@@ -72,13 +72,16 @@ services:
       # Plugins vom Host: Datei tauschen = Plugin aktualisiert (Server liest sie bei jedem Zugriff, no-cache);
       # neue Fassung unter ⌁ Plugins → ↑ aktualisieren. Kein neues Image noetig
       - ./plugins:/app/plugins
-      # ... aber ein Bind-Mount ueberdeckt alles darunter, auch die node_modules aus dem Image. Diese drei Plugins
-      # brauchen Pakete (sharp, pdfjs, transformers); ihre Ordner kommen darum aus dem Image zurueck, damit es autark bleibt
+      # ... aber ein Bind-Mount ueberdeckt alles darunter, auch die node_modules aus dem Image. Diese vier Plugins
+      # brauchen Pakete (sharp, pdfjs, transformers, tesseract); ihre Ordner kommen darum aus dem Image zurueck, damit es autark bleibt
       - journali-derive-modules:/app/plugins/derive/node_modules
       - journali-docs-modules:/app/plugins/docs/node_modules
       # embed: Pakete aus dem Image, dazu das Modell (.cache), das der erste Lauf holt — es soll kein zweites Mal geladen werden
       - journali-embed-modules:/app/plugins/embed/node_modules
       - journali-embed-cache:/app/plugins/embed/.cache
+      # ocr: Pakete aus dem Image, dazu die Sprachdaten (.cache) des ersten Laufs
+      - journali-ocr-modules:/app/plugins/ocr/node_modules
+      - journali-ocr-cache:/app/plugins/ocr/.cache
     depends_on:
       db:
         condition: service_healthy
@@ -88,8 +91,10 @@ volumes:
   journali-secrets:
   journali-media:
   journali-jobs:
-  # Pakete der drei Plugins, die welche brauchen — beim ersten Start aus dem Image gefuellt; dazu das Modell von embed
+  # Pakete der vier Plugins, die welche brauchen — beim ersten Start aus dem Image gefuellt; dazu das Modell von embed und die Sprachdaten von ocr
   journali-derive-modules:
   journali-docs-modules:
   journali-embed-modules:
   journali-embed-cache:
+  journali-ocr-modules:
+  journali-ocr-cache:

@@ -28,5 +28,7 @@ plugins/xport/export/
 plugins/*/node_modules/
 # Plugin embed: das geladene Modell — kommt beim ersten Lauf, nie ins Repo
 plugins/embed/.cache/
+# Plugin ocr: die Sprachdaten der Erkennung — kommen beim ersten Lauf, nie ins Repo
+plugins/ocr/.cache/
 # Startprofil: es nennt die eigene Entwicklungsadresse. Nur launchSettings.example.json gehoert ins Repo.
 Journali.Server/Properties/launchSettings.json

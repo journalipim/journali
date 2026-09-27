@@ -1,0 +1,60 @@
+{
+  "key": "ocr",
+  "version": "1.0.0",
+  "label": {
+    "de": "Texterkennung (OCR)",
+    "en": "Text recognition (OCR)"
+  },
+  "description": {
+    "de": "Erkennt den Text gescannter Dokumente — PDFs ohne Textebene — mit einer lokalen Texterkennung (tesseract.js) und legt ihn in den Dokumentindex, mit Seiten, Abschnitten und Tabellen wie beim Leser. Holt die Dokumente im Zustand „scan“ vom Server, läuft als Job im Hintergrund, in Runden, bis nichts mehr offen ist. Braucht npm install im Plugin-Verzeichnis; die Sprachdaten kommen beim ersten Lauf in das Verzeichnis .cache. Abgeleitete Daten, nichts davon geht ins Journal.",
+    "en": "Recognises the text of scanned documents — PDFs without a text layer — with a local OCR (tesseract.js) and stores it in the document index, with pages, sections and tables like the reader does. Fetches the documents in state “scan” from the server and runs as a background job in rounds until nothing is left. Needs npm install in the plugin directory; the language data is downloaded on the first run into the .cache directory. Derived data, nothing goes into the journal."
+  },
+  "kind": "tool",
+  "runs": "process",
+  "requires": [
+    "tasker"
+  ],
+  "process": {
+    "command": "node",
+    "args": [
+      "job.mjs",
+      "{journali}",
+      "{actor}",
+      "{limit}",
+      "{langs}",
+      "{scale}",
+      "{maxPages}"
+    ],
+    "description": "Gescannte Dokumente erkennen und in den Index legen; läuft, bis nichts mehr offen ist",
+    "params": [
+      {
+        "key": "limit",
+        "label": "Dokumente je Runde",
+        "type": "number",
+        "default": "10",
+        "perJob": true
+      },
+      {
+        "key": "langs",
+        "label": "Sprachen der Erkennung (tesseract-Codes, mit +)",
+        "type": "text",
+        "default": "deu+eng",
+        "perJob": false
+      },
+      {
+        "key": "scale",
+        "label": "Auflösung beim Rendern der Seiten (1 = 72 dpi, 2 = 144 dpi, 3 = 216 dpi)",
+        "type": "number",
+        "default": "2",
+        "perJob": false
+      },
+      {
+        "key": "maxPages",
+        "label": "Seiten je Dokument höchstens",
+        "type": "number",
+        "default": "40",
+        "perJob": false
+      }
+    ]
+  }
+}

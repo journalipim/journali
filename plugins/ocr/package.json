@@ -1,0 +1,11 @@
+{
+  "name": "journali-plugin-ocr",
+  "private": true,
+  "type": "module",
+  "description": "journali: Texterkennung für gescannte Dokumente — tesseract.js (Erkennung), pdfjs-dist und @napi-rs/canvas (Seiten rendern). Einmalig: npm install (im Container: eigene Stufe im Dockerfile).",
+  "dependencies": {
+    "@napi-rs/canvas": "^0.1.60",
+    "pdfjs-dist": "^4.10.38",
+    "tesseract.js": "^5.1.1"
+  }
+}

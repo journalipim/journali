@@ -324,8 +324,8 @@ Kindprozess `node plugins/embed/serve.mjs` vor (`Embedder.cs`). Ein anderes Mode
 
 ## Plugins im Container
 
-Das Image ist autark: es bringt alle Plugins mit, dazu die Pakete der drei, die
-welche brauchen (`derive` mit sharp, `docs` mit pdfjs, `embed` mit transformers) und die Node-Binärdatei.
+Das Image ist autark: es bringt alle Plugins mit, dazu die Pakete der vier, die
+welche brauchen (`derive` mit sharp, `docs` mit pdfjs, `embed` mit transformers, `ocr` mit tesseract) und die Node-Binärdatei.
 Ein `docker run` allein genügt, nichts wird nachgeladen.
 
 `compose.yaml` legt zusätzlich `./plugins` vom Host darüber, damit ein Plugin ohne
@@ -339,6 +339,8 @@ Volumes genau diese Ordner zurück, dazu das Modell von `embed`:
 - journali-docs-modules:/app/plugins/docs/node_modules
 - journali-embed-modules:/app/plugins/embed/node_modules
 - journali-embed-cache:/app/plugins/embed/.cache
+- journali-ocr-modules:/app/plugins/ocr/node_modules
+- journali-ocr-cache:/app/plugins/ocr/.cache
 ```
 
 Sie werden beim ersten Start aus dem Image gefüllt. Wer die Pakete eines Plugins

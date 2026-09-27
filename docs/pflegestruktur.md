@@ -1680,16 +1680,20 @@ Zustand (`state=<wf>:<zustand>`), Fahne in der Farbe des Zustands an der Kachel.
 Bild nicht ausgeleitet wird — der Zustand steht in `MediaView.Workflow`, die Erzeuger müssen ihn lesen (Siegel); und ein
 Übergang, der einen Job anstösst (`WfTransition.job`), als Brücke zu Import und Export.
 
-**J. Texterkennung (OCR) — Serverseite gebaut (27.09.2026), Erkenner offen.** Der Volltext liegt schon **je
-Medium** (`DocText.cs`, Tabelle `media_text`), PDFs werden gelesen und durchsucht, und der Zustand `scan` bedeutet
-„ohne Textebene — wartet auf OCR“. Neu ist die offene Postenliste dafür: `GET /api/docs/scans` nennt die Dokumente
-im Zustand `scan` mit dem Hash, den der Index kennt (`DocsApi.Scans`) — eine Frage an den Index, kein Bestand; ein
-abgebrochener Lauf lässt sie offen. **Der Erkenner ist ein Prozess-Plugin und entsteht lokal** (Siegel): er holt
-`/api/docs/scans`, lädt `/api/media/{id}/file`, erkennt, und legt den Text per `PUT /api/docs/{id}` ab — mit
-`state: text` und `note: "ocr"`, derselbe Weg wie der Leser (`plugins/docs/job.mjs`). Damit wird ein gescanntes
-Datenblatt durchsuchbar. Offen und eine Entscheidung: **Bilder**. Der Leser nimmt nur Dokumente (`Readable`); jedes
-Bild zu erkennen kostet viel und bringt bei Produktfotos nichts. Ein Weg wäre ein Stichwort oder Ordner „Text
-erkennen“, das Bilder ausdrücklich in die Liste stellt.
+**J. Texterkennung (OCR) — gebaut (27.09.2026).** Der Volltext liegt **je Medium** (`DocText.cs`, `media_text`), und
+der Zustand `scan` bedeutet „ohne Textebene — wartet auf OCR“. `GET /api/docs/scans` ist die offene Postenliste:
+Dokumente in diesem Zustand mit dem Hash, den der Index kennt (`DocsApi.Scans`) — eine Frage an den Index, kein
+Bestand. Der Erkenner ist das Plugin `ocr` (`plugins/ocr`): ein Job, der die Datei lädt, die Seiten rendert
+(`pdfjs-dist`, `@napi-rs/canvas`), sie lokal erkennt (`tesseract.js`, Sprachen als Parameter, Vorgabe `deu+eng`) und
+aus Zeilen und Wortkästen dieselben Abschnitte und Tabellen baut wie der Leser (`../docs/core.mjs`: `cellsOf`,
+`findTables`) — der Zellenabstand folgt der mittleren Zeichenbreite der Seite, denn die Erkennung misst in Pixeln.
+Abgelegt wird mit `PUT /api/docs/{id}`, `state: text`, `note: "ocr · Vertrauen n %"`; ein Dokument ohne erkennbaren
+Text wird `fehler` mit dem Grund, damit es nicht in jeder Runde wiederkommt (`/docs/retry` gibt es frei). Die
+Sprachdaten kommen beim ersten Lauf nach `plugins/ocr/.cache` (Volume). Kein Systemjob: die Erkennung ist teuer und
+eine Entscheidung je Anlage. Damit wird ein gescanntes Datenblatt durchsuchbar, einbettbar (35) und seine Tabellen
+werden Attribute (L). Offen und eine Entscheidung: **Bilder**. Der Leser nimmt nur Dokumente in den Index
+(`Readable`); jedes Bild zu erkennen kostet viel und bringt bei Produktfotos nichts. Der Erkenner kann Bilder, sobald
+sie in der Liste stehen — ein Stichwort oder Ordner „Text erkennen“ wäre der Weg, sie ausdrücklich hineinzustellen.
 
 **K. Ablegen auf einem Knoten.** Heute nimmt der Baum nur JSON und Tabellen an (`TreeView.vue`); ein Bild oder PDF
 auf einen Knoten gezogen bringt „Kein Importer für …“. Zu bauen: ein Asset, das auf einen Knoten fällt, wird
