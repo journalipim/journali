@@ -42,7 +42,7 @@ const api = { get: async p => { const r = await fetch(server + p, { headers }); 
     const texte = []
     if (withDocs) {
       try {
-        const rels = await api.get(`/api/nodes/${encodeURIComponent(r.id)}/relations`)
+        const rels = await api.get(`/api/nodes/${encodeURIComponent(r.id)}/relations?export=true`)   // nur, was in die Ausleitung darf: gültig und freigegeben
         for (const rel of (rels.out ?? []).filter(x => x.other?.role === 'media')) {
           try { const t = await api.get(`/api/docs/${encodeURIComponent(rel.other.id)}/text`); if (t.chunks?.length) texte.push({ id: rel.other.id, name: rel.other.label, chunks: t.chunks.slice(0, 200) }) } catch { }
         }

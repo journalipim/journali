@@ -22,7 +22,7 @@ public static class RelationApi
     /// stop=true am Knoten oder einem näheren Vorfahren nimmt es dort und darunter heraus. Eigene und geerbte bestehen
     /// nebeneinander; ein Medium, das der Knoten selbst zugeordnet hat, wird nicht noch einmal als geerbt gezeigt.
     /// </summary>
-    private static List<object> Inherited(Tree tree, ModelCatalog model, Catalog c, string id)
+    private static List<object> Inherited(Tree tree, ModelCatalog model, Catalog c, string id, bool export = false)
     {
         if (!tree.Nodes.TryGetValue(id, out var node)) return new();
         var mediaTypes = model.RelationTypes.Values.Where(t => t.To is not null && t.To.Contains(Roles.Media)).Select(t => t.Key).ToHashSet();
@@ -39,7 +39,9 @@ public static class RelationApi
                 var key = $"{r.Type}|{r.To}";
                 if (Flag(r, "stop")) { blocked.Add(key); continue; }
                 if (!Flag(r, "inherit") || blocked.Contains(key) || !seen.Add(key)) continue;
-                outList.Add(new { relation = RelationView.Of(tree, model, c.Media, r, "out"), from = new { a.Id, Label = NodeRow.LabelOf(tree, model, a) } });
+                var view = RelationView.Of(tree, model, c.Media, r, "out", c.Workflows);
+                if (export && !RelationView.Ausleitbar(view.Other)) continue;   // abgelaufen oder nicht freigegeben: nicht in die Ausleitung
+                outList.Add(new { relation = view, from = new { a.Id, Label = NodeRow.LabelOf(tree, model, a) } });
             }
         }
         return outList;
@@ -47,18 +49,20 @@ public static class RelationApi
 
     public static void Map(RouteGroupBuilder api)
     {
-        api.MapGet("/nodes/{id}/relations", (string id, Catalog c) =>
+        // export=true: die Sicht der Ausleitung — ein Medium, das heute nicht gilt (Frist) oder nicht freigegeben ist
+        // (Medien-Workflow), fehlt in out und inherited. Die Erzeuger (xport, rag, Datenblatt) fragen so; die Pflege sieht alles.
+        api.MapGet("/nodes/{id}/relations", (string id, Catalog c, bool export = false) =>
             c.With((model, tree, _) => tree.Nodes.ContainsKey(id)
                 ? new
                 {
-                    @out = c.Relations.From(id).OrderBy(r => r.Type).ThenBy(r => r.LastNumber).Select(r => RelationView.Of(tree, model, c.Media, r, "out")).ToList(),
-                    @in = c.Relations.To(id).OrderBy(r => r.Type).ThenBy(r => r.LastNumber).Select(r => RelationView.Of(tree, model, c.Media, r, "in")).ToList(),
-                    inherited = Inherited(tree, model, c, id),
+                    @out = c.Relations.From(id).OrderBy(r => r.Type).ThenBy(r => r.LastNumber).Select(r => RelationView.Of(tree, model, c.Media, r, "out", c.Workflows)).Where(v => !export || RelationView.Ausleitbar(v.Other)).ToList(),
+                    @in = c.Relations.To(id).OrderBy(r => r.Type).ThenBy(r => r.LastNumber).Select(r => RelationView.Of(tree, model, c.Media, r, "in", c.Workflows)).ToList(),
+                    inherited = Inherited(tree, model, c, id, export),
                 }
                 : null) is { } v ? Results.Ok(v) : Results.NotFound());
 
         api.MapGet("/relations/{id}", (string id, Catalog c) =>
-            c.With((model, tree, _) => c.Relations.All.TryGetValue(id, out var r) ? RelationView.Of(tree, model, c.Media, r, "out") : null) is { } v ? Results.Ok(v) : Results.NotFound());
+            c.With((model, tree, _) => c.Relations.All.TryGetValue(id, out var r) ? RelationView.Of(tree, model, c.Media, r, "out", c.Workflows) : null) is { } v ? Results.Ok(v) : Results.NotFound());
 
         api.MapPost("/relations", (RelationCreated b, HttpRequest req, Catalog c) => TreeApi.Run(req, c, x => Commands.CreateRelation(x, b.Type, b.From, b.To)));
         api.MapDelete("/relations/{id}", (string id, HttpRequest req, Catalog c) => TreeApi.Run(req, c, x => Commands.RetireRelation(x, id)));
@@ -70,19 +74,23 @@ public static class RelationApi
 }
 
 /// <summary>Das andere Ende einer Relation: Knoten oder Medium (dann mit Typ und Bild-Flag) — oder verwaist, wenn es weg ist.</summary>
-public sealed record RelationEnd(string Id, string? Role, string Label, bool Missing, string? Mime = null, bool IsImage = false, long Bytes = 0, bool HasThumb = false, bool Valid = true);
+public sealed record RelationEnd(string Id, string? Role, string Label, bool Missing, string? Mime = null, bool IsImage = false, long Bytes = 0, bool HasThumb = false, bool Valid = true, bool Released = true);
 
 /// <summary>Eine Relation aus Sicht eines Knotens: Richtung, das andere Ende, die Werte.</summary>
 public sealed record RelationView(string Id, string Type, string From, string To, string Dir, RelationEnd Other, List<ValueView> Values,
     Dictionary<string, string> External, int Entries, long LastNumber, DateTimeOffset LastAt, string LastActor)
 {
-    public static RelationView Of(Tree tree, ModelCatalog model, Media media, Relation r, string dir)
+    /// <summary>Geht das andere Ende in die Ausleitung? Ein Knoten immer; ein Medium, wenn es heute gilt (Frist) und freigegeben ist (Medien-Workflow).</summary>
+    public static bool Ausleitbar(RelationEnd e) => e.Role != Roles.Media || (e.Valid && e.Released);
+
+    public static RelationView Of(Tree tree, ModelCatalog model, Media media, Relation r, string dir, Workflows? wfs = null)
     {
         var otherId = dir == "out" ? r.To : r.From;
         var other = tree.Nodes.TryGetValue(otherId, out var n)
             ? new RelationEnd(n.Id, n.Role, NodeRow.LabelOf(tree, model, n), false)
             : media.All.TryGetValue(otherId, out var m)
-                ? new RelationEnd(m.Id, Roles.Media, m.Name, false, m.Mime, m.IsImage, m.Bytes, m.IsImage || m.Derived.ContainsKey(Media.ThumbPreset), m.GueltigAm(DateOnly.FromDateTime(DateTime.Now)))
+                ? new RelationEnd(m.Id, Roles.Media, m.Name, false, m.Mime, m.IsImage, m.Bytes, m.IsImage || m.Derived.ContainsKey(Media.ThumbPreset), m.GueltigAm(DateOnly.FromDateTime(DateTime.Now)),
+                    wfs is null || MediaWorkflowApi.Freigegeben(wfs, m))
                 : new RelationEnd(otherId, null, otherId, true);
         return new(r.Id, r.Type, r.From, r.To, dir, other, ValueView.Of(r).ToList(), r.External, r.Entries, r.LastNumber, r.LastAt, r.LastActor);
     }

@@ -19,6 +19,14 @@ public static class MediaWorkflowApi
     public static List<MediaState> States(Catalog c, Medium m) => c.Workflows.All.Values.Where(w => w.AppliesToMedium()).OrderBy(w => w.Key)
         .Select(wf => { var st = c.Workflows.StateOf(m.Id, wf); return new MediaState(wf.Key, wf.Label, st, wf.State(st)?.Label, wf.State(st)?.Color, wf.State(st)?.Final ?? false); }).ToList();
 
+    /// <summary>
+    /// Freigegeben ist ein Medium, wenn jeder Workflow, der für Assets gilt, an ihm in einem Endzustand steht (27.09.2026).
+    /// Ohne Medien-Workflow ist alles freigegeben; sobald einer gilt, ist der Startzustand nicht frei — genau das will,
+    /// wer einen Freigabe-Workflow für Bilder einschaltet. Die Ausleitung fragt hier (<c>RelationEnd.Released</c>).
+    /// </summary>
+    public static bool Freigegeben(Workflows wfs, Medium m) =>
+        wfs.All.Values.Where(w => w.AppliesToMedium()).All(w => w.State(wfs.StateOf(m.Id, w))?.Final ?? false);
+
     public static void Map(RouteGroupBuilder api, JobRunner runner)
     {
         // Was am Asset gilt: je Workflow der Zustand, die Schritte, die meine Rolle gehen darf, und wer sonst dran ist

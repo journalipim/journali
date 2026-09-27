@@ -1680,8 +1680,12 @@ Zustand (`state=<wf>:<zustand>`), Fahne in der Farbe des Zustands an der Kachel.
 Brücke zu Import und Export — `WfTransition.Job` nennt einen Job des Tasker, und nach einem gelungenen Schritt startet
 er (`WorkflowApi.Nachlauf`, am Knoten wie am Asset; läuft er schon, findet er den neuen Stand in seiner nächsten Runde;
 ein Fehler beim Start hält den Schritt nicht auf). In den Workflow-Einstellungen steht er als Spalte „⏱ Job“ je
-Übergang. **Offen:** dass ein nicht freigegebenes Bild nicht ausgeleitet wird — der Zustand steht in
-`MediaView.Workflow`, die Erzeuger müssen ihn lesen (Siegel).
+Übergang. **Gebaut (27.09.2026):** ein nicht freigegebenes Bild wird nicht
+ausgeleitet — `RelationEnd.Released` (jeder Medien-Workflow am Medium in einem Endzustand, `MediaWorkflowApi.Freigegeben`)
+neben `Valid` (Frist), und `GET /api/nodes/{id}/relations?export=true` lässt Medien weg, die eines von beidem nicht
+sind (`RelationView.Ausleitbar`) — in `out` wie in `inherited`. Die Erzeuger fragen so (`xport`, `rag`); die Pflege
+fragt ohne `export` und sieht alles. Ohne Medien-Workflow ist jedes Medium freigegeben; sobald einer für Assets gilt,
+ist der Startzustand nicht frei — das ist der Sinn eines Freigabe-Workflows.
 
 **J. Texterkennung (OCR) — gebaut (27.09.2026).** Der Volltext liegt **je Medium** (`DocText.cs`, `media_text`), und
 der Zustand `scan` bedeutet „ohne Textebene — wartet auf OCR“. `GET /api/docs/scans` ist die offene Postenliste:

@@ -201,7 +201,7 @@ public static class MediaApi
         // Verwendung, sondern eine Sperre; er steht mit in der Liste und die Oberfläche kennzeichnet ihn.
         api.MapGet("/media/{id}/usage", (string id, Catalog c) =>
             c.With((model, tree, _) => c.Media.All.ContainsKey(id)
-                ? c.Relations.To(id).OrderBy(r => r.Type).ThenBy(r => r.LastNumber).Select(r => RelationView.Of(tree, model, c.Media, r, "in")).ToList()
+                ? c.Relations.To(id).OrderBy(r => r.Type).ThenBy(r => r.LastNumber).Select(r => RelationView.Of(tree, model, c.Media, r, "in", c.Workflows)).ToList()
                 : null) is { } v ? Results.Ok(v) : Results.NotFound());
 
         api.MapGet("/media/{id}/file", async (string id, Catalog c, IMediaStore store, HttpResponse res, CancellationToken ct) =>

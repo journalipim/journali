@@ -294,6 +294,7 @@ steht im Kopf `X-Actor`.
 | `POST /api/media/probe` `?limit&again` | `MediaProbed` je gelesenem Kopf; `GET /api/media/probe` zählt die offenen Posten |
 | `GET /api/media/{id}/workflow` · `POST …/workflow/{wf}/{transition}` `{note?}` · `PUT …/workflow/{wf}/assign` `{user}` | `WorkflowStateSet` / `WorkflowAssigned` am Medienstrom — derselbe Workflow wie am Knoten, wenn seine Rollen `media` nennen; ohne Wirkungen |
 | `GET /api/docs/scans` `?limit` | kein Eintrag — die offene Postenliste der Texterkennung (Dokumente im Zustand `scan`); der Erkenner liefert über `PUT /api/docs/{id}` mit `state: text`, `note: "ocr"` |
+| `GET /api/nodes/{id}/relations` `?export=true` | kein Eintrag — die Sicht der Ausleitung: Medien, die heute nicht gelten oder nicht freigegeben sind, fehlen (`RelationEnd.Valid`, `RelationEnd.Released`) |
 | `POST /api/jobs/system/{plugin}/run` | `JobDefined`, wenn es noch keinen Job des Systemjobs gibt (Vorgaben aus dem Manifest); dann ein Lauf. Der Balken der Systemjobs im Tasker |
 | `GET /api/docs/search` `?q&mode=text|semantic|hybrid&under` | kein Eintrag — Wörter, Sinn (Vektoren) oder beides verschnitten; `warning` sagt, warum der Sinn nicht ging |
 | `GET /api/docs/{id}/text` | kein Eintrag — die Abschnitte eines Dokuments aus dem Index (Plugin rag, Nachlesen) |
