@@ -247,7 +247,12 @@ public sealed record NodeRetired();
 /// <summary>Knoten zurück ins Abbild — mit Werten, Gruppen, Kennungen, wie er war; der Vater muss da sein.</summary>
 public sealed record NodeRestored();
 
-public sealed record StatusSet(string Status);
+/// <summary>
+/// Status eines Knotens. <paramref name="From"/> ist der Tag, ab dem er gilt — in der Zukunft (ein Produkt läuft zum
+/// Jahreswechsel aus) wie in der Vergangenheit (ein Stand wird nachgetragen). Ohne Datum gilt er ab dem Eintrag.
+/// Der Eintrag trägt nur den Tag; welcher Status heute gilt, rechnet das Abbild (<see cref="Projections.Node.Status"/>).
+/// </summary>
+public sealed record StatusSet(string Status, DateOnly? From = null);
 
 /// <summary>
 /// Welche Attributgruppen an diesem Knoten hängen (ganze Liste, der letzte gewinnt).

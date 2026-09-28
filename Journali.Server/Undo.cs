@@ -67,8 +67,16 @@ public static class Undo
                 case Types.StatusSet:
                 {
                     if (!seen.Add($"{e.Stream}|status")) break;
-                    var prev = journal.ReadStream(e.Stream).Where(x => x.Number < e.Number && x.Type == Types.StatusSet).Select(x => Types.Deserialize<StatusSet>(x.Payload).Status).LastOrDefault() ?? Statuses.Draft;
-                    steps.Add(new(e.Stream, Types.StatusSet, $"Status {prev}", Types.Serialize(new StatusSet(prev))));
+                    // Die Stufe steht an ihrem Tag, nicht am Tag des Eintrags: zurueckgenommen wird sie, indem
+                    // derselbe Tag den Status bekommt, der dort ohne sie gegolten haette (28.09.2026). Ein Eintrag
+                    // ohne Datum haette einen Plan fuer naechstes Jahr stehen lassen — er gilt ja erst dann
+                    var weg = Types.Deserialize<StatusSet>(e.Payload);
+                    var ab = weg.From ?? DateOnly.FromDateTime(e.At.UtcDateTime);
+                    var vorher = journal.ReadStream(e.Stream).Where(x => x.Number < e.Number && x.Type == Types.StatusSet)
+                        .Select(x => (Stufe: Types.Deserialize<StatusSet>(x.Payload), Ab: Types.Deserialize<StatusSet>(x.Payload).From ?? DateOnly.FromDateTime(x.At.UtcDateTime), x.Number))
+                        .Where(x => x.Ab <= ab).OrderBy(x => x.Ab).ThenBy(x => x.Number).LastOrDefault();
+                    var prev = vorher.Stufe?.Status ?? Statuses.Draft;
+                    steps.Add(new(e.Stream, Types.StatusSet, $"Status {prev}", Types.Serialize(new StatusSet(prev, weg.From))));
                     break;
                 }
                 case Types.NodeNamed:

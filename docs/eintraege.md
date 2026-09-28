@@ -40,7 +40,7 @@ Eintrag übergeht das Abbild.
 | `NodeOrdered` | `order` | Platz unter den Geschwistern (Rubriken). Ohne Eintrag alphabetisch |
 | `NodeRetired` | — | Knoten aus dem Abbild (nur ohne Kinder); das Journal behält alles — das Abbild legt ihn in den Papierkorb |
 | `NodeRestored` | — | Knoten zurück aus dem Papierkorb, mit allem, was er hatte (Werte, Gruppen, Kennungen); der Vater muss im Baum stehen. Rückgängig je Aktion über den Stapel: `POST /api/batches/{batch}/undo` holt genau die Knoten des Stapels zurück |
-| `StatusSet` | `status` (Schlüssel aus dem Status-Vokabular des Modells) | Produkt und Variante; Gruppe hat keinen. Saat: draft, active, discontinued |
+| `StatusSet` | `status` (Schlüssel aus dem Status-Vokabular des Modells), `from?` (Tag JJJJ-MM-TT) | Produkt und Variante; eine Gruppe hat erst einen, wenn er gilt. Saat: draft, active, discontinued. `from` ist der Tag, ab dem er gilt — in der Zukunft (zum Jahreswechsel auslaufen) wie in der Vergangenheit (einen Stand nachtragen); ohne `from` gilt er ab dem Eintrag. Was heute gilt, rechnet das Abbild: die Stufe mit dem grössten Tag, der nicht in der Zukunft liegt, bei gleichem Tag die zuletzt eingetragene (`Node.Status`, `Node.StatusAm(tag)`, `Node.StatusGeplant`) |
 | `GroupsAttached` | `groups[]` | welche Attributgruppen an diesem Knoten hängen (ganze Liste); die **Definition** vererbt sich nach unten — ob der **Wert** vererbt wird, sagt das Attribut |
 | `ExternalLinked` | `system`, `id` | externe Kennung je Quellsystem (Import: Update statt Neuanlage); je System nur ein Knoten |
 | `ExternalUnlinked` | `system` | Kennung weg |
@@ -272,7 +272,7 @@ steht im Kopf `X-Actor`.
 | `PUT /api/nodes/{id}/roles` `{roles[]}` | `NodeRestricted` — sichtbar für Rollen; `PUT /api/media/folders/{id}/roles` ebenso `MediaFolderRestricted`. Listen (`/api/tree`, `/api/search`, `/api/media`, `/api/media/folders`, Relationen, Verwendung) zeigen nur, was die Rolle sieht; ein einzelnes Ding, das sie nicht sieht, ist 403 (`Auth.Sichtbar`) |
 | `POST /api/nodes/{id}/order` `{parent?, before?}` | `NodeMoved` (wenn der Vater wechselt) + `NodeOrdered` je Geschwister, dessen Platz sich ändert |
 | `DELETE /api/nodes/{id}` | `NodeRetired` — nur ohne Kinder |
-| `POST /api/nodes/{id}/status` `{status}` | `StatusSet` |
+| `POST /api/nodes/{id}/status` `{status, from?}` | `StatusSet` — `from` (JJJJ-MM-TT) ist der Tag, ab dem er gilt; leer heisst ab sofort |
 | `POST /api/nodes/{id}/attributes` `{attribute, locale?, channel?, value | values[]}` | `AttributeSet` — nur, wenn das Attribut hier **gilt** (Gruppe am Pfad, dort aktiv, `levels`); prüft Achsen, Kanal, Typ, Wörterbuch; `sku` eindeutig über alle Varianten |
 | `POST /api/nodes/{id}/categories` `{category}` | `CategoryAssigned` |
 | `DELETE /api/nodes/{id}/categories/{category}` | `CategoryRemoved` |

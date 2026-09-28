@@ -6,7 +6,7 @@ import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '../api.js'
 import { store } from '../store.js'
-import { setStatus as setStatusScoped } from '../status.js'
+import { setStatus as setStatusScoped, setStatusAb } from '../status.js'
 import { dialog as ask } from '../dialog.js'
 import { tree, icon } from '../tree.js'
 import { menu } from '../menu.js'
@@ -413,6 +413,9 @@ async function retireAll(rows) {
   store.toast(t_('{0} Knoten zurückgezogen', [n]), 'ok')
   await tree.load(); if (!tree.byId.has(props.id)) router.push('/tree')
 }
+async function statusAb(r) {
+  try { if (await setStatusAb(r)) store.toast(t_('Status gesetzt'), 'ok') } catch (e) { store.toast(e.message) }
+}
 async function setStatus(r, status) {
   // fragt bei Subitems „auch für die n Subitems?" (status.js)
   try { await setStatusScoped(r, status) } catch (e) { store.toast(e.message) }
@@ -499,7 +502,10 @@ async function contextMenu(e, r) {
         : { label: t_('Duplizieren'), icon: '⧉', key: 'd', hint: t_('ohne SKU/Freigaben'), disabled: r.role === 'variant' && Object.keys(r.axisValues).length > 0, action: () => duplicate(r, false) },
     !sel && r.role !== 'variant' && kids ? { label: t_('Mit {0} darunter duplizieren', [countBelow(r.id)]), icon: '⧉', key: 't', action: () => duplicate(r, true) } : null,
     { sep: true },
-    ...(r.role !== 'rubric' ? [...(store.model?.statuses ?? []).map(s => st(s.key)), { sep: true }] : []),   // Status aus dem Modell
+    ...(r.role !== 'rubric' ? [...(store.model?.statuses ?? []).map(s => st(s.key)),
+      // Ein Status gilt ab einem Tag: zum Jahreswechsel auslaufen, einen Stand nachtragen (28.09.2026)
+      { label: t_('Status ab Datum …'), icon: '⏱', hint: r.statusNext ? `${r.statusNextAb} ${store.statusLabel(r.statusNext)}` : '', action: () => statusAb(r), ...only1 },
+      { sep: true }] : []),   // Status aus dem Modell
     ...(wfItems.length ? [{ label: t_('Workflow') + (sel ? ` (${sel.length})` : ''), icon: '⚑', items: wfItems }, { sep: true }] : []),
     { label: picked.value.has(r.id) ? t_('Abwählen') : t_('Auswählen'), icon: '☑', key: 'm', hint: 'Strg+Klick', action: () => { const s = new Set(picked.value); s.has(r.id) ? s.delete(r.id) : s.add(r.id); picked.value = s } },
     picked.value.size ? { label: t_('Auswahl aufheben ({0})', [picked.value.size]), icon: '☐', key: 'Escape', hint: 'Esc', action: () => { picked.value = new Set() } } : null,

@@ -324,12 +324,23 @@ public static class Commands
     /// <summary>
     /// Status eines Knotens setzen — seit dem 23.09.2026 auch an einer Gruppe.
     /// Er gilt für den Knoten selbst und vererbt sich nicht: die Gruppe sagt etwas über sich, jedes Produkt über sich.
+    /// <paramref name="from"/> ist der Tag, ab dem er gilt (28.09.2026) — leer heisst ab sofort.
     /// </summary>
-    public static Outcome SetStatus(Ctx c, string id, string? status)
+    public static Outcome SetStatus(Ctx c, string id, string? status, string? from = null)
     {
         if (!c.Tree.Nodes.ContainsKey(id)) return Outcome.Missing;
         if (!c.Model.Statuses.ContainsKey(status ?? "")) return Outcome.Bad("Status: {0}", string.Join(", ", c.Model.StatusesOrdered.Select(s => s.Key)));
-        return Outcome.Ok(c.Write(id, Types.StatusSet, new StatusSet(status!)));
+        if (!Tag(from, out var ab)) return Outcome.Bad("Datum: {0}", "JJJJ-MM-TT");
+        return Outcome.Ok(c.Write(id, Types.StatusSet, new StatusSet(status!, ab)));
+    }
+
+    /// <summary>Ein Tag aus der Oberfläche: leer ist erlaubt (gilt sofort), sonst JJJJ-MM-TT.</summary>
+    private static bool Tag(string? s, out DateOnly? tag)
+    {
+        tag = null;
+        if (string.IsNullOrWhiteSpace(s)) return true;
+        if (!DateOnly.TryParse(s, System.Globalization.CultureInfo.InvariantCulture, out var d)) return false;
+        tag = d; return true;
     }
 
     /// <summary>Beleg an einem Wert (ValueSourced): das Attribut muss es geben; ob der Wert gerade da ist, ist egal — der Beleg gilt für die Achse.</summary>

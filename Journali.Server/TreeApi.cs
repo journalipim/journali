@@ -218,7 +218,7 @@ public static class TreeApi
             return r.Id is not null ? Results.Ok(new { id = r.Id, entries = r.Count, batch })
                 : r.Error is not null ? Bad(r.Error) : Results.NotFound();
         });
-        api.MapPost("/nodes/{id}/status", (string id, StatusSet b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.SetStatus(x, id, b.Status)));
+        api.MapPost("/nodes/{id}/status", (string id, StatusBody b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.SetStatus(x, id, b.Status, b.From)));
         api.MapPost("/nodes/{id}/attributes", (string id, AttributeSet b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.SetAttribute(x, id, b.Attribute, b.Locale, b.Channel, b.Value, b.Values, b.Row)));
         // Ausdrücklich leer: hier gilt nichts, auch wenn oben etwas steht. Zurück zur Vererbung führt ein leerer AttributeSet.
         api.MapPost("/nodes/{id}/attributes/clear", (string id, AttributeCleared b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.ClearAttribute(x, id, b.Attribute, b.Locale, b.Channel, b.Row)));
@@ -241,6 +241,8 @@ public static class TreeApi
     public sealed record DeriveBody(string? From, bool Self = false);
     public sealed record OrderBody(string? Parent, string? Before);
     public sealed record NameBody(string? Name);
+    /// <summary>Status setzen; From ist der Tag (JJJJ-MM-TT), ab dem er gilt — leer heisst ab sofort.</summary>
+    public sealed record StatusBody(string? Status, string? From);
     public sealed record StandBody(long? JournalNumber, bool? Now);
     /// <summary>Treffer einer Regel als Ansicht: Gliederungen mit Knoten (Id, Rolle, Name, Anzahl darunter).</summary>
     public static object RuleView(Tree tree, ModelCatalog model, PubRule rule)
@@ -274,13 +276,18 @@ public sealed record NodeRow(string Id, string Role, string? Parent, string Labe
     Dictionary<string, string> AxisValues, string Status, Dictionary<string, string>? Keys, Dictionary<string, string> External,
     int Entries, long LastNumber, DateTimeOffset LastAt, string LastActor, string? LabelAttribute = null,
     string? Channel = null, string? Market = null, string[]? Placed = null, int? Order = null, string? Source = null, Dictionary<string, string>? PlacedNames = null, long? Stand = null, List<PubRule>? Rules = null,
-    bool HasStatus = true, string[]? VisibleTo = null)
+    bool HasStatus = true, string[]? VisibleTo = null,
+    string? StatusAb = null, string? StatusNext = null, string? StatusNextAb = null)
 {
+    /// <summary>Ein Tag geht als JJJJ-MM-TT hinaus — dieselbe Schreibweise, die die Oberfläche zurückschickt.</summary>
+    internal static string? Tag(DateOnly? d) => d?.ToString("yyyy-MM-dd");
+
     public static NodeRow Of(Tree tree, ModelCatalog model, Node n) => new(
         n.Id, n.Role, n.Parent, LabelOf(tree, model, n), n.Name, n.Groups.Length > 0 ? string.Join(",", n.Groups) : null, n.Axes, n.AxisValues, n.Status,
         tree.KeysOf(model, n), n.External, n.Entries, n.LastNumber, n.LastAt, n.LastActor, LabelAttributeOf(tree, model, n),
         n.Channel, n.Market, n.Role == Roles.Rubric ? n.Placed.ToArray() : null, n.Order, n.Source, n.Role == Roles.Rubric && n.PlacedNames.Count > 0 ? n.PlacedNames : null, n.Stand, n.Role == Roles.Rubric && n.Rules.Count > 0 ? n.Rules : null,
-        n.HasStatus, n.VisibleTo.Length > 0 ? n.VisibleTo : null);
+        n.HasStatus, n.VisibleTo.Length > 0 ? n.VisibleTo : null,
+        Tag(n.StatusAb), n.StatusGeplant?.Status, Tag(n.StatusGeplant?.Ab));
 
     /// <summary>Das ★-Attribut, das diesen Knoten benennt (Tabelle): null bei fixiertem Namen; sonst das nächste ★ am Pfad,
     /// das hier gilt und einen Wert hat — hat keins einen Wert, das nächste, das hier gilt (dann benennt der Wert, sobald er da ist).</summary>
@@ -380,7 +387,7 @@ public sealed record NodeView(string Id, string Role, string? Parent, Labels Lab
     List<AncestorView> Ancestors, string[] AttachedGroups, List<GroupView> Groups, List<string> Orphans, List<ComputedView> Computed,
     List<string> Categories, List<Release> Releases, List<ReleasedVia> ReleasedVia, List<Completeness> Completeness,
     int Children, int Entries, long LastNumber, DateTimeOffset LastAt, string LastActor, string? Source = null, string? SourceLabel = null,
-    bool HasStatus = true)
+    bool HasStatus = true, string? StatusAb = null, string? StatusNext = null, string? StatusNextAb = null)
 {
     public static NodeView Of(Tree tree, ModelCatalog model, Node n)
     {
@@ -406,6 +413,6 @@ public sealed record NodeView(string Id, string Role, string? Parent, Labels Lab
         tree.Children(n.Id).Count(),
         n.Entries, n.LastNumber, n.LastAt, n.LastActor,
         n.Source, n.Source is { } src && tree.Nodes.TryGetValue(src, out var sn) ? NodeRow.LabelOf(tree, model, sn) : null,
-        n.HasStatus);
+        n.HasStatus, NodeRow.Tag(n.StatusAb), n.StatusGeplant?.Status, NodeRow.Tag(n.StatusGeplant?.Ab));
     }
 }

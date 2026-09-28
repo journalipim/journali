@@ -158,12 +158,6 @@ Rauschen, `ReleaseGranted` bleibt). Zwei Fallen:
   wie bei `enrich`, nur mit dem vorliegenden Dokument als Quelle.
   *Zu klären:* was bei mehreren Treffern je Attribut gilt; ob Einheiten und Listenwerte gleich abgebildet werden;
   ob ein zweites Datenblatt am selben Knoten die alten Vorschläge ersetzt oder ergänzt.
-- **Status mit Geltungsdatum.** Ein Status (aktiv, ausgelaufen) soll ab einem Datum gelten,
-  in der Zukunft wie in der Vergangenheit. Entwurf: `StatusSet` bekommt ein optionales
-  `effectiveFrom`; der aktuelle Status ist beim Lesen der jüngste Eintrag, dessen Datum
-  nicht in der Zukunft liegt — kein neuer Eintragstyp, keine Uhr im Journal, das Abbild
-  rechnet ihn aus Eintrag und Tageszeit. Publikation und Freigabe lesen den abgeleiteten
-  Status; ein Export sieht damit am Stichtag denselben Stand wie die Oberfläche.
 - **Das wachsende Journal**. Nicht die Grösse ist das Problem, sondern die
   **Zahl** der Einträge: die Startzeit darf nicht von der Länge des Journals abhängen.
 

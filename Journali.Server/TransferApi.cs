@@ -14,9 +14,12 @@ namespace Journali.Server;
 public static class TransferApi
 {
     public sealed record RawValue(string Attribute, string? Locale = null, string? Channel = null, string? Row = null, string? Value = null, string[]? Values = null);
+    /// <summary>Eine Stufe des Lebenszyklus in den Rohdaten: ab welchem Tag welcher Status gilt. Nur gewählte Tage
+    /// stehen hier — ein Status ohne Datum ist schlicht <c>Status</c>.</summary>
+    public sealed record RawStatus(string Status, string From);
     public sealed record RawNode(string Id, string Role, string? Parent, string? Name, string? Status, string[]? Axes, Dictionary<string, string>? AxisValues,
         string[]? Groups, string? LabelAttribute, Dictionary<string, string>? External, List<RawValue> Values, Dictionary<string, List<string>>? Rows,
-        Labels? Label, List<RawNode>? Children)
+        Labels? Label, List<RawNode>? Children, List<RawStatus>? StatusPlan = null)
     {
         [JsonIgnore] public string? Family { get; init; }
     }
@@ -109,7 +112,9 @@ public static class TransferApi
             n.Groups.Length > 0 ? n.Groups : null, n.LabelAttribute, n.External.Count > 0 ? n.External : null, values,
             n.Rows.Count > 0 ? n.Rows.ToDictionary(kv => kv.Key, kv => kv.Value.ToList()) : null,
             n.Role == Roles.Group && n.Label.Count > 0 ? n.Label : null,
-            deep ? tree.Children(n.Id).Select(k => Raw(tree, k, true)).ToList() : null);
+            deep ? tree.Children(n.Id).Select(k => Raw(tree, k, true)).ToList() : null,
+            // Was erst noch gilt, geht mit: sonst faellt ein zum Jahreswechsel geplanter Status beim Ausleiten weg
+            n.StatusGeplant is { } g ? [new RawStatus(g.Status, g.Ab.ToString("yyyy-MM-dd"))] : null);
     }
 
     private sealed class Stats { public int Created, Restored, Updated, Entries, ModelAdded; public List<string> Errors = new(); public Dictionary<string, string> IdMap = new(); }
@@ -197,6 +202,10 @@ public static class TransferApi
         // und soll keine Einträge erzeugen.
         if (r.Status is { Length: > 0 } st && st != n.Status && (r.Role != Roles.Group || n.HasStatus || st != Statuses.Draft))
             Count(s, Commands.SetStatus(c, id, st), r.Id);
+        // Geplante Stufen: nur, was hier noch nicht so steht — ein zweiter Import derselben Datei schreibt nichts
+        foreach (var p in r.StatusPlan ?? [])
+            if (DateOnly.TryParse(p.From, System.Globalization.CultureInfo.InvariantCulture, out var ab) && n.StatusAm(ab) != p.Status)
+                Count(s, Commands.SetStatus(c, id, p.Status, p.From), r.Id);
         if (r.Role == Roles.Product && r.Axes is not null && !r.Axes.SequenceEqual(n.Axes) && !tree.Children(id).Any()) Count(s, Commands.SetAxes(c, id, r.Axes), r.Id);
         var groups = r.Groups ?? [];
         if (!groups.SequenceEqual(n.Groups)) Count(s, Commands.AttachGroups(c, id, groups), r.Id);

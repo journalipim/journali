@@ -59,7 +59,7 @@ public static class BatchApi
                             "node.move" => Commands.Move(ctx, a.Node(), a.Id("parent")),
                             "node.retire" => Commands.Retire(ctx, a.Node()),
                             "node.order" => Commands.Order(ctx, a.Node(), a.Id("parent"), a.Id("before")),   // Tabellenbearbeitung: Zeilen verschieben
-                            "status.set" => Commands.SetStatus(ctx, a.Node(), a.Str("status")),
+                            "status.set" => Commands.SetStatus(ctx, a.Node(), a.Str("status"), a.Str("from")),
                             "attribute.set" => Commands.SetAttribute(ctx, a.Node(), a.Str("attribute"), a.Str("locale"), a.Str("channel"), a.Str("value"), a.Strings("values"), a.Id("row")),
                             "value.source" => Commands.SourceValue(ctx, a.Node(), a.Str("attribute"), a.Str("locale"), a.Str("channel"), a.Id("row"), a.Str("source"), a.Str("title"), a.Str("note"), a.Str("method"), a.Str("checkedAt")),
                             "row.add" => Commands.AddRow(ctx, a.Node(), a.Str("attribute")),

@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using Journali.Core.Entries;
 using Journali.Core.Journal;
 
@@ -7,6 +8,13 @@ namespace Journali.Core.Projections;
 public readonly record struct Axis(string Attribute, string? Locale, string? Channel, string? Row = null);
 
 public readonly record struct Release(string Channel, string? Locale);
+
+/// <summary>
+/// Eine Stufe des Lebenszyklus: ab welchem Tag welcher Status gilt, und welcher Eintrag es sagte.
+/// <paramref name="Gewaehlt"/> unterscheidet das gewählte Datum vom Tag des Eintrags — nur ein gewähltes zeigt die
+/// Oberfläche an, sonst stünde an jedem Knoten ein Datum, das niemand gesetzt hat.
+/// </summary>
+public readonly record struct StatusStufe(string Status, DateOnly Ab, long Eintrag, bool Gewaehlt = false);
 
 /// <summary>Ein Knoten im Baum: Produktgruppe, Produkt oder Variante — mit allem, was sein Strom ergibt.</summary>
 /// <summary>Beleg eines Werts: Quelle (URL oder Text), Titel, Notiz, Weg (web | ai | rule | import | manual), Prüfdatum, Eintrag und Akteur.</summary>
@@ -26,14 +34,53 @@ public sealed class Node
     public string? Family { get; set; }                        // Produkt
     public string[] Axes { get; set; } = [];                   // Produkt: wonach es variiert
     public Dictionary<string, string> AxisValues { get; } = new(); // Variante
-    public string Status { get; set; } = Statuses.Draft;
-    /// <summary>Nummer des Eintrags, der den Status setzte — 0 heisst: nie gesetzt. Nötig, seit auch Gruppen einen
+    /// <summary>Die Stufen des Lebenszyklus, in der Reihenfolge der Einträge: ab welchem Tag welcher Status gilt.
+    /// Jede Stufe hat einen Tag — ohne Datum im Eintrag ist es der Tag des Eintrags.</summary>
+    public List<StatusStufe> StatusStufen { get; } = [];
+    /// <summary>Der heute geltende Status; ohne Stufe „draft“.</summary>
+    [JsonIgnore] public string Status => Geltend(Heute)?.Status ?? Statuses.Draft;
+    /// <summary>Nummer des Eintrags, dessen Stufe heute gilt — 0 heisst: keine. Nötig, seit auch Gruppen einen
     /// Status haben dürfen: <see cref="Status"/> ist mit „draft“ vorbelegt, und eine Gruppe, die nie
     /// jemand angefasst hat, ist kein Entwurf — sie hat schlicht keinen.</summary>
-    public long StatusAt { get; set; }
+    [JsonIgnore] public long StatusAt => Geltend(Heute)?.Eintrag ?? 0;
+    /// <summary>Ab wann der heute geltende Status gilt — nur, wenn der Tag gewählt wurde; sonst null.</summary>
+    [JsonIgnore] public DateOnly? StatusAb => Geltend(Heute) is { Gewaehlt: true } s ? s.Ab : null;
+    /// <summary>Die nächste Stufe, die etwas ändert — für die Anzeige „ab 01.01.2027 ausgelaufen“. Null, wenn keine ansteht.</summary>
+    [JsonIgnore] public StatusStufe? StatusGeplant => Geplant(Heute);
     /// <summary>Hat dieser Knoten einen eigenen Status? Produkte und Varianten immer (sie beginnen als Entwurf),
-    /// Gruppen erst, wenn jemand einen setzt.</summary>
-    public bool HasStatus => Role != Roles.Group || StatusAt > 0;
+    /// Gruppen erst, wenn einer gilt.</summary>
+    [JsonIgnore] public bool HasStatus => Role != Roles.Group || StatusAt > 0;
+
+    private static DateOnly Heute => DateOnly.FromDateTime(DateTime.UtcNow);
+
+    /// <summary>
+    /// Der Status an einem Tag: die Stufe mit dem grössten Datum, das nicht nach <paramref name="tag"/> liegt; bei
+    /// gleichem Datum die zuletzt eingetragene. Nach Datum, nicht nach Eintragsreihenfolge — sonst hätte ein heute
+    /// gesetzter Status einen früher eingetragenen Plan für nächstes Jahr stillschweigend aufgehoben.
+    /// </summary>
+    public StatusStufe? Geltend(DateOnly tag)
+    {
+        StatusStufe? beste = null;
+        foreach (var s in StatusStufen)
+            if (s.Ab <= tag && (beste is not { } b || s.Ab > b.Ab || (s.Ab == b.Ab && s.Eintrag > b.Eintrag))) beste = s;
+        return beste;
+    }
+
+    /// <summary>
+    /// Die nächste Änderung nach <paramref name="tag"/>: die früheste Stufe, an deren Tag ein anderer Status gilt als
+    /// heute. Eine Stufe, die denselben Status wiederholt, ist keine Änderung und wird nicht angezeigt — sonst stünde
+    /// nach einem Zurücknehmen „ab 01.01.2027 aktiv“ da, obwohl aktiv schon gilt.
+    /// </summary>
+    public StatusStufe? Geplant(DateOnly tag)
+    {
+        var jetzt = Geltend(tag)?.Status ?? Statuses.Draft;
+        foreach (var ab in StatusStufen.Where(s => s.Ab > tag).Select(s => s.Ab).Distinct().OrderBy(d => d))
+            if (Geltend(ab) is { } g && g.Status != jetzt) return g;
+        return null;
+    }
+
+    /// <summary>Der Status an einem Stichtag — Publikation und Export sehen damit denselben Stand wie die Oberfläche.</summary>
+    public string StatusAm(DateOnly tag) => Geltend(tag)?.Status ?? Statuses.Draft;
     public Dictionary<string, string> External { get; } = new();   // Quellsystem → Kennung dort
     /// <summary>Attributgruppen, die hier angehängt sind; die Definition vererbt sich nach unten.</summary>
     public string[] Groups { get; set; } = [];
@@ -529,8 +576,8 @@ public sealed class Tree : IProjection
                 if (n.External.Remove(eu.System, out var gone)) _external.Remove((eu.System, gone));
                 break;
             case Types.StatusSet:
-                n.Status = Types.Deserialize<StatusSet>(entry.Payload).Status;
-                n.StatusAt = entry.Number;
+                var st = Types.Deserialize<StatusSet>(entry.Payload);
+                n.StatusStufen.Add(new StatusStufe(st.Status, st.From ?? DateOnly.FromDateTime(entry.At.UtcDateTime), entry.Number, st.From is not null));
                 break;
             case Types.GroupsAttached:
                 n.Groups = Types.Deserialize<GroupsAttached>(entry.Payload).Groups.Distinct().ToArray();

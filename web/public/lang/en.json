@@ -2671,5 +2671,13 @@
  "Modellname ungültig.": "Model name invalid.",
  "▭ Abmessungen": "▭ Dimensions",
  "Abmessungen des fertigen Bildes — eine EXIF-Drehung ist eingerechnet.": "Dimensions of the finished image — an EXIF rotation is included.",
- "Der Job probe liest die Abmessungen nach.": "The job probe reads the dimensions."
+ "Der Job probe liest die Abmessungen nach.": "The job probe reads the dimensions.",
+ "Datum: {0}": "Date: {0}",
+ "{0} gehört zu journali und wird nicht entfernt — ausschalten geht.": "{0} belongs to journali and is not removed — disabling it works.",
+ "Status ab Datum": "Status from date",
+ "ab": "from",
+ "ab {0} {1}": "from {0} {1}",
+ "Status ab einem Tag setzen": "Set a status from a given day",
+ "Status gesetzt": "Status set",
+ "Status ab Datum …": "Status from date …"
 }

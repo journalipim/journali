@@ -10,7 +10,7 @@ import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { api, when } from '../api.js'
 import { store } from '../store.js'
-import { setStatus as setStatusScoped } from '../status.js'
+import { setStatus as setStatusScoped, setStatusAb } from '../status.js'
 import { dialog } from '../dialog.js'
 import { tree, icon } from '../tree.js'
 import { menu } from '../menu.js'
@@ -547,6 +547,8 @@ const setStar = def => command(() => api.post(`${nodeUrl()}/label-attribute`, { 
 const setStatus = s => command(() => api.post(`${nodeUrl()}/status`, { status: s }))
 /// Aus dem Wähler oben: bei Subitems erst fragen, dann hier und ggf. darunter setzen (status.js)
 const pickStatus = async s => { if (!s || !node.value) return; try { await setStatusScoped(node.value, s); await load() } catch (e) { store.toast(e.message) } }
+/// Status ab einem Tag — zum Jahreswechsel auslaufen, einen Stand nachtragen (28.09.2026)
+const pickStatusAb = async () => { if (!node.value) return; try { if (await setStatusAb(node.value)) await load() } catch (e) { store.toast(e.message) } }
 const attach = groups => command(() => api.post(`${nodeUrl()}/groups`, { groups }, 'PUT'))
 // ---- Relationen (18): je Typ ausgehend (→) und eingehend (←, mit umgekehrter Bezeichnung); Werte an der Relation aus der Gruppe des Typs
 const relTypes = computed(() => model.value?.relationTypes ?? [])
@@ -840,6 +842,8 @@ function cellMenu(e, def, col, block) {
         <option v-for="s in (store.model?.statuses ?? [])" :key="s.key" :value="s.key">{{ store.statusText(s.key) }}</option>
         <option v-if="node.status && node.hasStatus !== false && !store.status(node.status)" :value="node.status">{{ $t("{0} (nicht im Modell)", [node.status]) }}</option>
       </select>
+      <button v-if="node.role !== 'rubric'" class="x" :style="node.statusNext ? store.statusStyle(node.statusNext) : null" @click="pickStatusAb"
+        :title="node.statusNext ? $t('ab {0} {1}', [node.statusNextAb, store.statusLabel(node.statusNext)]) : $t('Status ab einem Tag setzen')">⏱<span v-if="node.statusNext" class="muted"> {{ node.statusNextAb }}</span></button>
       <button class="x" @click="store.journalOpen = !store.journalOpen; store.save()" :title="store.journalOpen ? $t('Journal zuklappen') : $t('Journal aufklappen')">{{ store.journalOpen ? '≡▸' : '◂≡' }}</button>
       <button class="x" @click="undo" :disabled="!history.length && !ausJournal?.possible"
         :title="history.length ? stepTitle(history[history.length - 1], $t('↶ Rückgängig'), history.length, $t('Strg+Z')) : (ausJournal?.possible ? $t('{0} (Strg+Z)', [ausJournal.what]) : $t('nichts rückgängig zu machen'))">↶<span v-if="history.length" class="muted"> {{ history.length }}</span></button>

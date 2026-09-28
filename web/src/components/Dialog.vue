@@ -23,6 +23,7 @@ function onKey(e) {
         <label v-if="dialog.option" class="option"><input type="checkbox" v-model="dialog.option.checked" /> {{ dialog.option.label }}</label>
         <select v-if="dialog.kind === 'prompt' && dialog.choices" ref="field" v-model="dialog.value" style="width:100%;margin-top:10px"><option v-for="c in dialog.choices" :key="c.value" :value="c.value">{{ c.label }}</option></select>
         <input v-else-if="dialog.kind === 'prompt'" ref="field" v-model="dialog.value" class="cell-input" style="width:100%;margin-top:10px" :placeholder="dialog.placeholder" :type="dialog.secret ? 'password' : 'text'" :autocomplete="dialog.secret ? 'current-password' : 'off'" />
+        <label v-if="dialog.extra" class="extra">{{ dialog.extra.label }}<input v-model="dialog.extra.value" class="cell-input" :type="dialog.extra.type" :placeholder="dialog.extra.placeholder ?? ''" /></label>
         <div class="buttons">
           <button v-if="dialog.cancel" @click="dialog.done(false)">{{ dialog.cancel }}</button>
           <button ref="okBtn" :class="dialog.danger ? 'danger' : 'primary'" @click="dialog.done(true)">{{ dialog.ok }}</button>
@@ -45,6 +46,8 @@ function onKey(e) {
 .keys kbd { font: inherit; font-family: ui-monospace, Consolas, monospace; font-size: 12px; background: var(--cell); border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; }
 .list { margin-top: 6px; white-space: pre-wrap; line-height: 1.5; color: var(--text); max-height: 200px; overflow-y: scroll; }
 .option { display: flex; align-items: center; gap: 6px; margin-top: 10px; cursor: pointer; }
+.extra { display: flex; align-items: center; gap: 6px; margin-top: 10px; color: var(--muted); }
+.extra > input { flex: 1; min-width: 0; }
 .buttons { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
 button.danger { background: var(--neg); color: #fff; border-color: var(--neg); }
 </style>
