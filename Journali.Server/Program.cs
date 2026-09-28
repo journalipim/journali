@@ -182,7 +182,15 @@ jobRunner.Offen = async plugin =>
     if (!m.TryGetValue(plugin, out var mf) || !mf.Raw.TryGetProperty("progress", out var pg) || pg.ValueKind != JsonValueKind.String) return 0;
     var pfad = pg.GetString();
     if (string.IsNullOrWhiteSpace(pfad)) return 0;
-    using var a = await offenClient.GetAsync(jobRunner.Origin.TrimEnd('/') + pfad);
+    // Mit Anwendern ist auch ein Lesen geschuetzt: der Takt weist sich als Dienst aus, wie ein Joblauf es tut.
+    // Das Token gilt nur fuer diese eine Anfrage und wird danach zurueckgezogen
+    var token = Auth.IssueServiceToken("system:nachziehen", "editor");
+    using var anfrage = new HttpRequestMessage(HttpMethod.Get, jobRunner.Origin.TrimEnd('/') + pfad);
+    anfrage.Headers.Add("X-Actor", "system:nachziehen");
+    anfrage.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+    HttpResponseMessage a;
+    try { a = await offenClient.SendAsync(anfrage); } finally { Auth.RevokeServiceToken(token); }
+    using var _ = a;
     if (!a.IsSuccessStatusCode) return 0;
     using var d = JsonDocument.Parse(await a.Content.ReadAsStringAsync());
     // ready: false heisst, das Plugin kann gerade nicht arbeiten — dann waere ein Lauf vergeblich
