@@ -1,8 +1,8 @@
 {
  "key": "csv",
- "version": "1.0.0",
- "hash": "8412907ace56cd6298f912a7e8632a2ec88de627c25bbea51a6612dc3fcec61a",
- "issued": "2026-09-25",
+ "version": "1.0.1",
+ "hash": "42e7aaf49dbe21d5e4adcb23d175c48d15b8ca53e6d78210029319ae81a5120f",
+ "issued": "2026-09-28",
  "issuer": "journali",
- "sig": "SEpUp3TcdZ8afQ3x9LgpeC+edERfvLhiui4psVj05jF18emDMXWrhsUYC/GBanDx6JYJ36a6wWFGyJVUzQYACg=="
+ "sig": "RWJHWK/8/Rs21PIO5WUHxUhYH98pPgAKkQvqDV/pr3pprRx28aU9xRRCq8dGzrhNKI+ByoMG9GeAI1Tu9ux9tQ=="
 }

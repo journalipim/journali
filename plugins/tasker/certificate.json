@@ -1,8 +1,8 @@
 {
  "key": "tasker",
- "version": "1.5.6",
- "hash": "4e3d48afb6323ebe6ba6858e9bb0be3e3181c08f63c00ed740ba44a694b588c0",
+ "version": "1.7.0",
+ "hash": "40edaf0c855a04ca749d8bd37b8b4ec85e1cfed59cdf56d33d68babc13e642db",
  "issued": "2026-09-28",
  "issuer": "journali",
- "sig": "z33P35OWSr3DKlKN+bCSHembrf2h8cEZaWD2+X+AFGxENFG3eSD/oRivVm08EALRReTHM+ng2zBmCw86rXe5iA=="
+ "sig": "PfPZMRkpCR4VOvfjWzfXknOXD1beRfGBs7VupWfH/SsPgpFfFaN1k9iw09z7sq/c8PQq37YeTTUlwtVwvD5zSQ=="
 }
