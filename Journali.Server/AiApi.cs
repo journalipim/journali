@@ -27,6 +27,29 @@ public static class AiApi
     private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromMinutes(5) };
 
     /// <summary>Was die Anbieter sprechen — dieselben zwei wie im Browser (web/src/ai.js), hier serverseitig.</summary>
+    /// <summary>
+    /// Die Anfrage an die Anthropic-API. Der Systemtext geht als Block mit <c>cache_control</c>: wiederholt sich der Anfang
+    /// einer Anfrage innerhalb weniger Minuten — dieselbe Attributliste für das zweite Dokument eines Knotens, derselbe
+    /// Katalog für den nächsten Knoten der Prüfmaschine —, liest der Dienst ihn aus dem Cache statt ihn neu zu rechnen
+    /// (28.09.2026). Unter der Mindestlänge des Dienstes bleibt der Block ein gewöhnlicher Systemtext; ein Nachteil entsteht
+    /// nicht. temperature gibt es bei Claude 5 nicht mehr — wir schicken es gar nicht erst.
+    /// </summary>
+    public static object AnthropicBody(string model, int maxTokens, string? system, string user, bool web, int maxSearches)
+    {
+        var sys = string.IsNullOrWhiteSpace(system) ? null : new object[] { new { type = "text", text = system, cache_control = new { type = "ephemeral" } } };
+        var messages = new[] { new { role = "user", content = user } };
+        return web
+            ? new { model, max_tokens = maxTokens, system = sys, messages, tools = new object[] { new { type = "web_search_20250305", name = "web_search", max_uses = maxSearches } } }
+            : (object)new { model, max_tokens = maxTokens, system = sys, messages };
+    }
+
+    /// <summary>Eingang und Ausgang aus <c>usage</c>: die Cache-Felder zählen zum Eingang — auch gelesener Cache ging über die Leitung.</summary>
+    public static (int In, int Out) AnthropicUsage(JsonElement us)
+    {
+        int Feld(string name) => us.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.Number ? v.GetInt32() : 0;
+        return (Feld("input_tokens") + Feld("cache_creation_input_tokens") + Feld("cache_read_input_tokens"), Feld("output_tokens"));
+    }
+
     private static async Task<(string Text, List<object> Sources, long BytesIn, long BytesOut)> Call(string provider, string key, string model, string? system, string user, int maxTokens, bool web, int maxSearches, CancellationToken ct)
     {
         using var req = new HttpRequestMessage();
@@ -36,10 +59,7 @@ public static class AiApi
             req.RequestUri = new Uri("https://api.anthropic.com/v1/messages");
             req.Headers.TryAddWithoutValidation("x-api-key", key);
             req.Headers.TryAddWithoutValidation("anthropic-version", "2023-06-01");
-            // temperature gibt es bei Claude 5 und Opus 4.7/4.8 nicht mehr — wir schicken es gar nicht erst
-            body = web
-                ? new { model, max_tokens = maxTokens, system, messages = new[] { new { role = "user", content = user } }, tools = new object[] { new { type = "web_search_20250305", name = "web_search", max_uses = maxSearches } } }
-                : (object)new { model, max_tokens = maxTokens, system, messages = new[] { new { role = "user", content = user } } };
+            body = AnthropicBody(model, maxTokens, system, user, web, maxSearches);
         }
         else
         {
@@ -73,11 +93,7 @@ public static class AiApi
                         if (cit.TryGetProperty("url", out var url) && url.GetString() is { Length: > 0 } u)
                             sources.Add(new { url = u, title = cit.TryGetProperty("title", out var ti) ? ti.GetString() ?? u : u });
             }
-            if (root.TryGetProperty("usage", out var us))
-            {
-                tin = us.TryGetProperty("input_tokens", out var i) ? i.GetInt32() : 0;
-                tout = us.TryGetProperty("output_tokens", out var o) ? o.GetInt32() : 0;
-            }
+            if (root.TryGetProperty("usage", out var us)) (tin, tout) = AnthropicUsage(us);
         }
         else
         {

@@ -338,6 +338,13 @@ Bytes — was hingeschickt und was zurückgekommen ist. Es steht als Kennzahl in
 Klassifikation, Prüfung, Geodaten). Begrenzt wird nichts. Die Recherche im Internet nutzt das
 Suchwerkzeug des Anbieters und wird dort je Suche berechnet.
 
+**Der Anfang einer Anfrage wird gecacht** (28.09.2026): der Systemtext geht als Block mit `cache_control` an die
+Anthropic-API. Wiederholt sich derselbe Anfang innerhalb weniger Minuten — die Attributliste eines Knotens für das
+zweite Dokument, der Katalog der Prüfmaschine für den nächsten Knoten —, liest der Dienst ihn aus dem Cache statt ihn
+neu zu rechnen und berechnet ihn günstiger. Ein einzelner Aufruf wird dadurch nicht billiger, eine Reihe gleichartiger
+schon. Unter der Mindestlänge des Dienstes bleibt der Block ein gewöhnlicher Systemtext. Der andere Anbieter cacht
+von sich aus. Das Austauschvolumen zählt weiter, was über die Leitung ging — auch gelesener Cache.
+
 ### Vektoren und die Frage an die Dokumente
 
 Die Suche nach Sinn braucht **keinen** Schlüssel: das Plugin `embed` rechnet die Vektoren mit einem lokalen Modell
