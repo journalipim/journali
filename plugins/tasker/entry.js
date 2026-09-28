@@ -236,10 +236,12 @@ async function mount(root, ctx) {
     say(`${st.jobs.length} Jobs · ${st.jobs.filter(j => j.enabled && j.schedule).length} geplant${running ? ` · ${running} laufen` : ''}`)
     // Der Stand der Systemjobs kommt nach: je Plugin sein progress-Endpunkt, und einer davon rechnet eine offene
     // Postenliste aus. Darauf wartet niemand mehr — die Liste steht schon, die Balken füllen sich, sobald es da ist.
+    // Jede Kachel für sich: mit Promise.all hielt die langsamste alle anderen auf, und vier Kacheln standen
+    // zehn Sekunden auf „…“, obwohl drei längst da waren (28.09.2026)
     const sys = [...new Map(st.plugins.filter(p => p.system && p.progress).map(p => [p.key, p.progress])).entries()]
-    if (!sys.length) return
-    Promise.all(sys.map(async ([key, url]) => [key, await api.get(url).catch(e => ({ ready: false, reason: e.message }))]))
-      .then(paare => { st.progress = Object.fromEntries(paare); drawList() })
+    for (const [key, url] of sys)
+      api.get(url).catch(e => ({ ready: false, reason: e.message }))
+        .then(wert => { st.progress = { ...st.progress, [key]: wert }; drawList() })
   }
   async function runSystem(plugin) {
     try { await api.post(`/api/jobs/system/${encodeURIComponent(plugin)}/run`); store.toast(t('▶ {0} holt nach', [plugin]), 'ok'); await load(); watch() } catch (e) { store.toast(e.message) }
