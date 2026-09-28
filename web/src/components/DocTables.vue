@@ -287,9 +287,9 @@ function bausteine(id, chunks) {
     // Schlüssel — sonst überschriebe der ✓ die Definition des Attributs, und der Server lehnte ab (626 Werte, 28.09.2026)
     else if (def || (model.value.attributes ?? []).some(a => a.key === r.newKey)) { r.why = def ? t_('Attribut {0} ist {1}', [def.key, def.type]) : t_('Schlüssel {0} gibt es', [r.newKey]); r.newKey = r.newKey + '_text' }
     if (def?.type === 'enum' || (!def && punkte.length >= 2)) alsListe(r, r.saetze, def?.type === 'enum' ? def : null)
-    // Trifft der Baustein ein vorhandenes Attribut, das hier noch leer ist, ist er angehakt — das Modell sagt, das
-    // Produkt hat es, das Datenblatt liefert es. Neues bleibt ohne Haken: man nimmt, was auf die Seite gehört
-    r.take = r.target === 'attr' && !r.inaktiv && !r.error
+    // Angehakt wie oben bei den Werten: was im Dokument steht, gehört an das Produkt — ein vorhandenes Attribut bekommt
+    // seinen Text, ein neues wird angelegt. Wer einen Abschnitt nicht will, nimmt den Haken weg (28.09.2026)
+    r.take = r.target !== 'skip' && !r.inaktiv && !r.error
     return schonDa(r)
   })
   textZeilen.value = [...textZeilen.value.filter(r => r.doc !== id), ...neu]

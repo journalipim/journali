@@ -40,8 +40,8 @@ const TABELLEN = { ready: true, state: 'text', tables: [{ seq: 0, page: 1, headi
 const TEXT = { ready: true, state: 'text', chunks: [{ seq: 0, page: 1, heading: null, body: 'Gewicht 1,2 kg' }, { seq: 1, page: 2, heading: null, body: 'Nennleistung 35 W bei 230 V' },
   { seq: 2, page: 2, heading: 'Funkentstörung', body: '• Netzleitung und Lampenleitung nicht kreuzen.\n• Lampenleitungen verdrillen.' }, { seq: 3, page: 3, heading: 'Funkentstörung', body: '• Netzleitung in der Leuchte kurz halten.' },
   { seq: 4, page: 3, heading: 'Montage', body: 'Das Gerät wird mit zwei Schrauben auf einer ebenen Fläche befestigt. Die Zuleitung ist zugentlastet zu führen.' }] }
-// ohne Bausteine, die ein Attribut treffen — der Standard: „Funkentstörung“ trifft emc und wäre angehakt, jeder Wertetest zählte einen mehr
-const TEXT_BASIS = { ...TEXT, chunks: TEXT.chunks.filter(c => c.heading !== 'Funkentstörung') }
+// ohne Bausteine — der Standard: ein Baustein ist angehakt (vorhandenes wie neues Attribut), jeder Wertetest zählte einen mehr
+const TEXT_BASIS = { ...TEXT, chunks: TEXT.chunks.filter(c => !c.heading) }
 // mit Zeilen, die ein Attribut treffen — nur für die Tests, die das prüfen; sonst zählte jeder Test einen Wert mehr
 const TEXT_ZEILEN = { ...TEXT, chunks: [...TEXT.chunks,
   { seq: 5, page: 1, heading: 'Technische Daten', body: 'Leistung  35 W\nNetzspannungsbereich  220 – 240 V\nGewicht  pro Stk.' },
@@ -413,9 +413,9 @@ test('Abschnitte mit Überschrift stehen als Textbausteine — eigene Gruppe, oh
   assert.deepEqual(w.vm.bausteineZeilen.map(b => b.key), ['Funkentstörung', 'Montage'], '„Technische Daten“ ist zu kurz; die zwei Abschnitte „Funkentstörung“ werden einer')
   assert.ok(w.vm.werte.every(r => !r.baustein), 'die Werte oben bleiben unter sich')
   assert.match(w.find('tbody.bausteine .step-band').text(), /▤ Textbausteine · 2/)
-  // Funkentstörung trifft die Liste emc, die hier leer ist — angehakt; Montage wäre neu — ohne Haken
-  assert.deepEqual(w.vm.bausteineZeilen.map(b => [b.key, b.take]), [['Funkentstörung', true], ['Montage', false]])
-  assert.match(w.find('.dt-foot .primary').text(), /4/, 'drei Tabellenwerte und der Baustein, der ein leeres Attribut trifft')
+  // beide angehakt: Funkentstörung trifft die leere Liste emc, Montage wird ein neues html-Attribut
+  assert.deepEqual(w.vm.bausteineZeilen.map(b => [b.key, b.take]), [['Funkentstörung', true], ['Montage', true]], 'auch ein neues Attribut ist angehakt — wie oben bei den Werten')
+  assert.match(w.find('.dt-foot .primary').text(), /5/, 'drei Tabellenwerte und zwei Bausteine')
   // Fliesstext: html, Absätze
   const m = w.vm.bausteineZeilen[1]
   assert.deepEqual([m.page, m.target, m.newKey, m.newType, m.quelle], [3, 'new', 'montage', 'html', 'text'])
@@ -483,10 +483,10 @@ test('✓ mit der Aufzählung: die neuen Sätze kommen in die Liste, der Wert si
 })
 
 test('ein Baustein mit Haken als neues html-Attribut: mit Sprache, der Wert ist das HTML, der Beleg nennt die Überschrift', async () => {
-  const { w, rufe } = await dialog()
+  const { w, rufe } = await dialog({ text: TEXT })
   const z = zeile(w, 'Montage')
-  await z.find('input[type=checkbox]').setValue(true); await flushPromises()
-  assert.match(w.find('.dt-foot .primary').text(), /4/)
+  assert.equal(z.find('input[type=checkbox]').element.checked, true, 'schon angehakt — der Abschnitt gehört an das Produkt')
+  assert.match(w.find('.dt-foot .primary').text(), /5/)
   await w.find('.dt-foot .primary').trigger('click'); await flushPromises()
   const attr = rufe.find(r => r.methode === 'PUT' && /\/api\/model\/attributes\/montage$/.test(r.pfad))
   assert.deepEqual([attr.rumpf.type, attr.rumpf.axes, attr.rumpf.group, attr.rumpf.label], ['html', ['locale'], 'from_document', { de: 'Montage' }], 'die Sprachachse heisst axes — mit perLocale kam der Wert nicht an')
@@ -497,7 +497,7 @@ test('ein Baustein mit Haken als neues html-Attribut: mit Sprache, der Wert ist 
 })
 
 test('↻ neu lesen: der Index wird geleert, der Job liest neu, der Dialog wartet wie beim ersten Mal', async () => {
-  const { w, rufe } = await dialog()
+  const { w, rufe } = await dialog({ text: TEXT })
   const vorher = rufe.length
   await w.findAll('button').find(b => b.text().includes('neu lesen')).trigger('click'); await flushPromises()
   const danach = rufe.slice(vorher)
@@ -523,7 +523,7 @@ test('Matrixtabelle: derselbe Schlüssel mehrmals ist eine Zeile — gleiche Wer
 })
 
 test('ein Baustein in ein bestehendes Textattribut', async () => {
-  const { w, rufe } = await dialog()
+  const { w, rufe } = await dialog({ text: TEXT })
   await zeile(w, 'Montage').find('select').setValue('hints'); await flushPromises()
   const b = w.vm.bausteineZeilen.find(x => x.key === 'Montage')
   assert.deepEqual([b.target, b.attribute, b.take], ['attr', 'hints', true], 'ein Ziel wählen hakt an')
@@ -534,7 +534,7 @@ test('ein Baustein in ein bestehendes Textattribut', async () => {
 })
 
 test('ein neuer Baustein lässt sich zwischen html und enum umstellen', async () => {
-  const { w } = await dialog()
+  const { w } = await dialog({ text: TEXT })
   const z = zeile(w, 'Montage')
   await z.findAll('select')[1].setValue('enum'); await flushPromises()
   const m = w.vm.bausteineZeilen.find(x => x.key === 'Montage')
@@ -556,7 +556,7 @@ test('die KI läuft erst auf Knopfdruck — was Token kostet, läuft nicht von s
 })
 
 test('ohne KI-Schlüssel gibt es keinen Knopf — nur ✦ aus', async () => {
-  const { w } = await dialog()
+  const { w } = await dialog({ text: TEXT })
   assert.equal(kiKnopf(w), undefined); assert.match(w.text(), /✦ aus/)
 })
 
