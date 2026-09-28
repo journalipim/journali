@@ -1244,7 +1244,7 @@ select.on { color: var(--accent); border-color: var(--accent); }
 th.master { color: var(--accent); font-weight: 700; }
 .view select, .view button { font-size: 12px; padding: 1px 6px; }
 /* Reiter: einzeilig, klein, umbrechend — mit Echtdaten sind es zwanzig und mehr */
-.tabs { display: flex; flex-wrap: wrap; gap: 2px; padding: 4px 8px 0; border-bottom: 1px solid var(--line); background: var(--bg); }
+.tabs { display: flex; flex-wrap: wrap; gap: 2px; padding: 4px 8px 0; border-bottom: 1px solid var(--line); background: var(--bg); position: sticky; top: 57px; z-index: 3; }
 .tabbtn { border: 1px solid var(--line); border-bottom: 0; border-radius: 6px 6px 0 0; background: var(--bg); color: var(--muted); padding: 1px 8px; font-size: 12px; line-height: 18px; white-space: nowrap; max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
 .tabbtn .n { font-size: 10px; }
 /* aktiv: Farbe und Kante, nie fett — fett ist breiter und liesse die Reiterzeile anders umbrechen */
