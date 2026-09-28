@@ -53,7 +53,9 @@ const eingeschraenkt = computed(() => plugins.list.some(p => p.allowed === false
 const kinds = computed(() => [...new Set(plugins.list.map(p => p.manifest?.kind).filter(Boolean))].sort())
 const shown = computed(() => {
   const s = q.value.trim().toLowerCase()
-  const list = plugins.list.filter(p => (zeigeFeste.value || !fest(p) || zuTun(p))
+  // Der Filter ‹System› schraenkt ein wie jeder andere Chip: an = nur diese, aus = die uebrigen. Vorher liess er
+  // zusaetzlich alles durch, statt einzugrenzen (28.09.2026)
+  const list = plugins.list.filter(p => (zeigeFeste.value ? fest(p) : (!fest(p) || zuTun(p)))
     && (!kindFilter.value || p.manifest?.kind === kindFilter.value)
     && (!nurTarif.value || p.allowed !== false)
     && (!stateFilter.value || (stateFilter.value === 'on' ? p.enabled : stateFilter.value === 'off' ? p.installed && !p.enabled : stateFilter.value === 'update' ? p.update : stateFilter.value === 'cert' ? p.certified : !p.installed))
