@@ -1,6 +1,6 @@
 {
   "key": "excel",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "label": {
     "de": "Excel",
     "en": "Excel"
@@ -80,7 +80,6 @@
         "{pub}"
       ],
       "description": "Teilbaum oder Ausleitung eines Publikationsbaums als Excel in ein Verzeichnis — je Wurzel eine Datei, die letzten n bleiben",
-      "profile": "generic",
       "files": {
         "out": {
           "many": true,

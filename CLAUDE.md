@@ -134,17 +134,20 @@ und Betriebsrechner. Eine Beispieladresse ist `localhost` oder ein Platzhalter, 
 
   **Zugänge** (Plugin `driver`, `DriverApi.cs`, `/api/drivers`): ein Plugin fragt nach einem Zugang seiner Art
   („gib mir die vom Typ mysql“) statt selbst nach Adresse und Passwort. Zwei Sorten: einer, der **Dateien liefert**
-  — mit Auflisten und Browser —, und einer, der nur **Anmeldung** ist. **Angeboten wird nur, was trägt**: heute
-  allein `file`; ftp, webdav, mysql, solr und ixp stehen erst in der Liste, wenn ihr Treiber gebaut ist.
+  — mit Auflisten und Browser —, und einer, der nur **Anmeldung** ist. **Angeboten wird nur, was trägt**: Dateien
+  liefern `file`, `webdav` und `ftp` (alle hinter `IDateiTreiber`, `Treiber.cs`), Anmeldungen sind `ixp` und `solr`
+  (der Browser liest ihre Quelle über `/api/drivers/{zugang}/relay`). **Alle Arten gehören zum Plugin `driver`** —
+  kein Plugin je Art (28.09.2026); mysql kommt, sobald ein Plugin es liest.
   Der Zugang ist **keine Schicht über der Datenbank**: er kennt kein SQL und keinen Index, das Plugin weiß, was es
   mit seiner Verbindung tut. Die offenen Felder stehen im Journal, das **Geheimnis beim Server** (Tresor) und geht
   **nur an einen Prozess**, nie an den Browser — die Liste nennt bloß seinen Namen. `lokal` ist eingebaut.
 
   *Gebaut ist davon:* beim Transport das Dateisystem (Pfad auf dem Server, bei Jobs die Fächer `in/` und `out/`),
-  dazu HTTP als Quelle beim JSON-Import. Plugins mit eigener Quelle (`ixp`, `solr`) bringen ihren Zugang selbst mit:
-  er gehört zur Quelle und steht im Profil, das Geheimnis beim Server (`/api/plugins/{key}/secrets/{name}`,
-  `jobs/secrets.json`) — nie im Journal, denn dort lässt sich nichts löschen. Ein allgemeiner Transportweg mit
-  eigenem Zugang, den jedes Format-Plugin nutzen kann, ist noch nicht gebaut.
+  HTTP als Quelle beim JSON-Import und **Fächer an einem Zugang** (WebDAV, FTP): der Tasker holt den Eingang vor dem
+  Lauf und legt die Ausgabe danach ab — das ist der allgemeine Transportweg, jedes Format-Plugin nutzt ihn, ohne
+  davon zu wissen (`docs/tasker-dateien.md`). `ixp` und `solr` nehmen ihre Quelle aus einem Zugang: im Profil steht
+  sein Name, im Job ein Parameter vom Typ `driver` (`JOURNALI_ZUGANG_*`); das Geheimnis bleibt beim Server — nie im
+  Journal, denn dort lässt sich nichts löschen, und nie im Browser.
   **Ein Format, ein Plugin**: `csv`, `excel` und `json` bringen Import **und** Export ihres Formats mit — ihre Art
   ist `io` (⇵ Import / Export), nicht `import`. `ixp` und `solr` sind nur Import. Die Schlüssel der Office-Add-ins
   heißen `exceladdin` und `ooaddin` (25.09.2026), damit `excel` das Formatplugin ist.
@@ -163,7 +166,8 @@ und Betriebsrechner. Eine Beispieladresse ist `localhost` oder ein Platzhalter, 
   Tooltip und im Kopf. So steht die Voraussetzung nicht als Satz in der Beschreibung, sondern als Zustand da; Plugin-Daten im
   Journal (`PluginDataSet`, `ctx.data`); Profile je Import-Plugin
   (`ProfileBar`); im Job-Dialog steht bei gewähltem Profil nur, was am Job hängt
-  (Profil, Pfade, Schalter) — ein Parameter mit `perJob: true` bleibt immer sichtbar.
+  (Profil, Pfade, Schalter) — ein Parameter mit `perJob: true` bleibt immer sichtbar. Der Job-Dialog legt **keine
+  Profile an**: den generischen Profil-Editor gibt es nicht mehr, seit `rag` eine eigene Ansicht hat (28.09.2026).
   **Zertifikat:** `certificate.json` neben dem Manifest (`docs/plugins-zertifizierung.md`); wer ein Plugin
   ändert, signiert es vor dem Commit neu (`node tools/plugin-cert.mjs sign <key>`, nach dem Bau) — der Kern-Test
   `Core_Plugins_mit_Zertifikat_sind_gueltig` prüft alle Siegel im Repo. **Core-Plugins** sind die mit journali

@@ -1,6 +1,6 @@
 {
   "key": "csv",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "label": {
     "de": "CSV / TSV",
     "en": "CSV / TSV"
@@ -80,7 +80,6 @@
         "{pub}"
       ],
       "description": "Teilbaum oder Ausleitung eines Publikationsbaums als CSV in ein Verzeichnis — je Wurzel eine Datei, die letzten n bleiben",
-      "profile": "generic",
       "files": {
         "out": {
           "many": true,

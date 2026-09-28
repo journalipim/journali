@@ -81,6 +81,20 @@ wartenden), `files.in.order: name | time`. Der Tasker
 
 Das Plugin tut nur eins: die Datei lesen, die es bekommt.
 
+## Fächer an einem Zugang (28.09.2026)
+
+Eingang und Ausgabe können an einem Zugang liegen, der Dateien liefert (WebDAV, FTP — Plugin `driver`). Das
+Dateisystem des Servers bleibt die Basis der Fächer; der Zugang ist der Transport davor und dahinter, das Plugin
+merkt davon nichts:
+
+- **Eingang von** (`files.inZugang`, `files.inPfad`): vor dem Lauf holt der Tasker, was dort liegt und auf
+  `files.in.pattern` passt (höchstens 50 Dateien je Lauf), nach `in/` und schiebt es dort nach
+  `<pfad>/abgeholt/<zeit>-<name>`. Danach gilt es wie eine Datei in `in/` — mit Duplikat-Prüfung am Hash.
+- **Ausgabe nach** (`files.outZugang`, `files.outPfad`): nach einem gelungenen Lauf legt der Tasker jede Ausgabe
+  dort ab (Unterverzeichnisse werden angelegt); das Log des Laufs nennt jede Datei (`→ zugang: name`).
+
+Ist der Zugang nicht erreichbar, läuft der Job mit dem, was im Fach liegt; die Meldung steht im Log.
+
 ## Archiv, Beweis
 
 `done/` ist der Beleg auf Platte; wer mehr will, schaltet je Job **Archiv im

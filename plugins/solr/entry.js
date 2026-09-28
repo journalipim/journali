@@ -1,4 +1,4 @@
-(function(){const s=document.createElement('style');s.textContent="\n.x[data-v-34165bad] { border: 0; background: none; color: var(--muted); padding: 0 4px;\n}\n.x[data-v-34165bad]:hover { color: var(--neg);\n}\n.sources[data-v-34165bad] { gap: 4px;\n}\n.form[data-v-34165bad] { padding: 6px 8px; border-bottom: 1px solid var(--line); display: flex; flex-direction: column; gap: 4px;\n}\n.row[data-v-34165bad] { display: flex; gap: 4px;\n}\n.src .node[data-v-34165bad] { display: flex; align-items: center; gap: 4px; height: 24px; white-space: nowrap; padding-right: 8px; outline: none;\n}\n.src .node.on[data-v-34165bad] { background: var(--accent-soft);\n}\n.src .node.current[data-v-34165bad], .src .node[data-v-34165bad]:focus { box-shadow: inset 2px 0 0 var(--accent);\n}\n.twisty[data-v-34165bad] { width: 12px; color: var(--muted); font-size: 11px; cursor: pointer;\n}\n.icon[data-v-34165bad] { width: 16px; text-align: center;\n}\n.node.group .icon[data-v-34165bad] { color: var(--muted);\n}\n.node.product .icon[data-v-34165bad] { color: var(--accent);\n}\n.node.variant .icon[data-v-34165bad] { color: var(--warn);\n}\n.label[data-v-34165bad] { overflow: hidden; text-overflow: ellipsis;\n}\n.count[data-v-34165bad] { margin-left: auto; font-size: 11px;\n}\n.form-grid[data-v-34165bad] { width: 100%;\n}\n.form-grid td[data-v-34165bad] { white-space: normal; vertical-align: middle; height: 30px; padding: 2px 4px;\n}\n.form-grid td[data-v-34165bad]:first-child { padding-left: 8px; white-space: nowrap;\n}\n.form-grid select[data-v-34165bad] { margin-right: 8px; min-width: 220px;\n}\n.val[data-v-34165bad] { max-width: 420px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;\n}\n.section[data-v-34165bad] { padding: 10px 8px; border-top: 1px solid var(--line);\n}\n.section h2[data-v-34165bad] { font-size: 12px; margin: 0 0 6px; color: var(--muted); font-weight: 600;\n}\n";document.head.append(s)})();
+(function(){const s=document.createElement('style');s.textContent="\n.x[data-v-ae864653] { border: 0; background: none; color: var(--muted); padding: 0 4px;\n}\n.x[data-v-ae864653]:hover { color: var(--neg);\n}\n.sources[data-v-ae864653] { gap: 4px;\n}\n.form[data-v-ae864653] { padding: 6px 8px; border-bottom: 1px solid var(--line); display: flex; flex-direction: column; gap: 4px;\n}\n.row[data-v-ae864653] { display: flex; gap: 4px;\n}\n.src .node[data-v-ae864653] { display: flex; align-items: center; gap: 4px; height: 24px; white-space: nowrap; padding-right: 8px; outline: none;\n}\n.src .node.on[data-v-ae864653] { background: var(--accent-soft);\n}\n.src .node.current[data-v-ae864653], .src .node[data-v-ae864653]:focus { box-shadow: inset 2px 0 0 var(--accent);\n}\n.twisty[data-v-ae864653] { width: 12px; color: var(--muted); font-size: 11px; cursor: pointer;\n}\n.icon[data-v-ae864653] { width: 16px; text-align: center;\n}\n.node.group .icon[data-v-ae864653] { color: var(--muted);\n}\n.node.product .icon[data-v-ae864653] { color: var(--accent);\n}\n.node.variant .icon[data-v-ae864653] { color: var(--warn);\n}\n.label[data-v-ae864653] { overflow: hidden; text-overflow: ellipsis;\n}\n.count[data-v-ae864653] { margin-left: auto; font-size: 11px;\n}\n.form-grid[data-v-ae864653] { width: 100%;\n}\n.form-grid td[data-v-ae864653] { white-space: normal; vertical-align: middle; height: 30px; padding: 2px 4px;\n}\n.form-grid td[data-v-ae864653]:first-child { padding-left: 8px; white-space: nowrap;\n}\n.form-grid select[data-v-ae864653] { margin-right: 8px; min-width: 220px;\n}\n.val[data-v-ae864653] { max-width: 420px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;\n}\n.section[data-v-ae864653] { padding: 10px 8px; border-top: 1px solid var(--line);\n}\n.section h2[data-v-ae864653] { font-size: 12px; margin: 0 0 6px; color: var(--muted); font-weight: 600;\n}\n";document.head.append(s)})();
 const m$1 = window.journali.vue;
 const Fragment = m$1.Fragment;
 const computed = m$1.computed;
@@ -18,6 +18,7 @@ const renderList = m$1.renderList;
 const resolveComponent = m$1.resolveComponent;
 const toDisplayString = m$1.toDisplayString;
 const unref = m$1.unref;
+const vModelSelect = m$1.vModelSelect;
 const vModelText = m$1.vModelText;
 const withCtx = m$1.withCtx;
 const withDirectives = m$1.withDirectives;
@@ -91,6 +92,14 @@ function jsonp(url) {
     document.head.appendChild(tag);
   });
 }
+const mitJson = (url) => url + (url.includes("?") ? "&" : "?") + "wt=json";
+const holenMitFetch = async (url, headers = {}) => {
+  const res = await fetch(mitJson(url), { headers });
+  if (!res.ok) throw new Error(`Solr: ${res.status} ${res.statusText}`);
+  return res.json();
+};
+holenMitFetch.als = (name, passwort) => !name ? holenMitFetch : (url) => holenMitFetch(url, { Authorization: "Basic " + Buffer.from(`${name}:${passwort ?? ""}`).toString("base64") });
+const holenUeber = (zugang, holen) => (url) => holen(`/api/drivers/${encodeURIComponent(zugang)}/relay?path=${encodeURIComponent(mitJson(url))}`);
 function solr(core, holen = jsonp) {
   const base = core.replace(/\/+$/, "");
   const NODES = "(type:group OR type:product OR type:productVariant)";
@@ -407,138 +416,135 @@ const _export_sfc = (sfc, props) => {
 const _hoisted_1 = ["title"];
 const _hoisted_2 = { class: "attr" };
 const _hoisted_3 = { class: "row" };
-const _hoisted_4 = ["placeholder", "title"];
-const _hoisted_5 = ["disabled"];
-const _hoisted_6 = { class: "step-band" };
-const _hoisted_7 = { class: "muted" };
-const _hoisted_8 = { class: "muted" };
-const _hoisted_9 = { class: "scroll src" };
-const _hoisted_10 = ["title", "data-id", "onClick", "onKeydown"];
-const _hoisted_11 = ["onClick"];
-const _hoisted_12 = ["checked", "disabled", "onChange", "title"];
-const _hoisted_13 = { class: "icon" };
-const _hoisted_14 = { class: "label" };
-const _hoisted_15 = ["title"];
-const _hoisted_16 = {
+const _hoisted_4 = ["title"];
+const _hoisted_5 = { value: "" };
+const _hoisted_6 = ["value"];
+const _hoisted_7 = ["value"];
+const _hoisted_8 = ["disabled"];
+const _hoisted_9 = { key: 0 };
+const _hoisted_10 = { class: "attr" };
+const _hoisted_11 = ["placeholder", "title"];
+const _hoisted_12 = { class: "step-band" };
+const _hoisted_13 = { class: "muted" };
+const _hoisted_14 = { class: "muted" };
+const _hoisted_15 = { class: "scroll src" };
+const _hoisted_16 = ["title", "data-id", "onClick", "onKeydown"];
+const _hoisted_17 = ["onClick"];
+const _hoisted_18 = ["checked", "disabled", "onChange", "title"];
+const _hoisted_19 = { class: "icon" };
+const _hoisted_20 = { class: "label" };
+const _hoisted_21 = ["title"];
+const _hoisted_22 = {
   key: 1,
   class: "muted count"
 };
-const _hoisted_17 = {
+const _hoisted_23 = {
   key: 0,
   class: "empty"
 };
-const _hoisted_18 = {
+const _hoisted_24 = {
   class: "toolbar hint muted",
   style: { "border-top": "1px solid var(--line)", "border-bottom": "0", "font-size": "12px" }
 };
-const _hoisted_19 = {
+const _hoisted_25 = {
   key: 0,
   class: "pane",
   style: { "flex": "1" }
 };
-const _hoisted_20 = { class: "toolbar" };
-const _hoisted_21 = { class: "mono muted" };
-const _hoisted_22 = ["title"];
-const _hoisted_23 = { class: "scroll" };
-const _hoisted_24 = { class: "toolbar meta muted" };
-const _hoisted_25 = { key: 0 };
-const _hoisted_26 = { key: 1 };
-const _hoisted_27 = { key: 2 };
-const _hoisted_28 = { key: 3 };
-const _hoisted_29 = { class: "grid" };
-const _hoisted_30 = ["title"];
-const _hoisted_31 = { class: "muted" };
-const _hoisted_32 = ["title"];
-const _hoisted_33 = {
+const _hoisted_26 = { class: "toolbar" };
+const _hoisted_27 = { class: "mono muted" };
+const _hoisted_28 = ["title"];
+const _hoisted_29 = { class: "scroll" };
+const _hoisted_30 = { class: "toolbar meta muted" };
+const _hoisted_31 = { key: 0 };
+const _hoisted_32 = { key: 1 };
+const _hoisted_33 = { key: 2 };
+const _hoisted_34 = { key: 3 };
+const _hoisted_35 = { class: "grid" };
+const _hoisted_36 = ["title"];
+const _hoisted_37 = { class: "muted" };
+const _hoisted_38 = ["title"];
+const _hoisted_39 = {
   key: 0,
   class: "muted"
 };
-const _hoisted_34 = ["title"];
-const _hoisted_35 = {
+const _hoisted_40 = ["title"];
+const _hoisted_41 = {
   key: 0,
   class: "muted",
   style: { "padding": "0 8px", "font-size": "12px" }
 };
-const _hoisted_36 = {
+const _hoisted_42 = {
   class: "pane",
   style: { "flex": "1" }
 };
-const _hoisted_37 = { class: "toolbar" };
-const _hoisted_38 = ["disabled"];
-const _hoisted_39 = ["disabled"];
-const _hoisted_40 = { class: "scroll" };
-const _hoisted_41 = { class: "grid form-grid" };
-const _hoisted_42 = { class: "muted" };
-const _hoisted_43 = {
+const _hoisted_43 = { class: "toolbar" };
+const _hoisted_44 = ["disabled"];
+const _hoisted_45 = ["disabled"];
+const _hoisted_46 = { class: "scroll" };
+const _hoisted_47 = { class: "grid form-grid" };
+const _hoisted_48 = { class: "muted" };
+const _hoisted_49 = {
   class: "muted",
   style: { "margin-bottom": "4px" }
 };
-const _hoisted_44 = { class: "muted" };
-const _hoisted_45 = ["placeholder"];
-const _hoisted_46 = { class: "muted" };
-const _hoisted_47 = {
+const _hoisted_50 = { class: "muted" };
+const _hoisted_51 = ["placeholder"];
+const _hoisted_52 = { class: "muted" };
+const _hoisted_53 = {
   class: "grid",
   style: { "width": "auto" }
 };
-const _hoisted_48 = { class: "num pos" };
-const _hoisted_49 = { class: "num" };
-const _hoisted_50 = { class: "num pos" };
-const _hoisted_51 = { class: "num" };
-const _hoisted_52 = {
+const _hoisted_54 = { class: "num pos" };
+const _hoisted_55 = { class: "num" };
+const _hoisted_56 = { class: "num pos" };
+const _hoisted_57 = { class: "num" };
+const _hoisted_58 = {
   key: 0,
   class: "section"
 };
-const _hoisted_53 = {
+const _hoisted_59 = {
   key: 0,
   class: "warn"
 };
-const _hoisted_54 = { class: "grid" };
-const _hoisted_55 = ["title"];
-const _hoisted_56 = { class: "mono muted" };
-const _hoisted_57 = { class: "muted" };
-const _hoisted_58 = ["title"];
-const _hoisted_59 = {
-  key: 0,
-  class: "muted"
-};
-const _hoisted_60 = { class: "num" };
-const _hoisted_61 = { class: "section" };
-const _hoisted_62 = { class: "grid" };
-const _hoisted_63 = ["title"];
-const _hoisted_64 = {
-  key: 0,
-  class: "muted"
-};
+const _hoisted_60 = { class: "grid" };
+const _hoisted_61 = ["title"];
+const _hoisted_62 = { class: "mono muted" };
+const _hoisted_63 = { class: "muted" };
+const _hoisted_64 = ["title"];
 const _hoisted_65 = {
+  key: 0,
+  class: "muted"
+};
+const _hoisted_66 = { class: "num" };
+const _hoisted_67 = { class: "section" };
+const _hoisted_68 = { class: "grid" };
+const _hoisted_69 = ["title"];
+const _hoisted_70 = {
+  key: 0,
+  class: "muted"
+};
+const _hoisted_71 = {
   key: 1,
   class: "pos"
 };
-const _hoisted_66 = { class: "section" };
-const _hoisted_67 = { class: "muted" };
-const _hoisted_68 = { class: "chips" };
-const _hoisted_69 = ["disabled"];
-const _hoisted_70 = ["disabled"];
-const _hoisted_71 = {
+const _hoisted_72 = { class: "section" };
+const _hoisted_73 = { class: "muted" };
+const _hoisted_74 = { class: "chips" };
+const _hoisted_75 = ["disabled"];
+const _hoisted_76 = ["disabled"];
+const _hoisted_77 = {
   key: 0,
   class: "muted"
 };
-const _hoisted_72 = {
+const _hoisted_78 = {
   key: 0,
   class: "warn"
 };
-const _hoisted_73 = {
+const _hoisted_79 = {
   key: 0,
   class: "grid",
   style: { "width": "auto", "margin-top": "6px" }
-};
-const _hoisted_74 = { class: "num pos" };
-const _hoisted_75 = { class: "num" };
-const _hoisted_76 = { class: "num warn" };
-const _hoisted_77 = { class: "num neg" };
-const _hoisted_78 = { class: "num muted" };
-const _hoisted_79 = {
-  key: 0,
-  class: "pos"
 };
 const _hoisted_80 = { class: "num pos" };
 const _hoisted_81 = { class: "num" };
@@ -546,55 +552,85 @@ const _hoisted_82 = { class: "num warn" };
 const _hoisted_83 = { class: "num neg" };
 const _hoisted_84 = { class: "num muted" };
 const _hoisted_85 = {
+  key: 0,
+  class: "pos"
+};
+const _hoisted_86 = { class: "num pos" };
+const _hoisted_87 = { class: "num" };
+const _hoisted_88 = { class: "num warn" };
+const _hoisted_89 = { class: "num neg" };
+const _hoisted_90 = { class: "num muted" };
+const _hoisted_91 = {
   key: 1,
   class: "muted",
   style: { "font-size": "12px" }
 };
-const _hoisted_86 = {
+const _hoisted_92 = {
   key: 2,
   style: { "margin-top": "6px" }
 };
-const _hoisted_87 = {
+const _hoisted_93 = {
   key: 0,
   class: "neg"
 };
-const _hoisted_88 = {
+const _hoisted_94 = {
   key: 1,
   class: "pos"
 };
-const _hoisted_89 = {
+const _hoisted_95 = {
   key: 2,
   class: "muted"
 };
-const _hoisted_90 = {
+const _hoisted_96 = {
   key: 1,
   class: "section"
 };
-const _hoisted_91 = {
+const _hoisted_97 = {
   key: 0,
   class: "neg"
 };
-const _hoisted_92 = {
+const _hoisted_98 = {
   key: 1,
   class: "pos"
 };
-const _hoisted_93 = { class: "mono" };
-const _hoisted_94 = {
+const _hoisted_99 = { class: "mono" };
+const _hoisted_100 = {
   key: 2,
   class: "muted"
 };
-const _hoisted_95 = { class: "section" };
+const _hoisted_101 = { class: "section" };
 const JOB = "solr_import";
 const _sfc_main = {
   __name: "View",
   setup(__props) {
     const srcW = paneWidth("import.src", 340);
     const router = useRouter();
-    const saved = JSON.parse(localStorage.getItem("journali.import.solr") || "{}");
+    const saved = (() => {
+      try {
+        return JSON.parse(localStorage.getItem("journali.import.solr") || "{}");
+      } catch {
+        return {};
+      }
+    })();
+    const zugang = ref(saved.zugang || "");
+    const zugaenge = ref([]);
     const base = ref(saved.base || "");
     const target = ref(saved.target || "");
     const skipText = ref(saved.skip || "");
-    const persist = () => localStorage.setItem("journali.import.solr", JSON.stringify({ base: base.value, target: target.value, skip: skipText.value, auto: connected.value }));
+    const persist = () => {
+      try {
+        localStorage.setItem("journali.import.solr", JSON.stringify({ zugang: zugang.value, base: base.value, target: target.value, skip: skipText.value, auto: connected.value }));
+      } catch {
+      }
+    };
+    async function ladeZugaenge() {
+      try {
+        zugaenge.value = await api.get("/api/drivers?art=solr") ?? [];
+      } catch {
+        zugaenge.value = [];
+      }
+    }
+    const quelleText = () => zugang.value ? zugaenge.value.find((z) => z.key === zugang.value)?.label ?? zugang.value : base.value;
     let client = null;
     const connected = ref(false);
     const total = ref(0);
@@ -617,7 +653,8 @@ const _sfc_main = {
     const known = computed(() => new Map(tree.rows.filter((r) => r.external?.[SYSTEM]).map((r) => [r.external[SYSTEM], r])));
     onMounted(() => {
       if (!tree.loaded) tree.load();
-      if (saved.base && saved.auto) connect();
+      ladeZugaenge();
+      if ((saved.zugang || saved.base) && saved.auto) connect();
     });
     function say(text) {
       log.value.unshift(`${(/* @__PURE__ */ new Date()).toLocaleTimeString("de-DE")} ${text}`);
@@ -640,9 +677,10 @@ const _sfc_main = {
         await tree.load();
       }
     };
-    const profileGet = () => ({ base: base.value, target: target.value, skip: skipText.value, checked: [...checked.value], root: [...checked.value].join(",") });
+    const profileGet = () => ({ zugang: zugang.value || null, base: zugang.value ? "" : base.value, target: target.value, skip: skipText.value, checked: [...checked.value], root: [...checked.value].join(",") });
     async function profileSet(p) {
       if (!p) {
+        zugang.value = "";
         base.value = "";
         target.value = "";
         skipText.value = "";
@@ -655,10 +693,11 @@ const _sfc_main = {
         persist();
         return;
       }
-      base.value = p.base ?? "";
+      zugang.value = p.zugang ?? "";
+      base.value = p.zugang ? "" : p.base ?? "";
       target.value = p.target ?? "";
       skipText.value = p.skip ?? "";
-      if (!base.value) return;
+      if (!zugang.value && !base.value) return;
       await connect();
       for (const id of p.checked ?? []) {
         await reveal(id);
@@ -678,7 +717,7 @@ const _sfc_main = {
     async function connect() {
       busy.value = "verbinde …";
       try {
-        client = solr(base.value);
+        client = zugang.value ? solr("", holenUeber(zugang.value, api.get)) : solr(base.value);
         total.value = await client.count();
         const roots = await client.roots();
         rows.value = roots.map((d) => ({ doc: d, depth: 0, parent: null, loaded: false, kids: null }));
@@ -878,7 +917,8 @@ const _sfc_main = {
           label: `Import (Solr) · ${wurzeln.length} Wurzel${wurzeln.length === 1 ? "" : "n"}`,
           service: "solr",
           params: {
-            base: base.value,
+            zugang: zugang.value || "",
+            base: zugang.value ? "" : base.value,
             roots: wurzeln.join(","),
             target: target.value || "",
             skip: skipText.value || "",
@@ -922,7 +962,7 @@ const _sfc_main = {
                   connected.value ? (openBlock(), createElementBlock("span", {
                     key: 0,
                     class: "muted",
-                    title: base.value
+                    title: quelleText()
                   }, "☰ " + toDisplayString(total.value), 9, _hoisted_1)) : createCommentVNode("v-if", true)
                 ]),
                 default: withCtx(() => [
@@ -930,32 +970,75 @@ const _sfc_main = {
                     createElementVNode(
                       "td",
                       _hoisted_2,
-                      toDisplayString(_ctx.$t("Quelle")),
+                      toDisplayString(_ctx.$t("Zugang")),
                       1
                       /* TEXT */
                     ),
                     createElementVNode("td", _hoisted_3, [
-                      withDirectives(createElementVNode("input", {
-                        "onUpdate:modelValue": _cache[0] || (_cache[0] = ($event) => base.value = $event),
-                        type: "text",
-                        placeholder: _ctx.$t("https://…/solr/<kern>"),
-                        title: _ctx.$t("URL des Solr-Kerns"),
-                        onKeydown: withKeys(connect, ["enter"])
-                      }, null, 40, _hoisted_4), [
-                        [vModelText, base.value]
+                      withDirectives(createElementVNode("select", {
+                        "onUpdate:modelValue": _cache[0] || (_cache[0] = ($event) => zugang.value = $event),
+                        class: "zugang",
+                        style: { "flex": "1" },
+                        title: _ctx.$t("Solr-Kern mit Anmeldung — eingerichtet unter ⌁ Zugänge, das Passwort bleibt beim Server")
+                      }, [
+                        createElementVNode(
+                          "option",
+                          _hoisted_5,
+                          toDisplayString(_ctx.$t("— freie Adresse, ohne Anmeldung —")),
+                          1
+                          /* TEXT */
+                        ),
+                        (openBlock(true), createElementBlock(
+                          Fragment,
+                          null,
+                          renderList(zugaenge.value, (z) => {
+                            return openBlock(), createElementBlock("option", {
+                              key: z.key,
+                              value: z.key
+                            }, toDisplayString(z.label || z.key), 9, _hoisted_6);
+                          }),
+                          128
+                          /* KEYED_FRAGMENT */
+                        )),
+                        zugang.value && !zugaenge.value.some((z) => z.key === zugang.value) ? (openBlock(), createElementBlock("option", {
+                          key: 0,
+                          value: zugang.value
+                        }, toDisplayString(zugang.value) + " ✗", 9, _hoisted_7)) : createCommentVNode("v-if", true)
+                      ], 8, _hoisted_4), [
+                        [vModelSelect, zugang.value]
                       ]),
                       createElementVNode("button", {
                         class: "primary",
                         onClick: connect,
-                        disabled: !!busy.value
-                      }, toDisplayString(_ctx.$t("Verbinden")), 9, _hoisted_5)
+                        disabled: !!busy.value || !zugang.value && !base.value
+                      }, toDisplayString(_ctx.$t("Verbinden")), 9, _hoisted_8)
                     ])
-                  ])
+                  ]),
+                  !zugang.value ? (openBlock(), createElementBlock("tr", _hoisted_9, [
+                    createElementVNode(
+                      "td",
+                      _hoisted_10,
+                      toDisplayString(_ctx.$t("Quelle")),
+                      1
+                      /* TEXT */
+                    ),
+                    createElementVNode("td", null, [
+                      withDirectives(createElementVNode("input", {
+                        "onUpdate:modelValue": _cache[1] || (_cache[1] = ($event) => base.value = $event),
+                        type: "text",
+                        placeholder: _ctx.$t("https://…/solr/<kern>"),
+                        title: _ctx.$t("URL des Solr-Kerns — mit Anmeldung nur über einen Zugang"),
+                        onKeydown: withKeys(connect, ["enter"])
+                      }, null, 40, _hoisted_11), [
+                        [vModelText, base.value]
+                      ])
+                    ])
+                  ])) : createCommentVNode("v-if", true)
                 ]),
                 _: 1
                 /* STABLE */
               }, 8, ["busy"]),
-              createElementVNode("div", _hoisted_6, [
+              createElementVNode("div", _hoisted_12, [
                 createTextVNode(
                   toDisplayString(_ctx.$t("2 · Auswahl") + " "),
                   1
@@ -963,12 +1046,12 @@ const _sfc_main = {
                 ),
                 createElementVNode(
                   "span",
-                  _hoisted_7,
+                  _hoisted_13,
                   toDisplayString(_ctx.$t("· Haken = Teilbaum, Klick zeigt den Knoten")),
                   1
                   /* TEXT */
                 ),
-                _cache[6] || (_cache[6] = createElementVNode(
+                _cache[7] || (_cache[7] = createElementVNode(
                   "span",
                   { class: "grow" },
                   null,
@@ -977,13 +1060,13 @@ const _sfc_main = {
                 )),
                 createElementVNode(
                   "span",
-                  _hoisted_8,
+                  _hoisted_14,
                   toDisplayString(_ctx.$t("{0} gewählt", [checked.value.size])),
                   1
                   /* TEXT */
                 )
               ]),
-              createElementVNode("div", _hoisted_9, [
+              createElementVNode("div", _hoisted_15, [
                 (openBlock(true), createElementBlock(
                   Fragment,
                   null,
@@ -1001,26 +1084,26 @@ const _sfc_main = {
                       createElementVNode("span", {
                         class: "twisty",
                         onClick: withModifiers(($event) => toggle(r), ["stop"])
-                      }, toDisplayString(unref(roleOf)(r.doc) === "variant" || r.kids === 0 ? "" : expanded.value.has(r.doc.id) ? "▾" : "▸"), 9, _hoisted_11),
+                      }, toDisplayString(unref(roleOf)(r.doc) === "variant" || r.kids === 0 ? "" : expanded.value.has(r.doc.id) ? "▾" : "▸"), 9, _hoisted_17),
                       createElementVNode("input", {
                         type: "checkbox",
                         checked: checked.value.has(r.doc.id) || checkedAbove(r),
                         disabled: checkedAbove(r),
-                        onClick: _cache[1] || (_cache[1] = withModifiers(() => {
+                        onClick: _cache[2] || (_cache[2] = withModifiers(() => {
                         }, ["stop"])),
                         onChange: ($event) => check(r),
                         title: _ctx.$t("Teilbaum importieren")
-                      }, null, 40, _hoisted_12),
+                      }, null, 40, _hoisted_18),
                       createElementVNode(
                         "span",
-                        _hoisted_13,
+                        _hoisted_19,
                         toDisplayString(unref(icon)(unref(roleOf)(r.doc))),
                         1
                         /* TEXT */
                       ),
                       createElementVNode(
                         "span",
-                        _hoisted_14,
+                        _hoisted_20,
                         toDisplayString(r.doc.name || r.doc.remote_id || r.doc.master_id),
                         1
                         /* TEXT */
@@ -1029,62 +1112,62 @@ const _sfc_main = {
                         key: 0,
                         class: "pos",
                         title: _ctx.$t("schon in journali")
-                      }, "✓", 8, _hoisted_15)) : createCommentVNode("v-if", true),
+                      }, "✓", 8, _hoisted_21)) : createCommentVNode("v-if", true),
                       r.kids ? (openBlock(), createElementBlock(
                         "span",
-                        _hoisted_16,
+                        _hoisted_22,
                         toDisplayString(r.kids),
                         1
                         /* TEXT */
                       )) : createCommentVNode("v-if", true)
-                    ], 46, _hoisted_10);
+                    ], 46, _hoisted_16);
                   }),
                   128
                   /* KEYED_FRAGMENT */
                 )),
                 !connected.value ? (openBlock(), createElementBlock(
                   "div",
-                  _hoisted_17,
+                  _hoisted_23,
                   toDisplayString(_ctx.$t("Verbinden — Solr liest sich ohne Anmeldung.")),
                   1
                   /* TEXT */
                 )) : createCommentVNode("v-if", true)
               ]),
-              createElementVNode("div", _hoisted_18, [
-                _cache[7] || (_cache[7] = createElementVNode(
+              createElementVNode("div", _hoisted_24, [
+                _cache[8] || (_cache[8] = createElementVNode(
                   "kbd",
                   null,
                   "↑",
                   -1
                   /* CACHED */
                 )),
-                _cache[8] || (_cache[8] = createElementVNode(
+                _cache[9] || (_cache[9] = createElementVNode(
                   "kbd",
                   null,
                   "↓",
                   -1
                   /* CACHED */
                 )),
-                _cache[9] || (_cache[9] = createTextVNode(
+                _cache[10] || (_cache[10] = createTextVNode(
                   " · ",
-                  -1
-                  /* CACHED */
-                )),
-                _cache[10] || (_cache[10] = createElementVNode(
-                  "kbd",
-                  null,
-                  "→",
                   -1
                   /* CACHED */
                 )),
                 _cache[11] || (_cache[11] = createElementVNode(
                   "kbd",
                   null,
+                  "→",
+                  -1
+                  /* CACHED */
+                )),
+                _cache[12] || (_cache[12] = createElementVNode(
+                  "kbd",
+                  null,
                   "←",
                   -1
                   /* CACHED */
                 )),
-                _cache[12] || (_cache[12] = createTextVNode(
+                _cache[13] || (_cache[13] = createTextVNode(
                   " · ",
                   -1
                   /* CACHED */
@@ -1108,13 +1191,13 @@ const _sfc_main = {
           ),
           createVNode(unref(Splitter), {
             modelValue: unref(srcW),
-            "onUpdate:modelValue": _cache[2] || (_cache[2] = ($event) => isRef(srcW) ? srcW.value = $event : null),
+            "onUpdate:modelValue": _cache[3] || (_cache[3] = ($event) => isRef(srcW) ? srcW.value = $event : null),
             min: 240,
             max: 800
           }, null, 8, ["modelValue"]),
           createCommentVNode(" Der angeklickte Knoten: nur dann, sonst gehört der Platz dem Plan "),
-          current.value ? (openBlock(), createElementBlock("div", _hoisted_19, [
-            createElementVNode("div", _hoisted_20, [
+          current.value ? (openBlock(), createElementBlock("div", _hoisted_25, [
+            createElementVNode("div", _hoisted_26, [
               createElementVNode(
                 "h1",
                 null,
@@ -1124,12 +1207,12 @@ const _sfc_main = {
               ),
               createElementVNode(
                 "span",
-                _hoisted_21,
+                _hoisted_27,
                 toDisplayString(current.value.master_id),
                 1
                 /* TEXT */
               ),
-              _cache[13] || (_cache[13] = createElementVNode(
+              _cache[14] || (_cache[14] = createElementVNode(
                 "span",
                 { class: "grow" },
                 null,
@@ -1138,36 +1221,36 @@ const _sfc_main = {
               )),
               createElementVNode("button", {
                 class: "x",
-                onClick: _cache[3] || (_cache[3] = ($event) => current.value = null),
+                onClick: _cache[4] || (_cache[4] = ($event) => current.value = null),
                 title: _ctx.$t("zuklappen")
-              }, "×", 8, _hoisted_22)
+              }, "×", 8, _hoisted_28)
             ]),
-            createElementVNode("div", _hoisted_23, [
+            createElementVNode("div", _hoisted_29, [
               createCommentVNode(" kein nacktes <template> hier: Vue 3 rendert es als echtes <template>-Element, dessen Inhalt unsichtbar ist "),
-              createElementVNode("div", _hoisted_24, [
+              createElementVNode("div", _hoisted_30, [
                 current.value.product_number ? (openBlock(), createElementBlock(
                   "span",
-                  _hoisted_25,
+                  _hoisted_31,
                   toDisplayString(_ctx.$t("SKU {0}", [current.value.product_number])),
                   1
                   /* TEXT */
                 )) : createCommentVNode("v-if", true),
                 current.value.main_level != null ? (openBlock(), createElementBlock(
                   "span",
-                  _hoisted_26,
+                  _hoisted_32,
                   toDisplayString(_ctx.$t("· Ebene {0}", [current.value.main_level])),
                   1
                   /* TEXT */
                 )) : createCommentVNode("v-if", true),
                 current.value.info__changedOn__dateTime ? (openBlock(), createElementBlock(
                   "span",
-                  _hoisted_27,
+                  _hoisted_33,
                   toDisplayString(_ctx.$t("· geändert {0}", [current.value.info__changedOn__dateTime.slice(0, 10)])),
                   1
                   /* TEXT */
                 )) : createCommentVNode("v-if", true),
-                known.value.has(current.value.master_id) ? (openBlock(), createElementBlock("span", _hoisted_28, [
-                  _cache[14] || (_cache[14] = createTextVNode(
+                known.value.has(current.value.master_id) ? (openBlock(), createElementBlock("span", _hoisted_34, [
+                  _cache[15] || (_cache[15] = createTextVNode(
                     "· ",
                     -1
                     /* CACHED */
@@ -1188,7 +1271,7 @@ const _sfc_main = {
                   }, 8, ["to"])
                 ])) : createCommentVNode("v-if", true)
               ]),
-              createElementVNode("table", _hoisted_29, [
+              createElementVNode("table", _hoisted_35, [
                 createElementVNode("thead", null, [
                   createElementVNode("tr", null, [
                     createElementVNode(
@@ -1232,10 +1315,10 @@ const _sfc_main = {
                         createElementVNode("td", {
                           class: "mono",
                           title: v.section ? `${v.label ?? ""} · ${v.section}` : ""
-                        }, toDisplayString(v.key), 9, _hoisted_30),
+                        }, toDisplayString(v.key), 9, _hoisted_36),
                         createElementVNode(
                           "td",
-                          _hoisted_31,
+                          _hoisted_37,
                           toDisplayString(v.type),
                           1
                           /* TEXT */
@@ -1249,12 +1332,12 @@ const _sfc_main = {
                             1
                             /* TEXT */
                           ),
-                          !attrs.value.has(v.attr) ? (openBlock(), createElementBlock("span", _hoisted_33, " +")) : createCommentVNode("v-if", true)
-                        ], 10, _hoisted_32),
+                          !attrs.value.has(v.attr) ? (openBlock(), createElementBlock("span", _hoisted_39, " +")) : createCommentVNode("v-if", true)
+                        ], 10, _hoisted_38),
                         createElementVNode("td", {
                           class: "val",
                           title: v.value
-                        }, toDisplayString(v.value.replace(/<[^>]+>/g, " ").slice(0, 160)), 9, _hoisted_34)
+                        }, toDisplayString(v.value.replace(/<[^>]+>/g, " ").slice(0, 160)), 9, _hoisted_40)
                       ]);
                     }),
                     128
@@ -1264,15 +1347,15 @@ const _sfc_main = {
               ]),
               currentSkipped.value.length ? (openBlock(), createElementBlock(
                 "p",
-                _hoisted_35,
+                _hoisted_41,
                 toDisplayString(_ctx.$t("übergangen: {0}", [currentSkipped.value.join(", ")])),
                 1
                 /* TEXT */
               )) : createCommentVNode("v-if", true)
             ])
           ])) : createCommentVNode("v-if", true),
-          createElementVNode("div", _hoisted_36, [
-            createElementVNode("div", _hoisted_37, [
+          createElementVNode("div", _hoisted_42, [
+            createElementVNode("div", _hoisted_43, [
               createElementVNode(
                 "h1",
                 null,
@@ -1280,7 +1363,7 @@ const _sfc_main = {
                 1
                 /* TEXT */
               ),
-              _cache[15] || (_cache[15] = createElementVNode(
+              _cache[16] || (_cache[16] = createElementVNode(
                 "span",
                 { class: "grow" },
                 null,
@@ -1291,16 +1374,16 @@ const _sfc_main = {
                 class: "primary",
                 onClick: analyse,
                 disabled: !connected.value || !checked.value.size || !!busy.value
-              }, toDisplayString(_ctx.$t("Analysieren")), 9, _hoisted_38),
+              }, toDisplayString(_ctx.$t("Analysieren")), 9, _hoisted_44),
               createElementVNode("button", {
                 class: "primary",
                 onClick: run,
                 disabled: !plan.value || !!busy.value
-              }, toDisplayString(_ctx.$t("Schreiben")), 9, _hoisted_39)
+              }, toDisplayString(_ctx.$t("Schreiben")), 9, _hoisted_45)
             ]),
-            createElementVNode("div", _hoisted_40, [
-              createElementVNode("table", _hoisted_41, [
-                _cache[16] || (_cache[16] = createElementVNode(
+            createElementVNode("div", _hoisted_46, [
+              createElementVNode("table", _hoisted_47, [
+                _cache[17] || (_cache[17] = createElementVNode(
                   "colgroup",
                   null,
                   [
@@ -1314,7 +1397,7 @@ const _sfc_main = {
                   createElementVNode("tr", null, [
                     createElementVNode(
                       "td",
-                      _hoisted_42,
+                      _hoisted_48,
                       toDisplayString(_ctx.$t("Ziel ▣")),
                       1
                       /* TEXT */
@@ -1322,14 +1405,14 @@ const _sfc_main = {
                     createElementVNode("td", null, [
                       createElementVNode(
                         "div",
-                        _hoisted_43,
+                        _hoisted_49,
                         toDisplayString(_ctx.$t("{0} · angehakte Wurzeln kommen hier unter; tiefere unter ihre importierten Eltern", [target.value ? "▣ " + (unref(tree).byId.get(target.value)?.label ?? target.value) : _ctx.$t("⌂ Wurzel")])),
                         1
                         /* TEXT */
                       ),
                       createVNode(unref(TreePicker), {
                         modelValue: target.value,
-                        "onUpdate:modelValue": _cache[4] || (_cache[4] = ($event) => target.value = $event),
+                        "onUpdate:modelValue": _cache[5] || (_cache[5] = ($event) => target.value = $event),
                         roles: ["group"],
                         "allow-root": "",
                         height: 180,
@@ -1340,24 +1423,24 @@ const _sfc_main = {
                   createElementVNode("tr", null, [
                     createElementVNode(
                       "td",
-                      _hoisted_44,
+                      _hoisted_50,
                       toDisplayString(_ctx.$t("Übergehen")),
                       1
                       /* TEXT */
                     ),
                     createElementVNode("td", null, [
                       withDirectives(createElementVNode("input", {
-                        "onUpdate:modelValue": _cache[5] || (_cache[5] = ($event) => skipText.value = $event),
+                        "onUpdate:modelValue": _cache[6] || (_cache[6] = ($event) => skipText.value = $event),
                         type: "text",
                         placeholder: _ctx.$t("weitere Schlüssel, Muster mit *"),
                         style: { "width": "260px" },
                         onChange: persist
-                      }, null, 40, _hoisted_45), [
+                      }, null, 40, _hoisted_51), [
                         [vModelText, skipText.value]
                       ]),
                       createElementVNode(
                         "span",
-                        _hoisted_46,
+                        _hoisted_52,
                         toDisplayString(_ctx.$t("immer: {0}, Relationen, Medien", [unref(DEFAULT_SKIP).join(", ")])),
                         1
                         /* TEXT */
@@ -1370,10 +1453,10 @@ const _sfc_main = {
                 Fragment,
                 { key: 0 },
                 [
-                  createElementVNode("table", _hoisted_47, [
+                  createElementVNode("table", _hoisted_53, [
                     createElementVNode("thead", null, [
                       createElementVNode("tr", null, [
-                        _cache[17] || (_cache[17] = createElementVNode(
+                        _cache[18] || (_cache[18] = createElementVNode(
                           "th",
                           null,
                           null,
@@ -1382,14 +1465,14 @@ const _sfc_main = {
                         )),
                         createElementVNode(
                           "th",
-                          _hoisted_48,
+                          _hoisted_54,
                           toDisplayString(_ctx.$t("neu")),
                           1
                           /* TEXT */
                         ),
                         createElementVNode(
                           "th",
-                          _hoisted_49,
+                          _hoisted_55,
                           toDisplayString(_ctx.$t("vorhanden")),
                           1
                           /* TEXT */
@@ -1411,14 +1494,14 @@ const _sfc_main = {
                             ),
                             createElementVNode(
                               "td",
-                              _hoisted_50,
+                              _hoisted_56,
                               toDisplayString(counts.value[r][0]),
                               1
                               /* TEXT */
                             ),
                             createElementVNode(
                               "td",
-                              _hoisted_51,
+                              _hoisted_57,
                               toDisplayString(counts.value[r][1]),
                               1
                               /* TEXT */
@@ -1430,7 +1513,7 @@ const _sfc_main = {
                       ))
                     ])
                   ]),
-                  plan.value.needs.newAttrs.size || plan.value.needs.newGroups.size ? (openBlock(), createElementBlock("div", _hoisted_52, [
+                  plan.value.needs.newAttrs.size || plan.value.needs.newGroups.size ? (openBlock(), createElementBlock("div", _hoisted_58, [
                     createElementVNode("h2", null, [
                       createTextVNode(
                         toDisplayString(_ctx.$t("Neu im Modell: ▤ {0} · ⊞ {1}", [plan.value.needs.newGroups.size, plan.value.needs.newAttrs.size])),
@@ -1439,13 +1522,13 @@ const _sfc_main = {
                       ),
                       plan.value.needs.raise.size ? (openBlock(), createElementBlock(
                         "span",
-                        _hoisted_53,
+                        _hoisted_59,
                         toDisplayString(" " + _ctx.$t("· {0} Gruppen „aktiv ab“ anheben: {1}", [plan.value.needs.raise.size, [...plan.value.needs.raise].map(([k, r]) => `${k} → ${r ?? "überall"}`).join(", ")])),
                         1
                         /* TEXT */
                       )) : createCommentVNode("v-if", true)
                     ]),
-                    createElementVNode("table", _hoisted_54, [
+                    createElementVNode("table", _hoisted_60, [
                       createElementVNode("thead", null, [
                         createElementVNode("tr", null, [
                           createElementVNode(
@@ -1469,7 +1552,7 @@ const _sfc_main = {
                             1
                             /* TEXT */
                           ),
-                          _cache[18] || (_cache[18] = createElementVNode(
+                          _cache[19] || (_cache[19] = createElementVNode(
                             "th",
                             { class: "num" },
                             "#",
@@ -1492,15 +1575,15 @@ const _sfc_main = {
                                 ),
                                 createElementVNode(
                                   "span",
-                                  _hoisted_56,
+                                  _hoisted_62,
                                   toDisplayString(k),
                                   1
                                   /* TEXT */
                                 )
-                              ], 8, _hoisted_55),
+                              ], 8, _hoisted_61),
                               createElementVNode(
                                 "td",
-                                _hoisted_57,
+                                _hoisted_63,
                                 toDisplayString(d.type) + toDisplayString(d.multiple ? " ≣" : "") + toDisplayString(d.axes ? " 🗣" : ""),
                                 1
                                 /* TEXT */
@@ -1516,15 +1599,15 @@ const _sfc_main = {
                                 ),
                                 plan.value.needs.newGroups.get(d.group)?.activeFrom ? (openBlock(), createElementBlock(
                                   "span",
-                                  _hoisted_59,
+                                  _hoisted_65,
                                   toDisplayString(" " + _ctx.$t("· ab {0}", [unref(icon)(plan.value.needs.newGroups.get(d.group).activeFrom)])),
                                   1
                                   /* TEXT */
                                 )) : createCommentVNode("v-if", true)
-                              ], 10, _hoisted_58),
+                              ], 10, _hoisted_64),
                               createElementVNode(
                                 "td",
-                                _hoisted_60,
+                                _hoisted_66,
                                 toDisplayString(plan.value.needs.counts.get(k)),
                                 1
                                 /* TEXT */
@@ -1537,7 +1620,7 @@ const _sfc_main = {
                       ])
                     ])
                   ])) : createCommentVNode("v-if", true),
-                  createElementVNode("div", _hoisted_61, [
+                  createElementVNode("div", _hoisted_67, [
                     createElementVNode(
                       "h2",
                       null,
@@ -1545,7 +1628,7 @@ const _sfc_main = {
                       1
                       /* TEXT */
                     ),
-                    createElementVNode("table", _hoisted_62, [
+                    createElementVNode("table", _hoisted_68, [
                       createElementVNode("tbody", null, [
                         (openBlock(true), createElementBlock(
                           Fragment,
@@ -1564,12 +1647,12 @@ const _sfc_main = {
                                 ),
                                 it.doc.pseudo ? (openBlock(), createElementBlock(
                                   "span",
-                                  _hoisted_64,
+                                  _hoisted_70,
                                   toDisplayString(" " + _ctx.$t("· Sammelprodukt")),
                                   1
                                   /* TEXT */
                                 )) : createCommentVNode("v-if", true)
-                              ], 8, _hoisted_63),
+                              ], 8, _hoisted_69),
                               createElementVNode("td", null, [
                                 it.existing ? (openBlock(), createBlock(_component_router_link, {
                                   key: 0,
@@ -1587,7 +1670,7 @@ const _sfc_main = {
                                   /* STABLE */
                                 }, 8, ["to"])) : (openBlock(), createElementBlock(
                                   "span",
-                                  _hoisted_65,
+                                  _hoisted_71,
                                   toDisplayString(_ctx.$t("neu")),
                                   1
                                   /* TEXT */
@@ -1605,7 +1688,7 @@ const _sfc_main = {
                 64
                 /* STABLE_FRAGMENT */
               )) : createCommentVNode("v-if", true),
-              createElementVNode("div", _hoisted_66, [
+              createElementVNode("div", _hoisted_72, [
                 createElementVNode("h2", null, [
                   createTextVNode(
                     toDisplayString(_ctx.$t("⇄ Relationen") + " "),
@@ -1614,24 +1697,24 @@ const _sfc_main = {
                   ),
                   createElementVNode(
                     "span",
-                    _hoisted_67,
+                    _hoisted_73,
                     toDisplayString(_ctx.$t("· zweiter Lauf, wenn die Knoten drin sind (beide Enden müssen importiert sein)")),
                     1
                     /* TEXT */
                   )
                 ]),
-                createElementVNode("div", _hoisted_68, [
+                createElementVNode("div", _hoisted_74, [
                   createElementVNode("button", {
                     class: "primary",
                     onClick: analyseRelations,
                     disabled: !connected.value || !checked.value.size || !!busy.value
-                  }, toDisplayString(_ctx.$t("⇄ analysieren")), 9, _hoisted_69),
+                  }, toDisplayString(_ctx.$t("⇄ analysieren")), 9, _hoisted_75),
                   createElementVNode("button", {
                     class: "primary",
                     onClick: runRelations,
                     disabled: !relPlan.value || !!busy.value
-                  }, toDisplayString(_ctx.$t("⇄ schreiben")), 9, _hoisted_70),
-                  relPlan.value ? (openBlock(), createElementBlock("span", _hoisted_71, [
+                  }, toDisplayString(_ctx.$t("⇄ schreiben")), 9, _hoisted_76),
+                  relPlan.value ? (openBlock(), createElementBlock("span", _hoisted_77, [
                     createTextVNode(
                       toDisplayString(_ctx.$t("{0} Knoten mit Kanten · {1} Befehle", [relPlan.value.docs, relPlan.value.cmds])),
                       1
@@ -1639,14 +1722,14 @@ const _sfc_main = {
                     ),
                     relPlan.value.needs.missingFrom ? (openBlock(), createElementBlock(
                       "span",
-                      _hoisted_72,
+                      _hoisted_78,
                       toDisplayString(" " + _ctx.$t("· {0} Quellen nicht importiert", [relPlan.value.needs.missingFrom])),
                       1
                       /* TEXT */
                     )) : createCommentVNode("v-if", true)
                   ])) : createCommentVNode("v-if", true)
                 ]),
-                relPlan.value ? (openBlock(), createElementBlock("table", _hoisted_73, [
+                relPlan.value ? (openBlock(), createElementBlock("table", _hoisted_79, [
                   createElementVNode("thead", null, [
                     createElementVNode("tr", null, [
                       createElementVNode(
@@ -1658,35 +1741,35 @@ const _sfc_main = {
                       ),
                       createElementVNode(
                         "th",
-                        _hoisted_74,
+                        _hoisted_80,
                         toDisplayString(_ctx.$t("neu")),
                         1
                         /* TEXT */
                       ),
                       createElementVNode(
                         "th",
-                        _hoisted_75,
+                        _hoisted_81,
                         toDisplayString(_ctx.$t("vorhanden")),
                         1
                         /* TEXT */
                       ),
                       createElementVNode(
                         "th",
-                        _hoisted_76,
+                        _hoisted_82,
                         toDisplayString(_ctx.$t("geändert")),
                         1
                         /* TEXT */
                       ),
                       createElementVNode(
                         "th",
-                        _hoisted_77,
+                        _hoisted_83,
                         toDisplayString(_ctx.$t("Ziel fehlt")),
                         1
                         /* TEXT */
                       ),
                       createElementVNode(
                         "th",
-                        _hoisted_78,
+                        _hoisted_84,
                         toDisplayString(_ctx.$t("auf sich selbst")),
                         1
                         /* TEXT */
@@ -1705,39 +1788,39 @@ const _sfc_main = {
                               1
                               /* TEXT */
                             ),
-                            relPlan.value.needs.newTypes.has(t2) ? (openBlock(), createElementBlock("span", _hoisted_79, " +")) : createCommentVNode("v-if", true)
+                            relPlan.value.needs.newTypes.has(t2) ? (openBlock(), createElementBlock("span", _hoisted_85, " +")) : createCommentVNode("v-if", true)
                           ]),
                           createElementVNode(
                             "td",
-                            _hoisted_80,
+                            _hoisted_86,
                             toDisplayString(s.neu),
                             1
                             /* TEXT */
                           ),
                           createElementVNode(
                             "td",
-                            _hoisted_81,
+                            _hoisted_87,
                             toDisplayString(s.gleich),
                             1
                             /* TEXT */
                           ),
                           createElementVNode(
                             "td",
-                            _hoisted_82,
+                            _hoisted_88,
                             toDisplayString(s.geaendert),
                             1
                             /* TEXT */
                           ),
                           createElementVNode(
                             "td",
-                            _hoisted_83,
+                            _hoisted_89,
                             toDisplayString(s.zielFehlt),
                             1
                             /* TEXT */
                           ),
                           createElementVNode(
                             "td",
-                            _hoisted_84,
+                            _hoisted_90,
                             toDisplayString(s.selbst),
                             1
                             /* TEXT */
@@ -1751,34 +1834,34 @@ const _sfc_main = {
                 ])) : createCommentVNode("v-if", true),
                 relPlan.value?.needs.newAttrs.size ? (openBlock(), createElementBlock(
                   "p",
-                  _hoisted_85,
+                  _hoisted_91,
                   toDisplayString(_ctx.$t("Neu in ▤ {0}: {1}", [unref(REL_GROUP), [...relPlan.value.needs.newAttrs.keys()].join(", ")])),
                   1
                   /* TEXT */
                 )) : createCommentVNode("v-if", true),
-                relResult.value ? (openBlock(), createElementBlock("div", _hoisted_86, [
+                relResult.value ? (openBlock(), createElementBlock("div", _hoisted_92, [
                   relResult.value.error ? (openBlock(), createElementBlock(
                     "div",
-                    _hoisted_87,
+                    _hoisted_93,
                     toDisplayString(_ctx.$t("{0} — {1} Einträge davor geschrieben.", [relResult.value.error, relResult.value.written])),
                     1
                     /* TEXT */
                   )) : relResult.value.written ? (openBlock(), createElementBlock(
                     "div",
-                    _hoisted_88,
+                    _hoisted_94,
                     toDisplayString(_ctx.$t("{0} Einträge in {1} Stapeln", [relResult.value.written, relResult.value.batches])),
                     1
                     /* TEXT */
                   )) : (openBlock(), createElementBlock(
                     "div",
-                    _hoisted_89,
+                    _hoisted_95,
                     toDisplayString(_ctx.$t("Nichts zu schreiben.")),
                     1
                     /* TEXT */
                   ))
                 ])) : createCommentVNode("v-if", true)
               ]),
-              result.value ? (openBlock(), createElementBlock("div", _hoisted_90, [
+              result.value ? (openBlock(), createElementBlock("div", _hoisted_96, [
                 createElementVNode(
                   "h2",
                   null,
@@ -1788,11 +1871,11 @@ const _sfc_main = {
                 ),
                 result.value.error ? (openBlock(), createElementBlock(
                   "div",
-                  _hoisted_91,
+                  _hoisted_97,
                   toDisplayString(result.value.error),
                   1
                   /* TEXT */
-                )) : result.value.job ? (openBlock(), createElementBlock("div", _hoisted_92, [
+                )) : result.value.job ? (openBlock(), createElementBlock("div", _hoisted_98, [
                   createTextVNode(
                     toDisplayString(_ctx.$t("an den Tasker übergeben · Lauf") + " "),
                     1
@@ -1800,12 +1883,12 @@ const _sfc_main = {
                   ),
                   createElementVNode(
                     "span",
-                    _hoisted_93,
+                    _hoisted_99,
                     toDisplayString(result.value.run),
                     1
                     /* TEXT */
                   ),
-                  _cache[19] || (_cache[19] = createTextVNode(
+                  _cache[20] || (_cache[20] = createTextVNode(
                     " → ",
                     -1
                     /* CACHED */
@@ -1823,13 +1906,13 @@ const _sfc_main = {
                   })
                 ])) : (openBlock(), createElementBlock(
                   "div",
-                  _hoisted_94,
+                  _hoisted_100,
                   toDisplayString(_ctx.$t("Nichts zu schreiben.")),
                   1
                   /* TEXT */
                 ))
               ])) : createCommentVNode("v-if", true),
-              createElementVNode("div", _hoisted_95, [
+              createElementVNode("div", _hoisted_101, [
                 createElementVNode(
                   "h2",
                   null,
@@ -1866,7 +1949,7 @@ const _sfc_main = {
     };
   }
 };
-const View = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-34165bad"]]);
+const View = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-ae864653"]]);
 const entry = {
   views: [{ path: "import", topic: "import", label: t("Solr"), icon: "⇩", component: View }]
 };

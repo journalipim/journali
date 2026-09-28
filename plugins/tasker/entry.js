@@ -384,78 +384,6 @@ async function mount(root, ctx) {
     detail.style.display = 'flex'; detail.style.flexDirection = 'column'
   }
 
-  // ---- Generischer Profil-Editor:
-  // für Prozesse ohne eigene Ansicht ("profile": "generic" im Manifest). Formular aus den Parametern — ohne profile, Dateien/Verzeichnisse
-  // (Sache des Taskers) und Geheimnisse (am Profil beim Server, 🔒). Gespeichert als profile:<name> in den Daten des Plugins (Journal).
-  function profileEditor(p, defs, current, onDone) {
-    const fields = defs.filter(d => !(d.type === 'profile' || d.key === 'profile' || d.type === 'path' || d.type === 'dir'))
-    const box = el('div', { style: 'position:fixed;inset:0;background:rgba(0,0,0,.45);display:grid;place-items:center;z-index:50' })
-    const dlg = el('div', { style: 'width:560px;max-height:90vh;overflow:auto;background:var(--pane);border:1px solid var(--line);border-radius:8px;padding:14px 16px;font-size:13px' })
-    const sel = el('select', { style: 'flex:1' }, el('option', { value: '' }, t('— neues Profil —')))
-    const nameIn = el('input', { type: 'text', placeholder: t('Name des Profils'), style: 'flex:1' })
-    const form = el('div'); const inputs = {}; let secretKeys = []
-    const status = el('span', { class: 'muted', style: 'font-size:12px' })
-    const close = () => box.remove()
-    const draw = (data = {}) => {
-      form.innerHTML = ''
-      for (const d of fields) {
-        const cur = data[d.key] ?? d.default ?? ''
-        let inp
-        if (d.secret) {
-          inp = el('input', { type: 'password', placeholder: secretKeys.includes(d.key) ? t('•••••• (hinterlegt — leer lassen = behalten)') : t('geheim — bleibt beim Server, am Profil'), style: 'width:100%' })
-          form.append(el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, d.label + ' 🔒'), inp)
-        } else if (d.type === 'node') {
-          inp = { value: cur }
-          const shown = el('span', { class: 'muted' }, cur ? tree.byId.get(cur)?.label ?? cur : '(leer)')
-          const tb = el('div'); ctx.treePicker(tb, { value: cur || null, roles: ['group', 'product'], height: 160, allowRoot: true, onPick: r => { inp.value = r?.id ?? ''; shown.textContent = r ? r.label : '(leer)' } })
-          form.append(el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, d.label, ' · ', shown), tb)
-        } else if (d.type === 'pub') {
-          inp = el('select', { style: 'width:100%' }, el('option', { value: '' }, '(keiner)'), ...(tree.pubTrees ?? []).map(r => el('option', { value: r.id }, `${r.label} · ${r.channel}${r.market ? '/' + r.market : ''}`))); inp.value = cur
-          form.append(el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, d.label), inp)
-        } else if (d.type === 'boolean') {
-          inp = el('input', { type: 'checkbox' }); inp.checked = String(cur) === 'true'
-          Object.defineProperty(inp, 'value', { get() { return this.checked ? 'true' : 'false' }, configurable: true })
-          form.append(el('label', { style: 'display:flex;gap:6px;align-items:center;margin-top:8px' }, inp, d.label))
-        } else {
-          inp = el('input', { type: d.type === 'number' ? 'number' : 'text', value: String(cur), style: 'width:100%' })
-          form.append(el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, d.label), inp)
-        }
-        inputs[d.key] = inp
-      }
-    }
-    const loadNames = async keep => { const names = (await api.get(`/api/plugins/${p.key}/data?prefix=profile:`).catch(() => [])).map(n => n.slice(8)); sel.innerHTML = ''; sel.append(el('option', { value: '' }, t('— neues Profil —')), ...names.map(n => el('option', { value: n }, n))); sel.value = keep && names.includes(keep) ? keep : '' }
-    const loadOne = async n => {
-      nameIn.value = n
-      if (!n) { secretKeys = []; draw({}); return }
-      const data = (await api.get(`/api/plugins/${p.key}/data/${encodeURIComponent('profile:' + n)}`).catch(() => null)) ?? {}
-      secretKeys = (await api.get(`/api/plugins/${p.key}/secrets/${encodeURIComponent(n)}`).catch(() => ({ keys: [] }))).keys
-      draw(data)
-    }
-    sel.addEventListener('change', () => loadOne(sel.value))
-    const save = async () => {
-      const n = nameIn.value.trim(); if (!n || n.includes(':')) { store.toast(t('Name fehlt (ohne Doppelpunkt)')); return }
-      const data = {}, secrets = {}
-      for (const d of fields) { const v = inputs[d.key]?.value ?? ''; if (d.secret) { if (v) secrets[d.key] = v } else if (v !== '') data[d.key] = d.type === 'boolean' ? v === 'true' : v }
-      try {
-        await api.post(`/api/plugins/${p.key}/data/${encodeURIComponent('profile:' + n)}`, data, 'PUT')
-        if (Object.keys(secrets).length) await api.post(`/api/plugins/${p.key}/secrets/${encodeURIComponent(n)}`, { values: secrets }, 'PUT')
-        store.toast(`Profil „${n}“ gespeichert`, 'ok'); close(); onDone?.(n)
-      } catch (e) { store.toast(e.message) }
-    }
-    const del = async () => {
-      const n = sel.value; if (!n) return
-      if (!await dialog.confirm({ title: t('Profil „{0}“ löschen?', [n]), text: t('Jobs, die es nennen, laufen dann ohne diese Werte.'), ok: t('🗑 Löschen'), danger: true })) return
-      try { await api.del(`/api/plugins/${p.key}/data/${encodeURIComponent('profile:' + n)}`); await api.del(`/api/plugins/${p.key}/secrets/${encodeURIComponent(n)}`).catch(() => {}); await loadNames(''); await loadOne(''); onDone?.('') } catch (e) { store.toast(e.message) }
-    }
-    dlg.append(el('div', { style: 'font-weight:600;font-size:14px' }, t('✎ Profile · {0}', [(typeof p.label === 'string' ? p.label : L(p.label)) || p.key])),
-      el('div', { style: 'display:flex;gap:6px' }, sel, nameIn, el('button', { type: 'button', class: 'x', title: t('Profil löschen'), onclick: del }, '🗑')),
-      form,
-      el('div', { style: 'display:flex;justify-content:flex-end;gap:8px;margin-top:14px;align-items:center' }, status, el('span', { class: 'grow' }), el('button', { type: 'button', onclick: close }, t('Abbrechen')), el('button', { type: 'button', class: 'primary', onclick: save }, t('💾 Speichern'))))
-    box.append(dlg); box.addEventListener('mousedown', e => { if (e.target === box) close() })
-    document.body.append(box)
-    loadNames(current).then(() => loadOne(current || ''))
-  }
-
   // ---- Anlegen / Bearbeiten: Plugin, Parameter aus dem Manifest, Zeitplan, Zeitgrenze
   async function openEdit(j) {
     const box = el('div', { class: 'overlay', style: 'position:fixed;inset:0;background:rgba(0,0,0,.45);display:grid;place-items:center;z-index:40' })
@@ -578,9 +506,9 @@ async function mount(root, ctx) {
           }).catch(() => {})
           inp.addEventListener('change', () => { profilWert = inp.value; noteSecret(inp.value); drawParams(); check(); zeige(schritt) })
           secretNote = el('div', { class: 'muted', style: 'font-size:12px;margin-top:2px' })
-          // Prozess ohne eigene Ansicht (export, backup, rag, Datenblatt-Job, JSON-Export): Profile hier anlegen — ein Formular aus den Parametern des Manifests
-          const editBtn = p?.profile === 'generic' ? el('button', { type: 'button', class: 'x', title: t('Profile dieses Prozesses anlegen und ändern'), onclick: () => profileEditor(p, defs, inp.value, n => { drawParams(); const sel = paramInputs.profile; if (sel && n) { if (![...sel.options].some(o => o.value === n)) sel.append(el('option', { value: n }, n)); sel.value = n; noteSecret(n) } }) }, '✎') : ''
-          paramsBox.append(el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, d.label), el('div', { style: 'display:flex;gap:4px' }, inp, editBtn), secretNote)
+          // Profile legt die Ansicht des Plugins an, nie dieser Dialog — der generische Profil-Editor ist weg, seit das
+          // letzte Plugin mit Profil (rag) eine eigene Ansicht hat (28.09.2026)
+          paramsBox.append(el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, d.label), inp, secretNote)
           if (cur) noteSecret(cur)
         } else if (d.type === 'boolean') {
           inp = el('input', { type: 'checkbox' }); inp.checked = String(cur) === 'true'
@@ -626,7 +554,7 @@ async function mount(root, ctx) {
       const profileDef = defs.find(d => d.type === 'profile' || d.key === 'profile')
       const profile = paramInputs.profile?.value ?? ''
       // „(leer = Werte unten)“ im Feldnamen heisst: ohne Profil geht es auch, dann stehen die Werte im Job
-      if (!profile && profilPflicht(profileDef)) fehlt(t('Profil fehlt — in der Ansicht des Plugins speichern') + (p?.profile === 'generic' ? ' oder ✎' : ''), 1)
+      if (!profile && profilPflicht(profileDef)) fehlt(t('Profil fehlt — in der Ansicht des Plugins speichern'), 1)
       for (const d of defs) {
         const v = paramInputs[d.key]?.value ?? ''
         // mit Fächern kommt die Datei aus in/ bzw. geht nach out/ — dann ist der Parameter nicht Pflicht

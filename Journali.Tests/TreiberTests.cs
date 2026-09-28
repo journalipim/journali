@@ -266,4 +266,26 @@ public class TreiberTests
         }
         finally { try { Directory.Delete(dir, true); } catch { } }
     }
+
+    /// <summary>
+    /// ixp und solr nehmen ihre Quelle aus einem Zugang (28.09.2026). Das Argument {token} gab es bei ixp als Token der
+    /// Quelle — der JobRunner setzt dort aber den Dienst-Token des Laufs, die Quelle bekam also nie ihren Token.
+    /// </summary>
+    [Theory]
+    [InlineData("ixp")]
+    [InlineData("solr")]
+    public void Ixp_und_Solr_nehmen_die_Quelle_aus_einem_Zugang(string key)
+    {
+        string? plugins = null;
+        for (var d = new DirectoryInfo(AppContext.BaseDirectory); d is not null && plugins is null; d = d.Parent)
+            if (File.Exists(Path.Combine(d.FullName, "plugins", key, "plugin.json"))) plugins = Path.Combine(d.FullName, "plugins");
+        Assert.NotNull(plugins);
+        var m = PluginApi.Scan(plugins!)[key];
+        var proc = PluginApi.ProcessOf(m.Raw, "") ?? throw new Xunit.Sdk.XunitException("kein Prozess");
+        var zugang = proc.GetProperty("params").EnumerateArray().Single(p => p.GetProperty("key").GetString() == "zugang");
+        Assert.Equal("driver", zugang.GetProperty("type").GetString());
+        Assert.Equal(key, zugang.GetProperty("art").GetString());
+        Assert.DoesNotContain(proc.GetProperty("args").EnumerateArray(), a => a.GetString() == "{token}");
+        Assert.DoesNotContain(proc.GetProperty("params").EnumerateArray(), p => p.GetProperty("key").GetString() == "token");
+    }
 }

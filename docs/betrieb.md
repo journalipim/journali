@@ -512,8 +512,10 @@ Texte und Geheimnisse stehen unter „Überschreiben (leer = wie im Profil)“. 
 (sonst `config:<name>`) aus den Plugin-Daten und füllt jeden Manifest-Parameter gleichen Namens, den der Job nicht
 selbst setzt — die Prozesse selbst bleiben, wie sie sind. Plugins mit eigener Ansicht pflegen ihre Profile dort
 (IXP, JSON-Import, Solr, Vorlagen-Export — Solr: Kern, Ziel, angehakte Wurzeln als `root` mit Komma, übergangene
-Schlüssel); Prozesse ohne Ansicht tragen `"profile": "generic"` und bekommen im Job-Dialog
-✎ — ein Formular aus ihren Parametern (Tabellen-Export, Backup, RAG, Datenblatt-Job, JSON-Export).
+Schlüssel; Tabellen-Export unter ⇪ Export → CSV/Excel; RAG unter ⇪ Export → KI-Wissensbasis). Der Job-Dialog legt
+keine Profile an — den generischen Profil-Editor (`"profile": "generic"`) gibt es seit dem 28.09.2026 nicht mehr.
+Ein Prozess, dessen Profil „leer = Werte unten“ erlaubt (Datenblatt-Job, JSON-Export), bekommt ohne Profil seine
+Werte direkt am Job; vorhandene Profile bleiben wählbar.
 **Fächer** (`docs/tasker-dateien.md`): Prozesse mit `files` im Manifest bekommen je Job `in/`, `done/`,
 `failed/`, `out/` unter einer Basis (Vorgabe `jobs/<key>`, je Job ein Share). Der Tasker wählt den Eingang (Muster,
 eine oder alle Dateien, Duplikat nach SHA-256 → `done/…-dup-…` ohne Lauf; leerer Eingang → kein Lauf), füllt
@@ -536,6 +538,37 @@ Browser.
 `GET /api/files` listet ein Verzeichnis des Servers (Recht Jobs oder Storage). Dazu `POST /api/files/dir`
 (anlegen) und `PUT /api/files/dir` (umbenennen); beide nehmen nur einen Namen, keinen Pfad — sonst liesse sich
 damit an jede Stelle des Dateisystems schreiben. Gelöscht wird über diesen Weg nichts, und Dateien bleiben unberührt.
+
+## Zugänge (Plugin driver)
+
+Ein Zugang wird einmal unter ⌁ Zugänge eingerichtet und von jedem Plugin nach seiner Art gewählt. Alle Arten gehören
+zum Plugin `driver` (`DriverApi.cs`, `Treiber.cs`), keine ist ein eigenes Plugin (28.09.2026):
+
+| Art | Sorte | Felder | Geheimnis |
+|---|---|---|---|
+| `file` | Dateien | — (eingebaut: `lokal`, das Dateisystem des Servers) | — |
+| `webdav` | Dateien | `url`, `user` | `password` |
+| `ftp` | Dateien | `host`, `port`, `user`, `pfad` (Startverzeichnis), `tls` (explizites TLS) | `password` |
+| `ixp` | Anmeldung | `url` | `token` (Bearer) |
+| `solr` | Anmeldung | `url`, `user` | `password` (Basic) |
+
+Die Felder stehen im Journal (`plugin:driver`, `zugang:<key>`), das Geheimnis im Tresor — die Liste nennt nur seinen
+Namen. Endpunkte:
+
+- `GET /api/drivers/arten`, `GET /api/drivers` (`?art=`, `?dateien=true`), `PUT`/`DELETE /api/drivers/{zugang}`
+- `GET /api/drivers/{zugang}/files?path=`, `POST`/`PUT /api/drivers/{zugang}/dir` — der Dateibrowser eines Zugangs,
+  der Dateien liefert; die Antwort hat dieselbe Form wie `/api/files`. Pfade sind relativ zur Wurzel des Zugangs, `..`
+  wird abgewiesen.
+- `POST /api/drivers/{zugang}/test` — kommt der Zugang an? Dateien: die Wurzel auflisten; Anmeldung: die Quelle
+  einmal fragen (Solr: `/admin/ping`). Antwort `{ ok, text }`.
+- `GET /api/drivers/{zugang}/relay?path=` — nur bei einer Anmeldung: der Server fragt die Quelle unter ihrer Adresse
+  (Pfad relativ, ohne `..`, ohne fremden Rechner) und hängt die Anmeldung an. So liest die Ansicht von IXP und Solr
+  ihre Quelle, ohne dass das Geheimnis den Server verlässt.
+
+**Im Job:** ein Parameter vom Typ `driver` (mit `art`) wird im Job-Dialog eine Auswahl der Zugänge dieser Art; der
+JobRunner reicht Felder und Geheimnisse als `JOURNALI_<PARAM>_<FELD>` an den Prozess (`JOURNALI_ZUGANG_URL`,
+`JOURNALI_ZUGANG_TOKEN`). Steht der Zugang im Profil, füllt ihn der JobRunner wie jeden anderen Parameter daraus.
+Die **Fächer** eines Jobs können an einem Zugang liegen, der Dateien liefert (`docs/tasker-dateien.md`).
 
 ## Fehlermeldungen
 

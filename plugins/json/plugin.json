@@ -1,6 +1,6 @@
 {
   "key": "json",
-  "version": "2.2.1",
+  "version": "2.2.2",
   "label": {
     "de": "JSON",
     "en": "JSON"
@@ -87,7 +87,6 @@
         "{keep}"
       ],
       "description": "Teilbaum als JSON in ein Verzeichnis — Rohdaten (wiederherstellbar), ausgewerteter Baum oder flache Liste; je Wurzel eine Datei",
-      "profile": "generic",
       "files": {
         "out": {
           "many": true,
@@ -97,7 +96,7 @@
       "params": [
         {
           "key": "profile",
-          "label": "Profil — ✎ hier anlegen: Teilbaum, Format, Sprachen … (leer = Werte unten)",
+          "label": "Profil (leer = Werte unten)",
           "type": "profile",
           "default": "",
           "perJob": true

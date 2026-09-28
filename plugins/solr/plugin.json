@@ -1,13 +1,13 @@
 {
   "key": "solr",
-  "version": "1.2.1",
+  "version": "1.3.0",
   "label": {
     "de": "Solr",
     "en": "Solr"
   },
   "description": {
-    "de": "Solr-Kern (Export eines anderen PIM): Baum, Attribute, Relationen — Ansicht im Browser (JSONP) und Skript für grosse Läufe.",
-    "en": "Solr core ( export): tree, attributes, relations — browser view (JSONP) and a script for big runs."
+    "de": "Solr-Kern (Export eines anderen PIM): Baum, Attribute, Relationen — Ansicht im Browser und Job für grosse Läufe; Kern und Anmeldung aus einem Zugang der Art solr.",
+    "en": "Solr core (export of another PIM): tree, attributes, relations — browser view and a job for big runs; core and login from an access of kind solr."
   },
   "kind": "import",
   "runs": "browser",
@@ -33,8 +33,16 @@
         "perJob": true
       },
       {
+        "key": "zugang",
+        "label": "Zugang zum Solr-Kern (leer = wie im Profil)",
+        "type": "driver",
+        "art": "solr",
+        "default": "",
+        "perJob": false
+      },
+      {
         "key": "base",
-        "label": "Solr-Kern (URL; leer = wie im Profil)",
+        "label": "Solr-Kern ohne Anmeldung (URL; leer = wie im Profil)",
         "type": "text",
         "default": "",
         "perJob": false

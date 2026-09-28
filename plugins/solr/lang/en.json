@@ -11,7 +11,6 @@
  "Fortschritt, Abbrechen und das Protokoll": "Progress, cancel and the log",
  "Quelle": "Source",
  "https://…/solr/<kern>": "https://…/solr/<core>",
- "URL des Solr-Kerns": "URL of the Solr core",
  "Verbinden": "Connect",
  "2 · Auswahl": "2 · Selection",
  "· Haken = Teilbaum, Klick zeigt den Knoten": "· tick = subtree, click shows the node",
@@ -66,5 +65,9 @@
  "Nichts zu schreiben.": "Nothing to write.",
  "Ergebnis": "Result",
  "an den Tasker übergeben · Lauf": "handed over to the tasker · run",
- "Protokoll": "Log"
+ "Protokoll": "Log",
+ "Zugang": "Access",
+ "Solr-Kern mit Anmeldung — eingerichtet unter ⌁ Zugänge, das Passwort bleibt beim Server": "Solr core with login — set up under ⌁ Accesses, the password stays on the server",
+ "— freie Adresse, ohne Anmeldung —": "— free address, without login —",
+ "URL des Solr-Kerns — mit Anmeldung nur über einen Zugang": "URL of the Solr core — with login only through an access"
 }

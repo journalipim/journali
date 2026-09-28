@@ -6,15 +6,18 @@ Stand 17.09.2026. Untersucht an einer Kundeninstanz (Adresse nicht im Repo)
 `/solr/#/` ist eine Angular-App über derselben API; alles Nötige liefert
 `/solr/products/select` und `/solr/products/schema`. **Kein CORS-Kopf** —
 aber Solr antwortet auf `json.wrf=<callback>` mit JSONP (Content-Type
-text/plain, kein `nosniff`), und das darf ein `<script>`-Tag laden. Darum
-gibt es zwei Wege mit **einem** Ablauf (`lauf.mjs`) und **einer** Abbildung
+text/plain, kein `nosniff`), und das darf ein `<script>`-Tag laden — ohne Anmeldung.
+Seit dem 28.09.2026 ist der Kern ein **Zugang** (⌁ Zugänge, Plugin `driver`, Art `solr`: Adresse, Name,
+Passwort beim Server): die Ansicht liest über `GET /api/drivers/<zugang>/relay?path=…`, der Server meldet
+sich an — kein CORS, kein Passwort im Browser. JSONP bleibt nur für eine freie Adresse ohne Zugang.
+Es gibt zwei Wege mit **einem** Ablauf (`lauf.mjs`) und **einer** Abbildung
 (`solr.js`) — seit dem 23.09.2026 beide auf node:
 
 - **⇩ Import → Solr** in der Oberfläche (`src/View.vue`): Quellbaum aufklappen,
   Knoten anschauen (alles, was er hat, und was davon wohin geht), Haken =
-  Teilbaum, Analysieren, Schreiben. Solr liest der Browser per JSONP.
+  Teilbaum, Analysieren, Schreiben. Solr liest der Browser über den Zugang.
 - **Der Job** (`job.mjs`, Prozess-Plugin): derselbe Ablauf auf dem Server, Solr
-  per fetch, journali mit dem Dienst-Token des Laufs. Für grosse Läufe — er
+  per fetch (mit Basic-Anmeldung aus dem Zugang), journali mit dem Dienst-Token des Laufs. Für grosse Läufe — er
   hängt an keinem offenen Browserfenster.
 
 ## Was drin ist
@@ -84,7 +87,8 @@ stehen am Job:
 | Parameter | Bedeutung |
 |---|---|
 | `profile` | Profil aus ⇩ Import → Solr (Kern, Ziel, Wurzeln, übergangene Schlüssel) |
-| `base` | URL des Solr-Kerns |
+| `zugang` | Zugang der Art `solr` — Adresse und Anmeldung (`JOURNALI_ZUGANG_URL`, `_USER`, `_PASSWORD`) |
+| `base` | URL des Solr-Kerns ohne Anmeldung (ältere Profile; der Zugang geht vor) |
 | `roots` | Solr-Ids der Wurzeln, mit Komma |
 | `target` | Zielknoten in journali (leer = oberste Ebene) |
 | `skip` | zusätzlich zu übergehende Felder |
@@ -94,10 +98,10 @@ stehen am Job:
 Von Hand geht es auch:
 
 ```bash
-node plugins/solr/job.mjs http://localhost:5000 taloan
+node plugins/solr/job.mjs http://localhost:5000 admin
 ```
 
-Der Rest kommt dann aus der Umgebung (`JOURNALI_BASE`, `JOURNALI_ROOTS`,
+Der Rest kommt dann aus der Umgebung (`JOURNALI_ZUGANG_URL` oder `JOURNALI_BASE`, `JOURNALI_ROOTS`,
 `JOURNALI_TARGET`, `JOURNALI_SKIP`, `JOURNALI_RELATIONS`, `JOURNALI_DRY_RUN`).
 
 Ablauf: Modell zuerst (`PUT /api/model/groups`, `PUT /api/model/attributes`,
