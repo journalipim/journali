@@ -340,7 +340,12 @@ async function mount(root, ctx) {
     detail.innerHTML = ''
     const d = st.detail; if (!d) return
     const head = el('div', { class: 'toolbar', style: 'gap:10px' }, el('b', {}, d.label), el('span', { class: 'muted' }, t('{0} · {1} · Zeitgrenze {2} min{3}', [d.plugin, d.scheduleText, d.timeoutMinutes, d.role ? ' ' + t('· Rolle') + ' ' + d.role : ''])),
-      el('span', { class: 'muted mono', style: 'font-size:11px' }, Object.entries(d.params).map(([k, v]) => `${k}=${v}`).join(' ')), d.secrets.length ? el('span', { class: 'chip', title: t('Geheimnisse liegen beim Server (jobs/secrets.json), nicht im Journal') }, `🔒 ${d.secrets.join(', ')}`) : '')
+      // Nur, was das Plugin heute kennt: ein Parameter, den das Manifest nicht mehr nennt, steht als Altlast im
+      // Job-Eintrag und wirkt nicht mehr — in der Kopfzeile sieht er aus, als täte er etwas (28.09.2026)
+      el('span', { class: 'muted mono', style: 'font-size:11px' }, (() => {
+        const kennt = new Set((st.plugins.find(p => p.key === d.plugin && (p.service ?? '') === (d.service ?? ''))?.params ?? []).map(x => x.key))
+        return Object.entries(d.params).filter(([k]) => !kennt.size || kennt.has(k)).map(([k, v]) => `${k}=${v}`).join(' ')
+      })()), d.secrets.length ? el('span', { class: 'chip', title: t('Geheimnisse liegen beim Server (jobs/secrets.json), nicht im Journal') }, `🔒 ${d.secrets.join(', ')}`) : '')
     const runs = el('div', { style: 'width:340px;border-right:1px solid var(--line);overflow:auto' })
     const tbl = el('table', { class: 'grid', style: 'width:100%' })
     for (const r of d.runs) {
@@ -678,12 +683,13 @@ async function mount(root, ctx) {
   const q = new URLSearchParams(location.search); const wanted = q.get('new')
   if (wanted && st.plugins.some(p => p.key === wanted)) { history.replaceState(null, '', location.pathname); openEdit({ plugin: wanted, service: q.get('service') ?? '', _new: true }) }
   else if (st.plugin) history.replaceState(null, '', location.pathname)
-  // Während ein Job läuft, alle fünf Sekunden; sonst einmal je Minute. Offene Posten allein waren kein guter Grund:
-  // sie bleiben offen, bis jemand den Job startet, und jede Abfrage kostet den Server Arbeit (27.09.2026).
+  // Während ein Job läuft, alle fünf Sekunden; sonst alle fünfzehn. Mit einer Minute im Leerlauf sah man einen
+  // Lauf von zehn Sekunden nie — er begann und endete zwischen zwei Abfragen, und die Kachel blieb still
+  // (28.09.2026). Offene Posten allein sind weiter kein Grund: sie bleiben offen, bis der Nachzieher startet.
   let runde = 0
   const poll = setInterval(() => {
     runde++
-    if (st.jobs.some(j => j.running) || runde % 12 === 0) load()
+    if (st.jobs.some(j => j.running) || runde % 3 === 0) load()
   }, 5000)
   return () => { clearInterval(poll); clearTimeout(st.timer) }
 }
