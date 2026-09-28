@@ -694,7 +694,11 @@ public sealed record JobDefined(string Label, string Plugin, Dictionary<string, 
 /// <c>Latest</c> = nach jedem erfolgreichen Lauf eine Kopie unter stabilem Namen (Kopie, kein Link), <c>Archive</c> =
 /// verarbeitete Eingänge und Ausgaben zusätzlich als Medium im Medienspeicher (Vorgabe aus).
 /// </summary>
-public sealed record JobFiles(string? Base = null, string? Keep = null, bool Latest = false, bool Archive = false);
+/// <param name="InZugang">Eingang über einen Zugang (driver): vor dem Lauf holt der Tasker, was dort unter <c>InPfad</c> liegt, nach in/
+/// und schiebt es dort nach <c>abgeholt/</c> (28.09.2026). Null = nur das Fach auf dem Server.</param>
+/// <param name="OutZugang">Ausgabe über einen Zugang: nach einem gelungenen Lauf legt der Tasker jede Ausgabe dort unter <c>OutPfad</c> ab.</param>
+public sealed record JobFiles(string? Base = null, string? Keep = null, bool Latest = false, bool Archive = false,
+    string? InZugang = null, string? InPfad = null, string? OutZugang = null, string? OutPfad = null);
 /// <summary>Eingang verarbeitet: <c>Status</c> ok | failed | duplicate (gleicher Hash schon verarbeitet — ohne Lauf nach done/).</summary>
 public sealed record JobFileConsumed(string Run, string Name, string Hash, long Bytes, string Status, string? MediaId = null);
 /// <summary>Ausgabe geschrieben; <c>Latest</c>: dazu unter dem stabilen Namen kopiert.</summary>

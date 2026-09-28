@@ -124,6 +124,12 @@ export function stelle(def, profilGewaehlt) {
 
 /// Welche Fächer ein Job benutzt: liest er Dateien, gibt es in/, done/ und failed/; schreibt er, gibt es out/.
 ///
+/// Welche Fächer an einem Zugang liegen können (28.09.2026): der Eingang, wenn der Job Dateien frisst, die Ausgabe,
+/// wenn er schreibt — jeweils nur, solange der Tasker das Fach führt (der Parameter leer bleibt).
+export function fachZugaenge(files, params = {}) {
+  return { in: nutztFach(files?.in, params), out: nutztFach(files?.out, params) }
+}
+
 export function fachNames(files, params = {}) {
   const out = []
   if (nutztFach(files?.in, params)) out.push('in/', 'done/', 'failed/')
@@ -485,8 +491,23 @@ async function mount(root, ctx) {
     const fKeep = el('input', { type: 'text', value: j?.files?.keep ?? '', placeholder: 'alle', style: 'width:90px', title: t('Aufbewahrung: 10 = die letzten 10 Läufe, 30d = 30 Tage, leer = alle') })
     const fLatest = el('input', { type: 'checkbox' }); fLatest.checked = j?.files?.latest ?? true
     const fArchive = el('input', { type: 'checkbox' }); fArchive.checked = j?.files?.archive ?? false
+    // Fächer an einem Zugang (driver): der Eingang wird vor dem Lauf von dort geholt, die Ausgabe danach dort abgelegt
+    const zugangsListe = api.get('/api/drivers?dateien=true').then(l => (l ?? []).filter(z => z.art !== 'file')).catch(() => [])
+    const zugangZeile = (text, zugang, pfad, titel) => {
+      const sel = el('select', { style: 'width:180px' }, el('option', { value: '' }, t('— nur das Fach —')))
+      const pfadIn = el('input', { type: 'text', value: pfad ?? '', placeholder: t('Pfad im Zugang, z. B. /eingang'), style: 'flex:1' })
+      const pick = el('button', { type: 'button', title: t('Verzeichnis im Zugang wählen'), onclick: () => { if (sel.value) ctx.filePicker({ value: pfadIn.value, dirOnly: true, zugang: sel.value, onPick: v => { pfadIn.value = v } }) } }, '📁')
+      const stand = () => { pfadIn.disabled = !sel.value; pick.disabled = !sel.value }
+      sel.addEventListener('change', stand)
+      zugangsListe.then(l => { for (const z of l) sel.append(el('option', { value: z.key }, z.label || z.key)); if (zugang && !l.some(z => z.key === zugang)) sel.append(el('option', { value: zugang }, zugang)); sel.value = zugang ?? ''; stand() })
+      stand()
+      const row = el('div', { class: 'zugang-zeile', style: 'display:flex;gap:4px;align-items:center;margin-top:6px', title: titel }, el('span', { class: 'muted', style: 'width:110px' }, text), sel, pfadIn, pick)
+      return { row, sel, pfadIn, wert: () => row.style.display === 'none' || !sel.value ? { zugang: null, pfad: null } : { zugang: sel.value, pfad: pfadIn.value.trim() || '/' } }
+    }
+    const fIn = zugangZeile(t('Eingang von'), j?.files?.inZugang, j?.files?.inPfad, t('Vor jedem Lauf holt der Tasker, was dort liegt und aufs Muster passt, nach in/ und schiebt es dort nach abgeholt/'))
+    const fOut = zugangZeile(t('Ausgabe nach'), j?.files?.outZugang, j?.files?.outPfad, t('Nach jedem gelungenen Lauf legt der Tasker die Ausgaben dort ab'))
     const fachBox = el('div', { style: 'display:none' },
-      fachLabelEl, el('div', { style: 'display:flex;gap:4px' }, fBase, fBaseBtn),
+      fachLabelEl, el('div', { style: 'display:flex;gap:4px' }, fBase, fBaseBtn), fIn.row, fOut.row,
       el('div', { style: 'display:flex;gap:14px;align-items:center;margin-top:6px;flex-wrap:wrap' },
         el('label', { style: 'display:flex;gap:6px;align-items:center' }, el('span', { class: 'muted' }, t('Aufbewahrung')), fKeep),
         el('label', { style: 'display:flex;gap:6px;align-items:center', title: t('nach jedem Lauf eine Kopie unter festem Namen: <key>-latest') }, fLatest, 'latest'),
@@ -524,6 +545,16 @@ async function mount(root, ctx) {
           // Publikationsbaum: Dropdown der Bäume, leer = keiner
           inp = el('select', {}, el('option', { value: '' }, t('(keiner — Teilbaum unten)')), ...(tree.pubTrees ?? []).map(r => el('option', { value: r.id }, `${r.label} · ${r.channel}${r.market ? '/' + r.market : ''}`)))
           inp.value = cur
+          append(el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, d.label), inp)
+        } else if (d.type === 'driver') {
+          // Zugang (driver): eine Auswahl der eingerichteten Zugänge dieser Art — Adresse und Anmeldung bekommt der
+          // Prozess vom Server (JOURNALI_<PARAM>_<FELD>), das Geheimnis sieht der Dialog nie
+          inp = el('select', { style: 'width:100%' }, el('option', { value: '' }, t('— kein Zugang —')))
+          if (cur) { inp.append(el('option', { value: cur }, cur)); inp.value = cur }
+          api.get('/api/drivers' + (d.art ? '?art=' + encodeURIComponent(d.art) : '')).then(l => {
+            for (const z of l ?? []) { const da = [...inp.options].find(o => o.value === z.key); if (da) da.textContent = z.label || z.key; else inp.append(el('option', { value: z.key }, z.label || z.key)) }
+            if (!(l ?? []).length && !cur) inp.title = t('noch kein Zugang dieser Art — unter ⌁ Zugänge anlegen')
+          }).catch(() => {})
           append(el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, d.label), inp)
         } else if (d.type === 'path' || d.type === 'dir') {
           // Pfad auf dem Server: Textfeld plus 📁 — der Dateibrowser der Oberfläche (ctx.filePicker, /api/files)
@@ -577,6 +608,8 @@ async function mount(root, ctx) {
       const werte = Object.fromEntries(Object.entries(paramInputs).map(([k, i]) => [k, i?.value ?? '']))
       const namen = p?.files ? fachNames(p.files, werte) : []
       fachBox.style.display = namen.length ? '' : 'none'
+      const zg = fachZugaenge(p?.files, werte)
+      fIn.row.style.display = zg.in ? '' : 'none'; fOut.row.style.display = zg.out ? '' : 'none'
       if (namen.length) {
         fachLabelEl.textContent = t('Fächer · Basis ({0})', [namen.join(', ')])
         fBaseBtn.title = t('Basis der Fächer auf dem Server wählen ({0})', [namen.join(', ')])
@@ -620,7 +653,8 @@ async function mount(root, ctx) {
       const alt = saveBtn.textContent
       saveBtn.disabled = true; saveBtn.textContent = t('⋯ speichert')
       try {
-        const files = fachBox.style.display === 'none' ? null : { base: fBase.value.trim() || null, keep: fKeep.value.trim() || null, latest: fLatest.checked, archive: fArchive.checked }
+        const fi = fIn.wert(), fo = fOut.wert()
+        const files = fachBox.style.display === 'none' ? null : { base: fBase.value.trim() || null, keep: fKeep.value.trim() || null, latest: fLatest.checked, archive: fArchive.checked, inZugang: fi.zugang, inPfad: fi.pfad, outZugang: fo.zugang, outPfad: fo.pfad }
         await api.post(`/api/jobs/${key}`, { label: labelIn.value.trim() || key, plugin: pluginSel.value.split('|')[0], service: pluginSel.value.split('|')[1] || '', params, schedule, enabled: j?.enabled ?? true, timeoutMinutes: Number(timeoutIn.value) || 60, files, ...(darfRolle ? { role: rolleSel.value } : {}) }, 'PUT')
         store.toast(`Job „${labelIn.value || key}“ gespeichert`, 'ok'); box.remove(); st.cur = key; await load()
       } catch (e) { store.toast(e.message); saveBtn.disabled = false; saveBtn.textContent = alt }

@@ -173,6 +173,16 @@ public sealed class JobRunner : BackgroundService
         // füllen, was der Job selbst nicht gesetzt hat
         if (job.Params.TryGetValue("profile", out var prof) && prof is { Length: > 0 })
             foreach (var (k, v) in Secrets.Get(Dir, Secrets.ProfileKey(job.Plugin, prof))) if (!values.TryGetValue(k, out var have) || have.Length == 0) values[k] = v;
+        // Zugänge (28.09.2026): ein Parameter vom Typ driver nennt einen Zugang — der Prozess bekommt dessen Felder und
+        // Geheimnisse als <param>_<feld>, also JOURNALI_<PARAM>_<FELD> (zugang_url, zugang_token). Das Geheimnis geht nur hierher, nie an den Browser.
+        if (Zugaenge(_catalog, Dir, proc, values, out var zugangFehler) is false) { error = zugangFehler; return null; }
+        // Eingang über einen Zugang: vor dem Lauf holen, was dort liegt — dann gilt es wie eine Datei in in/
+        if (job.Files?.InZugang is { } inZugang && JobFach.In(proc) is { } inSpec)
+        {
+            if (DriverApi.Aufloesen(_catalog, Dir, inZugang) is not { } a || DriverApi.TreiberFuer(a.Zugang, Dir) is not { } t) { error = $"Zugang {inZugang} gibt es nicht oder er liefert keine Dateien"; return null; }
+            try { Fach.Holen(job, t, job.Files.InPfad, inSpec, m => _log.LogWarning("Job {Key}: {Meldung}", key, m)).GetAwaiter().GetResult(); }
+            catch (Exception e) { _log.LogWarning("Job {Key}: Eingang über {Zugang}: {Meldung}", key, inZugang, e.Message); }   // was im Fach liegt, läuft trotzdem
+        }
         // Fächer: Eingang wählen (Duplikate weg), Ausgabeort festlegen, {inFile}/{inDir}/{outFile}/{outDir} füllen
         JobFach.Plan? plan;
         try
@@ -231,10 +241,18 @@ public sealed class JobRunner : BackgroundService
             {
                 try
                 {
+                    // Ausgabe über einen Zugang: der Treiber wird einmal je Lauf gebaut
+                    Func<string, string, Task>? ablegen = null;
+                    if (job.Files?.OutZugang is { } outZugang)
+                    {
+                        if (DriverApi.Aufloesen(_catalog, Dir, outZugang) is { } a && DriverApi.TreiberFuer(a.Zugang, Dir) is { } t)
+                            ablegen = async (datei, name) => { await JobFach.Ablegen(t, job.Files.OutPfad, datei, name); Line("→ ", $"{outZugang}: {name}"); };
+                        else Line("! Fächer: ", $"Zugang {outZugang} gibt es nicht oder er liefert keine Dateien");
+                    }
                     await Fach.Finish(job, plan, run, status is "ok" or "warn", logPath,
                         (type, payload) => _catalog.With((_, _, write) => write(actor, Jobs.Stream + key, type, payload, null).Number),
                         (path, name) => Archive(actor, path, name),
-                        m => Line("! Fächer: ", m));
+                        m => Line("! Fächer: ", m), ablegen);
                 }
                 catch (Exception e) { Line("! Fächer: ", e.Message); }
             }
@@ -297,6 +315,27 @@ public sealed class JobRunner : BackgroundService
 
     public string? RunningId(string key) { lock (_gate) return _running.TryGetValue(key, out var r) ? r.Run : null; }
     public string LogPath(string key, string run) => Path.Combine(Dir, key, run + ".log");
+
+    /// <summary>
+    /// Parameter vom Typ <c>driver</c> auflösen: der Wert ist der Name eines Zugangs; seine Felder und Geheimnisse kommen
+    /// als <c>&lt;param&gt;_&lt;feld&gt;</c> dazu — was der Job schon setzt, bleibt. Nennt das Manifest eine <c>art</c>, muss der
+    /// Zugang von dieser Art sein. Ein leerer Parameter ist kein Fehler: dann nimmt das Plugin, was es sonst hat.
+    /// </summary>
+    public static bool Zugaenge(Catalog catalog, string dir, JsonElement proc, Dictionary<string, string> values, out string? fehler)
+    {
+        fehler = null;
+        if (!proc.TryGetProperty("params", out var ps) || ps.ValueKind != JsonValueKind.Array) return true;
+        foreach (var p in ps.EnumerateArray())
+        {
+            if (!(p.TryGetProperty("type", out var ty) && ty.GetString() == "driver") || !p.TryGetProperty("key", out var k) || k.GetString() is not { Length: > 0 } key) continue;
+            if (!values.TryGetValue(key, out var name) || string.IsNullOrWhiteSpace(name)) continue;
+            if (DriverApi.Aufloesen(catalog, dir, name) is not { } a) { fehler = $"Zugang {name} gibt es nicht"; return false; }
+            if (p.TryGetProperty("art", out var art) && art.GetString() is { Length: > 0 } soll && a.Zugang.Art != soll) { fehler = $"Zugang {name} ist {a.Zugang.Art}, nicht {soll}"; return false; }
+            foreach (var (f, v) in a.Zugang.Felder) values.TryAdd($"{key}_{f}", v);
+            foreach (var (g, v) in a.Geheim) values.TryAdd($"{key}_{g}", v);
+        }
+        return true;
+    }
 
     private static JsonElement? ProfileOf(Journali.Core.Projections.PluginState state, string name)
     {

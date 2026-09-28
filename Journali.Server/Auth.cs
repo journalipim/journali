@@ -188,6 +188,8 @@ public static class Auth
         if (path.StartsWith("/api/media/store") || path.StartsWith("/api/media/copy")) return Rights.Storage;
         if (path.StartsWith("/api/betrieb")) return Rights.Storage;   // Spiegel und Schnappschuss: Ablage, kein Modell
         if (path.StartsWith("/api/media/presets") && !read) return Rights.Model;   // Vorschau-Presets sind Modell
+        // Die Liste der Zugänge (ohne Geheimnisse) und die Weiterleitung einer Anmeldung braucht, wer importiert — das ist Pflege
+        if (path.StartsWith("/api/drivers") && read && (path is "/api/drivers" or "/api/drivers/arten" || path.EndsWith("/relay"))) return Rights.Write;
         if (path.StartsWith("/api/files") || path.StartsWith("/api/drivers")) return Rights.Jobs;   // Dateibrowser und Zugänge: Jobs — oder Storage (Allowed)
         if (path.StartsWith("/api/jobs") && (path.EndsWith("/uebergabe") || path.EndsWith("/pause") || path.EndsWith("/resume"))) return Rights.Write;   // einen Import abgeben und anhalten ist Pflege, kein Jobbau
         if (path.StartsWith("/api/jobs") && path.EndsWith("/signal")) return Rights.Read;   // der Lauf fragt selbst, ob er warten soll

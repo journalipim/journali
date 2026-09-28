@@ -22,20 +22,29 @@ public static class DriverApi
     /// <summary>Der eingebaute Zugang: das Dateisystem des Servers. Immer da, ohne Einrichtung, ohne Geheimnis.</summary>
     public const string Lokal = "lokal";
 
-    /// <summary>Eine Art von Zugang und ihre Felder. <c>Dateien</c> sagt, ob der Zugang auflisten kann.</summary>
+    /// <summary>Eine Art von Zugang und ihre Felder. <c>Dateien</c> sagt, ob der Zugang auflisten kann. Wie ein Feld im Formular
+    /// heisst, sagt die Oberfläche des Plugins — dort wird es auch übersetzt.</summary>
     public sealed record Art(string Key, string Label, bool Dateien, string[] Felder, string[] Geheim);
 
     /// <summary>
     /// Was es gibt. <b>Nur was wirklich trägt</b> — eine Art, die noch nicht umgesetzt ist, steht hier nicht:
     /// angeboten wird nichts, was beim Anklicken „ist noch nicht gebaut“ antwortet (25.09.2026).
-    /// <para>Vorgesehen, sobald der jeweilige Treiber steht: <c>ftp</c> und <c>webdav</c> (liefern Dateien),
-    /// <c>mysql</c>, <c>solr</c> und <c>ixp</c> (nur Anmeldung). Für die letzten beiden gibt es die Plugins schon,
-    /// sie führen ihren Zugang aber noch selbst.</para>
+    /// <para>Alle Arten gehören zu diesem einen Plugin — kein Plugin je Art (28.09.2026). Dateien liefern <c>file</c>,
+    /// <c>webdav</c> und <c>ftp</c>, alle hinter derselben Schnittstelle (<see cref="IDateiTreiber"/>); <c>ixp</c> und
+    /// <c>solr</c> sind Anmeldungen: der Job bekommt ihre Felder, der Browser liest die Quelle über
+    /// <c>/drivers/{zugang}/relay</c> — das Geheimnis verlässt den Server nicht. <c>mysql</c> kommt, sobald ein Plugin es liest.</para>
     /// </summary>
     public static readonly IReadOnlyList<Art> Arten =
     [
         new("file", "Dateisystem des Servers", true, [], []),
+        new("webdav", "WebDAV", true, ["url", "user"], ["password"]),
+        new("ftp", "FTP", true, ["host", "port", "user", "pfad", "tls"], ["password"]),
+        new("ixp", "IXP (Anmeldung)", false, ["url"], ["token"]),
+        new("solr", "Solr (Anmeldung)", false, ["url", "user"], ["password"]),
     ];
+
+    /// <summary>Arten, deren Quelle der Browser über die Weiterleitung liest.</summary>
+    public static readonly IReadOnlySet<string> Anmeldungen = new HashSet<string> { "ixp", "solr" };
 
     public static Art? ArtVon(string? key) => Arten.FirstOrDefault(a => a.Key == key);
 
@@ -99,18 +108,79 @@ public static class DriverApi
             return Results.Ok(new { entfernt = zugang });
         });
 
-        // Auflisten — nur bei einem Zugang, der Dateien liefert
-        api.MapGet("/drivers/{zugang}/files", (string zugang, Catalog c, string? path) =>
-            MitDatei(c, zugang, out var fehler) is { } z
-                ? FileApi.Files(dataDir, env.ContentRootPath, path) : fehler);
+        // Auflisten — nur bei einem Zugang, der Dateien liefert. Das Dateisystem des Servers antwortet wie /api/files;
+        // ein ferner Zugang geht über seinen Treiber und antwortet in derselben Form (Treiber.Antwort)
+        api.MapGet("/drivers/{zugang}/files", async (string zugang, Catalog c, string? path, CancellationToken ct) =>
+        {
+            if (MitDatei(c, zugang, out var fehler) is not { } z) return fehler;
+            if (z.Art == "file") return FileApi.Files(dataDir, env.ContentRootPath, path);
+            return await Fern(async () =>
+            {
+                var t = TreiberFuer(z, jobsDir)!; var p = Treiber.Normal(path);
+                return Results.Ok(Treiber.Antwort(z.Label, p, await t.ListeAsync(p, ct)));
+            });
+        });
 
-        api.MapPost("/drivers/{zugang}/dir", (string zugang, FileApi.NeuBody body, HttpRequest req, Catalog c) =>
-            MitDatei(c, zugang, out var fehler) is { } z
-                ? FileApi.NeuesVerzeichnis(body, req) : fehler);
+        api.MapPost("/drivers/{zugang}/dir", async (string zugang, FileApi.NeuBody body, HttpRequest req, Catalog c, CancellationToken ct) =>
+        {
+            if (MitDatei(c, zugang, out var fehler) is not { } z) return fehler;
+            if (z.Art == "file") return FileApi.NeuesVerzeichnis(body, req);
+            if (ModelApi.Actor(req) is null) return ModelApi.ActorMissing();
+            if (FileApi.Name(body.Name) is not { } name) return Bad("Name: ohne \\ / : * ? \" < > | und nicht leer.");
+            return await Fern(async () => { var ziel = Treiber.Kind(body.Path ?? "/", name); await TreiberFuer(z, jobsDir)!.NeuesVerzeichnisAsync(ziel, ct); return Results.Ok(new { path = ziel }); });
+        });
 
-        api.MapPut("/drivers/{zugang}/dir", (string zugang, FileApi.UmbenennenBody body, HttpRequest req, Catalog c) =>
-            MitDatei(c, zugang, out var fehler) is { } z
-                ? FileApi.VerzeichnisUmbenennen(body, req) : fehler);
+        api.MapPut("/drivers/{zugang}/dir", async (string zugang, FileApi.UmbenennenBody body, HttpRequest req, Catalog c, CancellationToken ct) =>
+        {
+            if (MitDatei(c, zugang, out var fehler) is not { } z) return fehler;
+            if (z.Art == "file") return FileApi.VerzeichnisUmbenennen(body, req);
+            if (ModelApi.Actor(req) is null) return ModelApi.ActorMissing();
+            if (FileApi.Name(body.Name) is not { } name) return Bad("Name: ohne \\ / : * ? \" < > | und nicht leer.");
+            return await Fern(async () =>
+            {
+                var alt = Treiber.Normal(body.Path); if (Treiber.Vater(alt) is not { } vater) return Bad("Die Wurzel eines Zugangs lässt sich nicht umbenennen.");
+                var neuPfad = Treiber.Kind(vater, name);
+                await TreiberFuer(z, jobsDir)!.UmbenennenAsync(alt, neuPfad, ct);
+                return Results.Ok(new { path = neuPfad });
+            });
+        });
+
+        // Prüfen: kommt der Zugang an? Dateien: die Wurzel auflisten; Anmeldung: die Quelle einmal fragen
+        api.MapPost("/drivers/{zugang}/test", async (string zugang, Catalog c, CancellationToken ct) =>
+        {
+            if (Alle(c).FirstOrDefault(x => x.Key == zugang) is not { } z) return Bad("Zugang {0} gibt es nicht.", zugang);
+            try
+            {
+                if (ArtVon(z.Art)?.Dateien ?? false)
+                {
+                    if (z.Art == "file") return Results.Ok(new { ok = true, text = "ok" });
+                    var n = (await TreiberFuer(z, jobsDir)!.ListeAsync("/", ct)).Count;
+                    return Results.Ok(new { ok = true, text = $"{n}" });
+                }
+                using var res = await Weiter(z, Geheim(jobsDir, z.Key), z.Art == "solr" ? "/admin/ping" : "/", ct);
+                return Results.Ok(new { ok = res.IsSuccessStatusCode, text = $"{(int)res.StatusCode}" });
+            }
+            catch (Exception e) when (e is IOException or HttpRequestException or ArgumentException or TaskCanceledException or InvalidOperationException)
+            { return Results.Ok(new { ok = false, text = e.Message }); }
+        });
+
+        // Die Weiterleitung einer Anmeldung: der Browser liest die Quelle (IXP, Solr) über den Server, der die Anmeldung
+        // anhängt — das Geheimnis verlässt ihn nicht. Nur GET, nur unterhalb der Adresse des Zugangs (path relativ, ohne ..)
+        api.MapGet("/drivers/{zugang}/relay", async (string zugang, string? path, HttpContext http, Catalog c, CancellationToken ct) =>
+        {
+            if (Alle(c).FirstOrDefault(x => x.Key == zugang) is not { } z) return Bad("Zugang {0} gibt es nicht.", zugang);
+            if (!Anmeldungen.Contains(z.Art)) return Bad("Zugang {0} ist keine Anmeldung.", zugang);
+            try
+            {
+                var res = await Weiter(z, Geheim(jobsDir, z.Key), path ?? "/", ct);
+                http.Response.RegisterForDispose(res);
+                var typ = res.Content.Headers.ContentType?.ToString() ?? "application/octet-stream";
+                return Results.Stream(await res.Content.ReadAsStreamAsync(ct), typ, enableRangeProcessing: false) is var ok && res.IsSuccessStatusCode
+                    ? ok : Results.StatusCode((int)res.StatusCode);
+            }
+            catch (ArgumentException e) { return Bad(e.Message); }
+            catch (HttpRequestException e) { return Bad("Quelle nicht erreichbar: {0}", e.Message); }
+        });
     }
 
     /// <summary>Alle Zugänge: der eingebaute zuerst, dann die eingerichteten aus dem Journal.</summary>
@@ -147,4 +217,62 @@ public static class DriverApi
     }
 
     private static IResult Bad(string vorlage, params object[] werte) => ModelApi.Bad(vorlage, werte);
+
+    /// <summary>Die Geheimnisse eines Zugangs — nur für den Server und für Prozesse, nie für den Browser.</summary>
+    public static Dictionary<string, string> Geheim(string jobsDir, string zugang) => Secrets.Get(jobsDir, Secrets.ProfileKey(Plugin, zugang));
+
+    /// <summary>Zugang und Geheimnisse zu einem Namen — für den JobRunner (Parameter vom Typ driver, Fächer an einem Zugang).</summary>
+    public static (Zugang Zugang, Dictionary<string, string> Geheim)? Aufloesen(Catalog c, string jobsDir, string? zugang) =>
+        string.IsNullOrWhiteSpace(zugang) || Alle(c).FirstOrDefault(x => x.Key == zugang.Trim()) is not { } z ? null : (z, Geheim(jobsDir, z.Key));
+
+    /// <summary>Der Treiber eines Zugangs, der Dateien liefert.</summary>
+    public static IDateiTreiber? TreiberFuer(Zugang z, string jobsDir) => Treiber.Fuer(z, Geheim(jobsDir, z.Key), Handler);
+
+    /// <summary>Nur für Prüfstände: ein eigener HTTP-Weg statt des Netzes (WebDAV, Weiterleitung).</summary>
+    public static HttpMessageHandler? Handler { get; set; }
+
+    private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(60) };
+
+    /// <summary>
+    /// Die Adresse einer Weiterleitung: die URL des Zugangs plus ein relativer Pfad mit Abfrage. Kein Schema, kein
+    /// <c>//</c> am Anfang, kein <c>..</c>, kein Rückstrich — sonst ginge die Anfrage an einen anderen Rechner als den des Zugangs.
+    /// </summary>
+    public static Uri WeiterUrl(Zugang z, string pfad)
+    {
+        var basis = (z.Felder.GetValueOrDefault("url") ?? "").Trim().TrimEnd('/');
+        if (!Uri.TryCreate(basis, UriKind.Absolute, out var b) || b.Scheme is not ("http" or "https")) throw new ArgumentException("Zugang ohne Adresse (url mit http:// oder https://).");
+        var p = (pfad ?? "/").Trim();
+        if (!p.StartsWith('/')) p = "/" + p;
+        if (p.StartsWith("//") || p.Contains("://") || p.Contains('\\') || p.Split('?')[0].Split('/').Any(t => t == "..")) throw new ArgumentException("Pfad: relativ zur Adresse des Zugangs, ohne ..");
+        var u = new Uri(basis + p);
+        if (!string.Equals(u.Host, b.Host, StringComparison.OrdinalIgnoreCase) || u.Port != b.Port) throw new ArgumentException("Pfad: relativ zur Adresse des Zugangs, ohne ..");
+        return u;
+    }
+
+    /// <summary>Die Anmeldung einer Art als Kopf: IXP Bearer mit Token, Solr Basic mit Name und Passwort, sonst keiner.</summary>
+    public static System.Net.Http.Headers.AuthenticationHeaderValue? Anmeldung(Zugang z, IReadOnlyDictionary<string, string> geheim) => z.Art switch
+    {
+        "ixp" when geheim.GetValueOrDefault("token") is { Length: > 0 } t => new("Bearer", t),
+        "solr" when z.Felder.GetValueOrDefault("user") is { Length: > 0 } u =>
+            new("Basic", Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes($"{u}:{geheim.GetValueOrDefault("password")}"))),
+        _ => null,
+    };
+
+    private static async Task<HttpResponseMessage> Weiter(Zugang z, IReadOnlyDictionary<string, string> geheim, string pfad, CancellationToken ct)
+    {
+        using var req = new HttpRequestMessage(HttpMethod.Get, WeiterUrl(z, pfad));
+        req.Headers.Authorization = Anmeldung(z, geheim);
+        req.Headers.Accept.ParseAdd("application/json");
+        var http = Handler is null ? Http : new HttpClient(Handler, disposeHandler: false);
+        return await http.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, ct);
+    }
+
+    /// <summary>Ein ferner Zugriff: was schiefgeht, ist eine Meldung, kein Absturz.</summary>
+    private static async Task<IResult> Fern(Func<Task<IResult>> tun)
+    {
+        try { return await tun(); }
+        catch (ArgumentException e) { return Bad(e.Message); }
+        catch (Exception e) when (e is IOException or HttpRequestException or TaskCanceledException or System.Net.WebException or System.Xml.XmlException)
+        { return Bad("Zugang nicht erreichbar: {0}", e.Message); }
+    }
 }

@@ -110,7 +110,8 @@ public sealed class JobFach
     /// Nach dem Lauf: Eingänge nach done/ oder failed/ (mit Log daneben), Ausgaben belegen, latest kopieren, Aufbewahrung, Archiv.
     /// Alles, was schiefgeht, landet in <paramref name="log"/> — der Lauf selbst ist schon beurteilt.
     /// </summary>
-    public async Task Finish(JobState job, Plan plan, string run, bool ok, string logPath, Action<string, object> journal, Func<string, string, Task<string?>> archive, Action<string> log)
+    public async Task Finish(JobState job, Plan plan, string run, bool ok, string logPath, Action<string, object> journal, Func<string, string, Task<string?>> archive, Action<string> log,
+        Func<string, string, Task>? ablegen = null)
     {
         var now = DateTimeOffset.Now.ToString("yyyyMMdd-HHmmss");
         foreach (var p in plan.In)
@@ -145,6 +146,12 @@ public sealed class JobFach
                 journal(Types.JobFileWritten, new JobFileWritten(run, plan.Many ? Path.Combine(Path.GetFileName(plan.OutDir!), name) : name, hash, fi.Length, latest, mediaId));
             }
             catch (Exception e) { log($"Ausgabe {name}: {e.Message}"); }
+            // Ausgabe über einen Zugang: dort ablegen — bei vielen Dateien im Ordner des Laufs, sonst unter dem Namen der Datei
+            if (ablegen is not null)
+            {
+                try { await ablegen(path, plan.Many ? Path.Combine(Path.GetFileName(plan.OutDir!), name) : name); }
+                catch (Exception e) { log($"Ablage {name}: {e.Message}"); }
+            }
         }
         if (latest)
         {   // Kopie, kein Link — der stabile Name für den, der abholt
@@ -192,6 +199,53 @@ public sealed class JobFach
     }
 
     private static void TryDeleteEmpty(string dir) { try { if (Directory.Exists(dir) && !Directory.EnumerateFileSystemEntries(dir).Any()) Directory.Delete(dir); } catch { } }
+
+    /// <summary>
+    /// Eingang über einen Zugang (28.09.2026): holt, was unter <paramref name="pfad"/> liegt und auf das Muster passt,
+    /// nach in/ — höchstens <paramref name="hoechstens"/> Dateien je Lauf — und schiebt es dort nach <c>abgeholt/</c>.
+    /// Ab dann gehört die Datei dem Fach: Duplikate, done/ und failed/ gelten wie bei einer Datei, die jemand in in/ legte.
+    /// Die Zeit der geholten Datei wird zurückgesetzt, sonst hielte <see cref="Prepare"/> sie für „wird gerade geschrieben“.
+    /// Gibt die Namen zurück; was schiefgeht, steht in <paramref name="log"/>, der Rest wird trotzdem geholt.
+    /// </summary>
+    public async Task<List<string>> Holen(JobState job, IDateiTreiber treiber, string? pfad, InSpec spec, Action<string> log, int hoechstens = 50, CancellationToken ct = default)
+    {
+        var quelle = Treiber.Normal(pfad);
+        var inDir = Fach(job, "in"); Directory.CreateDirectory(inDir);
+        var geholt = new List<string>();
+        var liste = (await treiber.ListeAsync(quelle, ct)).Where(e => !e.Verzeichnis && !e.Name.StartsWith('.') && Treiber.Passt(e.Name, spec.Patterns))
+            .OrderBy(e => spec.Order == "time" ? e.Zeit ?? DateTimeOffset.MinValue : DateTimeOffset.MinValue).ThenBy(e => e.Name, StringComparer.Ordinal).Take(hoechstens).ToList();
+        if (liste.Count == 0) return geholt;
+        var abgeholt = Treiber.Kind(quelle, "abgeholt");
+        try { await treiber.NeuesVerzeichnisAsync(abgeholt, ct); } catch (Exception e) { log($"abgeholt/ anlegen: {e.Message}"); }
+        foreach (var e in liste)
+        {
+            var ziel = Unique(Path.Combine(inDir, e.Name));
+            try
+            {
+                await using (var quellStrom = await treiber.LesenAsync(e.Pfad, ct))
+                await using (var datei = File.Create(ziel)) await quellStrom.CopyToAsync(datei, ct);
+                File.SetLastWriteTimeUtc(ziel, DateTime.UtcNow.AddMinutes(-1));
+                var stempel = DateTimeOffset.Now.ToString("yyyyMMdd-HHmmss");
+                try { await treiber.UmbenennenAsync(e.Pfad, Treiber.Kind(abgeholt, $"{stempel}-{e.Name}"), ct); }
+                catch (Exception m) { log($"{e.Name}: geholt, aber nicht nach abgeholt/ geschoben — {m.Message}"); }
+                geholt.Add(e.Name);
+            }
+            catch (Exception x) { try { File.Delete(ziel); } catch { } log($"{e.Name}: nicht geholt — {x.Message}"); }
+        }
+        return geholt;
+    }
+
+    /// <summary>Ausgabe über einen Zugang: eine geschriebene Datei dort unter <paramref name="pfad"/> ablegen, Unterordner wie im Lauf.</summary>
+    public static async Task Ablegen(IDateiTreiber treiber, string? pfad, string datei, string name, CancellationToken ct = default)
+    {
+        var ziel = Treiber.Kind(pfad ?? "/", name.Replace('\\', '/'));
+        // Unterordner eines Laufs mit vielen Dateien anlegen — Schritt für Schritt, was es gibt, ist kein Fehler
+        var ordner = Treiber.Vater(ziel); var kette = new List<string>();
+        for (var o = ordner; o is not null && o != "/" && o != Treiber.Normal(pfad); o = Treiber.Vater(o)) kette.Insert(0, o);
+        foreach (var o in kette) await treiber.NeuesVerzeichnisAsync(o, ct);
+        await using var strom = File.OpenRead(datei);
+        await treiber.SchreibenAsync(ziel, strom, ct);
+    }
 
     public static string Sha(string path)
     {

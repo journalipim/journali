@@ -39,3 +39,12 @@ test('eigene Quelle im Job: das in-Fach gilt nicht mehr', () => {
   assert.deepEqual(fachNames(files, { source: 'C:/ablage/x.json' }), ['out/'])
   assert.deepEqual(fachNames(files, {}), ['in/', 'done/', 'failed/', 'out/'])
 })
+
+// Fächer an einem Zugang (28.09.2026): nur wo der Tasker das Fach führt, kann es an einem Zugang liegen
+import { fachZugaenge } from '../../plugins/tasker/entry.js'
+test('Eingang und Ausgabe an einem Zugang — nur für die Fächer, die der Job wirklich benutzt', () => {
+  assert.deepEqual(fachZugaenge({ in: { pattern: '*.csv' }, out: { many: true } }), { in: true, out: true })
+  assert.deepEqual(fachZugaenge({ out: { many: true, param: 'dir' } }), { in: false, out: true })
+  assert.deepEqual(fachZugaenge({ out: { many: true, param: 'dir' } }, { dir: '/srv/export' }), { in: false, out: false }, 'eigenes Verzeichnis: kein Fach, also kein Zugang')
+  assert.deepEqual(fachZugaenge(null), { in: false, out: false })
+})

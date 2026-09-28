@@ -88,3 +88,45 @@ test('gibt es nur den eingebauten Zugang, steht kein leeres Formular da', async 
     assert.equal(w.findAll('input[type=password]').length, 0)
   } finally { api.get = get }
 })
+
+// ---- 28.09.2026: WebDAV und FTP liefern Dateien, IXP und Solr sind Anmeldungen — alle im einen Plugin driver
+test('die Felder heissen im Formular, wie ein Anwender sie kennt; TLS ist eine Wahl, kein Freitext', async () => {
+  const get = api.get
+  api.get = async p => (p === '/api/drivers/arten'
+    ? [{ key: 'file', label: 'x', dateien: true, felder: [], geheim: [] }, { key: 'ftp', label: 'FTP', dateien: true, felder: ['host', 'port', 'user', 'pfad', 'tls'], geheim: ['password'] }, { key: 'ixp', label: 'IXP', dateien: false, felder: ['url'], geheim: ['token'] }]
+    : [{ key: 'lokal', art: 'file', label: '⌂ Dieser Server', felder: {}, dateien: true, geheim: [] }, { key: 'quelle', art: 'ixp', label: 'Quelle', felder: { url: 'https://api.beispiel.invalid' }, dateien: false, geheim: ['token'] }])
+  try {
+    const { default: View } = await import('../../plugins/driver/src/View.vue')
+    const w = mount(View)
+    await new Promise(r => setTimeout(r, 0)); await w.vm.$nextTick()
+    const text = w.text()
+    assert.match(text, /Rechner/); assert.match(text, /Startverzeichnis/); assert.match(text, /Passwort/)
+    assert.equal(w.findAll('select').length, 2, 'Art und TLS')
+    assert.match(w.findAll('select')[1].text(), /explizites TLS/)
+    assert.match(w.find('select').text(), /IXP \(Anmeldung\)/, 'die Art heisst, was sie ist')
+    const quelle = w.findAll('tbody tr').find(r => r.text().includes('Quelle'))
+    assert.match(quelle.text(), /IXP \(Anmeldung\)/); assert.match(quelle.text(), /Token/)
+  } finally { api.get = get }
+})
+
+test('⟳ prüft einen Zugang und schreibt die Antwort an die Zeile', async () => {
+  const get = api.get, post = api.post, gefragt = []
+  api.get = async p => (p === '/api/drivers/arten' ? ARTEN : ZUGAENGE)
+  api.post = async (p) => { gefragt.push(p); return p.includes('/archiv/') ? { ok: true, text: '3' } : { ok: false, text: 'FTP LIST /: 530 Login incorrect' } }
+  try {
+    const { default: View } = await import('../../plugins/driver/src/View.vue')
+    const w = mount(View)
+    await new Promise(r => setTimeout(r, 0)); await w.vm.$nextTick()
+    const zeile = name => w.findAll('tbody tr').find(r => r.text().includes(name))
+    assert.equal(zeile('Dieser Server').findAll('button').filter(b => b.text() === '⟳').length, 0, 'der eingebaute braucht keine Prüfung')
+    await zeile('Archiv').findAll('button').find(b => b.text() === '⟳').trigger('click')
+    await new Promise(r => setTimeout(r, 0)); await w.vm.$nextTick()
+    assert.deepEqual(gefragt, ['/api/drivers/archiv/test'])
+    assert.match(zeile('Archiv').find('td.pruef').text(), /^erreichbar$/)
+    await zeile('ERP').findAll('button').find(b => b.text() === '⟳').trigger('click')
+    await new Promise(r => setTimeout(r, 0)); await w.vm.$nextTick()
+    const erp = zeile('ERP').find('td.pruef')
+    assert.match(erp.text(), /nicht erreichbar/); assert.match(erp.attributes('title'), /530/)
+    assert.ok(erp.classes('neg'))
+  } finally { api.get = get; api.post = post }
+})
