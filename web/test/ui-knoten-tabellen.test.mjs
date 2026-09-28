@@ -496,6 +496,22 @@ test('↻ neu lesen: der Index wird geleert, der Job liest neu, der Dialog warte
   assert.ok(danach.findIndex(r => r.methode === 'DELETE') < danach.findIndex(r => /\/tables/.test(r.pfad)), 'erst löschen, dann holen')
 })
 
+test('↻ neu lesen: der Zähler des Balkens fängt von vorn an', async () => {
+  const { w } = await dialog({ tabellen: { ready: true, state: 'text', tables: [] }, text: TEXT_ZEILEN })
+  const { gesamt } = w.vm.schritte; assert.ok(gesamt > 1)
+  await w.findAll('button').find(b => b.text().includes('neu lesen')).trigger('click'); await flushPromises()
+  assert.deepEqual([w.vm.schritte.gesamt, w.vm.schritte.erledigt], [gesamt, gesamt], 'nicht das Doppelte')
+})
+
+test('Matrixtabelle: derselbe Schlüssel mehrmals ist eine Zeile — gleiche Werte einmal, verschiedene mit ·', async () => {
+  const tables = [{ seq: 0, page: 1, heading: null, rows: [['HI', '1x20 W'], ['HI', '1x22 W'], ['HI', '1x20 W'], ['Lebensdauer', '40.000 h'], ['Lebensdauer', '40.000 h'], ['a', '1'], ['b', '2']] }]
+  const { w } = await dialog({ tabellen: { ready: true, state: 'text', tables } })
+  const hi = w.vm.rows.filter(r => r.key === 'HI'); const leb = w.vm.rows.filter(r => r.key === 'Lebensdauer')
+  assert.equal(hi.length, 1); assert.equal(hi[0].value, '1x20 W · 1x22 W'); assert.notEqual(hi[0].target, 'skip')
+  assert.equal(leb.length, 1); assert.equal(leb[0].value, '40.000 h')
+  assert.equal(w.vm.rows.some(r => r.why === 'doppelt'), false, 'nichts mehr als doppelt gestrichen')
+})
+
 test('ein Baustein in ein bestehendes Textattribut', async () => {
   const { w, rufe } = await dialog()
   await zeile(w, 'Montage').find('select').setValue('hints'); await flushPromises()

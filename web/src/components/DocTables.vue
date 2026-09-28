@@ -217,11 +217,14 @@ function typ(r) {
 
 /// Aus den gelesenen Tabellen die Zeilen des Dialogs: Schlüssel links, Wert rechts, dazu der Vorschlag des Mappers.
 function baue() {
-  const paare = []
+  const paare = []; const je = new Map()
   for (const [id, d] of docs.value) for (const tb of d.tables ?? []) for (const cells of tb.rows ?? []) {
     if (!Array.isArray(cells) || cells.length < 2) continue
     const key = String(cells[0] ?? '').trim(), value = cells.slice(1).map(c => String(c ?? '').trim()).filter(Boolean).join(' ')
-    if (key && value) paare.push({ key, value, doc: id, heading: tb.heading ?? null, page: tb.page ?? null })
+    if (!key || !value) continue
+    const k = `${id}|${norm(key)}`; const da = je.get(k)
+    if (!da) { const p = { key, value, doc: id, heading: tb.heading ?? null, page: tb.page ?? null, werte: [value] }; je.set(k, p); paare.push(p) }
+    else if (!da.werte.some(v => gleichWert(v, value))) { da.werte.push(value); da.value = da.werte.join(' · ') }
   }
   const vorschlag = suggestPairs(paare, model.value, { role: props.node.role })
   tabellenZeilen.value = vorschlag.map((v, i) => {
@@ -522,6 +525,7 @@ async function neuLesen() {
     for (const id of props.media) await api.del(`/api/docs/${encodeURIComponent(id)}`)
     docs.value = new Map(); tabellenZeilen.value = []; zeilenWerte.value = []; kiZeilen.value = []; textZeilen.value = []; textGeholt.clear(); texte.clear(); textZahl.value = 0
     gestartet = false; warten.value = true; hinweis.value = ''; kiHinweis.value = ''; if (ki.value !== 'aus') ki.value = 'bereit'
+    schritte.value = { gesamt: 0, erledigt: 0 }
     if (timer) { clearTimeout(timer); timer = null }
     await lade()
   } catch (e) { hinweis.value = e.message }
