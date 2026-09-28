@@ -6,7 +6,9 @@ import { Window } from 'happy-dom'
 const win = new Window({ url: 'http://localhost:5000/' })
 // Alles, was ein Browser mitbringt, kommt aus happy-dom: die DOM-Klassen werden gebraucht, weil Vue in seinen Hooks
 // dagegen prüft (fehlt eine, bricht das Zeichnen mitten im Update mit „X is not defined“ — und die Ansicht ist leer).
-for (const k of ['window', 'document', 'navigator', 'getComputedStyle', 'requestAnimationFrame', 'cancelAnimationFrame', 'location'])
+// history gehoert dazu, seit eine Ansicht ueber den Router geprueft wird: vue-router greift beim Abschluss einer
+// Navigation darauf zu, auch mit createMemoryHistory (28.09.2026)
+for (const k of ['window', 'document', 'navigator', 'getComputedStyle', 'requestAnimationFrame', 'cancelAnimationFrame', 'location', 'history'])
   if (globalThis[k] === undefined) globalThis[k] = win[k]
 for (const k of Object.getOwnPropertyNames(win))
   if (/^[A-Z]/.test(k) && globalThis[k] === undefined && typeof win[k] === 'function') globalThis[k] = win[k]

@@ -7,7 +7,7 @@ import ImportView from './ImportView.vue'
 import ExportView from './ExportView.vue'
 import StrukturView from './StrukturView.vue'
 import * as tableExport from '../browser.js'
-import { store } from 'journali'
+import { store, plugins } from 'journali'
 import { t } from 'journali'
 
 const roles = ['group', 'product']
@@ -28,7 +28,10 @@ export default {
     { topic: 'export', roles: datenRoles, icon: '⇪', label: (r, below) => t('Excel: Vorlage für {0}', [below]), run: id => tableExport.nodeWorkbook(id, false).catch(e => store.toast(e.message)) },
     { topic: 'export', roles: datenRoles, icon: '⇪', label: (r, below) => `Excel: ${below} exportieren`, run: id => tableExport.nodeWorkbook(id, true).catch(e => store.toast(e.message)) },
     { topic: 'export', roles: ['group'], icon: '⑂', label: t('Struktur: Baum als Tabelle …'), run: (id, ctx) => ctx.go(`/p/table/struktur?node=${encodeURIComponent(id)}`) },
-    { topic: 'export', roles, icon: '⊞', label: 'Exportieren … (Teilbaum)', run: (id, ctx) => { localStorage.setItem('journali.export.root', id); ctx.go(`/p/table/export?node=${encodeURIComponent(id)}`) } },
+    // Je Format ein Eintrag: die Ansicht dahinter hat das Format fest, ein gemeinsamer Eintrag traf immer CSV
+    // und liess Excel unerreichbar (28.09.2026). Der Eintrag erscheint nur, solange sein Format-Plugin wirkt
+    { topic: 'export', roles, icon: '⊞', label: () => plugins.enabled('excel') ? t('Excel: Teilbaum exportieren …') : null, run: (id, ctx) => { localStorage.setItem('journali.export.root', id); ctx.go(`/p/table/export-xlsx?node=${encodeURIComponent(id)}`) } },
+    { topic: 'export', roles, icon: '⊞', label: () => plugins.enabled('csv') ? t('CSV: Teilbaum exportieren …') : null, run: (id, ctx) => { localStorage.setItem('journali.export.root', id); ctx.go(`/p/table/export?node=${encodeURIComponent(id)}`) } },
     { topic: 'import', roles: datenRoles, icon: '⇩', label: (r, below) => `Excel: ${below} importieren …`, run: (id, ctx) => ctx.go(`/p/table/import?node=${encodeURIComponent(id)}`) },
   ],
   tableExport,   // für andere Plugins: ctx.use('table').tableExport — build, toCsv, toJson, toJsonTree, toXlsx, download, nodeWorkbook

@@ -239,5 +239,7 @@
  "Knoten wählen, dann Vorschau oder herunterladen.": "Choose a node, then preview or download.",
  "den Baum als Tabelle heraus, in Excel entwerfen, in einem Zug hinein — ohne Inhalte": "the tree out as a table, drafted in Excel, back in one go — without content",
  "Struktur: Baum als Tabelle …": "Structure: tree as a table …",
- "Kein Importer für {0} — Plugin für dieses Format einschalten (⌿ Plugins)": "No importer for {0} — switch on the plugin for this format (⌿ Plugins)"
+ "Kein Importer für {0} — Plugin für dieses Format einschalten (⌿ Plugins)": "No importer for {0} — switch on the plugin for this format (⌿ Plugins)",
+ "Excel: Teilbaum exportieren …": "Excel: export subtree …",
+ "CSV: Teilbaum exportieren …": "CSV: export subtree …"
 }

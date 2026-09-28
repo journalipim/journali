@@ -18,7 +18,12 @@ export function treePicker(container, { value = null, values = [], roles = ['gro
   const wrap = document.createElement('div'); wrap.append(search, box); container.append(wrap)
   const matches = r => q && (r.label.toLowerCase().includes(q) || tree.keyHit(r, q))
   const visible = r => !q || matches(r) || tree.rows.some(x => matches(x) && tree.ancestors(x.id).some(a => a.id === r.id))
-  function reveal() { if (cur) for (const a of tree.ancestors(cur)) open.add(a.id); for (const r of tree.rows) if (!r.parent) open.add(r.id) }
+  // Aufklappen bis zum Gewaehlten — im Mehrfachmodus bis zu jedem Angehakten. Ohne das stand die Wurzelliste da,
+  // und der per Rechtsklick vorbelegte Knoten war nirgends zu sehen (28.09.2026)
+  function reveal() {
+    for (const id of multi ? picked : (cur ? [cur] : [])) for (const a of tree.ancestors(id)) open.add(a.id)
+    for (const r of tree.rows) if (!r.parent) open.add(r.id)
+  }
   function draw() {
     box.innerHTML = ''
     if (allowRoot) { const row = document.createElement('div'); row.className = 'pick' + (cur === null ? ' on' : ''); row.textContent = t('⌂ Wurzel (oberste Ebene)'); row.addEventListener('click', () => { cur = null; draw(); onPick(null) }); box.append(row) }
@@ -50,5 +55,5 @@ export function treePicker(container, { value = null, values = [], roles = ['gro
   }
   const start = async () => { if (!tree.loaded) await tree.load(); reveal(); draw() }
   start()
-  return { set(id) { cur = id; reveal(); draw() }, setValues(ids) { picked.clear(); for (const i of ids) picked.add(i); draw() }, refresh: draw, get value() { return cur }, get values() { return [...picked] } }
+  return { set(id) { cur = id; reveal(); draw() }, setValues(ids) { picked.clear(); for (const i of ids) picked.add(i); reveal(); draw() }, refresh: draw, get value() { return cur }, get values() { return [...picked] } }
 }

@@ -31,7 +31,7 @@
 //   ai     — die KI, wenn in den Einstellungen ein Anbieter-Schlüssel steht (ai.js): available(), active(), label(), ask({ system, user, json, web })
 //   mapper — der Datenmapper (mapper.js): suggest, plan, convert, parseDelimited, fromObjects
 //   batch(commands, batchId?) — POST /api/batch
-import { reactive, watch } from 'vue'
+import { reactive, watch, markRaw } from 'vue'
 import { api } from './api.js'
 import { store } from './store.js'
 import { tree } from './tree.js'
@@ -87,7 +87,9 @@ export const plugins = reactive({
       if (!this.active(p.key)) continue
       const mod = this.modules.get(p.key); if (!mod) continue
       // needs: eine Ansicht, die ein anderes Plugin braucht, erscheint nur, solange das wirkt
-      for (const v of mod.views ?? []) if (!v.needs || this.active(v.needs)) this.views.push({ key: p.key, ...v })
+      // markRaw: eine Vue-Komponente gehoert nicht in ein reaktives Objekt — Vue warnt und legt sonst einen
+      // Proxy um den ganzen Komponentenbaum (28.09.2026)
+      for (const v of mod.views ?? []) if (!v.needs || this.active(v.needs)) this.views.push({ key: p.key, ...v, ...(v.component ? { component: markRaw(v.component) } : {}) })
       for (const a of mod.nodeActions ?? []) this.nodeActions.push({ key: p.key, ...a })
       for (const i of mod.importers ?? []) this.importers.push({ key: p.key, source: i.key, ...i })
       for (const c of mod.checks ?? []) this.checks.push({ key: p.key, check: c.key, ...c })

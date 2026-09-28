@@ -10,7 +10,9 @@ export default {
     { path: 'export', label: 'JSON-Export', icon: '⇪', topic: 'export', mount: mountExport },   // strukturiert — nicht Tabelle
   ],
   nodeActions: [
-    { label: (r, below) => t('JSON: Rohdaten sichern (mit {0})', [below]), icon: '⇪', roles: ['group', 'product', 'variant'], async run(nodeId, ctx) { try { const raw = await rawOf(ctx, nodeId); download(new Blob([JSON.stringify(raw, null, 1)], { type: 'application/json' }), rawName(ctx, nodeId)) } catch (e) { ctx.store.toast(e.message) } } },
+    // topic: die Art „io“ ist Import und Export zugleich und nennt kein Thema — ohne topic stand der Eintrag
+    // unter ⌁ Werkzeuge statt unter ⇪ Export (28.09.2026)
+    { topic: 'export', label: (r, below) => t('JSON: Rohdaten sichern (mit {0})', [below]), icon: '⇪', roles: ['group', 'product', 'variant'], async run(nodeId, ctx) { try { const raw = await rawOf(ctx, nodeId); download(new Blob([JSON.stringify(raw, null, 1)], { type: 'application/json' }), rawName(ctx, nodeId)) } catch (e) { ctx.store.toast(e.message) } } },
   ],
   importers: [{
     key: 'json', label: 'JSON', accept: ['.json', '.jsonl', '.ndjson'],
