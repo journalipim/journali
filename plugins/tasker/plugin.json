@@ -1,6 +1,6 @@
 {
   "key": "tasker",
-  "version": "1.5.3",
+  "version": "1.5.4",
   "label": {
     "de": "Jobs",
     "en": "Jobs"
@@ -15,5 +15,6 @@
   "base": [
     "jobs"
   ],
-  "autoInstall": true
+  "autoInstall": true,
+  "builtin": true
 }

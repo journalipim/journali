@@ -2,7 +2,7 @@
 // ⌁ Plugins (docs/pflegestruktur.md, 19): links alles, was unter plugins/ liegt oder das Journal kennt,
 // mit Stand und Fassung; rechts das gewählte — installieren, ein/aus, aktualisieren, entfernen,
 // und bei Prozess-Plugins der Start mit Parametern und der Ausgabe.
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { api, when } from '../api.js'
 import { store } from '../store.js'
 import { plugins } from '../plugins.js'
@@ -42,11 +42,19 @@ const stateFilter = ref('')
 // „mein Tarif": nur, was diese Anlage verwenden darf. Der Schalter erscheint nur, wenn überhaupt etwas fehlt —
 // bei Pro+, Enterprise und Unlimited ist alles erlaubt, dann gäbe es nichts zu filtern
 const nurTarif = ref(false)
+/// Gehört das Plugin zu journali? `system` (ein Systemjob) oder `builtin` (ohne es geht es nicht: Jobs, Sicherung,
+/// Zugänge). Solche stehen nicht zur Wahl — sie lassen sich nicht entfernen und stehen nur in der Liste, wenn es etwas
+/// zu tun gibt: ein Update liegt vor, oder sie sind noch nicht installiert (28.09.2026).
+const fest = p => !!(p.manifest?.system || p.manifest?.builtin)
+const zuTun = p => !p.installed || p.update || p.sealReason
+const festeVerborgen = computed(() => plugins.list.filter(p => fest(p) && !zuTun(p)).length)
+const zeigeFeste = ref(false)
 const eingeschraenkt = computed(() => plugins.list.some(p => p.allowed === false))
 const kinds = computed(() => [...new Set(plugins.list.map(p => p.manifest?.kind).filter(Boolean))].sort())
 const shown = computed(() => {
   const s = q.value.trim().toLowerCase()
-  const list = plugins.list.filter(p => (!kindFilter.value || p.manifest?.kind === kindFilter.value)
+  const list = plugins.list.filter(p => (zeigeFeste.value || !fest(p) || zuTun(p))
+    && (!kindFilter.value || p.manifest?.kind === kindFilter.value)
     && (!nurTarif.value || p.allowed !== false)
     && (!stateFilter.value || (stateFilter.value === 'on' ? p.enabled : stateFilter.value === 'off' ? p.installed && !p.enabled : stateFilter.value === 'update' ? p.update : stateFilter.value === 'cert' ? p.certified : !p.installed))
     && (!s || p.key.includes(s) || label(p.manifest).toLowerCase().includes(s) || (L(p.manifest?.description) ?? '').toLowerCase().includes(s) || (p.manifest?.kind ?? '').includes(s)))
@@ -108,6 +116,8 @@ async function toggle(p) {
 }
 
 onMounted(async () => { await plugins.load(); if (!cur.value) cur.value = plugins.list[0]?.key ?? null; await plugins.pruefeZustand() })
+// Die Auswahl folgt der Liste: was nicht mehr dasteht, steht auch rechts nicht mehr
+watch(shown, liste => { if (cur.value && !liste.some(p => p.key === cur.value)) cur.value = liste[0]?.key ?? null })
 async function act(path, method = 'POST') {
   if (!store.actor) { store.toast(t('👤 Name fehlt → Einstellungen')); return }
   busy.value = '…'
@@ -127,6 +137,7 @@ function pick(k) { cur.value = k }
       <span class="sep">·</span>
       <span v-for="[v, l] in [['on', '● an'], ['off', '○ aus'], ['update', $t('↑ Update')], ['new', $t('⇩ nicht installiert')], ['cert', $t('❖ Core')]]" :key="v" class="view-chip" :class="{ on: stateFilter === v }" @click="stateFilter = stateFilter === v ? '' : v">{{ l }}</span>
       <span v-if="eingeschraenkt" class="view-chip" :class="{ on: nurTarif }" @click="nurTarif = !nurTarif" :title="$t('nur, was diese Anlage verwenden darf — mit den anderen Filtern zusammen')">{{ $t("◆ mein Tarif") }}</span>
+      <span v-if="festeVerborgen" class="view-chip feste" :class="{ on: zeigeFeste }" @click="zeigeFeste = !zeigeFeste" :title="$t('Was zu journali gehört: Systemjobs und die Plugins, ohne die es nicht arbeitet. Sie stehen hier nur, wenn ein Update vorliegt oder eines fehlt.')">{{ $t("⚙ System · {0}", [festeVerborgen]) }}</span>
     </div>
     <div class="li head">
       <span class="k" :title="$t('nach Key sortieren{0}', [sortBy === 'key' ? ' ' + $t('— Klick dreht die Richtung') : ''])" @click="sortByCol('key')">{{ $t("Key{0}", [caret('key')]) }}<i class="grip" :title="$t('Spalte breiter oder schmaler ziehen; Doppelklick setzt zurück')" @mousedown="cols.zieh('key', $event)" @dblclick.stop="cols.zurueck()" /></span>
@@ -181,7 +192,7 @@ function pick(k) { cur.value = k }
         <!-- Zustandsschalter wie „in der Leiste“: leuchtet, wenn es wirkt; Klick kippt. Ein Plugin, das der Tarif nicht
              enthält, wirkt nicht — auch wenn es im Journal aktiviert ist; dann steht der Tarif da, der es enthält -->
         <button :class="{ primary: plugins.active(current.key) }" :disabled="current.allowed === false && !current.enabled" @click="toggle(current)" :title="current.allowed === false ? (current.enabled ? $t('Aktiviert, aber ohne Wirkung — {0} gehört zum Tarif {1}', [current.key, tarifOf(current)]) : $t('Tarif {0}', [tarifOf(current)])) : current.enabled ? (plugins.active(current.key) ? $t('Deaktivieren (jetzt aktiviert)') : $t('aktiviert, aber ohne Wirkung:') + ' ' + missing(current.key).join(', ') + ' ' + $t('ist aus')) : missing(current.key).length ? 'braucht ' + missing(current.key).join(', ') : $t('Aktivieren (jetzt deaktiviert)')">{{ current.allowed === false ? `◇ ${tarifOf(current)}` : current.enabled ? (plugins.active(current.key) ? '● aktiviert' : '◐ aktiviert') : '○ deaktiviert' }}</button>
-        <button class="x" @click="act(`/api/plugins/${current.key}`, 'DELETE')" :title="$t('aus dem Journal entfernen — die Dateien bleiben')">🗑</button>
+        <button v-if="!fest(current)" class="x" @click="act(`/api/plugins/${current.key}`, 'DELETE')" :title="$t('aus dem Journal entfernen — die Dateien bleiben')">🗑</button>
       </template>
     </div>
     <div class="toolbar meta muted">

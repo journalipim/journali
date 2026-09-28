@@ -2501,6 +2501,8 @@
  "Ohne passende Signatur zählt der Stand nicht.": "Without a matching signature the state does not count.",
  "entzogen": "revoked",
  "Schlüssel nicht angenommen: {0}": "Key not accepted: {0}",
+ "⚙ System · {0}": "⚙ System · {0}",
+ "Was zu journali gehört: Systemjobs und die Plugins, ohne die es nicht arbeitet. Sie stehen hier nur, wenn ein Update vorliegt oder eines fehlt.": "What belongs to journali: system jobs and the plugins it cannot work without. They are listed here only when an update is pending or one is missing.",
  "◆ mein Tarif": "◆ my tier",
  "nur, was diese Anlage verwenden darf — mit den anderen Filtern zusammen": "only what this installation may use — together with the other filters",
  "Datenbankpasswort anzeigen": "Show the database password",

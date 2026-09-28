@@ -17,6 +17,14 @@ public static class PluginApi
 {
     public sealed record Manifest(string Key, string Version, JsonElement Raw, PluginSeal.Seal Seal);
 
+    /// <summary>Gehört dieses Plugin zu journali? <c>system</c> (ein Systemjob) oder <c>builtin</c> (ohne es geht es nicht).</summary>
+    public static bool Fest(string dir, string key)
+    {
+        if (!Scan(dir).TryGetValue(key, out var m)) return false;
+        return (m.Raw.TryGetProperty("system", out var s) && s.ValueKind == JsonValueKind.True)
+            || (m.Raw.TryGetProperty("builtin", out var b) && b.ValueKind == JsonValueKind.True);
+    }
+
     /// <summary>Alle plugin.json unter dem Verzeichnis, nach Schlüssel.</summary>
     public static Dictionary<string, Manifest> Scan(string dir)
     {
@@ -132,6 +140,9 @@ public static class PluginApi
         api.MapDelete("/plugins/{key}", (string key, HttpRequest req, Catalog c) =>
         {
             if (Actor(req) is not { } actor) return ActorMissing();
+            // Was das System trägt, bleibt (28.09.2026): die Systemjobs (system) und die Plugins, ohne die journali
+            // nicht arbeitet (builtin — Jobs, Sicherung, Zugänge). Ausschalten geht, entfernen nicht.
+            if (Fest(dir, key)) return Bad("{0} gehört zu journali und wird nicht entfernt — ausschalten geht.", key);
             return c.With((_, _, write) => c.Plugins.All.ContainsKey(key)
                 ? Results.Ok(EntryView.Of(write(actor, Plugins.Stream + key, Types.PluginRemoved, new PluginRemoved(), null)))
                 : Results.NotFound());

@@ -1,8 +1,8 @@
 {
  "key": "driver",
- "version": "1.0.0",
- "hash": "2007d6b3c3910c7d13ae39fd996279f70b949c59b4b2fa2c2e1de0c9d15845a3",
- "issued": "2026-09-27",
+ "version": "1.0.1",
+ "hash": "4932528c08140ba81040de61c31c31b4092a5914ed72da00396b08c928be9517",
+ "issued": "2026-09-28",
  "issuer": "journali",
- "sig": "rdlLkLebsBcyUrHFX/9KmQKoTd/P7EACzR9JMKXxCuddeCoctBtbG9KP+wx/dIXK5c1DpRnywAg/EyYXEcZh2A=="
+ "sig": "2NhxyoPA+XWmGPD0Q+RLAQ9bSZPUrLK9te77yS99UWdRFrSUyGhNhhe8V0guBeftUcQ7q2vyKYl30uMr0NGnYA=="
 }

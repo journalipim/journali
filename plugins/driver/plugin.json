@@ -1,6 +1,6 @@
 {
   "key": "driver",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "label": {
     "de": "Zugänge",
     "en": "Accesses"
@@ -12,5 +12,6 @@
   "kind": "tool",
   "runs": "browser",
   "entry": "entry.js",
-  "autoInstall": true
+  "autoInstall": true,
+  "builtin": true
 }
