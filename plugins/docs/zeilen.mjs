@@ -1,30 +1,25 @@
-// Prüfwerkzeug: die Zeilen eines PDF, wie der Leser (job.mjs) sie in den Index legt — Zellen mit zwei Leerzeichen
-// getrennt. Aufruf: node zeilen.mjs <datei.pdf> [seite]. Zum Nachsehen, warum eine Regel im Dialog etwas findet oder nicht.
+// Prüfwerkzeug: was der Leser aus einem PDF macht — Blöcke mit Rolle (Überschrift, Text, Tabelle) je Seite, oder das
+// ganze Dokument als Abschnitte und Tabellen. Aufruf: node zeilen.mjs <datei.pdf> [seite]
 import fs from 'node:fs'
-import { cellsOf, dropRunningLines, joinHyphens, findTables } from './core.mjs'
+import { pdfPages } from './pdf.mjs'
+import { layoutDocument, analysePage, bodyOf, blockText } from './layout.mjs'
 
 const [,, datei, nurSeite] = process.argv
-const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs')
-const doc = await pdfjs.getDocument({ data: new Uint8Array(fs.readFileSync(datei)), useSystemFonts: true, isEvalSupported: false, verbosity: 0 }).promise
-const pages = [], rows = []
-for (let n = 1; n <= doc.numPages; n++) {
-  const page = await doc.getPage(n)
-  const content = await page.getTextContent()
-  let y = null, line = [], lines = []
-  for (const item of content.items) {
-    const ty = Math.round(item.transform?.[5] ?? 0)
-    if (y !== null && Math.abs(ty - y) > 2) { lines.push(line); line = [] }
-    y = ty
-    line.push({ x: item.transform?.[4] ?? 0, w: item.width ?? 0, str: item.str + (item.hasEOL ? '\n' : '') })
+if (!datei) { console.error('node zeilen.mjs <datei.pdf> [seite]'); process.exit(2) }
+const pages = await pdfPages(fs.readFileSync(datei))
+const body = bodyOf(pages)
+console.log(`Seiten ${pages.length} · Fliesstext ${body.bodySize} pt ${body.bodyFont}`)
+if (nurSeite) {
+  const p = pages[Number(nurSeite) - 1]
+  if (!p) { console.error(`Seite ${nurSeite} gibt es nicht`); process.exit(2) }
+  for (const b of analysePage(p.items, body).blocks) {
+    console.log(`[${b.role}${b.level ?? ''}] x${Math.round(b.x0)}-${Math.round(b.x1)} y${Math.round(b.y0)}-${Math.round(b.y1)} ${b.size}pt ${b.font}`)
+    if (b.table && b.header) console.log(`    KOPF: ${b.header.join(' | ')}`)
+    console.log('    ' + blockText(b).replace(/\n/g, '\n    '))
   }
-  if (line.length) lines.push(line)
-  pages.push(lines.map(l => cellsOf(l).join('  ')).filter(Boolean).join('\n'))
-  rows.push(lines.map(l => cellsOf(l)).filter(c => c.length))
-  page.cleanup()
+} else {
+  const { chunks, tables, zeichen } = layoutDocument(pages)
+  console.log(`Abschnitte ${chunks.length} · Tabellen ${tables.length} · Zeichen ${zeichen}`)
+  for (const c of chunks) console.log(`S.${c.page} ${c.heading ? JSON.stringify(c.heading) : '—'}: ${c.body.replace(/\n/g, ' ').slice(0, 100)}`)
+  for (const t of tables) console.log(`TAB S.${t.page} ${t.heading ?? ''}: ${t.rows.length} Zeilen — ${t.rows.slice(0, 3).map(r => r.join(' | ')).join(' ; ')}`)
 }
-await doc.destroy()
-const text = dropRunningLines(pages).map(joinHyphens)
-text.forEach((t, i) => { if (!nurSeite || Number(nurSeite) === i + 1) { console.log(`\n=== Seite ${i + 1} ===`); console.log(t) } })
-const tabellen = findTables(rows)
-console.log(`\n=== Tabellen (Schlüssel/Wert, ≥3 Zeilen): ${tabellen.length} ===`)
-for (const t of tabellen) console.log(`S. ${t.page} ${t.heading ?? ''}: ${t.rows.length} Zeilen — ${t.rows.slice(0, 3).map(r => r.join(' | ')).join(' ; ')}`)

@@ -1,4 +1,6 @@
 // Plugin docs — Kern ohne Node-Abhängigkeiten.
+// Für Text, HTML und OCR: dort gibt es keine Schriftinformation, also entscheiden Zeilenform und Wortlage. Ein PDF
+// liest der Typografie-Leser (layout.mjs) — er kennt Schriftgrösse und Schnitt und rät nicht am Text (28.09.2026).
 // Hier steht, wie aus Text Abschnitte werden — das Lesen der Dateiformate macht job.mjs.
 // Abschnitte statt ganzer Dokumente: ein 40-seitiges Datenblatt ist als Ganzes für die Suche wertlos, und ein Treffer
 // soll „Seite 4" sagen können (pflegestruktur §32).
