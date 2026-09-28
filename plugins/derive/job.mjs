@@ -64,11 +64,24 @@ async function render(item, src) {
   return { data, width: info.width, height: info.height, mime: format === 'jpeg' ? 'image/jpeg' : `image/${format}` }
 }
 
+// Die Bytes gehen einzeln in den Speicher (sie sind gross), der Beleg wird gesammelt: beleg=false laesst den
+// Journaleintrag weg. Frueher nahm jedes PUT die Schreibsperre, und waehrend einer Runde kam kein Leser mehr
+// durch — die Kacheln standen sekundenlang still (28.09.2026)
 async function put(item, out) {
-  const r = await fetch(`${server}/api/media/${encodeURIComponent(item.id)}/derived/${encodeURIComponent(item.preset)}`, {
+  const r = await fetch(`${server}/api/media/${encodeURIComponent(item.id)}/derived/${encodeURIComponent(item.preset)}?beleg=false`, {
     method: 'PUT', headers: { ...headers, 'Content-Type': out.mime, 'X-Width': String(out.width), 'X-Height': String(out.height), 'X-Fingerprint': item.fingerprint }, body: out.data,
   })
   if (!r.ok) throw new Error(`ablegen: ${r.status} ${await r.text()}`)
+  return { id: item.id, preset: item.preset, width: out.width, height: out.height, bytes: out.data.length, fingerprint: item.fingerprint }
+}
+
+/// Die Belege einer Runde in einem Zug — ein Stapel, eine Sperre
+async function belege(liste) {
+  if (!liste.length) return
+  const r = await fetch(`${server}/api/media/derived`, {
+    method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify({ belege: liste }),
+  })
+  if (!r.ok) throw new Error(`Belege: ${r.status} ${await r.text()}`)
 }
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'journali-derive-'))
@@ -81,6 +94,7 @@ try {
     if (!items.length) break
     rounds++
     console.log(`Runde ${rounds}: ${items.length} Ableitungen (${pending.presets.map(p => `${p.key} ${p.pending} fehlend`).join(', ')})`)
+    const runde = []   // die Belege dieser Runde — sie gehen am Ende in einem Zug ins Journal
     // je Bild einmal laden, alle Presets daraus rechnen
     const byId = new Map(); for (const it of items) { if (!byId.has(it.id)) byId.set(it.id, []); byId.get(it.id).push(it) }
     for (const [id, its] of byId) {
@@ -94,12 +108,15 @@ try {
           quelle = await pdfFirstPage(src, edge)
         }
         for (const it of its) {
-          try { const out = await render(it, quelle); await put(it, out); done++; console.log(`✓ ${it.name} → ${it.preset} ${out.width}×${out.height} ${(out.data.length / 1024).toFixed(0)} KB`) }
+          try { const out = await render(it, quelle); runde.push(await put(it, out)); done++; console.log(`✓ ${it.name} → ${it.preset} ${out.width}×${out.height} ${(out.data.length / 1024).toFixed(0)} KB`) }
           catch (e) { failed++; failedIds.add(it.id + '/' + it.preset); console.error(`✗ ${it.name} → ${it.preset}: ${e.message}`) }
         }
       } catch (e) { failed += its.length; for (const it of its) failedIds.add(it.id + '/' + it.preset); console.error(`✗ ${its[0].name}: ${e.message}`) }
       finally { try { fs.unlinkSync(src) } catch {} }
     }
+    // Erst jetzt ins Journal: eine Sperre je Runde statt einer je Ableitung. Bricht der Lauf vorher ab, liegen die
+    // Bytes ohne Beleg im Speicher — die Ableitung gilt dann als fehlend und wird neu gerechnet, kein Schaden
+    await belege(runde)
   }
   console.log(`${done} Ableitungen gerechnet${failed ? `, ${failed} gescheitert` : ''}${rounds ? '' : ' — nichts fehlte'}`)
   code = failed ? 3 : 0

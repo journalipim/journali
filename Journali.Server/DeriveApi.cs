@@ -15,6 +15,9 @@ namespace Journali.Server;
 public static class DeriveApi
 {
     public sealed record PresetBody(Labels? Label, int? Width, int? Height, string? Format, int? Quality, bool? Auto);
+    /// <summary>Ein Beleg je gerechneter Ableitung — die Bytes liegen schon im Speicher.</summary>
+    public sealed record Beleg(string? Id, string? Preset, int Width, int Height, long Bytes, string? Fingerprint);
+    public sealed record BelegeBody(List<Beleg>? Belege);
     private static readonly HashSet<string> Formats = ["webp", "jpeg", "png", "avif"];
     public const string PluginKey = "derive";
 
@@ -78,7 +81,7 @@ public static class DeriveApi
         }));
 
         // Ergebnis ablegen: Bytes im Body, Mass in den Köpfen X-Width/X-Height; der Server schreibt sha.<preset> und den Beleg
-        api.MapPut("/media/{id}/derived/{preset}", async (string id, string preset, HttpRequest req, Catalog c, IMediaStore store, CancellationToken ct) =>
+        api.MapPut("/media/{id}/derived/{preset}", async (string id, string preset, HttpRequest req, Catalog c, IMediaStore store, CancellationToken ct, bool beleg = true) =>
         {
             if (Actor(req) is not { } actor) return ActorMissing();
             var (m, p) = c.Lesen((_, _) => (c.Media.All.GetValueOrDefault(id), c.Media.Presets.GetValueOrDefault(preset)));
@@ -89,8 +92,33 @@ public static class DeriveApi
             using var buffer = new MemoryStream();
             await req.Body.CopyToAsync(buffer, ct); buffer.Position = 0;
             await store.PutAsync(m.Sha256 + "." + p.Key, buffer, ct);
-            c.With((_, _, write) => write(actor, m.Id, Types.MediaDerived, new MediaDerived(p.Key, w, h, buffer.Length, fingerprint), null));
+            // beleg=false: nur die Bytes ablegen, den Beleg sammelt der Aufrufer und schickt ihn am Ende der Runde
+            // an /media/derived. Jeder einzelne Beleg nahm sonst die Schreibsperre — bei 200 je Runde kam kein
+            // Leser mehr durch, und die Kacheln standen sekundenlang still (28.09.2026)
+            if (beleg) c.With((_, _, write) => write(actor, m.Id, Types.MediaDerived, new MediaDerived(p.Key, w, h, buffer.Length, fingerprint), null));
             return Results.Ok(new { ok = true, w, h, bytes = buffer.Length });
+        });
+
+        // Die Belege einer ganzen Runde in einem Zug — ein Stapel, eine Sperre
+        api.MapPost("/media/derived", (BelegeBody body, HttpRequest req, Catalog c) =>
+        {
+            if (Actor(req) is not { } actor) return ActorMissing();
+            if (body.Belege is not { Count: > 0 }) return Results.Ok(new { geschrieben = 0 });
+            var items = new List<(string, string, object)>();
+            var fehlt = new List<string>();
+            c.Lesen((_, _) =>
+            {
+                foreach (var b in body.Belege)
+                {
+                    var m = b.Id is { Length: > 0 } ? c.Media.All.GetValueOrDefault(b.Id) : null;
+                    var p = b.Preset is { Length: > 0 } ? c.Media.Presets.GetValueOrDefault(b.Preset) : null;
+                    if (m is null || p is null) { fehlt.Add($"{b.Id}/{b.Preset}"); continue; }
+                    items.Add((m.Id, Types.MediaDerived, new MediaDerived(p.Key, b.Width, b.Height, b.Bytes, b.Fingerprint ?? p.Fingerprint)));
+                }
+                return 0;
+            });
+            if (items.Count > 0) c.WriteMany(actor, items);
+            return Results.Ok(new { geschrieben = items.Count, fehlt });
         });
 
         // Ausliefern: GET /api/media/{id}/{preset} — liegt nichts vor, 404 (der Aufrufer nimmt dann /file oder wartet auf den Job)
