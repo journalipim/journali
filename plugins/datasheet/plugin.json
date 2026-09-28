@@ -1,6 +1,6 @@
 {
   "key": "datasheet",
-  "version": "2.3.0",
+  "version": "2.3.1",
   "label": {
     "de": "Datenblatt",
     "en": "Data sheet"
@@ -32,7 +32,6 @@
         "{locale}"
       ],
       "description": "Datenblätter eines Teilbaums als HTML-Dateien in ein Verzeichnis (mit index.html)",
-      "profile": "generic",
       "files": {
         "out": {
           "many": true,
@@ -42,7 +41,7 @@
       "params": [
         {
           "key": "profile",
-          "label": "Profil — ✎ hier anlegen: Teilbaum, Format, Sprachen … (leer = Werte unten)",
+          "label": "Profil (leer = Werte unten)",
           "type": "profile",
           "default": "",
           "perJob": true

@@ -1,6 +1,8 @@
 // Client für einen Solr-Kern (Export eines anderen PIM) — plugins/solr/README.md.
-// Solr schickt keinen CORS-Kopf, antwortet aber auf json.wrf mit JSONP: ein <script>-Tag
-// je Anfrage, nur Lesen. Im Job auf dem Server geht es ohne das: dort fragt fetch (holenMitFetch).
+// Der Kern ist ein Zugang (Plugin driver, Art solr, 28.09.2026): im Browser liest der Server mit
+// (/api/drivers/<zugang>/relay, holenUeber) und hängt die Anmeldung an — kein CORS, kein Passwort im Browser.
+// Ohne Zugang bleibt für eine freie Adresse JSONP: Solr schickt keinen CORS-Kopf, antwortet aber auf json.wrf —
+// ein <script>-Tag je Anfrage, nur Lesen, ohne Anmeldung. Im Job fragt fetch (holenMitFetch).
 // Die Abbildung steht hier einmal und gilt für beide Wege.
 export const SYSTEM = 'solr'
 export const ROLE = { group: 'group', product: 'product', productvariant: 'variant' }
@@ -36,14 +38,24 @@ function jsonp(url) {
   })
 }
 
+const mitJson = url => url + (url.includes('?') ? '&' : '?') + 'wt=json'
+
 /// Ohne Browser (Job auf dem Server): Solr antwortet auf wt=json ganz normal — CORS spielt dort keine Rolle.
-export const holenMitFetch = async url => {
-  const res = await fetch(url + (url.includes('?') ? '&' : '?') + 'wt=json')
+/// Mit Name (aus dem Zugang) meldet sich der Job per Basic an: holenMitFetch.als(name, passwort).
+export const holenMitFetch = async (url, headers = {}) => {
+  const res = await fetch(mitJson(url), { headers })
   if (!res.ok) throw new Error(`Solr: ${res.status} ${res.statusText}`)
   return res.json()
 }
+holenMitFetch.als = (name, passwort) => !name ? holenMitFetch
+  : url => holenMitFetch(url, { Authorization: 'Basic ' + Buffer.from(`${name}:${passwort ?? ''}`).toString('base64') })
 
-/// Ein Solr-Kern. `holen` ist der Weg zur Quelle: im Browser JSONP, im Job fetch.
+/// Über einen Zugang: die Adresse des Kerns kennt der Server, hier steht nur der Pfad dahinter (solr('', holenUeber(…))).
+/// holen = api.get der Oberfläche.
+export const holenUeber = (zugang, holen) => url =>
+  holen(`/api/drivers/${encodeURIComponent(zugang)}/relay?path=${encodeURIComponent(mitJson(url))}`)
+
+/// Ein Solr-Kern. `holen` ist der Weg zur Quelle: im Browser über den Zugang (oder JSONP), im Job fetch.
 export function solr(core, holen = jsonp) {
   const base = core.replace(/\/+$/, '')
   const NODES = '(type:group OR type:product OR type:productVariant)'

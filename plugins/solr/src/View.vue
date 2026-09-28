@@ -2,21 +2,28 @@
 // ⇩ Import aus einem Solr-Kern (Export eines anderen PIM): links der Quellbaum,
 // Knoten für Knoten beim Aufklappen nachgeladen (Haken = Teilbaum); in der Mitte
 // der gewählte Knoten mit allem, was er hat; rechts der Plan und der Stapel.
-// Solr lesen geht per JSONP im Browser; geschrieben wird nur über /api/model und /api/batch.
+// Solr lesen geht über einen Zugang (der Server liest mit und meldet sich an) oder, ohne Zugang, per JSONP;
+// geschrieben wird nur über /api/model und /api/batch.
 import { ref, computed, onMounted } from 'vue'
 import { api, store, tree, icon, plugins, Splitter, ImportHead, TreePicker, paneWidth } from 'journali'
 import { useRouter } from 'vue-router'
-import { solr, SYSTEM, roleOf, ownValues, DEFAULT_SKIP, TYPES, REL_GROUP } from '../solr.js'
+import { solr, holenUeber, SYSTEM, roleOf, ownValues, DEFAULT_SKIP, TYPES, REL_GROUP } from '../solr.js'
 import { plane, schreibe, planeRelationen, schreibeRelationen } from '../lauf.mjs'
 import { t as t_ } from 'journali'
 const srcW = paneWidth('import.src', 340)
 const router = useRouter()
 
-const saved = JSON.parse(localStorage.getItem('journali.import.solr') || '{}')
-const base = ref(saved.base || '')   // keine Vorgabe — das Plugin ist allgemein, Kundendaten gehören nicht ins Repo
+const saved = (() => { try { return JSON.parse(localStorage.getItem('journali.import.solr') || '{}') } catch { return {} } })()
+// Der Kern ist ein Zugang der Art solr (⌁ Zugänge, 28.09.2026): Adresse, Name und Passwort stehen dort, das Passwort
+// beim Server. Ohne Zugang bleibt die freie Adresse ohne Anmeldung
+const zugang = ref(saved.zugang || '')
+const zugaenge = ref([])
+const base = ref(saved.base || '')   // nur ohne Zugang; keine Vorgabe — das Plugin ist allgemein, Kundendaten gehören nicht ins Repo
 const target = ref(saved.target || '')
 const skipText = ref(saved.skip || '')
-const persist = () => localStorage.setItem('journali.import.solr', JSON.stringify({ base: base.value, target: target.value, skip: skipText.value, auto: connected.value }))
+const persist = () => { try { localStorage.setItem('journali.import.solr', JSON.stringify({ zugang: zugang.value, base: base.value, target: target.value, skip: skipText.value, auto: connected.value })) } catch {} }
+async function ladeZugaenge() { try { zugaenge.value = await api.get('/api/drivers?art=solr') ?? [] } catch { zugaenge.value = [] } }
+const quelleText = () => zugang.value ? (zugaenge.value.find(z => z.key === zugang.value)?.label ?? zugang.value) : base.value
 
 let client = null
 const connected = ref(false)
@@ -40,7 +47,7 @@ const modelGroups = computed(() => new Map((model.value?.groups ?? []).map(g => 
 const skip = computed(() => [...DEFAULT_SKIP, ...skipText.value.split(/[,\s]+/).filter(Boolean)])
 const known = computed(() => new Map(tree.rows.filter(r => r.external?.[SYSTEM]).map(r => [r.external[SYSTEM], r])))
 
-onMounted(() => { if (!tree.loaded) tree.load(); if (saved.base && saved.auto) connect() })
+onMounted(() => { if (!tree.loaded) tree.load(); ladeZugaenge(); if ((saved.zugang || saved.base) && saved.auto) connect() })
 function say(text) { log.value.unshift(`${new Date().toLocaleTimeString('de-DE')} ${text}`); if (log.value.length > 200) log.value.pop() }
 
 // Was der Ablauf (lauf.mjs) von der Umgebung braucht — im Job kommt dasselbe aus der API
@@ -54,13 +61,13 @@ const umgebung = {
 
 // Profile (ProfileBar): Quelle, Ziel, Auslassungen und die angehakten Wurzeln — im Journal unter plugin:solr
 // root: die angehakten Wurzeln mit Komma — so heisst der Parameter des Jobs; der JobRunner füllt ihn aus dem Profil
-const profileGet = () => ({ base: base.value, target: target.value, skip: skipText.value, checked: [...checked.value], root: [...checked.value].join(',') })
+const profileGet = () => ({ zugang: zugang.value || null, base: zugang.value ? '' : base.value, target: target.value, skip: skipText.value, checked: [...checked.value], root: [...checked.value].join(',') })
 async function profileSet(p) {
   if (!p) {   // „— Profil —“: alles leer, Quelle zu
-    base.value = ''; target.value = ''; skipText.value = ''; connected.value = false; rows.value = []; checked.value = new Set(); plan.value = null; result.value = null; current.value = null; persist(); return
+    zugang.value = ''; base.value = ''; target.value = ''; skipText.value = ''; connected.value = false; rows.value = []; checked.value = new Set(); plan.value = null; result.value = null; current.value = null; persist(); return
   }
-  base.value = p.base ?? ''; target.value = p.target ?? ''; skipText.value = p.skip ?? ''
-  if (!base.value) return
+  zugang.value = p.zugang ?? ''; base.value = p.zugang ? '' : p.base ?? ''; target.value = p.target ?? ''; skipText.value = p.skip ?? ''
+  if (!zugang.value && !base.value) return
   await connect()
   for (const id of p.checked ?? []) { await reveal(id); checked.value.add(id) }
   checked.value = new Set(checked.value)
@@ -77,7 +84,7 @@ async function reveal(id) {
 async function connect() {
   busy.value = 'verbinde …'
   try {
-    client = solr(base.value)
+    client = zugang.value ? solr('', holenUeber(zugang.value, api.get)) : solr(base.value)
     total.value = await client.count()
     const roots = await client.roots()
     rows.value = roots.map(d => ({ doc: d, depth: 0, parent: null, loaded: false, kids: null }))
@@ -209,7 +216,8 @@ async function run() {
       label: `Import (Solr) · ${wurzeln.length} Wurzel${wurzeln.length === 1 ? '' : 'n'}`,
       service: 'solr',
       params: {
-        base: base.value,
+        zugang: zugang.value || '',
+        base: zugang.value ? '' : base.value,
         roots: wurzeln.join(','),
         target: target.value || '',
         skip: skipText.value || '',
@@ -231,10 +239,17 @@ async function run() {
 <template>
   <div class="pane" :style="`width:${srcW}px;flex:none`">
     <ImportHead source="solr" plugin="solr" :busy="busy" :get="profileGet" :set="profileSet">
-      <template #status><span v-if="connected" class="muted" :title="base">☰ {{ total }}</span></template>
-      <tr><td class="attr">{{ $t("Quelle") }}</td><td class="row">
-        <input v-model="base" type="text" :placeholder="$t('https://…/solr/<kern>')" :title="$t('URL des Solr-Kerns')" @keydown.enter="connect" />
-        <button class="primary" @click="connect" :disabled="!!busy">{{ $t("Verbinden") }}</button>
+      <template #status><span v-if="connected" class="muted" :title="quelleText()">☰ {{ total }}</span></template>
+      <tr><td class="attr">{{ $t("Zugang") }}</td><td class="row">
+        <select v-model="zugang" class="zugang" style="flex:1" :title="$t('Solr-Kern mit Anmeldung — eingerichtet unter ⌁ Zugänge, das Passwort bleibt beim Server')">
+          <option value="">{{ $t("— freie Adresse, ohne Anmeldung —") }}</option>
+          <option v-for="z in zugaenge" :key="z.key" :value="z.key">{{ z.label || z.key }}</option>
+          <option v-if="zugang && !zugaenge.some(z => z.key === zugang)" :value="zugang">{{ zugang }} ✗</option>
+        </select>
+        <button class="primary" @click="connect" :disabled="!!busy || (!zugang && !base)">{{ $t("Verbinden") }}</button>
+      </td></tr>
+      <tr v-if="!zugang"><td class="attr">{{ $t("Quelle") }}</td><td>
+        <input v-model="base" type="text" :placeholder="$t('https://…/solr/<kern>')" :title="$t('URL des Solr-Kerns — mit Anmeldung nur über einen Zugang')" @keydown.enter="connect" />
       </td></tr>
     </ImportHead>
     <div class="step-band">{{ $t("2 · Auswahl") + ' ' }}<span class="muted">{{ $t("· Haken = Teilbaum, Klick zeigt den Knoten") }}</span><span class="grow" /><span class="muted">{{ $t("{0} gewählt", [checked.size]) }}</span></div>

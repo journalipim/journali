@@ -33,7 +33,6 @@ public static class JobApi
                     label = x.Proc.TryGetProperty("label", out var pl) ? pl : (manifests[p.Key].Raw.TryGetProperty("label", out var l) ? l : (JsonElement?)null),
                     @params = x.Proc.TryGetProperty("params", out var ps) ? ps : (JsonElement?)null,
                     description = x.Proc.TryGetProperty("description", out var d) ? d.GetString() : null,
-                    profile = x.Proc.TryGetProperty("profile", out var pr) ? pr.GetString() : null,   // "generic": Profile im Tasker anlegen (✎)
                     files = x.Proc.TryGetProperty("files", out var fi) ? fi : (JsonElement?)null,   // Fächer-Vertrag (in/out) — der Dialog zeigt dann die Fächer
                     // Systemjob (probe, embed, derive): immer sichtbar im Tasker, mit Balken aus progress (GET, liefert offen/gelesen/total)
                     system = manifests[p.Key].Raw.TryGetProperty("system", out var sy) && sy.ValueKind == JsonValueKind.True,
@@ -109,7 +108,16 @@ public static class JobApi
                 var secrets = new Dictionary<string, string?>(body.Secrets ?? new());
                 foreach (var k in secretKeys) if (prms.Remove(k, out var v) && v is { Length: > 0 }) secrets[k] = v;
                 if (secrets.Count > 0) Secrets.Set(runner.Dir, key, secrets);
-                var files = body.Files is { } fb ? new JobFiles(Blank(fb.Base), Blank(fb.Keep), fb.Latest, fb.Archive) : cur?.Files;
+                var files = body.Files is { } fb ? new JobFiles(Blank(fb.Base), Blank(fb.Keep), fb.Latest, fb.Archive, Blank(fb.InZugang), Blank(fb.InPfad), Blank(fb.OutZugang), Blank(fb.OutPfad)) : cur?.Files;
+                // Fächer an einem Zugang: nur einer, der Dateien liefert, und nur ein Pfad ohne ..
+                foreach (var (zg, pf) in new[] { (files?.InZugang, files?.InPfad), (files?.OutZugang, files?.OutPfad) })
+                {
+                    if (zg is null) continue;
+                    if (DriverApi.Alle(c).FirstOrDefault(x => x.Key == zg) is not { } z) return Bad("Zugang {0} gibt es nicht.", zg);
+                    if (!(DriverApi.ArtVon(z.Art)?.Dateien ?? false)) return Bad("Zugang {0} liefert keine Dateien — {1} ist eine Anmeldung.", zg, z.Art);
+                    if (z.Art == "file") return Bad("Fächer: das Dateisystem des Servers ist die Basis, kein Zugang.");
+                    try { Treiber.Normal(pf); } catch (ArgumentException e) { return Bad(e.Message); }
+                }
                 if (files?.Base is { } fbase && (fbase.Contains("..") || !Path.IsPathRooted(fbase))) return Bad("Fächer: Basis muss ein absoluter Pfad sein (auf dem Server).");
                 // Die Rolle des Laufs ändert nur, wer Anwender und Rollen verwaltet — sonst wäre ein Job ein Weg zu fremden Rechten
                 var rolle = cur?.Role;

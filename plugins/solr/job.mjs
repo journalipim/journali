@@ -2,7 +2,8 @@
 // anderen Umgebung aufgerufen: Solr per fetch statt JSONP, journali über die API mit dem Dienst-Token des Laufs.
 //
 // Aufruf: node job.mjs <journali> <actor> — alles Weitere aus der Umgebung (der JobRunner setzt JOURNALI_*):
-//   JOURNALI_BASE      URL des Solr-Kerns
+//   JOURNALI_ZUGANG_URL, _USER, _PASSWORD  der Kern als Zugang (Plugin driver, Art solr) — geht vor JOURNALI_BASE
+//   JOURNALI_BASE      URL des Solr-Kerns ohne Anmeldung (ältere Profile)
 //   JOURNALI_ROOTS     Solr-Ids der Wurzeln, mit Komma getrennt
 //   JOURNALI_TARGET    Zielknoten in journali (leer = oberste Ebene)
 //   JOURNALI_SKIP      zusätzlich zu überspringende Felder
@@ -16,7 +17,8 @@ const [, , serverArg, actorArg] = process.argv
 const E = process.env
 const server = (serverArg || E.JOURNALI_JOURNALI || 'http://localhost:5000').replace(/\/$/, '')
 const actor = actorArg || E.JOURNALI_ACTOR || 'job:solr'
-const base = (E.JOURNALI_BASE || '').trim()
+const base = (E.JOURNALI_ZUGANG_URL || E.JOURNALI_BASE || '').trim()
+const holen = E.JOURNALI_ZUGANG_URL ? holenMitFetch.als(E.JOURNALI_ZUGANG_USER, E.JOURNALI_ZUGANG_PASSWORD) : holenMitFetch
 const wurzeln = (E.JOURNALI_ROOTS || '').split(',').map(s => s.trim()).filter(Boolean)
 const ziel = (E.JOURNALI_TARGET || '').trim() || null
 const skip = skipListe(E.JOURNALI_SKIP || '')
@@ -24,7 +26,7 @@ const mitKanten = /^(true|1|ja)$/i.test(E.JOURNALI_RELATIONS || '')
 const trocken = /^(true|1|ja)$/i.test(E.JOURNALI_DRY_RUN || '')
 const headers = { 'X-Actor': actor, 'Content-Type': 'application/json', ...(E.JOURNALI_TOKEN ? { Authorization: 'Bearer ' + E.JOURNALI_TOKEN } : {}) }
 
-if (!base) { console.error('✗ Solr-URL fehlt (base)'); process.exitCode = 1 }
+if (!base) { console.error('✗ Solr-Kern fehlt (Zugang oder base)'); process.exitCode = 1 }
 if (!wurzeln.length) { console.error('✗ keine Wurzel gewählt (roots)'); process.exitCode = 1 }
 
 const sag = text => console.log(text)
@@ -111,7 +113,7 @@ const umgebung = { api, sag, halt, modell: null, baum: [], frisch: async () => {
 
 try {
   await umgebung.frisch()
-  const client = solr(base, holenMitFetch)
+  const client = solr(base, holen)
   const pdefs = await client.propertyDefs()
   sag(`Quelle ${base} · ${wurzeln.length} Wurzel(n) · Ziel ${ziel ?? 'oberste Ebene'}`)
 

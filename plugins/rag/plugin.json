@@ -1,6 +1,6 @@
 {
   "key": "rag",
-  "version": "1.2.1",
+  "version": "1.3.0",
   "label": {
     "de": "KI-Wissensbasis",
     "en": "AI knowledge base"
@@ -10,7 +10,8 @@
     "en": "Exports one clean, citable document per node for vector stores and RAG services (Markdown + nodes.jsonl with metadata, released version and documents) — as a scheduled job."
   },
   "kind": "export",
-  "runs": "process",
+  "runs": "browser",
+  "entry": "entry.js",
   "requires": [
     "tasker"
   ],
@@ -28,7 +29,6 @@
       "{withDocs}"
     ],
     "description": "Dokumente je Knoten (Markdown + nodes.jsonl) für RAG in ein Verzeichnis",
-    "profile": "generic",
     "files": {
       "out": {
         "many": true,
@@ -38,7 +38,7 @@
     "params": [
       {
         "key": "profile",
-        "label": "Profil — ✎ hier anlegen: Teilbaum, Format, Sprachen … (leer = Werte unten)",
+        "label": "Profil (⇪ Export → KI-Wissensbasis: Teilbaum, Knoten, Sprachen; leer = Werte unten)",
         "type": "profile",
         "default": "",
         "perJob": true

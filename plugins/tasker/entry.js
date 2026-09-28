@@ -124,6 +124,12 @@ export function stelle(def, profilGewaehlt) {
 
 /// Welche Fächer ein Job benutzt: liest er Dateien, gibt es in/, done/ und failed/; schreibt er, gibt es out/.
 ///
+/// Welche Fächer an einem Zugang liegen können (28.09.2026): der Eingang, wenn der Job Dateien frisst, die Ausgabe,
+/// wenn er schreibt — jeweils nur, solange der Tasker das Fach führt (der Parameter leer bleibt).
+export function fachZugaenge(files, params = {}) {
+  return { in: nutztFach(files?.in, params), out: nutztFach(files?.out, params) }
+}
+
 export function fachNames(files, params = {}) {
   const out = []
   if (nutztFach(files?.in, params)) out.push('in/', 'done/', 'failed/')
@@ -378,78 +384,6 @@ async function mount(root, ctx) {
     detail.style.display = 'flex'; detail.style.flexDirection = 'column'
   }
 
-  // ---- Generischer Profil-Editor:
-  // für Prozesse ohne eigene Ansicht ("profile": "generic" im Manifest). Formular aus den Parametern — ohne profile, Dateien/Verzeichnisse
-  // (Sache des Taskers) und Geheimnisse (am Profil beim Server, 🔒). Gespeichert als profile:<name> in den Daten des Plugins (Journal).
-  function profileEditor(p, defs, current, onDone) {
-    const fields = defs.filter(d => !(d.type === 'profile' || d.key === 'profile' || d.type === 'path' || d.type === 'dir'))
-    const box = el('div', { style: 'position:fixed;inset:0;background:rgba(0,0,0,.45);display:grid;place-items:center;z-index:50' })
-    const dlg = el('div', { style: 'width:560px;max-height:90vh;overflow:auto;background:var(--pane);border:1px solid var(--line);border-radius:8px;padding:14px 16px;font-size:13px' })
-    const sel = el('select', { style: 'flex:1' }, el('option', { value: '' }, t('— neues Profil —')))
-    const nameIn = el('input', { type: 'text', placeholder: t('Name des Profils'), style: 'flex:1' })
-    const form = el('div'); const inputs = {}; let secretKeys = []
-    const status = el('span', { class: 'muted', style: 'font-size:12px' })
-    const close = () => box.remove()
-    const draw = (data = {}) => {
-      form.innerHTML = ''
-      for (const d of fields) {
-        const cur = data[d.key] ?? d.default ?? ''
-        let inp
-        if (d.secret) {
-          inp = el('input', { type: 'password', placeholder: secretKeys.includes(d.key) ? t('•••••• (hinterlegt — leer lassen = behalten)') : t('geheim — bleibt beim Server, am Profil'), style: 'width:100%' })
-          form.append(el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, d.label + ' 🔒'), inp)
-        } else if (d.type === 'node') {
-          inp = { value: cur }
-          const shown = el('span', { class: 'muted' }, cur ? tree.byId.get(cur)?.label ?? cur : '(leer)')
-          const tb = el('div'); ctx.treePicker(tb, { value: cur || null, roles: ['group', 'product'], height: 160, allowRoot: true, onPick: r => { inp.value = r?.id ?? ''; shown.textContent = r ? r.label : '(leer)' } })
-          form.append(el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, d.label, ' · ', shown), tb)
-        } else if (d.type === 'pub') {
-          inp = el('select', { style: 'width:100%' }, el('option', { value: '' }, '(keiner)'), ...(tree.pubTrees ?? []).map(r => el('option', { value: r.id }, `${r.label} · ${r.channel}${r.market ? '/' + r.market : ''}`))); inp.value = cur
-          form.append(el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, d.label), inp)
-        } else if (d.type === 'boolean') {
-          inp = el('input', { type: 'checkbox' }); inp.checked = String(cur) === 'true'
-          Object.defineProperty(inp, 'value', { get() { return this.checked ? 'true' : 'false' }, configurable: true })
-          form.append(el('label', { style: 'display:flex;gap:6px;align-items:center;margin-top:8px' }, inp, d.label))
-        } else {
-          inp = el('input', { type: d.type === 'number' ? 'number' : 'text', value: String(cur), style: 'width:100%' })
-          form.append(el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, d.label), inp)
-        }
-        inputs[d.key] = inp
-      }
-    }
-    const loadNames = async keep => { const names = (await api.get(`/api/plugins/${p.key}/data?prefix=profile:`).catch(() => [])).map(n => n.slice(8)); sel.innerHTML = ''; sel.append(el('option', { value: '' }, t('— neues Profil —')), ...names.map(n => el('option', { value: n }, n))); sel.value = keep && names.includes(keep) ? keep : '' }
-    const loadOne = async n => {
-      nameIn.value = n
-      if (!n) { secretKeys = []; draw({}); return }
-      const data = (await api.get(`/api/plugins/${p.key}/data/${encodeURIComponent('profile:' + n)}`).catch(() => null)) ?? {}
-      secretKeys = (await api.get(`/api/plugins/${p.key}/secrets/${encodeURIComponent(n)}`).catch(() => ({ keys: [] }))).keys
-      draw(data)
-    }
-    sel.addEventListener('change', () => loadOne(sel.value))
-    const save = async () => {
-      const n = nameIn.value.trim(); if (!n || n.includes(':')) { store.toast(t('Name fehlt (ohne Doppelpunkt)')); return }
-      const data = {}, secrets = {}
-      for (const d of fields) { const v = inputs[d.key]?.value ?? ''; if (d.secret) { if (v) secrets[d.key] = v } else if (v !== '') data[d.key] = d.type === 'boolean' ? v === 'true' : v }
-      try {
-        await api.post(`/api/plugins/${p.key}/data/${encodeURIComponent('profile:' + n)}`, data, 'PUT')
-        if (Object.keys(secrets).length) await api.post(`/api/plugins/${p.key}/secrets/${encodeURIComponent(n)}`, { values: secrets }, 'PUT')
-        store.toast(`Profil „${n}“ gespeichert`, 'ok'); close(); onDone?.(n)
-      } catch (e) { store.toast(e.message) }
-    }
-    const del = async () => {
-      const n = sel.value; if (!n) return
-      if (!await dialog.confirm({ title: t('Profil „{0}“ löschen?', [n]), text: t('Jobs, die es nennen, laufen dann ohne diese Werte.'), ok: t('🗑 Löschen'), danger: true })) return
-      try { await api.del(`/api/plugins/${p.key}/data/${encodeURIComponent('profile:' + n)}`); await api.del(`/api/plugins/${p.key}/secrets/${encodeURIComponent(n)}`).catch(() => {}); await loadNames(''); await loadOne(''); onDone?.('') } catch (e) { store.toast(e.message) }
-    }
-    dlg.append(el('div', { style: 'font-weight:600;font-size:14px' }, t('✎ Profile · {0}', [(typeof p.label === 'string' ? p.label : L(p.label)) || p.key])),
-      el('div', { style: 'display:flex;gap:6px' }, sel, nameIn, el('button', { type: 'button', class: 'x', title: t('Profil löschen'), onclick: del }, '🗑')),
-      form,
-      el('div', { style: 'display:flex;justify-content:flex-end;gap:8px;margin-top:14px;align-items:center' }, status, el('span', { class: 'grow' }), el('button', { type: 'button', onclick: close }, t('Abbrechen')), el('button', { type: 'button', class: 'primary', onclick: save }, t('💾 Speichern'))))
-    box.append(dlg); box.addEventListener('mousedown', e => { if (e.target === box) close() })
-    document.body.append(box)
-    loadNames(current).then(() => loadOne(current || ''))
-  }
-
   // ---- Anlegen / Bearbeiten: Plugin, Parameter aus dem Manifest, Zeitplan, Zeitgrenze
   async function openEdit(j) {
     const box = el('div', { class: 'overlay', style: 'position:fixed;inset:0;background:rgba(0,0,0,.45);display:grid;place-items:center;z-index:40' })
@@ -485,8 +419,23 @@ async function mount(root, ctx) {
     const fKeep = el('input', { type: 'text', value: j?.files?.keep ?? '', placeholder: 'alle', style: 'width:90px', title: t('Aufbewahrung: 10 = die letzten 10 Läufe, 30d = 30 Tage, leer = alle') })
     const fLatest = el('input', { type: 'checkbox' }); fLatest.checked = j?.files?.latest ?? true
     const fArchive = el('input', { type: 'checkbox' }); fArchive.checked = j?.files?.archive ?? false
+    // Fächer an einem Zugang (driver): der Eingang wird vor dem Lauf von dort geholt, die Ausgabe danach dort abgelegt
+    const zugangsListe = api.get('/api/drivers?dateien=true').then(l => (l ?? []).filter(z => z.art !== 'file')).catch(() => [])
+    const zugangZeile = (text, zugang, pfad, titel) => {
+      const sel = el('select', { style: 'width:180px' }, el('option', { value: '' }, t('— nur das Fach —')))
+      const pfadIn = el('input', { type: 'text', value: pfad ?? '', placeholder: t('Pfad im Zugang, z. B. /eingang'), style: 'flex:1' })
+      const pick = el('button', { type: 'button', title: t('Verzeichnis im Zugang wählen'), onclick: () => { if (sel.value) ctx.filePicker({ value: pfadIn.value, dirOnly: true, zugang: sel.value, onPick: v => { pfadIn.value = v } }) } }, '📁')
+      const stand = () => { pfadIn.disabled = !sel.value; pick.disabled = !sel.value }
+      sel.addEventListener('change', stand)
+      zugangsListe.then(l => { for (const z of l) sel.append(el('option', { value: z.key }, z.label || z.key)); if (zugang && !l.some(z => z.key === zugang)) sel.append(el('option', { value: zugang }, zugang)); sel.value = zugang ?? ''; stand() })
+      stand()
+      const row = el('div', { class: 'zugang-zeile', style: 'display:flex;gap:4px;align-items:center;margin-top:6px', title: titel }, el('span', { class: 'muted', style: 'width:110px' }, text), sel, pfadIn, pick)
+      return { row, sel, pfadIn, wert: () => row.style.display === 'none' || !sel.value ? { zugang: null, pfad: null } : { zugang: sel.value, pfad: pfadIn.value.trim() || '/' } }
+    }
+    const fIn = zugangZeile(t('Eingang von'), j?.files?.inZugang, j?.files?.inPfad, t('Vor jedem Lauf holt der Tasker, was dort liegt und aufs Muster passt, nach in/ und schiebt es dort nach abgeholt/'))
+    const fOut = zugangZeile(t('Ausgabe nach'), j?.files?.outZugang, j?.files?.outPfad, t('Nach jedem gelungenen Lauf legt der Tasker die Ausgaben dort ab'))
     const fachBox = el('div', { style: 'display:none' },
-      fachLabelEl, el('div', { style: 'display:flex;gap:4px' }, fBase, fBaseBtn),
+      fachLabelEl, el('div', { style: 'display:flex;gap:4px' }, fBase, fBaseBtn), fIn.row, fOut.row,
       el('div', { style: 'display:flex;gap:14px;align-items:center;margin-top:6px;flex-wrap:wrap' },
         el('label', { style: 'display:flex;gap:6px;align-items:center' }, el('span', { class: 'muted' }, t('Aufbewahrung')), fKeep),
         el('label', { style: 'display:flex;gap:6px;align-items:center', title: t('nach jedem Lauf eine Kopie unter festem Namen: <key>-latest') }, fLatest, 'latest'),
@@ -525,6 +474,16 @@ async function mount(root, ctx) {
           inp = el('select', {}, el('option', { value: '' }, t('(keiner — Teilbaum unten)')), ...(tree.pubTrees ?? []).map(r => el('option', { value: r.id }, `${r.label} · ${r.channel}${r.market ? '/' + r.market : ''}`)))
           inp.value = cur
           append(el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, d.label), inp)
+        } else if (d.type === 'driver') {
+          // Zugang (driver): eine Auswahl der eingerichteten Zugänge dieser Art — Adresse und Anmeldung bekommt der
+          // Prozess vom Server (JOURNALI_<PARAM>_<FELD>), das Geheimnis sieht der Dialog nie
+          inp = el('select', { style: 'width:100%' }, el('option', { value: '' }, t('— kein Zugang —')))
+          if (cur) { inp.append(el('option', { value: cur }, cur)); inp.value = cur }
+          api.get('/api/drivers' + (d.art ? '?art=' + encodeURIComponent(d.art) : '')).then(l => {
+            for (const z of l ?? []) { const da = [...inp.options].find(o => o.value === z.key); if (da) da.textContent = z.label || z.key; else inp.append(el('option', { value: z.key }, z.label || z.key)) }
+            if (!(l ?? []).length && !cur) inp.title = t('noch kein Zugang dieser Art — unter ⌁ Zugänge anlegen')
+          }).catch(() => {})
+          append(el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, d.label), inp)
         } else if (d.type === 'path' || d.type === 'dir') {
           // Pfad auf dem Server: Textfeld plus 📁 — der Dateibrowser der Oberfläche (ctx.filePicker, /api/files)
           inp = el('input', { type: 'text', value: cur, placeholder: d.type === 'dir' ? t('Verzeichnis auf dem Server') : t('Datei, Verzeichnis oder URL'), style: 'flex:1' })
@@ -547,9 +506,9 @@ async function mount(root, ctx) {
           }).catch(() => {})
           inp.addEventListener('change', () => { profilWert = inp.value; noteSecret(inp.value); drawParams(); check(); zeige(schritt) })
           secretNote = el('div', { class: 'muted', style: 'font-size:12px;margin-top:2px' })
-          // Prozess ohne eigene Ansicht (export, backup, rag, Datenblatt-Job, JSON-Export): Profile hier anlegen — ein Formular aus den Parametern des Manifests
-          const editBtn = p?.profile === 'generic' ? el('button', { type: 'button', class: 'x', title: t('Profile dieses Prozesses anlegen und ändern'), onclick: () => profileEditor(p, defs, inp.value, n => { drawParams(); const sel = paramInputs.profile; if (sel && n) { if (![...sel.options].some(o => o.value === n)) sel.append(el('option', { value: n }, n)); sel.value = n; noteSecret(n) } }) }, '✎') : ''
-          paramsBox.append(el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, d.label), el('div', { style: 'display:flex;gap:4px' }, inp, editBtn), secretNote)
+          // Profile legt die Ansicht des Plugins an, nie dieser Dialog — der generische Profil-Editor ist weg, seit das
+          // letzte Plugin mit Profil (rag) eine eigene Ansicht hat (28.09.2026)
+          paramsBox.append(el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, d.label), inp, secretNote)
           if (cur) noteSecret(cur)
         } else if (d.type === 'boolean') {
           inp = el('input', { type: 'checkbox' }); inp.checked = String(cur) === 'true'
@@ -577,6 +536,8 @@ async function mount(root, ctx) {
       const werte = Object.fromEntries(Object.entries(paramInputs).map(([k, i]) => [k, i?.value ?? '']))
       const namen = p?.files ? fachNames(p.files, werte) : []
       fachBox.style.display = namen.length ? '' : 'none'
+      const zg = fachZugaenge(p?.files, werte)
+      fIn.row.style.display = zg.in ? '' : 'none'; fOut.row.style.display = zg.out ? '' : 'none'
       if (namen.length) {
         fachLabelEl.textContent = t('Fächer · Basis ({0})', [namen.join(', ')])
         fBaseBtn.title = t('Basis der Fächer auf dem Server wählen ({0})', [namen.join(', ')])
@@ -593,7 +554,7 @@ async function mount(root, ctx) {
       const profileDef = defs.find(d => d.type === 'profile' || d.key === 'profile')
       const profile = paramInputs.profile?.value ?? ''
       // „(leer = Werte unten)“ im Feldnamen heisst: ohne Profil geht es auch, dann stehen die Werte im Job
-      if (!profile && profilPflicht(profileDef)) fehlt(t('Profil fehlt — in der Ansicht des Plugins speichern') + (p?.profile === 'generic' ? ' oder ✎' : ''), 1)
+      if (!profile && profilPflicht(profileDef)) fehlt(t('Profil fehlt — in der Ansicht des Plugins speichern'), 1)
       for (const d of defs) {
         const v = paramInputs[d.key]?.value ?? ''
         // mit Fächern kommt die Datei aus in/ bzw. geht nach out/ — dann ist der Parameter nicht Pflicht
@@ -620,7 +581,8 @@ async function mount(root, ctx) {
       const alt = saveBtn.textContent
       saveBtn.disabled = true; saveBtn.textContent = t('⋯ speichert')
       try {
-        const files = fachBox.style.display === 'none' ? null : { base: fBase.value.trim() || null, keep: fKeep.value.trim() || null, latest: fLatest.checked, archive: fArchive.checked }
+        const fi = fIn.wert(), fo = fOut.wert()
+        const files = fachBox.style.display === 'none' ? null : { base: fBase.value.trim() || null, keep: fKeep.value.trim() || null, latest: fLatest.checked, archive: fArchive.checked, inZugang: fi.zugang, inPfad: fi.pfad, outZugang: fo.zugang, outPfad: fo.pfad }
         await api.post(`/api/jobs/${key}`, { label: labelIn.value.trim() || key, plugin: pluginSel.value.split('|')[0], service: pluginSel.value.split('|')[1] || '', params, schedule, enabled: j?.enabled ?? true, timeoutMinutes: Number(timeoutIn.value) || 60, files, ...(darfRolle ? { role: rolleSel.value } : {}) }, 'PUT')
         store.toast(`Job „${labelIn.value || key}“ gespeichert`, 'ok'); box.remove(); st.cur = key; await load()
       } catch (e) { store.toast(e.message); saveBtn.disabled = false; saveBtn.textContent = alt }

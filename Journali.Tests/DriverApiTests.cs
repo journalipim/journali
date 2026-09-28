@@ -24,11 +24,13 @@ public class DriverApiTests
     [Fact]
     public void Angeboten_wird_nur_was_traegt()
     {
-        // Eine Art, die noch nicht umgesetzt ist, steht nicht in der Liste: sonst waehlt jemand FTP und bekommt
-        // beim ersten Klick „ist noch nicht gebaut“ (25.09.2026)
-        Assert.All(DriverApi.Arten, a => Assert.Equal("file", a.Key));
-        Assert.Null(DriverApi.ArtVon("ftp"));
-        Assert.Null(DriverApi.ArtVon("webdav"));
+        // Eine Art, die noch nicht umgesetzt ist, steht nicht in der Liste: sonst waehlt jemand sie und bekommt
+        // beim ersten Klick „ist noch nicht gebaut“ (25.09.2026). Seit 28.09.2026 hat jede Art, die Dateien liefert,
+        // einen Treiber, und jede Anmeldung eine Weiterleitung
+        Assert.Equal(new[] { "file", "webdav", "ftp", "ixp", "solr" }, DriverApi.Arten.Select(a => a.Key));
+        foreach (var a in DriverApi.Arten.Where(a => a.Dateien))
+            Assert.NotNull(Treiber.Fuer(new DriverApi.Zugang("z", a.Key, "", new() { ["url"] = "https://example.invalid/", ["host"] = "example.invalid" }), new Dictionary<string, string>()));
+        Assert.All(DriverApi.Arten.Where(a => !a.Dateien), a => Assert.Contains(a.Key, DriverApi.Anmeldungen));
         Assert.Null(DriverApi.ArtVon("mysql"));
     }
 
