@@ -46,7 +46,13 @@ export function systemBlock(rows, onRun, aktionen = {}) {
       ? el('span', { class: 'muted offen' }, t('{0} offen', [r.offen.toLocaleString('de-DE')]))
       : el('span', { class: 'muted offen' }, r.ready === false ? '' : r.progress ? t('nichts offen') : '')
     const bar = el('div', { class: 'sysbar' }, el('div', { class: 'fill', style: `width:${r.pct ?? 0}%` }))
+    // Läuft er von selbst? Ein Systemjob wird vom Server angestossen (nach dem Hochladen, nach einer Änderung) und
+    // folgt seinem Zeitplan — ausgeschaltet tut er das nicht mehr und wartet auf ▶ (28.09.2026).
+    const schalter = j
+      ? el('button', { class: 'x ' + (j.enabled ? 'pos' : 'muted'), title: j.enabled ? t('läuft von selbst — ausschalten') : t('läuft nur auf Knopfdruck — einschalten'), onclick: ev => { ev.stopPropagation(); aktionen.toggle?.(j, ev) } }, j.enabled ? '●' : '○')
+      : el('span', { class: 'x leer' })
     const knoepfe = el('div', { class: 'tun' },
+      schalter,
       laeuft && j?.paused ? el('button', { class: 'x', title: t('weiter'), onclick: ev => { ev.stopPropagation(); aktionen.resume?.(j, ev) } }, '▶')
         : laeuft ? el('button', { class: 'x', title: t('anhalten (wartet beim nächsten Stapel)'), onclick: ev => { ev.stopPropagation(); aktionen.pause?.(j, ev) } }, '⏸')
         : el('button', { class: 'x', title: t('jetzt nachholen'), disabled: r.ready === false, onclick: ev => { ev.stopPropagation(); onRun?.(r.plugin, ev) } }, '▶'),
@@ -243,6 +249,7 @@ async function mount(root, ctx) {
       pause: (j, ev) => tut(ev, () => pause(j)),
       resume: (j, ev) => tut(ev, () => resume(j)),
       cancel: (j, ev) => tut(ev, () => cancel(j)),
+      toggle: (j, ev) => tut(ev, () => toggle(j)),
       open: j => { st.cur = j.key; drawList(); loadDetail(j.key) },
     }))
     // Die Systemjobs stehen oben in ihren Kacheln — in der Liste darunter stehen die Jobs des Anwenders

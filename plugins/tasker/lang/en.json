@@ -111,5 +111,7 @@
  "{0} offen": "{0} pending",
  "nichts offen": "nothing pending",
  "Lauf und Protokoll ansehen": "Show the run and its log",
- "weiter": "resume"
+ "weiter": "resume",
+ "läuft von selbst — ausschalten": "runs by itself — switch off",
+ "läuft nur auf Knopfdruck — einschalten": "runs only on demand — switch on"
 }

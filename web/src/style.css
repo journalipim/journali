@@ -282,7 +282,7 @@ td.tun > .leer { visibility: hidden; }
    selbst angelegt hat. Je Kachel: Name, Füllstand, was erledigt und was offen ist, und die Knöpfe dazu. */
 .sysjobs { border-bottom: 1px solid var(--line); padding: 6px 10px 10px; }
 .sys-kopf { font-size: 11px; padding: 0 0 6px; }
-.sys-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px; }
+.sys-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 8px; }
 .sys-kachel { border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; background: var(--pane); }
 .sys-kachel.laeuft { border-color: var(--warn); }
 .sys-kachel .kopf { display: flex; align-items: baseline; gap: 6px; margin-bottom: 6px; }
@@ -290,7 +290,7 @@ td.tun > .leer { visibility: hidden; }
 .sys-kachel .kopf .mono { font-size: 11px; }
 .sys-kachel .sysbar { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; }
 .sys-kachel .sysbar .fill { height: 100%; background: var(--accent); }
-.sys-kachel .fuss { display: flex; align-items: center; gap: 8px; margin-top: 6px; font-size: 12px; }
+.sys-kachel .fuss { display: flex; align-items: center; gap: 8px; margin-top: 6px; font-size: 12px; white-space: nowrap; }
 .sys-kachel .fuss .grow { flex: 1; }
 .sys-kachel .fuss .tun { display: flex; gap: 2px; }
 .sys-kachel .fuss .tun > * { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 22px; padding: 0; font-size: 13px; line-height: 1; }

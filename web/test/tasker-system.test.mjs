@@ -11,7 +11,7 @@ const PLUGINS = [
   { key: 'csv', service: 'export', label: { de: 'CSV' }, system: false, progress: null },
   { key: 'csv', service: 'import', label: { de: 'CSV' }, system: false, progress: null },
 ]
-const JOBS = [{ key: 'probe', plugin: 'probe', label: 'Masse', running: true }]
+const JOBS = [{ key: 'probe', plugin: 'probe', label: 'Bildabmessungen', running: true, enabled: true }]
 const PROGRESS = { probe: { total: 200, gelesen: 150, offen: 50 }, embed: { ready: false, reason: 'Erweiterung vector fehlt in dieser Datenbank.' } }
 
 test('je Systemjob eine Zeile — mit Fortschritt, Job und Prozentzahl; Dienste zählen einmal', () => {
@@ -33,18 +33,21 @@ test('ohne Antwort des Endpunkts steht die Zeile trotzdem da', () => {
 // Kacheln statt Zeilen (28.09.2026): die Systemjobs stehen oben in ihrer eigenen Fläche, mit Fortschritt und
 // Steuerung; die Liste darunter gehört den Jobs, die jemand selbst angelegt hat.
 test('die Kacheln: Füllstand, Zahlen, und je nach Lauf starten oder anhalten', () => {
-  const gestartet = [], angehalten = []
-  const box = systemBlock(systemRows(PLUGINS, JOBS, PROGRESS), p => gestartet.push(p), { pause: j => angehalten.push(j.key) })
+  const gestartet = [], angehalten = [], geschaltet = []
+  const box = systemBlock(systemRows(PLUGINS, JOBS, PROGRESS), p => gestartet.push(p), { pause: j => angehalten.push(j.key), toggle: j => geschaltet.push(j.key) })
   const kacheln = box.querySelectorAll('.sys-kachel')
   assert.equal(kacheln.length, 2)
   assert.equal(kacheln[0].querySelector('.fill').style.width, '75%', 'der Balken füllt sich mit dem Erledigten')
   assert.match(kacheln[0].textContent, /150 \/ 200/); assert.match(kacheln[0].textContent, /50 offen/)
   assert.ok(kacheln[0].classList.contains('laeuft'), 'ein laufender Systemjob ist zu sehen')
 
-  // läuft: der erste Knopf hält an, der zweite bricht ab (= anhalten bis zum nächsten Start)
+  // erster Knopf: läuft der Job von selbst? Danach ⏸ (er läuft gerade) und ⊘
   const knoepfe = kacheln[0].querySelectorAll('.tun button')
-  assert.equal(knoepfe[0].textContent, '⏸')
+  assert.equal(knoepfe[0].textContent, '●', 'der Schalter fehlt')
   knoepfe[0].dispatchEvent(new win.Event('click'))
+  assert.deepEqual(geschaltet, ['probe'])
+  assert.equal(knoepfe[1].textContent, '⏸')
+  knoepfe[1].dispatchEvent(new win.Event('click'))
   assert.deepEqual(angehalten, ['probe'])
 
   // embed: nicht bereit, der Grund im Tooltip, ▶ gesperrt
@@ -54,7 +57,7 @@ test('die Kacheln: Füllstand, Zahlen, und je nach Lauf starten oder anhalten', 
 
   // ein bereiter ohne Job: ▶ ruft mit dem Plugin
   const box2 = systemBlock(systemRows(PLUGINS.slice(1, 2), [], { embed: { ready: true, total: 10, gelesen: 0, offen: 10 } }), p => gestartet.push(p))
-  box2.querySelector('.tun button').dispatchEvent(new win.Event('click'))
+  box2.querySelector('.tun button').dispatchEvent(new win.Event('click'))   // ohne Job gibt es keinen Schalter: der erste Knopf ist ▶
   assert.deepEqual(gestartet, ['embed'])
   assert.equal(box2.querySelector('.fill').style.width, '0%')
 })
