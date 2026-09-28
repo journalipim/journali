@@ -73,10 +73,9 @@ public class SystemjobNachziehenTests
     /// ein Preset eingeschraenkt war, waehrend der Zaehler ueber alle Presets zaehlte.
     /// </summary>
     [Theory]
-    [InlineData(1, 2)]
-    [InlineData(2, 4)]
-    [InlineData(8, 16)]
-    [InlineData(30, 60)]
+    [InlineData(1, 5)]
+    [InlineData(5, 15)]
+    [InlineData(15, 60)]
     [InlineData(60, 60)]   // hoeher geht es nicht
     public void Bewirkt_ein_Lauf_nichts_waechst_der_Abstand(int bisher, int erwartet) =>
         Assert.Equal(TimeSpan.FromMinutes(erwartet), JobRunner.NaechsterAbstand(true, TimeSpan.FromMinutes(bisher)));
@@ -91,8 +90,13 @@ public class SystemjobNachziehenTests
     [Fact]
     public void Der_Abstand_waechst_nie_ueber_eine_Stunde()
     {
+        // Nach drei wirkungslosen Laeufen ist Ruhe: 1 -> 5 -> 15 -> 60. Das sind vier Zeilen in der Liste
+        // statt sechzig in der ersten Stunde
         var a = TimeSpan.FromMinutes(1);
-        for (var i = 0; i < 20; i++) a = JobRunner.NaechsterAbstand(true, a);
+        a = JobRunner.NaechsterAbstand(true, a); Assert.Equal(TimeSpan.FromMinutes(5), a);
+        a = JobRunner.NaechsterAbstand(true, a); Assert.Equal(TimeSpan.FromMinutes(15), a);
+        a = JobRunner.NaechsterAbstand(true, a); Assert.Equal(JobRunner.NachzugMax, a);
+        for (var i = 0; i < 10; i++) a = JobRunner.NaechsterAbstand(true, a);
         Assert.Equal(JobRunner.NachzugMax, a);
     }
 

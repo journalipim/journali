@@ -82,12 +82,16 @@ public sealed class JobRunner : BackgroundService
 
     /// <summary>
     /// Wie lange bis zum nächsten Versuch? Hat der Lauf etwas bewirkt (die Zahl der offenen Posten hat sich
-    /// geändert), geht es sofort weiter — eine Minute. Hat er nichts bewirkt, verdoppelt sich der Abstand bis
-    /// <see cref="NachzugMax"/>: sonst startet der Takt endlos Prozesse, die nichts finden (28.09.2026).
+    /// geändert), geht es sofort weiter — eine Minute. Hat er nichts bewirkt, wird der Abstand schnell lang:
+    /// 1 → 5 → 15 → 60. Jeder Lauf steht im Journal und in der Liste der Läufe; wer nichts findet, soll dort nicht
+    /// jede Minute eine Zeile hinterlassen (28.09.2026).
     /// </summary>
-    public static TimeSpan NaechsterAbstand(bool unveraendert, TimeSpan bisher) =>
-        unveraendert ? TimeSpan.FromMinutes(Math.Min(NachzugMax.TotalMinutes, Math.Max(1, bisher.TotalMinutes) * 2))
-                     : TimeSpan.FromMinutes(1);
+    public static TimeSpan NaechsterAbstand(bool unveraendert, TimeSpan bisher)
+    {
+        if (!unveraendert) return TimeSpan.FromMinutes(1);
+        var m = bisher.TotalMinutes;
+        return TimeSpan.FromMinutes(m < 5 ? 5 : m < 15 ? 15 : NachzugMax.TotalMinutes);
+    }
 
     /// <summary>
     /// Systemjobs holen auf. „Läuft von selbst“ heisst nicht „läuft nach der Uhr“, sondern: solange etwas offen ist,
