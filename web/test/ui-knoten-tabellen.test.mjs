@@ -633,6 +633,64 @@ test('mit KI: ein Attribut, das schon einen eigenen Wert hat, bleibt ohne Haken'
   assert.equal(power.take, false); assert.match(power.why, /hat schon/)
 })
 
+// ── Was der Knoten schon hat ──────────────────────────────────────────────────────────────────────────────────
+
+test('Tabelle: hat der Knoten denselben Wert schon, steht er in der Zeile und der Haken ist weg', async () => {
+  const knoten = { ...KNOTEN, values: [{ attribute: 'weight', value: '1.2' }] }
+  const { w } = await dialog({ knoten })
+  const g = w.vm.rows.find(r => r.attribute === 'weight')
+  assert.deepEqual([g.take, g.gleich, g.why], [false, true, 'gleich · 1.2'])
+  assert.ok(zeile(w, 'Gewicht').find('td.pos').exists(), 'gleich ist grün')
+  assert.equal(zeile(w, 'Gewicht').find('input[type=checkbox]').element.checked, false)
+})
+
+test('Tabelle: „1,2“ am Knoten und „1.2“ aus dem Dokument sind derselbe Wert', async () => {
+  const { w } = await dialog({ knoten: { ...KNOTEN, values: [{ attribute: 'weight', value: '1,2' }] } })
+  assert.equal(w.vm.rows.find(r => r.attribute === 'weight').gleich, true)
+})
+
+test('Tabelle: ein anderer eigener Wert steht in der Zeile, ohne Haken — der Anwender entscheidet', async () => {
+  const { w } = await dialog({ knoten: { ...KNOTEN, values: [{ attribute: 'weight', value: '2' }] } })
+  const g = w.vm.rows.find(r => r.attribute === 'weight')
+  assert.deepEqual([g.take, g.gleich, g.why], [false, false, 'hat schon · 2'])
+})
+
+test('geerbt: ein anderer Wert vom Vorfahren bleibt angehakt und steht dabei; derselbe nimmt den Haken', async () => {
+  const modell = { ...MODELL, attributes: MODELL.attributes.map(a => a.key === 'weight' ? { ...a, inheritable: true } : a) }
+  const knoten = wert => ({ ...KNOTEN, ancestors: [{ id: 'g1', role: 'group', label: 'Mastertree', values: [{ attribute: 'weight', value: wert }] }] })
+  const mit = async (wert, m = modell) => { welt({}); store.model = m; const w = mount(DocTables, { props: { node: knoten(wert), media: ['m1'], names: { m1: 'datenblatt.pdf' } } }); await flushPromises(); return w }
+  const w = await mit('2')
+  const g = w.vm.rows.find(r => r.attribute === 'weight')
+  assert.deepEqual([g.take, g.why, g.von], [true, 'geerbt · 2', 'Mastertree'])
+  assert.match(zeile(w, 'Gewicht').findAll('td').at(-1).attributes('title'), /geerbt von Mastertree/)
+  const w2 = await mit('1.2')
+  const g2 = w2.vm.rows.find(r => r.attribute === 'weight')
+  assert.deepEqual([g2.take, g2.gleich, g2.why], [false, true, 'gleich · 1.2'])
+  const w3 = await mit('1.2', MODELL)
+  assert.equal(w3.vm.rows.find(r => r.attribute === 'weight').take, true, 'nicht vererbbar: der Vorfahr zählt nicht')
+})
+
+test('Zielwechsel: das gewählte Attribut hat den Wert schon — der Haken geht weg', async () => {
+  const { w } = await dialog({ knoten: { ...KNOTEN, values: [{ attribute: 'power', value: '22' }] } })
+  const d = w.vm.rows.find(r => r.key === 'Durchmesser')
+  w.vm.ziel(d, 'power')
+  assert.deepEqual([d.target, d.attribute, d.error, d.take, d.why], ['attr', 'power', null, false, 'gleich · 22'])
+})
+
+test('der Balken läuft, solange Abfragen offen sind, und ist weg, wenn nichts mehr nachkommt', async () => {
+  welt({ tabellen: { ready: true, state: 'text', tables: [] }, text: TEXT_ZEILEN })
+  const echt = globalThis.fetch; let frei; const tor = new Promise(r => { frei = r })
+  globalThis.fetch = async (url, opt) => { if (/\/api\/docs\/search/.test(String(url))) await tor; return echt(url, opt) }
+  const w = mount(DocTables, { props: { node: KNOTEN, media: ['m1'], names: { m1: 'datenblatt.pdf' } } })
+  await flushPromises()
+  assert.ok(w.find('.lauf').exists(), 'Balken sichtbar — die Suche läuft')
+  assert.ok(w.vm.schritte.gesamt > 1 && w.vm.schritte.erledigt < w.vm.schritte.gesamt, `${w.vm.schritte.erledigt}/${w.vm.schritte.gesamt}`)
+  assert.match(w.find('.lauf').attributes('title'), /von \d+ Abfragen/)
+  frei(); await flushPromises()
+  assert.equal(w.find('.lauf').exists(), false, 'fertig: kein Balken')
+  assert.equal(w.vm.schritte.erledigt, w.vm.schritte.gesamt)
+})
+
 test('mit KI: der Beleg nennt den Weg ai, die Stelle und die Sicherheit', async () => {
   const { w, rufe } = await dialog({ ki: KI, tabellen: { ready: true, state: 'text', tables: [] } })
   await w.find('.dt-foot .primary').trigger('click'); await flushPromises()

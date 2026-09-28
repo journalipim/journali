@@ -53,6 +53,11 @@ const kiHinweis = ref('')
 const busy = ref(false)
 let gestartet = false, timer = null
 const textGeholt = new Set()      // Dokumente, deren Text schon geholt ist (Textbausteine, Zeilen, KI)
+/// Die Schritte, die Werte nachliefern: je Dokument der Text, dann je offenem Attribut eine Suche. Der Balken sagt,
+/// wann nichts mehr kommt (28.09.2026)
+const schritte = ref({ gesamt: 0, erledigt: 0 })
+const laeuft = computed(() => schritte.value.erledigt < schritte.value.gesamt)
+const prozent = computed(() => schritte.value.gesamt ? Math.round(schritte.value.erledigt / schritte.value.gesamt * 100) : 100)
 const t0 = Date.now()
 const WARTEN_MS = 120_000, TAKT_MS = 3000
 const TEXT_MAX = 60_000           // Zeichen, die an die KI gehen — ein Datenblatt hat wenige Seiten, ein Katalog nicht
@@ -100,8 +105,37 @@ const attributeHier = computed(() => {
   const keys = new Set((props.node.groups ?? []).filter(g => g.active !== false).flatMap(g => g.attributes ?? []))
   return attrs.value.filter(a => keys.has(a.key))
 })
-/// Hat der Knoten für dieses Attribut schon einen eigenen Wert? Dann bleibt der Vorschlag ohne Haken — der Anwender entscheidet.
-const eigenerWert = key => (props.node.values ?? []).find(v => v.attribute === key && !v.row && (v.value != null && v.value !== '' || v.values?.length))
+/// Was der Knoten für dieses Attribut schon hat: der eigene Wert, sonst — wenn das Attribut vererbt — der des nächsten
+/// Vorfahren. Ohne Zeile; bei Sprachen die ohne, sonst die Mastersprache, sonst die erste
+function vorhanden(key) {
+  const master = model.value.masterLocale ?? 'de'
+  const such = werte => { const l = (werte ?? []).filter(v => v.attribute === key && !v.row && (v.value != null && v.value !== '' || v.values?.length)); return l.find(v => !v.locale) ?? l.find(v => v.locale === master) ?? l[0] ?? null }
+  const eigen = such(props.node.values); if (eigen) return { ...eigen, von: null }
+  if (!(model.value.attributes ?? []).find(a => a.key === key)?.inheritable) return null
+  for (const an of props.node.ancestors ?? []) { const v = such(an.values); if (v) return { ...v, von: an.label ?? an.id } }
+  return null
+}
+/// „1,2“ und „1.2“ sind derselbe Wert, „104 Hz“ und „104  Hz“ auch
+const gleichWert = (a, b) => { const n = s => String(s ?? '').trim().replace(/\s+/g, ' '); if (n(a) === n(b)) return true; const x = Number(n(a).replace(',', '.')), y = Number(n(b).replace(',', '.')); return n(a) !== '' && !Number.isNaN(x) && !Number.isNaN(y) && x === y }
+const kurz = s => nurText(String(s ?? '')).slice(0, 40)
+/// Steht am Knoten schon ein Wert? Dann steht er in der Zeile: derselbe → ohne Haken (es gibt nichts zu schreiben);
+/// ein anderer eigener → ohne Haken, der Anwender entscheidet; ein anderer geerbter → mit Haken, das Dokument gehört zu
+/// diesem Knoten und sein Wert bricht die Vererbung (28.09.2026)
+function schonDa(r) {
+  r.vorhanden = null; r.gleich = false
+  if (r.target !== 'attr' || r.inaktiv || r.error) return r
+  const v = vorhanden(r.attribute); if (!v) return r
+  const alt = v.values ?? [v.value]
+  const neu = r.listValues ? r.listValues.map(x => x.value) : r.multiple ? glieder(r.converted) : [r.converted]
+  r.vorhanden = alt.map(kurz).join(', '); r.von = v.von
+  r.gleich = alt.length === neu.length && alt.every(a => neu.some(b => gleichWert(a, b)))
+  if (r.gleich) { r.take = false; r.why = t_('gleich · {0}', [r.vorhanden]) }
+  else if (!v.von) { r.take = false; r.why = t_('hat schon · {0}', [r.vorhanden]) }
+  else r.why = t_('geerbt · {0}', [r.vorhanden])
+  return r
+}
+/// Der Tooltip zum Grund: woher der vorhandene Wert kommt
+const whyTitel = r => r.gleich ? t_('Der Knoten hat diesen Wert schon{0}', [r.von ? ' — ' + t_('geerbt von {0}', [r.von]) : '']) : r.vorhanden ? (r.von ? t_('geerbt von {0} — der Wert aus dem Dokument gilt dann für diesen Knoten', [r.von]) : t_('Der Knoten hat einen eigenen Wert')) : ''
 
 /// Zahl mit Einheit, die das Modell nicht kennt: der Mapper liess „104 Hz“ als Text stehen, weil er nur bekannte Einheiten
 /// abtrennt (splitUnit). Für ein neues Attribut wird daraus eine Zahl mit neuer Einheit — angelegt beim ✓ (ensureUnit)
@@ -195,7 +229,7 @@ function baue() {
     // ein gefundenes Attribut, dessen Gruppe hier nicht gilt: der Server lehnte den Wert ab — als Hinweis, nicht als Sperre
     if (r.target === 'attr' && !gruppeHier(r.attribute)) { r.why = t_('Gruppe {0} gilt an diesem Knoten nicht', [attrs.value.find(a => a.key === r.attribute)?.group ?? '']); r.inaktiv = true }
     r.take = r.target !== 'skip' && !r.error && !r.inaktiv && r.converted != null
-    return r
+    return schonDa(r)
   })
   entdoppeln()
 }
@@ -231,9 +265,8 @@ function bausteine(id, chunks) {
     if (def?.type === 'enum' || (!def && punkte.length >= 2)) alsListe(r, r.saetze, def?.type === 'enum' ? def : null)
     // Trifft der Baustein ein vorhandenes Attribut, das hier noch leer ist, ist er angehakt — das Modell sagt, das
     // Produkt hat es, das Datenblatt liefert es. Neues bleibt ohne Haken: man nimmt, was auf die Seite gehört
-    if (r.target === 'attr' && !r.inaktiv && !r.error && eigenerWert(r.attribute)) r.why = t_('hat schon einen Wert')
-    r.take = r.target === 'attr' && !r.inaktiv && !r.error && !eigenerWert(r.attribute)
-    return r
+    r.take = r.target === 'attr' && !r.inaktiv && !r.error
+    return schonDa(r)
   })
   textZeilen.value = [...textZeilen.value.filter(r => r.doc !== id), ...neu]
 }
@@ -286,10 +319,9 @@ function wertZeile(def, id, kv, page, quelle, sc) {
   const r = { key: def.label?.[master] || L(def.label) || def.key, value: kv.value, doc: id, page, heading: null, quote: `${kv.key}: ${kv.value}`, confidence: Math.round(sc * 100) / 100,
     quelle, fest: true, target: 'attr', attribute: def.key, newKey: def.key, newType: def.type, unit: def.unit ?? null, converted, error, why: '', inaktiv: !gruppeHier(def.key) }
   if (r.inaktiv) r.why = t_('Gruppe {0} gilt an diesem Knoten nicht', [def.group ?? ''])
-  else if (eigenerWert(def.key)) r.why = t_('hat schon einen Wert')
   // ein Vorschlag unter der Schwelle der Zeilenregel (die erste Überschrift als Name) steht da, aber ohne Haken
-  r.take = !r.error && !r.inaktiv && r.converted != null && !eigenerWert(def.key) && sc >= 0.72
-  return listeZuordnen(r)
+  r.take = !r.error && !r.inaktiv && r.converted != null && sc >= 0.72
+  return schonDa(listeZuordnen(r))
 }
 /// Spaltentabelle: die Zellen einer Zeile, getrennt durch zwei Leerzeichen oder Tab
 const SPALTEN = /\s{2,}|\t/
@@ -335,6 +367,7 @@ async function ausZeilen(id, chunks) {
   if (!liste.length || !chunks?.length) return
   const alle = chunks.flatMap(c => String(c.body ?? '').split(/\r?\n/).map(z => z.trim()).filter(Boolean).map(z => ({ z, kv: kvZeile(z), page: c.page ?? null })))
   const neu = []; const offen = []
+  const suchen = []
   for (const def of liste) {
     // die Kandidaten nach Treffer sortiert — der erste, der einen Wert ergibt, zählt: „Gewicht  pro Stk.“ trifft
     // genauso gut wie „Gewicht  pro Stk.  0,105 kg“, hat aber keine Zahl
@@ -342,11 +375,16 @@ async function ausZeilen(id, chunks) {
     for (const k of kandidatenFuer(def, alle)) { z = wertZeile(def, id, k.kv, k.page, 'zeile', k.sc); if (z) break }
     if (z) neu.push(z); else offen.push(def)
   }
+  zeilenWerte.value = [...zeilenWerte.value.filter(r => r.doc !== id), ...neu]
+  entdoppeln()
   // Sinnsuche: Wörter und Vektoren — was der Server hat. Nur für das, was die Zeilen nicht fanden, und je Attribut eine Frage
-  for (const def of offen.slice(0, 40)) {
+  suchen.push(...offen.slice(0, 40)); schritte.value.gesamt += suchen.length
+  let getan = 0
+  for (const def of suchen) {
     const q = def.label?.[model.value.masterLocale ?? 'de'] || L(def.label) || def.key
     let hits = []
     try { const r = await api.get(`/api/docs/search?q=${encodeURIComponent(q)}&mode=hybrid&under=${encodeURIComponent(props.node.id)}&limit=5`); if (r?.ready === false) break; hits = (r?.hits ?? []).filter(h => h.media === id) } catch { break }
+    getan++; schritte.value.erledigt++
     // ab 0,6, und der Wert muss einer sein: „È“ oder „tc Punkt“ aus einem Tabellenkopf sind keiner
     const kandidaten = []
     for (const h of hits) for (const z of String(chunks.find(c => c.seq === h.seq)?.body ?? '').split(/\r?\n/)) { const kv = kvZeile(z); if (!kv) continue; const sc = trifft(def, kv.key); if (sc >= 0.6 && kv.value.length >= 2 && /[\p{L}\d]{2}/u.test(kv.value)) kandidaten.push({ kv, page: h.page ?? null, sc }) }
@@ -358,6 +396,7 @@ async function ausZeilen(id, chunks) {
     }
     if (z) neu.push(z)
   }
+  schritte.value.erledigt += suchen.length - getan   // abgebrochen: der Rest zählt als erledigt, es kommt nichts mehr
   zeilenWerte.value = [...zeilenWerte.value.filter(r => r.doc !== id), ...neu]
   entdoppeln()
 }
@@ -406,9 +445,8 @@ async function lies(id, chunks) {
       confidence: sicherheit(it.confidence), quelle: 'ki', fest: true,
       target: 'attr', attribute: def.key, newKey: def.key, newType: def.type, unit: def.unit ?? null, converted, error, why: '', inaktiv: !gruppeHier(def.key) }
     if (r.inaktiv) r.why = t_('Gruppe {0} gilt an diesem Knoten nicht', [def.group ?? ''])
-    else if (eigenerWert(def.key)) r.why = t_('hat schon einen Wert')
-    r.take = !r.error && !r.inaktiv && r.converted != null && !eigenerWert(def.key)
-    neu.push(r)
+    r.take = !r.error && !r.inaktiv && r.converted != null
+    neu.push(schonDa(r))
   }
   // Weitere Daten: Bezeichnung/Wert wie eine Tabellenzeile — der Mapper sucht das Attribut im ganzen Modell oder schlägt ein neues vor
   const paare = (j?.more ?? []).filter(m => m?.label && m?.value != null && String(m.value).trim() !== '')
@@ -421,9 +459,8 @@ async function lies(id, chunks) {
     else if (v.target === 'attr' && /^ähnlich /.test(v.why ?? '')) Object.assign(v, { target: 'new', attribute: null, why: '', converted: convert(v.number ?? paare[i].value, { type: v.newType }, model.value), error: null })
     const r = listeZuordnen(listeRaten(einheitRaten({ ...paare[i], ...v, quelle: 'ki', fest: false })))
     if (r.target === 'attr' && !gruppeHier(r.attribute)) { r.why = t_('Gruppe {0} gilt an diesem Knoten nicht', [attrs.value.find(a => a.key === r.attribute)?.group ?? '']); r.inaktiv = true }
-    else if (r.target === 'attr' && eigenerWert(r.attribute)) r.why = t_('hat schon einen Wert')
-    r.take = r.target !== 'skip' && !r.error && !r.inaktiv && r.converted != null && !(r.target === 'attr' && eigenerWert(r.attribute))
-    neu.push(r)
+    r.take = r.target !== 'skip' && !r.error && !r.inaktiv && r.converted != null
+    neu.push(schonDa(r))
   })
   kiZeilen.value = [...kiZeilen.value.filter(r => r.doc !== id), ...neu]
   entdoppeln()
@@ -456,13 +493,15 @@ async function lade() {
 /// KI liegen, die erst auf Knopfdruck läuft
 async function textLesen() {
   const faellig = props.media.filter(id => docs.value.get(id)?.state === 'text' && !textGeholt.has(id))
+  schritte.value.gesamt += faellig.length
   for (const id of faellig) {
     textGeholt.add(id)
     let chunks = []
     try { const r = await api.get(`/api/docs/${encodeURIComponent(id)}/text`); if (r.state === 'text') chunks = r.chunks ?? [] }
-    catch (e) { hinweis.value = e.message; continue }
+    catch (e) { hinweis.value = e.message; schritte.value.erledigt++; continue }
     texte.set(id, chunks); textZahl.value = texte.size
     bausteine(id, chunks)
+    schritte.value.erledigt++
     await ausZeilen(id, chunks)
   }
 }
@@ -528,15 +567,15 @@ function ziel(r, v) {
     r.why = r.inaktiv ? t_('Gruppe {0} gilt an diesem Knoten nicht', [def?.group ?? '']) : ''
     if (def?.type === 'enum') { alsListe(r, r.saetze, def); r.take = !r.inaktiv && !r.error }
     else { r.newType = 'html'; r.listValues = null; r.multiple = false; r.converted = alsHtml(r.value) }
-    haken(r); return
+    schonDa(r); haken(r); return
   }
-  if (v === '+') { r.target = 'new'; r.inaktiv = false; r.converted = convert(r.number ?? r.value, { type: r.newType }, model.value); r.error = validate(r.converted, { type: r.newType }, model.value); r.take = !r.error && r.converted != null; r.why = t_('neu als {0}', [r.newType]); listeRaten(einheitRaten(r)); haken(r); return }
+  if (v === '+') { r.target = 'new'; r.inaktiv = false; r.vorhanden = null; r.gleich = false; r.converted = convert(r.number ?? r.value, { type: r.newType }, model.value); r.error = validate(r.converted, { type: r.newType }, model.value); r.take = !r.error && r.converted != null; r.why = t_('neu als {0}', [r.newType]); listeRaten(einheitRaten(r)); haken(r); return }
   const def = attrs.value.find(a => a.key === v)
   r.target = 'attr'; r.attribute = v; r.inaktiv = !gruppeHier(v); r.listValues = null; r.multiple = false
   r.converted = convert(r.number ?? r.value, def, model.value); r.error = validate(r.converted, def, model.value)
   r.take = !r.inaktiv && !r.error; r.why = r.inaktiv ? t_('Gruppe {0} gilt an diesem Knoten nicht', [def?.group ?? '']) : ''
   if (def?.type === 'enum') { listeZuordnen(r); r.take = !r.inaktiv && !r.error }
-  haken(r)
+  schonDa(r); haken(r)
 }
 const zielWert = r => r.target === 'attr' ? r.attribute : r.target === 'new' ? '+' : ''
 
@@ -613,7 +652,7 @@ async function uebernehmen() {
 function onKey(e) { if (e.key === 'Escape') emit('close') }
 onMounted(async () => { window.addEventListener('keydown', onKey); try { await store.poll(true) } catch {} lade() })   // Modell frisch: der zweite Lauf kennt die Attribute des ersten
 onUnmounted(() => { window.removeEventListener('keydown', onKey); if (timer) clearTimeout(timer) })
-defineExpose({ rows, werte, bausteineZeilen, zeilenWerte, warten, hinweis, genommen, ki, kiHinweis, attributeHier, gruppe, gruppeName, ebene, zuordnen, neuLesen, kiFragen })
+defineExpose({ rows, werte, bausteineZeilen, zeilenWerte, warten, hinweis, genommen, ki, kiHinweis, attributeHier, gruppe, gruppeName, ebene, zuordnen, neuLesen, kiFragen, ziel, schritte })
 </script>
 
 <template>
@@ -625,6 +664,7 @@ defineExpose({ rows, werte, bausteineZeilen, zeilenWerte, warten, hinweis, genom
         <span v-if="ki === 'läuft'" class="ai" :title="$t('Der Text geht gegen die {0} Attribute, die hier gelten', [attributeHier.length])">{{ $t("✦ KI liest …") }}</span>
         <button v-else-if="ki !== 'aus'" class="x ai" :disabled="!kiBereit || busy" @click="kiFragen" :title="$t('Den Text gegen das Modell lesen lassen — einmal je Dokument, kostet Token')">{{ $t("✦ KI fragen") }}</button>
         <span v-else class="muted" :title="$t('Kein KI-Schlüssel am Team — es zählen Tabellen, Zeilen und Suche')">{{ $t("✦ aus") }}</span>
+        <span v-if="laeuft" class="lauf" :title="$t('{0} von {1} Abfragen — solange kommen Werte nach', [schritte.erledigt, schritte.gesamt])"><b><i :style="{ width: prozent + '%' }" /></b><span class="muted">{{ schritte.erledigt }}/{{ schritte.gesamt }}</span></span>
         <span v-if="kiHinweis" :class="kiHinweis.startsWith('✗') ? 'neg' : 'ai'">{{ kiHinweis }}</span>
         <span v-if="hinweis" class="neg">{{ hinweis }}</span>
         <span class="grow" />
@@ -665,7 +705,7 @@ defineExpose({ rows, werte, bausteineZeilen, zeilenWerte, warten, hinweis, genom
                 <span v-else-if="r.target === 'attr'" class="muted">{{ attrs.find(a => a.key === r.attribute)?.type }}<template v-if="attrs.find(a => a.key === r.attribute)?.unit">{{ ' ' + attrs.find(a => a.key === r.attribute)?.unit }}</template></span>
               </td>
               <td><input type="text" v-model="r.converted" style="width:140px" /></td>
-              <td class="muted" :class="{ neg: r.error || r.inaktiv }" style="font-size:11px">{{ r.error || r.why }}</td>
+              <td class="muted" :class="{ neg: r.error || r.inaktiv, pos: r.gleich }" style="font-size:11px" :title="whyTitel(r)">{{ r.error || r.why }}</td>
             </tr>
           </tbody>
           <tbody v-if="bausteineZeilen.length" class="bausteine">
@@ -687,7 +727,7 @@ defineExpose({ rows, werte, bausteineZeilen, zeilenWerte, warten, hinweis, genom
                 <span v-else-if="r.target === 'attr'" class="muted">html</span>
               </td>
               <td class="muted roh" :title="r.listValues ? listeTitel(r) : r.converted">{{ r.listValues ? r.listValues.map(v => v.label).join(' · ').slice(0, 60) : nurText(r.converted).slice(0, 60) }}</td>
-              <td class="muted" :class="{ neg: r.inaktiv }" style="font-size:11px">{{ r.why }}</td>
+              <td class="muted" :class="{ neg: r.inaktiv, pos: r.gleich }" style="font-size:11px" :title="whyTitel(r)">{{ r.why }}</td>
             </tr>
           </tbody>
         </table>
@@ -721,4 +761,7 @@ tr.aus td { opacity: .55; }
 .roh { font-size: 11px; max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .quelle { font-size: 11px; white-space: nowrap; }
 .empty { padding: 24px; text-align: center; color: var(--muted); }
+.lauf { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; white-space: nowrap; }
+.lauf b { display: block; width: 120px; height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
+.lauf b i { display: block; height: 100%; background: var(--accent); transition: width .3s; }
 </style>
