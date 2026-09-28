@@ -11,16 +11,15 @@ import path from 'node:path'
 import { pipeline } from 'node:stream/promises'
 import { Readable } from 'node:stream'
 
-// Kein Preset-Argument mehr: der Job rechnet alle Presets mit „automatisch". Welche das sind, steht in den
-// Einstellungen — ein Job, der davon eines aussparte, liess den Rest fuer immer liegen (28.09.2026).
-// JOURNALI_PRESET bleibt fuer einen Lauf von Hand
+// Keine Preset-Auswahl: der Job rechnet alle Presets mit „automatisch". Welche das sind, steht in den
+// Einstellungen — ein Job, der davon eines aussparte, liess den Rest fuer immer liegen. Auch JOURNALI_PRESET wird
+// nicht mehr gelesen: der JobRunner setzt jeden Job-Parameter als Umgebungsvariable, ein alter Eintrag wirkte also
+// weiter, obwohl das Manifest den Parameter nicht mehr kennt (28.09.2026)
 const [,, serverArg, actorArg, limitArg] = process.argv
-const presetArg = null
 const E = process.env
 const server = (serverArg || E.JOURNALI_JOURNALI || 'http://localhost:5000').replace(/\/$/, '')
 const actor = actorArg || E.JOURNALI_ACTOR || 'job:derive'
 const limit = Math.max(1, parseInt(limitArg || E.JOURNALI_LIMIT || '200', 10) || 200)
-const only = (presetArg || E.JOURNALI_PRESET || '').trim()
 const headers = { 'X-Actor': actor, ...(E.JOURNALI_TOKEN ? { Authorization: 'Bearer ' + E.JOURNALI_TOKEN } : {}) }
 
 let sharp
@@ -77,7 +76,7 @@ let done = 0, failed = 0, rounds = 0, code = 0
 const failedIds = new Set()   // was scheiterte, nicht in der nächsten Runde wieder versuchen
 try {
   for (;;) {
-    const pending = await get(`/api/media/pending?limit=${limit}${only ? '&preset=' + encodeURIComponent(only) : ''}`)
+    const pending = await get(`/api/media/pending?limit=${limit}`)
     const items = pending.items.filter(x => !failedIds.has(x.id + '/' + x.preset))
     if (!items.length) break
     rounds++
