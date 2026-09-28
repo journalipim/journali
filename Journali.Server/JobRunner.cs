@@ -28,6 +28,12 @@ public sealed class JobRunner : BackgroundService
     /// <summary>Medienspeicher fürs Archiv (Files.Archive) — vom Programm gesetzt.</summary>
     public IMediaStore? Store { get; set; }
 
+    /// <summary>
+    /// Der Stand eines Systemjobs: wie viele Posten offen sind. Das Programm setzt die Funktion — sie fragt den
+    /// <c>progress</c>-Endpunkt aus dem Manifest, denselben, den die Kachel im Tasker zeigt.
+    /// </summary>
+    public Func<string, Task<int>>? Offen { get; set; }
+
     public JobRunner(Catalog catalog, string pluginDir, string jobDir, ILogger<JobRunner> log)
     {
         _catalog = catalog; _pluginDir = pluginDir; _log = log; Dir = jobDir;
@@ -43,6 +49,7 @@ public sealed class JobRunner : BackgroundService
         while (!stop.IsCancellationRequested)
         {
             try { Tick(); } catch (Exception e) { _log.LogError(e, "Job-Takt"); }
+            try { await Nachziehen(stop); } catch (Exception e) { _log.LogError(e, "Systemjobs"); }
             try { await Task.Delay(TimeSpan.FromSeconds(20), stop); } catch (OperationCanceledException) { }
         }
         lock (_gate) foreach (var (_, r) in _running) { try { r.Process.Kill(true); } catch { } }
@@ -63,6 +70,38 @@ public sealed class JobRunner : BackgroundService
             if (!Cron.TryParse(schedule, out var cron)) continue;
             for (var t = from; t <= now; t = t.AddMinutes(1))
                 if (cron.Matches(t)) { Start(key, "schedule", out _); break; }
+        }
+    }
+
+    private DateTimeOffset _letztesNachziehen = DateTimeOffset.MinValue;
+
+    /// <summary>
+    /// Systemjobs holen auf. „Läuft von selbst“ heisst nicht „läuft nach der Uhr“, sondern: solange etwas offen ist,
+    /// wird weitergearbeitet — ein Rückstand aus der Zeit vor dem Plugin bleibt sonst für immer liegen (28.09.2026).
+    /// <para>Je Minute höchstens eine Runde; ein Job, der schon läuft, wird nicht noch einmal gestartet (das lehnt
+    /// <see cref="Start"/> selbst ab). Ausgeschaltet zählt er nicht — der Schalter auf der Kachel ist die Bremse.
+    /// Ohne Zeitplan im Tarif läuft er trotzdem: ein Systemjob ist keine Automatik nach der Uhr, sondern der
+    /// Nachzieher zu dem, was ohnehin geschieht.</para>
+    /// </summary>
+    private async Task Nachziehen(CancellationToken stop)
+    {
+        if (Offen is null) return;
+        var jetzt = DateTimeOffset.Now;
+        if (jetzt - _letztesNachziehen < TimeSpan.FromMinutes(1)) return;
+        _letztesNachziehen = jetzt;
+
+        var kandidaten = _catalog.Lesen((_, _) => _catalog.Jobs.All.Values
+            .Where(j => j.Enabled && j.Schedule is null)
+            .Select(j => (j.Key, j.Plugin)).ToList());
+        foreach (var (key, plugin) in kandidaten)
+        {
+            if (stop.IsCancellationRequested) return;
+            lock (_gate) if (_running.ContainsKey(key)) continue;   // laeuft schon
+            int offen;
+            try { offen = await Offen(plugin); } catch { continue; }   // kein progress-Endpunkt oder nicht erreichbar
+            if (offen <= 0) continue;
+            Start(key, "nachziehen", out var fehler);
+            if (fehler is not null && fehler != "läuft schon") _log.LogWarning("Systemjob {Job}: {Fehler}", key, fehler);
         }
     }
 

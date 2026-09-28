@@ -173,6 +173,23 @@ app.UseCors();   // auch im Betrieb: das OnlyOffice-Plugin ruft /api aus dem Edi
 // Die Adresse, unter der Jobs den Server erreichen: die, mit der die Oberfläche kommt (localhost:5000 oder der Host im Netz)
 app.Use(async (ctx, next) => { if (ctx.Request.Path.StartsWithSegments("/api")) jobRunner.Origin = $"{ctx.Request.Scheme}://{ctx.Request.Host}"; await next(); });
 
+// Wieviele Posten hat ein Systemjob offen? Aus dem progress-Endpunkt seines Manifests — derselbe, den die Kachel im
+// Tasker liest. Der Takt des JobRunners zieht damit nach, solange etwas offen ist (28.09.2026)
+var offenClient = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
+jobRunner.Offen = async plugin =>
+{
+    var m = PluginApi.Scan(jobRunner.PluginDir);
+    if (!m.TryGetValue(plugin, out var mf) || !mf.Raw.TryGetProperty("progress", out var pg) || pg.ValueKind != JsonValueKind.String) return 0;
+    var pfad = pg.GetString();
+    if (string.IsNullOrWhiteSpace(pfad)) return 0;
+    using var a = await offenClient.GetAsync(jobRunner.Origin.TrimEnd('/') + pfad);
+    if (!a.IsSuccessStatusCode) return 0;
+    using var d = JsonDocument.Parse(await a.Content.ReadAsStringAsync());
+    // ready: false heisst, das Plugin kann gerade nicht arbeiten — dann waere ein Lauf vergeblich
+    if (d.RootElement.TryGetProperty("ready", out var r) && r.ValueKind == JsonValueKind.False) return 0;
+    return d.RootElement.TryGetProperty("offen", out var o) && o.TryGetInt32(out var n) ? n : 0;
+};
+
 // Datenbank im Betrieb weg: eine Meldung statt eines Serverfehlers — die Oberfläche zeigt sie oben, bis wieder eine
 // Anfrage durchgeht. Die Verbindung bleibt, wie sie ist; Npgsql verbindet neu, sobald die Datenbank zurück ist.
 app.Use(async (ctx, next) =>

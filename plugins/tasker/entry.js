@@ -36,7 +36,7 @@ export function systemRows(plugins, jobs, progress = {}) {
 /// Je Kachel: was erledigt ist, was offen ist, und starten / anhalten / weiter — dieselben Knöpfe wie bei einem Job.
 export function systemBlock(rows, onRun, aktionen = {}) {
   const box = el('div', { class: 'sysjobs' })
-  box.append(el('div', { class: 'muted sys-kopf', title: t('Systemjobs laufen in jedem Tarif. Die offenen Posten stehen im Journal und im Index; ein Lauf holt nach, was fehlt.') }, t('⚙ Systemjobs')))
+  box.append(el('div', { class: 'muted sys-kopf', title: t('Systemjobs laufen in jedem Tarif. Eingeschaltet holen sie von selbst auf, was offen ist — ohne Zeitplan und ohne Knopfdruck.') }, t('⚙ Systemjobs')))
   const grid = el('div', { class: 'sys-grid' })
   for (const r of rows) {
     const j = r.job
@@ -48,10 +48,10 @@ export function systemBlock(rows, onRun, aktionen = {}) {
       ? el('span', { class: 'muted offen' }, t('{0} offen', [r.offen.toLocaleString('de-DE')]))
       : el('span', { class: 'muted offen' }, r.ready === false ? '' : r.progress ? t('nichts offen') : '')
     const bar = el('div', { class: 'sysbar' }, el('div', { class: 'fill', style: `width:${r.pct ?? 0}%` }))
-    // Läuft er von selbst? Ein Systemjob wird vom Server angestossen (nach dem Hochladen, nach einer Änderung) und
-    // folgt seinem Zeitplan — ausgeschaltet tut er das nicht mehr und wartet auf ▶ (28.09.2026).
+    // Läuft er von selbst? Eingeschaltet wird ein Systemjob vom Server angestossen — nach dem Hochladen und solange
+    // etwas offen ist, bis nichts mehr offen ist. Ausgeschaltet wartet er auf ▶ (28.09.2026).
     const schalter = j
-      ? el('button', { class: 'x ' + (j.enabled ? 'pos' : 'muted'), title: j.enabled ? t('läuft von selbst — ausschalten') : t('läuft nur auf Knopfdruck — einschalten'), onclick: ev => { ev.stopPropagation(); aktionen.toggle?.(j, ev) } }, j.enabled ? '●' : '○')
+      ? el('button', { class: 'x ' + (j.enabled ? 'pos' : 'muted'), title: j.enabled ? t('holt auf, was offen ist — ausschalten') : t('läuft nur auf Knopfdruck — einschalten'), onclick: ev => { ev.stopPropagation(); aktionen.toggle?.(j, ev) } }, j.enabled ? '●' : '○')
       : el('span', { class: 'x leer' })
     const knoepfe = el('div', { class: 'tun' },
       schalter,
