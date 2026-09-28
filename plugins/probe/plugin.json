@@ -1,13 +1,13 @@
 {
   "key": "probe",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "label": {
     "de": "Bildmasse lesen",
     "en": "Read image dimensions"
   },
   "description": {
-    "de": "Liest aus dem Kopf eines Bildes (JPEG, PNG, GIF, WebP, BMP, TIFF) Mass in Pixeln, Auflösung, Farbraum und Transparenz und hält sie am Medium fest — die Grundlage für Filter wie „mindestens 2000 px“. Ein anderes Format bekommt 0 × 0, damit der Posten nicht offen bleibt. Läuft als Job in Runden und nimmt nach einem Abbruch dort wieder auf, wo er stand.",
-    "en": "Reads pixel dimensions, resolution, colour space and transparency from an image header (JPEG, PNG, GIF, WebP, BMP, TIFF) and records them at the medium — the basis for filters such as \"at least 2000 px\". Any other format gets 0 × 0 so the item does not stay pending. Runs as a job in rounds and resumes where it stopped."
+    "de": "Ermittelt Mass in Pixeln, Auflösung, Farbraum und Transparenz von Bildern (JPEG, PNG, GIF, WebP, BMP, TIFF) und hält sie am Medium fest — die Grundlage für Filter wie „mindestens 2000 px“. Ein anderes Format bekommt 0 × 0. Läuft als Job in Runden und nimmt nach einem Abbruch dort wieder auf, wo er stand.",
+    "en": "Determines pixel dimensions, resolution, colour space and transparency of images (JPEG, PNG, GIF, WebP, BMP, TIFF) and records them at the medium — the basis for filters such as \"at least 2000 px\". Any other format gets 0 × 0. Runs as a job in rounds and resumes where it stopped."
   },
   "kind": "tool",
   "runs": "process",
