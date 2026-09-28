@@ -1,6 +1,6 @@
 {
   "key": "derive",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "label": {
     "de": "Vorschauen rechnen",
     "en": "Derive previews"
@@ -21,8 +21,7 @@
       "job.mjs",
       "{journali}",
       "{actor}",
-      "{limit}",
-      "{preset}"
+      "{limit}"
     ],
     "description": "Fehlende Ableitungen nach allen Presets mit „automatisch“ rechnen (oder nur ein Preset); läuft, bis nichts mehr fehlt",
     "params": [
@@ -31,13 +30,6 @@
         "label": "Bilder je Runde (der Job holt so lange nach, bis nichts mehr fehlt)",
         "type": "number",
         "default": "200",
-        "perJob": true
-      },
-      {
-        "key": "preset",
-        "label": "nur dieses Preset (leer = alle mit „automatisch“)",
-        "type": "text",
-        "default": "",
         "perJob": true
       }
     ]

@@ -11,7 +11,11 @@ import path from 'node:path'
 import { pipeline } from 'node:stream/promises'
 import { Readable } from 'node:stream'
 
-const [,, serverArg, actorArg, limitArg, presetArg] = process.argv
+// Kein Preset-Argument mehr: der Job rechnet alle Presets mit „automatisch". Welche das sind, steht in den
+// Einstellungen — ein Job, der davon eines aussparte, liess den Rest fuer immer liegen (28.09.2026).
+// JOURNALI_PRESET bleibt fuer einen Lauf von Hand
+const [,, serverArg, actorArg, limitArg] = process.argv
+const presetArg = null
 const E = process.env
 const server = (serverArg || E.JOURNALI_JOURNALI || 'http://localhost:5000').replace(/\/$/, '')
 const actor = actorArg || E.JOURNALI_ACTOR || 'job:derive'
