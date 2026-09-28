@@ -67,6 +67,20 @@ test('Tabellenzeilen sind keine Überschriften', () => {
   assert.ok(isHeading('Produktbeschreibung'))
 })
 
+test('Umbrüche im Fliesstext und Spaltenköpfe sind keine Überschriften', () => {
+  assert.ok(!isHeading('Seh- und Arbeitsbedingungen zielt HCL vorrangig auf'), 'endet mit „auf“ — der Satz geht weiter')
+  assert.ok(!isHeading('Mit dem DALI x/e-touchPANEL 02 programmieren Sie Lichtstimmungen sowie'), 'endet mit „sowie“')
+  assert.ok(!isHeading('Gemütszustand variieren. So steigt mit zunehmendem'), 'ein Satzende mitten in der Zeile')
+  assert.ok(!isHeading('Tunable White beschreibt die variable Farbtemperatursteuerung', 'vonwarm- bis kaltweißem Licht.'), 'die nächste Zeile geht klein weiter')
+  assert.ok(!isHeading('Größe', '(mm)'), 'Spaltenkopf: die Einheit steht in der nächsten Zeile')
+  assert.ok(isHeading('Größe', 'Die Leuchte ist 20 cm lang.'), 'mit einem Satz danach ist es eine')
+  assert.ok(isHeading('Technische Daten', 'Netzspannung 220 V'))
+  assert.ok(isHeading('Produktbeschreibung', null))
+  const chunks = chunk('Seh- und Arbeitsbedingungen zielt HCL vorrangig auf\nden circadianen Rhythmus ab, der die innere Uhr steuert.\nMontage\nDas Gerät flach auf Metall montieren.')
+  assert.deepEqual(chunks.map(c => c.heading), [null, 'Montage'], 'im Abschnitt: die umbrochene Zeile bleibt im Text')
+  assert.match(chunks[0].body, /^Seh- und Arbeitsbedingungen zielt HCL vorrangig auf\nden circadianen/)
+})
+
 test('Silbentrennung am Zeilenende wird zusammengezogen', () => {
   assert.equal(joinHyphens('Stoßstrom-\nverstärkung'), 'Stoßstromverstärkung')
   assert.equal(joinHyphens('LED-\nTreiber'), 'LED-\nTreiber', 'Bindestrich vor Grossbuchstabe bleibt')

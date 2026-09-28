@@ -256,10 +256,14 @@ function bausteine(id, chunks) {
     else gruppen.push({ heading: String(c.heading).trim(), body: String(c.body ?? ''), page: c.page ?? null })
   }
   // eine Überschrift ist kurz: bis 60 Zeichen, bis acht Wörter — „Um Geräteausfälle durch Masseschlüsse zu vermeiden,
-  // muss die Verdrahtung“ hielt der Leser für eine, es ist ein Satz
+  // muss die Verdrahtung“ hielt der Leser für eine, es ist ein Satz. Ein Umbruch im Fliesstext ist auch keine: der Text
+  // geht klein weiter („Seh- und Arbeitsbedingungen zielt HCL vorrangig auf“ + „den circadianen Rhythmus ab“), oder die
+  // Zeile endet mit einem Wort, das den Satz fortsetzt; „Größe“ + „(mm)“ ist ein Spaltenkopf (28.09.2026)
   const MAX_UEBERSCHRIFT = 60
+  const GEHT_WEITER = /\b(und|oder|sowie|mit|auf|für|von|vom|bei|zu|zum|zur|der|die|das|den|dem|des|ein|eine|einen|einem|einer|im|in|an|am|nach|über|unter|durch|ohne|gegen|um|bis|als|wie|aus|sich|noch|auch|nur|sehr|so|dass|ob|wenn|weil|and|or|with|for|of|to|the|a|an|in|on|at|by|from|as)$/i
+  const umbruch = g => GEHT_WEITER.test(g.heading) || /[a-zäöüß][.!?]\s+[A-ZÄÖÜ]/.test(g.heading) || /^[a-zäöüß(]/.test(g.body.trim())
   const neu = gruppen.filter(g => g.body.trim().length >= MIN_TEXT && !/^\d+([.,]\d+)?$/.test(g.heading) && schluessel(g.heading)
-    && g.heading.length <= MAX_UEBERSCHRIFT && g.heading.split(/\s+/).length <= 8 && !/[,.;:]$/.test(g.heading)).map(g => {
+    && g.heading.length <= MAX_UEBERSCHRIFT && g.heading.split(/\s+/).length <= 8 && !/[,.;:]$/.test(g.heading) && !umbruch(g)).map(g => {
     const zeilen = String(g.body).split(/\r?\n/).map(z => z.trim()).filter(Boolean)
     const punkte = zeilen.filter(z => /^[•\-–*·]\s*\S/.test(z)).map(z => z.replace(/^[•\-–*·]\s*/, ''))
     const r = { key: g.heading, value: g.body, doc: id, page: g.page, heading: g.heading, quote: null, confidence: null, quelle: 'text', baustein: true,

@@ -7,11 +7,18 @@
 /// oder eine Tabellenzeile aussieht. Letzteres ist in Datenblättern der Normalfall: „Netzspannungsbereich 220 – 240 V"
 /// ist ein Wert, keine Überschrift.
 const HEADING = /^[^\n]{3,80}$/
-export function isHeading(line) {
+/// Ein Wort, mit dem keine Überschrift endet: der Satz geht in der nächsten Zeile weiter („… zielt HCL vorrangig auf“)
+const SATZ_GEHT_WEITER = /\b(und|oder|sowie|mit|auf|für|von|vom|bei|zu|zum|zur|der|die|das|den|dem|des|ein|eine|einen|einem|einer|im|in|an|am|nach|über|unter|durch|ohne|gegen|um|bis|als|wie|aus|sich|noch|auch|nur|sehr|so|dass|ob|wenn|weil|and|or|with|for|of|to|the|a|an|in|on|at|by|from|as)$/i
+/// Eine Zeile ist eine Überschrift, wenn sie kurz ist und kein Satz. `next` ist die Zeile danach: geht der Text dort
+/// klein oder mit einer Klammer weiter, war die Zeile ein Umbruch im Fliesstext oder ein Spaltenkopf („Größe“ + „(mm)“)
+export function isHeading(line, next = null) {
   const s = line.trim()
   if (!HEADING.test(s)) return false
   if (/[.;:,]$/.test(s)) return false
   if (/[-–]$/.test(s)) return false                       // Silbentrennung am Zeilenende: der Satz geht weiter
+  if (SATZ_GEHT_WEITER.test(s)) return false
+  if (/[a-zäöüß][.!?]\s+[A-ZÄÖÜ]/.test(s)) return false            // ein Satzende mitten in der Zeile: „… variieren. So steigt …“
+  if (next != null && /^[a-zäöüß(]/.test(String(next).trim())) return false
   if (s.split(/\s+/).length > 10) return false
   if (/\d[\d.,]*\s*(%|°|[A-Za-zµΩ]{1,4}\b)/.test(s)) return false   // Messwert mit Einheit: 220 V, 100.000 h, 0,16 W
   if ((s.match(/\d/g) ?? []).length > 6) return false      // Zahlenkolonne
@@ -67,8 +74,9 @@ export function chunk(text, { max = 900, min = 120, page = null } = {}) {
   }
   // Zeilenweise: eine Überschrift beginnt einen neuen Abschnitt — in PDFs steht sie mitten im Textfluss, ohne Leerzeile
   for (const para of clean.split(/\n{2,}/)) {
-    for (const line of para.split('\n')) {
-      if (isHeading(line)) { flush(); heading = line.trim(); continue }
+    const zeilen = para.split('\n')
+    for (const [i, line] of zeilen.entries()) {
+      if (isHeading(line, zeilen[i + 1] ?? null)) { flush(); heading = line.trim(); continue }
       buf.push(line)
       if (buf.join('\n').length >= max) flush()
     }

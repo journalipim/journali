@@ -398,6 +398,16 @@ test('ohne KI-Schlüssel geht nichts an die KI — der Text wird trotzdem geholt
 
 // ── Textbausteine ─────────────────────────────────────────────────────────────────────────────────────────────
 
+test('Bausteine: ein Umbruch im Fliesstext und ein Spaltenkopf aus dem alten Index sind keine', async () => {
+  const text = { ready: true, state: 'text', chunks: [
+    { seq: 0, page: 2, heading: 'Seh- und Arbeitsbedingungen zielt HCL vorrangig auf', body: 'den circadianen Rhythmus ab, der unter anderem die innere Uhr des Menschen steuert.' },
+    { seq: 1, page: 4, heading: 'Gemütszustand variieren. So steigt mit zunehmendem', body: 'Alter beispielsweise das Bedürfnis nach höheren Beleuchtungsstärken deutlich an.' },
+    { seq: 2, page: 8, heading: 'Größe', body: '(mm)\nArt.-Nr.\nLCA 50W 350-1050mA DT8 lp PRE 350–1.050 20 89 123456' },
+    { seq: 3, page: 9, heading: 'LED-Treiber', body: '— Ausgangsstrom einstellbar mit basicDIM Wireless oder I-Select 2\n— Kleine Bauform mit Zugentlastung' }] }
+  const { w } = await dialog({ tabellen: { ready: true, state: 'text', tables: [] }, text })
+  assert.deepEqual(w.vm.bausteineZeilen.map(b => b.key), ['LED-Treiber'])
+})
+
 test('Abschnitte mit Überschrift stehen als Textbausteine — eigene Gruppe, ohne KI', async () => {
   const { w } = await dialog({ text: TEXT })
   assert.deepEqual(w.vm.bausteineZeilen.map(b => b.key), ['Funkentstörung', 'Montage'], '„Technische Daten“ ist zu kurz; die zwei Abschnitte „Funkentstörung“ werden einer')
