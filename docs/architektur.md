@@ -137,6 +137,17 @@ Rauschen, `ReleaseGranted` bleibt). Zwei Fallen:
   zu einem Stand verdichten — mit eigenem Eintrag, nie aus Platzgründen (~5 MB je 25 000 Einträge)
 - ~~Benutzer und Rollen~~ gebaut 19.09.2026 (`Auth.cs`, `docs/betrieb.md`); offen: SSO, Workflow-Rollen; ~~Rollen je Teilbaum~~ gebaut 27.09.2026 (`NodeRestricted`, `MediaFolderRestricted`, `Auth.Sichtbar`)
 - Import/Export — in der Praxis die Hälfte des Systems
+- **Datenblatt auf einen Knoten ziehen → Werte vorschlagen** (28.09.2026, offen). Ein PDF mit Strg auf eine
+  Baumzeile: das Dokument wird **wie sonst auch als Asset abgelegt** und dem Knoten zugeordnet, und zusätzlich
+  gegen das Attributmodell dieses Knotens gelesen — welche Attribute gelten hier, welche davon stehen im Text?
+  Ergebnis ist eine Vorschlagsliste, kein Schreibvorgang: jeder Wert mit Quelle (Seite, Stelle) und Sicherheit,
+  nichts ohne Haken, übernommen als ein Stapel.
+  *Die Bausteine liegen:* `docs` hat den Text in Abschnitten, das Modell kennt die Attribute am Knoten, `enrich`
+  hat den Vorschlagsdialog samt Übernahme (heute mit Recherche als Quelle statt des Dokuments), und der Drop auf
+  die Baumzeile legt bereits Assets an (`ui-tree-asset-drop`). Was fehlt, ist die Verbindung: dasselbe Verfahren
+  wie bei `enrich`, nur mit dem vorliegenden Dokument als Quelle.
+  *Zu klären:* was bei mehreren Treffern je Attribut gilt; ob Einheiten und Listenwerte gleich abgebildet werden;
+  ob ein zweites Datenblatt am selben Knoten die alten Vorschläge ersetzt oder ergänzt.
 - **Status mit Geltungsdatum.** Ein Status (aktiv, ausgelaufen) soll ab einem Datum gelten,
   in der Zukunft wie in der Vergangenheit. Entwurf: `StatusSet` bekommt ein optionales
   `effectiveFrom`; der aktuelle Status ist beim Lesen der jüngste Eintrag, dessen Datum
