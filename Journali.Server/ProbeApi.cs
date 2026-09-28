@@ -122,7 +122,7 @@ public static class ProbeApi
         {
             if (!pluginOn) return (null, "Plugin probe ist nicht installiert oder aus (⌁ Plugins).");
             c.With((_, _, write) => write(actor, Jobs.Stream + PluginKey, Types.JobDefined,
-                new JobDefined("Bildmasse lesen", PluginKey, new() { ["limit"] = "200" }, null, true, 120, null), null));
+                new JobDefined("Bildabmessungen lesen", PluginKey, new() { ["limit"] = "200" }, null, true, 120, null), null));
             job = PluginKey;
         }
         var run = runner.Start(job, "media", out var error);

@@ -1,8 +1,8 @@
 {
  "key": "probe",
- "version": "1.0.4",
- "hash": "f457ddf3db58b21f7f10c922d6ae989f3ca7c1d8b7a39749d9128f343a187aca",
+ "version": "1.0.5",
+ "hash": "7b9f0b2affc61d27ab29058d0254e4dd13f0296bce29f11f8b6fc8fa857ade66",
  "issued": "2026-09-28",
  "issuer": "journali",
- "sig": "xFWymkyyyNI1aOBrhkNETiwDVAXGhAkfwSVBIJX2CiFvBphwAj3qr88e1my/7bszsF38P0naljPBvtKtzncYdw=="
+ "sig": "/g0VDuBdMxyV8R1bA9W6SeoNH/lwXeXz0wz7DL8WxJHdmEHrbnOAuDEAuJlOLVHr8UmmijOzQSbTcZfUj9XqIA=="
 }

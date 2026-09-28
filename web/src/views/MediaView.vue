@@ -454,9 +454,9 @@ const oeffnen = m => { if (store.can('download')) window.open(`/api/media/${m.id
           </td></tr>
         </template>
         <!-- Gemessen, nicht gepflegt: was der Server aus dem Kopf der Datei liest (MediaProbed) -->
-        <tr><td class="attr muted" :title="$t('Mass des fertigen Bildes — eine EXIF-Drehung ist eingerechnet.')">{{ $t("▭ Maß") }}</td>
+        <tr><td class="attr muted" :title="$t('Abmessungen des fertigen Bildes — eine EXIF-Drehung ist eingerechnet.')">{{ $t("▭ Abmessungen") }}</td>
           <td v-if="current.probe?.width" class="mono">{{ current.probe.width }} × {{ current.probe.height }} px<span class="muted">{{ ' · ' + mp(current.pixels) + ' MP' }}</span></td>
-          <td v-else class="muted" :title="current.probe ? $t('Kein Format, das der Server aus dem Kopf liest.') : $t('Der Job probe liest die Masse nach.')">—</td></tr>
+          <td v-else class="muted" :title="current.probe ? $t('Kein Format, das der Server aus dem Kopf liest.') : $t('Der Job probe liest die Abmessungen nach.')">—</td></tr>
         <tr v-if="current.probe?.dpi"><td class="attr muted">{{ $t("Auflösung") }}</td><td class="mono">{{ current.probe.dpi }} dpi</td></tr>
         <tr v-if="current.probe?.space"><td class="attr muted">{{ $t("Farbraum") }}</td><td class="mono">{{ current.probe.space }}</td></tr>
         <tr v-if="current.probe && current.probe.alpha !== null"><td class="attr muted">{{ $t("Transparenz") }}</td><td>{{ current.probe.alpha ? '✓' : '–' }}</td></tr>

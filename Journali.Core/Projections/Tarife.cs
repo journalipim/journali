@@ -99,7 +99,7 @@ public static class Tarife
     public const int Ohne = int.MaxValue;
 
     /// <summary>
-    /// Systemjobs: sie rechnen und messen, was jede Anlage braucht — die Vorschauen, die Bildmasse, die Vektoren.
+    /// Systemjobs: sie rechnen und messen, was jede Anlage braucht — die Vorschauen, die Bildabmessungen, die Vektoren.
     /// Das ist Betrieb, kein Merkmal eines Tarifs, und darum sind sie in jedem erlaubt.
     /// <para>Die Ausnahme steht hier und nicht nur in <see cref="Basis"/>, weil im Betrieb das signierte Tarifblatt
     /// gilt und nicht das Saatgut: ein Blatt, das einen neuen Systemjob noch nicht kennt, sperrte ihn sonst aus. In

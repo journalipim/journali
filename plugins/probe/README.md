@@ -1,4 +1,4 @@
-# probe — Bildmasse lesen
+# probe — Bildabmessungen lesen
 
 Liest aus dem Kopf jeder Datei, was darin steht: Mass in Pixeln, Auflösung in Punkten je Zoll, Farbraum,
 Transparenz. Die Angaben stehen danach am Medium (`MediaProbed`) und tragen die Filter der Bibliothek — etwa

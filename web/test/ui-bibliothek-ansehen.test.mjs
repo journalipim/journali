@@ -1,4 +1,4 @@
-// ▨ Medien, rechte Spalte: was der Server seit Block A liefert, muss auch zu sehen sein — Mass, Auflösung,
+// ▨ Medien, rechte Spalte: was der Server seit Block A liefert, muss auch zu sehen sein — Abmessungen, Auflösung,
 // Farbraum, Transparenz, Herkunft, Importdatum. Dazu ein PDF, das der Browser selbst zeigt, und der Doppelklick
 // auf eine Kachel, der die Datei öffnet.
 import test from 'node:test'
@@ -50,13 +50,13 @@ async function bibliothek(medien, verwendung) {
 const feld = (w, label) => w.findAll('.form tr').find(tr => tr.find('td')?.text().includes(label))
 const kachel = (w, name) => w.findAll('.tile').find(t => t.find('.name')?.text() === name)
 
-test('das Mass des Originals steht rechts, mit Megapixeln', async () => {
+test('die Abmessungen des Originals stehen rechts, mit Megapixeln', async () => {
   const { w } = await bibliothek([BILD])
   await kachel(w, 'vorne.jpg').trigger('click')
   await flushPromises()
 
-  assert.match(feld(w, 'Maß').text(), /4000 × 3000 px/)
-  assert.match(feld(w, 'Maß').text(), /12,0 MP/)
+  assert.match(feld(w, 'Abmessungen').text(), /4000 × 3000 px/)
+  assert.match(feld(w, 'Abmessungen').text(), /12,0 MP/)
   assert.match(feld(w, 'Auflösung').text(), /300 dpi/)
   assert.match(feld(w, 'Farbraum').text(), /srgb/)
   assert.match(feld(w, 'Transparenz').text(), /–/)
@@ -82,18 +82,18 @@ test('ohne Herkunft steht dort „von Hand“', async () => {
   assert.equal(feld(w, 'Bezug'), undefined, 'ohne Bezug soll die Zeile fehlen')
 })
 
-/// Zwei Gründe für „kein Mass“, und sie bedeuten Verschiedenes — das sagt der Tooltip, nicht der sichtbare Text.
+/// Zwei Gründe für „keine Abmessungen“, und sie bedeuten Verschiedenes — das sagt der Tooltip, nicht der sichtbare Text.
 test('noch nicht gelesen und kein bekanntes Format sind zweierlei', async () => {
   const { w } = await bibliothek([OHNE, PDF])
   await kachel(w, 'neu.tif').trigger('click')
   await flushPromises()
-  const offen = feld(w, 'Maß').findAll('td')[1]
+  const offen = feld(w, 'Abmessungen').findAll('td')[1]
   assert.equal(offen.text(), '—')
-  assert.match(offen.attributes('title') ?? '', /liest die Masse nach/)
+  assert.match(offen.attributes('title') ?? '', /liest die Abmessungen nach/)
 
   await kachel(w, 'datenblatt.pdf').trigger('click')
   await flushPromises()
-  const unbekannt = feld(w, 'Maß').findAll('td')[1]
+  const unbekannt = feld(w, 'Abmessungen').findAll('td')[1]
   assert.equal(unbekannt.text(), '—')
   assert.match(unbekannt.attributes('title') ?? '', /Kein Format/)
 })

@@ -2475,7 +2475,6 @@
  "Test einer neuen Instanz, ab dem ersten Eintrag im Journal": "Trial of a new instance, from the first journal entry",
  "⚷ Schlüssel · {0}": "⚷ Keys · {0}",
  "Reset": "Reset",
- "Limit": "Limit",
  "Stand vom Lizenzserver neu holen": "Fetch the state from the licence server again",
  "Stand vom Lizenzserver holen": "Fetch the state from the licence server",
  "⚿ Bestellen · {0}": "⚿ Order · {0}",
@@ -2527,10 +2526,7 @@
  "{0} lagen schon im Speicher": "{0} were already in the store",
  "{0} zugeordnet": "{0} attached",
  "Herkunft: plugin, profile, job, ref oder from.": "Source: plugin, profile, job, ref or from.",
- "▭ Maß": "▭ Size",
- "Mass des fertigen Bildes — eine EXIF-Drehung ist eingerechnet.": "Size of the finished image — an EXIF rotation is already applied.",
  "Kein Format, das der Server aus dem Kopf liest.": "No format the server reads from the header.",
- "Der Job probe liest die Masse nach.": "The probe job reads the dimensions.",
  "Auflösung": "Resolution",
  "Farbraum": "Colour space",
  "Transparenz": "Transparency",
@@ -2670,5 +2666,8 @@
  "Sichtbar für Rollen …": "Visible to roles …",
  "Rollen: nur a-z, 0-9, _.": "Roles: only a-z, 0-9, _.",
  "Für Rolle {0} nicht sichtbar.": "Not visible to role {0}.",
- "Modellname ungültig.": "Model name invalid."
+ "Modellname ungültig.": "Model name invalid.",
+ "▭ Abmessungen": "▭ Dimensions",
+ "Abmessungen des fertigen Bildes — eine EXIF-Drehung ist eingerechnet.": "Dimensions of the finished image — an EXIF rotation is included.",
+ "Der Job probe liest die Abmessungen nach.": "The job probe reads the dimensions."
 }
