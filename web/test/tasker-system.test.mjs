@@ -71,3 +71,15 @@ test('bei einem Systemjob heisst Abbrechen anhalten bis zum nächsten Start', ()
   const n = abbruchText({ plugin: 'csv', label: 'Export' }, plugins)
   assert.equal(n.title, 'abbrechen'); assert.match(n.toast, /Export abgebrochen/)
 })
+
+// 28.09.2026 gemeldet: „wenn nichts mehr offen ist, wieso ist der Balken dann nicht bei 100 %?“ — bei den
+// Bildabmessungen zählt `gelesen` nur die mit Abmessungen; die 748 ohne bekanntes Format sind aber auch abgearbeitet.
+test('der Balken zeigt, was erledigt ist — nicht nur, was etwas ergeben hat', () => {
+  const plugins = [{ key: 'probe', service: '', label: { de: 'Bildabmessungen lesen' }, system: true, progress: '/api/media/probe' }]
+  const [r] = systemRows(plugins, [], { probe: { ready: true, total: 939, gelesen: 191, offen: 0 } })
+  assert.equal(r.pct, 100, 'nichts offen heisst fertig')
+  assert.equal(r.gelesen, 939)
+
+  const [halb] = systemRows(plugins, [], { probe: { ready: true, total: 1000, gelesen: 100, offen: 400 } })
+  assert.equal(halb.pct, 60, '600 von 1000 sind abgearbeitet')
+})

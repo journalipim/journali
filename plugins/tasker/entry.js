@@ -22,7 +22,9 @@ export function systemRows(plugins, jobs, progress = {}) {
     const pr = progress?.[p.key] ?? null
     const total = Number(pr?.total ?? 0), gelesen = Number(pr?.gelesen ?? 0), offen = Number(pr?.offen ?? 0)
     const label = (globalThis.journali?.L ? globalThis.journali.L(p.label) : null) || p.label?.de || (typeof p.label === 'string' ? p.label : '') || p.key
-    rows.push({ plugin: p.key, label, progress: pr, ready: pr ? pr.ready !== false : null, total, gelesen, offen, pct: pr && pr.ready !== false && total > 0 ? Math.round(gelesen / total * 100) : null, job: (jobs ?? []).find(j => j.plugin === p.key) ?? null })
+    // Der Füllstand zeigt, was abgearbeitet ist (total − offen): was kein bekanntes Format hat, ist auch erledigt.
+    const erledigt = Math.max(gelesen, total - offen)
+    rows.push({ plugin: p.key, label, progress: pr, ready: pr ? pr.ready !== false : null, total, gelesen: erledigt, offen, pct: pr && pr.ready !== false && total > 0 ? Math.round(erledigt / total * 100) : null, job: (jobs ?? []).find(j => j.plugin === p.key) ?? null })
   }
   return rows
 }
@@ -306,7 +308,7 @@ async function mount(root, ctx) {
     const b = ev?.currentTarget
     const alt = b?.textContent
     if (b) { b.disabled = true; b.textContent = '⋯' }
-    try { await f() } finally { if (b?.isConnected) { b.disabled = false; b.textContent = alt } }
+    try { await f() } finally { if (b) { b.disabled = false; b.textContent = alt } }
   }
   async function run(j) { try { await api.post(`/api/jobs/${j.key}/run`); store.toast(`▶ ${j.label} gestartet`, 'ok'); st.cur = j.key; await load(); watch() } catch (e) { store.toast(e.message) } }
   async function cancel(j) { try { await api.post(`/api/jobs/${j.key}/cancel`); store.toast(abbruchText(j, st.plugins).toast); await load() } catch (e) { store.toast(e.message) } }

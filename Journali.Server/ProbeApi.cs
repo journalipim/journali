@@ -29,7 +29,8 @@ public static class ProbeApi
         {
             offen = c.Media.Unprobed().Count(),
             unbekannt = c.Media.Unknown().Count(),
-            gelesen = c.Media.All.Values.Count(m => m.Probe is { Width: > 0 }),
+            gemessen = c.Media.All.Values.Count(m => m.Probe is { Width: > 0 }),
+            gelesen = c.Media.All.Count - c.Media.Unprobed().Count(),
             total = c.Media.All.Count,
         })));
 

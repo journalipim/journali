@@ -1,9 +1,9 @@
 {
   "key": "docs",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "label": {
-    "de": "Dokumente lesen",
-    "en": "Read documents"
+    "de": "Dokumente durchsuchbar machen",
+    "en": "Make documents searchable"
   },
   "description": {
     "de": "Liest den Text aus den Dokumenten am Knoten (PDF je Seite, Text, HTML, Markdown, XML), schneidet ihn in Abschnitte und legt ihn in den Dokumentindex für die Volltextsuche (⌕ Dokumente); Tabellen mit Schlüssel und Wert legt er daneben, für die Übernahme in Attribute. Läuft als Job im Hintergrund und holt nach, was noch fehlt; abgeleitete Daten, nichts davon geht ins Journal.",
