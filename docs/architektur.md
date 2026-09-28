@@ -137,6 +137,16 @@ Rauschen, `ReleaseGranted` bleibt). Zwei Fallen:
   zu einem Stand verdichten — mit eigenem Eintrag, nie aus Platzgründen (~5 MB je 25 000 Einträge)
 - ~~Benutzer und Rollen~~ gebaut 19.09.2026 (`Auth.cs`, `docs/betrieb.md`); offen: SSO, Workflow-Rollen; ~~Rollen je Teilbaum~~ gebaut 27.09.2026 (`NodeRestricted`, `MediaFolderRestricted`, `Auth.Sichtbar`)
 - Import/Export — in der Praxis die Hälfte des Systems
+- **Status am Asset** (28.09.2026, offen). Ein Knoten kann aktiv sein und eines seiner Assets trotzdem
+  überholt — heute lässt sich das nicht sagen. Ein Medium kennt nur *zurückgezogen* (`MediaRetired`, es
+  verschwindet), *abgelöst* (`MediaSuperseded`, die Fassungskette) und einen Workflow-Zustand
+  (`MediaWorkflowApi`, „was noch zu tun ist“). Was fehlt, ist der **Status aus demselben Vokabular wie am Knoten**
+  (`StatusDefinition` im Modell, `StatusSet` am Strom) — dieselben Werte, dieselbe Anzeige, nur am Medium.
+  *Entwurf:* `StatusSet` am Medienstrom, wie es `WorkflowStateSet` dort schon tut — kein neuer Eintragstyp; das
+  Abbild `Media` nimmt ihn auf, der Zuordnungsdialog (`MediaPicker`, Drop auf den Baum) bietet ihn gleich mit an.
+  *Zu klären:* was ein überholtes Asset für die Ausleitung bedeutet (geht es mit oder nicht?); ob der Status dem
+  Medium gehört oder der Zuordnung — ein Bild hängt an mehreren Knoten, und „hier überholt“ ist etwas anderes als
+  „überall überholt“.
 - **Datenblatt auf einen Knoten ziehen → Werte vorschlagen** (28.09.2026, offen). Ein PDF mit Strg auf eine
   Baumzeile: das Dokument wird **wie sonst auch als Asset abgelegt** und dem Knoten zugeordnet, und zusätzlich
   gegen das Attributmodell dieses Knotens gelesen — welche Attribute gelten hier, welche davon stehen im Text?
