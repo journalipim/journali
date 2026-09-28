@@ -3,7 +3,7 @@
 // Grundlinie, h Schriftgrösse, font der Schnitt), so wie pdf.mjs sie aus pdfjs liefert.
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { lines, tables, blocks, order, roles, blockText, analysePage, layoutDocument, bodyOf, paragraphs, spaltenBahn, seitenBloecke } from '../../plugins/docs/layout.mjs'
+import { lines, tables, blocks, order, roles, blockText, analysePage, layoutDocument, bodyOf, paragraphs, spaltenBahn, seitenBloecke, istSchluesselWert } from '../../plugins/docs/layout.mjs'
 
 const BUCH = 'Serif-Book', FETT = 'Serif-Bold'
 /// Ein Textstück: Breite aus der Zeichenzahl, damit die Lage stimmt, ohne sie je Stück auszurechnen
@@ -92,6 +92,22 @@ test('Schlüssel und Wert: drei Zeilen gehen als Tabelle in den Index, der Text 
   assert.equal(tb[0].heading, 'Technische Daten')
   assert.deepEqual(tb[0].rows, [['Frequenzgang', '10 Hz – 40 kHz'], ['Impedanz', '17 Ω'], ['Treiber-Einheit', '9,2 mm dynamisch']])
   assert.ok(chunks.some(c => /Frequenzgang \| 10 Hz/.test(c.body)), 'im Text steht die Tabelle auch')
+})
+
+test('eine Matrix ist kein Schlüssel/Wert — je Zeile höchstens drei gefüllte Zellen', () => {
+  assert.equal(istSchluesselWert(['Frequenzgang', '10 Hz – 40 kHz']), true)
+  assert.equal(istSchluesselWert(['Treibstoff', '', '', '1,27E-03', 'l/100km']), true, 'Leerzellen zählen nicht')
+  assert.equal(istSchluesselWert(['ADPE', '[kg Sb-Equiv.]', '7,48E-03', '3,88E-09', '4,46E-09', '0', '0']), false, 'je Abschnitt eine Zahl — das ist keine Angabe zum Produkt')
+  const items = [
+    s('Wirkungsindikatoren', 30, 700, { h: 12, font: FETT }),
+    s('Indikator', 30, 660, { h: 7, font: FETT }), s('A1-A3', 200, 660, { h: 7, font: FETT }), s('C1', 260, 660, { h: 7, font: FETT }), s('C2', 320, 660, { h: 7, font: FETT }),
+    s('ADPE', 30, 648, { h: 7 }), s('7,48E-03', 200, 648, { h: 7 }), s('3,88E-09', 260, 648, { h: 7 }), s('4,46E-09', 320, 648, { h: 7 }),
+    s('ADPF', 30, 636, { h: 7 }), s('5,53E+02', 200, 636, { h: 7 }), s('7,52E-01', 260, 636, { h: 7 }), s('4,97E-01', 320, 636, { h: 7 }),
+    s('AP', 30, 624, { h: 7 }), s('2,91E-01', 200, 624, { h: 7 }), s('2,01E-04', 260, 624, { h: 7 }), s('1,17E-04', 320, 624, { h: 7 }),
+  ]
+  const { chunks, tables: tb } = layoutDocument([{ page: 1, items }])
+  assert.equal(tb.length, 0, 'nichts davon wird ein Attributwert')
+  assert.ok(chunks.some(c => /ADPE \| 7,48E-03/.test(c.body)), 'im Text steht die Matrix weiter — sie ist durchsuchbar')
 })
 
 test('Kopf- und Fusszeilen, die auf den meisten Seiten stehen, fallen weg', () => {

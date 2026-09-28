@@ -310,9 +310,22 @@ export function bodyOf(pages) {
   return roles(pages.flatMap(p => seitenBloecke(lines(p.items))))
 }
 
-/// Eine Zeile Schlüssel/Wert: links ein Name, rechts ein Wert
+/// Eine Zeile Schlüssel/Wert: links ein Name, rechts EIN Wert. Eine Matrix ist keine — „ADPE | [kg Sb-Equiv.] |
+/// 7,48E-03 | 3,88E-09 | 4,46E-09 | 0 | 0 | …“ hat je Lebenszyklusabschnitt eine Zahl, und die gehören nicht in ein
+/// Attribut. Bis zu drei gefüllte Zellen gelten (Wert, Einheit, Anmerkung), mehr ist eine Matrix (28.09.2026)
 const KEY = /^[A-Za-zÄÖÜäöüß][^\n]{1,60}$/
-const istSchluesselWert = r => r.length >= 2 && KEY.test(r[0].replace(/:$/, '')) && !/[.;]$/.test(r[0]) && r[0].split(/\s+/).length <= 8 && r.slice(1).join(' ').trim().length > 0 && r.slice(1).join(' ').length <= 120
+export function wertZellen(r) { return r.slice(1).map(c => String(c ?? '').trim()).filter(Boolean) }
+export function istSchluesselWert(r) {
+  if (!Array.isArray(r) || r.length < 2) return false
+  const k = String(r[0] ?? '').replace(/:$/, '')
+  if (!KEY.test(k) || /[.;]$/.test(k) || k.split(/\s+/).length > 8) return false
+  const werte = wertZellen(r)
+  if (!werte.length || werte.length > 3 || werte.join(' ').length > 120) return false
+  // ein Attribut hat EINEN Wert: zwei Zahlen nebeneinander sind zwei Grössen („0,14 | 14,4“ = Gewicht und Anteil) oder
+  // eine Reihe über Lebenszyklusabschnitte. Eine Einheit oder eine Bemerkung daneben ist in Ordnung
+  return werte.filter(c => ZAHL.test(c)).length <= 1
+}
+const ZAHL = /^[+-]?\d[\d.,\s']*(?:[eE][+-]?\d+)?$/
 
 /// Das Dokument: je Seite die Blöcke in Lesereihenfolge; Kopf- und Fusszeilen (auf den meisten Seiten dieselbe Zeile)
 /// fallen weg; Überschriften bleiben am folgenden Text; Tabellen mit Schlüssel und Wert gehen daneben in `tables`.
@@ -339,7 +352,7 @@ export function layoutDocument(pages, { max = 900, minRows = 3 } = {}) {
         heading = t.replace(/\n/g, ' ').replace(/\s*:$/, ''); offen = heading; continue
       }
       if (b.table) {
-        if (b.rows.length >= minRows && b.rows.every(istSchluesselWert)) tabellen.push({ page: s.page, heading, rows: b.rows.map(r => [r[0].replace(/:$/, ''), ...r.slice(1)]) })
+        if (b.rows.length >= minRows && b.rows.every(istSchluesselWert)) tabellen.push({ page: s.page, heading, rows: b.rows.map(r => [r[0].replace(/:$/, ''), ...wertZellen(r)]) })
         push((b.header && b.header.some(Boolean) ? b.header.join(' | ') + '\n' : '') + t); offen = null; continue
       }
       push(t); offen = null

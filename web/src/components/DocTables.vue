@@ -312,7 +312,12 @@ const nurText = html => String(html ?? '').replace(/<\/(p|li)>/g, ' ').replace(/
 // ---- Text gegen das Modell ohne KI
 /// Eine Zeile Schlüssel/Wert: zwei Leerzeichen, Doppelpunkt oder Tab dazwischen
 const KV_ZEILE = /^(.{2,60}?)(?:\s{2,}|:\s+|\t)(\S.*)$/
-const kvZeile = z => { const m = String(z ?? '').trim().match(KV_ZEILE); return m ? { key: m[1].trim().replace(/:$/, ''), value: m[2].trim() } : null }
+const kvZeile = z => {
+  const s = String(z ?? '').trim()
+  // eine Tabellenzeile aus dem Index steht mit | zwischen den Zellen: sie kommt als Tabelle, nicht noch einmal als Zeile
+  if ((s.match(/\|/g) ?? []).length >= 2) return null
+  const m = s.match(KV_ZEILE); return m ? { key: m[1].trim().replace(/:$/, ''), value: m[2].trim() } : null
+}
 /// Wie gut ein Zeilenschlüssel ein Attribut trifft: gleich 1, beginnt damit 0,85, Synonym des Mappers 1, sonst Ähnlichkeit
 function trifft(def, key) {
   const k = norm(key), master = model.value.masterLocale ?? 'de'
@@ -571,9 +576,29 @@ const zielKey = r => r.target === 'attr' ? r.attribute : r.target === 'new' ? r.
 const gleich = (a, b) => String(a.converted ?? '') === String(b.converted ?? '')
 /// Die anderen Zeilen mit demselben Ziel, deren Wert ein anderer ist — nur die sind ein Widerspruch
 const widerspricht = r => { const k = zielKey(r); return k ? rows.value.filter(x => x !== r && zielKey(x) === k && !gleich(x, r)) : [] }
-/// Nach dem Laden: bei verschiedenen Werten für ein Attribut trägt keine Zeile den Haken, jede nennt den anderen Wert.
-/// Gleiche Werte bleiben angehakt — geschrieben wird dann einmal (uebernehmen)
+/// Wie gut eine Quelle ist: die Tabelle im Dokument steht vor der Zeile im Text, die vor der Sinnsuche — die KI hat
+/// ihre eigene Spur und bleibt daneben stehen
+const QUELLRANG = { tabelle: 3, zeile: 2, suche: 1 }
+/// Nach dem Laden: dasselbe Ziel aus derselben Spur zweimal (Tabelle und Zeile finden denselben Schlüssel) — die
+/// bessere Quelle bleibt, die andere fällt weg, sonst stünde jede Zeile doppelt da (28.09.2026). Bleiben zwei Zeilen
+/// mit verschiedenen Werten, trägt keine den Haken, und jede nennt den anderen Wert
 function entdoppeln() {
+  const raus = new Set()
+  const besteJeZiel = new Map()
+  for (const r of rows.value) {
+    if (r.baustein || r.quelle === 'ki') continue
+    const k = zielKey(r); if (!k) continue
+    const da = besteJeZiel.get(k)
+    if (!da) { besteJeZiel.set(k, r); continue }
+    const rang = x => (QUELLRANG[x.quelle] ?? 0) * 10 + (x.confidence ?? 0) + (x.error ? -100 : 0)
+    const schlechter = rang(r) >= rang(da) ? da : r
+    besteJeZiel.set(k, schlechter === da ? r : da)
+    raus.add(schlechter)
+  }
+  if (raus.size) {
+    tabellenZeilen.value = tabellenZeilen.value.filter(r => !raus.has(r))
+    zeilenWerte.value = zeilenWerte.value.filter(r => !raus.has(r))
+  }
   for (const r of rows.value) {
     const andere = widerspricht(r); if (!andere.length) continue
     r.take = false; r.why = '≠ ' + [...new Set(andere.map(x => x.converted))].join(', ')   // der Widerspruch wiegt mehr als der Grund des Mappers

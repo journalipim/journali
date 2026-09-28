@@ -748,6 +748,22 @@ test('ein Baustein, dessen html-Attribut zu einer hier nicht geltenden Gruppe ge
   assert.match(f.why, /Gruppe other gilt/)
 })
 
+test('dasselbe Attribut aus Tabelle und Zeile steht einmal da — die bessere Quelle bleibt', async () => {
+  const tabellen = { ready: true, state: 'text', tables: [{ seq: 0, page: 1, heading: null, rows: [['Leistung', '35 W'], ['a', '1'], ['b', '2']] }] }
+  const text = { ready: true, state: 'text', chunks: [{ seq: 0, page: 2, heading: null, body: 'Leistung  35 W' }] }
+  const { w } = await dialog({ tabellen, text })
+  const p = w.vm.rows.filter(r => r.attribute === 'power')
+  assert.equal(p.length, 1, `einmal, nicht zweimal: ${p.map(x => x.quelle).join(', ')}`)
+  assert.equal(p[0].quelle, 'tabelle', 'die Tabelle im Dokument steht vor der Zeile im Text')
+})
+
+test('eine Tabellenzeile im Text wird nicht noch einmal als Zeile gelesen', async () => {
+  const text = { ready: true, state: 'text', chunks: [{ seq: 0, page: 1, heading: null, body: 'ADPE | [kg Sb-Equiv.] | 7,48E-03 | 3,88E-09 | 4,46E-09\nLeistung  35 W' }] }
+  const { w } = await dialog({ tabellen: { ready: true, state: 'text', tables: [] }, text })
+  assert.equal(w.vm.rows.some(r => /Sb-Equiv/.test(String(r.value))), false, 'die Zellen einer Matrix sind kein Wert')
+  assert.ok(w.vm.rows.some(r => r.attribute === 'power'), 'die echte Zeile bleibt')
+})
+
 test('Textbausteine stehen in der Reihenfolge des Dokuments, das Band nennt die Seiten', async () => {
   const text = { ready: true, state: 'text', chunks: [
     { seq: 0, page: 4, heading: 'Montage', body: 'Das Gerät wird mit zwei Schrauben auf einer ebenen Fläche befestigt und zugentlastet.' },
