@@ -9,7 +9,7 @@
 // Privater Schlüssel: JOURNALI_PLUGIN_SIGNING_KEY (Pfad zur PEM-Datei), sonst ~/.journali/plugin-signing.pem.
 // Öffentlicher Schlüssel zum Prüfen: JOURNALI_PLUGIN_KEY (Base64 SubjectPublicKeyInfo), sonst der eingebaute in PluginSeal.cs.
 //
-// Was gehasht wird (identisch mit Journali.Server/PluginSeal.cs): alle Dateien unter plugins/<key>/, ausser node_modules,
+// Was gehasht wird (identisch mit Journali.Server/PluginSeal.cs): alle Dateien unter plugins/<key>/, ausser node_modules, .cache,
 // __pycache__, .git, certificate.json und den Pfaden unter `ignore`; Pfade mit / getrennt, ordinal sortiert;
 // je Datei `pfad\0sha256hex\n` in einen SHA-256. Signiert wird `key\nversion\nhash\nissued\nissuer\nignore,…`
 // mit ECDSA P-256 / SHA-256, Signatur als IEEE P1363 (r||s) in Base64 — das Format, das .NET VerifyData erwartet.
@@ -22,7 +22,8 @@ import { execFileSync } from 'node:child_process'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const PLUGINS = join(ROOT, 'plugins')
-const SKIP_DIRS = new Set(['node_modules', '__pycache__', '.git'])
+// .cache: was ein Plugin zur Laufzeit holt (embed sein Modell) — sonst bricht es sein eigenes Siegel (28.09.2026)
+const SKIP_DIRS = new Set(['node_modules', '__pycache__', '.git', '.cache'])
 const CERT = 'certificate.json'
 const ISSUER = 'journali'
 

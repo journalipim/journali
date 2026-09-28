@@ -8,7 +8,7 @@ namespace Journali.Server;
 /// <summary>
 /// Das Siegel eines Plugins: <c>certificate.json</c> im Plugin-Verzeichnis, signiert vom Herausgeber (ECDSA P-256,
 /// SHA-256, Signatur IEEE P1363 in Base64). Es nennt Schlüssel, Fassung und den Hash über alle Dateien des Verzeichnisses
-/// (ausser node_modules, __pycache__, .git, certificate.json und den Pfaden unter <c>ignore</c>). Passt eine Datei nicht
+/// (ausser node_modules, __pycache__, .git, .cache, certificate.json und den Pfaden unter <c>ignore</c>). Passt eine Datei nicht
 /// mehr, ist das Siegel gebrochen — das Plugin bleibt nutzbar, trägt aber kein Siegel.
 /// <para>Geprüft wird mit dem eingebauten öffentlichen Schlüssel oder mit <c>JOURNALI_PLUGIN_KEY</c>; das Werkzeug
 /// dazu ist <c>tools/plugin-cert.mjs</c>, das denselben Hash rechnet.</para>
@@ -18,7 +18,9 @@ public static class PluginSeal
     public const string FileName = "certificate.json";
     /// <summary>Der öffentliche Schlüssel des Herausgebers (Base64, SubjectPublicKeyInfo).</summary>
     public const string DefaultKey = "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEDC5LFAXKOGYMNw18LjmJIOP3IfH3SWtP5rGzzBSF1HtyTzbrkqReAfYUkXbnDutAdl8H57eT8Fa/yB1pfQdBVQ==";
-    private static readonly HashSet<string> SkipDirs = new(StringComparer.Ordinal) { "node_modules", "__pycache__", ".git" };
+    // .cache: was ein Plugin zur Laufzeit holt (embed sein Modell) — sonst bricht es sein eigenes Siegel, sobald
+    // es einmal gearbeitet hat (28.09.2026)
+    private static readonly HashSet<string> SkipDirs = new(StringComparer.Ordinal) { "node_modules", "__pycache__", ".git", ".cache" };
 
     public sealed record Certificate(string Key, string Version, string Hash, string Issued, string Issuer, string[]? Ignore = null, string? Sig = null)
     {
