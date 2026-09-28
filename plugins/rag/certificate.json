@@ -1,8 +1,8 @@
 {
  "key": "rag",
- "version": "1.2.0",
- "hash": "50ba19ef4b60552493cacb4e60b97db7bfc026436256ccbc714f51c5c5082f5b",
- "issued": "2026-09-27",
+ "version": "1.2.1",
+ "hash": "df0b95ee335f06b11270a496ecde6935f4ec3a097c57cd4f67c11c4c664c0c15",
+ "issued": "2026-09-28",
  "issuer": "journali",
- "sig": "cJXKrBsHQsIP1eUrsWU+qg2qAQgL/Vqan8R/DIl/06go8vQmzlC7tv1S3QmaiPUJqs5aADEq/73oeMAJhK0OpQ=="
+ "sig": "Ic4ZyYs5nuBbGCNXNUPGIZy3C86egzxNwHqi1GV8m9K5yjAarSu5Is85o2MMipKz18q9kxvSMqP7s8ehXc6lvQ=="
 }

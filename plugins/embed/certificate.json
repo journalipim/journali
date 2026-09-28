@@ -1,8 +1,8 @@
 {
  "key": "embed",
- "version": "1.0.0",
- "hash": "baf5cae1bdc68a0d352ec60d99358505a8b5d4ccf1c423bdbe9878445ebfc3af",
- "issued": "2026-09-27",
+ "version": "1.0.1",
+ "hash": "394c5f465235282b3e1e78d087357b6f8d934001d2661089ad512838d2547c60",
+ "issued": "2026-09-28",
  "issuer": "journali",
- "sig": "y+P6faRPYi+MlUw2Ebfk/7ERhYYFQ7MYvbZFx3E88XKj2xks2xIHh6UM/0n/fjVc/sERBMiC2jC6VtTsKW7J1A=="
+ "sig": "PkXxbhnxY9yqljPlZdugCBRo1nUIvrR4GA9qNuZEoXv5R4044QlvJlsh8eynXKjqluFLO03nrHi1OXSQzSm9BQ=="
 }

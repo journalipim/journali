@@ -1,8 +1,8 @@
 {
  "key": "xliff",
- "version": "1.1.0",
- "hash": "5ce64f03ba876133d031c6399c974f05ddde1eac909bd62300229ae1f3b83f5e",
- "issued": "2026-09-25",
+ "version": "1.1.1",
+ "hash": "2df2d6b26ef3ec5943dbd5a52bce24b49b2db96fb09a772dcbac578e0e9a09e9",
+ "issued": "2026-09-28",
  "issuer": "journali",
- "sig": "I51g2EPRYX1yOzbUpWEvmjsaTrXxJ2z6IwUS33zChu7jEYM9VGfP8UYopNTYFDAUQN4iPY0S3ROQFOD9p/lcfw=="
+ "sig": "eUnliurXAqcXTF46fmN4MjrG8DtbbJVbhtq7YueQBBnfsTBDUck8Ji/5es+8XXoAfEQ+lriAgFxVEylgLJGuBg=="
 }

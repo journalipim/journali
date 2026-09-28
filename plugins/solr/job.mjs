@@ -24,8 +24,8 @@ const mitKanten = /^(true|1|ja)$/i.test(E.JOURNALI_RELATIONS || '')
 const trocken = /^(true|1|ja)$/i.test(E.JOURNALI_DRY_RUN || '')
 const headers = { 'X-Actor': actor, 'Content-Type': 'application/json', ...(E.JOURNALI_TOKEN ? { Authorization: 'Bearer ' + E.JOURNALI_TOKEN } : {}) }
 
-if (!base) { console.error('✗ Solr-URL fehlt (base)'); process.exit(1) }
-if (!wurzeln.length) { console.error('✗ keine Wurzel gewählt (roots)'); process.exit(1) }
+if (!base) { console.error('✗ Solr-URL fehlt (base)'); process.exitCode = 1 }
+if (!wurzeln.length) { console.error('✗ keine Wurzel gewählt (roots)'); process.exitCode = 1 }
 
 const sag = text => console.log(text)
 
@@ -116,8 +116,8 @@ try {
   sag(`Quelle ${base} · ${wurzeln.length} Wurzel(n) · Ziel ${ziel ?? 'oberste Ebene'}`)
 
   const plan = await plane({ client, umgebung, wurzeln, skip, pdefs })
-  if (trocken) { sag('Probelauf — nichts geschrieben'); process.exit(plan.items.length ? 0 : 2) }
-  if (!plan.items.length) { sag('nichts zu tun'); process.exit(2) }
+  if (trocken) { sag('Probelauf — nichts geschrieben'); process.exitCode = plan.items.length ? 0 : 2 }
+  if (!plan.items.length) { sag('nichts zu tun'); process.exitCode = 2 }
 
   const { geschrieben, stapel } = await schreibe({ plan, umgebung, ziel, skip })
 
@@ -128,8 +128,8 @@ try {
     if (rp.cmds) ({ geschrieben: kanten } = await schreibeRelationen({ plan: rp, umgebung }))
   }
   sag(`✓ ${geschrieben} Einträge in ${stapel} Stapeln${kanten ? ` · ${kanten} Kanten` : ''}`)
-  process.exit(geschrieben || kanten ? 0 : 2)
+  process.exitCode = geschrieben || kanten ? 0 : 2
 } catch (e) {
   console.error('✗ ' + e.message)
-  process.exit(1)
+  process.exitCode = 1
 }

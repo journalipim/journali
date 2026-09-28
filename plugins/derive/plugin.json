@@ -1,6 +1,6 @@
 {
   "key": "derive",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "label": {
     "de": "Vorschauen rechnen",
     "en": "Derive previews"
@@ -41,5 +41,7 @@
         "perJob": true
       }
     ]
-  }
+  },
+  "system": true,
+  "progress": "/api/media/derive"
 }

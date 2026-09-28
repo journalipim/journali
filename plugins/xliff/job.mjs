@@ -25,7 +25,7 @@ try {
     const qs = `root=${encodeURIComponent(profile?.root ?? '')}&from=${from}&to=${to}&channel=${encodeURIComponent(profile?.channel ?? '')}&attributes=${encodeURIComponent(profile?.attributes ?? '')}&scope=${profile?.scope ?? 'open'}`
     // Paket schnüren: der Auftrag steht im Journal, die Datei ist nur die Kopie für unterwegs
     const r = await fetch(`${server}/api/translate/order?${qs}&format=xliff`, { method: 'POST', headers })
-    if (r.status === 400) { console.log(`nichts im Rückstand (${from || 'Master'} → ${to}) — kein Auftrag, keine Datei`); process.exit(0) }
+    if (r.status === 400) { console.log(`nichts im Rückstand (${from || 'Master'} → ${to}) — kein Auftrag, keine Datei`); process.exitCode = 0 }
     if (!r.ok) throw new Error(`order: ${r.status} ${await r.text()}`)
     const xml = await r.text()
     const units = (xml.match(/<unit\b/g) || []).length
@@ -52,4 +52,4 @@ try {
     if (conflicts) code = 3
   } else throw new Error('Modus export oder import erwartet')
 } catch (e) { console.error('✗ ' + e.message); code = 1 }
-process.exit(code)
+process.exitCode = code

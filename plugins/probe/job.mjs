@@ -20,10 +20,29 @@ const limit = Math.min(5000, Math.max(1, parseInt(limitArg || E.JOURNALI_LIMIT |
 const again = /^(1|true|ja)$/i.test(String(againArg ?? E.JOURNALI_AGAIN ?? ''))
 const headers = { 'X-Actor': actor, ...(E.JOURNALI_TOKEN ? { Authorization: 'Bearer ' + E.JOURNALI_TOKEN } : {}) }
 
-async function call(method, pfad) {
-  const r = await fetch(server + pfad, { method, headers })
+/// Ein Aussetzer beendet keinen Lauf: bei 502/503/504 und bei einer abgerissenen Verbindung wird gewartet und noch
+/// einmal gefragt — bis zu fünfmal, 2, 4, 8, 16, 32 Sekunden (28.09.2026: ein Neustart der Datenbank beendete einen
+/// Lauf mitten in der Arbeit).
+async function call(method, pfad, versuch = 0) {
+  let r
+  try { r = await fetch(server + pfad, { method, headers }) }
+  catch (e) {
+    if (versuch >= 5) throw new Error(`${pfad}: ${e.message}`)
+    return warte(method, pfad, versuch, e.message)
+  }
+  if (r.status === 502 || r.status === 503 || r.status === 504) {
+    if (versuch >= 5) throw new Error(`${pfad}: ${r.status} ${(await r.text()).slice(0, 300)}`)
+    return warte(method, pfad, versuch, `${r.status}`)
+  }
   if (!r.ok) throw new Error(`${pfad}: ${r.status} ${(await r.text()).slice(0, 300)}`)
   return r.json()
+}
+
+async function warte(method, pfad, versuch, grund) {
+  const s = 2 ** (versuch + 1)
+  console.log(`… ${pfad}: ${grund} — noch einmal in ${s} s (${versuch + 1}/5)`)
+  await new Promise(f => setTimeout(f, s * 1000))
+  return call(method, pfad, versuch + 1)
 }
 
 /// Hält der Tasker den Lauf an? Dann endet der Prozess; fortgesetzt wird er von Hand, und er findet dieselben Posten.
@@ -33,12 +52,12 @@ async function angehalten() {
 }
 
 const stand = await call('GET', '/api/media/probe')
-console.log(`${stand.total} Assets, ${stand.gelesen} mit Mass, ${stand.offen} offen, ${stand.unbekannt} ohne bekanntes Format`)
+console.log(`${stand.total} Assets, ${stand.gelesen} gemessen, ${stand.offen} offen, ${stand.unbekannt} ohne bekanntes Format`)
 if (again) console.log('again: auch die ohne bekanntes Format werden erneut gelesen')
 
 let gelesen = 0, unbekannt = 0, fehlt = 0, runde = 0
 for (;;) {
-  if (await angehalten()) { console.log(`angehalten nach ${runde} Runden — ${gelesen} gelesen`); process.exit(2) }
+  if (await angehalten()) { console.log(`angehalten nach ${runde} Runden — ${gelesen} gelesen`); process.exitCode = 2 }
   const r = await call('POST', `/api/media/probe?limit=${limit}&again=${again}`)
   runde++
   gelesen += r.gelesen; unbekannt += r.unbekannt; fehlt += r.fehlt
@@ -46,8 +65,8 @@ for (;;) {
   // Keine Runde kam voran und nichts ist mehr offen: fertig. Kam keine voran, ist aber noch etwas offen,
   // liegt es an Dateien, die im Store fehlen — dann hört der Job auf, statt ewig zu kreisen.
   if (r.offen === 0) break
-  if (r.gelesen + r.unbekannt === 0) { console.error(`✗ ${r.offen} offen, aber nichts zu lesen — Dateien fehlen im Store (/api/media/missing)`); process.exit(3) }
+  if (r.gelesen + r.unbekannt === 0) { console.error(`✗ ${r.offen} offen, aber nichts zu lesen — Dateien fehlen im Store (/api/media/missing)`); process.exitCode = 3 }
 }
 
-console.log(`fertig: ${gelesen} mit Mass, ${unbekannt} ohne bekanntes Format, ${fehlt} fehlen im Store`)
-process.exit(fehlt > 0 ? 3 : 0)
+console.log(`fertig: ${gelesen} gemessen, ${unbekannt} ohne bekanntes Format, ${fehlt} fehlen im Store`)
+process.exitCode = fehlt > 0 ? 3 : 0

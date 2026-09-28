@@ -14,7 +14,7 @@ const source = sourceArg || E.JOURNALI_SOURCE
 const profileName = profileArg || E.JOURNALI_PROFILE || ''
 const parentArgv = parentArg || E.JOURNALI_PARENT || ''
 const dryRun = (dryArg || E.JOURNALI_DRYRUN || 'false') === 'true'
-if (!source) { console.error('✗ Quelle fehlt (Datei, Verzeichnis oder URL)'); process.exit(1) }
+if (!source) { console.error('✗ Quelle fehlt (Datei, Verzeichnis oder URL)'); process.exitCode = 1 }
 
 const headers = { 'X-Actor': actor, 'Content-Type': 'application/json', ...(process.env.JOURNALI_TOKEN ? { Authorization: 'Bearer ' + process.env.JOURNALI_TOKEN } : {}) }   // mit Benutzern: Dienst-Token des Laufs
 async function request(method, p, body) {
@@ -55,6 +55,6 @@ async function read(src) {
   const r = await request('POST', '/api/nodes/import', { node, model, parent, map, dryRun })
   const line = `${r.created} neu · ${r.restored} zurückgeholt · ${r.updated} angeglichen · ${r.model} Modellteile${dryRun ? ' (würden)' : ` · ${r.entries} Einträge (Stapel ${r.batch})`}`
   for (const e of r.errors ?? []) console.log('✗ ' + e)
-  if (r.errors?.length) { console.log(`⚠ ${line} — ${r.errors.length} Fehler`); process.exit(3) }
+  if (r.errors?.length) { console.log(`⚠ ${line} — ${r.errors.length} Fehler`); process.exitCode = 3 }
   console.log(`✓ ${line}`)
-})().catch(e => { console.error('✗ ' + e.message); process.exit(1) })
+})().catch(e => { console.error('✗ ' + e.message); process.exitCode = 1 })

@@ -1,8 +1,8 @@
 {
  "key": "derive",
- "version": "1.0.0",
- "hash": "58e0c06adbbc42ded14d816a20b6463d6096bd387c38d192152bd33482c053a7",
- "issued": "2026-09-25",
+ "version": "1.0.2",
+ "hash": "a0f9701d4e4a3884575454ef4d5889e2c3dedb2038c37ff6a2d25392363e2fef",
+ "issued": "2026-09-28",
  "issuer": "journali",
- "sig": "Lg1JpF1ir0oo6KxU1WG0AhsEAlaakBgM34qIz3DaWucnL22oGgdXYxwVUqI8tHU5FBZpcvpnuqrKrLOPl+Nx2w=="
+ "sig": "hEbBe49cc6ZThmcS5o7Me+UDsGTdvLUKAdzcwcTP15WWI+EcWcrqYw8HOzCsQU6avNdxDiUooIPY+d+DmzlLWA=="
 }

@@ -56,6 +56,17 @@ public static class DeriveApi
         });
 
         // Was fehlt (für das Plugin derive): je Bild und Preset — oder nur ein Preset. Höchstens `limit` Bilder je Aufruf.
+        // Der Stand für die Leiste der Systemjobs: wie viele Ableitungen es geben müsste und wie viele es gibt.
+        // Gezählt wird je Preset mit auto — dieselben, die der Job rechnet.
+        api.MapGet("/media/derive", (Catalog c) => c.Lesen((_, _) =>
+        {
+            var presets = c.Media.Presets.Values.Where(p => p.Auto).ToList();
+            if (presets.Count == 0) return Results.Ok(new { ready = false, reason = "Kein Preset mit auto.", total = 0L, gelesen = 0L, offen = 0L });
+            var soll = (long)presets.Count * c.Media.All.Values.Count(m => m.IsRenderable);
+            var offen = presets.Sum(p => (long)c.Media.Pending(p).Count());
+            return Results.Ok(new { ready = true, reason = (string?)null, total = soll, gelesen = soll - offen, offen });
+        }));
+
         api.MapGet("/media/pending", (Catalog c, string? preset = null, int limit = 200) => c.Lesen((_, _) =>
         {
             var presets = c.Media.Presets.Values.Where(p => p.Auto && (preset is null || p.Key == preset)).ToList();

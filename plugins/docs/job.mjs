@@ -76,7 +76,7 @@ async function main() {
   let gelesen = 0, abschnitte = 0, tabellen = 0, fehler = 0, scans = 0
   for (let runde = 1; ; runde++) {
     const status = await get(`/api/docs/status?pending=true&limit=${limit}`)
-    if (!status.ready) { console.error('✗ Kein Dokumentindex — der Server läuft ohne Postgres'); process.exit(1) }
+    if (!status.ready) { console.error('✗ Kein Dokumentindex — der Server läuft ohne Postgres'); process.exitCode = 1 }
     const offen = status.pending ?? []
     if (!offen.length) break
     console.error(`Runde ${runde}: ${offen.length} Dokumente · im Index ${status.media} Dokumente, ${status.chunks} Abschnitte${status.scans ? `, ${status.scans} warten auf OCR` : ''}`)
@@ -100,7 +100,7 @@ async function main() {
   }
   const s = ((Date.now() - t0) / 1000).toFixed(1)
   console.log(JSON.stringify({ gelesen, abschnitte, tabellen, scans, fehler, sekunden: +s }))
-  process.exit(fehler ? 3 : 0)
+  process.exitCode = fehler ? 3 : 0
 }
 
-main().catch(e => { console.error('✗ ' + e.message); process.exit(1) })
+main().catch(e => { console.error('✗ ' + e.message); process.exitCode = 1 })

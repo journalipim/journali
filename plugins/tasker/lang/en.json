@@ -99,8 +99,6 @@
  "Systemjobs laufen in jedem Tarif. Die offenen Posten stehen im Journal und im Index; ein Lauf holt nach, was fehlt.": "System jobs run in every plan. The pending items live in the journal and the index; a run catches up on what is missing.",
  "⚙ Systemjobs": "⚙ System jobs",
  "nicht bereit": "not ready",
- "offen": "pending",
- "{0} von {1} erledigt · {2} offen": "{0} of {1} done · {2} pending",
  "jetzt nachholen": "catch up now",
  "▶ {0} holt nach": "▶ {0} is catching up",
  "anhalten bis zum nächsten Start — die offenen Posten bleiben offen": "stop until the next start — the pending items stay pending",
@@ -109,5 +107,9 @@
  "⊘ {0} abgebrochen": "⊘ {0} cancelled",
  "⋯ Jobs werden geholt": "⋯ fetching jobs",
  "⋯ speichert": "⋯ saving",
- "⋯": "⋯"
+ "⋯": "⋯",
+ "{0} offen": "{0} pending",
+ "nichts offen": "nothing pending",
+ "Lauf und Protokoll ansehen": "Show the run and its log",
+ "weiter": "resume"
 }

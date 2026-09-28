@@ -77,9 +77,9 @@ async function main() {
   const t0 = Date.now()
   let erkannt = 0, fehler = 0, leer = 0, runde = 0
   for (;;) {
-    if (await angehalten()) { console.log(`angehalten nach ${runde} Runden — ${erkannt} erkannt`); await worker?.terminate(); process.exit(2) }
+    if (await angehalten()) { console.log(`angehalten nach ${runde} Runden — ${erkannt} erkannt`); await worker?.terminate(); process.exitCode = 2 }
     const r = await get(`/api/docs/scans?limit=${limit}`)
-    if (r.ready === false) { console.error('✗ Kein Dokumentindex — der Server läuft ohne Postgres'); process.exit(1) }
+    if (r.ready === false) { console.error('✗ Kein Dokumentindex — der Server läuft ohne Postgres'); process.exitCode = 1 }
     const offen = r.scans ?? []
     if (!offen.length) break
     runde++
@@ -116,7 +116,7 @@ async function main() {
   }
   await worker?.terminate()
   console.log(JSON.stringify({ erkannt, leer, fehler, sekunden: +((Date.now() - t0) / 1000).toFixed(1) }))
-  process.exit(fehler ? 3 : 0)
+  process.exitCode = fehler ? 3 : 0
 }
 
-main().catch(async e => { console.error('✗ ' + e.message); await worker?.terminate(); process.exit(1) })
+main().catch(async e => { console.error('✗ ' + e.message); await worker?.terminate(); process.exitCode = 1 })

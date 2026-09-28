@@ -76,4 +76,4 @@ const api = { get: async p => { const r = await fetch(server + p, { headers }); 
   }
   fs.writeFileSync(path.join(dir, 'nodes.jsonl'), lines.join('\n') + '\n', 'utf8')
   console.log(`✓ ${n} Dokumente (${targets.length} Knoten × ${locs.join(', ')}) nach ${dir} — nodes.jsonl + Markdown je Knoten`)
-})().catch(e => { console.error('✗ ' + (e.message ?? e)); process.exit(1) })
+})().catch(e => { console.error('✗ ' + (e.message ?? e)); process.exitCode = 1 })

@@ -48,4 +48,4 @@ const api = { get: async p => { const r = await fetch(server + p, { headers }); 
   fs.writeFileSync(file, out, 'utf8')
   const gaps = ctx.stats ? `${ctx.stats.classified ? `, ETIM Ø ${ctx.stats.completeness} % über ${ctx.stats.classified} Produkte` : ''}${ctx.stats.held ? `, ${ctx.stats.held} zurückgehalten` : ''}${ctx.stats.unknown ? `, ${ctx.stats.unknown} Merkmale leer (UN)` : ''}${ctx.stats.bad ? `, ${ctx.stats.bad} Werte passen nicht (als UN)` : ''}` : ''
   console.log(`✓ ${file}: ${ctx.count} Produkte, ${(out.length / 1024).toFixed(0)} KB (Profil ${profileName}, ${locale})${gaps}`)
-})().catch(e => { console.error('✗ ' + (e.message ?? e)); process.exit(1) })
+})().catch(e => { console.error('✗ ' + (e.message ?? e)); process.exitCode = 1 })

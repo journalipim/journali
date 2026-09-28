@@ -20,7 +20,7 @@ const only = (presetArg || E.JOURNALI_PRESET || '').trim()
 const headers = { 'X-Actor': actor, ...(E.JOURNALI_TOKEN ? { Authorization: 'Bearer ' + E.JOURNALI_TOKEN } : {}) }
 
 let sharp
-try { sharp = (await import('sharp')).default } catch (e) { console.error('✗ sharp fehlt — im Plugin-Verzeichnis einmal „npm install“ ausführen (' + e.message + ')'); process.exit(1) }
+try { sharp = (await import('sharp')).default } catch (e) { console.error('✗ sharp fehlt — im Plugin-Verzeichnis einmal „npm install“ ausführen (' + e.message + ')'); process.exitCode = 1 }
 
 /// Erste Seite eines PDF als PNG. Einmal je Datei in der grössten gebrauchten Kante gerendert —
 /// die Presets rechnen dann aus diesem Bild weiter, statt das PDF mehrfach zu öffnen. Weisser Grund: ein Datenblatt
@@ -102,4 +102,4 @@ try {
   code = failed ? 3 : 0
 } catch (e) { console.error('✗ ' + e.message); code = 1 }
 finally { try { fs.rmSync(tmp, { recursive: true, force: true }) } catch {} }
-process.exit(code)
+process.exitCode = code

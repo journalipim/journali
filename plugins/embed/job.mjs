@@ -19,10 +19,30 @@ const limit = Math.min(1000, Math.max(1, parseInt(limitArg || E.JOURNALI_LIMIT |
 const model = (modelArg || E.JOURNALI_MODEL || E.JOURNALI_EMBED_MODEL || DEFAULT_MODEL).trim()
 const headers = { 'X-Actor': actor, ...(E.JOURNALI_TOKEN ? { Authorization: 'Bearer ' + E.JOURNALI_TOKEN } : {}) }
 
-async function call(method, pfad, body) {
-  const r = await fetch(server + pfad, { method, headers: body ? { ...headers, 'Content-Type': 'application/json' } : headers, body: body ? JSON.stringify(body) : undefined })
+/// Ein Aussetzer beendet keinen Lauf: bei 502/503/504 und bei einer abgerissenen Verbindung wird gewartet und noch
+/// einmal gefragt — bis zu fünfmal, 2, 4, 8, 16, 32 Sekunden. Ein Lauf über Stunden starb sonst an einem Neustart der
+/// Datenbank (28.09.2026: „503 Datenbank nicht erreichbar“ mitten in Runde 58).
+async function call(method, pfad, body, versuch = 0) {
+  let r
+  try {
+    r = await fetch(server + pfad, { method, headers: body ? { ...headers, 'Content-Type': 'application/json' } : headers, body: body ? JSON.stringify(body) : undefined })
+  } catch (e) {
+    if (versuch >= 5) throw new Error(`${pfad}: ${e.message}`)
+    return warte(method, pfad, body, versuch, e.message)
+  }
+  if (r.status === 502 || r.status === 503 || r.status === 504) {
+    if (versuch >= 5) throw new Error(`${pfad}: ${r.status} ${(await r.text()).slice(0, 300)}`)
+    return warte(method, pfad, body, versuch, `${r.status}`)
+  }
   if (!r.ok) throw new Error(`${pfad}: ${r.status} ${(await r.text()).slice(0, 300)}`)
   return r.json()
+}
+
+async function warte(method, pfad, body, versuch, grund) {
+  const s = 2 ** (versuch + 1)
+  console.log(`… ${pfad}: ${grund} — noch einmal in ${s} s (${versuch + 1}/5)`)
+  await new Promise(f => setTimeout(f, s * 1000))
+  return call(method, pfad, body, versuch + 1)
 }
 
 /// Hält der Tasker den Lauf an? Dann endet der Prozess; fortgesetzt wird er von Hand, und er findet dieselben Posten.
@@ -32,14 +52,14 @@ async function angehalten() {
 }
 
 const stand = await call('GET', `/api/docs/embed?model=${encodeURIComponent(model)}`)
-if (stand.ready === false) { console.error('✗ ' + (stand.reason ?? 'keine Vektoren')); process.exit(1) }
+if (stand.ready === false) { console.error('✗ ' + (stand.reason ?? 'keine Vektoren')); process.exitCode = 1 }
 console.log(`${stand.chunks} Abschnitte, ${stand.embedded} mit Vektor · ${stand.nodesTotal} Knoten, ${stand.nodes} mit Vektor · ${stand.offen} offen · Modell ${model}`)
 
 let abschnitte = 0, knoten = 0, runde = 0
 for (;;) {
-  if (await angehalten()) { console.log(`angehalten nach ${runde} Runden — ${abschnitte} Abschnitte, ${knoten} Knoten`); process.exit(2) }
+  if (await angehalten()) { console.log(`angehalten nach ${runde} Runden — ${abschnitte} Abschnitte, ${knoten} Knoten`); process.exitCode = 2 }
   const offen = await call('GET', `/api/docs/embed/pending?limit=${limit}&model=${encodeURIComponent(model)}`)
-  if (offen.ready === false) { console.error('✗ ' + (offen.reason ?? 'keine Vektoren')); process.exit(1) }
+  if (offen.ready === false) { console.error('✗ ' + (offen.reason ?? 'keine Vektoren')); process.exitCode = 1 }
   const chunks = offen.chunks ?? [], nodes = offen.nodes ?? []
   if (!chunks.length && !nodes.length && !(offen.gone ?? []).length) break
   runde++
@@ -57,7 +77,7 @@ for (;;) {
   abschnitte += r.chunks ?? 0; knoten += r.nodes ?? 0
   console.log(`Runde ${runde}: ${r.chunks} Abschnitte, ${r.nodes} Knoten${(offen.gone ?? []).length ? `, ${offen.gone.length} Knoten weg` : ''} · ${((Date.now() - t0) / 1000).toFixed(1)} s`)
   // Nichts kam voran, aber es war etwas offen: dann stimmt etwas nicht (leerer Text?) — aufhören statt kreisen
-  if ((r.chunks ?? 0) + (r.nodes ?? 0) === 0 && (chunks.length + nodes.length) > 0) { console.error(`✗ ${chunks.length + nodes.length} Posten offen, aber nichts geschrieben`); process.exit(1) }
+  if ((r.chunks ?? 0) + (r.nodes ?? 0) === 0 && (chunks.length + nodes.length) > 0) { console.error(`✗ ${chunks.length + nodes.length} Posten offen, aber nichts geschrieben`); process.exitCode = 1 }
 }
 console.log(`fertig: ${abschnitte} Abschnitte, ${knoten} Knoten eingebettet`)
-process.exit(0)
+process.exitCode = 0

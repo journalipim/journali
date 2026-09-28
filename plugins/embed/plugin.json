@@ -1,6 +1,6 @@
 {
   "key": "embed",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "label": {
     "de": "Einbettungen (Vektoren)",
     "en": "Embeddings (vectors)"

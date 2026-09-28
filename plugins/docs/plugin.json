@@ -1,6 +1,6 @@
 {
   "key": "docs",
-  "version": "1.2.0",
+  "version": "1.2.2",
   "label": {
     "de": "Dokumente lesen",
     "en": "Read documents"
@@ -32,5 +32,7 @@
         "perJob": true
       }
     ]
-  }
+  },
+  "system": true,
+  "progress": "/api/docs/status"
 }

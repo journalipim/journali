@@ -30,22 +30,31 @@ test('ohne Antwort des Endpunkts steht die Zeile trotzdem da', () => {
   assert.equal(r.progress, null); assert.equal(r.ready, null); assert.equal(r.pct, null)
 })
 
-test('der Block: Balken als Füllstand, Zahlen, ▶ startet das Nachholen — ein laufender zeigt nur, dass er läuft', () => {
-  const gestartet = []
-  const box = systemBlock(systemRows(PLUGINS, JOBS, PROGRESS), p => gestartet.push(p))
-  const zeilen = box.querySelectorAll('.sysrow')
-  assert.equal(zeilen.length, 2)
-  assert.equal(zeilen[0].querySelector('.fill').style.width, '75%', 'der Balken füllt sich mit dem Erledigten')
-  assert.match(zeilen[0].textContent, /150 \/ 200/); assert.match(zeilen[0].textContent, /50 offen/)
-  assert.equal(zeilen[0].querySelector('button'), null, 'läuft schon — kein zweiter Start')
-  assert.match(zeilen[0].textContent, /▶/)
+// Kacheln statt Zeilen (28.09.2026): die Systemjobs stehen oben in ihrer eigenen Fläche, mit Fortschritt und
+// Steuerung; die Liste darunter gehört den Jobs, die jemand selbst angelegt hat.
+test('die Kacheln: Füllstand, Zahlen, und je nach Lauf starten oder anhalten', () => {
+  const gestartet = [], angehalten = []
+  const box = systemBlock(systemRows(PLUGINS, JOBS, PROGRESS), p => gestartet.push(p), { pause: j => angehalten.push(j.key) })
+  const kacheln = box.querySelectorAll('.sys-kachel')
+  assert.equal(kacheln.length, 2)
+  assert.equal(kacheln[0].querySelector('.fill').style.width, '75%', 'der Balken füllt sich mit dem Erledigten')
+  assert.match(kacheln[0].textContent, /150 \/ 200/); assert.match(kacheln[0].textContent, /50 offen/)
+  assert.ok(kacheln[0].classList.contains('laeuft'), 'ein laufender Systemjob ist zu sehen')
+
+  // läuft: der erste Knopf hält an, der zweite bricht ab (= anhalten bis zum nächsten Start)
+  const knoepfe = kacheln[0].querySelectorAll('.tun button')
+  assert.equal(knoepfe[0].textContent, '⏸')
+  knoepfe[0].dispatchEvent(new win.Event('click'))
+  assert.deepEqual(angehalten, ['probe'])
+
   // embed: nicht bereit, der Grund im Tooltip, ▶ gesperrt
-  assert.match(zeilen[1].textContent, /nicht bereit/)
-  assert.match(zeilen[1].querySelector('span[title]').getAttribute('title'), /vector fehlt/)
-  assert.ok(zeilen[1].querySelector('button').disabled)
+  assert.match(kacheln[1].textContent, /nicht bereit/)
+  assert.match(kacheln[1].querySelector('span[title]').getAttribute('title'), /vector fehlt/)
+  assert.ok(kacheln[1].querySelector('.tun button').disabled)
+
   // ein bereiter ohne Job: ▶ ruft mit dem Plugin
   const box2 = systemBlock(systemRows(PLUGINS.slice(1, 2), [], { embed: { ready: true, total: 10, gelesen: 0, offen: 10 } }), p => gestartet.push(p))
-  box2.querySelector('button').dispatchEvent(new win.Event('click'))
+  box2.querySelector('.tun button').dispatchEvent(new win.Event('click'))
   assert.deepEqual(gestartet, ['embed'])
   assert.equal(box2.querySelector('.fill').style.width, '0%')
 })

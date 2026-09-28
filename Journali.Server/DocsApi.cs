@@ -75,7 +75,11 @@ public static class DocsApi
                     .Select(m => new Pending(m.Id, m.Name, m.Mime, m.Sha256, m.Bytes, known.TryGetValue(m.Id, out var s) && s.Sha == m.Sha256))
                     .Where(p => !p.Indexed).Take(Math.Clamp(limit, 1, 5000)).ToList())
                 : [];
-            return Results.Ok(new { ready = true, media, chunks, scans, errors, pending = list });
+            // dieselben Zahlen im Format der Leiste: gelesen von total, und was offen ist
+            var lesbar = (long)c.Read(_ => c.Media.All.Values.Count(m => Readable(m.Mime)));
+            var offenN = (long)c.Read(_ => c.Media.All.Values.Count(m => Readable(m.Mime) && !(known.TryGetValue(m.Id, out var s) && s.Sha == m.Sha256)));
+            return Results.Ok(new { ready = true, media, chunks, scans, errors, pending = list,
+                total = lesbar, gelesen = lesbar - offenN, offen = offenN });
         });
 
         // Die Scans: was auf Texterkennung wartet. Der Erkenner holt die Liste, lädt die Datei, erkennt, und legt den

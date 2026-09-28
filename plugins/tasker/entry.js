@@ -29,22 +29,35 @@ export function systemRows(plugins, jobs, progress = {}) {
 
 /// Der Block der Systemjobs: je Zeile Name, Balken (Füllstand: erledigt von gesamt), die Zahlen, ▶ zum Nachholen.
 /// Kein Job dazu ist kein Hindernis — der Server legt ihn beim ersten ▶ an.
-export function systemBlock(rows, onRun) {
-  const box = el('div', { class: 'sysjobs', style: 'border-bottom:1px solid var(--line)' })
-  box.append(el('div', { class: 'muted', style: 'font-size:11px;padding:4px 10px', title: t('Systemjobs laufen in jedem Tarif. Die offenen Posten stehen im Journal und im Index; ein Lauf holt nach, was fehlt.') }, t('⚙ Systemjobs')))
+/// Die Systemjobs stehen oben als Kacheln — Name, Zahl, Balken und ihre Knöpfe in einer Fläche (28.09.2026). Als
+/// Zeilen füllten sie die Liste, in der die Jobs des Anwenders stehen; dort haben sie nichts zu suchen.
+/// Je Kachel: was erledigt ist, was offen ist, und starten / anhalten / weiter — dieselben Knöpfe wie bei einem Job.
+export function systemBlock(rows, onRun, aktionen = {}) {
+  const box = el('div', { class: 'sysjobs' })
+  box.append(el('div', { class: 'muted sys-kopf', title: t('Systemjobs laufen in jedem Tarif. Die offenen Posten stehen im Journal und im Index; ein Lauf holt nach, was fehlt.') }, t('⚙ Systemjobs')))
+  const grid = el('div', { class: 'sys-grid' })
   for (const r of rows) {
-    const laeuft = !!r.job?.running
-    const zahlen = r.ready === false ? el('span', { class: 'muted', style: 'font-size:12px', title: r.progress?.reason ?? r.progress?.pluginReason ?? '' }, t('nicht bereit'))
-      : r.progress ? el('span', { class: 'mono muted', style: 'font-size:12px;white-space:nowrap' }, `${r.gelesen.toLocaleString('de-DE')} / ${r.total.toLocaleString('de-DE')}${r.offen ? ` · ${r.offen.toLocaleString('de-DE')} ${t('offen')}` : ''}`)
-      : el('span', { class: 'muted', style: 'font-size:12px' }, '…')
-    const bar = el('div', { class: 'sysbar', style: 'flex:1;height:6px;background:var(--line);border-radius:3px;overflow:hidden;min-width:80px' },
-      el('div', { class: 'fill', style: `width:${r.pct ?? 0}%;height:100%;background:var(--accent)` }))
-    box.append(el('div', { class: 'sysrow', 'data-plugin': r.plugin, style: 'display:flex;gap:10px;align-items:center;padding:3px 10px', title: r.progress ? t('{0} von {1} erledigt · {2} offen', [r.gelesen, r.total, r.offen]) : '' },
-      el('span', { style: 'flex:0 0 220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap' }, r.label, el('span', { class: 'mono muted', style: 'margin-left:6px;font-size:11px' }, r.plugin)),
-      bar, zahlen,
-      laeuft ? el('span', { class: 'warn', style: 'font-size:12px;width:22px;text-align:center', title: t('läuft') }, '▶')
-        : el('button', { class: 'x', title: t('jetzt nachholen'), disabled: r.ready === false, onclick: () => onRun?.(r.plugin) }, '▶')))
+    const j = r.job
+    const laeuft = !!j?.running
+    const zahl = r.ready === false ? el('span', { class: 'neg zahl', title: r.progress?.reason ?? r.progress?.pluginReason ?? '' }, t('nicht bereit'))
+      : r.progress ? el('span', { class: 'mono zahl' }, `${r.gelesen.toLocaleString('de-DE')} / ${r.total.toLocaleString('de-DE')}`)
+      : el('span', { class: 'muted zahl' }, '⋯')
+    const offen = r.progress && r.ready !== false && r.offen
+      ? el('span', { class: 'muted offen' }, t('{0} offen', [r.offen.toLocaleString('de-DE')]))
+      : el('span', { class: 'muted offen' }, r.ready === false ? '' : r.progress ? t('nichts offen') : '')
+    const bar = el('div', { class: 'sysbar' }, el('div', { class: 'fill', style: `width:${r.pct ?? 0}%` }))
+    const knoepfe = el('div', { class: 'tun' },
+      laeuft && j?.paused ? el('button', { class: 'x', title: t('weiter'), onclick: ev => { ev.stopPropagation(); aktionen.resume?.(j, ev) } }, '▶')
+        : laeuft ? el('button', { class: 'x', title: t('anhalten (wartet beim nächsten Stapel)'), onclick: ev => { ev.stopPropagation(); aktionen.pause?.(j, ev) } }, '⏸')
+        : el('button', { class: 'x', title: t('jetzt nachholen'), disabled: r.ready === false, onclick: ev => { ev.stopPropagation(); onRun?.(r.plugin, ev) } }, '▶'),
+      laeuft ? el('button', { class: 'x', title: t('anhalten bis zum nächsten Start — die offenen Posten bleiben offen'), onclick: ev => { ev.stopPropagation(); aktionen.cancel?.(j, ev) } }, '⊘') : el('span', { class: 'x leer' }),
+      j ? el('button', { class: 'x', title: t('Lauf und Protokoll ansehen'), onclick: ev => { ev.stopPropagation(); aktionen.open?.(j, ev) } }, '☰') : el('span', { class: 'x leer' }))
+    grid.append(el('div', { class: 'sys-kachel' + (laeuft ? ' laeuft' : ''), 'data-plugin': r.plugin },
+      el('div', { class: 'kopf' }, el('b', {}, r.label), el('span', { class: 'mono muted' }, r.plugin)),
+      bar,
+      el('div', { class: 'fuss' }, zahl, offen, el('span', { class: 'grow' }), knoepfe)))
   }
+  box.append(grid)
   return box
 }
 
@@ -226,8 +239,15 @@ async function mount(root, ctx) {
   function drawList() {
     list.innerHTML = ''
     const sys = systemRows(st.plugins, st.jobs, st.progress).filter(r => !st.plugin || r.plugin === st.plugin)
-    if (sys.length) list.append(systemBlock(sys, runSystem))
-    const jobs = st.plugin ? st.jobs.filter(j => j.plugin === st.plugin) : st.jobs
+    if (sys.length) list.append(systemBlock(sys, (plugin, ev) => tut(ev, () => runSystem(plugin)), {
+      pause: (j, ev) => tut(ev, () => pause(j)),
+      resume: (j, ev) => tut(ev, () => resume(j)),
+      cancel: (j, ev) => tut(ev, () => cancel(j)),
+      open: j => { st.cur = j.key; drawList(); loadDetail(j.key) },
+    }))
+    // Die Systemjobs stehen oben in ihren Kacheln — in der Liste darunter stehen die Jobs des Anwenders
+    const eigene = st.jobs.filter(j => !sys.some(r => r.plugin === j.plugin))
+    const jobs = st.plugin ? eigene.filter(j => j.plugin === st.plugin) : eigene
     if (!jobs.length) {
       const was = leerText(st)
       list.append(el('div', { class: 'empty' },
