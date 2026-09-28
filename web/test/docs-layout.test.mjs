@@ -3,7 +3,7 @@
 // Grundlinie, h Schriftgrösse, font der Schnitt), so wie pdf.mjs sie aus pdfjs liefert.
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { lines, tables, blocks, order, roles, blockText, analysePage, layoutDocument, bodyOf, paragraphs } from '../../plugins/docs/layout.mjs'
+import { lines, tables, blocks, order, roles, blockText, analysePage, layoutDocument, bodyOf, paragraphs, spaltenBahn, seitenBloecke } from '../../plugins/docs/layout.mjs'
 
 const BUCH = 'Serif-Book', FETT = 'Serif-Bold'
 /// Ein Textstück: Breite aus der Zeichenzahl, damit die Lage stimmt, ohne sie je Stück auszurechnen
@@ -128,6 +128,37 @@ test('Fliesstext des ganzen Dokuments: eine Seite voller Tabellen bekommt keine 
   const body = bodyOf([text(1), text(2), tabelle])
   assert.equal(body.bodySize, 10)
   assert.equal(body.bodyFont, BUCH)
+})
+
+test('zwei Spalten: die Bahn dazwischen trennt, die linke Spalte kommt ganz vor der rechten', () => {
+  const links = ['Diese Deklaration basiert auf den Regeln:', 'PCR-B: Anforderungen an die Erklärung für',
+    'Leuchten, Lichtquellen und Vorschaltgeräte.', 'Ausstellungsdatum', '2026-05-25']
+  const rechts = ['Gültigkeitsbereich:', 'Die Deklaration gilt für eine Komponente', 'TW CLE 261 (Artikelnummer: 89603436).',
+    'Das Produkt wird am Standort hergestellt.', 'Grundlage der Berechnung ist ein Mix.']
+  const items = [
+    s('1. Allgemeine Angaben', 30, 760, { h: 14, font: FETT }),   // über beide Spalten
+    ...links.map((z, i) => s(z, 30, 720 - i * 14, { h: 8, font: i === 0 || i === 3 ? FETT : BUCH })),
+    ...rechts.map((z, i) => s(z, 300, 720 - i * 14, { h: 8, font: i === 0 ? FETT : BUCH })),
+  ]
+  const ls = lines(items)
+  assert.ok(spaltenBahn(ls) > 200 && spaltenBahn(ls) < 300, `Bahn bei ${spaltenBahn(ls)}`)
+  const bs = seitenBloecke(ls)
+  const texte = bs.map(b => blockText(b).split('\n')[0])
+  assert.equal(texte[0], '1. Allgemeine Angaben')
+  assert.ok(texte.indexOf('Ausstellungsdatum') < texte.indexOf('Gültigkeitsbereich:'), `links vor rechts: ${texte.join(' / ')}`)
+  assert.equal(bs.some(b => b.table), false, 'zwei Spalten sind keine Tabelle')
+})
+
+test('eine Überschrift darf auf einen Doppelpunkt enden — der gehört nicht in den Namen', () => {
+  const items = [
+    s('Gültigkeitsbereich:', 30, 700, { h: 10, font: FETT }),
+    ...absatz(['Die Deklaration gilt für eine Leuchtenkomponente mit der Artikelnummer 89603436.',
+      'Das Produkt wird am Standort hergestellt und in Leuchten eingebaut.',
+      'Grundlage der Berechnung ist ein gemittelter Mix der Energieaufwände.'], 30, 680),
+  ]
+  const { chunks } = layoutDocument([{ page: 1, items }])
+  assert.equal(chunks[0].heading, 'Gültigkeitsbereich', 'ohne Doppelpunkt')
+  assert.match(chunks[0].body, /^Die Deklaration gilt/)
 })
 
 test('Läufe in der Zeile: ein Sprung nach rechts trennt, ein Wortabstand nicht', () => {

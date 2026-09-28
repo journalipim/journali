@@ -51,6 +51,8 @@ const rows = computed(() => [...tabellenZeilen.value, ...zeilenWerte.value, ...k
 const zielName = r => r.target === 'attr' ? (L(attrs.value.find(a => a.key === r.attribute)?.label) || r.attribute || '') : r.target === 'new' ? (r.key || r.newKey || '') : r.key || ''
 const werte = computed(() => rows.value.filter(r => !r.baustein).sort((a, b) => zielName(a).localeCompare(zielName(b), 'de', { sensitivity: 'base' })))
 const bausteineZeilen = computed(() => rows.value.filter(r => r.baustein))
+/// Von welcher bis zu welcher Seite die Bausteine reichen — sie stehen in der Reihenfolge des Dokuments
+const bausteineSeiten = computed(() => { const s = bausteineZeilen.value.map(r => r.page).filter(p => p != null); return s.length ? [Math.min(...s), Math.max(...s)] : [0, 0] })
 const warten = ref(true)          // ein Dokument ist noch nicht gelesen — der Job liest es, wir fragen nach
 const hinweis = ref('')
 const ki = ref(ai.available() ? 'bereit' : 'aus')   // aus | bereit | läuft | fertig | fehler — läuft erst auf Knopfdruck
@@ -58,6 +60,14 @@ const texte = new Map()           // Dokument → Abschnitte, für die KI auf Kn
 const textZahl = ref(0)           // wie viele Texte da sind — die Map ist nicht reaktiv, der Zähler schon
 const kiHinweis = ref('')
 const busy = ref(false)
+/// Was das Übernehmen gerade tut: Attribute anlegen, Listen ergänzen, Werte schreiben — mit Zähler, weil achtzig neue
+/// Attribute achtzig Anfragen sind (28.09.2026)
+const arbeit = ref(null)   // { text, erledigt, gesamt } oder null
+/// Mehrere Anfragen zugleich: vier Stränge über dieselbe Liste — die Reihenfolge ist egal, jede Sache steht für sich
+async function reihum(liste, f, straenge = 4) {
+  const rest = [...liste]
+  await Promise.all(Array.from({ length: Math.min(straenge, rest.length) }, async () => { while (rest.length) await f(rest.shift()) }))
+}
 let gestartet = false, timer = null
 const textGeholt = new Set()      // Dokumente, deren Text schon geholt ist (Textbausteine, Zeilen, KI)
 /// Die Schritte, die Werte nachliefern: je Dokument der Text, dann je offenem Attribut eine Suche. Der Balken sagt,
@@ -82,7 +92,7 @@ function typBaustein(r) {
   else { r.listValues = null; r.multiple = false; r.converted = alsHtml(r.value); r.error = null; r.why = '' }
 }
 const gilt = key => (props.node.groups ?? []).some(g => g.key === key)
-const gruppeHier = key => { const a = attrs.value.find(x => x.key === key); return !a?.group || gilt(a.group) }
+const gruppeHier = key => { const a = (model.value.attributes ?? []).find(x => x.key === key); return !a?.group || gilt(a.group) }
 const genommen = computed(() => rows.value.filter(r => r.take && r.target !== 'skip' && r.converted != null && r.converted !== ''))
 const anzahl = computed(() => rows.value.length)
 const name = id => namen.value[id] ?? id
@@ -263,7 +273,7 @@ function bausteine(id, chunks) {
   const GEHT_WEITER = /\b(und|oder|sowie|mit|auf|für|von|vom|bei|zu|zum|zur|der|die|das|den|dem|des|ein|eine|einen|einem|einer|im|in|an|am|nach|über|unter|durch|ohne|gegen|um|bis|als|wie|aus|sich|noch|auch|nur|sehr|so|dass|ob|wenn|weil|and|or|with|for|of|to|the|a|an|in|on|at|by|from|as)$/i
   const umbruch = g => GEHT_WEITER.test(g.heading) || /[a-zäöüß][.!?]\s+[A-ZÄÖÜ]/.test(g.heading) || /^[a-zäöüß(]/.test(g.body.trim())
   const neu = gruppen.filter(g => g.body.trim().length >= MIN_TEXT && !/^\d+([.,]\d+)?$/.test(g.heading) && schluessel(g.heading)
-    && g.heading.length <= MAX_UEBERSCHRIFT && g.heading.split(/\s+/).length <= 8 && !/[,.;:]$/.test(g.heading) && !umbruch(g)).map(g => {
+    && g.heading.length <= MAX_UEBERSCHRIFT && g.heading.split(/\s+/).length <= 8 && !/[,.;]$/.test(g.heading) && !umbruch(g)).map(g => {
     const zeilen = String(g.body).split(/\r?\n/).map(z => z.trim()).filter(Boolean)
     const punkte = zeilen.filter(z => /^[•\-–*·]\s*\S/.test(z)).map(z => z.replace(/^[•\-–*·]\s*/, ''))
     const r = { key: g.heading, value: g.body, doc: id, page: g.page, heading: g.heading, quote: null, confidence: null, quelle: 'text', baustein: true,
@@ -615,8 +625,9 @@ async function uebernehmen() {
     if (neu.size && !gk) { store.toast(t_('Gruppe ohne Namen')); busy.value = false; return }
     if (neu.size && !gruppen.value.some(g => g.key === gk))
       await api.post(`/api/model/groups/${encodeURIComponent(gk)}`, { key: gk, label: { [master]: gruppeName.value.trim() }, activeFrom: null }, 'PUT')
-    for (const [key, r] of neu) {
-      if (attrs.value.some(a => a.key === key)) { store.toast(t_('Schlüssel {0} gibt es', [key])); continue }   // nie eine Definition überschreiben
+    arbeit.value = { text: t_('Attribute'), erledigt: 0, gesamt: neu.size }
+    await reihum([...neu], async ([key, r]) => {
+      if (attrs.value.some(a => a.key === key)) { store.toast(t_('Schlüssel {0} gibt es', [key])); arbeit.value.erledigt++; return }   // nie eine Definition überschreiben
       // eine Einheit, die das Modell nicht kennt, wird angelegt — Schlüssel ist das Symbol (ensureUnit)
       const unit = r.unit ? (r.unitNeu ? await ensureUnit(r.unit) : r.unit) : null
       // eine Werteliste: die Liste unter dem Schlüssel des Attributs, ihre Werte aus dem Dokument, dann das Attribut darauf
@@ -625,7 +636,8 @@ async function uebernehmen() {
         await api.post(`/api/model/lists/${encodeURIComponent(key)}/values`, (r.listValues ?? []).map(v => ({ value: v.value, label: { [master]: v.label } })), 'PUT')
       }
       await api.post(`/api/model/attributes/${encodeURIComponent(key)}`, { key, label: { [master]: r.key }, type: r.newType, unit, group: gk, ...(r.newType === 'enum' ? { list: key, multiple: !!r.multiple } : {}), ...(r.baustein && r.newType === 'html' ? { axes: ['locale'] } : {}) }, 'PUT')   // die Sprachachse heisst axes, nicht perLocale
-    }
+      arbeit.value.erledigt++
+    })
     // 2. die Gruppe an die gewählte Ebene, wenn sie am Pfad noch nicht gilt — sonst gälte kein neues Attribut hier.
     // Eine Ebene darüber: erst lesen, was dort hängt — GroupsAttached ist die ganze Liste
     if (neu.size && !vonOben(gk)) {
@@ -636,8 +648,11 @@ async function uebernehmen() {
     // 2b. Sätze, die in einer vorhandenen Liste noch fehlen — einmal je Liste, vor dem Stapel
     const nachtrag = new Map()
     for (const r of liste) if (r.target === 'attr' && r.listValues?.some(v => v.neu)) { const def = (r.baustein ? bausteinAttrs.value : attrs.value).find(a => a.key === r.attribute); if (def?.list) { if (!nachtrag.has(def.list)) nachtrag.set(def.list, []); nachtrag.get(def.list).push(...r.listValues.filter(v => v.neu)) } }
-    for (const [lk, vs] of nachtrag)
+    if (nachtrag.size) arbeit.value = { text: t_('Wertelisten'), erledigt: 0, gesamt: nachtrag.size }
+    await reihum([...nachtrag], async ([lk, vs]) => {
       await api.post(`/api/model/lists/${encodeURIComponent(lk)}/values`, vs.map(v => ({ value: v.value, label: { [master]: v.label } })), 'PUT')
+      arbeit.value.erledigt++
+    })
     // 3. ein Stapel für die Werte — je Wert der Beleg dazu: das Dokument, die Seite, die Stelle. Zwei Zeilen mit
     // demselben Ziel und Wert (Tabelle und KI sagen dasselbe) schreiben einmal; die Werte sind sonst nicht in Einklang
     const einmal = []; const ziele = new Set()
@@ -656,7 +671,9 @@ async function uebernehmen() {
         { op: 'value.source', args: { node: props.node.id, attribute, locale, source: name(r.doc), title: r.page != null ? t_('Seite {0}', [r.page]) : null, note, method: r.quelle === 'ki' ? 'ai' : 'import', checkedAt: heute } },
       ]
     })
+    arbeit.value = { text: t_('Werte'), erledigt: 0, gesamt: einmal.length }
     const res = await api.post('/api/batch?skipErrors=true', { commands })
+    arbeit.value.erledigt = einmal.length
     // gezählt werden die Werte, nicht die Belege — jeder zweite Befehl ist der Beleg zum ersten
     const n = (res.results ?? []).filter(x => x.index % 2 === 0).length
     for (const s of res.skipped ?? []) if (s.index % 2 === 0) store.toast(`${einmal[s.index / 2]?.key ?? s.index}: ${s.message}`)
@@ -664,7 +681,7 @@ async function uebernehmen() {
     if (n) store.toast(t_('{0} Werte aus dem Dokument übernommen', [n]) + (neu.size ? ' · ' + t_('{0} Attribute neu', [neu.size]) : ''), 'ok')
     emit('done')
   } catch (e) { store.toast(e.message) }
-  finally { busy.value = false }
+  finally { busy.value = false; arbeit.value = null }
 }
 
 function onKey(e) { if (e.key === 'Escape') emit('close') }
@@ -685,11 +702,12 @@ onMounted(async () => {
   lade()
 })
 onUnmounted(() => { window.removeEventListener('keydown', onKey); if (timer) clearTimeout(timer) })
-defineExpose({ rows, werte, bausteineZeilen, zeilenWerte, warten, hinweis, genommen, ki, kiHinweis, attributeHier, gruppe, gruppeName, ebene, zuordnen, neuLesen, kiFragen, ziel, schritte, medien, hochladen })
+defineExpose({ rows, werte, bausteineZeilen, zeilenWerte, warten, hinweis, genommen, ki, kiHinweis, attributeHier, gruppe, gruppeName, ebene, zuordnen, neuLesen, kiFragen, ziel, schritte, medien, hochladen, bausteineSeiten, uebernehmen, arbeit })
 </script>
 
 <template>
-  <div class="dt-overlay" @mousedown.self="emit('close')">
+  <!-- Kein Schliessen beim Klick daneben: hier stehen hundert Zeilen mit Haken, ein Fehlklick wirft die Arbeit weg -->
+  <div class="dt-overlay">
     <div class="dt">
       <div class="toolbar">
         <h1 :title="$t('▦ aus Tabellen, ✦ von der KI im Text — gegen die Attribute, die hier gelten. Geschrieben wird erst mit ✓, je Wert mit Beleg.')">{{ $t("▦ Werte aus dem Dokument") + ' ' }}<span class="muted">· {{ anzahl }}<template v-if="mehrere">{{ ' ' + $t("· {0} Dokumente", [medien.length]) }}</template></span></h1>
@@ -711,7 +729,7 @@ defineExpose({ rows, werte, bausteineZeilen, zeilenWerte, warten, hinweis, genom
             <th style="width:24px"></th>
             <th style="width:280px" :title="$t('die erste Spalte der Tabelle im Dokument — oder das Attribut, für das die KI eine Stelle fand')">{{ $t("Im Dokument") }}</th>
             <th :title="$t('▦ aus einer Tabelle, ✦ von der KI im Text — Seite und Sicherheit; die Stelle steht im Tooltip')">{{ $t("Quelle") }}</th>
-            <th :title="$t('Attribut am Knoten — gefunden über Schlüssel, Bezeichnung, Synonym oder Ähnlichkeit; „+ neu“ legt es an')">{{ $t("→ Attribut") }}</th>
+            <th :title="$t('Attribut am Knoten — über Schlüssel, Bezeichnung oder Ähnlichkeit gefunden; „+ neu“ legt es an. Nach dieser Spalte sortiert.')">{{ $t("→ Attribut") + ' ↓' }}</th>
             <th :title="$t('Typ und Einheit eines neuen Attributs — aus dem Wert geraten, änderbar')">{{ $t("Typ") }}</th>
             <th :title="$t('der Wert, wie er geschrieben wird — Zahl ohne Einheit, Datum als JJJJ-MM-TT')">{{ $t("Wert") }}</th>
             <th></th>
@@ -743,7 +761,7 @@ defineExpose({ rows, werte, bausteineZeilen, zeilenWerte, warten, hinweis, genom
             </tr>
           </tbody>
           <tbody v-if="bausteineZeilen.length" class="bausteine">
-            <tr class="step"><td colspan="7" class="step-band" style="display:table-cell;height:24px" :title="$t('Abschnitte mit Überschrift aus dem Dokument — als html-Attribut an das Produkt, neu oder in ein bestehendes. Ohne Haken: man nimmt, was auf die Seite gehört.')">{{ $t("▤ Textbausteine") + ' ' }}<span class="muted">· {{ bausteineZeilen.length }}</span></td></tr>
+            <tr class="step"><td colspan="7" class="step-band" style="display:table-cell;height:24px" :title="$t('Abschnitte mit Überschrift, in der Reihenfolge des Dokuments — als html-Attribut an das Produkt, neu oder in ein bestehendes.')">{{ $t("▤ Textbausteine") + ' ' }}<span class="muted">· {{ bausteineZeilen.length }} · {{ $t("S. {0}–{1}", [bausteineSeiten[0], bausteineSeiten[1]]) }}</span></td></tr>
             <tr v-for="(r, i) in bausteineZeilen" :key="'b' + i" class="row" :class="{ aus: !r.take }">
               <td><input type="checkbox" v-model="r.take" :disabled="r.target === 'skip'" @change="haken(r)" /></td>
               <td :title="r.value">{{ r.key }}<div class="muted roh">{{ nurText(r.converted) }}</div></td>
@@ -778,6 +796,7 @@ defineExpose({ rows, werte, bausteineZeilen, zeilenWerte, warten, hinweis, genom
           </template>
         </template>
         <span class="grow" />
+        <span v-if="arbeit" class="lauf" :title="$t('{0}: {1} von {2}', [arbeit.text, arbeit.erledigt, arbeit.gesamt])"><b><i :style="{ width: (arbeit.gesamt ? Math.round(arbeit.erledigt / arbeit.gesamt * 100) : 100) + '%' }" /></b><span class="muted">{{ arbeit.text }} {{ arbeit.erledigt }}/{{ arbeit.gesamt }}</span></span>
         <button @click="emit('close')">{{ $t("Abbrechen") }}</button>
         <button class="primary" :disabled="busy || !genommen.length" @click="uebernehmen">{{ $t("✓ {0} übernehmen", [genommen.length]) }}</button>
       </div>

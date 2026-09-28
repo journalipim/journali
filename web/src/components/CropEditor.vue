@@ -118,7 +118,7 @@ defineExpose({ crop, rahmen, begrenzen, ganz })
 </script>
 
 <template>
-  <div class="ce-overlay" @mousedown.self="emit('close')" @keydown="onKey" tabindex="-1">
+  <div class="ce-overlay" @keydown="onKey" tabindex="-1">
     <div class="ce">
       <div class="toolbar"><h1>{{ '✂ ' + medium.name }}</h1>
         <span class="muted" v-if="img">{{ img.naturalWidth + ' × ' + img.naturalHeight + ' px' }}</span><span class="grow" />

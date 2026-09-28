@@ -514,7 +514,7 @@ const oeffnen = m => { if (store.can('download')) window.open(dateiLink(m), '_bl
   <CropEditor v-if="cropFuer" :medium="cropFuer" @done="zugeschnitten" @close="cropFuer = null" />
 
   <!-- Zuordnen: ein Knoten aus dem Baum, dann eine Relation je gewähltem Asset -->
-  <div v-if="zuordnen" class="zu-overlay" @mousedown.self="zuordnen = null">
+  <div v-if="zuordnen" class="zu-overlay">
     <div class="zu">
       <div class="toolbar"><h1>{{ $t("⇄ Zuordnen") + ' ' }}<span class="muted">{{ '· ' + zuordnen.medien.length }}</span></h1><span class="grow" />
         <button class="x" @click="zuordnen = null" :title="$t('schliessen')">✕</button></div>

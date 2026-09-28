@@ -682,7 +682,7 @@ function onDialogKey(e) {
     </div>
 
     <!-- Verknüpfen: Auswahl → Ziel, dann Typ und Richtung -->
-    <div v-if="link" class="overlay" @click.self="link = null" @keydown="onLinkKey">
+    <div v-if="link" class="overlay" @keydown="onLinkKey">
       <div class="dialog" style="min-width:640px;max-width:92vw">
         <div class="toolbar"><h1>{{ $t("⇄ {0} Einträge verknüpfen", [pickedRows.length]) }}</h1><span class="grow" /><button class="x" @click="link = null" :title="$t('Esc')">×</button></div>
         <table class="grid form"><colgroup><col style="width:130px" /><col /></colgroup><tbody>
@@ -729,7 +729,7 @@ function onDialogKey(e) {
     </div>
 
     <!-- Anlegen: Dialog mit Pflichtfeldern (Mastersprache); erst vollständig, dann ein Stapel -->
-    <div v-if="creating" class="overlay" @click.self="creating = null" @keydown="onDialogKey">
+    <div v-if="creating" class="overlay" @keydown="onDialogKey">
       <div class="dialog" ref="dialog">
         <div class="toolbar"><h1>{{ icon(creating) }} {{ creating === 'group' ? $t('Neue Gruppe') : creating === 'product' ? $t('Neues Produkt') : $t('Neue Variante') }}</h1>
           <span v-if="creating === 'group' && groupTarget" class="view-chip" :class="{ on: atRoot }" role="button" tabindex="0"

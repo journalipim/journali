@@ -49,7 +49,7 @@ const kb = b => b < 1024 ? `${b} B` : b < 1048576 ? `${(b / 1024).toFixed(0)} kB
 </script>
 
 <template>
-  <div class="mp-overlay" @mousedown.self="emit('close')">
+  <div class="mp-overlay">
     <div class="mp">
       <div class="toolbar"><h1>{{ $t("▨ Aus der Bibliothek zuordnen") }}</h1><span class="muted">{{ title }} · {{ items.length }}</span><span class="grow" /><button class="x" @click="emit('close')" :title="$t('schliessen (Esc)')">✕</button></div>
       <div class="mp-body">

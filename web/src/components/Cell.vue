@@ -125,7 +125,7 @@ function onEditKey(e) {
     <!-- Das Eingabefeld ersetzt die Box mit denselben Massen — nicht darin, sonst doppelter Rahmen und unten abgeschnitten. -->
     <input v-else ref="input" v-model="draft" class="cell-input" :data-mode="openMode" @keydown="onEditKey" @input="onInput" @blur="commit" />
     <Teleport to="body">
-      <div v-if="big" class="overlay" @mousedown.self="cancelBig">
+      <div v-if="big" class="overlay">
         <div class="big">
           <textarea ref="area" v-model="draft" @keydown="onBigKey" spellcheck="false"></textarea>
           <div :id="panelId"></div>

@@ -117,6 +117,9 @@ export function tables(ls, gesperrt = paragraphs(ls)) {
       if (!frei(n)) break
       if (n.runs.length === 1 && dy <= 1.8 * size && spalteVon(n.runs[0], sp) > 0) { vor.zeilen.push(n); vor.zellen.push({ ...n.runs[0] }); j++; continue }
       if (n.runs.length < 2 || dy > 3.5 * size || !n.runs.some(kurz)) break
+      // Ein Schnittwechsel beendet die Tabelle: steht die ganze Zeile in einem anderen Schnitt als die Reihe davor,
+      // beginnt etwas Neues — im Zertifikat geht die Kopftabelle so in zweispaltigen Text über (28.09.2026)
+      if (reihen.length >= 2 && n.runs.every(r => vor.zellen.every(z => z.font !== r.font))) break
       const passend = n.runs.filter(r => sp.some(s => Math.abs(s.x0 - r.x0) <= 0.8 * size) || spalteVon(r, sp) >= 0).length
       if (passend < 2) break
       reihen.push({ zellen: n.runs.map(r => ({ ...r })), zeilen: [n] }); j++
@@ -216,7 +219,7 @@ export function roles(bs, { bodySize = null, bodyFont = null } = {}) {
   for (const b of bs) {
     if (b.table) { b.role = 'table'; continue }
     const t = blockText(b)
-    const kurz = b.lines.length <= 3 && b.chars <= 200 && !/[.!?;:,]$/.test(t)
+    const kurz = b.lines.length <= 3 && b.chars <= 200 && !/[.!?;,]$/.test(t)   // ein Doppelpunkt am Ende ist gerade typisch: „Gültigkeitsbereich:“
     const wort = /\p{L}[\p{L}\p{M}'’-]*\p{L}/u.test(t)
     if (wort && b.size >= bodySize * 1.15 && b.lines.length <= 4 && b.chars <= 240) { b.role = 'heading'; groessen.add(Math.round(b.size * 2) / 2) }
     else if (wort && b.font !== bodyFont && Math.abs(b.size - bodySize) <= 1.5 && kurz && b.lines.length <= 2 && b.chars <= 120) b.role = 'subheading'
@@ -228,19 +231,83 @@ export function roles(bs, { bodySize = null, bodyFont = null } = {}) {
   return { bodySize, bodyFont }
 }
 
-/// Eine Seite: Zeilen, Tabellen, Blöcke, Reihenfolge, Rollen. `body` (Grösse und Schnitt des Fliesstexts) kommt aus dem
-/// ganzen Dokument, damit eine Seite voller Tabellen nicht ihre eigene Norm bekommt
+/// Der Spaltenschnitt einer Seite: eine senkrechte Bahn, die keine Zeile überschreitet und links wie rechts genug
+/// Text hat, trennt zwei Spalten. Zeilen, die die Bahn überspannen (Überschrift über die Breite), gehören keiner
+/// Spalte — sie teilen die Seite in Bänder. Ohne diesen Schnitt verbände jede Zeile beide Spalten, und zwei Absätze
+/// nebeneinander sähen wie eine Tabelle aus (28.09.2026)
+export function spaltenBahn(ls, { rand = 4 } = {}) {
+  if (ls.length < 6) return null
+  const x0 = Math.min(...ls.map(l => l.x0)), x1 = Math.max(...ls.map(l => l.x1))
+  if (x1 - x0 < 100) return null
+  const schritt = 2, n = Math.floor((x1 - x0) / schritt)
+  const zeichen = ls.reduce((s, l) => s + l.runs.reduce((m, r) => m + r.text.length, 0), 0)
+  let best = null
+  let lauf = null
+  for (let i = 1; i < n; i++) {
+    const x = x0 + i * schritt
+    // ein paar Zeilen dürfen die Bahn überschreiten — eine Kopfzeile über die Breite macht aus zwei Spalten keine eine;
+    // sie wird später ein eigenes Band
+    const drueber = ls.filter(l => l.runs.some(r => x > r.x0 - rand && x < r.x1 + rand)).length
+    const frei = drueber <= Math.max(1, Math.floor(ls.length * 0.12))
+    if (frei) { lauf = lauf ?? x; continue }
+    if (lauf != null) { const breite = x - lauf; if (breite >= 12 && (!best || breite > best.breite)) best = { von: lauf, bis: x, breite }; lauf = null }
+  }
+  if (lauf != null && x0 + n * schritt - lauf >= 12) best = best && best.breite >= x0 + n * schritt - lauf ? best : { von: lauf, bis: x1, breite: x1 - lauf }
+  if (!best) return null
+  const mitte = (best.von + best.bis) / 2
+  if (mitte - x0 < 0.2 * (x1 - x0) || x1 - mitte < 0.2 * (x1 - x0)) return null   // eine Bahn am Rand ist keine Spaltengrenze
+  const seite = s => ls.reduce((n2, l) => n2 + l.runs.filter(r => s === 'l' ? r.x1 <= mitte : r.x0 >= mitte).reduce((m, r) => m + r.text.length, 0), 0)
+  if (seite('l') < 0.2 * zeichen || seite('r') < 0.2 * zeichen) return null   // eine Spalte fast ohne Text ist keine
+  return mitte
+}
+
+/// Die Bänder einer Seite: eine Zeile, die die Bahn überspannt, steht für sich (volle Breite); was dazwischen liegt,
+/// wird in linke und rechte Spalte geteilt. Liefert Gruppen von Zeilen in Lesereihenfolge
+function baender(ls, bahn) {
+  const out = []
+  let band = null
+  for (const l of ls) {
+    const voll = l.runs.some(r => r.x0 < bahn && r.x1 > bahn)
+    if (voll) { out.push({ voll: true, zeilen: [l] }); band = null; continue }
+    if (!band) { band = { voll: false, links: [], rechts: [] }; out.push(band) }
+    // die Zeile wird an der Bahn geteilt: links ihre linken Läufe, rechts ihre rechten — sonst zöge eine Zeile beide Spalten zusammen
+    const teil = rs => ({ ...l, runs: rs, x0: rs[0].x0, x1: rs.at(-1).x1 })
+    const links = l.runs.filter(r => r.x1 <= bahn), rechts = l.runs.filter(r => r.x0 >= bahn)
+    if (links.length) band.links.push(teil(links))
+    if (rechts.length) band.rechts.push(teil(rechts))
+  }
+  return out
+}
+
+/// Eine Seite: Spaltenschnitt, dann je Band Zeilen, Tabellen, Blöcke, Reihenfolge, Rollen. `body` (Grösse und Schnitt
+/// des Fliesstexts) kommt aus dem ganzen Dokument, damit eine Seite voller Tabellen nicht ihre eigene Norm bekommt
 export function analysePage(items, body = {}) {
-  const ls = lines(items)
-  const tb = tables(ls)
-  const bs = order([...tb, ...blocks(ls)])
+  const bs = seitenBloecke(lines(items))
   const stats = roles(bs, body)
   return { blocks: bs, ...stats }
 }
 
+/// Die Blöcke einer Seite in Lesereihenfolge — mit Spaltenschnitt, wenn die Seite zwei Spalten hat
+export function seitenBloecke(ls) {
+  const bahn = spaltenBahn(ls)
+  if (bahn == null) { const tb = tables(ls); return order([...tb, ...blocks(ls)]) }
+  // Der Schnitt gilt fürs Erkennen: Zeilen und Tabellen einer Spalte bleiben unter sich. Die Lesereihenfolge macht
+  // danach der XY-Schnitt über alle Blöcke der Seite — er teilt an derselben Bahn und gibt die linke Spalte ganz vor
+  // der rechten aus, statt Band für Band zu wechseln
+  const out = []
+  for (const b of baender(ls, bahn)) {
+    for (const teil of b.voll ? [b.zeilen] : [b.links, b.rechts]) {
+      if (!teil?.length) continue
+      const tb = tables(teil)
+      out.push(...tb, ...blocks(teil))
+    }
+  }
+  return order(out)
+}
+
 /// Grösse und Schnitt des Fliesstexts über alle Seiten: die Zeichen zählen, nicht die Seiten
 export function bodyOf(pages) {
-  return roles(pages.flatMap(p => { const ls = lines(p.items); return [...tables(ls), ...blocks(ls)] }))
+  return roles(pages.flatMap(p => seitenBloecke(lines(p.items))))
 }
 
 /// Eine Zeile Schlüssel/Wert: links ein Name, rechts ein Wert
@@ -269,7 +336,7 @@ export function layoutDocument(pages, { max = 900, minRows = 3 } = {}) {
       if (b.role === 'heading' || b.role === 'subheading') {
         // zwei Überschriften hintereinander: die erste wird selbst ein Abschnitt (Titel und Untertitel), die zweite gilt
         if (offen) chunks.push({ page: s.page, heading: null, body: offen })
-        heading = t.replace(/\n/g, ' '); offen = heading; continue
+        heading = t.replace(/\n/g, ' ').replace(/\s*:$/, ''); offen = heading; continue
       }
       if (b.table) {
         if (b.rows.length >= minRows && b.rows.every(istSchluesselWert)) tabellen.push({ page: s.page, heading, rows: b.rows.map(r => [r[0].replace(/:$/, ''), ...r.slice(1)]) })

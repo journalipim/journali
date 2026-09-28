@@ -76,7 +76,7 @@ function onEditKey(e) {
       <template v-if="!disabled"><span v-if="plain" class="muted tag">‹›</span>{{ brief }}</template>
     </div>
     <Teleport to="body">
-      <div v-if="open" class="overlay" @mousedown.self="cancel">
+      <div v-if="open" class="overlay">
         <div class="editor" @keydown="onEditKey">
           <div class="toolbar"><h1>‹› {{ title }}</h1><span class="grow" /><kbd>{{ $t("Ctrl+Enter") }}</kbd>{{ ' ' + $t("speichern ·") + ' ' }}<kbd>{{ $t("Esc") }}</kbd>{{ ' ' + $t("verwerfen") }}</div>
           <div class="toolbar fmt" v-if="!source">

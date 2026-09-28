@@ -198,7 +198,7 @@ const HELP_TEMPLATE = [
 
 <template>
   <Teleport to="body">
-    <div class="overlay" @mousedown.self="emit('close')" @keydown="onKey">
+    <div class="overlay" @keydown="onKey">
       <div class="editor">
         <div class="toolbar">
           <h1>{{ isTemplate ? '{}' : 'ƒ' }} {{ title }}</h1>

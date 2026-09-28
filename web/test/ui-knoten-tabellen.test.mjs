@@ -735,6 +735,45 @@ test('der Balken läuft, solange Abfragen offen sind, und ist weg, wenn nichts m
   assert.equal(w.vm.schritte.erledigt, w.vm.schritte.gesamt)
 })
 
+test('ein Baustein, dessen html-Attribut zu einer hier nicht geltenden Gruppe gehört, bleibt aus', async () => {
+  // die Prüfung lief über die Attributliste des Dialogs, die html auslässt — der Server lehnte den Wert dann ab
+  const modell = { ...MODELL, attributes: [...MODELL.attributes, { key: 'montage_text', label: { de: 'Montage' }, type: 'html', group: 'other', perLocale: true }] }
+  welt({ text: TEXT }); store.model = modell
+  const w = mount(DocTables, { props: { node: KNOTEN, media: ['m1'], names: { m1: 'datenblatt.pdf' } } })
+  await flushPromises()
+  const f = w.vm.bausteineZeilen.find(b => b.key === 'Montage')
+  assert.ok(f, `Montage fehlt — da sind: ${w.vm.bausteineZeilen.map(b => b.key).join(', ')}`)
+  assert.equal(f.attribute, 'montage_text')
+  assert.equal(f.take, false, 'kein Haken')
+  assert.match(f.why, /Gruppe other gilt/)
+})
+
+test('Textbausteine stehen in der Reihenfolge des Dokuments, das Band nennt die Seiten', async () => {
+  const text = { ready: true, state: 'text', chunks: [
+    { seq: 0, page: 4, heading: 'Montage', body: 'Das Gerät wird mit zwei Schrauben auf einer ebenen Fläche befestigt und zugentlastet.' },
+    { seq: 1, page: 2, heading: 'Anwendung', body: 'Die Komponenten werden in Leuchten für Innenräume eingesetzt, auch in Feuchträumen.' }] }
+  const { w } = await dialog({ tabellen: { ready: true, state: 'text', tables: [] }, text })
+  assert.deepEqual(w.vm.bausteineZeilen.map(b => [b.key, b.page]), [['Montage', 4], ['Anwendung', 2]], 'wie im Index, nicht sortiert')
+  assert.deepEqual(w.vm.bausteineSeiten, [2, 4])
+  assert.match(w.find('tbody.bausteine .step-band').text(), /▤ Textbausteine · 2 · S\. 2–4/)
+})
+
+test('✓ übernehmen: der Balken zählt Attribute, dann Werte — und ist danach weg', async () => {
+  const { w, rufe } = await dialog({ tabellen: { ready: true, state: 'text', tables: [{ seq: 0, page: 1, heading: null, rows: [['Zündspannung', '5 kVp'], ['Netzfrequenz', '50 Hz'], ['Farbe', 'blau']] }] } })
+  const echt = globalThis.fetch; let frei; const tor = new Promise(r => { frei = r })
+  globalThis.fetch = async (url, opt = {}) => { if (/\/api\/model\/attributes\//.test(String(url))) await tor; return echt(url, opt) }
+  const fertig = w.vm.uebernehmen()
+  await flushPromises()
+  assert.ok(w.vm.arbeit, 'der Balken steht')
+  assert.deepEqual([w.vm.arbeit.text, w.vm.arbeit.gesamt], ['Attribute', 3], 'drei neue Attribute')
+  assert.equal(w.vm.arbeit.erledigt, 0)
+  assert.match(w.find('.dt-foot .lauf').text(), /Attribute 0\/3/)
+  frei(); await fertig; await flushPromises()
+  assert.equal(w.vm.arbeit, null, 'danach weg')
+  assert.equal(rufe.filter(r => /\/api\/model\/attributes\//.test(r.pfad) && r.methode === 'PUT').length, 3)
+  assert.ok(rufe.some(r => /\/api\/batch/.test(r.pfad)), 'und die Werte im Stapel')
+})
+
 test('mit KI: der Beleg nennt den Weg ai, die Stelle und die Sicherheit', async () => {
   const { w, rufe } = await dialog({ ki: KI, tabellen: { ready: true, state: 'text', tables: [] } })
   await w.find('.dt-foot .primary').trigger('click'); await flushPromises()
