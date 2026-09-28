@@ -22,7 +22,7 @@ async function mount(root, ctx) {
   const textAttrs = (model.attributes ?? []).filter(a => a.perLocale && (a.type === 'text' || a.type === 'html'))
   const st = { from: master, to: model.locales.find(l => l.code !== master)?.code ?? '', channel: '', scope: 'open', attrs: new Set(textAttrs.map(a => a.key)), root: null, units: [], edited: new Map(), plan: null }
   root.style.cssText = 'display:flex;flex-direction:column;height:100%;padding:0'
-  const status = el('span', { class: 'muted' }); const say = m => { status.textContent = m }
+  const status = el('span', { class: 'muted' }); const say = m => { status.textContent = m; status.className = String(m).startsWith('✦') ? 'ai' : 'muted' }   // ✦: die bezahlte KI arbeitet — magenta
   const body = el('div', { class: 'scroll', style: 'flex:1;padding:0 8px 12px' })
   const band = t => el('div', { class: 'step-band', style: 'margin:10px -8px 6px' }, t)
 
@@ -93,7 +93,7 @@ async function mount(root, ctx) {
   const loadBtn = el('button', { class: 'primary', onclick: loadUnits }, t_('⟳ Einheiten laden'))
   const xliffBtn = el('button', { title: t_('XLIFF 2.0 herunterladen — Rücklauf über Schritt 4'), onclick: async () => {
     try { const r = await fetch(`${store.server}/api/translate/xliff?${q()}`, { headers: { 'X-Actor': store.actor } }); if (!r.ok) throw new Error(await r.text()); download(await r.blob(), `journali-${st.from}-${st.to}.xlf`) } catch (e) { store.toast(e.message) } } }, t_('⇪ XLIFF exportieren'))
-  const aiBtn = el('button', { title: t_('leere Ziele mit der KI vorübersetzen — Vorschläge in der Tabelle, geschrieben wird mit 💾'), onclick: preTranslate }, t_('✦ KI vorübersetzen'))
+  const aiBtn = el('button', { class: 'ai', title: t_('leere Ziele mit der KI vorübersetzen — Vorschläge in der Tabelle, geschrieben wird mit 💾'), onclick: preTranslate }, t_('✦ KI vorübersetzen'))
   const memBtn = el('button', { title: t_('Vorschläge aus Gedächtnis (◌) und Wörterbuch (📖) in die Ziele übernehmen — geschrieben wird mit 💾'), onclick: () => { let n = 0; for (const u of st.units) if (u.memory && !(st.edited.get(u.id) ?? u.target)) { st.edited.set(u.id, u.memory); if (u._ta) u._ta.value = u.memory; n++ } count.textContent = t_('{0} Einheiten · {1} geändert', [st.units.length, st.edited.size]); say(t_('◌ {0} übernommen', [n])) } }, t_('◌ Gedächtnis übernehmen'))
   const writeBtn = el('button', { class: 'primary', title: t_('die eingetragenen Ziele schreiben (AttributeSet je Einheit) — nur, wo die Quelle seit dem Laden unverändert ist'), onclick: writeEdited }, t_('💾 Ziele schreiben'))
   // Paket schnüren (30): ein Auftrag im Journal + die XLIFF-Datei dazu — der Rücklauf findet den Auftrag in der Datei wieder

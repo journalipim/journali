@@ -116,7 +116,8 @@ export async function dataOf(ctx, id, locale, depth = 0) {
   const lookup = (m, key, loc) => m.get(`${key}|${loc}|`) ?? (loc ? m.get(`${key}||`) : null) ?? null
   const value = (key, loc) => {
     const d = defs.get(key); if (!d) return null
-    if (d.type === 'formula') return n.computed.find(c => c.attribute === key && (c.locale ?? null) === (d.perLocale ? loc : null))?.value ?? null
+    // Formel und Vorlage sind berechnet — ihr Wert steht in computed, nicht in values (dort liegt bei der Vorlage das Skript)
+    if (d.type === 'formula' || d.type === 'template') return n.computed.find(c => c.attribute === key && (c.locale ?? null) === (d.perLocale ? loc : null))?.value ?? null
     const l = d.perLocale ? loc : ''
     let v = lookup(own, key, l)
     if (v == null && d.inheritable) for (const m of anc) { v = lookup(m, key, l); if (v != null) break }

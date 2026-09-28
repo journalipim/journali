@@ -12,6 +12,17 @@ namespace Journali.Server;
 /// </summary>
 public static class MediaApi
 {
+    /// <summary>
+    /// Content-Disposition inline mit dem Namen der Datei: ein ASCII-Rückfall für alte Browser und der volle Name als
+    /// UTF-8 (RFC 5987), damit Umlaute ankommen. Anführungszeichen und Zeilenumbrüche fallen weg — sie brächen den Kopf.
+    /// </summary>
+    public static string Inline(string? name)
+    {
+        var n = string.IsNullOrWhiteSpace(name) ? "file" : name.Replace('"', '\'').Replace("\r", "").Replace("\n", "");
+        var ascii = new string(n.Select(ch => ch < 128 ? ch : '_').ToArray());
+        return $"inline; filename=\"{ascii}\"; filename*=UTF-8''{Uri.EscapeDataString(n)}";
+    }
+
     /// <summary>Die Stichwörter eines Mediums — der vermehrbare Wert steht in den Listen, nicht in den Werten.</summary>
     private static IEnumerable<string> Stichworte(Medium m) =>
         m.Lists.Where(kv => kv.Key.Attribute == Model.KeywordAttribute).SelectMany(kv => kv.Value).Distinct(StringComparer.Ordinal);
@@ -219,6 +230,8 @@ public static class MediaApi
             var stream = await store.OpenAsync(m.Sha256, ct);
             if (stream is null) return Results.NotFound(Err("Datei {0} fehlt im Store.", m.Sha256));
             res.Headers.CacheControl = "public, max-age=31536000, immutable";
+            // Der Name geht mit — sonst hiesse jeder Abruf „file.pdf“, der letzte Teil der Adresse (28.09.2026)
+            res.Headers.ContentDisposition = Inline(m.Name);
             return Results.File(stream, m.Mime, enableRangeProcessing: true);
         });
 

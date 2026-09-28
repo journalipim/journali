@@ -357,7 +357,9 @@ const istPdf = m => (m?.mime ?? '') === 'application/pdf'
 /// Megapixel aus der Pixelzahl, mit Komma wie im Deutschen
 const mp = n => (n / 1_000_000).toFixed(1).replace('.', ',')
 /// Die Datei in einem neuen Fenster — was damit geschieht, entscheidet der Rechner des Anwenders.
-const oeffnen = m => { if (store.can('download')) window.open(`/api/media/${m.id}/file`, '_blank', 'noopener') }
+// der Name als Parameter: eine andere Adresse als vor dem 28.09.2026 — die alte ist ein Jahr gecacht, ohne Dateinamen
+const dateiLink = m => `/api/media/${encodeURIComponent(m.id)}/file?name=${encodeURIComponent(m.name ?? m.label ?? '')}`
+const oeffnen = m => { if (store.can('download')) window.open(dateiLink(m), '_blank', 'noopener') }
 </script>
 
 <template>
@@ -428,7 +430,7 @@ const oeffnen = m => { if (store.can('download')) window.open(`/api/media/${m.id
   <div class="pane" style="flex:1" v-if="current">
     <div class="toolbar"><h1>▨ {{ current.name }}</h1><span class="mono muted">{{ current.id }}</span><span class="grow" />
       <!-- Laden darf, wer das Recht hat — sehen ist nicht haben; ohne Recht fehlt der Weg, nicht nur der Knopf -->
-      <a v-if="store.can('download')" :href="`/api/media/${current.id}/file`" target="_blank" class="muted" :title="$t('Datei öffnen')">{{ $t("↗ Datei") }}</a>
+      <a v-if="store.can('download')" :href="dateiLink(current)" target="_blank" class="muted" :title="$t('Datei öffnen')">{{ $t("↗ Datei") }}</a>
       <button v-if="current.isImage && store.can('download')" class="x" @click="zuschneiden(current)" :title="$t('Zuschneiden und ausrichten — das Ergebnis ist ein neues Medium')">✂</button>
       <button class="x" @click="retire(current)" :title="sel.size > 1 ? $t('{0} gewählte Medien zurückziehen (die Dateien bleiben im Store)', [sel.size]) : $t('Medium zurückziehen (die Datei bleibt im Store)')">🗑</button></div>
     <div class="toolbar meta muted"><span>{{ current.mime }}</span><span>· {{ kb(current.bytes) }}</span><span>{{ $t("· ⇄ {0} Knoten", [current.used]) }}</span>

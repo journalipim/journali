@@ -425,7 +425,7 @@ async function classDialog(nodeId, ctx, onDone = null) {
         class: target === l.node.id ? 'primary' : '',
         title: t_('{0} Produkt{1}/Varianten darunter{2}{3}{4}', [l.products, l.products === 1 ? '' : 'e', l.groups ? ' ' + t_('· {0} Untergruppen', [l.groups]) : '', l.own ? ' ' + t_('· {0} mit eigener Klasse', [l.own]) : '', k === rec ? ' ' + t_('· Empfehlung: die höchste Ebene ohne Untergruppen und ohne Widerspruch') : '']),
         onclick: () => { target = l.node.id; draw() },
-      }, `${ICON[l.node.role] ?? ''} ${l.node.label}`, el('span', { class: 'muted', style: 'font-size:11px' }, ` ${l.products}`), l.own ? el('span', { class: 'warn', style: 'font-size:11px' }, ` ≠${l.own}`) : null, k === rec ? el('span', { style: 'font-size:11px' }, ' ✦') : null))
+      }, `${ICON[l.node.role] ?? ''} ${l.node.label}`, el('span', { class: 'muted', style: 'font-size:11px' }, ` ${l.products}`), l.own ? el('span', { class: 'warn', style: 'font-size:11px' }, ` ≠${l.own}`) : null, k === rec ? el('span', { class: 'ai', style: 'font-size:11px' }, ' ✦') : null))
       const cur = levelInfo.find(l => l.node.id === target)
       body.append(el('div', { class: 'chips', style: 'margin-bottom:4px' }, el('span', { class: 'muted', style: 'font-size:12px' }, t_('Klasse setzen an')), ...chips),
         el('div', { class: 'muted', style: 'font-size:12px;margin-bottom:6px' }, cur ? t_('Die Klasse gilt dann für {0} Produkte und Varianten unter {1}{2}.', [cur.products, cur.node.label, cur.own ? ' ' + t_('— {0} davon haben eine eigene Klasse und behalten sie', [cur.own]) : '']) : ''))
@@ -696,7 +696,7 @@ async function mount(root, ctx) {
     const ai = ctx.ai; const suggest = el('div', { style: 'margin-top:4px' })
     const gname = c => c.group ? (nameOf(c.group.name, locale) || c.group.code) : '—'
     const askAi = async () => {
-      suggest.innerHTML = ''; suggest.append(el('span', { class: 'muted' }, '✦ …'))
+      suggest.innerHTML = ''; suggest.append(el('span', { class: 'ai' }, '✦ …'))
       try {
         const groupsAll = [...new Set(P.map(gname))].sort()
         const g = await ai.ask({ system: t_('Du ordnest Produkte ETIM-Klassengruppen zu. Antworte nur als JSON {"groups":["…","…"]} mit 1 bis 3 Namen exakt aus der Liste.'), user: `Produkt: ${row.label}\nPfad: ${path.join(' › ')}\nGruppen:\n${groupsAll.join('\n')}`, json: true, maxTokens: 200, purpose: t_('Klassifikation') })

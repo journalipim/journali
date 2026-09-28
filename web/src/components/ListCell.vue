@@ -5,6 +5,9 @@
 import { ref, nextTick } from 'vue'
 import { NEW, mayAddListValue, ensureListValue } from '../lists.js'
 import { store } from '../store.js'
+import { api } from '../api.js'
+import { dialog } from '../dialog.js'
+import { t as t_ } from '../i18n.js'
 // list: Schlüssel der Werteliste — „+ neuer Wert …“ macht die Zeile zum Textfeld, ✓ legt den Wert an
 const props = defineProps({ value: String, inherited: String, disabled: Boolean, options: Array, labelOf: Function, title: String, check: Function, list: String })   // check(wert) → Fehlertext oder null
 const free = ref(new Set())   // Zeilen, die bei enum als Text eingegeben werden (neuer Wert)
@@ -48,6 +51,21 @@ function onKey(e, i) {
   else if (e.key === 'Backspace' && rows.value[i] === '' && rows.value.length > 1) { e.preventDefault(); remove(i); nextTick(() => focusRow(Math.max(0, i - 1))) }
 }
 function onBoxKey(e) { if (e.key === 'Enter' || e.key === 'F2') { e.preventDefault(); show() } else if (e.key === 'Delete' && props.value != null) emit('save', '') }
+/// Den Text eines Listenwerts ändern — aus der Zelle heraus, ohne den Weg ins Modell (28.09.2026): bei einer Liste aus
+/// Sätzen („Funkentstörung“) ist die Zelle der Ort, an dem der Tippfehler auffällt. Modell-Recht, weil es das Modell ändert;
+/// die anderen Sprachen des Werts bleiben
+const darfPflegen = () => !!props.list && store.can('model')
+async function pflegen(i) {
+  const key = rows.value[i]; if (!key) return
+  const liste = store.model?.lists?.find(l => l.key === props.list); const wert = liste?.values?.find(v => v.value === key); if (!wert) return
+  const master = store.model?.masterLocale ?? 'de'
+  const neu = await dialog.prompt({ title: t_('Wert ändern'), text: key, value: wert.label?.[master] ?? label(key), ok: t_('Ändern') })
+  if (neu == null || !neu.trim() || neu.trim() === (wert.label?.[master] ?? '')) return
+  try {
+    await api.post(`/api/model/lists/${encodeURIComponent(props.list)}/values/${encodeURIComponent(key)}`, { value: key, label: { ...(wert.label ?? {}), [master]: neu.trim() }, extra: wert.extra ?? null, order: wert.order ?? 0 }, 'PUT')
+    await store.poll(true)
+  } catch (e) { error.value = { i, message: e.message } }
+}
 // Umsortieren: Griff ziehen, auf eine Zeile fallen lassen
 function dropOn(i) { const from = drag.value; drag.value = null; if (from == null || from === i) return; const [x] = rows.value.splice(from, 1); rows.value.splice(i, 0, x) }
 </script>
@@ -66,6 +84,7 @@ function dropOn(i) { const from = drag.value; drag.value = null; if (from == nul
         <span class="grip" draggable="true" :title="$t('ziehen: umsortieren')" @dragstart="drag = i" @dragend="drag = null">⋮⋮</span>
         <select v-if="options && !free.has(i)" v-model="rows[i]" @keydown="onKey($event, i)" @change="onRowChange(i)"><option value="">—</option><option v-for="o in options" :key="o" :value="o">{{ label(o) }}</option><option v-if="mayAddListValue(list)" :value="NEW">{{ $t("+ neuer Wert …") }}</option></select>
         <input v-else v-model="rows[i]" :class="{ bad: error?.i === i }" :placeholder="free.has(i) ? $t('neuer Wert') : ''" @keydown="onKey($event, i)" @input="error = null" />
+        <button v-if="darfPflegen() && options && !free.has(i) && rows[i]" class="x" :title="$t('Text dieses Werts ändern — gilt überall, wo er gewählt ist')" tabindex="-1" @click="pflegen(i)">✎</button>
         <button class="x" :title="$t('Zeile entfernen')" tabindex="-1" @click="remove(i)">−</button>
       </div>
       <div v-if="error" class="neg" style="font-size:12px;padding:2px 4px">✗ {{ error.message }}</div>
@@ -83,7 +102,7 @@ function dropOn(i) { const from = drag.value; drag.value = null; if (from == nul
 .cell-box.list { display: flex; flex-wrap: wrap; gap: 3px; align-items: center; cursor: text; min-height: 24px; }
 .chip { border: 1px solid var(--line); border-radius: 10px; padding: 0 6px; font-size: 12px; background: var(--pane); white-space: nowrap; }
 .n { margin-left: auto; font-size: 11px; }
-.editor { position: absolute; left: 2px; top: 100%; z-index: 6; min-width: 260px; width: calc(100% - 4px); background: var(--pane); border: 1px solid var(--accent); border-radius: 4px; padding: 4px; box-shadow: 0 4px 16px rgba(0,0,0,.35); }
+.editor { position: absolute; left: 2px; top: 100%; z-index: 6; min-width: 260px; width: max(calc(100% - 4px), 560px); max-width: min(92vw, 960px); background: var(--pane); border: 1px solid var(--accent); border-radius: 4px; padding: 4px; box-shadow: 0 4px 16px rgba(0,0,0,.35); }
 .lrow { display: flex; align-items: center; gap: 4px; padding: 1px 0; }
 .lrow.over { border-top: 1px dashed var(--accent); }
 .lrow input, .lrow select { flex: 1; min-width: 0; height: 24px; border: 1px solid var(--cell-line); border-radius: 3px; background: var(--cell); color: var(--text); padding: 0 4px; font: inherit; }

@@ -530,14 +530,14 @@ export async function mount(root, ctx, catalog) {
     const box = el('div', { style: 'margin-top:10px' })
     const bar = el('div', { class: 'chips' },
       el('button', { onclick: () => { st.sugg = deriveSuggestions(catalog, st.mapping, r); drawSugg() }, title: t_('aus vorhandenen Werten ableiten (Regeln des Katalogs)') }, t_('⚙ Vorschläge (regelbasiert)')),
-      el('button', { class: ai.available() ? 'primary' : '', disabled: ai.available() ? null : 'disabled', title: ai.available() ? t_('KI ({0}) schlägt Werte für die angehakten Knoten vor', [ai.label()]) : t_('kein KI-Schlüssel — Einstellungen → KI'), onclick: async () => {
+      el('button', { class: ai.available() ? 'primary ai' : 'ai', disabled: ai.available() ? null : 'disabled', title: ai.available() ? t_('KI ({0}) schlägt Werte für die angehakten Knoten vor', [ai.label()]) : t_('kein KI-Schlüssel — Einstellungen → KI'), onclick: async () => {
         const ids = st.picked.size ? [...st.picked] : r.nodes.filter(n => n.leaf && n.score != null && n.score < 100).slice(0, 10).map(n => n.row.id)
         if (!ids.length) { store.toast(t_('keine Knoten mit Lücken')); return }
         if (ids.length > 25 && !(await dialog.confirm({ title: t_('{0} Knoten an die KI schicken?', [ids.length]), warn: t_('{0} Anfragen an {1}', [ids.length, ai.label()]), ok: t_('✦ Schicken') }))) return
         const s = await aiSuggestions(catalog, st.mapping, r, ids, say); st.sugg = [...st.sugg.filter(x => x.source !== 'ai'), ...s]; say(t_('{0} KI-Vorschläge', [s.filter(x => !x.error).length])); drawSugg()
       } }, t_('✦ Vorschläge mit KI{0}', [ai.available() ? '' : ' ' + t_('(kein Schlüssel)')])),
       // Fremde Produkte (Handelsware): die Daten stehen beim Hersteller — die KI sucht im Internet, jeder Wert mit Quelle
-      el('button', { class: ai.available() ? 'primary' : '', disabled: ai.available() ? null : 'disabled', title: ai.available() ? t_('KI ({0}) sucht im Internet nach Hersteller, Typ, EAN — Datenblätter, Kataloge; je Wert die Quelle. Kostet je Suche extra beim Anbieter', [ai.label()]) : t_('kein KI-Schlüssel — Einstellungen → KI'), onclick: async () => {
+      el('button', { class: ai.available() ? 'primary ai' : 'ai', disabled: ai.available() ? null : 'disabled', title: ai.available() ? t_('KI ({0}) sucht im Internet nach Hersteller, Typ, EAN — Datenblätter, Kataloge; je Wert die Quelle. Kostet je Suche extra beim Anbieter', [ai.label()]) : t_('kein KI-Schlüssel — Einstellungen → KI'), onclick: async () => {
         const ids = st.picked.size ? [...st.picked] : r.nodes.filter(n => n.leaf && n.score != null && n.score < 100).slice(0, 5).map(n => n.row.id)
         if (!ids.length) { store.toast(t_('keine Knoten mit Lücken')); return }
         if (ids.length > 10 && !(await dialog.confirm({ title: t_('{0} Knoten recherchieren?', [ids.length]), warn: t_('{0} Anfragen mit bis zu 6 Suchen an {1}', [ids.length, ai.label()]), ok: t_('✦ Recherchieren') }))) return
@@ -554,7 +554,7 @@ export async function mount(root, ctx, catalog) {
       for (const s of st.sugg) {
         const cb = el('input', { type: 'checkbox' }); cb.checked = take.has(s); cb.disabled = !!s.error; cb.addEventListener('change', () => { cb.checked ? take.add(s) : take.delete(s) })
         const val = el('input', { type: 'text', value: s.value, style: 'width:100%' }); val.addEventListener('input', () => { s.value = val.value })
-        tb.append(el('tr', { class: s.error ? 'neg' : '' }, el('td', {}, cb), el('td', {}, s.node.label), el('td', {}, s.item ? s.item.label : '—'), el('td', {}, s.error ? '' : val), el('td', { class: 'muted', style: 'font-size:11px' }, s.source === 'web' ? `⌕ ${s.confidence != null ? Math.round(s.confidence * 100) + ' %' : ''}` : s.source === 'ai' ? `✦ ${s.confidence != null ? Math.round(s.confidence * 100) + ' %' : ''}` : '⚙'), el('td', { class: 'muted', style: 'font-size:12px;white-space:normal' }, s.why, s.url ? el('a', { href: s.url, target: '_blank', style: 'margin-left:6px', title: s.url }, t_('↗ Quelle')) : null)))
+        tb.append(el('tr', { class: s.error ? 'neg' : '' }, el('td', {}, cb), el('td', {}, s.node.label), el('td', {}, s.item ? s.item.label : '—'), el('td', {}, s.error ? '' : val), el('td', { class: s.source === 'web' || s.source === 'ai' ? 'ai' : 'muted', style: 'font-size:11px' }, s.source === 'web' ? `⌕ ${s.confidence != null ? Math.round(s.confidence * 100) + ' %' : ''}` : s.source === 'ai' ? `✦ ${s.confidence != null ? Math.round(s.confidence * 100) + ' %' : ''}` : '⚙'), el('td', { class: 'muted', style: 'font-size:12px;white-space:normal' }, s.why, s.url ? el('a', { href: s.url, target: '_blank', style: 'margin-left:6px', title: s.url }, t_('↗ Quelle')) : null)))
       }
       list.append(t, el('div', { class: 'chips', style: 'margin-top:6px' }, el('button', { class: 'primary', onclick: async () => {
         const chosen = [...take]; if (!chosen.length) return

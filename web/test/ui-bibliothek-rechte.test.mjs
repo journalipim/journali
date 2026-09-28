@@ -49,7 +49,7 @@ test.afterEach(() => { store.auth = { known: false, enabled: false, setup: false
 test('ohne download: kein Link zur Datei, kein PDF-Rahmen, kein Zuschnitt, kein Doppelklick', async () => {
   const { w } = await bibliothek(['read'])
   await kachel(w, 'blatt.pdf').trigger('click'); await flushPromises()
-  assert.equal(w.find('a[href$="/file"]').exists(), false, 'der Datei-Link steht da')
+  assert.equal(w.find('a[href*="/file?name="]').exists(), false, 'der Datei-Link steht da')
   assert.equal(w.find('.preview iframe.pdf').exists(), false, 'der PDF-Rahmen lädt die Datei')
 
   await kachel(w, 'vorne.jpg').trigger('click'); await flushPromises()
@@ -67,7 +67,7 @@ test('ohne download: kein Link zur Datei, kein PDF-Rahmen, kein Zuschnitt, kein 
 test('mit download ist der Weg da', async () => {
   const { w } = await bibliothek(['read', 'download'])
   await kachel(w, 'blatt.pdf').trigger('click'); await flushPromises()
-  assert.ok(w.find('a[href$="/file"]').exists())
+  assert.ok(w.find('a[href*="/file?name="]').exists())
   assert.ok(w.find('.preview iframe.pdf').exists())
   await kachel(w, 'vorne.jpg').trigger('contextmenu')
   assert.ok(eintrag('Zuschneiden'))
@@ -77,7 +77,7 @@ test('ohne Anmeldung gilt alles wie bisher', async () => {
   const { w } = await bibliothek(null)
   store.auth.enabled = false
   await kachel(w, 'blatt.pdf').trigger('click'); await flushPromises()
-  assert.ok(w.find('a[href$="/file"]').exists())
+  assert.ok(w.find('a[href*="/file?name="]').exists())
 })
 
 test('eine abgelaufene Kachel ist zu erkennen, und die Facette filtert danach', async () => {

@@ -100,6 +100,8 @@ body {
 .fehler { color: var(--neg); font-weight: 600; }   /* Fehlermeldung: rot und fett */
 .warn { color: var(--warn); }
 .ai { color: var(--ai); }   /* von der KI erzeugt — kostet Token */
+button.ai { border-color: var(--ai); }                                          /* ein Knopf, der die bezahlte KI ruft */
+button.primary.ai { background: var(--ai); border-color: var(--ai); color: #fff; }
 .pick.ai:hover { background: color-mix(in srgb, var(--ai) 12%, transparent); }
 .grow { flex: 1; }
 .sep { color: var(--line); }

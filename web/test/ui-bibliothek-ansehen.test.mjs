@@ -125,7 +125,7 @@ test('Doppelklick auf eine Kachel öffnet die Datei', async () => {
   await kachel(w, 'vorne.jpg').trigger('dblclick')
 
   assert.equal(gerufen.length, 1)
-  assert.equal(gerufen[0][0], '/api/media/m1/file')
+  assert.match(gerufen[0][0], /^\/api\/media\/m1\/file\?name=/, 'mit dem Namen als Parameter — eine andere Adresse als die gecachte ohne Dateinamen')
   assert.equal(gerufen[0][1], '_blank')
 })
 

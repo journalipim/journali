@@ -90,7 +90,7 @@ async function mount(root, ctx) {
     const ld = JSON.stringify(jsonLd(st.result.facts, st.locale), null, 1)
     body.append(el('div', { class: 'section' }, el('h2', {}, t('Schema.org Product (JSON-LD)') + ' ', el('span', { class: 'muted' }, t('· aus den Daten, ohne KI — für Shop oder Webseite'))), el('pre', { class: 'out', style: 'white-space:pre-wrap;font-size:11px;max-height:240px;overflow:auto' }, ld), el('button', { class: 'x', onclick: () => navigator.clipboard.writeText(ld).then(() => store.toast('kopiert', 'ok')) }, '⧉ kopieren')))
   }
-  root.append(el('div', { class: 'toolbar' }, el('h1', {}, t('✎ GEO-Texte')), el('span', { style: 'position:relative' }, nodeBtn, pick), locSel, el('button', { class: 'primary', onclick: suggest }, t('✦ Vorschlagen')), el('span', { class: 'grow' }), status), body)
+  root.append(el('div', { class: 'toolbar' }, el('h1', {}, t('✎ GEO-Texte')), el('span', { style: 'position:relative' }, nodeBtn, pick), locSel, el('button', { class: 'primary ai', onclick: suggest }, t('✦ Vorschlagen')), el('span', { class: 'grow' }), status), body)
   draw()
   return () => {}
 }
