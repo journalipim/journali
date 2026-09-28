@@ -41,7 +41,9 @@ async function pdfPages(bytes) {
       line.push({ x: item.transform?.[4] ?? 0, w: item.width ?? 0, str: item.str + (item.hasEOL ? '\n' : '') })
     }
     if (line.length) lines.push(line)
-    pages.push(lines.map(l => l.map(i => i.str).join('').trim()).filter(Boolean).join('\n'))
+    // Zellen mit Abstand: ein Sprung nach rechts wird zu zwei Leerzeichen — sonst klebte „Netzspannungsbereich220 – 240 V“
+    // zusammen, und weder Suche noch Schlüssel/Wert-Regel fanden die Grenze (28.09.2026)
+    pages.push(lines.map(l => cellsOf(l).join('  ')).filter(Boolean).join('\n'))
     rows.push(lines.map(l => cellsOf(l)).filter(c => c.length))
     page.cleanup()
   }

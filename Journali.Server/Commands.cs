@@ -127,13 +127,28 @@ public static class Commands
     }
 
     /// <summary>Attributgruppen an einen Knoten hängen (ganze Liste); die Definition gilt ab hier nach unten.</summary>
+    /// <summary>
+    /// Attributgruppen an einen Knoten hängen — die ganze Liste. Eine Gruppe, die hier neu dazukommt, gilt ab hier nach
+    /// unten; steht sie an einem Nachfahren noch einmal ausdrücklich, ist das nur eine Doppelung — und sie täuscht, denn
+    /// sie hielte die Gruppe fest, wenn hier jemand löst. Darum wird sie dort weggeräumt (28.09.2026): ein Eintrag je
+    /// betroffenem Nachfahren, nach dem eigenen.
+    /// </summary>
     public static Outcome AttachGroups(Ctx c, string id, string[]? groups)
     {
         if (!c.Tree.Nodes.TryGetValue(id, out var n)) return Outcome.Missing;
         var list = groups?.Select(g => g.Trim()).Where(g => g.Length > 0).Distinct().ToArray() ?? [];
         foreach (var g in list)
             if (!c.Model.Groups.ContainsKey(g) && !c.Model.Attributes.Values.Any(a => a.Group == g)) return Outcome.Bad("Unbekannte Gruppe: {0}", g);
-        return Outcome.Ok(c.Write(id, Types.GroupsAttached, new GroupsAttached(list)));
+        // Was von einem Vorfahren schon gilt, wird hier nicht noch einmal angeheftet — es wäre nur eine Doppelung
+        var vonOben = c.Tree.EffectiveGroups(n).Where(x => x.From.Id != n.Id).Select(x => x.Group).ToHashSet();
+        list = list.Where(g => !vonOben.Contains(g)).ToArray();
+        var neu = list.Except(n.Groups).ToHashSet();
+        var entry = c.Write(id, Types.GroupsAttached, new GroupsAttached(list));
+        if (neu.Count > 0)
+            foreach (var d in c.Tree.DescendantsDeepestFirst(id).ToList())
+                if (d.Groups.Any(neu.Contains))
+                    c.Write(d.Id, Types.GroupsAttached, new GroupsAttached(d.Groups.Where(g => !neu.Contains(g)).ToArray()));
+        return Outcome.Ok(entry);
     }
 
     public static Outcome CreateVariant(Ctx c, string? productId, Dictionary<string, string>? axisValues)

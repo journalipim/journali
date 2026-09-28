@@ -396,9 +396,10 @@ const freeGroups = computed(() => (model.value?.groups ?? []).filter(g => !(node
 const groupLabel = k => L(model.value?.groups.find(x => x.key === k)?.label) || k
 const groupLocked = k => { const g = model.value?.groups.find(x => x.key === k); return g?.activeFrom && node.value && !(node.value.groups ?? []).find(x => x.key === k)?.active }
 // Angehängte Gruppen zum Lesen sortiert: alphabetisch nach Label, gesperrte ⌀ ans Ende — die Reihenfolge im Journal ist die des Anhängens und bedeutet nichts
-// Gruppe hängt schon weiter oben — die hier ist überflüssig
+// Gruppe hängt schon weiter oben: dann steht sie hier nicht als eigene Zeile — sie gilt von dort, das Band nennt die
+// Geerbten oben. Der Server heftet so etwas seit dem 28.09.2026 nicht mehr an und räumt es beim nächsten Anhängen weg
 const fromAbove = g => path.value.find(a => (a.groups ?? '').split(',').includes(g)) ?? null
-const attachedSorted = computed(() => [...(node.value?.attachedGroups ?? [])].sort((a, b) => (groupLocked(a) ? 1 : 0) - (groupLocked(b) ? 1 : 0) || groupLabel(a).localeCompare(groupLabel(b), 'de', { sensitivity: 'base' })))
+const attachedSorted = computed(() => [...(node.value?.attachedGroups ?? [])].filter(g => !fromAbove(g)).sort((a, b) => (groupLocked(a) ? 1 : 0) - (groupLocked(b) ? 1 : 0) || groupLabel(a).localeCompare(groupLabel(b), 'de', { sensitivity: 'base' })))
 
 // ---- Laden
 /// Zellen, die gerade von aussen geändert wurden — sie blitzen kurz auf (26.09.2026). Der Schlüssel ist derselbe wie
@@ -626,9 +627,42 @@ const mediaTypes = computed(() => mediaTypesFor(model.value, node.value?.role))
 const mediaDrag = ref(false)
 const mediaFile = ref(null)
 const mediaPick = ref({ open: false })   // ▨ aus der Bibliothek … (MediaPicker)
-// ▦ Tabellen aus dem Dokument (34 L): { media: [ids] } öffnet den Dialog — nach einem Strg-Drop hier oder im Baum
+// ▦ Werte aus dem Dokument (34 L): { media: [ids], names } öffnet den Dialog — nach einem Strg-Drop hier oder im Baum,
+// oder per Rechtsklick auf ein Asset im Band (28.09.2026)
 const docTables = ref(null)
-watch(() => store.pendingDocTables, p => { if (p && p.node === props.id) { docTables.value = { media: p.media }; store.pendingDocTables = null } }, { immediate: true })
+watch(() => store.pendingDocTables, p => { if (p && p.node === props.id) { docTables.value = { media: p.media, names: p.names ?? {} }; store.pendingDocTables = null } }, { immediate: true })
+
+// ---- Auswahl im Band: Strg+Klick wählt, Rechtsklick öffnet das Menü für die Auswahl (oder die eine Kachel).
+// Ein Datenblatt liegt meist längst am Knoten — es noch einmal zu ziehen, nur um die Auswertung zu starten, legte ein
+// zweites Asset an. Mehrere zusammen sind ein Fall: Datenblatt und Massblatt desselben Produkts ergeben eine Liste
+/// Der Link zur Datei, mit dem Namen als Parameter: die Datei ist ein Jahr lang unveränderlich gecacht — mit den Köpfen
+/// von damals. Wer sie vor dem 28.09.2026 geöffnet hat, bekäme sie sonst weiter als „file“ (ohne Content-Disposition)
+const dateiLink = m => `/api/media/${encodeURIComponent(m.id)}/file?name=${encodeURIComponent(m.label ?? m.name ?? '')}`
+const pickedMedia = ref(new Set())
+watch(() => props.id, () => { pickedMedia.value = new Set() })   // ein anderer Knoten, eine leere Auswahl
+/// Ein Dokument, das der Leser (docs) versteht: nach Name oder Art — Bilder haben keinen Text
+const istDokument = m => IST_DOKUMENT.test(m?.label ?? '') || m?.mime === 'application/pdf' || /^text\//.test(m?.mime ?? '')
+function mediaClick(e, r) {
+  if (!(e.ctrlKey || e.metaKey)) return
+  e.preventDefault()   // der Klick traf vielleicht den Link zur Datei — mit Strg wird gewählt, nicht geöffnet
+  const s = new Set(pickedMedia.value); s.has(r.id) ? s.delete(r.id) : s.add(r.id); pickedMedia.value = s
+}
+function mediaMenu(e, r) {
+  const sel = pickedMedia.value.has(r.id) ? mediaRels.value.filter(x => pickedMedia.value.has(x.id)) : [r]
+  const dokumente = sel.filter(x => istDokument(x.other))
+  const names = Object.fromEntries(dokumente.map(x => [x.other.id, x.other.label]))
+  menu.open(e, [
+    { label: sel.length > 1 ? t_('{0} Assets', [sel.length]) : r.other.label, disabled: true },
+    { sep: true },
+    { label: dokumente.length > 1 ? t_('{0} Dokumente auswerten …', [dokumente.length]) : t_('Dokument auswerten …'), icon: '▦', key: 'a', disabled: !dokumente.length,
+      hint: dokumente.length ? t_('Tabellen und Text → Attribute') : t_('kein Dokument'), action: () => { docTables.value = { media: dokumente.map(x => x.other.id), names } } },
+    { label: pickedMedia.value.has(r.id) ? t_('Abwählen') : t_('Auswählen'), icon: '☑', key: 'm', hint: 'Strg+Klick', action: () => { const s = new Set(pickedMedia.value); s.has(r.id) ? s.delete(r.id) : s.add(r.id); pickedMedia.value = s } },
+    pickedMedia.value.size ? { label: t_('Auswahl aufheben ({0})', [pickedMedia.value.size]), icon: '☐', key: 'Escape', hint: 'Esc', action: () => { pickedMedia.value = new Set() } } : null,
+    { sep: true },
+    { label: sel.length > 1 ? t_('{0} Zuordnungen lösen', [sel.length]) : t_('Zuordnung lösen'), icon: '×', key: 'Delete', danger: true, hint: t_('das Medium bleibt in der Bibliothek'),
+      action: async () => { for (const x of sel) await retireRel(x); pickedMedia.value = new Set() } },
+  ])
+}
 
 // ---- Reihenfolge der Assets: ziehen statt Zahlen tippen.
 // Die Reihenfolge steht als Wert „position“ an der Zuordnung (relation_media). Beim Ablegen bekommt jede
@@ -663,8 +697,8 @@ async function uploadMedia(files, auswerten = false) {
     const erg = await attachFiles(files, props.id, mediaTypes.value)
     for (const f of erg.fehler) store.toast(f)
     if (erg.zugeordnet) store.toast(medienMeldung(erg), 'ok')
-    const dokumente = auswerten ? (erg.medien ?? []).filter(m => IST_DOKUMENT.test(m.name)).map(m => m.id) : []
-    if (dokumente.length) docTables.value = { media: dokumente }
+    const dokumente = auswerten ? (erg.medien ?? []).filter(m => IST_DOKUMENT.test(m.name)) : []
+    if (dokumente.length) docTables.value = { media: dokumente.map(m => m.id), names: Object.fromEntries(dokumente.map(m => [m.id, m.name])) }
     await load(); store.poll(true)
   } catch (e) { store.toast(e.message) }
   finally { busy.value = false; mediaDrag.value = false }
@@ -931,7 +965,6 @@ function cellMenu(e, def, col, block) {
                   @click="scriptCell = { def, col: c }" @keydown.enter.prevent="scriptCell = { def, col: c }"
                   :title="(ownValue(def.key, c) ?? inherited(def, c).value ?? $t('Skript anlegen (Editor öffnen)')) + (inherited(def, c).from && ownValue(def.key, c) == null ? '\n\ngeerbt von ' + inherited(def, c).from.label : '')">
                   <span class="res">{{ computedValue(def.key, c.locale) ?? '—' }}</span>
-                  <span class="src muted">{{ (ownValue(def.key, c) ?? inherited(def, c).value ?? '').split('\n')[0].slice(0, 40) }}</span>
                 </div>
               </td>
             </template>
@@ -986,14 +1019,14 @@ function cellMenu(e, def, col, block) {
     </template>
 
       <div class="section" :class="{ over: mediaDrag }" @dragover.prevent="mediaDrag = true" @dragleave="mediaDrag = false" @drop.prevent="uploadMedia([...$event.dataTransfer.files], $event.ctrlKey || $event.metaKey)">
-        <h2 @click="toggle('media')" :title="$t('Dateien hierher ziehen legt sie an diesem Knoten ab. Mit Strg werden die Tabellen eines Dokuments ausgewertet.')"><span class="caret">{{ open('media') ? '▾' : '▸' }}</span>{{ $t("▩ Assets") + ' ' }}<span class="muted">· {{ mediaRels.length }}<template v-if="inheritedMedia.length">{{ ' ' + $t("· {0} geerbt", [inheritedMedia.length]) }}</template></span></h2>
+        <h2 @click="toggle('media')" :title="$t('Dateien hierher ziehen legt sie an diesem Knoten ab. Mit Strg wird ein Dokument ausgewertet — ein Rechtsklick auf ein Asset tut dasselbe.')"><span class="caret">{{ open('media') ? '▾' : '▸' }}</span>{{ $t("▩ Assets") + ' ' }}<span class="muted">· {{ mediaRels.length }}<template v-if="inheritedMedia.length">{{ ' ' + $t("· {0} geerbt", [inheritedMedia.length]) }}</template></span></h2>
         <template v-if="open('media')">
         <div class="tiles">
-          <div v-for="(r, i) in mediaRels" :key="r.id" class="tile" :class="{ first: i === 0, drop: mediaDropId === r.id, dragging: mediaDragId === r.id }"
+          <div v-for="(r, i) in mediaRels" :key="r.id" class="tile" :class="{ first: i === 0, drop: mediaDropId === r.id, dragging: mediaDragId === r.id, picked: pickedMedia.has(r.id) }"
             draggable="true" @dragstart="mediaDragStart($event, r)" @dragover="mediaDragOver($event, r)" @dragleave="mediaDropId === r.id && (mediaDropId = null)"
-            @drop.prevent="mediaDrop(r)" @dragend="mediaDragEnd"
-            :title="`${r.other.label} · ${r.other.mime ?? ''} · ${$L(relType(r.type)?.label) || r.type}\n${$t('ziehen: Reihenfolge ändern')}`">
-            <a :href="store.can('download') ? `/api/media/${r.other.id}/file` : null" :target="store.can('download') ? '_blank' : null"><MediaThumb v-if="r.other.isImage || r.other.hasThumb" :id="r.other.id" :self="r.other.isImage" /><div v-else class="doc">{{ (r.other.mime ?? '').split('/')[1]?.slice(0, 6) || '📄' }}</div></a>
+            @drop.prevent="mediaDrop(r)" @dragend="mediaDragEnd" @click="mediaClick($event, r)" @contextmenu="mediaMenu($event, r)"
+            :title="`${r.other.label} · ${r.other.mime ?? ''} · ${$L(relType(r.type)?.label) || r.type}\n${$t('ziehen: Reihenfolge ändern · Strg+Klick: wählen · Rechtsklick: auswerten')}`">
+            <a :href="store.can('download') ? dateiLink(r.other) : null" :target="store.can('download') ? '_blank' : null"><MediaThumb v-if="r.other.isImage || r.other.hasThumb" :id="r.other.id" :self="r.other.isImage" /><div v-else class="doc">{{ (r.other.mime ?? '').split('/')[1]?.slice(0, 6) || '📄' }}</div></a>
             <div class="name"><span v-if="r.other.valid === false" class="neg" :title="$t('gilt heute nicht — fällt aus der Ausleitung')">⌛ </span><router-link :to="`/media`" class="muted">{{ r.other.label }}</router-link></div>
             <table class="grid" style="width:auto;margin:0"><tbody>
               <tr v-for="d in relGroupAttrs(r.type).filter(d => d.key !== 'stop')" :key="d.key"><td class="muted" style="font-size:11px;padding:0 4px" :title="d.key === 'inherit' ? $t('gilt dann an allen Subitems — bis eines die Vererbung stoppt') : d.key">{{ $L(d.label) || d.key }}</td>
@@ -1003,7 +1036,7 @@ function cellMenu(e, def, col, block) {
           </div>
           <!-- geerbte Medien: kursiv, gedämpft, mit Herkunft — hier nicht änderbar; ein eigenes Medium dieses Typs bricht die Vererbung -->
           <div v-for="r in inheritedMedia" :key="'inh-' + r.id" class="tile inherited" :title="$t('geerbt von {0} — nicht löschbar; ⛔ sperrt es hier und an allen Subitems', [r.from.label])">
-            <a :href="`/api/media/${r.other.id}/file`" target="_blank"><MediaThumb v-if="r.other.isImage || r.other.hasThumb" :id="r.other.id" :self="r.other.isImage" /><div v-else class="doc">{{ (r.other.mime ?? '').split('/')[1]?.slice(0, 6) || '📄' }}</div></a>
+            <a :href="dateiLink(r.other)" target="_blank"><MediaThumb v-if="r.other.isImage || r.other.hasThumb" :id="r.other.id" :self="r.other.isImage" /><div v-else class="doc">{{ (r.other.mime ?? '').split('/')[1]?.slice(0, 6) || '📄' }}</div></a>
             <div class="name muted"><i>{{ r.other.label }}</i></div>
             <div class="muted meta">{{ $L(relType(r.type)?.label) || r.type }} · <router-link :to="`/tree/${r.from.id}`" class="muted" :title="$t('zum Knoten, an dem das Medium hängt')">↑ {{ r.from.label }}</router-link>
               <button class="x" style="float:right" @click="stopInherited(r)" :title="$t('Medium hier und an allen Subitems sperren (rücknehmbar)')">⛔</button></div>
@@ -1020,7 +1053,7 @@ function cellMenu(e, def, col, block) {
           <button @click="mediaPick.open = true" :title="$t('Medien aus der Bibliothek zuordnen — Ordner, Suche, Mehrfachauswahl')">{{ $t("▨ Aus der Bibliothek wählen …") }}</button>
         </div>
         <MediaPicker v-if="mediaPick.open" :types="mediaTypes" :exclude="[...mediaRels, ...stopped].map(r => r.other.id)" @pick="linkMedia" @close="mediaPick.open = false" />
-        <DocTables v-if="docTables" :node="node" :media="docTables.media" @close="docTables = null" @done="docTables = null; load(); store.poll(true)" />
+        <DocTables v-if="docTables" :node="node" :media="docTables.media" :names="docTables.names ?? {}" @close="docTables = null" @done="docTables = null; load(); store.poll(true)" />
         </template>
       </div>
 
@@ -1155,8 +1188,8 @@ function cellMenu(e, def, col, block) {
           <tbody>
             <tr v-for="g in attachedSorted" :key="g" :title="g">
               <td><router-link :to="{ path: '/model', query: { section: 'groups', key: g } }">▤ {{ groupLabel(g) }}</router-link></td>
-              <td class="muted" :title="fromAbove(g) ? $t('{0} hängt schon an {1} und gilt von dort nach unten — hier überflüssig, × nimmt sie ab', [groupLabel(g), fromAbove(g).label]) : ''">{{ groupLocked(g) ? $t('⌖ hier gesperrt — aktiv ab') + ' ' + roleLabel[model.groups.find(x => x.key === g).activeFrom] : fromAbove(g) ? $t('⚠ schon von {0} — überflüssig', [fromAbove(g).label]) : $t('ab hier nach unten') }}</td>
-              <td class="num"><button class="x" @click="attach(node.attachedGroups.filter(x => x !== g))" :title="fromAbove(g) ? $t('hier abnehmen — sie gilt weiter von {0}', [fromAbove(g).label]) : $t('Gruppe hier abnehmen')">×</button></td>
+              <td class="muted">{{ groupLocked(g) ? $t('⌖ hier gesperrt — aktiv ab') + ' ' + roleLabel[model.groups.find(x => x.key === g).activeFrom] : $t('ab hier nach unten') }}</td>
+              <td class="num"><button class="x" @click="attach(node.attachedGroups.filter(x => x !== g))" :title="$t('Gruppe hier abnehmen')">×</button></td>
             </tr>
           </tbody>
         </table>
@@ -1230,6 +1263,7 @@ th.master { color: var(--accent); font-weight: 700; }
 .tile .name a { text-decoration: none; }
 .tile .meta { font-size: 11px; margin-top: 2px; }
 .tile.first { border-color: var(--accent); }
+.tile.picked { background: var(--accent-soft); }
 .tile.drop { outline: 2px dashed var(--accent); outline-offset: -2px; }
 .tile.dragging { opacity: .5; }
 .tile .pos1 { color: var(--accent); }

@@ -261,6 +261,27 @@ die den Begriff benutzen — ohne einen einzigen Produkteintrag. Zweiter
 Nutzen: Übersetzungsgedächtnis — was in einem Produkt schon übersetzt
 wurde, schlägt das Wörterbuch beim nächsten vor.
 
+**Entschieden (28.09.2026): Sätze, die man je Produkt auswählt, sind Listenwerte — kein zweites Wörterbuch.** Der
+Anlass ist der Abschnitt „Funkentstörung“ eines Datenblatts — acht Punkte wie „Netzleitung und Lampenleitung nicht
+kreuzen“. Das nächste Datenblatt hat denselben Abschnitt, aber „… bitte nicht kreuzen“: derselbe Sachverhalt, frei
+getextet, weil die Redaktion nicht mehr weiss, wie sie es beim anderen Produkt formuliert hat. Datengetrieben heisst:
+**der Satz steht einmal da**, einmal übersetzt, und jedes Produkt **verweist** auf ihn.
+
+Die Trennung, die dabei gilt: das **Wörterbuch** (`Terms`) ist die Übersetzungsschicht — Glossar und Gedächtnis
+für Systemtexte, Attributnamen, Fachwörter; es wird nicht am Produkt ausgewählt. Die **Werteliste** ist die Auswahl am
+Produkt, und sie hat schon alles, was ein „Satz mit Gruppe“ braucht: die Liste ist die Gruppe, jeder Wert hat einen
+Schlüssel und einen Text je Sprache (`ListValueDefinition(Value, Labels)`), das Attribut ist `enum` mehrwertig, der
+Server prüft gegen die Liste, Ausleitung, Formel und Datenblatt lösen den Schlüssel in der Sprache auf. Ein Attribut
+`terms` hätte dasselbe noch einmal gebaut. Gebaut ist darum nur, was fehlte (34 L): die Punkte eines Abschnitts als
+Werte der Liste gleichen Namens, je Satz **Best Guess** gegen die vorhandenen Werte — gleich, normalisiert gleich,
+oder ähnlich ab der Schwelle des Mappers (0,72), Ähnlichkeit aber nur für Sätze, nie für Codes („EN 61347-2-12“ und
+„EN 61347-2-13“ sind sich ähnlich und verschieden) —, was nicht trifft, kommt neu in die Liste (Schlüssel aus dem
+Text), solange sie nicht geschlossen ist.
+
+Offen und die eigentliche Lücke: **⇄ Übersetzung kennt die Texte der Wertelisten nicht** — ein Satz, der einmal
+gepflegt ist, muss dort einmal übersetzt werden können wie ein Attributwert (XLIFF hin und zurück, DeepL, KI, das
+Gedächtnis). Bis dahin stehen die Übersetzungen der Listenwerte im Modell (Wertelisten), von Hand.
+
 ### 10. Platzhaltertexte (`template:<family>/<attribute>`)
 
 *Lesart (Vorschlag):* Textvorlagen je Familie × Attribut × Sprache × Kanal,
@@ -1231,7 +1252,8 @@ ist dann zugleich das Werkzeug `aehnlich` für den MCP-Dienst (§31).
   feldweise wie beim Produkt?
 - Relationen gerichtet mit expliziter Gegenrichtung oder abgeleitet?
 - HTML in `description`: roh speichern (Vorschlag) oder strukturiert (Markdown)?
-- Wörterbuch: nur Begriffe (Vorschlag) oder auch ganze Sätze/Bausteine?
+- ~~Wörterbuch: nur Begriffe (Vorschlag) oder auch ganze Sätze/Bausteine?~~ — entschieden 28.09.2026: auch Sätze, in
+  Gruppen (9).
 - Platzhaltertext-Ergebnis als Ableitung (Vorschlag) oder beim Anlegen als
   Eintrag „eingefroren"?
 - Plugins: darf ein Import Handwerte überschreiben — je Attribut regelbar
@@ -1716,15 +1738,34 @@ auf einen Knoten gezogen bringt „Kein Importer für …“. Zu bauen: ein Asse
 angelegt, verarbeitet (Masse, Ableitungen, Text) **und** dem Knoten zugeordnet. Das ist der kürzeste Weg von der
 Datei zum Produkt und sollte der erste Block der Oberfläche sein.
 
-**L. Technische Tabellen aus einem Dokument — gebaut (27.09.2026).** Mit gedrückter Steuerungstaste auf einen
-Knoten gezogen (Baum oder Medienband), wird ein Dokument nicht nur angehängt, sondern **ausgewertet**: Tabellen darin
-werden Zeilen Schlüssel/Wert, den Attributen des Knotens zugeordnet — und wo es keines gibt, entsteht das Attribut im
-selben Schritt. Es läuft nie ohne Bestätigung: ein falsch erkanntes Attribut ist teurer als ein nicht erkanntes.
+**L. Werte aus einem Dokument — gebaut (27.09.2026, Text gegen das Modell und Rechtsklick 28.09.2026).** Die
+Konzeption in einem Satz: **für jeden gefundenen Wert wird nach Best Guess ein bestehendes Attribut vorgeschlagen;
+gibt es keines, lässt es sich neu anlegen und einer Attributgruppe zuordnen — einer bestehenden oder einer neuen —, und
+die Gruppe kommt an den Knoten oder an eine Ebene darüber.** Ein Dokument am Knoten wird also nicht nur angehängt,
+sondern **ausgewertet**, aus zwei Quellen in einer Liste: **Tabellen** darin werden Zeilen Schlüssel/Wert; der
+**Text** geht gegen die Attribute, die an diesem Knoten gelten, und die KI nennt je Attribut Wert, Seite, Stelle und
+Sicherheit, dazu alles Weitere als Bezeichnung/Wert. Es läuft nie ohne Bestätigung: ein falsch erkanntes Attribut ist
+teurer als ein nicht erkanntes.
 
-Die vier Schritte, wie sie stehen:
+Zwei Wege hinein, derselbe Dialog dahinter:
 
-1. **Anhängen** (K): die Datei wird ein Asset am Knoten. Mit Strg merkt sich der Baum die Dokumente
-   (`store.pendingDocTables`) und springt zum Knoten; das Medienband öffnet den Dialog direkt.
+- **Ziehen mit Strg** auf einen Knoten (Baum oder Medienband): die Datei wird ein Asset (K) — mit Strg merkt sich der
+  Baum die Dokumente samt Namen (`store.pendingDocTables`) und springt zum Knoten; das Medienband öffnet den Dialog
+  direkt.
+- **Shift beim Ablegen** auf eine Gruppe oder ein Produkt: je Dokument ein **neuer Knoten darunter** — Produkt unter der
+  Gruppe, Variante unter dem Produkt (nur ohne Achsen; eine Variante mit Achsen braucht Achsenwerte) —, benannt nach
+  der Datei ohne Endung, mit dem Dokument als Asset. Ein Stapel je Knoten (`product.create`/`variant.create`,
+  `node.rename` über `@n`), dann das Asset. Ein Dokument: der Baum springt hin und öffnet die Auswertung; mehrere: er
+  bleibt stehen und zählt. Was kein Dokument ist, legt keinen Knoten an.
+- **Rechtsklick auf ein Asset** im Band der Knotenansicht — oder auf mehrere, mit Strg+Klick gewählte. Ein Datenblatt
+  liegt meist längst am Knoten; es noch einmal zu ziehen, nur um die Auswertung zu starten, legte ein zweites Asset
+  an. Mehrere zusammen sind ein Fall: Datenblatt und Massblatt desselben Produkts ergeben **eine** Liste, die Quelle
+  je Zeile nennt das Dokument. Bilder haben keinen Text — an ihnen ist der Eintrag gesperrt. Dasselbe Menü löst
+  Zuordnungen, einzeln oder für die Auswahl.
+
+Die Schritte, wie sie stehen:
+
+1. **Anhängen** (K), wenn die Datei neu ist — beim Rechtsklick entfällt das.
 2. **Tabellen finden** — Teil von `docs`, nicht ein eigenes Plugin: ein Dokument wird einmal gelesen. Der Leser behält
    je Textstück die x-Lage; ein Sprung nach rechts trennt Zellen (`cellsOf`), drei oder mehr Zeilen Schlüssel/Wert
    hintereinander sind eine Tabelle, die Überschrift davor gehört dazu (`findTables`); bei Textdateien gilt „Schlüssel:
@@ -1737,17 +1778,97 @@ Die vier Schritte, wie sie stehen:
    (Schlüssel, Bezeichnung, Synonym, Ähnlichkeit), die Einheit aus dem Wert (`splitUnit`: „22 mm“ → 22, `mm`, nur
    wenn das Modell die Einheit kennt), der Typ aus dem Wert, der Wert umgeformt und geprüft. Schlüsselspalten (Id,
    Elternteil, Status) gibt es in dieser Lage nicht. Passt der Wert nicht zum geratenen Typ, wird das Attribut Text.
-4. **Bestätigen** — `DocTables.vue`: je Zeile Haken, Schlüssel und Rohwert aus dem Dokument, das Attribut (gefunden,
-   „+ neu: key“ oder nichts), Typ und Einheit eines neuen, der Wert, wie er geschrieben wird, und der Grund. Erst ✓
-   schreibt, in dieser Reihenfolge: `PUT /api/model/attributes/{key}` je neuem Attribut (Modell, zählt nicht) in der
-   **festen Gruppe `from_document` („aus Dokument“)** — eine Entscheidung: der Dialog fragt nicht je Attribut nach
-   der Gruppe, eingeordnet wird später im Modell; dann `PUT /api/nodes/{id}/groups`, wenn die Gruppe am Pfad noch
-   nicht gilt; dann **ein Stapel** `attribute.set` (`POST /api/batch?skipErrors=true`, Pflege, zählt) — was der
-   Server ablehnt, steht als Meldung je Zeile, der Rest wird geschrieben.
+   Eine **Zahl mit einer Einheit, die das Modell nicht kennt** („104 Hz“), wird für ein neues Attribut trotzdem eine
+   Zahl: Einheit `Hz`, gekennzeichnet als neu, angelegt beim ✓ (`ensureUnit`, Schlüssel ist das Symbol) — vorher war
+   das Text, und am ersten Datenblatt waren es siebzehn Textattribute für Watt, Hertz und Volt. „560 Stk.“: der Punkt
+   gehört nicht zur Einheit. Eine **Aufzählung** („EN 55015, EN 61000-3-2, …“ — zwei oder mehr kurze Glieder) wird
+   eine **Werteliste**, mehrwertig: beim ✓ die Liste unter dem Schlüssel des Attributs, ihre Werte aus dem Dokument,
+   das Attribut `enum` darauf, der Wert als `values`. Der Typ eines neuen Attributs lässt sich im Dialog umstellen —
+   `enum` macht aus dem Wert eine Liste, jeder andere Typ formt ihn um. Beim Öffnen holt der Dialog das Modell frisch
+   (`store.poll(true)`): der zweite Lauf über dasselbe Dokument kennt die Attribute des ersten und schlägt sie vor.
+   **Was die bezahlte KI tut, ist magenta** (`--ai`, Klasse `ai`): die ✦-Zeilen, der Lauf, die Knöpfe der
+   Prüfmaschine, geo und xliff — Prüfstand `ui-ki-farbe`.
+4a. **Text gegen das Modell ohne KI** (▦ Zeile, ⌕ Sinnsuche; 28.09.2026) — bei einem Datenblatt steht der Wert in
+   derselben Zeile wie sein Schlüssel, und die Zellen sind seit dem 28.09. mit Abstand getrennt. Je Attribut, das hier
+   gilt, die Zeile im Text, deren Schlüssel Bezeichnung, Attributschlüssel oder ein Synonym des Mappers trifft
+   (gleich, beginnt damit, ähnlich ≥ 0,72) — der Rest der Zeile ist der Wert, mit Einheit abgetrennt, umgeformt,
+   geprüft. Dazu die **Spaltentabelle**: ist der Attributname eine Zelle eines Kopfs („Typ  Artikelnummer“), steht
+   der Wert in derselben Spalte der Wertzeile — die kommt oft Zeilen später, weil der Kopf umgebrochen ist
+   („Verpackung“, „Karton“, … je eine Zeile); gesucht wird bis zwölf Zeilen voraus nach einer Zeile mit genügend
+   Zellen. Eine **EAN** ist dreizehn Ziffern mit Prüfziffer, irgendwo im Text. Der **Name** kommt aus der Spalte
+   „Typ“ einer Tabelle — die Typenbezeichnung; die erste Überschrift war es nicht, die hiess am ersten Datenblatt
+   „Gewicht“. Ein Wert, der mit einem Vergleichszeichen endet („tc/ta für ≥“), ist ein Kopf. Prüfwerkzeug:
+   `node plugins/docs/zeilen.mjs <datei.pdf>` zeigt die Zeilen, wie der Leser sie in den Index legt. Die Suche (⌕) braucht
+   ≥ 0,6, einen Wert, der einer ist, und schlägt einer Werteliste nichts Neues vor. Die Werte stehen nach Attribut
+   sortiert; die Quelle nennt die Seite. Für Attribute ohne Zeilentreffer eine Frage je Attribut an `GET /api/docs/search?mode=hybrid&under=
+   <knoten>` (Wörter, und Vektoren, wenn `embed` läuft): im gefundenen Abschnitt die passendste Schlüssel/Wert-Zeile,
+   ab 0,5, mit der Sicherheit, die sie hat — „Nennmasse: 1,5 kg“ für Gewicht. Ein Zahlenattribut nimmt die Zahl
+   aus dem Wert („pro Stk.  0,105 kg“ → 0,105); ohne Zahl (ein Tabellenkopf, eine Nebenzelle) gibt es keine Zeile —
+   ein falscher Vorschlag ist schlechter als keiner. Findet ohne Kosten, was zu finden ist;
+   was Zeile und KI beide finden, ist derselbe Wert oder ein Widerspruch (5).
+4. **Text gegen das Modell** (✦) — nur mit KI-Schlüssel am Team, und **nur auf Knopfdruck** („✦ KI fragen“, magenta,
+   bereit, sobald der Text da ist): was Token kostet, läuft nicht von selbst (28.09.2026). Sonst bleibt es bei 2, 3
+   und 4a. Die Attribute, die an
+   diesem Knoten gelten (die aktiven Gruppen am Pfad, `node.groups`), und der Text des Dokuments
+   (`GET /api/docs/{id}/text`, mit Seitenmarken, bis 60 000 Zeichen — ein Datenblatt hat wenige Seiten, ein Katalog
+   nicht) gehen einmal je Dokument an die KI; sie antwortet je Attribut mit Wert, Seite, Stelle (wörtlich) und
+   Sicherheit — und dazu **alle weiteren technischen Daten** als Bezeichnung/Wert (auch aus Tabellen und Massangaben
+   in Zeichnungen). Ohne das fand die KI an einem Knoten mit drei Attributen drei Werte, während das Datenblatt
+   zwanzig hatte. Dazu bekommt sie **alle Attribute des Modells** (Schlüssel und Bezeichnung, im gecachten Systemtext)
+   und nennt den Schlüssel, wenn es die Sache schon gibt — sonst hiess „Lampenwattage“ beim zweiten Lauf
+   „Lampenleistung“, und es entstanden zwölf Attribute für Werte, die es schon gab. Ein genannter Schlüssel gilt; ohne
+   geht die Zeile durch den Mapper wie eine Tabellenzeile (3), aber nur über Schlüssel, Bezeichnung und Synonym — ein
+   reiner Ähnlichkeitstreffer („λ bei 50 Hz“ ≈ „Strom bei 50 Hz“) zählt bei einer KI-Zeile nicht, sie kannte die
+   Liste. Das Ziel bleibt wählbar. Der Wert wird wie bei 3 umgeformt und geprüft; eine
+   Einheit im Wert („35 W“) stört nicht. Ein Attribut, das am Knoten
+   schon einen eigenen Wert hat, bleibt ohne Haken: der Anwender entscheidet, nicht der Vorschlag. Das Attribut einer
+   ✦-Zeile steht fest — die KI hat es ja gegen genau dieses Attribut gelesen.
+   **Textbausteine** (▤) — die dritte Quelle, ohne KI: jeder Abschnitt mit Überschrift aus dem Index
+   (`GET /api/docs/{id}/text`), aufeinanderfolgende unter derselben Überschrift zusammen, zu kurze nicht. Ein
+   Abschnitt wie „Funkentstörung“ mit acht Punkten hat keinen Wert, aber einen Platz am Produkt: als `html`-Attribut
+   (mit Sprache), neu unter dem Schlüssel der Überschrift oder in ein bestehendes Textattribut — Aufzählungspunkte
+   werden eine Liste, der Rest Absätze. Eigene Zeilengruppe unter den Werten, **keine Zeile trägt einen Haken**: bei
+   einem 40-seitigen Katalog wären das 40 Textattribute, die niemand will; bei einem Datenblatt sind „Montage“,
+   „Funkentstörung“, „Normen“ genau die drei, die auf die Produktseite gehören. Man nimmt, was gehört — mit einer
+   Ausnahme: trifft der Baustein ein **vorhandenes** Attribut, das hier noch leer ist, ist er angehakt; das Modell
+   sagt, das Produkt hat es, das Datenblatt liefert es.
+    **Eine Aufzählung wird eine Werteliste** (9): die Punkte unter „Funkentstörung“ sind keine Absätze, sondern Sätze,
+   die man je Produkt auswählt. Die Überschrift sucht ein Attribut (Mapper) — trifft sie eine mehrwertige Liste,
+   geht jeder Satz gegen deren Werte: gleich oder normalisiert gleich, bei Sätzen auch ähnlich (≥ 0,72; „bitte nicht
+   kreuzen“ trifft „nicht kreuzen“), sonst neu mit einem Schlüssel aus dem Text. Beim ✓ kommen die neuen Sätze in die
+   Liste (`PUT /api/model/lists/{key}/values`), der Wert sind die Schlüssel. Ohne passendes Attribut: neu als `enum`
+   mehrwertig mit eigener Liste, umstellbar auf `html`. Dasselbe gilt für Aufzählungen in Werten („Normen“) und für
+   jede Zeile, deren Ziel ein enum-Attribut ist: was in der Liste fehlt, wird nachgetragen — nicht abgelehnt.
+   **↻ neu lesen** im Kopf des Dialogs löscht den Eintrag im Index und lässt den Job das Dokument neu lesen — nötig,
+   wenn der Leser sich geändert hat (Tabellen seit 27.09., Zellen mit Abstand seit 28.09.) und der Index den alten
+   Stand hält. Ein neues html-Attribut aus einem Baustein bekommt die Sprachachse (`axes: ['locale']`).
+   **In der Zelle** eines mehrwertigen Listenattributs ändert ✎ den Text eines Werts (Modell-Recht, die anderen
+   Sprachen bleiben) — bei einer Liste aus Sätzen ist die Zelle der Ort, an dem der Tippfehler auffällt.
+5. **Bestätigen** — `DocTables.vue`: je Zeile Haken, Schlüssel und Rohwert (bei ✦ die Stelle) aus dem Dokument, die
+   Quelle (▦ Tabelle oder ✦ KI, Seite, Sicherheit; das Dokument und die Stelle im Tooltip), das Attribut (gefunden,
+   „+ neu: key“ oder nichts), Typ und Einheit eines neuen, der Wert, wie er geschrieben wird, und der Grund.
+   **Zielen zwei Zeilen auf dasselbe Attribut**, kommt es auf den Wert an: derselbe Wert ist kein Widerspruch — beide
+   bleiben angehakt, geschrieben wird einmal, mit dem Beleg der ersten; verschiedene Werte tragen keinen Haken, jede
+   Zeile nennt den anderen Wert (≠), und der Anwender wählt — hakt er eine an, verliert die andere den Haken. Der
+   Dialog entscheidet das nicht vorab. **Neue Attribute brauchen eine Gruppe und eine Ebene**: unten steht die
+   Gruppe zur Wahl — eine des Modells oder „+ neue Gruppe“ mit Namen; Vorgabe ist `from_document` („aus Dokument“),
+   wenn es sie gibt. Gilt die Gruppe am Knoten noch nicht, steht daneben der Pfad von der Wurzel bis hierher als
+   Ebene, an die sie kommt — Vorgabe der Knoten selbst; weiter oben gilt sie für alles darunter („Elektrik“ an die
+   Produktgruppe, und jedes Produkt darunter hat die Attribute). Eine Gruppe für alle neuen Attribute eines Laufs,
+   nicht je Zeile — eingeordnet wird später im Modell. Erst ✓ schreibt, in dieser Reihenfolge:
+   `PUT /api/model/groups/{key}`, wenn die Gruppe neu ist; `PUT /api/model/attributes/{key}` je neuem Attribut
+   (Modell, zählt nicht) in dieser Gruppe; dann `PUT /api/nodes/{ebene}/groups`, wenn die Gruppe am Pfad noch nicht
+   gilt — an einer Ebene darüber wird vorher gelesen, was dort hängt, denn `GroupsAttached` ist die ganze Liste; dann
+   **ein Stapel**
+   (`POST /api/batch?skipErrors=true`, Pflege, zählt): je Wert `attribute.set` und direkt dahinter der **Beleg**
+   `value.source` — Quelle ist der Name des Dokuments, Titel die Seite, Notiz die Stelle (▦: die Überschrift der
+   Tabelle; ✦: das Zitat und die Sicherheit), Weg `import` (▦) oder `ai` (✦). Was der Server ablehnt, steht als
+   Meldung je Zeile, der Rest wird geschrieben.
 
 Offen: Tabellen mit mehr als zwei Spalten (Varianten je Spalte) werden heute als Schlüssel plus zusammengezogener Wert
-gelesen; eine Zuordnung Spalte → Variante wäre der nächste Schritt. Und ein Bild von einer Tabelle (Scan) braucht erst
-die Texterkennung (J).
+gelesen; eine Zuordnung Spalte → Variante wäre der nächste Schritt. Ein Bild von einer Tabelle (Scan) braucht erst die
+Texterkennung (J). Und ein zweites Datenblatt am selben Knoten ergänzt die Vorschläge des ersten nicht — jeder Aufruf
+des Dialogs ist eine eigene Liste; was übernommen wurde, steht am Wert als Beleg.
 
 ### Semantische Suche
 

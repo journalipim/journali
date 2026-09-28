@@ -41,7 +41,7 @@ Eintrag übergeht das Abbild.
 | `NodeRetired` | — | Knoten aus dem Abbild (nur ohne Kinder); das Journal behält alles — das Abbild legt ihn in den Papierkorb |
 | `NodeRestored` | — | Knoten zurück aus dem Papierkorb, mit allem, was er hatte (Werte, Gruppen, Kennungen); der Vater muss im Baum stehen. Rückgängig je Aktion über den Stapel: `POST /api/batches/{batch}/undo` holt genau die Knoten des Stapels zurück |
 | `StatusSet` | `status` (Schlüssel aus dem Status-Vokabular des Modells), `from?` (Tag JJJJ-MM-TT) | Produkt und Variante; eine Gruppe hat erst einen, wenn er gilt. Saat: draft, active, discontinued. `from` ist der Tag, ab dem er gilt — in der Zukunft (zum Jahreswechsel auslaufen) wie in der Vergangenheit (einen Stand nachtragen); ohne `from` gilt er ab dem Eintrag. Was heute gilt, rechnet das Abbild: die Stufe mit dem grössten Tag, der nicht in der Zukunft liegt, bei gleichem Tag die zuletzt eingetragene (`Node.Status`, `Node.StatusAm(tag)`, `Node.StatusGeplant`) |
-| `GroupsAttached` | `groups[]` | welche Attributgruppen an diesem Knoten hängen (ganze Liste); die **Definition** vererbt sich nach unten — ob der **Wert** vererbt wird, sagt das Attribut |
+| `GroupsAttached` | `groups[]` | welche Attributgruppen an diesem Knoten hängen (ganze Liste); die **Definition** vererbt sich nach unten — ob der **Wert** vererbt wird, sagt das Attribut. Kommt eine Gruppe hier neu dazu, räumt der Befehl die gleiche Anheftung an Nachfahren weg (ein Eintrag je Nachfahr) — darunter wäre sie nur eine Doppelung, die die Gruppe festhielte, wenn hier jemand löst (28.09.2026) |
 | `ExternalLinked` | `system`, `id` | externe Kennung je Quellsystem (Import: Update statt Neuanlage); je System nur ein Knoten |
 | `ExternalUnlinked` | `system` | Kennung weg |
 

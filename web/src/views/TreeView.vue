@@ -328,10 +328,49 @@ async function dropAssets(files, r) {
   return erg
 }
 
+/// Shift+Drop: je Dokument ein neuer Knoten darunter — Produkt unter einer Gruppe, Variante unter einem Produkt —, benannt
+/// nach der Datei, mit dem Dokument als Asset (28.09.2026). Ein Stapel je Knoten: anlegen, benennen; dann das Asset.
+/// Ein Dokument: der Baum springt hin und öffnet die Auswertung; mehrere: er bleibt stehen und zählt
+async function dropAnlegen(files, r) {
+  if (!store.actor) { store.toast(t_('👤 Name fehlt → Einstellungen')); return }
+  if (r.role !== 'group' && r.role !== 'product') { store.toast(t_('Ziel muss eine Gruppe oder ein Produkt sein')); return }
+  const dokumente = files.filter(f => IST_DOKUMENT.test(f.name))
+  if (!dokumente.length) { store.toast(t_('Kein Dokument dabei')); return }
+  if (r.role === 'product' && (r.axes ?? []).length) { store.toast(t_('Produkt hat Achsen — eine Variante braucht Achsenwerte')); return }
+  const rolle = r.role === 'group' ? 'product' : 'variant'
+  const typen = mediaTypesFor(store.model, rolle)
+  const angelegt = []
+  for (const f of dokumente) {
+    const name = f.name.replace(/\.[^.]+$/, '')
+    try {
+      const res = await api.post('/api/batch', { commands: [
+        rolle === 'product' ? { op: 'product.create', ref: 'n', args: { group: r.id } } : { op: 'variant.create', ref: 'n', args: { product: r.id, axisValues: {} } },
+        { op: 'node.rename', args: { node: '@n', name } }] })
+      if (res.error) { store.toast(`${f.name}: ${res.error.message}`); continue }
+      const id = res.results?.find(x => x.ref === 'n')?.node
+      if (!id) { store.toast(`${f.name}: ${t_('Knoten nicht angelegt')}`); continue }
+      let medien = []
+      if (typen.length) { const erg = await attachFiles([f], id, typen); for (const x of erg.fehler) store.toast(x); medien = erg.medien ?? [] }
+      else store.toast(t_('Kein Relationstyp zu Medien für diesen Knotentyp'))
+      angelegt.push({ id, name, medien })
+    } catch (e) { store.toast(`${f.name}: ${e.message}`) }
+  }
+  if (!angelegt.length) return
+  await store.poll(true); await tree.load(); tree.expand(r.id)
+  if (angelegt.length === 1) {
+    const [a] = angelegt
+    const docs = a.medien.filter(m => IST_DOKUMENT.test(m.name))
+    if (docs.length) store.pendingDocTables = { node: a.id, media: docs.map(m => m.id), names: Object.fromEntries(docs.map(m => [m.id, m.name])) }
+    router.push(`/tree/${a.id}`)
+  } else store.toast(t_('{0} Knoten angelegt', [angelegt.length]), 'ok')
+}
+
 async function onDrop(e, r) {
   if (!dragId.value && e.dataTransfer?.files?.length) {
     dropId.value = null
     const files = [...e.dataTransfer.files]
+    // Shift: nicht anhängen, sondern anlegen — je Dokument ein Knoten darunter
+    if (e.shiftKey) { await dropAnlegen(files, r); return }
     const f = files[0]
     // Bilder und Dokumente sind Assets — sie gehen nie in einen Tabellen-Import, auch wenn ein Plugin die
     // Endung kennt. Alles Weitere: JSON und Tabellen in ihren Import, der Rest wird ebenfalls ein Asset.
@@ -349,8 +388,8 @@ async function onDrop(e, r) {
     }
     const erg = await dropAssets(files, r)
     // Mit Strg wird ein Dokument ausgewertet (34 L): die Knotenansicht fragt, welche Tabellenzeilen Attribute werden
-    const dokumente = (e.ctrlKey || e.metaKey) ? (erg?.medien ?? []).filter(m => IST_DOKUMENT.test(m.name)).map(m => m.id) : []
-    if (dokumente.length) { store.pendingDocTables = { node: r.id, media: dokumente }; router.push(`/tree/${r.id}`) }
+    const dokumente = (e.ctrlKey || e.metaKey) ? (erg?.medien ?? []).filter(m => IST_DOKUMENT.test(m.name)) : []
+    if (dokumente.length) { store.pendingDocTables = { node: r.id, media: dokumente.map(m => m.id), names: Object.fromEntries(dokumente.map(m => [m.id, m.name])) }; router.push(`/tree/${r.id}`) }
     return
   }
   const ids = dragIds()
@@ -763,9 +802,11 @@ function onDialogKey(e) {
 .pick { display: flex; align-items: center; gap: 8px; height: 24px; padding: 0 8px; white-space: nowrap; cursor: pointer; }
 .pick:hover { background: var(--hover); }
 .node.dragging { opacity: .5; }
-.twisty { width: 14px; color: var(--muted); font-size: 11px; text-align: center; cursor: pointer; }
+/* flex: 0 0 — Pfeil und Symbol schrumpfen nie: sonst fiel der leere Pfeil eines Blatts auf null, sobald eine lange
+   Bezeichnung die Zeile überlaufen liess, und Geschwister sahen aus wie Ebenen (28.09.2026) */
+.twisty { flex: 0 0 14px; width: 14px; color: var(--muted); font-size: 11px; text-align: center; cursor: pointer; }
 .twisty.leaf { cursor: default; }
-.icon { width: 16px; text-align: center; }
+.icon { flex: 0 0 16px; width: 16px; text-align: center; }
 .node.group .icon { color: var(--muted); }
 .node.product .icon { color: var(--accent); }
 .node.variant .icon { color: var(--warn); }
@@ -774,5 +815,5 @@ function onDialogKey(e) {
 /* angehefteter Name: kursiv, kein Symbol — die Information ist klein */
 .label.pinned { font-style: italic; }
 .hit { font-size: 11px; overflow: hidden; text-overflow: ellipsis; max-width: 45%; }
-.count { margin-left: auto; font-size: 11px; }
+.count { margin-left: auto; font-size: 11px; flex-shrink: 0; }
 </style>

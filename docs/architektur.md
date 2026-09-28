@@ -147,17 +147,11 @@ Rauschen, `ReleaseGranted` bleibt). Zwei Fallen:
   *Zu klären:* was ein überholtes Asset für die Ausleitung bedeutet (geht es mit oder nicht?); ob der Status dem
   Medium gehört oder der Zuordnung — ein Bild hängt an mehreren Knoten, und „hier überholt“ ist etwas anderes als
   „überall überholt“.
-- **Datenblatt auf einen Knoten ziehen → Werte vorschlagen** (28.09.2026, offen). Ein PDF mit Strg auf eine
-  Baumzeile: das Dokument wird **wie sonst auch als Asset abgelegt** und dem Knoten zugeordnet, und zusätzlich
-  gegen das Attributmodell dieses Knotens gelesen — welche Attribute gelten hier, welche davon stehen im Text?
-  Ergebnis ist eine Vorschlagsliste, kein Schreibvorgang: jeder Wert mit Quelle (Seite, Stelle) und Sicherheit,
-  nichts ohne Haken, übernommen als ein Stapel.
-  *Die Bausteine liegen:* `docs` hat den Text in Abschnitten, das Modell kennt die Attribute am Knoten, `enrich`
-  hat den Vorschlagsdialog samt Übernahme (heute mit Recherche als Quelle statt des Dokuments), und der Drop auf
-  die Baumzeile legt bereits Assets an (`ui-tree-asset-drop`). Was fehlt, ist die Verbindung: dasselbe Verfahren
-  wie bei `enrich`, nur mit dem vorliegenden Dokument als Quelle.
-  *Zu klären:* was bei mehreren Treffern je Attribut gilt; ob Einheiten und Listenwerte gleich abgebildet werden;
-  ob ein zweites Datenblatt am selben Knoten die alten Vorschläge ersetzt oder ergänzt.
+- **Wertelisten übersetzen** (28.09.2026, offen). Sätze, die man je Produkt auswählt („Funkentstörung“), sind
+  Werte einer Werteliste — Schlüssel und Text je Sprache, das Attribut `enum` mehrwertig; die Auswertung eines
+  Dokuments ordnet je Satz dem vorhandenen Wert zu oder trägt ihn nach (`pflegestruktur.md` 9, 34 L). Was fehlt:
+  ⇄ Übersetzung kennt die Texte der Wertelisten nicht — XLIFF, DeepL, KI und das Gedächtnis arbeiten nur über
+  Attributwerte. Ein Satz, der einmal gepflegt ist, muss dort einmal übersetzt werden können.
 - **Das wachsende Journal**. Nicht die Grösse ist das Problem, sondern die
   **Zahl** der Einträge: die Startzeit darf nicht von der Länge des Journals abhängen.
 

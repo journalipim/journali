@@ -47,6 +47,7 @@ function server() {
     let antwort = {}
     if (pfad.endsWith('/api/media') && (opt.method ?? 'GET') === 'POST') antwort = { id: 'm-' + rufe.length, name: 'x', existed: false }
     else if (pfad.includes('/api/relations')) antwort = { stream: 'r-1' }
+    else if (pfad.endsWith('/api/batch')) antwort = { batch: 'b', results: [{ index: 0, ref: 'n', node: 'n-' + rufe.length }], error: null }
     return { ok: true, status: 200, text: async () => JSON.stringify(antwort), json: async () => antwort }
   }
   return rufe
@@ -59,6 +60,13 @@ async function ablegen(w, id, files) {
   const zeile = w.findAll('.node').find(n => n.attributes('title') === id)
   assert.ok(zeile, `die Zeile ${id} steht nicht im Baum`)
   await zeile.trigger('drop', { dataTransfer: { files, types: ['Files'], getData: () => '' } })
+  await flushPromises()
+}
+
+/// Mit Shift ablegen: je Dokument ein neuer Knoten darunter
+async function ablegenShift(w, id, files) {
+  const zeile = w.findAll('.node').find(n => n.attributes('title') === id)
+  await zeile.trigger('drop', { dataTransfer: { files, types: ['Files'], getData: () => '' }, shiftKey: true })
   await flushPromises()
 }
 
