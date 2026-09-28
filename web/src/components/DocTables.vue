@@ -27,10 +27,17 @@ import { ai } from '../ai.js'
 import { icon, tree } from '../tree.js'
 import { ensureUnit } from '../compliance.js'
 import { suggestPairs, convert, validate, splitUnit, norm, similarity, SYNONYMS, DOC_GROUP } from '../mapper.js'
+import { attachFiles } from '../media.js'
 import { t as t_ } from '../i18n.js'
 import { L } from '../i18n.js'
 
-const props = defineProps({ node: { type: Object, required: true }, media: { type: Array, default: () => [] }, names: { type: Object, default: () => ({}) } })
+/// media/names: Dokumente, die schon am Knoten hängen. dateien/typen: Dateien, die der Dialog selbst hochlädt und
+/// anhängt (Shift+Drop) — so steht der Fortschritt vom ersten Moment an hier, nicht erst nach dem Hochladen
+const props = defineProps({ node: { type: Object, required: true }, media: { type: Array, default: () => [] }, names: { type: Object, default: () => ({}) },
+  dateien: { type: Array, default: () => [] }, typen: { type: Array, default: () => [] } })
+const medien = ref([...props.media])
+const namen = ref({ ...props.names })
+const hochladen = ref(false)
 const emit = defineEmits(['close', 'done'])
 
 const TYPEN = ['text', 'integer', 'decimal', 'boolean', 'date', 'enum']
@@ -59,7 +66,7 @@ const schritte = ref({ gesamt: 0, erledigt: 0 })
 const laeuft = computed(() => schritte.value.erledigt < schritte.value.gesamt)
 const prozent = computed(() => schritte.value.gesamt ? Math.round(schritte.value.erledigt / schritte.value.gesamt * 100) : 100)
 const t0 = Date.now()
-const WARTEN_MS = 120_000, TAKT_MS = 3000
+const WARTEN_MS = 120_000, TAKT_MS = 1500
 const TEXT_MAX = 60_000           // Zeichen, die an die KI gehen — ein Datenblatt hat wenige Seiten, ein Katalog nicht
 
 const model = computed(() => store.model ?? {})
@@ -78,8 +85,8 @@ const gilt = key => (props.node.groups ?? []).some(g => g.key === key)
 const gruppeHier = key => { const a = attrs.value.find(x => x.key === key); return !a?.group || gilt(a.group) }
 const genommen = computed(() => rows.value.filter(r => r.take && r.target !== 'skip' && r.converted != null && r.converted !== ''))
 const anzahl = computed(() => rows.value.length)
-const name = id => props.names?.[id] ?? id
-const mehrere = computed(() => props.media.length > 1)
+const name = id => namen.value[id] ?? id
+const mehrere = computed(() => medien.value.length > 1)
 
 // ---- Wohin mit neuen Attributen: eine Gruppe des Modells oder eine neue, und die Ebene, an der sie hängt.
 // Vorgabe ist „aus Dokument“, wenn es die Gruppe gibt — sonst eine neue mit diesem Namen. Der Anwender wählt anders,
@@ -382,11 +389,11 @@ async function ausZeilen(id, chunks) {
   entdoppeln()
   // Sinnsuche: Wörter und Vektoren — was der Server hat. Nur für das, was die Zeilen nicht fanden, und je Attribut eine Frage
   suchen.push(...offen.slice(0, 40)); schritte.value.gesamt += suchen.length
-  let getan = 0
-  for (const def of suchen) {
+  let getan = 0, stop = false
+  const eine = async def => {
     const q = def.label?.[model.value.masterLocale ?? 'de'] || L(def.label) || def.key
     let hits = []
-    try { const r = await api.get(`/api/docs/search?q=${encodeURIComponent(q)}&mode=hybrid&under=${encodeURIComponent(props.node.id)}&limit=5`); if (r?.ready === false) break; hits = (r?.hits ?? []).filter(h => h.media === id) } catch { break }
+    try { const r = await api.get(`/api/docs/search?q=${encodeURIComponent(q)}&mode=hybrid&under=${encodeURIComponent(props.node.id)}&limit=5`); if (r?.ready === false) { stop = true; return }; hits = (r?.hits ?? []).filter(h => h.media === id) } catch { stop = true; return }
     getan++; schritte.value.erledigt++
     // ab 0,6, und der Wert muss einer sein: „È“ oder „tc Punkt“ aus einem Tabellenkopf sind keiner
     const kandidaten = []
@@ -399,6 +406,9 @@ async function ausZeilen(id, chunks) {
     }
     if (z) neu.push(z)
   }
+  // vier Abfragen zugleich; die Reihenfolge der Antworten ist egal, die Zeilen stehen nachher nach Attribut sortiert
+  const reihe = [...suchen]
+  await Promise.all(Array.from({ length: 4 }, async () => { while (reihe.length && !stop) await eine(reihe.shift()) }))
   schritte.value.erledigt += suchen.length - getan   // abgebrochen: der Rest zählt als erledigt, es kommt nichts mehr
   zeilenWerte.value = [...zeilenWerte.value.filter(r => r.doc !== id), ...neu]
   entdoppeln()
@@ -474,7 +484,7 @@ async function lies(id, chunks) {
 /// Dialog wartet auf ihn, nicht der Anwender.
 async function lade() {
   const offen = []
-  for (const id of props.media) {
+  for (const id of medien.value) {
     try {
       const r = await api.get(`/api/docs/${encodeURIComponent(id)}/tables`)
       if (r.ready === false) { hinweis.value = t_('Kein Dokumentindex — der Server läuft ohne Postgres'); warten.value = false; ki.value = ki.value === 'aus' ? 'aus' : 'fertig'; return }
@@ -495,7 +505,7 @@ async function lade() {
 /// Je gelesenem Dokument einmal den Text holen: Textbausteine, Zeilen und Sinnsuche — ohne KI. Der Text bleibt für die
 /// KI liegen, die erst auf Knopfdruck läuft
 async function textLesen() {
-  const faellig = props.media.filter(id => docs.value.get(id)?.state === 'text' && !textGeholt.has(id))
+  const faellig = medien.value.filter(id => docs.value.get(id)?.state === 'text' && !textGeholt.has(id))
   schritte.value.gesamt += faellig.length
   for (const id of faellig) {
     textGeholt.add(id)
@@ -522,7 +532,7 @@ async function neuLesen() {
   if (busy.value) return
   busy.value = true
   try {
-    for (const id of props.media) await api.del(`/api/docs/${encodeURIComponent(id)}`)
+    for (const id of medien.value) await api.del(`/api/docs/${encodeURIComponent(id)}`)
     docs.value = new Map(); tabellenZeilen.value = []; zeilenWerte.value = []; kiZeilen.value = []; textZeilen.value = []; textGeholt.clear(); texte.clear(); textZahl.value = 0
     gestartet = false; warten.value = true; hinweis.value = ''; kiHinweis.value = ''; if (ki.value !== 'aus') ki.value = 'bereit'
     schritte.value = { gesamt: 0, erledigt: 0 }
@@ -654,21 +664,37 @@ async function uebernehmen() {
 }
 
 function onKey(e) { if (e.key === 'Escape') emit('close') }
-onMounted(async () => { window.addEventListener('keydown', onKey); try { await store.poll(true) } catch {} lade() })   // Modell frisch: der zweite Lauf kennt die Attribute des ersten
+onMounted(async () => {
+  window.addEventListener('keydown', onKey)
+  try { await store.poll(true) } catch {}   // Modell frisch: der zweite Lauf kennt die Attribute des ersten
+  if (props.dateien.length) {
+    hochladen.value = true
+    try {
+      const erg = await attachFiles(props.dateien, props.node.id, props.typen)
+      for (const x of erg.fehler) hinweis.value = x
+      medien.value = erg.medien.map(m => m.id); namen.value = Object.fromEntries(erg.medien.map(m => [m.id, m.name]))
+    } catch (e) { hinweis.value = e.message }
+    hochladen.value = false
+    try { await store.poll(true) } catch {}   // die Knotenansicht zeigt das Medium
+    if (!medien.value.length) { warten.value = false; return }
+  }
+  lade()
+})
 onUnmounted(() => { window.removeEventListener('keydown', onKey); if (timer) clearTimeout(timer) })
-defineExpose({ rows, werte, bausteineZeilen, zeilenWerte, warten, hinweis, genommen, ki, kiHinweis, attributeHier, gruppe, gruppeName, ebene, zuordnen, neuLesen, kiFragen, ziel, schritte })
+defineExpose({ rows, werte, bausteineZeilen, zeilenWerte, warten, hinweis, genommen, ki, kiHinweis, attributeHier, gruppe, gruppeName, ebene, zuordnen, neuLesen, kiFragen, ziel, schritte, medien, hochladen })
 </script>
 
 <template>
   <div class="dt-overlay" @mousedown.self="emit('close')">
     <div class="dt">
       <div class="toolbar">
-        <h1 :title="$t('▦ aus Tabellen, ✦ von der KI im Text — gegen die Attribute, die hier gelten. Geschrieben wird erst mit ✓, je Wert mit Beleg.')">{{ $t("▦ Werte aus dem Dokument") + ' ' }}<span class="muted">· {{ anzahl }}<template v-if="mehrere">{{ ' ' + $t("· {0} Dokumente", [media.length]) }}</template></span></h1>
-        <span v-if="warten" class="muted" :title="$t('Der Job „Dokumente lesen“ liest das Dokument gerade; die Zeilen erscheinen, sobald er fertig ist.')">{{ $t("◌ wird gelesen …") }}</span>
+        <h1 :title="$t('▦ aus Tabellen, ✦ von der KI im Text — gegen die Attribute, die hier gelten. Geschrieben wird erst mit ✓, je Wert mit Beleg.')">{{ $t("▦ Werte aus dem Dokument") + ' ' }}<span class="muted">· {{ anzahl }}<template v-if="mehrere">{{ ' ' + $t("· {0} Dokumente", [medien.length]) }}</template></span></h1>
+        <span v-if="hochladen" class="lauf" :title="$t('Die Datei geht zum Server und wird an den Knoten gehängt')"><b class="unbestimmt"><i /></b><span class="muted">{{ $t("◌ wird hochgeladen …") }}</span></span>
+        <span v-else-if="warten" class="lauf" :title="$t('Der Job „Dokumente lesen“ liest das Dokument gerade; die Zeilen erscheinen, sobald er fertig ist.')"><b class="unbestimmt"><i /></b><span class="muted">{{ $t("◌ wird gelesen …") }}</span></span>
+        <span v-else-if="laeuft" class="lauf" :title="$t('{0} von {1} Abfragen — solange kommen Werte nach', [schritte.erledigt, schritte.gesamt])"><b><i :style="{ width: prozent + '%' }" /></b><span class="muted">{{ schritte.erledigt }}/{{ schritte.gesamt }}</span></span>
         <span v-if="ki === 'läuft'" class="ai" :title="$t('Der Text geht gegen die {0} Attribute, die hier gelten', [attributeHier.length])">{{ $t("✦ KI liest …") }}</span>
         <button v-else-if="ki !== 'aus'" class="x ai" :disabled="!kiBereit || busy" @click="kiFragen" :title="$t('Den Text gegen das Modell lesen lassen — einmal je Dokument, kostet Token')">{{ $t("✦ KI fragen") }}</button>
         <span v-else class="muted" :title="$t('Kein KI-Schlüssel am Team — es zählen Tabellen, Zeilen und Suche')">{{ $t("✦ aus") }}</span>
-        <span v-if="laeuft" class="lauf" :title="$t('{0} von {1} Abfragen — solange kommen Werte nach', [schritte.erledigt, schritte.gesamt])"><b><i :style="{ width: prozent + '%' }" /></b><span class="muted">{{ schritte.erledigt }}/{{ schritte.gesamt }}</span></span>
         <span v-if="kiHinweis" :class="kiHinweis.startsWith('✗') ? 'neg' : 'ai'">{{ kiHinweis }}</span>
         <span v-if="hinweis" class="neg">{{ hinweis }}</span>
         <span class="grow" />
@@ -768,4 +794,6 @@ tr.aus td { opacity: .55; }
 .lauf { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; white-space: nowrap; }
 .lauf b { display: block; width: 120px; height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
 .lauf b i { display: block; height: 100%; background: var(--accent); transition: width .3s; }
+.lauf b.unbestimmt i { width: 35%; animation: lauf 1.2s linear infinite; }
+@keyframes lauf { from { margin-left: -35%; } to { margin-left: 100%; } }
 </style>

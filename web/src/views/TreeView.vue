@@ -330,7 +330,8 @@ async function dropAssets(files, r) {
 
 /// Shift+Drop: je Dokument ein neuer Knoten darunter — Produkt unter einer Gruppe, Variante unter einem Produkt —, benannt
 /// nach der Datei, mit dem Dokument als Asset (28.09.2026). Ein Stapel je Knoten: anlegen, benennen; dann das Asset.
-/// Ein Dokument: der Baum springt hin und öffnet die Auswertung; mehrere: er bleibt stehen und zählt
+/// Ein Dokument: der Baum springt sofort hin, der Dialog lädt die Datei hoch und zeigt dabei den Fortschritt — nicht erst,
+/// wenn alles durch ist (28.09.2026); mehrere: der Baum bleibt stehen, lädt hoch und zählt
 async function dropAnlegen(files, r) {
   if (!store.actor) { store.toast(t_('👤 Name fehlt → Einstellungen')); return }
   if (r.role !== 'group' && r.role !== 'product') { store.toast(t_('Ziel muss eine Gruppe oder ein Produkt sein')); return }
@@ -339,16 +340,31 @@ async function dropAnlegen(files, r) {
   if (r.role === 'product' && (r.axes ?? []).length) { store.toast(t_('Produkt hat Achsen — eine Variante braucht Achsenwerte')); return }
   const rolle = r.role === 'group' ? 'product' : 'variant'
   const typen = mediaTypesFor(store.model, rolle)
+  const anlegen = async f => {
+    const name = f.name.replace(/\.[^.]+$/, '')
+    const res = await api.post('/api/batch', { commands: [
+      rolle === 'product' ? { op: 'product.create', ref: 'n', args: { group: r.id } } : { op: 'variant.create', ref: 'n', args: { product: r.id, axisValues: {} } },
+      { op: 'node.rename', args: { node: '@n', name } }] })
+    if (res.error) { store.toast(`${f.name}: ${res.error.message}`); return null }
+    const id = res.results?.find(x => x.ref === 'n')?.node
+    if (!id) { store.toast(`${f.name}: ${t_('Knoten nicht angelegt')}`); return null }
+    return { id, name }
+  }
+  if (dokumente.length === 1 && typen.length) {
+    const [f] = dokumente; let a = null
+    try { a = await anlegen(f) } catch (e) { store.toast(`${f.name}: ${e.message}`) }
+    if (!a) return
+    await store.poll(true); await tree.load(); tree.expand(r.id)
+    store.pendingDocTables = { node: a.id, media: [], names: {}, dateien: [f], typen }
+    router.push(`/tree/${a.id}`)
+    return
+  }
   const angelegt = []
   for (const f of dokumente) {
     const name = f.name.replace(/\.[^.]+$/, '')
     try {
-      const res = await api.post('/api/batch', { commands: [
-        rolle === 'product' ? { op: 'product.create', ref: 'n', args: { group: r.id } } : { op: 'variant.create', ref: 'n', args: { product: r.id, axisValues: {} } },
-        { op: 'node.rename', args: { node: '@n', name } }] })
-      if (res.error) { store.toast(`${f.name}: ${res.error.message}`); continue }
-      const id = res.results?.find(x => x.ref === 'n')?.node
-      if (!id) { store.toast(`${f.name}: ${t_('Knoten nicht angelegt')}`); continue }
+      const a = await anlegen(f); if (!a) continue
+      const id = a.id
       let medien = []
       if (typen.length) { const erg = await attachFiles([f], id, typen); for (const x of erg.fehler) store.toast(x); medien = erg.medien ?? [] }
       else store.toast(t_('Kein Relationstyp zu Medien für diesen Knotentyp'))

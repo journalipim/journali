@@ -693,6 +693,24 @@ test('Zielwechsel: das gewählte Attribut hat den Wert schon — der Haken geht 
   assert.deepEqual([d.target, d.attribute, d.error, d.take, d.why], ['attr', 'power', null, false, 'gleich · 22'])
 })
 
+test('mit Dateien: der Dialog lädt hoch und zeigt es — dann hängt das Dokument am Knoten und wird gelesen', async () => {
+  const { rufe } = welt()
+  const echt = globalThis.fetch; let frei; const tor = new Promise(r => { frei = r })
+  globalThis.fetch = async (url, opt = {}) => { if (/\/api\/media$/.test(String(url)) && opt.method === 'POST') await tor; return echt(url, opt) }
+  const datei = new File([new Uint8Array([1, 2, 3])], 'blatt.pdf', { type: 'application/pdf' })
+  const w = mount(DocTables, { props: { node: KNOTEN, media: [], names: {}, dateien: [datei], typen: [{ key: 'document', to: ['media'] }] } })
+  await flushPromises()
+  assert.ok(w.vm.hochladen); assert.match(w.text(), /wird hochgeladen/); assert.ok(w.find('.lauf .unbestimmt').exists(), 'Balken ohne Mass')
+  assert.equal(rufe.some(r => /\/tables/.test(r.pfad)), false, 'noch nichts gelesen')
+  frei(); await flushPromises()
+  assert.equal(w.vm.hochladen, false)
+  const rel = rufe.find(r => /\/api\/relations$/.test(r.pfad) && r.methode === 'POST')
+  assert.deepEqual([rel.rumpf.type, rel.rumpf.from], ['document', 'p1'])
+  assert.deepEqual(w.vm.medien, [rel.rumpf.to], 'das neue Medium ist das Dokument des Dialogs')
+  assert.ok(rufe.some(r => new RegExp(`/api/docs/${rel.rumpf.to}/tables`).test(r.pfad)), 'danach wird es gelesen')
+  assert.ok(w.vm.rows.some(r => r.attribute === 'weight'), 'die Tabelle des Dokuments ist da')
+})
+
 test('der Balken läuft, solange Abfragen offen sind, und ist weg, wenn nichts mehr nachkommt', async () => {
   welt({ tabellen: { ready: true, state: 'text', tables: [] }, text: TEXT_ZEILEN })
   const echt = globalThis.fetch; let frei; const tor = new Promise(r => { frei = r })

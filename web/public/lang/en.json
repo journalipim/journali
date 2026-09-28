@@ -2688,6 +2688,8 @@
  "Der Knoten hat diesen Wert schon{0}": "The node already has this value{0}",
  "geerbt von {0} — der Wert aus dem Dokument gilt dann für diesen Knoten": "inherited from {0} — the value from the document then applies to this node",
  "Der Knoten hat einen eigenen Wert": "The node has a value of its own",
+ "◌ wird hochgeladen …": "◌ uploading …",
+ "Die Datei geht zum Server und wird an den Knoten gehängt": "The file goes to the server and is attached to the node",
  "{0} von {1} Abfragen — solange kommen Werte nach": "{0} of {1} queries — values keep arriving until then",
  "S. {0}": "p. {0}",
  "von der KI im Text gefunden": "found in the text by the AI",

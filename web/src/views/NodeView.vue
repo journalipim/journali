@@ -630,7 +630,7 @@ const mediaPick = ref({ open: false })   // ▨ aus der Bibliothek … (MediaPic
 // ▦ Werte aus dem Dokument (34 L): { media: [ids], names } öffnet den Dialog — nach einem Strg-Drop hier oder im Baum,
 // oder per Rechtsklick auf ein Asset im Band (28.09.2026)
 const docTables = ref(null)
-watch(() => store.pendingDocTables, p => { if (p && p.node === props.id) { docTables.value = { media: p.media, names: p.names ?? {} }; store.pendingDocTables = null } }, { immediate: true })
+watch(() => store.pendingDocTables, p => { if (p && p.node === props.id) { docTables.value = { media: p.media, names: p.names ?? {}, dateien: p.dateien ?? [], typen: p.typen ?? [] }; store.pendingDocTables = null } }, { immediate: true })
 
 // ---- Auswahl im Band: Strg+Klick wählt, Rechtsklick öffnet das Menü für die Auswahl (oder die eine Kachel).
 // Ein Datenblatt liegt meist längst am Knoten — es noch einmal zu ziehen, nur um die Auswertung zu starten, legte ein
@@ -1053,7 +1053,7 @@ function cellMenu(e, def, col, block) {
           <button @click="mediaPick.open = true" :title="$t('Medien aus der Bibliothek zuordnen — Ordner, Suche, Mehrfachauswahl')">{{ $t("▨ Aus der Bibliothek wählen …") }}</button>
         </div>
         <MediaPicker v-if="mediaPick.open" :types="mediaTypes" :exclude="[...mediaRels, ...stopped].map(r => r.other.id)" @pick="linkMedia" @close="mediaPick.open = false" />
-        <DocTables v-if="docTables" :node="node" :media="docTables.media" :names="docTables.names ?? {}" @close="docTables = null" @done="docTables = null; load(); store.poll(true)" />
+        <DocTables v-if="docTables" :node="node" :media="docTables.media" :names="docTables.names ?? {}" :dateien="docTables.dateien ?? []" :typen="docTables.typen ?? []" @close="docTables = null" @done="docTables = null; load(); store.poll(true)" />
         </template>
       </div>
 

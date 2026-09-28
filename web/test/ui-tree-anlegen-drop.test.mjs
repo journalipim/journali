@@ -65,15 +65,16 @@ test('Shift + zwei Datenblätter auf eine Gruppe: je Datei ein Produkt, benannt 
   assert.equal(store.pendingDocTables, null)
 })
 
-test('Shift + ein Datenblatt auf ein Produkt: eine Variante — der Baum springt hin und öffnet die Auswertung', async () => {
+test('Shift + ein Datenblatt auf ein Produkt: eine Variante — der Baum springt sofort hin, der Dialog lädt die Datei hoch', async () => {
   const rufe = welt(); const { w, router } = baum(); await flushPromises()
   await ablegen(w, 'p1', [datei('6 mm.pdf', 'application/pdf')], true)
   const s = stapel(rufe)
   assert.equal(s.length, 1); assert.deepEqual(s[0][0], { op: 'variant.create', ref: 'n', args: { product: 'p1', axisValues: {} } })
-  const id = rufe.find(r => r.pfad.endsWith('/api/relations') && r.methode === 'POST').rumpf.from
+  assert.equal(rufe.some(r => r.pfad.endsWith('/api/media') && r.methode === 'POST'), false, 'der Baum lädt nicht hoch — das tut der Dialog, mit Fortschritt')
+  const id = store.pendingDocTables?.node
+  assert.ok(id, 'die Auswertung öffnet sich am neuen Knoten')
   assert.match(router.path, new RegExp(`^/tree/${id}$`), 'zum neuen Knoten')
-  assert.equal(store.pendingDocTables?.node, id, 'die Auswertung öffnet sich dort')
-  assert.equal(store.pendingDocTables.media.length, 1)
+  assert.deepEqual([store.pendingDocTables.media.length, store.pendingDocTables.dateien.map(f => f.name), store.pendingDocTables.typen.map(t => t.key)], [0, ['6 mm.pdf'], ['image', 'document']])
 })
 
 test('Shift auf ein Produkt mit Achsen: keine Variante ohne Achsenwerte — nichts angelegt', async () => {
