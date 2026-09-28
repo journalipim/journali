@@ -67,6 +67,35 @@ public class SystemjobNachziehenTests
         Assert.Null(r.Offen);
     }
 
+    /// <summary>
+    /// Der Rueckfall: bewirkt ein Lauf nichts, verdoppelt sich der Abstand bis auf eine Stunde. Ohne ihn startete
+    /// der Takt jede Minute einen Prozess, der nichts fand — beobachtet am 28.09.2026 an einem derive-Job, der auf
+    /// ein Preset eingeschraenkt war, waehrend der Zaehler ueber alle Presets zaehlte.
+    /// </summary>
+    [Theory]
+    [InlineData(1, 2)]
+    [InlineData(2, 4)]
+    [InlineData(8, 16)]
+    [InlineData(30, 60)]
+    [InlineData(60, 60)]   // hoeher geht es nicht
+    public void Bewirkt_ein_Lauf_nichts_waechst_der_Abstand(int bisher, int erwartet) =>
+        Assert.Equal(TimeSpan.FromMinutes(erwartet), JobRunner.NaechsterAbstand(true, TimeSpan.FromMinutes(bisher)));
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(16)]
+    [InlineData(60)]
+    public void Aendert_sich_die_Zahl_faengt_der_Abstand_wieder_bei_einer_Minute_an(int bisher) =>
+        Assert.Equal(TimeSpan.FromMinutes(1), JobRunner.NaechsterAbstand(false, TimeSpan.FromMinutes(bisher)));
+
+    [Fact]
+    public void Der_Abstand_waechst_nie_ueber_eine_Stunde()
+    {
+        var a = TimeSpan.FromMinutes(1);
+        for (var i = 0; i < 20; i++) a = JobRunner.NaechsterAbstand(true, a);
+        Assert.Equal(JobRunner.NachzugMax, a);
+    }
+
     [Fact]
     public async Task Die_Offen_Funktion_liefert_die_Zahl_der_offenen_Posten()
     {

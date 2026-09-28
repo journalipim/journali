@@ -74,6 +74,20 @@ public sealed class JobRunner : BackgroundService
     }
 
     private DateTimeOffset _letztesNachziehen = DateTimeOffset.MinValue;
+    /// <summary>Je Job: wie viel beim letzten Start offen war, wann das war, und wie lange bis zum nächsten Versuch.</summary>
+    private readonly Dictionary<string, (int Offen, DateTimeOffset Wann, TimeSpan Abstand)> _nachzug = new();
+
+    /// <summary>Der längste Abstand, in dem ein Systemjob es noch einmal versucht.</summary>
+    public static readonly TimeSpan NachzugMax = TimeSpan.FromHours(1);
+
+    /// <summary>
+    /// Wie lange bis zum nächsten Versuch? Hat der Lauf etwas bewirkt (die Zahl der offenen Posten hat sich
+    /// geändert), geht es sofort weiter — eine Minute. Hat er nichts bewirkt, verdoppelt sich der Abstand bis
+    /// <see cref="NachzugMax"/>: sonst startet der Takt endlos Prozesse, die nichts finden (28.09.2026).
+    /// </summary>
+    public static TimeSpan NaechsterAbstand(bool unveraendert, TimeSpan bisher) =>
+        unveraendert ? TimeSpan.FromMinutes(Math.Min(NachzugMax.TotalMinutes, Math.Max(1, bisher.TotalMinutes) * 2))
+                     : TimeSpan.FromMinutes(1);
 
     /// <summary>
     /// Systemjobs holen auf. „Läuft von selbst“ heisst nicht „läuft nach der Uhr“, sondern: solange etwas offen ist,
@@ -99,7 +113,22 @@ public sealed class JobRunner : BackgroundService
             lock (_gate) if (_running.ContainsKey(key)) continue;   // laeuft schon
             int offen;
             try { offen = await Offen(plugin); } catch { continue; }   // kein progress-Endpunkt oder nicht erreichbar
-            if (offen <= 0) continue;
+            if (offen <= 0) { _nachzug.Remove(key); continue; }
+
+            // Rueckfall: bewirkt ein Lauf nichts, waechst der Abstand bis auf eine Stunde. Sonst startet der Takt
+            // jede Minute einen Prozess ins Leere — etwa wenn der Job auf ein Preset eingeschraenkt ist, bei dem
+            // nichts fehlt, waehrend der Zaehler ueber alle Presets zaehlt (28.09.2026)
+            if (_nachzug.TryGetValue(key, out var v))
+            {
+                var abstand = offen == v.Offen ? v.Abstand : TimeSpan.FromMinutes(1);
+                if (jetzt - v.Wann < abstand) continue;
+                var neu = NaechsterAbstand(offen == v.Offen, abstand);
+                _nachzug[key] = (offen, jetzt, neu);
+                if (offen == v.Offen && neu >= TimeSpan.FromMinutes(8) && abstand < TimeSpan.FromMinutes(8))
+                    _log.LogWarning("Systemjob {Job}: {Offen} offen, aber kein Lauf bewirkt etwas — Abstand jetzt {Min} min", key, offen, neu.TotalMinutes);
+            }
+            else _nachzug[key] = (offen, jetzt, TimeSpan.FromMinutes(1));
+
             Start(key, "nachziehen", out var fehler);
             if (fehler is not null && fehler != "läuft schon") _log.LogWarning("Systemjob {Job}: {Fehler}", key, fehler);
         }
