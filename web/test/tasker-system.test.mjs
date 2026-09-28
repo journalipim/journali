@@ -6,7 +6,7 @@ import { win } from './ui.mjs'
 import { systemRows, systemBlock } from '../../plugins/tasker/entry.js'
 
 const PLUGINS = [
-  { key: 'probe', service: '', label: { de: 'Masse der Dateien lesen' }, system: true, progress: '/api/media/probe' },
+  { key: 'probe', service: '', label: { de: 'Bildmasse lesen' }, system: true, progress: '/api/media/probe' },
   { key: 'embed', service: '', label: { de: 'Einbettungen (Vektoren)' }, system: true, progress: '/api/docs/embed' },
   { key: 'csv', service: 'export', label: { de: 'CSV' }, system: false, progress: null },
   { key: 'csv', service: 'import', label: { de: 'CSV' }, system: false, progress: null },
@@ -20,7 +20,7 @@ test('je Systemjob eine Zeile — mit Fortschritt, Job und Prozentzahl; Dienste 
   const probe = rows[0]
   assert.deepEqual([probe.gelesen, probe.total, probe.offen, probe.pct], [150, 200, 50, 75])
   assert.equal(probe.job?.running, true)
-  assert.equal(probe.label, 'Masse der Dateien lesen')
+  assert.equal(probe.label, 'Bildmasse lesen')
   const embed = rows[1]
   assert.equal(embed.ready, false); assert.equal(embed.pct, null); assert.equal(embed.job, null)
 })

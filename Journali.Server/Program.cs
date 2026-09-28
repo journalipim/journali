@@ -321,7 +321,7 @@ RelationApi.Map(api);
 MediaApi.Map(api);
 DeriveApi.Map(api);   // Vorschau-Presets und Ableitungen (Plugin derive rechnet)
 ProbeApi.Map(api);
-MediaWorkflowApi.Map(api, jobRunner);   // derselbe Workflow auch für Assets, wenn seine Rollen media nennen   // Masse der Dateien: der Server liest, der Job probe treibt an (Tasker führt ihn)
+MediaWorkflowApi.Map(api, jobRunner);   // derselbe Workflow auch für Assets, wenn seine Rollen media nennen   // Bildmasse: der Server liest, der Job probe treibt an (Tasker führt ihn)
 TranslateApi.Map(api);
 WorkflowApi.Map(api, jobRunner);   // Workflows (27): Definitionen, Zustand je Knoten, Schritte, Meine Aufgaben   // Übersetzungsmanagement: Einheiten je Sprachrichtung, Rückweg mit Quellprüfung (Plugin xliff)
 VersionApi.Map(api, pluginDir, LoggerFactory.Create(b => b.AddConsole()).CreateLogger("versions"));   // Versionen
