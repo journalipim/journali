@@ -146,6 +146,32 @@ test('jedes Beispiel der Bibliothek ist ein gültiges Skript — Kopf und Standa
   }
 })
 
+test('ctx.step: nummeriert, misst, prüft optional gegen ein Schema und macht Snapshots', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'scriptum-step-'))
+  const logs = []
+  try {
+    const ctx = kontext({ server: 'http://localhost:0', token: '', actor: 'job:x', params: {}, outDir: dir, log: s => logs.push(s) })
+    assert.equal(typeof ctx.step, 'function'); assert.equal(typeof ctx.lib.csv, 'function')
+    const r = await ctx.step('laden', () => [1, 2, 3], { schema: { type: 'array' }, snapshot: true })
+    assert.deepEqual(r, [1, 2, 3], 'gibt das Ergebnis des Schritts zurück')
+    assert.ok(logs.some(l => l.includes('▸ 1 laden')), 'Start im Log')
+    assert.ok(logs.some(l => /✓ 1 laden · \d+ ms/.test(l)), 'Ende mit Dauer')
+    assert.ok(fs.readdirSync(dir).some(f => f.includes('laden') && f.endsWith('.json')), 'ein Snapshot im Fach out/')
+    // ein Schema-Fehler wirft mit dem Namen des Schritts
+    await assert.rejects(() => ctx.step('prüfen', () => ({ a: 1 }), { schema: { type: 'object', required: ['b'] } }), /fehlt/)
+    // ein Fehler im Schritt wird geloggt und weitergeworfen
+    await assert.rejects(() => ctx.step('rechnen', () => { throw new Error('kaputt') }), /kaputt/)
+    assert.ok(logs.some(l => l.includes('✗') && l.includes('rechnen')), 'Fehler im Log')
+  } finally { fs.rmSync(dir, { recursive: true, force: true }) }
+})
+
+test('ctx.snapshot ohne Fach out/ bricht nicht ab, sondern notiert es', () => {
+  const logs = []
+  const ctx = kontext({ server: 'http://localhost:0', token: '', actor: 'job:x', params: {}, log: s => logs.push(s) })
+  assert.equal(ctx.snapshot('zwischen', { a: 1 }), null)
+  assert.ok(logs.some(l => l.includes('Schnappschuss') && l.includes('kein Fach')), 'eine Notiz statt eines Abbruchs')
+})
+
 test('ein Fehler des Skripts ist eine Meldung, kein Absturz', async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'scriptum-fehler-'))
   try {

@@ -16,6 +16,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import os from 'node:os'
+import { lib, pruefeSchema } from './lib.mjs'
 
 export const MARKE = '⟦scriptum⟧'
 /// Grenzen gehören an den Runner, nicht an das Skript: ein Fehler darf weder das Log fluten noch den Server beschäftigen.
@@ -94,6 +95,28 @@ export function kontext({ server, token, actor, params, outDir, log = console.lo
       return { file: sicher, bytes: fs.statSync(ziel).size }
     },
   }
+  // Schritte und Snapshots (docs/pflegestruktur.md 37): ein Skript in benannte Teile gliedern — jeder mit Start, Dauer
+  // und Ausgang im Log, optional gegen ein JSON-Schema geprueft und als Snapshot ins Fach out/. Kein Pipeline-Motor,
+  // nur Struktur in einem Skript.
+  let schritt = 0
+  const snapshot = (name, daten) => {
+    const datei = String(name).replace(/[^\w.@-]+/g, '_').replace(/(\.json)?$/, '.json')
+    if (!outDir) { log('· Schnappschuss ' + datei + ' (kein Fach out/)'); return null }
+    const ziel = path.join(outDir, datei)
+    fs.writeFileSync(ziel, JSON.stringify(daten ?? null, null, 1))
+    return { file: datei, bytes: fs.statSync(ziel).size }
+  }
+  const step = async (name, fn, opts = {}) => {
+    const nr = ++schritt, t0 = Date.now()
+    log('▸ ' + nr + ' ' + name)
+    let res
+    try { res = typeof fn === 'function' ? await fn() : fn }
+    catch (e) { log('✗ ' + nr + ' ' + name + ': ' + (e?.message ?? e)); throw e }
+    if (opts.schema) { const f = pruefeSchema(res, opts.schema); if (f) { log('✗ ' + nr + ' ' + name + ': ' + f); throw new Error('Schritt „' + name + '“: ' + f) } }
+    log('✓ ' + nr + ' ' + name + ' · ' + (Date.now() - t0) + ' ms')
+    if (opts.snapshot) snapshot(nr + '-' + name, res)
+    return res
+  }
   /// Ein Zugang: der Server (Weiterleitung) haengt die Anmeldung an und spricht das Fremdsystem an — das Geheimnis
   /// bleibt bei ihm, das Skript sieht es nie. Der Pfad ist relativ zur Adresse des Zugangs; die Antwort ist geparstes
   /// JSON, sonst Text. Der Name kommt aus einem Parameter (Typ driver) oder steht im Skript. Jede Methode nimmt
@@ -112,7 +135,7 @@ export function kontext({ server, token, actor, params, outDir, log = console.lo
       roh,
     }
   }
-  return { api, params, journali: server, actor, out, log, zugang }
+  return { api, params, journali: server, actor, out, log, zugang, step, snapshot, lib }
 }
 
 /// Den Quelltext in eine Datei schreiben und als Modul laden — ein Skript ist ein ES-Modul, kein String im Server.

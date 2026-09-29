@@ -322,6 +322,25 @@ export default async (ctx) => {
 `
   },
   {
+    key: "schritte-helfer",
+    title: "Schritte, Snapshot und Helfer",
+    description: "Zeigt ctx.step (benannte Schritte mit Dauer, JSON-Schema-Prüfung und Snapshot ins Fach out/) und ctx.lib (kuratierte Helfer wie csv, get, chunk).",
+    source: `export const meta = {
+  label: 'Schritte, Snapshot und Helfer',
+  params: [{ key: 'datei', label: 'Dateiname', type: 'text', default: 'knoten.csv' }],
+}
+
+// ctx.step gliedert ein Skript in benannte Teile: jeder steht mit Dauer im Log, kann gegen ein JSON-Schema geprüft und
+// als Snapshot ins Fach out/ gelegt werden. ctx.lib bringt geprüfte Helfer mit — hier get und csv. Kein Pipeline-Motor.
+export default async (ctx) => {
+  const knoten = await ctx.step('laden', () => ctx.api.get('/api/tree'), { schema: { type: 'array' }, snapshot: true })
+  const tabelle = await ctx.step('aufbereiten', () => knoten.map((n) => ({ id: n.id, name: String(ctx.lib.get(n, 'label', n.id) ?? '') })))
+  const text = ctx.lib.csv(tabelle, { columns: ['id', 'name'] })
+  return ctx.out.file(ctx.params.datei || 'knoten.csv', text)
+}
+`
+  },
+  {
     key: "bericht-zaehlen",
     title: "Knoten je Wert zählen",
     description: "Ein einfacher Bericht ohne Fremdsystem: wie viele Knoten je Wert eines Feldes (etwa status).",

@@ -2182,13 +2182,15 @@ Dritter bzw. Korrektheit: **Geheimnisse bleiben beim Server** (Tresor, Relay —
 Admin vor sich), **Signaturen sind Manipulationsnachweis** für ausgeliefertes (keine Erlaubnisschranke), und journali
 tut **nichts Gefährliches von selbst** — der Unterschied ist „der Anwender wählt es“ gegen „es passiert automatisch“.
 
-- **Bibliotheken / npm-Pakete.** Gebaut ist der Anfang: keine Pakete, nur die Standardbibliothek der Laufzeit, `fetch`,
-  der Kontext (`api`, `params`, `out`, `log`, `zugang`). npm-Pakete sind **kein Sicherheitsproblem** (siehe „Nicht
-  bevormunden“); die offene Frage ist rein technisch — wer legt `node_modules` für den Runner an (je Skript, global, im
-  Container-Bau) und wie die Versionen.
-- **Wiederverwendung.** Ein Skript ruft kein anderes auf — nötig war es nicht. Ein Fremdsystem spricht ein Skript über
-  `ctx.zugang` an (Abschnitt 38); das war der eigentliche Bedarf, nicht Skript ruft Skript. Kuratierte Helfer (etwa ein
-  `journali/scriptum`-Modul) wären der nächste Schritt für Reuse, wenn er gebraucht wird.
+- **Bibliotheken / npm-Pakete.** Der Kontext bringt mit: `api`, `params`, `out`, `log`, `zugang`, `step`, `snapshot`,
+  `lib` (dazu `fetch` und die Standardbibliothek der Laufzeit). Eigene npm-Pakete sind noch nicht dabei, aber **kein
+  Sicherheitsproblem** (siehe „Nicht bevormunden“); die offene Frage ist rein technisch — wer legt `node_modules` für
+  den Runner an (je Skript, global, im Container-Bau) und wie die Versionen.
+- **Wiederverwendung — gebaut (29.09.2026).** Kuratierte Helfer `ctx.lib` (csv, parseCsv, chunk, retry, get, sleep) —
+  geprüft und ausgeliefert statt beliebiger Pakete — und benannte Schritte `ctx.step(name, fn, { schema, snapshot })`:
+  jeder Schritt mit Start, Dauer und Ausgang im Log, optional gegen ein minimales JSON-Schema geprüft (`ctx.lib`-Prüfer)
+  und als Snapshot ins Fach out/ (`ctx.snapshot`). Struktur und Reuse **in einem** Skript, kein Pipeline-Motor über
+  Skripte hinweg. Ein Fremdsystem spricht ein Skript weiter über `ctx.zugang` an (Abschnitt 38) — nicht Skript ruft Skript.
 - **Ein Markt fremder Snippets.** Legitim, sobald der Anwender ihn einlöst — nicht davor zu schützen ist nicht unsere
   Aufgabe. Gebaut ist der bequeme, geprüfte Standardweg zuerst: eine eigene Beispiel-Bibliothek (Abschnitt 38). Die
   Grenze ist nur: journali zieht Fremdcode **nicht von selbst** und führt ihn aus — gewählt statt automatisch.
