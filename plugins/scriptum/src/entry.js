@@ -3,5 +3,5 @@
 import View from './View.vue'
 import { t } from 'journali'
 export default {
-  views: [{ path: 'skripte', topic: 'tools', label: t('Skripte'), icon: '⌨', hint: t('Auswertungen und Übergaben, die hier geschrieben werden: Tabelle, Text oder Datei — von Hand oder als Job'), component: View }],
+  views: [{ path: 'skripte', topic: 'tools', label: t('Skripte'), icon: '≡', hint: t('Auswertungen und Übergaben, die hier geschrieben werden: Tabelle, Text oder Datei — von Hand oder als Job'), component: View }],
 }

@@ -1198,7 +1198,7 @@ const _sfc_main = {
 };
 const View = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-d19b0f47"]]);
 const entry = {
-  views: [{ path: "skripte", topic: "tools", label: t("Skripte"), icon: "⌨", hint: t("Auswertungen und Übergaben, die hier geschrieben werden: Tabelle, Text oder Datei — von Hand oder als Job"), component: View }]
+  views: [{ path: "skripte", topic: "tools", label: t("Skripte"), icon: "≡", hint: t("Auswertungen und Übergaben, die hier geschrieben werden: Tabelle, Text oder Datei — von Hand oder als Job"), component: View }]
 };
 export {
   entry as default
