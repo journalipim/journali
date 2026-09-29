@@ -1992,3 +1992,70 @@ Export (34 J).
   und ▶; `POST /api/jobs/system/{plugin}/run` legt den Job an, wenn es keinen gibt, und startet ihn (wie
   `ProbeApi.Kick`, für jeden Systemjob). Der Balken ist ein Füllstand, wie in CLAUDE.md verlangt.
 - Bilder haben keinen Text und darum keinen Vektor; Bildeinbettungen (ein anderes Modell) wären ein eigener Schritt.
+## 36. Attribut und Gruppe — n:m (29.09.2026, entschieden)
+
+**Die Lage.** Ein Attribut trägt heute genau eine Gruppe (`AttributeDefinition.Group`, ein einzelner Schlüssel), und
+was an einem Knoten gilt, sind alle Attribute aller Gruppen am Pfad (`CompletenessRules.ActiveAttributes`). Geltung und
+Ordnung sind damit dieselbe Sache: Die Gruppe sagt zugleich, wofür ein Attribut inhaltlich steht und wo es gepflegt
+werden muss.
+
+**Das Problem.** Beides zusammen lässt sich nicht granular modellieren. Eine Grösse wie die Spannungsversorgung
+gehört zu vielen Produktarten; damit sie überall gilt, muss ihre Gruppe weit oben hängen — und dann erbt alles
+darunter auch jedes andere Attribut derselben Gruppe. Schneidet man die Gruppen kleiner, muss sich jedes Attribut für
+eine entscheiden: Dieselbe Grösse in zwei Ästen heisst zwei Attribute mit gleicher Bedeutung, gleicher Einheit und
+gleicher Pflicht. Das widerspricht dem Grundsatz, dass ein Attribut systemweit dieselbe Funktion hat.
+
+**Die Entscheidung.** Zwischen Attribut und Gruppe gilt künftig n:m. Eine Gruppe ist damit keine Zugehörigkeit des
+Attributs mehr, sondern eine **Auswahl**: eine Liste von Attributen, die man an einen Ast hängt. Ein Attribut kann in
+beliebig vielen Auswahlen vorkommen, ohne Kopie.
+
+Damit wird die Gruppe billig. Eine zweite Zusammenstellung, die ein Pflichtattribut weglässt, kostet einen Namen und
+ein paar Häkchen, statt Attribute umzuziehen und sie anderswo zu verlieren. Der natürliche Weg sind kleine Bausteine,
+die sich am Knoten addieren:
+
+    Betriebsgeräte für HID  →  Spannungsversorgung + Zündung + Gehäuse
+    LED-Treiber             →  Spannungsversorgung + Dimmung + Gehäuse
+
+**Die Pflicht bleibt am Attribut.** Ein Attribut hat überall dieselben Regeln — Typ, Einheit, Pflicht, Eindeutigkeit.
+Unterscheidet sich die Pflicht zwischen zwei Verwendungen, ist es eine andere Sache und damit ein anderes Attribut.
+Die Zuordnung zu einer Gruppe trägt deshalb nur Zugehörigkeit, keine eigenen Regeln. Für den Fall, dass eine Grösse
+nur unter Bedingungen gilt, gibt es bereits zwei Ventile: `Required` steht je Kanal und Sprache, und `When` schaltet
+ein Attribut anhand des Werts eines anderen ab.
+
+**Was unberührt bleibt.** Die Geltung entscheidet weiter der Baum: Gruppen hängen an Knoten und vererben sich nach
+unten (`Tree.EffectiveGroups`), `activeFrom` gilt je Rolle, `Levels` beschränkt auf Rollen, `When` auf Werte, und die
+Vollständigkeit rechnet wie bisher. Es ändert sich eine einzige Regel — dass ein Attribut nur einer Gruppe angehören
+darf.
+
+**Migration ohne Datenänderung.** Jedes Attribut behält seine heutige Zuordnung; aus einer Zuordnung wird eine
+Mitgliedschaft. Kein Eintrag im Journal wird ungültig, keine Vererbung kippt, keine Vollständigkeit ändert sich. Erst
+wenn jemand ein Attribut einer zweiten Gruppe hinzufügt, entsteht etwas Neues.
+
+**Vertagt, mit Begründung.**
+
+- **Eine zweite Ordnung** („Attributklasse“: worum es thematisch geht, quer zu den Gruppen) ist erst nötig, wenn die
+  Zahl der Attribute die Suche über Name und Gruppe überfordert. Sie darf dann nie über Geltung entscheiden, sonst
+  entsteht dasselbe Problem unter neuem Namen.
+- **Ein Behälter für Gruppen** (mehrere Gruppen unter einem Namen, in einem Zug anhängen) leistet in einem System mit
+  Vererbung wenig: Was anderswo Klickarbeit spart, macht hier der Baum. Sein einziger Rest-Nutzen ist die spätere
+  Änderung an vielen Ästen. Falls er kommt, dann als Vorlage, die beim Anhängen in ihre Gruppen aufgelöst wird — nicht
+  als Verweis, der eine zweite Auflösungsebene in Geltung, Vererbung und Vollständigkeit bringt.
+- **Bündel nach Zuständigkeit** (Vertrieb, Logistik, Marketing) beantworten nicht, welche Attribute ein Produkt hat,
+  sondern wer sie pflegt. Das ist eine Sicht, keine Gruppe.
+
+**Was zu bauen ist.**
+
+1. Kern: ein Eintrag, der die Mitgliedschaft eines Attributs in einer Gruppe setzt und löst; `ModelCatalog` führt sie
+   neben der heutigen Zuordnung, `AttributesOf` liest beide.
+2. Server: `ModelApi` gibt die Mitgliedschaften aus und nimmt sie entgegen; die Prüfung, dass ein Attribut zu einer
+   Gruppe gehört, fragt künftig die Menge.
+3. Oberfläche: Im Modell steht am Attribut eine Mehrfachauswahl statt eines Wählers; die Gruppe zeigt ihre Mitglieder
+   und nimmt welche auf.
+4. Knotenansicht: Ein Attribut, das über zwei geltende Gruppen hereinkommt, steht einmal da — unter der ersten Gruppe
+   am Pfad, mit Hinweis auf die weiteren. Der Wert ist derselbe, die Zelle auch.
+5. Datenblatt und Ausleitung: Der Baustein `group` nimmt die Attribute der Gruppe wie bisher; bei Mehrfachzugehörigkeit
+   kann dasselbe Attribut in zwei Blöcken vorkommen — das ist gewollt und bleibt Sache der Vorlage.
+
+**Offen.** Ob die Knotenansicht zusätzlich nach Thema gliedern soll, entscheidet sich mit der zweiten Ordnung. Ob die
+heutige einzelne Zuordnung am Attribut nach der Umstellung bestehen bleibt (als „Heimatgruppe“ für Anzeige und
+Export) oder in der Menge aufgeht, wird beim Bau entschieden — die Menge ist das Ziel.
