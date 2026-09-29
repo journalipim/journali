@@ -35,21 +35,6 @@ onMounted(async () => {
   }
 })
 
-// Aus einem Beispiel ein NEUES Skript anlegen (nie das gewählte überschreiben): eindeutiger Schlüssel, Kopf als
-// Bezeichnung/Parameter, dann wählen und im Editor öffnen
-async function beispielEinfuegen(b) {
-  if (!b) return
-  let key = b.key
-  const da = new Set(liste.value.map(s => s.key))
-  if (da.has(key)) { let n = 2; while (da.has(b.key + '_' + n)) n++; key = b.key + '_' + n }
-  const kopf = kopfLesen(b.source)
-  const leib = { source: b.source, params: kopf ? paramsAus(kopf) : [] }
-  if (kopf?.label) leib.label = String(kopf.label)
-  if (kopf?.role) leib.role = String(kopf.role)
-  if (kopf) leib.nodes = !!kopf.nodes
-  try { await api.post(`/api/scriptum/scripts/${encodeURIComponent(key)}`, leib, 'PUT'); await laden(key); editor.value = true }
-  catch (e) { store.toast(e.message) }
-}
 onUnmounted(() => clearTimeout(poll))
 
 async function laden(key = cur.value?.key) {
@@ -138,11 +123,6 @@ const dateiLink = computed(() => ergebnis.value?.file
     <div v-if="darfSchreiben" class="toolbar" style="border-bottom:1px solid var(--line)">
       <input v-model="neu" type="text" :placeholder="$t('neues Skript (key)')" style="flex:1" @keydown.enter="anlegen" />
       <button class="primary" :disabled="!neu.trim()" @click="anlegen">+</button>
-      <select class="beispiele" style="max-width:120px" :title="$t('Ein Beispiel als neues Skript anlegen')"
-        @change="e => { beispielEinfuegen(beispiele.find(x => x.key === e.target.value)); e.target.value = '' }">
-        <option value="">{{ $t("＋ Beispiel …") }}</option>
-        <option v-for="b in beispiele" :key="b.key" :value="b.key" :title="b.description">{{ b.title }}</option>
-      </select>
     </div>
     <div class="scroll">
       <div v-for="s in liste" :key="s.key" class="zeile" :class="{ on: cur?.key === s.key }" @click="waehlen(s)" :title="s.key">
@@ -220,7 +200,7 @@ const dateiLink = computed(() => ergebnis.value?.file
     <div v-else class="empty">{{ $t("Links ein Skript wählen.") }}</div>
 
     <ScriptEditor v-if="editor && cur" lang="js" :model-value="cur.source ?? ''" :title="cur.label || cur.key"
-      :draft-key="'scriptum.' + cur.key" @save="speichern" @close="editor = false" />
+      :templates="beispiele" :draft-key="'scriptum.' + cur.key" @save="speichern" @close="editor = false" />
   </div>
 </template>
 

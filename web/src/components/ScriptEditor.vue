@@ -10,7 +10,7 @@ import { L, t } from '../i18n.js'
 // node/locale: der Knoten, an dem das Skript gerechnet wird — dann zeigt der Fuss das momentane Ergebnis statt einer Erklärung
 // lang: 'formula' (Vorgabe) oder 'js' — ein Skript des Plugins scriptum. Dann prüft nicht der Server, es gibt keine
 // Attributvorschläge und die Hilfe zeigt den Kontext eines Laufs statt der Formelsprache (29.09.2026).
-const props = defineProps({ modelValue: String, title: String, draftKey: String, attributes: Array, type: String, node: String, locale: String, lang: { type: String, default: 'formula' } })
+const props = defineProps({ modelValue: String, title: String, draftKey: String, attributes: Array, type: String, node: String, locale: String, lang: { type: String, default: 'formula' }, templates: { type: Array, default: () => [] } })
 const emit = defineEmits(['save', 'close'])
 
 const text = ref(props.modelValue ?? '')
@@ -233,6 +233,11 @@ const HELP_TEMPLATE = [
           <span v-else class="neg" :title="check.error">✗ {{ check.error }}</span>
           <span class="grow" />
           <span v-if="draftAt" class="warn" :title="$t('Entwurf im Browser — noch nicht im Attribut')">{{ $t("✎ Entwurf") }}</span>
+          <select v-if="templates.length" class="vorlagen" :title="$t('Ein Beispiel als Startpunkt in den Editor laden')"
+            @change="e => { const tpl = templates.find(x => x.key === e.target.value); if (tpl) text = tpl.source; e.target.value = '' }">
+            <option value="">{{ $t("＋ Beispiel …") }}</option>
+            <option v-for="tpl in templates" :key="tpl.key" :value="tpl.key" :title="tpl.description">{{ tpl.title }}</option>
+          </select>
           <button :class="{ primary: help }" @click="help = !help" :title="$t('Was geht hier?')">?</button>
         </div>
         <div class="body">
