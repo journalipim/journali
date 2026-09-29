@@ -44,7 +44,13 @@ const emit = defineEmits(['close', 'done'])
 
 // Das Datenblatt daneben: welche Stelle die PdfPane zeigt. Ein Klick auf „Im Dokument“ setzt sie
 const aktiv = ref(null)
-function zeigen(r) { if (r?.doc) aktiv.value = { doc: r.doc, page: r.page ?? null, quote: r.quote ?? null, value: r.value ?? null } }
+function zeigen(r) {
+  if (!r?.doc) return
+  // Textbausteine: der ganze Abschnittstext ist zu lang zum Finden — die Überschrift ist der verlässliche Anker
+  const quote = r.baustein ? (r.heading || r.key || null) : (r.quote ?? null)
+  const value = r.baustein ? null : (r.value ?? null)
+  aktiv.value = { doc: r.doc, page: r.page ?? null, quote, value }
+}
 // Sicherheitsnetz: ein Fehler der PDF-Ansicht (pdf.js) darf den Dialog nicht leeren — die Analyse bleibt, der Fehler
 // wird sichtbar statt fatal. Der Text hilft, die Ursache zu nennen.
 const pdfFehler = ref(null)

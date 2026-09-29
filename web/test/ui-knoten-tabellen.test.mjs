@@ -1095,3 +1095,13 @@ test('die PDF-Ansicht steht daneben; ein Klick auf „Im Dokument“ zeigt Seite
   assert.equal(p2.props('page'), 2, 'springt zur Seite des Fundes')
   assert.equal(p2.props('quote'), 'Nennleistung 35 W', 'mit dem Zitat als Fundstelle')
 })
+
+test('bei einem Textbaustein ist die Überschrift der Anker — der Abschnittstext ist zu lang zum Finden', async () => {
+  const { w } = await dialog({ text: TEXT })   // TEXT hat Abschnitte mit Überschrift (Funkentstörung)
+  const zelle = w.findAll('td.stelle').find(td => td.text().includes('Funkentstörung'))
+  assert.ok(zelle, 'ein Textbaustein „Funkentstörung" ist klickbar')
+  await zelle.trigger('click'); await flushPromises()
+  const pdf = w.findComponent({ name: 'PdfPane' })
+  assert.equal(pdf.props('quote'), 'Funkentstörung', 'die Überschrift, nicht der lange Abschnittstext')
+  assert.equal(pdf.props('value'), null, 'kein langer Abschnittstext als Fundstelle')
+})
