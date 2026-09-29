@@ -25,6 +25,14 @@ export const GRENZEN = { bytes: 5_000_000, zeilen: 20_000, zelle: 4_000, text: 2
 /// Was der Lauf meldet: eine Zeile, die mit der Marke beginnt — die letzte gilt.
 export const melde = (wert, schreib = s => process.stdout.write(s)) => schreib(MARKE + JSON.stringify(wert) + '\n')
 
+/// Den Prozess sicher beenden: erst stdout/stderr leeren, dann exit. Sonst kappt process.exit() eine noch nicht
+/// geleerte Pipe und die Ergebniszeile geht verloren (der Lauf zeigt „nichts gemeldet“ bei Exit 0).
+export const raus = async (code) => {
+  try { await new Promise(r => process.stdout.write('', () => r())) } catch { /* egal */ }
+  try { await new Promise(r => process.stderr.write('', () => r())) } catch { /* egal */ }
+  process.exit(code)
+}
+
 /// Die Werte der Parameter: die Vorgaben aus dem Kopf, darüber JOURNALI_ARGS, darüber einzelne JOURNALI_ARG_<KEY>.
 export function werte(meta, env = process.env) {
   const aus = {}
@@ -153,12 +161,12 @@ async function main() {
   const key = (scriptArg || E.JOURNALI_SCRIPT || '').trim()
   const token = E.JOURNALI_TOKEN || ''
   const sekunden = Math.max(5, Math.min(3600, parseInt(E.JOURNALI_LIMIT || '', 10) || GRENZEN.sekunden))
-  if (!key) { console.error('✗ Kein Skript genannt (Parameter script).'); process.exit(2) }
+  if (!key) { console.error('✗ Kein Skript genannt (Parameter script).'); return raus(2) }
 
   const res = await fetch(`${server}/api/scriptum/scripts/${encodeURIComponent(key)}/source`, {
     headers: { 'X-Actor': actor, ...(token ? { Authorization: 'Bearer ' + token } : {}) },
   })
-  if (!res.ok) { console.error(`✗ Quelltext von ${key}: ${res.status} ${(await res.text()).slice(0, 300)}`); process.exit(1) }
+  if (!res.ok) { console.error(`✗ Quelltext von ${key}: ${res.status} ${(await res.text()).slice(0, 300)}`); return raus(1) }
   const quelle = await res.text()
 
   const verzeichnis = fs.mkdtempSync(path.join(os.tmpdir(), 'scriptum-'))
@@ -184,8 +192,8 @@ async function main() {
     fs.rmSync(verzeichnis, { recursive: true, force: true })
     console.log(`fertig in ${((Date.now() - uhr) / 1000).toFixed(1)} s`)
   }
-  process.exit(code)
+  await raus(code)
 }
 
 // Als Modul geladen (Prüfstand) tut die Datei nichts von selbst.
-if (process.argv[1] && import.meta.url === `file://${process.argv[1]}`) main().catch(e => { console.error('✗ ' + e.message); process.exit(1) })
+if (process.argv[1] && import.meta.url === `file://${process.argv[1]}`) main().catch(e => { console.error('✗ ' + e.message); return raus(1) })
