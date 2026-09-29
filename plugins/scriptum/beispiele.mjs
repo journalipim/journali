@@ -9,27 +9,33 @@ export const beispiele = [
   {
     key: 'csv-export',
     title: 'CSV-Export',
-    description: 'Alle sichtbaren Knoten als CSV in das Fach out/ des Laufs.',
+    description: 'Knoten als CSV in das Fach out/ — ganzer Baum, oder aus dem Kontextmenü die selektierten Knoten samt Teilbaum.',
     source: `export const meta = {
   label: 'CSV-Export eines Teilbaums',
+  nodes: true,
   params: [
+    { key: 'nodes', label: 'Knoten (IDs; leer = ganzer Baum)', type: 'text', default: '' },
     { key: 'datei', label: 'Dateiname', type: 'text', default: 'export.csv' },
   ],
 }
 
-// Alle sichtbaren Knoten als CSV. Die Spalten sind die Felder einer Knotenzeile; passe die Auswahl an, was du brauchst.
+// Alle sichtbaren Knoten als CSV — oder, aus dem Kontextmenü aufgerufen (meta.nodes), die selektierten Knoten samt
+// Teilbaum (ctx.params.nodes = ihre IDs). ctx.lib.csv baut die Tabelle mit richtiger Maskierung.
 export default async (ctx) => {
-  const zeilen = await ctx.api.get('/api/tree')
-  if (!zeilen.length) return ctx.out.text('Keine Knoten.')
-  const NL = String.fromCharCode(10)
-  const spalten = Object.keys(zeilen[0])
-  const feld = (w) => {
-    const s = String(w == null ? '' : w)
-    return (s.indexOf(';') >= 0 || s.indexOf('"') >= 0 || s.indexOf(NL) >= 0) ? '"' + s.split('"').join('""') + '"' : s
+  const alle = await ctx.api.get('/api/tree')
+  const ids = String(ctx.params.nodes || '').split(',').map((x) => x.trim()).filter(Boolean)
+  let zeilen = alle
+  if (ids.length) {
+    const gewaehlt = new Set(ids)   // die Gewaehlten und alles darunter
+    let mehr = true
+    while (mehr) {
+      mehr = false
+      for (const z of alle) if (z.parent && gewaehlt.has(z.parent) && !gewaehlt.has(z.id)) { gewaehlt.add(z.id); mehr = true }
+    }
+    zeilen = alle.filter((z) => gewaehlt.has(z.id))
   }
-  const kopf = spalten.join(';')
-  const leib = zeilen.map((z) => spalten.map((s) => feld(z[s])).join(';')).join(NL)
-  return ctx.out.file(ctx.params.datei || 'export.csv', kopf + NL + leib)
+  if (!zeilen.length) return ctx.out.text('Keine Knoten.')
+  return ctx.out.file(ctx.params.datei || 'export.csv', ctx.lib.csv(zeilen))
 }
 `,
   },
