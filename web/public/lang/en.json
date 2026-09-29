@@ -2812,5 +2812,7 @@
  "Anbieter": "Provider",
  "welches Modell der lokale Dienst nimmt — die Liste kommt vom Dienst": "which model the local service uses — the list comes from the service",
  "Das lokale Modell sucht nicht im Internet.": "The local model does not search the web.",
- "Das lokale Modell hat kein Modell geladen.": "The local model service has no model loaded."
+ "Das lokale Modell hat kein Modell geladen.": "The local model service has no model loaded.",
+ "Text mit dem lokalen Modell (": "Text with the local model (",
+ ") bearbeiten — mit den Produktdaten dieses Knotens": ") — using this node's product data"
 }

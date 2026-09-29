@@ -94,3 +94,33 @@ test('Listenwerte gehen als Wort an die KI, nicht als Code', async () => {
     assert.ok(f.rows.some(r => r.includes('Wi-Fi: ja')), 'Ja/Nein statt true/false')
   } finally { api.get = orig; ai.ask = origAsk }
 })
+
+// Der KI-Knopf und die „erzeugen“-Knöpfe sind magenta, nur solange die Frage etwas kostet (29.09.2026,
+// dritter Anbieter „lokal“): mit dem lokalen Modell bleibt die Leiste da, verliert aber die Farbe. Der Editor
+// wird nach body teleportiert — gesucht wird im Dokument (domButton), nicht im Wrapper.
+test('KI-Knopf und erzeugen-Knöpfe sind magenta, solange ein bezahlter Anbieter fragt', async () => {
+  const w = await openEditor()
+  const knopf = domButton('✦ KI')
+  assert.ok(knopf.el.classList.contains('ai'), 'der Hauptknopf ist magenta — die Frage kostet beim bezahlten Anbieter')
+  await knopf.trigger()
+  const erzeugen = [...document.querySelectorAll('.aibar .col')].find(c => /erzeugen/.test(c.textContent))
+  const gen = erzeugen.querySelector('button')
+  assert.ok(gen.classList.contains('ai'), 'ein Erzeugen-Knopf ist ebenfalls magenta')
+  w.unmount()
+})
+
+test('mit dem lokalen Modell verliert der KI-Knopf die Farbe — die Frage kostet nichts', async () => {
+  const vorher = { ...ai.server }
+  ai.server = { ...vorher, providers: ['lokal'], chosen: 'lokal', models: {} }
+  let w
+  try {
+    w = await openEditor()
+    const knopf = domButton('✦ KI')
+    assert.ok(!knopf.el.classList.contains('ai'), 'kein Magenta — das lokale Modell kostet nichts')
+    assert.match(knopf.el.getAttribute('title'), /lokalen Modell/, 'der Tooltip nennt das lokale Modell, nicht „kostet Token“')
+    await knopf.trigger()
+    const erzeugen = [...document.querySelectorAll('.aibar .col')].find(c => /erzeugen/.test(c.textContent))
+    const gen = erzeugen.querySelector('button')
+    assert.ok(!gen.classList.contains('ai'), 'auch die Erzeugen-Knöpfe bleiben ohne Magenta')
+  } finally { ai.server = vorher; w?.unmount() }
+})
