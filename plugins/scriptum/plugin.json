@@ -10,7 +10,7 @@
     "en": "Scripts written in the interface and kept in the journal: reports across system borders, own transformations, handovers to other systems. A run is a child process with a token of the role named at the script; the result is a table, a text or a file in the out folder. The form is part of the script (export const meta)."
   },
   "kind": "tool",
-  "runs": "process",
+  "runs": "browser",
   "entry": "entry.js",
   "requires": [
     "tasker"
