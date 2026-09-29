@@ -138,6 +138,7 @@ und Betriebsrechner. Eine Beispieladresse ist `localhost` oder ein Platzhalter, 
   (`export const meta`) ist das Formular, das Ergebnis eine Zeile auf stdout (Tabelle, Text oder Datei im Fach `out/`).
   Zwei Rechte: `scriptum.write` schreibt und liest den Quelltext (ein Administratorrecht), `scriptum.run` stösst an;
   am Skript steht, welches Recht sein Lauf braucht. Kein Geheimnis im Skript — dafür sind Zugänge und der Tresor da.
+  **Ab Pro+**: weder Kostenlos noch Pro enthalten `scriptum` — ein Skript läuft als Prozess auf dem Server.
 
   **Attribut und Gruppe sind n:m** (29.09.2026, `docs/pflegestruktur.md` 36): eine Gruppe ist eine **Auswahl** von
   Attributen, kein Besitz — dasselbe Attribut gilt in beliebig vielen Gruppen, ohne Kopie. Die Menge steht im Journal

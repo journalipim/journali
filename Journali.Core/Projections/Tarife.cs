@@ -84,7 +84,9 @@ public sealed class Tarifliste
 /// <item><b>Pro</b> — 50 000 / 250 000, dazu Datenblatt, Übersetzung (XLIFF), BMEcat (Export nach Vorlage), ETIM,
 /// Tasker; fünf Publikationsbäume. ETIM braucht Datenanalyse und Export nach Vorlage, der Tasker bringt die Sicherung
 /// als Job mit — die kommen mit.</item>
-/// <item><b>Pro+</b> — Pro mit allen Plugins.</item>
+/// <item><b>Pro+</b> — Pro mit allen Plugins; damit auch <c>scriptum</c> (29.09.2026): ein Skript läuft als Prozess
+/// auf dem Server, und wer eines schreibt, kann alles, was der Serverbenutzer kann — das gehört zu den Tarifen, die
+/// auch die Verantwortung dafür tragen, nicht zum Einstieg.</item>
 /// <item><b>Enterprise</b> — 200 000 / 1 000 000, alle Plugins, Publikationsbäume ohne Grenze.</item>
 /// <item><b>Unlimited</b> — keine Grenzen, alle Plugins.</item>
 /// </list>
@@ -109,6 +111,7 @@ public static class Tarife
     public static readonly IReadOnlySet<string> Systemjobs = new HashSet<string> { "derive", "probe", "embed" };
 
     // Die Systemjobs stehen auch hier: das Saatgut soll dasselbe sagen wie die Ausnahme darüber.
+    // Nicht hier und nicht bei Pro: scriptum — es gibt es erst ab Pro+ (Prüfstand TarifPluginsTests).
     private static readonly string[] Basis = ["table", "csv", "excel", "json", "exceladdin", "ooaddin", "derive", "probe", "embed", "tasker", "driver"];
 
     public static readonly Tarif Free = new("free", "Kostenlos", 0, 10_000, 50_000, 1, new HashSet<string>(Basis));
