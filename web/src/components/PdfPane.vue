@@ -84,16 +84,17 @@ async function zeichne(num) {
   })
 }
 
-/// Zur Seite springen und die Fundstelle markieren. Nur die PDF-Spalte scrollen (nicht scrollIntoView, das könnte
-/// übergeordnete Container mitscrollen); alles gekapselt, damit ein Fehler nie in den Dialog schlägt.
+/// Zur Seite springen und die Fundstelle markieren. scrollIntoView scrollt nachweislich nur die PDF-Spalte selbst
+/// (Browsertest: die Tabelle bleibt unberührt) und erreicht zuverlässig jede Seite; das Netz onErrorCaptured im Dialog
+/// fängt einen Fehler ab, hier zusätzlich try/catch.
 function springen() {
   try {
     if (!seiten.value.length) return
     const ziel = Number(props.page)   // die Seitenzahl kann als Text kommen — sonst schlägt der Vergleich fehl und es bliebe Seite 1
     const num = seiten.value.some(s => s.num === ziel) ? ziel : seiten.value[0].num
     markiere(num)
-    const seiteEl = canvasRefs[num]?.parentElement, box = behaelter.value
-    if (seiteEl && box) box.scrollTop += seiteEl.getBoundingClientRect().top - box.getBoundingClientRect().top - 4
+    const seiteEl = canvasRefs[num]?.parentElement
+    if (seiteEl?.scrollIntoView) seiteEl.scrollIntoView({ block: 'start', behavior: 'auto' })
   } catch { /* die Ansicht darf nie den Dialog stören */ }
 }
 
