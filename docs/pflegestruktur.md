@@ -2193,6 +2193,13 @@ Route) bleibt draussen; journali ist Quelle und Ziel und lässt sich von aussen 
 
 Damit ist ein neues System **ein Zugang plus ein Skript** — keine gebaute, signierte Erweiterung.
 
+**Schreiben mit Kopfzeilen.** Mancher Schreibzugriff braucht mehr als Rumpf und Anmeldung — SAP Gateway etwa einen
+CSRF-Token, gebunden an die Sitzung. Dafür gibt `ctx.zugang(name).roh(method, pfad, { body, headers })` die ganze
+Antwort zurück (`{ status, headers, body }`), und die Weiterleitung reicht wenige Kopfzeilen des Aufrufers an die
+Quelle durch (`X-CSRF-Token`, `If-Match`, den Sitzungskeks als `X-Relay-Cookie` → `Cookie`) — nie sein Authorization.
+So holt ein Skript erst den Token (`X-CSRF-Token: Fetch`) und schreibt dann mit Token und Keks; das Geheimnis des
+Zugangs bleibt beim Server. Beispiel „SAP OData schreiben (CSRF)“ in der Bibliothek.
+
 **Die Beispiel-Bibliothek — statt eines Marktes.** Damit niemand jedes Skript bei null beginnt, liefert journali
 **kuratierte Beispiele** mit (`plugins/scriptum/beispiele.mjs`): CSV-Export, Fremdsystem lesen, Fremdsystem beschicken,
 ein einfacher Bericht. Der Autor lädt eines in den Editor (＋ Beispiel …) und passt es an. Kein Fremdcode aus einem

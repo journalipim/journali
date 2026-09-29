@@ -68,8 +68,8 @@ function tabelleAus(liste, grenzen) {
 /// und die drei Wege, ein Ergebnis zu geben. Mehr gibt es nicht — kein Paket, kein zweites Skript.
 export function kontext({ server, token, actor, params, outDir, log = console.log }) {
   const kopf = (mitTyp = false) => ({ 'X-Actor': actor, ...(mitTyp ? { 'Content-Type': 'application/json' } : {}), ...(token ? { Authorization: 'Bearer ' + token } : {}) })
-  async function anfrage(method, pfad, body) {
-    const res = await fetch(server + pfad, { method, headers: kopf(body !== undefined), body: body === undefined ? undefined : JSON.stringify(body) })
+  async function anfrage(method, pfad, body, extra) {
+    const res = await fetch(server + pfad, { method, headers: { ...kopf(body !== undefined), ...(extra || {}) }, body: body === undefined ? undefined : JSON.stringify(body) })
     const text = await res.text()
     let data = null
     try { data = text ? JSON.parse(text) : null } catch { if (!res.ok) throw new Error(`${method} ${pfad}: ${res.status} ${text.slice(0, 300)}`); return text }
@@ -96,15 +96,20 @@ export function kontext({ server, token, actor, params, outDir, log = console.lo
   }
   /// Ein Zugang: der Server (Weiterleitung) haengt die Anmeldung an und spricht das Fremdsystem an — das Geheimnis
   /// bleibt bei ihm, das Skript sieht es nie. Der Pfad ist relativ zur Adresse des Zugangs; die Antwort ist geparstes
-  /// JSON, sonst Text. Der Name kommt aus einem Parameter (Typ driver) oder steht im Skript.
+  /// JSON, sonst Text. Der Name kommt aus einem Parameter (Typ driver) oder steht im Skript. Jede Methode nimmt
+  /// optional { headers } mit; roh(method, pfad, { body, headers }) gibt die ganze Antwort { status, headers, body }
+  /// zurueck — fuer Ablaeufe, die eine Kopfzeile brauchen (SAP: X-CSRF-Token holen, dann mit Sitzungskeks schreiben).
   const zugang = name => {
     if (!name) throw new Error('kein Zugang genannt')
-    const weiter = (method, pfad, body) => anfrage(method, `/api/drivers/${encodeURIComponent(name)}/relay?path=${encodeURIComponent(pfad || '/')}`, body)
+    const ziel = pfad => `/api/drivers/${encodeURIComponent(name)}/relay?path=${encodeURIComponent(pfad || '/')}`
+    const weiter = (method, pfad, body, opt) => anfrage(method, ziel(pfad), body, opt && opt.headers)
+    const roh = (method, pfad, opt) => anfrage(method, ziel(pfad) + '&raw=1', opt && opt.body, opt && opt.headers)
     return {
-      get: pfad => weiter('GET', pfad),
-      post: (pfad, body) => weiter('POST', pfad, body),
-      put: (pfad, body) => weiter('PUT', pfad, body),
-      del: pfad => weiter('DELETE', pfad),
+      get: (pfad, opt) => weiter('GET', pfad, undefined, opt),
+      post: (pfad, body, opt) => weiter('POST', pfad, body === undefined ? {} : body, opt),
+      put: (pfad, body, opt) => weiter('PUT', pfad, body === undefined ? {} : body, opt),
+      del: (pfad, opt) => weiter('DELETE', pfad, undefined, opt),
+      roh,
     }
   }
   return { api, params, journali: server, actor, out, log, zugang }

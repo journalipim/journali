@@ -102,6 +102,37 @@ test('ctx.zugang spricht ein Fremdsystem über die Weiterleitung — mit dem Pfa
   } finally { globalThis.fetch = alt }
 })
 
+test('ctx.zugang.roh gibt Status und Kopfzeilen zurück und reicht eigene Kopfzeilen durch — der SAP-CSRF-Weg', async () => {
+  const rufe = []
+  const alt = globalThis.fetch
+  globalThis.fetch = async (url, opt = {}) => {
+    rufe.push({ url: String(url), opt })
+    // die Weiterleitung im raw-Modus antwortet mit einem Umschlag { status, headers, body }
+    const umschlag = rufe.length === 1
+      ? { status: 200, headers: { 'x-csrf-token': 'ABC', 'set-cookie': ['SAP_SESSIONID=xy; path=/; HttpOnly'] }, body: '' }
+      : { status: 201, headers: {}, body: '{"d":{"Name":"Beispiel"}}' }
+    return { ok: true, status: 200, text: async () => JSON.stringify(umschlag) }
+  }
+  try {
+    const ctx = kontext({ server: 'http://localhost:5000', token: 'svc_1', actor: 'job:x', params: {} })
+    const z = ctx.zugang('sap')
+    // 1. Token holen
+    const hol = await z.roh('GET', '/srv?$format=json&$top=0', { headers: { 'x-csrf-token': 'Fetch' } })
+    assert.equal(hol.headers['x-csrf-token'], 'ABC', 'der Token kommt aus der Kopfzeile der Antwort')
+    assert.ok(rufe[0].url.endsWith('&raw=1'), 'roh geht mit raw=1 an die Weiterleitung')
+    assert.equal(rufe[0].opt.headers['x-csrf-token'], 'Fetch', 'die eigene Kopfzeile geht mit')
+    assert.equal(rufe[0].opt.headers.Authorization, 'Bearer svc_1', 'dazu das Token des Laufs')
+    // 2. schreiben mit Token und Keks
+    const keks = hol.headers['set-cookie'].map(c => c.split(';')[0]).join('; ')
+    const res = await z.roh('POST', '/srv', { body: { Name: 'Beispiel' }, headers: { 'x-csrf-token': hol.headers['x-csrf-token'], 'x-relay-cookie': keks } })
+    assert.equal(res.status, 201, 'der Status des Fremdsystems steht im Umschlag')
+    assert.equal(rufe[1].opt.method, 'POST')
+    assert.equal(rufe[1].opt.headers['x-relay-cookie'], 'SAP_SESSIONID=xy')
+    assert.equal(rufe[1].opt.headers['x-csrf-token'], 'ABC')
+    assert.equal(JSON.parse(rufe[1].opt.body).Name, 'Beispiel')
+  } finally { globalThis.fetch = alt }
+})
+
 test('ein Fehler des Skripts ist eine Meldung, kein Absturz', async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'scriptum-fehler-'))
   try {

@@ -127,6 +127,39 @@ export default async (ctx) => {
 `,
   },
   {
+    key: 'sap-odata-schreiben',
+    title: 'SAP OData schreiben (CSRF)',
+    description: 'Einen Datensatz nach SAP Gateway (OData v2) anlegen — mit dem CSRF-Token-Ablauf: erst Token und Sitzungskeks holen, dann schreiben.',
+    source: `export const meta = {
+  label: 'SAP OData schreiben (CSRF)',
+  params: [
+    { key: 'system', label: 'Zugang (HTTP/REST)', type: 'driver', default: '' },
+    { key: 'service', label: 'OData-Service und Entität', type: 'text', default: '/sap/opu/odata/sap/ZMY_SRV/ProductSet' },
+  ],
+}
+
+// Schreiben nach SAP Gateway (OData v2) braucht einen CSRF-Token, gebunden an die Sitzung:
+// 1. GET mit X-CSRF-Token: Fetch — der Token steht in der Antwort-Kopfzeile, der Sitzungskeks in Set-Cookie.
+// 2. POST mit demselben Token und demselben Keks. Beides reicht der Server durch; das Geheimnis des Zugangs bleibt bei ihm.
+// roh() gibt die ganze Antwort (Status, Kopfzeilen, Rumpf); der Keks geht als x-relay-cookie zurueck.
+export default async (ctx) => {
+  const zugang = ctx.zugang(ctx.params.system)
+  const service = ctx.params.service || '/'
+  const trenner = service.indexOf('?') >= 0 ? '&' : '?'
+  // 1. Token und Sitzungskeks holen
+  const hol = await zugang.roh('GET', service + trenner + '$format=json&$top=0', { headers: { 'x-csrf-token': 'Fetch' } })
+  const token = hol.headers && hol.headers['x-csrf-token']
+  if (!token) return ctx.out.text('Kein CSRF-Token — Anmeldung oder Service pruefen (Status ' + hol.status + ').')
+  const keks = ((hol.headers && hol.headers['set-cookie']) || []).map((c) => c.split(';')[0]).join('; ')
+  // 2. Einen Datensatz anlegen — die Felder richten sich nach der Entitaet
+  const satz = { Name: 'Beispiel', Description: 'ueber journali angelegt' }
+  const res = await zugang.roh('POST', service, { body: satz, headers: { 'x-csrf-token': token, 'x-relay-cookie': keks } })
+  if (res.status >= 200 && res.status < 300) return ctx.out.text('Angelegt (Status ' + res.status + ').')
+  return ctx.out.text('Abgelehnt (Status ' + res.status + '): ' + String(res.body || '').slice(0, 400))
+}
+`,
+  },
+  {
     key: 'bericht-zaehlen',
     title: 'Knoten je Wert zählen',
     description: 'Ein einfacher Bericht ohne Fremdsystem: wie viele Knoten je Wert eines Feldes (etwa status).',

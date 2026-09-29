@@ -47,6 +47,15 @@ public static class DriverApi
     /// <summary>Arten, deren Quelle über die Weiterleitung gelesen und beschickt wird — nie direkt, denn das Geheimnis bleibt beim Server.</summary>
     public static readonly IReadOnlySet<string> Anmeldungen = new HashSet<string> { "ixp", "solr", "http" };
 
+    /// <summary>
+    /// Kopfzeilen, die die Weiterleitung vom Aufrufer an die Quelle durchreicht — nie sein Authorization (das ist
+    /// journalis eigenes). Für Abläufe wie SAP-CSRF: den Token (<c>X-CSRF-Token</c>), die Vorbedingung (<c>If-Match</c>,
+    /// ETag) und den Sitzungskeks als <c>X-Relay-Cookie</c> → <c>Cookie</c> — so, weil eine Node-fetch keine eigene
+    /// Cookie-Kopfzeile setzen darf.
+    /// </summary>
+    private static readonly (string Ein, string Aus)[] RelayKopfDurch =
+        [("X-CSRF-Token", "X-CSRF-Token"), ("If-Match", "If-Match"), ("X-Relay-Cookie", "Cookie")];
+
     public static Art? ArtVon(string? key) => Arten.FirstOrDefault(a => a.Key == key);
 
     /// <summary>Ein eingerichteter Zugang, wie er im Journal steht (ohne Geheimnis).</summary>
@@ -167,8 +176,10 @@ public static class DriverApi
 
         // Die Weiterleitung: der Server liest die Quelle (IXP, Solr, HTTP) und beschickt sie, hängt die Anmeldung an —
         // das Geheimnis verlässt ihn nie. GET liest, POST/PUT/DELETE schreiben mit Rumpf; nur unterhalb der Adresse des
-        // Zugangs (path relativ, ohne ..). So spricht ein Skript ein Fremdsystem an, ohne dessen Anmeldung zu kennen
-        api.MapMethods("/drivers/{zugang}/relay", ["GET", "POST", "PUT", "DELETE"], async (string zugang, string? path, HttpContext http, Catalog c, CancellationToken ct) =>
+        // Zugangs (path relativ, ohne ..). Mit ?raw=1 kommt statt des Rumpfs ein Umschlag { status, headers, body }
+        // zurück — für Abläufe, die eine Kopfzeile brauchen (SAP: X-CSRF-Token holen, dann mit Sitzungskeks schreiben).
+        // Durchgereicht werden nur die Kopfzeilen aus RelayKopfDurch, nie das Authorization des Aufrufers
+        api.MapMethods("/drivers/{zugang}/relay", ["GET", "POST", "PUT", "DELETE"], async (string zugang, string? path, bool raw, HttpContext http, Catalog c, CancellationToken ct) =>
         {
             if (Alle(c).FirstOrDefault(x => x.Key == zugang) is not { } z) return Bad("Zugang {0} gibt es nicht.", zugang);
             if (!Anmeldungen.Contains(z.Art)) return Bad("Zugang {0} liest und beschickt nicht über die Weiterleitung.", zugang);
@@ -180,10 +191,22 @@ public static class DriverApi
                 rumpf = await sr.ReadToEndAsync(ct);
                 rumpfTyp = http.Request.ContentType;
             }
+            var durch = new List<KeyValuePair<string, string>>();
+            foreach (var (ein, aus) in RelayKopfDurch)
+                if (http.Request.Headers.TryGetValue(ein, out var v) && v.Count > 0) durch.Add(new(aus, v.ToString()));
             try
             {
-                var res = await Weiter(z, Geheim(jobsDir, z.Key), path ?? "/", ct, methode, rumpf, rumpfTyp);
+                var res = await Weiter(z, Geheim(jobsDir, z.Key), path ?? "/", ct, methode, rumpf, rumpfTyp, durch);
                 http.Response.RegisterForDispose(res);
+                if (raw)
+                {
+                    var kopf = new Dictionary<string, object?>();
+                    if (res.Headers.TryGetValues("X-CSRF-Token", out var tok)) kopf["x-csrf-token"] = tok.FirstOrDefault();
+                    if (res.Headers.TryGetValues("Set-Cookie", out var keks)) kopf["set-cookie"] = keks.ToArray();
+                    if (res.Headers.ETag is { } et) kopf["etag"] = et.ToString();
+                    if (res.Content.Headers.ContentType is { } ctp) kopf["content-type"] = ctp.ToString();
+                    return Results.Json(new { status = (int)res.StatusCode, headers = kopf, body = await res.Content.ReadAsStringAsync(ct) });
+                }
                 var typ = res.Content.Headers.ContentType?.ToString() ?? "application/octet-stream";
                 return Results.Stream(await res.Content.ReadAsStreamAsync(ct), typ, enableRangeProcessing: false) is var ok && res.IsSuccessStatusCode
                     ? ok : Results.StatusCode((int)res.StatusCode);
@@ -282,12 +305,13 @@ public static class DriverApi
             ? (h, s) : null;
 
     private static async Task<HttpResponseMessage> Weiter(Zugang z, IReadOnlyDictionary<string, string> geheim, string pfad, CancellationToken ct,
-        HttpMethod? methode = null, string? rumpf = null, string? typ = null)
+        HttpMethod? methode = null, string? rumpf = null, string? typ = null, IEnumerable<KeyValuePair<string, string>>? extra = null)
     {
         using var req = new HttpRequestMessage(methode ?? HttpMethod.Get, WeiterUrl(z, pfad));
         req.Headers.Authorization = Anmeldung(z, geheim);
         if (Kopf(z, geheim) is { } k) req.Headers.TryAddWithoutValidation(k.Name, k.Wert);
         req.Headers.Accept.ParseAdd("application/json");
+        if (extra is not null) foreach (var (n, v) in extra) req.Headers.TryAddWithoutValidation(n, v);
         if (rumpf is not null) req.Content = new StringContent(rumpf, System.Text.Encoding.UTF8, typ is { Length: > 0 } t ? t : "application/json");
         var http = Handler is null ? Http : new HttpClient(Handler, disposeHandler: false);
         return await http.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, ct);
