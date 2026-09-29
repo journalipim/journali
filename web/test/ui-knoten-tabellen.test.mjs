@@ -838,6 +838,8 @@ test('mehrere Dokumente: eine Liste, die Quelle nennt das Dokument', async () =>
 
 // ── Die Wege hinein ───────────────────────────────────────────────────────────────────────────────────────────
 
+// (die Vorschau steht bei den Asset-Tests weiter unten)
+
 const knotenansicht = async opt => {
   const { rufe } = welt(opt)
   const router = { path: '/tree/p1', push(p) { this.path = p }, replace(p) { this.path = p } }
@@ -880,7 +882,6 @@ test('Rechtsklick auf ein Dokument im Band: „Dokument auswerten …“ öffnet
   const { w } = await knotenansicht({ rels: RELS })
   const kacheln = band(w).findAll('.tile')
   assert.equal(kacheln.length, 3)
-  assert.equal(kacheln[0].find('a').attributes('href'), '/api/media/m1/file?name=datenblatt.pdf', 'der Link trägt den Namen — eine andere Adresse als die gecachte ohne Dateinamen')
   await kacheln[0].trigger('contextmenu', { clientX: 5, clientY: 5 })
   assert.ok(menu.visible)
   const e = eintrag(/^Dokument auswerten/)
@@ -929,4 +930,29 @@ test('Rechtsklick: „Zuordnung lösen“ löst die Auswahl, nicht nur die eine 
   await e.action(); await flushPromises()
   assert.deepEqual(rufe.filter(r => r.methode === 'DELETE').map(r => r.pfad.split('/').at(-1)), ['r1', 'r3'])
   menu.close()
+})
+
+test('Klick auf ein Asset zeigt es gross — der Download-Link trägt den Namen, mit → blättert man weiter', async () => {
+  const { w } = await knotenansicht({ rels: RELS })
+  const kacheln = band(w).findAll('.tile')
+  assert.equal(kacheln[0].find('a').exists(), false, 'die Kachel ist kein Download-Link mehr — der Klick zeigt das Medium')
+  await kacheln[0].find('.bild').trigger('click'); await flushPromises()
+  const v = w.findComponent({ name: 'MediaPreview' })
+  assert.ok(v.exists(), 'die Vorschau steht da')
+  assert.equal(v.find('h1').text().startsWith('datenblatt.pdf'), true)
+  assert.equal(v.find('a.x').attributes('href'), '/api/media/m1/file?name=datenblatt.pdf', 'der Link trägt den Namen — eine andere Adresse als die gecachte ohne Dateinamen')
+  assert.ok(v.find('iframe').exists(), 'ein PDF steht als Blatt da, nicht als Bild')
+  // blättern: das nächste Medium des Knotens, ohne das Fenster zu schliessen
+  await v.findAll('button.x').find(b => b.text() === '›').trigger('click'); await flushPromises()
+  assert.match(v.find('h1').text(), /massblatt\.pdf/)
+  await v.findAll('button.x').find(b => b.text() === '×').trigger('click'); await flushPromises()
+  assert.equal(w.findComponent({ name: 'MediaPreview' }).exists(), false)
+})
+
+test('Strg+Klick auf ein Asset wählt weiter aus, statt die Vorschau zu öffnen', async () => {
+  const { w } = await knotenansicht({ rels: RELS })
+  const kachel = band(w).findAll('.tile')[0]
+  await kachel.trigger('click', { ctrlKey: true }); await flushPromises()
+  assert.equal(w.findComponent({ name: 'MediaPreview' }).exists(), false)
+  assert.ok(kachel.classes('picked'), 'gewählt')
 })

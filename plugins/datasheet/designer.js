@@ -21,10 +21,11 @@ export const DEFAULT_LAYOUT = () => ({
 const PALETTE = [
   { kind: 'section', columns: 1, label: '▭ Abschnitt, 1 Spalte' }, { kind: 'section', columns: 2, label: '▯▯ Abschnitt, 2 Spalten' },
   { kind: 'section', columns: 3, label: '▯▯▯ Abschnitt, 3 Spalten' }, { kind: 'section', columns: 4, label: '▯▯▯▯ Abschnitt, 4 Spalten' },
-  { kind: 'text', label: '¶ Text' }, { kind: 'image', label: '▨ Bild' }, { kind: 'variants', label: '⊞ Datentabelle (Subitems)' }, { kind: 'compare', label: '⊟ Vergleichstabelle' }, { kind: 'pagebreak', label: '⤓ Seitenumbruch' },
+  { kind: 'text', label: '¶ Text' }, { kind: 'list', label: '⁝ Aufzählung' }, { kind: 'image', label: '▨ Bild' }, { kind: 'variants', label: '⊞ Datentabelle (Subitems)' }, { kind: 'compare', label: '⊟ Vergleichstabelle' }, { kind: 'pagebreak', label: '⤓ Seitenumbruch' },
 ]
 const newItem = t => t.kind === 'section' ? { id: nid(), kind: 'section', title: '', columns: t.columns, cells: Array.from({ length: t.columns }, () => []) }
   : t.kind === 'text' ? { id: nid(), kind: 'text', html: 'Text …' }
+  : t.kind === 'list' ? { id: nid(), kind: 'list', attr: t.attr ?? '', label: false, marker: 'disc', columns: 1 }
   : t.kind === 'image' ? { id: nid(), kind: 'image', which: 'first', height: 50 }
   : t.kind === 'variants' ? { id: nid(), kind: 'variants', attrs: [], group: '' }
   : t.kind === 'compare' ? { id: nid(), kind: 'compare', source: 'variants', nodes: [], group: '', attrs: [], diff: false, empty: false }
@@ -59,6 +60,19 @@ function renderItem(it, d, model, edit, ctx) {
       e = el('div', { class: 'ds-attr' })
       if (it.label !== false) e.append(el('span', { class: 'k' }, label(it.attr) + ': '))
       e.append(valueCell(d, it.attr) ?? el('span', { class: 'muted' }, edit ? `{${it.attr}}` : '')); break
+    }
+    case 'list': {
+      // Ein mehrwertiges Attribut als Aufzählung: je Wert eine Zeile. Der Wert kommt aus `listen`, nicht aus `attr` —
+      // dort stehen die Werte als ein Satz mit Kommas, und ein Wert kann selbst eines tragen (29.09.2026)
+      const werte = d.listen?.[it.attr] ?? (d.attr?.[it.attr] ? [String(d.attr[it.attr])] : [])
+      e = el('div', { class: 'ds-list' })
+      if (it.label) e.append(el('h3', {}, label(it.attr)))
+      if (werte.length) {
+        const ul = el('ul', { class: 'ds-ul', style: `list-style:${it.marker === 'none' ? 'none' : it.marker === 'dash' ? 'none' : it.marker}` + (it.columns > 1 ? `;column-count:${it.columns}` : '') })
+        for (const w of werte) ul.append(el('li', {}, it.marker === 'dash' ? '– ' + w : w))
+        e.append(ul)
+      } else e.append(el('div', { class: 'muted' }, edit ? `{${it.attr || 'kein Attribut'}}` : ''))
+      break
     }
     case 'image': {
       const imgs = it.which === 'all' ? d.images : d.images.slice(0, 1)
@@ -127,7 +141,7 @@ function renderBlock(b, d, model, edit, ctx) {
     case 'footer': return el('footer', { class: 'ds-footer muted' }, fill(b.text, d))
     case 'pagebreak': return el('div', { class: 'ds-break' }, edit ? '⤓ Seitenumbruch' : '')
     case 'variants': case 'compare': return renderItem(b, d, model, edit, ctx)
-    case 'text': case 'image': return renderItem(b, d, model, edit, ctx)
+    case 'text': case 'image': case 'list': return renderItem(b, d, model, edit, ctx)
     case 'section': {
       const s = el('section', { class: 'ds-section', style: `grid-template-columns: repeat(${b.columns}, 1fr)` })
       if (b.title) s.append(el('h2', { style: 'grid-column: 1 / -1' }, fill(b.title, d)))
@@ -153,6 +167,8 @@ const SHEET_CSS = `
   .ds-table { border-collapse: collapse; width: 100%; } .ds-table td, .ds-table th { padding: 0.6mm 1.5mm; border-bottom: 1px solid #eee; vertical-align: top; text-align: left; }
   .ds-table td.k { color: #6b7280; width: 42%; } .ds-variants th, .ds-compare th { background: #eef2f7; }
   .ds-compare td.k { width: auto; white-space: nowrap; }
+  .ds-list ul { margin: 0; padding-left: 1.1em; } .ds-list ul[style*="list-style:none"] { padding-left: 0; }
+  .ds-list li { margin: 0 0 1mm; break-inside: avoid; } .ds-list h3 { margin: 0 0 1mm; }
   .ds-attr .k { color: #6b7280; } .ds-images img { max-width: 100%; object-fit: contain; display: block; }
   .ds-footer { margin-top: 6mm; font-size: 0.8em; border-top: 1px solid #ddd; padding-top: 1mm; }
   .ds-break { break-after: page; height: 0; }
@@ -334,6 +350,12 @@ export async function mountDesigner(root, ctx) {
     canvas.append(page)
     drawProps()
   }
+  /// Die Attribute, die hier zur Wahl stehen — dieselben wie in der Palette, mehrwertige zuerst
+  function attrOptionen() {
+    const quelle = st.avail?.length ? st.avail.map(c => model.attributes.find(a => a.key === c.key)).filter(Boolean) : (model.attributes ?? [])
+    return quelle.map(a => ({ key: a.key, label: (a.label?.[st.locale] || a.label?.de || a.key) + (a.multiple ? ' ≣' : ''), multiple: !!a.multiple }))
+      .sort((x, y) => (y.multiple ? 1 : 0) - (x.multiple ? 1 : 0) || x.label.localeCompare(y.label, 'de', { sensitivity: 'base' }))
+  }
   function field(labelText, input) { return el('div', {}, el('label', {}, labelText), input) }
   function text(obj, key, after = draw) { const i = el('input', { type: 'text', value: obj[key] ?? '' }); i.addEventListener('input', () => { obj[key] = i.value; dctx.dirty(); after() }); return i }
   function num(obj, key, min, max) { const i = el('input', { type: 'number', value: obj[key] ?? '', min: String(min), max: String(max) }); i.addEventListener('input', () => { obj[key] = Number(i.value); dctx.dirty(); draw() }); return i }
@@ -361,6 +383,16 @@ export async function mountDesigner(root, ctx) {
       }
       case 'group': props.append(el('div', { class: 'mono muted' }, x.group), check(x, 'title', 'Überschrift zeigen'), check(x, 'empty', 'auch leere Attribute')); break
       case 'attr': props.append(el('div', { class: 'mono muted' }, x.attr), check(x, 'label', 'Bezeichnung davor')); break
+      case 'list': {
+        const a = el('select', {}, el('option', { value: '' }, '— Attribut —'), ...attrOptionen().map(o => el('option', { value: o.key }, o.label)))
+        a.value = x.attr ?? ''
+        a.addEventListener('change', () => { x.attr = a.value; dctx.dirty(); draw() })
+        const m = el('select', {}, el('option', { value: 'disc' }, '• Punkt'), el('option', { value: 'dash' }, '– Strich'), el('option', { value: 'decimal' }, '1. Zahl'), el('option', { value: 'none' }, 'ohne'))
+        m.value = x.marker ?? 'disc'
+        m.addEventListener('change', () => { x.marker = m.value; dctx.dirty(); draw() })
+        props.append(field('Attribut', a), field('Zeichen', m), field('Spalten', num(x, 'columns', 1, 4)), check(x, 'label', 'Bezeichnung als Überschrift'))
+        break
+      }
       case 'image': { const w = el('select', {}, el('option', { value: 'first' }, 'erstes Bild'), el('option', { value: 'all' }, 'alle Bilder')); w.value = x.which; w.addEventListener('change', () => { x.which = w.value; dctx.dirty(); draw() }); props.append(field('Welche', w), field('Höhe (mm)', num(x, 'height', 10, 200))); break }
       case 'variants': {
         props.append(el('div', { class: 'muted' }, 'Zeilen: die Subitems des Knotens (Produkt → Varianten, Gruppe → Produkte). Spalten: Achsen, eine Gruppe oder eigene Attribute:'))

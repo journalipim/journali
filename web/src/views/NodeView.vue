@@ -27,6 +27,7 @@ import HtmlCell from '../components/HtmlCell.vue'
 import RowsBlock from '../components/RowsBlock.vue'
 import VersionsPanel from '../components/VersionsPanel.vue'
 import MediaThumb from '../components/MediaThumb.vue'
+import MediaPreview from '../components/MediaPreview.vue'
 import MediaPicker from '../components/MediaPicker.vue'
 import DocTables from '../components/DocTables.vue'
 import { mediaTypesFor, attachFiles, meldung as medienMeldung, IST_DOKUMENT } from '../media.js'
@@ -642,10 +643,19 @@ const pickedMedia = ref(new Set())
 watch(() => props.id, () => { pickedMedia.value = new Set() })   // ein anderer Knoten, eine leere Auswahl
 /// Ein Dokument, das der Leser (docs) versteht: nach Name oder Art — Bilder haben keinen Text
 const istDokument = m => IST_DOKUMENT.test(m?.label ?? '') || m?.mime === 'application/pdf' || /^text\//.test(m?.mime ?? '')
+// Die Vorschau: welche Medien darin blätterbar sind und welches zuerst steht
+const vorschau = ref(null)   // { media: [...], start } oder null
+const vorschauMedien = computed(() => [...mediaRels.value.map(r => r.other), ...inheritedMedia.value.map(r => r.other)])
 function mediaClick(e, r) {
-  if (!(e.ctrlKey || e.metaKey)) return
-  e.preventDefault()   // der Klick traf vielleicht den Link zur Datei — mit Strg wird gewählt, nicht geöffnet
-  const s = new Set(pickedMedia.value); s.has(r.id) ? s.delete(r.id) : s.add(r.id); pickedMedia.value = s
+  if (e.ctrlKey || e.metaKey) {
+    e.preventDefault()   // der Klick traf vielleicht das Bild — mit Strg wird gewählt, nicht geöffnet
+    const s = new Set(pickedMedia.value); s.has(r.id) ? s.delete(r.id) : s.add(r.id); pickedMedia.value = s
+    return
+  }
+  // ein Klick auf Bild oder Name zeigt das Medium gross; die Zellen daneben bleiben bedienbar
+  if (e.target.closest('input, select, button, a, .cell-box, td')) return
+  e.preventDefault()
+  vorschau.value = { media: vorschauMedien.value, start: r.other.id }
 }
 function mediaMenu(e, r) {
   const sel = pickedMedia.value.has(r.id) ? mediaRels.value.filter(x => pickedMedia.value.has(x.id)) : [r]
@@ -1026,7 +1036,7 @@ function cellMenu(e, def, col, block) {
             draggable="true" @dragstart="mediaDragStart($event, r)" @dragover="mediaDragOver($event, r)" @dragleave="mediaDropId === r.id && (mediaDropId = null)"
             @drop.prevent="mediaDrop(r)" @dragend="mediaDragEnd" @click="mediaClick($event, r)" @contextmenu="mediaMenu($event, r)"
             :title="`${r.other.label} · ${r.other.mime ?? ''} · ${$L(relType(r.type)?.label) || r.type}\n${$t('ziehen: Reihenfolge ändern · Strg+Klick: wählen · Rechtsklick: auswerten')}`">
-            <a :href="store.can('download') ? dateiLink(r.other) : null" :target="store.can('download') ? '_blank' : null"><MediaThumb v-if="r.other.isImage || r.other.hasThumb" :id="r.other.id" :self="r.other.isImage" /><div v-else class="doc">{{ (r.other.mime ?? '').split('/')[1]?.slice(0, 6) || '📄' }}</div></a>
+            <div class="bild" :title="$t('anzeigen')"><MediaThumb v-if="r.other.isImage || r.other.hasThumb" :id="r.other.id" :self="r.other.isImage" /><div v-else class="doc">{{ (r.other.mime ?? '').split('/')[1]?.slice(0, 6) || '📄' }}</div></div>
             <div class="name"><span v-if="r.other.valid === false" class="neg" :title="$t('gilt heute nicht — fällt aus der Ausleitung')">⌛ </span><router-link :to="`/media`" class="muted">{{ r.other.label }}</router-link></div>
             <table class="grid" style="width:auto;margin:0"><tbody>
               <tr v-for="d in relGroupAttrs(r.type).filter(d => d.key !== 'stop')" :key="d.key"><td class="muted" style="font-size:11px;padding:0 4px" :title="d.key === 'inherit' ? $t('gilt dann an allen Subitems — bis eines die Vererbung stoppt') : d.key">{{ $L(d.label) || d.key }}</td>
@@ -1035,8 +1045,8 @@ function cellMenu(e, def, col, block) {
             <div class="muted meta"><span v-if="i === 0" class="pos1" :title="$t('steht an erster Stelle — die Ausleitung nimmt sie als Hauptbild')">{{ '① ' }}</span>{{ $L(relType(r.type)?.label) || r.type }}<span v-if="relValueRaw(r, 'inherit') === 'true'" :title="$t('wird an die Subitems vererbt')">{{ ' ' + $t("· ↓ vererbt") }}</span><button class="x" style="float:right" @click="retireRel(r)" :title="$t('Zuordnung lösen (das Medium bleibt in der Bibliothek)')">×</button></div>
           </div>
           <!-- geerbte Medien: kursiv, gedämpft, mit Herkunft — hier nicht änderbar; ein eigenes Medium dieses Typs bricht die Vererbung -->
-          <div v-for="r in inheritedMedia" :key="'inh-' + r.id" class="tile inherited" :title="$t('geerbt von {0} — nicht löschbar; ⛔ sperrt es hier und an allen Subitems', [r.from.label])">
-            <a :href="dateiLink(r.other)" target="_blank"><MediaThumb v-if="r.other.isImage || r.other.hasThumb" :id="r.other.id" :self="r.other.isImage" /><div v-else class="doc">{{ (r.other.mime ?? '').split('/')[1]?.slice(0, 6) || '📄' }}</div></a>
+          <div v-for="r in inheritedMedia" :key="'inh-' + r.id" class="tile inherited" @click="vorschau = { media: vorschauMedien, start: r.other.id }" :title="$t('geerbt von {0} — nicht löschbar; ⛔ sperrt es hier und an allen Subitems', [r.from.label])">
+            <div class="bild" :title="$t('anzeigen')"><MediaThumb v-if="r.other.isImage || r.other.hasThumb" :id="r.other.id" :self="r.other.isImage" /><div v-else class="doc">{{ (r.other.mime ?? '').split('/')[1]?.slice(0, 6) || '📄' }}</div></div>
             <div class="name muted"><i>{{ r.other.label }}</i></div>
             <div class="muted meta">{{ $L(relType(r.type)?.label) || r.type }} · <router-link :to="`/tree/${r.from.id}`" class="muted" :title="$t('zum Knoten, an dem das Medium hängt')">↑ {{ r.from.label }}</router-link>
               <button class="x" style="float:right" @click="stopInherited(r)" :title="$t('Medium hier und an allen Subitems sperren (rücknehmbar)')">⛔</button></div>
@@ -1054,6 +1064,7 @@ function cellMenu(e, def, col, block) {
         </div>
         <MediaPicker v-if="mediaPick.open" :types="mediaTypes" :exclude="[...mediaRels, ...stopped].map(r => r.other.id)" @pick="linkMedia" @close="mediaPick.open = false" />
         <DocTables v-if="docTables" :node="node" :media="docTables.media" :names="docTables.names ?? {}" :dateien="docTables.dateien ?? []" :typen="docTables.typen ?? []" @close="docTables = null" @done="docTables = null; load(); store.poll(true)" />
+        <MediaPreview v-if="vorschau" :media="vorschau.media" :start="vorschau.start" @close="vorschau = null" />
         </template>
       </div>
 
@@ -1259,6 +1270,7 @@ th.master { color: var(--accent); font-weight: 700; }
 .tile.inherited { opacity: .7; border-style: dashed; }
 .tile { width: 150px; border: 1px solid var(--line); border-radius: 6px; padding: 4px; background: var(--pane); }
 .tile img, .tile .doc { width: 100%; height: 100px; object-fit: contain; display: grid; place-items: center; background: var(--bg); border-radius: 4px; color: var(--muted); font-size: 12px; }
+.tile .bild { cursor: zoom-in; }
 .tile .name { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin: 4px 0; }
 .tile .name a { text-decoration: none; }
 .tile .meta { font-size: 11px; margin-top: 2px; }

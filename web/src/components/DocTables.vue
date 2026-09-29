@@ -109,7 +109,11 @@ const ebene = ref(props.node.id)
 const pfad = computed(() => [...(props.node.ancestors ?? []).map(a => ({ id: a.id, role: a.role, label: a.label })), { id: props.node.id, role: props.node.role, label: tree.byId.get(props.node.id)?.label ?? props.node.id }])
 const neueZeilen = computed(() => genommen.value.some(r => r.target === 'new'))
 /// Schlüssel aus einem Namen: klein, Umlaute aufgelöst, alles andere ein Unterstrich
-const schluessel = s => String(s ?? '').toLowerCase().replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss').replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '')
+/// Der Schlüssel eines neuen Attributs: nur a-z, 0-9 und _, und er beginnt mit einem Buchstaben — der Server nimmt
+/// nichts anderes. „2.1 Produktbeschreibung“ wird darum zu „produktbeschreibung“: die Kapitelnummer steht in der
+/// Bezeichnung, nicht im Schlüssel (29.09.2026)
+const schluessel = s => String(s ?? '').toLowerCase().replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss')
+  .replace(/[^a-z0-9]+/g, '_').replace(/^[_0-9]+/, '').replace(/_+$/, '')
 const gruppeKey = computed(() => gruppe.value === '+' ? schluessel(gruppeName.value) : gruppe.value)
 /// Kommt die gewählte Gruppe von einem Vorfahren? Dann hängt nichts — die Ebene entfällt. Hängt sie am Knoten selbst,
 /// bleibt die Ebene wählbar: eine Ebene darüber hängt sie dort an, und der Server räumt sie hier weg (AttachGroups)

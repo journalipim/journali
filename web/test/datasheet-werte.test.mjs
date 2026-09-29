@@ -28,3 +28,23 @@ test('eine Vorlage geht mit ihrem Ergebnis ins Blatt, nicht mit ihrem Skript —
   assert.equal(d.attr.summe, '42')
   assert.equal(d.attr.name, 'PCI 20 MINI Q211')
 })
+
+// ⁝ Aufzählung (29.09.2026): eine Produktbeschreibung hat zwanzig Sätze als Werteliste. Im Blatt gehören sie
+// untereinander, nicht in eine Zeile mit Kommas — und ein Satz trägt selbst ein Komma.
+const LISTE = { key: 'features', label: { de: 'Produktbeschreibung' }, closed: false, values: [
+  { value: 'fuer_metalldampf', label: { de: 'Für Metalldampf-Halogenlampen' } },
+  { value: 'schraubklemmen', label: { de: 'Schraubklemmen: ≤ 1,5 mm² für Litzendraht' } },
+  { value: 'flimmerfrei', label: { de: 'Flimmerfreies Licht' } }] }
+const MODEL2 = { ...MODEL, lists: [LISTE],
+  attributes: [...MODEL.attributes, { key: 'features', label: { de: 'Produktbeschreibung' }, type: 'enum', list: 'features', multiple: true }] }
+const KNOTEN2 = { ...KNOTEN, values: [...KNOTEN.values, { attribute: 'features', values: ['fuer_metalldampf', 'schraubklemmen', 'flimmerfrei'] }] }
+
+test('mehrwertig: die Werte stehen einzeln in listen — ein Komma im Wert trennt nicht', async () => {
+  const ctx = { store: { model: MODEL2 }, tree: { byId: new Map([['p1', { id: 'p1', role: 'product', label: 'PCI 20 MINI Q211', parent: null }]]), ancestors: () => [], kids: () => [] },
+    api: { get: async url => /\/relations$/.test(url) ? { out: [] } : /\/api\/nodes\/p1$/.test(url) ? KNOTEN2 : {} } }
+  const d = await dataOf(ctx, 'p1', 'de')
+  assert.deepEqual(d.listen.features, ['Für Metalldampf-Halogenlampen', 'Schraubklemmen: ≤ 1,5 mm² für Litzendraht', 'Flimmerfreies Licht'])
+  assert.equal(d.attr.features, 'Für Metalldampf-Halogenlampen, Schraubklemmen: ≤ 1,5 mm² für Litzendraht, Flimmerfreies Licht', 'als Satz bleibt es wie bisher')
+  assert.deepEqual(d.listen.weight, ['0.1'], 'ein einzelner Wert ist eine Liste mit einem Eintrag')
+  assert.deepEqual(d.listen.summe, ['42'])
+})

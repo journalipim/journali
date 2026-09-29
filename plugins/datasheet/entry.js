@@ -106,6 +106,9 @@ function render(tpl, data) {
 }
 
 // ---- Daten eines Knotens fürs Blatt: aufgelöste Werte (eigen, sonst Vorfahren, wenn vererbbar), Formeln, Bilder, Gruppen, Varianten
+/// Trennzeichen zwischen mehrwertigen Werten, solange sie im Blatt unterwegs sind — ein Komma ginge nicht, weil es in
+/// den Werten selbst vorkommt
+const SEP = '\u001f'
 export async function dataOf(ctx, id, locale, depth = 0) {
   const { api, store } = ctx
   const model = store.model
@@ -121,12 +124,20 @@ export async function dataOf(ctx, id, locale, depth = 0) {
     const l = d.perLocale ? loc : ''
     let v = lookup(own, key, l)
     if (v == null && d.inheritable) for (const m of anc) { v = lookup(m, key, l); if (v != null) break }
-    if (d.type === 'enum' && v != null) { const list = model.lists.find(x => x.key === d.list); v = v.split(',').map(x => list?.values.find(y => y.value === x.trim())?.label?.[loc] ?? L(list?.values.find(y => y.value === x.trim())?.label) ?? x).join(', ') }
+    if (d.type === 'enum' && v != null) { const list = model.lists.find(x => x.key === d.list); v = v.split(',').map(x => list?.values.find(y => y.value === x.trim())?.label?.[loc] ?? L(list?.values.find(y => y.value === x.trim())?.label) ?? x).join(SEP) }
     if (d.type === 'boolean') v = v === 'true' ? (loc === 'de' ? 'ja' : 'yes') : v === 'false' ? (loc === 'de' ? 'nein' : 'no') : v
     return v
   }
-  const attr = {}, label = {}, unit = {}
-  for (const d of model.attributes) { label[d.key] = d.label?.[locale] || L(d.label) || d.key; unit[d.key] = d.unit ?? ''; attr[d.key] = value(d.key, locale); for (const l of model.locales) if (d.perLocale) attr[`${d.key}@${l.code}`] = value(d.key, l.code) }
+  const attr = {}, label = {}, unit = {}, listen = {}
+  for (const d of model.attributes) {
+    label[d.key] = d.label?.[locale] || L(d.label) || d.key; unit[d.key] = d.unit ?? ''
+    const v = value(d.key, locale)
+    // mehrwertig: die Werte auch einzeln — für die Aufzählung im Blatt. Ein Wert kann selbst ein Komma tragen
+    // („Schraubklemmen: ≤ 1,5 mm² für Litzendraht“), darum steht zwischen ihnen ein eigenes Zeichen (29.09.2026)
+    listen[d.key] = v == null || v === '' ? [] : String(v).split(SEP).map(x => x.trim()).filter(Boolean)
+    attr[d.key] = v == null ? null : String(v).split(SEP).join(', ')
+    for (const l of model.locales) if (d.perLocale) { const w = value(d.key, l.code); attr[`${d.key}@${l.code}`] = w == null ? null : String(w).split(SEP).join(', ') }
+  }
   const groups = n.groups.filter(g => g.active).map(g => {
     const gd = model.groups.find(x => x.key === g.key)
     return { key: g.key, label: gd?.label?.[locale] || L(gd?.label) || g.key, attributes: g.attributes.map(k => ({ key: k, label: label[k], unit: unit[k], value: attr[k], type: defs.get(k)?.type })).filter(a => a.value != null && a.value !== '' && a.type !== 'html' && a.type !== 'rows') }
@@ -135,7 +146,7 @@ export async function dataOf(ctx, id, locale, depth = 0) {
   try { const rels = await api.get(`/api/nodes/${encodeURIComponent(id)}/relations`); images = [...(rels.out ?? []).filter(r => !(r.values ?? []).some(v => v.attribute === 'stop' && v.value === 'true')), ...(rels.inherited ?? []).map(x => x.relation)].filter(r => r.type === 'image' || r.other?.isImage).map(r => ({ id: r.to, url: `${store.server}/api/media/${r.to}/file`, label: r.other?.label })) } catch {}
   const axes = Object.entries(n.axisValues ?? {}).map(([k, v]) => ({ key: k, label: label[k] ?? k, value: defs.get(k)?.type === 'enum' ? (model.lists.find(x => x.key === defs.get(k).list)?.values.find(y => y.value === v)?.label?.[locale] ?? v) : v }))
   const row = ctx.tree.byId.get(id)
-  const out = { id, role: n.role, name: row?.label ?? n.name ?? id, sku: attr.sku ?? row?.sku ?? '', status: n.status, today: new Date().toLocaleDateString(locale === 'de' ? 'de-DE' : 'en-GB'), attr, label, unit, groups, images, image: images[0]?.url ?? null, axes, variants: [] }
+  const out = { id, role: n.role, name: row?.label ?? n.name ?? id, sku: attr.sku ?? row?.sku ?? '', status: n.status, listen, today: new Date().toLocaleDateString(locale === 'de' ? 'de-DE' : 'en-GB'), attr, label, unit, groups, images, image: images[0]?.url ?? null, axes, variants: [] }
   // Subitems: am Produkt die Varianten, an der Gruppe die Produkte — für Datentabelle und Vergleich; Varianten heissen weiter variants
   if (depth === 0) { const kids = ctx.tree.kids(id); out.children = await Promise.all(kids.map(k => dataOf(ctx, k.id, locale, 1))); out.variants = out.children.filter(c => c.role === 'variant') }
   return out
