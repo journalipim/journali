@@ -89,7 +89,8 @@ async function zeichne(num) {
 function springen() {
   try {
     if (!seiten.value.length) return
-    const num = seiten.value.some(s => s.num === props.page) ? props.page : seiten.value[0].num
+    const ziel = Number(props.page)   // die Seitenzahl kann als Text kommen — sonst schlägt der Vergleich fehl und es bliebe Seite 1
+    const num = seiten.value.some(s => s.num === ziel) ? ziel : seiten.value[0].num
     markiere(num)
     const seiteEl = canvasRefs[num]?.parentElement, box = behaelter.value
     if (seiteEl && box) box.scrollTop += seiteEl.getBoundingClientRect().top - box.getBoundingClientRect().top - 4
