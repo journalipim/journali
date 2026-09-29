@@ -7,6 +7,7 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { MARKE, melde, werte, ergebnis, kontext, lade } from '../../plugins/scriptum/runner.mjs'
+import { beispiele } from '../../plugins/scriptum/beispiele.mjs'
 
 const META = { label: 'Preise', params: [{ key: 'root', label: 'Teilbaum', default: 'g1' }, { key: 'tief', default: '3' }] }
 
@@ -131,6 +132,18 @@ test('ctx.zugang.roh gibt Status und Kopfzeilen zurück und reicht eigene Kopfze
     assert.equal(rufe[1].opt.headers['x-csrf-token'], 'ABC')
     assert.equal(JSON.parse(rufe[1].opt.body).Name, 'Beispiel')
   } finally { globalThis.fetch = alt }
+})
+
+test('jedes Beispiel der Bibliothek ist ein gültiges Skript — Kopf und Standardfunktion', async () => {
+  assert.ok(beispiele.length >= 4, 'die Bibliothek hat Beispiele')
+  for (const b of beispiele) {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'scriptum-bsp-'))
+    try {
+      const modul = await lade(b.source, dir)
+      assert.ok(modul.meta && typeof modul.meta.label === 'string', b.key + ': ein Kopf mit label')
+      assert.equal(typeof (modul.default ?? modul.run), 'function', b.key + ': eine Standardfunktion')
+    } finally { fs.rmSync(dir, { recursive: true, force: true }) }
+  }
 })
 
 test('ein Fehler des Skripts ist eine Meldung, kein Absturz', async () => {

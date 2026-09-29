@@ -160,6 +160,86 @@ export default async (ctx) => {
 `,
   },
   {
+    key: 'sap-sync',
+    title: 'SAP-Sync über OData',
+    description: 'Die heutige Fassung der SAP-Synchronisierung: Material oder Preise per OData holen, je SAP-Nummer den Knoten finden und Attribute im Stapel setzen. Als Zeitplan-Job.',
+    source: `export const meta = {
+  label: 'SAP-Sync über OData',
+  params: [
+    { key: 'system', label: 'Zugang (HTTP/REST)', type: 'driver', default: '' },
+    { key: 'service', label: 'OData-Service und Entität', type: 'text', default: '/sap/opu/odata/sap/ZMATERIAL_SRV/MaterialSet' },
+    { key: 'art', label: 'Auftragsart (material oder preis)', type: 'text', default: 'material' },
+    { key: 'land', label: 'Land (für Preise, z. B. DE)', type: 'text', default: 'DE' },
+    { key: 'grenze', label: 'Höchstens so viele', type: 'number', default: '500' },
+  ],
+}
+
+// SAP-Sync über OData — die heutige Fassung der alten DB-Tabellen-Synchronisierung: kein Bus, kein Polling einer DB.
+// Ein Zeitplan-Job holt periodisch, dieses Skript bildet ab. SAP reichert bestehende Artikel an; die Neuanlage bleibt
+// manuell. ANPASSEN: die Zuordnung SAP-Feld -> journali-Attribut (MAP_MATERIAL) und der Preis-Attributname. Der
+// Schlüssel, über den ein SAP-Datensatz seinen Knoten findet, ist hier die Fremd-Verknüpfung "sap" (external.link).
+const MAP_MATERIAL = {
+  Ean: 'ean',
+  BaseUnit: 'basismengeneinheit',
+  NetWeight: 'gewicht_ohne_verpackung',
+  CommodityCode: 'warennummer',
+  CountryOrigin: 'ursprungsland',
+}
+const preisAttribut = (land) => 'sap_preis_' + String(land || '').toLowerCase()
+
+export default async (ctx) => {
+  const zugang = ctx.zugang(ctx.params.system)
+  const service = ctx.params.service || '/'
+  const art = (ctx.params.art || 'material').toLowerCase()
+  const land = ctx.params.land || ''
+  const grenze = Number(ctx.params.grenze) || 500
+  const seite = 100
+  // 1. SAP lesen, mit Blättern
+  const rows = []
+  for (let skip = 0; skip < grenze; skip += seite) {
+    const top = Math.min(seite, grenze - skip)
+    const trenner = service.indexOf('?') >= 0 ? '&' : '?'
+    const antwort = await zugang.get(service + trenner + '$format=json&$top=' + top + '&$skip=' + skip)
+    const d = antwort && antwort.d ? antwort.d : antwort
+    const teil = d && Array.isArray(d.results) ? d.results
+      : (antwort && Array.isArray(antwort.value) ? antwort.value : (Array.isArray(d) ? d : []))
+    for (const e of teil) rows.push(e)
+    if (teil.length < top) break
+  }
+  // 2. je SAP-Datensatz den Knoten finden (Fremd-Verknüpfung sap) und Befehle sammeln
+  const befehle = []
+  let getroffen = 0, fehlend = 0
+  for (const r of rows) {
+    const nr = r.Material || r.MaterialNumber || r.ProductNumber || r.Matnr
+    if (!nr) continue
+    let knoten = null
+    try { knoten = await ctx.api.get('/api/nodes/external/sap/' + encodeURIComponent(nr)) } catch (e) { knoten = null }
+    if (!knoten || !knoten.id) { fehlend++; continue }
+    getroffen++
+    if (art === 'preis') {
+      const wert = r.GrossPrice != null ? r.GrossPrice : r.Price
+      if (wert != null) befehle.push({ op: 'attribute.set', args: { node: knoten.id, attribute: preisAttribut(land), value: String(wert) } })
+    } else {
+      for (const feld of Object.keys(MAP_MATERIAL)) {
+        if (r[feld] != null && r[feld] !== '') befehle.push({ op: 'attribute.set', args: { node: knoten.id, attribute: MAP_MATERIAL[feld], value: String(r[feld]) } })
+      }
+    }
+  }
+  // 3. in einem Stapel schreiben — ein fehlgeschlagener Befehl wird übersprungen, der Rest läuft
+  let geschrieben = 0, uebersprungen = 0
+  if (befehle.length) {
+    const antwort = await ctx.api.post('/api/batch?skipErrors=true', { commands: befehle })
+    geschrieben = (antwort.results || []).length
+    uebersprungen = (antwort.skipped || []).length
+  }
+  return ctx.out.table(['Kennzahl', 'Wert'], [
+    ['SAP-Datensätze', rows.length], ['Knoten getroffen', getroffen], ['nicht gefunden', fehlend],
+    ['Attribute geschrieben', geschrieben], ['übersprungen', uebersprungen],
+  ])
+}
+`,
+  },
+  {
     key: 'bericht-zaehlen',
     title: 'Knoten je Wert zählen',
     description: 'Ein einfacher Bericht ohne Fremdsystem: wie viele Knoten je Wert eines Feldes (etwa status).',
