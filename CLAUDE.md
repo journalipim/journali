@@ -132,6 +132,13 @@ und Betriebsrechner. Eine Beispieladresse ist `localhost` oder ein Platzhalter, 
   3. **Inhalt** — Zuordnung, Ziel im Baum, Umfang, Sprachen. Das ist das Profil.
   4. **Ablage und Zeit** — Verzeichnis, Dateiname, Zeitplan, Trockenlauf. Das ist der Job.
 
+  **Skripte** (Plugin `scriptum`, `ScriptumApi.cs`, `docs/pflegestruktur.md` 37, 29.09.2026): ein Skript ist ein
+  ES-Modul **im Journal** (`script:<key>` in den Plugin-Daten), nicht im Verzeichnis — geschrieben unter ⌨ Skripte,
+  gelaufen als Job `scriptum_<key>` (Kindprozess, Log, Zeitgrenze, Fächer), nie im Serverprozess. Der Kopf
+  (`export const meta`) ist das Formular, das Ergebnis eine Zeile auf stdout (Tabelle, Text oder Datei im Fach `out/`).
+  Zwei Rechte: `scriptum.write` schreibt und liest den Quelltext (ein Administratorrecht), `scriptum.run` stösst an;
+  am Skript steht, welches Recht sein Lauf braucht. Kein Geheimnis im Skript — dafür sind Zugänge und der Tresor da.
+
   **Attribut und Gruppe sind n:m** (29.09.2026, `docs/pflegestruktur.md` 36): eine Gruppe ist eine **Auswahl** von
   Attributen, kein Besitz — dasselbe Attribut gilt in beliebig vielen Gruppen, ohne Kopie. Die Menge steht im Journal
   (`AttributeGroupsSet`), `group` am Attribut zählt als Mitgliedschaft mit und bleibt die Heimatgruppe. Die **Pflicht

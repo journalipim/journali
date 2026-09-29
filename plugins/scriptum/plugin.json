@@ -1,0 +1,58 @@
+{
+  "key": "scriptum",
+  "version": "1.0.0",
+  "label": {
+    "de": "Skripte",
+    "en": "Scripts"
+  },
+  "description": {
+    "de": "Skripte, die in der Oberfläche geschrieben und im Journal gehalten werden: Auswertungen über Systemgrenzen, eigene Umwandlungen, Übergaben an Fremdsysteme. Ein Lauf ist ein Kindprozess mit einem Token der Rolle, die am Skript steht; das Ergebnis ist eine Tabelle, ein Text oder eine Datei im Fach out/. Das Formular steht im Skript (export const meta). Schreiben braucht das Recht „Skripte schreiben“, Anstossen das Recht, das am Skript steht.",
+    "en": "Scripts written in the interface and kept in the journal: reports across system borders, own transformations, handovers to other systems. A run is a child process with a token of the role named at the script; the result is a table, a text or a file in the out folder. The form is part of the script (export const meta)."
+  },
+  "kind": "tool",
+  "runs": "process",
+  "entry": "entry.js",
+  "requires": [
+    "tasker"
+  ],
+  "autoInstall": true,
+  "process": {
+    "command": "node",
+    "args": [
+      "runner.mjs",
+      "{journali}",
+      "{actor}",
+      "{script}"
+    ],
+    "description": "Ein Skript aus dem Journal ausführen — Ergebnis als Tabelle, Text oder Datei",
+    "files": {
+      "out": {
+        "many": true
+      }
+    },
+    "params": [
+      {
+        "key": "script",
+        "label": "Skript (⌨ Skripte)",
+        "type": "script",
+        "default": "",
+        "perJob": true
+      },
+      {
+        "key": "args",
+        "label": "Werte der Parameter (JSON; leer = die Vorgaben aus dem Kopf des Skripts)",
+        "type": "text",
+        "default": "",
+        "perJob": true
+      },
+      {
+        "key": "limit",
+        "label": "Zeitgrenze des Laufs (Sekunden)",
+        "type": "number",
+        "default": "60",
+        "perJob": true
+      }
+    ]
+  },
+  "builtin": true
+}

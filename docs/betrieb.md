@@ -290,6 +290,9 @@ weil der Server jedes Recht prüfen muss (`Auth.Needed`: welche Anfrage welches 
 | `jobs` | Jobs anlegen, starten, Läufe und Logs |
 | `storage` | Medien-Speicher einstellen, Store lesen, kopieren |
 | `users` | Benutzer und Rollen verwalten („Administrator“ heißt: dieses Recht) |
+| `download` | Herunterladen: die Datei selbst, ein Preset, ein Blob — sehen ist nicht haben |
+| `scriptum.write` | Skripte schreiben und ihren Quelltext lesen — ein Administratorrecht (siehe Skripte) |
+| `scriptum.run` | Ein freigegebenes Skript anstossen und sein Ergebnis sehen |
 
 Welche Rolle welche Rechte hat, steht im Journal (`role:<key>`, `RoleDefined`), Verwaltung unter
 ⚙ Einstellungen → 👤 Benutzer & Rollen (Tabelle Rollen × Rechte, neue Rollen, Rechtsklick zieht zurück).
@@ -539,6 +542,41 @@ unter Einstellungen → Storage (`GET /api/files?path=…`, `FileApi.cs`, Recht 
 `web/src/filePicker.js`, Plugins über `ctx.filePicker`): Wurzeln sind das Datenverzeichnis, das Programm und die
 Laufwerke; versteckte Einträge bleiben weg. Die Pfade gelten auf dem Rechner, auf dem der Server läuft — nicht im
 Browser.
+
+## Skripte (Plugin scriptum)
+
+Ein Skript ist ein ES-Modul, das **im Journal** steht (Plugin-Daten von `scriptum`, `script:<key>`) und als
+Kindprozess läuft — nie im Serverprozess. Geschrieben wird es unter ⌨ Skripte, angestossen von Hand, als Job mit
+Zeitplan oder über `/api`; jeder Lauf ist ein Job `scriptum_<key>` mit Log, Zeitgrenze und Fächern.
+
+Der Kopf des Skripts ist sein Formular, das Programm ist seine Standardfunktion:
+
+```js
+export const meta = { label: 'Preise prüfen', role: 'editor', params: [{ key: 'root', label: 'Teilbaum', default: '' }] }
+export default async function ({ api, params, out, log, journali, actor }) {
+  const rows = await api.get('/api/tree')
+  return out.table(['id', 'Bezeichnung'], rows.map(r => [r.id, r.label]))
+}
+```
+
+- **Das Token trägt die Rolle, die am Skript steht** (`meta.role`, sonst `editor`): ein Skript darf nie mehr als ein
+  Anwender mit dieser Rolle. `api` spricht `/api` mit diesem Token.
+- **Das Ergebnis** ist eine Zeile auf stdout mit der Marke `⟦scriptum⟧`: `{ table }`, `{ text }` oder `{ file }`
+  (die Datei liegt im Fach `out/` des Laufs). Alles andere, was das Skript ausgibt, ist Protokoll im Log.
+- **Die Grenzen gehören an den Runner**, nicht an das Skript: Zeitgrenze je Lauf (Vorgabe 60 s, am Skript
+  einstellbar), höchstens 20 000 Zeilen und 4 000 Zeichen je Zelle, Text bis 200 000 Zeichen. Ein Fehler des Skripts
+  ist eine Meldung mit Rückgabewert 1, kein Absturz.
+- **Kein Geheimnis im Skript** — Adresse und Anmeldung kommen aus einem Zugang (`driver`) oder dem Tresor; im Journal
+  lässt sich nichts löschen.
+- **Zwei Rechte.** `scriptum.write` schreibt und liest den Quelltext; wer es hat, kann alles, was der Serverbenutzer
+  kann (das Skript läuft als Prozess: was es im Netz und im Dateisystem tut, begrenzt nur das Betriebssystem). Am
+  Skript steht, welches Recht sein Lauf braucht (`run`) — damit bedient jemand die Auswertung, ohne je Quelltext zu
+  sehen. Den Quelltext bekommt ausserdem der Lauf selbst: ein Dienst-Token gehört einem Prozess auf diesem Server.
+- **Endpunkte:** `GET /api/scriptum/scripts` (Liste ohne Quelltext) · `GET|PUT|DELETE /api/scriptum/scripts/{key}` ·
+  `GET /api/scriptum/scripts/{key}/source` · `POST /api/scriptum/scripts/{key}/run` ·
+  `GET /api/scriptum/runs/{job}/{run}` (Stand, Ergebnis, Protokoll) · `GET /api/scriptum/runs/{job}/{run}/file?name=`.
+- **Keine Pakete**, kein Skript, das ein anderes aufruft: nur die Standardbibliothek der Laufzeit, `fetch` und was
+  der Kontext anbietet.
 
 ## Dateibrowser
 

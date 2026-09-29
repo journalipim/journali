@@ -832,12 +832,18 @@ public static class Rights
     /// <summary>Herunterladen (27.09.2026): die Datei selbst und ihre Ableitungen — sehen ist nicht haben. Kacheln und
     /// die Angaben sieht, wer liest; das Original, ein Preset und die Blobs lädt, wer dieses Recht hat.</summary>
     public const string Download = "download";
-    public static readonly string[] All = [Read, Write, Retire, Release, Model, Plugins, Jobs, Storage, Team, Users, Download];
+    /// <summary>Skripte schreiben und ändern (37, 29.09.2026). Ein Skript läuft als Prozess auf dem Server: sein Token
+    /// begrenzt, was es in journali darf, alles Weitere (Netz, Dateisystem) begrenzt nur das Betriebssystem. Darum ist
+    /// das ein Administratorrecht.</summary>
+    public const string ScriptumWrite = "scriptum.write";
+    /// <summary>Ein freigegebenes Skript anstossen und sein Ergebnis sehen — ohne den Quelltext zu lesen.</summary>
+    public const string ScriptumRun = "scriptum.run";
+    public static readonly string[] All = [Read, Write, Retire, Release, Model, Plugins, Jobs, Storage, Team, Users, Download, ScriptumWrite, ScriptumRun];
     public static readonly Dictionary<string, string> Label = new()
     {
         [Read] = "Lesen", [Write] = "Pflegen", [Retire] = "Zurückziehen", [Release] = "Freigeben, Versionen", [Model] = "Modell ändern",
         [Plugins] = "Plugins verwalten", [Jobs] = "Jobs", [Storage] = "Storage", [Team] = "Teammanager", [Users] = "Anwender und Rollen",
-        [Download] = "Herunterladen",
+        [Download] = "Herunterladen", [ScriptumWrite] = "Skripte schreiben", [ScriptumRun] = "Skripte ausführen",
     };
     /// <summary>
     /// Was ein Recht mit einschliesst. Ein neues Recht hat keine bestehende Rolle — führte man <c>download</c> ein, ohne dass
@@ -847,7 +853,12 @@ public static class Rights
     public static readonly Dictionary<string, string[]> Implies = new()
     {
         [Write] = [Download],
-        [Users] = [Team],
+        // Wer Rollen verwaltet, könnte sich jedes Recht selbst geben — darum trägt er auch das Schreiben von Skripten;
+        // sonst stünde eine Anlage nach der Aktualisierung ohne jemanden da, der eines anlegen darf (29.09.2026)
+        [Users] = [Team, ScriptumWrite],
+        [ScriptumWrite] = [ScriptumRun],
+        // Wer Jobs baut, kann jedes Skript als Job laufen lassen — dann darf er es auch von Hand anstossen
+        [Jobs] = [ScriptumRun],
     };
     /// <summary>Die wirksamen Rechte einer Rolle: die eigenen und alles, was sie einschliessen.</summary>
     public static IReadOnlySet<string> Effective(IEnumerable<string> own)

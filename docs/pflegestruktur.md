@@ -2131,12 +2131,35 @@ Administratorrecht, und die Oberfläche sagt das an der Stelle, an der jemand ei
 4. Rechte `scriptum.write` und `scriptum.run` im Vokabular; die Freigabe je Skript steht an ihm.
 5. Anstoss als Job: der Tasker sieht `scriptum` wie jedes Prozess-Plugin, das Skript ist der Parameter.
 
+**Gebaut (29.09.2026).** Plugin `scriptum` (`runs: process`, Ansicht ⌨ Skripte, Runner `runner.mjs`), Endpunkte in
+`ScriptumApi.cs`, Rechte `scriptum.write` und `scriptum.run` im Vokabular (`Rights`), Parameter vom Typ `script` im
+Job-Dialog. Ein Skript steht als `script:<key>` in den Plugin-Daten von `scriptum`.
+
+**Von Hand ausführen geht über die Job-Maschinerie.** ▶ legt den Job `scriptum_<key>` an (oder frischt ihn auf) und
+startet ihn über den `JobRunner`; die Ansicht fragt danach nach Stand, Ergebnis und Protokoll
+(`GET /api/scriptum/runs/{job}/{run}`). Damit gibt es **keinen zweiten Weg**, auf dem ein Prozess entsteht: dasselbe
+Log, dieselbe Zeitgrenze, dieselben Fächer, dieselbe Anzeige unter ⏱ Jobs — und kein Skript im Serverprozess. Das
+Ergebnis steht als letzte Zeile mit der Marke `⟦scriptum⟧` auf stdout und damit im Log des Laufs; von dort liest der
+Server es, statt eine zweite Ablage zu führen.
+
+**Die Freigabe ist ein Recht, kein Schalter.** Am Skript steht, welches Recht sein Lauf braucht (`run`): gesetzt heisst
+freigegeben. So bedient jemand eine Auswertung mit `read`, ohne `scriptum.run` an jede Rolle zu geben — und ohne je
+Quelltext zu sehen. Ohne Recht kann es nur, wer Skripte schreibt.
+
+**Der Kopf ist das Formular, an zwei Stellen gelesen.** Beim Speichern liest die Ansicht `export const meta` aus dem
+Quelltext (`plugins/scriptum/kopf.mjs`, nur der Ausdruck, nicht das Programm) und legt die Parameter neben das Skript —
+daraus baut das Formular, auch für den, der den Quelltext nicht sehen darf. Beim Lauf liest der Runner denselben Kopf
+noch einmal und nimmt seine Vorgaben; so können Programm und Maske nicht auseinanderlaufen.
+
+**Grenzen, an den Runner.** Zeitgrenze je Lauf (Vorgabe 60 s, am Skript einstellbar, höchstens eine Stunde),
+höchstens 20 000 Zeilen und 4 000 Zeichen je Zelle, Text bis 200 000 Zeichen. Ein Fehler des Skripts ist eine Meldung
+im Ergebnis und Rückgabewert 1 — kein Absturz.
+
 **Offen.**
 
-- **Bibliotheken.** Ein Skript, das nur `fetch` und die Standardbibliothek nutzt, braucht nichts. Sobald jemand ein
-  Paket will, stellt sich die Frage, wer es installiert und wer dafür geradesteht. Vorschlag für den Anfang: keine
-  Pakete, nur was die Laufzeit mitbringt und was `scriptum` selbst anbietet.
-- **Wiederverwendung.** Ob ein Skript ein anderes aufrufen darf, entscheidet sich beim Bau; nötig ist es nicht von
-  Anfang an.
-- **Grenzen der Laufzeit.** Eine Zeitgrenze je Lauf und eine Grenze für die Ausgabe sind nötig, damit ein Fehler im
-  Skript nicht den Server beschäftigt. Beides gehört an den Runner, nicht an das Skript.
+- **Bibliotheken.** Gebaut ist der Anfang wie vorgeschlagen: keine Pakete, nur die Standardbibliothek der Laufzeit,
+  `fetch` und der Kontext (`api`, `params`, `out`, `log`). Sobald jemand ein Paket will, stellt sich die Frage, wer es
+  installiert und wer dafür geradesteht.
+- **Wiederverwendung.** Ein Skript ruft kein anderes auf — nötig war es nicht.
+- **Ein Skript ohne Job.** Jeder Lauf legt einen Job an; ein Skript, das nur einmal laufen soll, hinterlässt also
+  einen Job in der Liste. Ob der Tasker solche Läufe eigens zeigt oder verbirgt, entscheidet sich, wenn es stört.

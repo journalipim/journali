@@ -442,6 +442,7 @@ async function mount(root, ctx) {
         el('label', { style: 'display:flex;gap:6px;align-items:center', title: t('Eingänge und Ausgaben zusätzlich als Medium im Medienspeicher ablegen') }, fArchive, t('Archiv im Medienspeicher'))))
     const paramsBox = el('div')
     const paramInputs = {}
+    let skripte = []   // die Skripte des Plugins scriptum, sobald sie da sind (Parameter vom Typ script)
     let profilWert = j?.params?.profile ?? ''   // welches Profil gewählt ist; ohne Profil stehen seine Werte im Dialog
     const drawParams = () => {
       paramsBox.innerHTML = ''
@@ -484,6 +485,21 @@ async function mount(root, ctx) {
             if (!(l ?? []).length && !cur) inp.title = t('noch kein Zugang dieser Art — unter ⌁ Zugänge anlegen')
           }).catch(() => {})
           append(el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, d.label), inp)
+        } else if (d.type === 'script') {
+          // Skript (scriptum): eine Auswahl der Skripte. Das Formular steht im Skript — seine Parameter erscheinen
+          // darunter und gehen als arg_<key> an den Lauf (29.09.2026)
+          inp = el('select', { style: 'width:100%' }, el('option', { value: '' }, t('— kein Skript —')))
+          if (cur) { inp.append(el('option', { value: cur }, cur)); inp.value = cur }
+          const formular = el('div')
+          api.get('/api/scriptum/scripts').then(l => {
+            skripte = l ?? []
+            for (const s of skripte) { const da = [...inp.options].find(o => o.value === s.key); if (da) da.textContent = s.label || s.key; else inp.append(el('option', { value: s.key }, s.label || s.key)) }
+            if (!skripte.length && !cur) inp.title = t('noch kein Skript — unter ⌨ Skripte anlegen')
+            inp.value = cur ?? ''
+            zeichneSkript(formular)
+          }).catch(() => {})
+          inp.addEventListener('change', () => { zeichneSkript(formular); check() })
+          append(el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, d.label), inp, formular)
         } else if (d.type === 'path' || d.type === 'dir') {
           // Pfad auf dem Server: Textfeld plus 📁 — der Dateibrowser der Oberfläche (ctx.filePicker, /api/files)
           inp = el('input', { type: 'text', value: cur, placeholder: d.type === 'dir' ? t('Verzeichnis auf dem Server') : t('Datei, Verzeichnis oder URL'), style: 'flex:1' })
@@ -526,6 +542,22 @@ async function mount(root, ctx) {
       aktualisiereFaecher()
       if (!defs.length) paramsBox.append(el('div', { class: 'muted', style: 'margin-top:8px' }, t('Dieses Plugin hat keine Parameter.')))
     }
+    /// Das Formular des gewählten Skripts: je Parameter ein Feld, sein Wert steht am Job als arg_<key>. So bleibt das
+    /// Formular im Skript und der Job-Dialog muss nichts davon wissen.
+    function zeichneSkript(box) {
+      box.innerHTML = ''
+      for (const k of Object.keys(paramInputs)) if (k.startsWith('arg_')) delete paramInputs[k]
+      const s = skripte.find(x => x.key === (paramInputs.script?.value ?? ''))
+      if (!s) return
+      if (!(s.params ?? []).length) { box.append(el('div', { class: 'muted', style: 'font-size:12px;margin-top:4px' }, t('Dieses Skript hat keine Parameter.'))); return }
+      for (const p of s.params) {
+        const wert = j?.params?.['arg_' + p.key] ?? p.default ?? ''
+        const inp = el('input', { type: p.type === 'number' ? 'number' : 'text', value: String(wert), style: 'width:100%' })
+        box.append(el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, p.label || p.key), inp)
+        paramInputs['arg_' + p.key] = inp
+      }
+    }
+
     // Speichern nur, wenn der Job laufen kann:
     // key, Profil (wenn der Prozess eines hat), Dateien/Verzeichnisse, Geheimnis (am Job oder am Profil hinterlegt)
     let profileSecrets = []

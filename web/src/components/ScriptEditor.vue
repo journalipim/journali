@@ -8,7 +8,9 @@ import { api } from '../api.js'
 import { L, t } from '../i18n.js'
 
 // node/locale: der Knoten, an dem das Skript gerechnet wird — dann zeigt der Fuss das momentane Ergebnis statt einer Erklärung
-const props = defineProps({ modelValue: String, title: String, draftKey: String, attributes: Array, type: String, node: String, locale: String })
+// lang: 'formula' (Vorgabe) oder 'js' — ein Skript des Plugins scriptum. Dann prüft nicht der Server, es gibt keine
+// Attributvorschläge und die Hilfe zeigt den Kontext eines Laufs statt der Formelsprache (29.09.2026).
+const props = defineProps({ modelValue: String, title: String, draftKey: String, attributes: Array, type: String, node: String, locale: String, lang: { type: String, default: 'formula' } })
 const emit = defineEmits(['save', 'close'])
 
 const text = ref(props.modelValue ?? '')
@@ -29,6 +31,7 @@ onMounted(async () => {
 let timer = null
 watch(text, () => { clearTimeout(timer); timer = setTimeout(run, 250); keepDraft() })
 async function run() {
+  if (isJs.value) { check.value = { ok: true, error: null, keys: [] }; return }   // JavaScript prüft die Laufzeit, nicht der Server
   if (!text.value.trim()) { check.value = { ok: true, error: null, keys: [] }; return }
   try { check.value = await api.post('/api/model/formula/check', { formula: text.value, node: props.node ?? null, locale: props.locale ?? null, type: props.type ?? null }) }
   catch (e) { check.value = { ok: false, error: e.message, keys: [] } }
@@ -52,6 +55,7 @@ function insert(s) {
 const ac = ref({ open: false, items: [], i: 0, start: 0, top: 0, left: 0 })
 // Vorlage: { tippen zeigt die Attribute, Enter fügt {schlüssel} ein — keine Funktionen, keine Schlüsselwörter
 const isTemplate = computed(() => props.type === 'template')
+const isJs = computed(() => props.lang === 'js')
 // Funktionen mit Signatur — dieselbe Liste wie Formula.cs; ab zwei getippten Buchstaben vorgeschlagen
 const SIGS = { round: 'round(x, n)', trunc: 'trunc(x)', floor: 'floor(x)', ceil: 'ceil(x)', abs: 'abs(x)', min: 'min(a, b)', max: 'max(a, b)', sqrt: 'sqrt(x)',
   len: 'len(s)', upper: 'upper(s)', lower: 'lower(s)', trim: 'trim(s)', left: 'left(s, n)', right: 'right(s, n)', contains: 'contains(s, t)', replace: 'replace(s, a, b)',
@@ -65,7 +69,7 @@ function acUpdate() {
   const before = text.value.slice(0, el.selectionStart)
   let items = [], start
   const m = (isTemplate.value ? /\{([A-Za-z0-9_]*)$/ : /[$@]([A-Za-z0-9_]*)$/).exec(before)
-  if (m && props.attributes?.length) {
+  if (m && props.attributes?.length && !isJs.value) {
     const q = m[1].toLowerCase()
     const wrap = k => isTemplate.value ? (text.value[el.selectionStart] === '}' ? '{' + k : '{' + k + '}') : '$' + k
     items = props.attributes.filter(a => a.key.includes(q) || (L(a.label) ?? '').toLowerCase().includes(q)).slice(0, 12).map(a => ({ kind: 'attr', insert: wrap(a.key), show: (isTemplate.value ? '{' : '$') + a.key + (isTemplate.value ? '}' : ''), note: `${L(a.label) || ''} · ${a.type}${a.perLocale ? ' 🗣' : ''}${a.unit ? ' · ' + a.unit : ''}` }))
@@ -187,7 +191,29 @@ const HELP = [
 ]
 const EXAMPLE_FORMULA = 'h = $height\nif (h >= 100) {\n  return `${format(h / 100, 2)} m`\n}\nreturn `${h} cm`'
 const EXAMPLE_TEMPLATE = '{name} mit {cpu}[, {ram} GB RAM][, {ssd|unit} SSD][ · {weight|1|unit}]'
-const EXAMPLE = computed(() => isTemplate.value ? EXAMPLE_TEMPLATE : EXAMPLE_FORMULA)
+// Ein Skript (scriptum): der Kopf ist das Formular, die Standardfunktion ist das Programm
+const EXAMPLE_JS = `export const meta = {
+  label: 'Produkte ohne Bild',
+  params: [{ key: 'root', label: 'Teilbaum', type: 'text', default: '' }],
+}
+
+export default async function ({ api, params, out, log }) {
+  const rows = await api.get('/api/tree')
+  const treffer = rows.filter(r => r.role === 'product' && (!params.root || r.parent === params.root))
+  log(\`\${treffer.length} Produkte geprüft\`)
+  return out.table(['id', 'Bezeichnung'], treffer.map(r => [r.id, r.label]))
+}`
+const EXAMPLE = computed(() => isJs.value ? EXAMPLE_JS : isTemplate.value ? EXAMPLE_TEMPLATE : EXAMPLE_FORMULA)
+// Was ein Skript bekommt und zurückgeben darf — mehr gibt es nicht: kein Paket, kein zweites Skript
+const HELP_JS = [
+  [t('Kopf'), [["export const meta = {\n  label: 'Name',\n  params: [{ key: 'x', label: 'X', type: 'text', default: '' }],\n  role: 'editor',\n}", t('Bezeichnung, Formular und die Rolle des Laufs')]]],
+  [t('Programm'), [['export default async function ({ api, params, out, log }) {\n  \n}', t('wird aufgerufen; was sie zurückgibt, ist das Ergebnis')]]],
+  [t('journali fragen'), [["await api.get('/api/tree')", t('lesen')], ["await api.post('/api/batch', { commands })", t('schreiben — mit den Rechten der Rolle am Skript')], ["await api.put('/api/nodes/p1/values', { … })", ''], ["await api.del('/api/…')", '']]],
+  [t('Ergebnis'), [["out.table(['a', 'b'], rows)", t('Tabelle')], ["out.text('fertig')", t('Text')], ["out.file('liste.csv', inhalt)", t('Datei im Fach out/ des Laufs')]]],
+  [t('Werte'), [['params.x', t('aus dem Formular; ohne Eingabe die Vorgabe aus dem Kopf')], ['journali', t('die Adresse dieses Servers')], ['actor', t('wer den Lauf angestossen hat')]]],
+  [t('Protokoll'), [["log('…')", t('eine Zeile ins Log des Laufs')], ['throw new Error("…")', t('abbrechen — die Meldung steht im Ergebnis')]]],
+  [t('Fremdes System'), [["await fetch(url, { headers })", t('Adresse und Anmeldung kommen aus einem Zugang, nie aus dem Skript')]]],
+]
 const HELP_TEMPLATE = [
   [t('Platzhalter'), [['{key}', t('Wert am Knoten — geerbt zählt, Text in der Sprache der Spalte, Werteliste als Label. { tippen zeigt die Liste')]]],
   [t('Zusätze'), [['{weight|unit}', t('Einheit anhängen: 1,5 kg')], ['{price|2}', t('Nachkommastellen in der Sprache (de 1,50)')], ['{weight|1|unit}', t('verkettet')], ['{name|upper}', t('GROSS')], ['{name|lower}', t('klein')], ['{name|capitalize}', t('Erster gross')], ['{description|plain}', t('HTML-Tags weg')]]],
@@ -201,8 +227,9 @@ const HELP_TEMPLATE = [
     <div class="overlay" @keydown="onKey">
       <div class="editor">
         <div class="toolbar">
-          <h1>{{ isTemplate ? '{}' : 'ƒ' }} {{ title }}</h1>
-          <span v-if="check.ok" class="pos" :title="$t('Syntax stimmt')">✓ {{ check.keys.length ? $t('liest') + ' ' + check.keys.map(k => isTemplate ? '{' + k + '}' : '$' + k).join(', ') : 'ok' }}</span>
+          <h1>{{ isJs ? '⌨' : isTemplate ? '{}' : 'ƒ' }} {{ title }}</h1>
+          <span v-if="isJs" class="muted" style="font-size:12px" :title="$t('Ein Skript prüft die Laufzeit — was schiefgeht, steht im Log des Laufs')">{{ $t("JavaScript · ES-Modul") }}</span>
+          <span v-else-if="check.ok" class="pos" :title="$t('Syntax stimmt')">✓ {{ check.keys.length ? $t('liest') + ' ' + check.keys.map(k => isTemplate ? '{' + k + '}' : '$' + k).join(', ') : 'ok' }}</span>
           <span v-else class="neg" :title="check.error">✗ {{ check.error }}</span>
           <span class="grow" />
           <span v-if="draftAt" class="warn" :title="$t('Entwurf im Browser — noch nicht im Attribut')">{{ $t("✎ Entwurf") }}</span>
@@ -219,10 +246,10 @@ const HELP_TEMPLATE = [
             </div>
           </div>
           <div v-if="help" class="help">
-            <div v-for="[h, items] in (isTemplate ? HELP_TEMPLATE : HELP)" :key="h" class="hrow"><b>{{ h }}</b>
-              <div v-for="[code, note] in items" :key="code" class="hitem" @click="insert(code)" :title="$t('Einfügen')"><code class="hs" v-html="isTemplate ? highlightTemplate(code) : highlight(code)"></code><span v-if="note" class="muted">{{ note }}</span></div>
+            <div v-for="[h, items] in (isJs ? HELP_JS : isTemplate ? HELP_TEMPLATE : HELP)" :key="h" class="hrow"><b>{{ h }}</b>
+              <div v-for="[code, note] in items" :key="code" class="hitem" @click="insert(code)" :title="$t('Einfügen')"><code class="hs" v-html="isTemplate && !isJs ? highlightTemplate(code) : highlight(code)"></code><span v-if="note" class="muted">{{ note }}</span></div>
             </div>
-            <div class="hrow"><b>{{ $t("Beispiel") }}</b><pre class="hs ex" @click="insert(EXAMPLE)" :title="$t('Beispiel einfügen')" v-html="isTemplate ? highlightTemplate(EXAMPLE) : highlight(EXAMPLE)"></pre></div>
+            <div class="hrow"><b>{{ $t("Beispiel") }}</b><pre class="hs ex" @click="insert(EXAMPLE)" :title="$t('Beispiel einfügen')" v-html="isTemplate && !isJs ? highlightTemplate(EXAMPLE) : highlight(EXAMPLE)"></pre></div>
           </div>
         </div>
         <div class="toolbar" style="border-top:1px solid var(--line);border-bottom:0">
@@ -232,7 +259,7 @@ const HELP_TEMPLATE = [
           <span class="grow" />
           <button v-if="draftAt" @click="discardDraft" :title="$t('zurück zum Stand im Attribut')">{{ $t("Entwurf verwerfen") }}</button>
           <button @click="emit('close')">{{ $t("Schliessen") }}</button>
-          <button class="primary" :disabled="!check.ok" @click="save" :title="check.ok ? $t('ins Attribut übernehmen') : $t('Syntax stimmt nicht')">{{ $t("Übernehmen") }}</button>
+          <button class="primary" :disabled="!check.ok" @click="save" :title="isJs ? $t('Skript speichern') : check.ok ? $t('ins Attribut übernehmen') : $t('Syntax stimmt nicht')">{{ $t("Übernehmen") }}</button>
         </div>
       </div>
     </div>

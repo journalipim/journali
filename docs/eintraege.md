@@ -132,7 +132,7 @@ Medienordner — Strom
 | `RowOrdered` | `attribute`, `rows[]` | Reihenfolge; ungenannte Zeilen hinten dran |
 | `CategoryAssigned` | `category` | Kategorie dazu — Altlast: Kategorien gibt es seit 17.09.2026 nicht mehr (pflegestruktur §4), Einträge bleiben lesbar |
 | `CategoryRemoved` | `category` | Kategorie weg (Altlast, s. o.) |
-| `PluginDataSet` | `name`, `value?` | Strom `plugin:<key>`: benannter JSON-Datensatz des Plugins (Profil `config:…`/`run:…`, Vorlage `template:…`, `settings`); leerer `value` = weg; der letzte gewinnt |
+| `PluginDataSet` | `name`, `value?` | Strom `plugin:<key>`: benannter JSON-Datensatz des Plugins (Profil `config:…`/`run:…`, Vorlage `template:…`, `settings`); leerer `value` = weg; der letzte gewinnt. **Ein Skript** (37, 29.09.2026) steht als `script:<key>` im Strom `plugin:scriptum`: `{ label, role?, run?, source, params[], note?, limit? }` — `role` ist die Rolle seines Laufs, `run` das Recht, mit dem andere es anstossen dürfen (leer = nur wer Skripte schreibt), `params` der Kopf des Quelltexts (`export const meta`). Lesen und schreiben nur mit `scriptum.write`; ein Geheimnis steht nie darin |
 | `ReleaseGranted` | `channel`, `locale?` | Freigabe für Kanal (je Sprache oder alle) — nur an der Variante |
 | `ReleaseRevoked` | `channel`, `locale?` | Freigabe weg |
 

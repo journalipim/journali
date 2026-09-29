@@ -359,6 +359,7 @@ DatenbankApi.Map(api, ziel, dataDir, app.Logger);   // ⇅ B&R → Datenbank: Ve
 MailApi.Map(api, mailer);   // Mailserver einstellen und eine Probe senden (Einstellungen → Mail)
 LicenceKeys.Map(api, licences, new KeyRequests(db, instanz), instanz, abos);   // Schlüssel: signiert anfordern, einlösen — Reset oder Limit, an die Instanz gebunden, einmal
 JobApi.Map(api, jobRunner);   // Jobs: Definition, Läufe, Logs (Plugin tasker)
+ScriptumApi.Map(api, jobRunner);   // Skripte (37): im Journal geschrieben, als Job gelaufen — der Quelltext nur für das Schreibrecht
 TeamApi.Map(api, jobDir);   // Teams: Kostenstelle der KI — Schlüssel, Verbuchung, Führung
 AiApi.Map(api, jobDir);     // KI über den Server: Schlüssel des zahlenden Teams; begrenzt wird hier nichts
 LicenceApi.Map(api, licences, abos);      // Lizenz ansehen, Abo verbinden und auffrischen

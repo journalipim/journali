@@ -111,5 +111,8 @@
  "Vor jedem Lauf holt der Tasker, was dort liegt und aufs Muster passt, nach in/ und schiebt es dort nach abgeholt/": "Before each run the tasker fetches what lies there and matches the pattern into in/ and moves it there to abgeholt/",
  "Nach jedem gelungenen Lauf legt der Tasker die Ausgaben dort ab": "After each successful run the tasker stores the outputs there",
  "— kein Zugang —": "— no access —",
- "noch kein Zugang dieser Art — unter ⌁ Zugänge anlegen": "no access of this kind yet — create one under ⌁ Accesses"
+ "noch kein Zugang dieser Art — unter ⌁ Zugänge anlegen": "no access of this kind yet — create one under ⌁ Accesses",
+ "— kein Skript —": "— no script —",
+ "noch kein Skript — unter ⌨ Skripte anlegen": "no script yet — create one under ⌨ Scripts",
+ "Dieses Skript hat keine Parameter.": "This script has no parameters."
 }
