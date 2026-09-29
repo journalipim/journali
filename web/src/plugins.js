@@ -46,6 +46,12 @@ import { ai } from './ai.js'
 import { t } from './i18n.js'
 import { L } from './i18n.js'
 
+/// Bringt dieses Plugin ein Modul für die Oberfläche mit? Das sagt sein <c>entry</c>, nicht <c>runs</c>: runs nennt,
+/// wo die Arbeit geschieht — ein Prozess-Plugin darf ein Band mitbringen (embed: „≈ Ähnliche Knoten“), ein
+/// Browser-Plugin einen Job (ixp). Ein Add-in (runs: office) zeigt auf eine HTML-Seite, kein Modul.
+/// Bis zum 29.09.2026 stand hier `runs === 'browser'` — Ansichten und Bänder von Prozess-Plugins luden nie.
+export const ladbar = m => typeof m?.entry === 'string' && m.entry.endsWith('.js')
+
 export const plugins = reactive({
   list: [],
   loaded: false,
@@ -76,7 +82,7 @@ export const plugins = reactive({
     // erst laden, was neu dazugekommen ist (ein Modul bleibt geladen — ein ES-Modul lässt sich nicht entladen)
     for (const p of order) {
       const m = p.manifest ?? {}
-      if (!this.active(p.key) || m.runs !== 'browser' || !m.entry || this.modules.has(p.key)) continue
+      if (!this.active(p.key) || !ladbar(m) || this.modules.has(p.key)) continue
       await registerPluginLang(p.key)   // Oberflächensprache (24.09.2026): plugins/<key>/lang/<code>.json vor dem Modul
       try { this.modules.set(p.key, (await import(/* @vite-ignore */ `/plugins/${p.key}/${m.entry}`)).default ?? {}) }
       catch (e) { store.toast(t('Plugin {0}: {1}', [p.key, e.message])) }
