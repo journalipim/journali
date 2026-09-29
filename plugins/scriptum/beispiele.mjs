@@ -259,6 +259,53 @@ export default async (ctx) => {
 `,
   },
   {
+    key: 'promotion-skripte',
+    title: 'Promotion test→prod: Skripte',
+    description: 'Hebt scriptum-Skripte auf eine andere Instanz (test→prod): Diff über die Skriptliste, Trockenlauf als Standard, Anwenden per Schalter. Löscht auf dem Ziel nie.',
+    source: `export const meta = {
+  label: 'Promotion test→prod: Skripte',
+  params: [
+    { key: 'ziel', label: 'Ziel-Instanz (Zugang HTTP/REST auf ihre Basis-URL)', type: 'driver', default: '' },
+    { key: 'anwenden', label: 'Anwenden (aus = nur Bericht)', type: 'boolean', default: 'false' },
+  ],
+}
+
+// Hebt scriptum-Skripte von dieser Instanz auf eine andere (test→prod). Das Ziel ist ein http-Zugang auf die Basis-URL
+// der Ziel-Instanz; sein Geheimnis ist ein API-Token dort mit dem Recht „Skripte schreiben". Standard ist Trockenlauf:
+// nur ein Bericht (neu/geändert/gleich). Mit „Anwenden" werden neue und geänderte Skripte per PUT übertragen — auf dem
+// Ziel wird nie etwas gelöscht. Das Modell hebt diese Fassung nicht (eigene Aufgabe).
+export default async (ctx) => {
+  const ziel = ctx.zugang(ctx.params.ziel)
+  const anwenden = String(ctx.params.anwenden) === 'true'
+  const lokal = await ctx.api.get('/api/scriptum/scripts')
+  let liste
+  try { liste = await ziel.get('/api/scriptum/scripts') } catch (e) { return ctx.out.text('Ziel nicht erreichbar: ' + (e && e.message ? e.message : e)) }
+  const dort = {}
+  for (const s of (liste || [])) dort[s.key] = true
+  const zeilen = []
+  for (const s of lokal) {
+    const voll = await ctx.api.get('/api/scriptum/scripts/' + encodeURIComponent(s.key))
+    let aktion = 'neu'
+    if (dort[s.key]) {
+      let d = null
+      try { d = await ziel.get('/api/scriptum/scripts/' + encodeURIComponent(s.key)) } catch (e) { d = null }
+      aktion = (d && d.source === voll.source && d.role === voll.role && d.run === voll.run) ? 'gleich' : 'geändert'
+    }
+    let ergebnis = aktion === 'gleich' ? '—' : (anwenden ? '?' : 'Trockenlauf')
+    if (aktion !== 'gleich' && anwenden) {
+      try {
+        await ziel.put('/api/scriptum/scripts/' + encodeURIComponent(s.key), { label: voll.label, role: voll.role, run: voll.run, source: voll.source, params: voll.params, note: voll.note, limit: voll.limit })
+        ergebnis = 'übertragen'
+      } catch (e) { ergebnis = 'Fehler: ' + (e && e.message ? e.message : e) }
+    }
+    zeilen.push([s.key, aktion, ergebnis])
+  }
+  if (!zeilen.length) return ctx.out.text('Keine Skripte.')
+  return ctx.out.table(['Skript', 'Unterschied', anwenden ? 'Ergebnis' : 'Bericht'], zeilen)
+}
+`,
+  },
+  {
     key: 'bericht-zaehlen',
     title: 'Knoten je Wert zählen',
     description: 'Ein einfacher Bericht ohne Fremdsystem: wie viele Knoten je Wert eines Feldes (etwa status).',

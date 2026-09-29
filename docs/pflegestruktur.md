@@ -2196,10 +2196,12 @@ tut **nichts Gefährliches von selbst** — der Unterschied ist „der Anwender 
   Grenze ist nur: journali zieht Fremdcode **nicht von selbst** und führt ihn aus — gewählt statt automatisch.
 - **Ein Skript ohne Job.** Jeder Lauf legt einen Job an; ein Skript, das nur einmal laufen soll, hinterlässt also
   einen Job in der Liste. Ob der Tasker solche Läufe eigens zeigt oder verbirgt, entscheidet sich, wenn es stört.
-- **Promotion test→prod.** Offen und noch nicht gebaut: Modell und Skripte gezielt von einer Instanz auf eine andere
-  heben (mit Diff und Idempotenz, append-only-fest). Ganze-Instanz-Kopie geht heute nur *runter* (⇅ B&R); nach oben ist
-  es API-Replay über einen `http`-Zugang auf die andere Instanz, das der Betreiber selbst orchestriert. Der Baustein
-  (prod als Zugang über /api) ist da; ein Migrations-Paket wäre der Ausbau.
+- **Promotion test→prod — Skripte gebaut (29.09.2026), Modell offen.** Das Beispiel „Promotion test→prod: Skripte"
+  hebt scriptum-Skripte auf eine andere Instanz: das Ziel ist ein `http`-Zugang auf ihre Basis-URL (Geheimnis = ein
+  API-Token dort mit `scriptum.write`), Diff über die Skriptliste, Trockenlauf als Standard, Anwenden per Schalter
+  (PUT je Skript, idempotent), gelöscht wird auf dem Ziel nie. Das **Modell** hebt es noch nicht: die idempotenten PUTs
+  je Schlüssel (`/attributes/{key}`, `/lists/{key}`, `/groups/{key}` …) sind da, aber der Feld-Abgleich GET↔PUT je
+  Modelltyp und ein sauberer Diff sind der Ausbau. Ganze-Instanz-Kopie geht weiterhin nur *runter* (⇅ B&R).
 
 ## 38. Fremdsysteme anbinden — Zugang `http` und `ctx.zugang` (29.09.2026, entschieden)
 
