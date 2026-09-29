@@ -16,14 +16,16 @@ public sealed record Completeness(string Channel, string? Locale, int Required, 
 /// </summary>
 public static class CompletenessRules
 {
-    /// <summary>Die Attribute, die an diesem Knoten gelten und erfassbar sind: aus den aktiven Gruppen des Pfads, plus <c>levels</c>-Ausnahmen.</summary>
+    /// <summary>Die Attribute, die an diesem Knoten gelten und erfassbar sind: aus den aktiven Gruppen des Pfads, plus <c>levels</c>-Ausnahmen.
+    /// Ein Attribut, das über mehrere geltende Gruppen hereinkommt (n:m, 29.09.2026), steht einmal in der Liste — sonst zählte seine Pflicht doppelt.</summary>
     public static IEnumerable<AttributeDefinition> ActiveAttributes(Tree tree, ModelCatalog model, Node node)
     {
+        var gesehen = new HashSet<string>();
         foreach (var (group, _) in tree.EffectiveGroups(node))
         {
             if (!model.GroupActiveAt(group, node.Role)) continue;
             foreach (var a in model.AttributesOf(group))
-                if (a.AllowedAt(node.Role) && WhenHolds(tree, model, node, a)) yield return a;
+                if (a.AllowedAt(node.Role) && WhenHolds(tree, model, node, a) && gesehen.Add(a.Key)) yield return a;
         }
     }
 

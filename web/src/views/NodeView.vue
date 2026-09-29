@@ -66,9 +66,16 @@ async function focusGroup() {
   await nextTick()
   // die Gruppe gilt am Knoten, aber die gewählte Sicht zeigt sie nicht: Sicht auf „alle“
   if (!blocks.value.some(b => b.key === g) && (node.value.groups ?? []).some(x => x.key === g) && store.viewKey[node.value.role]) { setView(''); await nextTick() }
-  if (!blocks.value.some(b => b.key === g)) { store.toast(t_('Gruppe {0} gilt an diesem Knoten nicht', [g])); return }
-  if (store.layout === 'tabs') tab.value = g
-  else document.querySelector(`tbody[data-group="${g}"]`)?.scrollIntoView({ block: 'start' })
+  // Ein Attribut steht nur einmal da (n:m): eine Gruppe, deren Attribute alle unter einer anderen stehen, hat keinen
+  // eigenen Block — dann zum Block, der sie zeigt
+  let ziel = blocks.value.some(b => b.key === g) ? g : null
+  if (!ziel && (node.value.groups ?? []).some(x => x.key === g)) {
+    const keys = (model.value?.groups ?? []).find(x => x.key === g)?.attributes ?? []
+    ziel = blocks.value.find(b => b.defs.some(d => keys.includes(d.key)))?.key ?? null
+  }
+  if (!ziel) { store.toast(t_('Gruppe {0} gilt an diesem Knoten nicht', [g])); return }
+  if (store.layout === 'tabs') tab.value = ziel
+  else document.querySelector(`tbody[data-group="${ziel}"]`)?.scrollIntoView({ block: 'start' })
 }
 
 const node = ref(null)
@@ -204,6 +211,10 @@ const blocks = computed(() => {
   }).filter(b => b.defs.length && (store.scope === 'all' || b.active))
     // „komplett“: gesperrte Gruppen ans Ende; in einer Sicht bleibt deren Reihenfolge.
     .sort((x, y) => view.value ? 0 : (x.active === y.active ? 0 : x.active ? -1 : 1))
+  // Ein Attribut kann in mehreren Gruppen Mitglied sein (n:m, 29.09.2026). Es steht einmal da: in der ersten Gruppe,
+  // die hier gilt; die weiteren nennt der Tooltip. Eine Gruppe, deren Attribute alle woanders stehen, fällt weg —
+  // ihre Attribute sind ja zu sehen, und welche Gruppen ein Attribut hat, steht am Attribut.
+  einmal(built)
   // Ein Plugin darf eine Gruppe gliedern: die Gruppe bleibt ein Reiter, seine Teile werden Zwischenüberschriften darin
   //.
   return built.map(b => {
@@ -211,6 +222,25 @@ const blocks = computed(() => {
     return rep ? withSections(b, rep.custom) : b
   })
 })
+
+/// Jedes Attribut nur im ersten Block, der es zeigt; in den anderen fällt es weg. `auchIn` sagt, welche Gruppen es
+/// ebenfalls führen — das steht im Tooltip seiner Zeile. Ändert die Liste an der Stelle, leere Blöcke fallen weg.
+function einmal(built) {
+  const zuerst = new Map()   // Attribut → Block, der es zeigt
+  for (const b of built) {
+    const bleibt = []
+    for (const d of b.defs) {
+      if (d.divider) { bleibt.push(d); continue }
+      const da = zuerst.get(d.key)
+      if (da) { da.auchIn = [...(da.auchIn ?? []), b.label]; continue }
+      zuerst.set(d.key, d); bleibt.push(d)
+    }
+    b.defs = bleibt
+  }
+  for (let i = built.length - 1; i >= 0; i--) if (!built[i].defs.some(d => !d.divider)) built.splice(i, 1)
+  return built
+}
+const auchTitel = def => def.auchIn?.length ? ' · ' + t_('auch in {0}', [def.auchIn.join(', ')]) : ''
 
 /// Die Attribute eines Blocks in der Reihenfolge des Plugins, mit Zwischenüberschriften; was das Plugin nicht nennt,
 /// steht unverändert hinten. Nur eine Überschrift? Dann keine — sie stünde allein über allem.
@@ -967,7 +997,7 @@ function cellMenu(e, def, col, block) {
           <!-- Zwischenüberschrift innerhalb einer Gruppe -->
           <tr v-if="def.divider" class="sub-row"><td class="sub" :colspan="columns.length + 1">{{ def.divider }}</td></tr>
           <tr v-else-if="def.type === 'formula' || def.type === 'template'">
-            <td class="attr" :title="def.key + (def.type === 'template' ? ' ' + $t('— Vorlage: Textbaustein {key}[ … ] aus Attributen, Ergebnis wird gebaut') : ' ' + $t('— Formel: der Wert ist ein Skript, das Ergebnis wird gerechnet'))"><div class="nm">{{ def.type === 'template' ? '{}' : 'ƒ' }} <span class="lbl">{{ store.label(def) }}</span><span v-if="store.attrNames !== 'label'" class="key muted">{{ def.key }}</span><span v-if="def.required" class="warn" :title="$t('Pflicht')">●</span></div></td>
+            <td class="attr" :title="def.key + (def.type === 'template' ? ' ' + $t('— Vorlage: Textbaustein {key}[ … ] aus Attributen, Ergebnis wird gebaut') : ' ' + $t('— Formel: der Wert ist ein Skript, das Ergebnis wird gerechnet')) + auchTitel(def)"><div class="nm">{{ def.type === 'template' ? '{}' : 'ƒ' }} <span class="lbl">{{ store.label(def) }}</span><span v-if="store.attrNames !== 'label'" class="key muted">{{ def.key }}</span><span v-if="def.required" class="warn" :title="$t('Pflicht')">●</span></div></td>
             <template v-for="c in columns" :key="c.label">
               <td v-if="!enabled(def, c, b)" class="cell" :title="props.pub && b.fromRole !== 'rubric' ? $t('Pflegewert · ändern im Pflegebaum') : ''"><div class="cell-box disabled" :class="{ ro: props.pub && b.fromRole !== 'rubric' }">{{ props.pub && b.fromRole !== 'rubric' ? roValue(def, c) : '' }}</div></td>
               <td v-else class="cell">
@@ -980,7 +1010,7 @@ function cellMenu(e, def, col, block) {
             </template>
           </tr>
           <tr v-else-if="def.type === 'rows'">
-            <td class="attr" :title="def.key"><div class="nm"><span class="lbl">{{ store.label(def) }}</span><span v-if="store.attrNames !== 'label'" class="key muted">{{ def.key }}</span> <span class="muted">{{ $t("≣ Zeilen") }}</span><span v-if="def.required" class="warn" :title="$t('Pflicht: mindestens eine Zeile')">●</span></div></td>
+            <td class="attr" :title="def.key + auchTitel(def)"><div class="nm"><span class="lbl">{{ store.label(def) }}</span><span v-if="store.attrNames !== 'label'" class="key muted">{{ def.key }}</span> <span class="muted">{{ $t("≣ Zeilen") }}</span><span v-if="def.required" class="warn" :title="$t('Pflicht: mindestens eine Zeile')">●</span></div></td>
             <td :colspan="columns.length" style="padding:0">
               <RowsBlock v-if="b.active" :def="def" :rows="node.rows?.[def.key] ?? []" :values="own" :locale="viewLocales[0] ?? locales[0]"
                 @set="(col, row, v) => setValue(col, { locale: col.perLocale ? (viewLocales[0] ?? locales[0]) : null, channel: null }, v, row)"
@@ -989,7 +1019,7 @@ function cellMenu(e, def, col, block) {
             </td>
           </tr>
           <tr v-else>
-            <td class="attr" :class="{ missing: missingOnly && missingOnly.keys.has(def.key) }" :title="def.key + (def.required ? ' ' + $t('· Pflicht:') + ' ' + Object.entries(def.required).map(([c, l]) => c + ':' + l.join(',')).join(' ') : '') + (def.inheritable ? ' · vererbbar' : '')"><div class="nm">
+            <td class="attr" :class="{ missing: missingOnly && missingOnly.keys.has(def.key) }" :title="def.key + (def.required ? ' ' + $t('· Pflicht:') + ' ' + Object.entries(def.required).map(([c, l]) => c + ':' + l.join(',')).join(' ') : '') + (def.inheritable ? ' · vererbbar' : '') + auchTitel(def)"><div class="nm">
               <button v-if="def.type !== 'html'" class="star" :class="{ on: !!star(def.key), own: starOwn(def.key), idle: star(def.key) && !star(def.key).applies }" :title="starTitle(def)" @click.stop="setStar(def)">{{ star(def.key) ? '★' : '☆' }}</button>
               <span class="lbl">{{ store.label(def) }}</span><span v-if="store.attrNames !== 'label'" class="key muted">{{ def.key }}</span>
               <span v-if="def.unit" class="muted">{{ def.unit }}</span>

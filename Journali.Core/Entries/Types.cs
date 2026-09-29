@@ -82,6 +82,7 @@ public static class Types
     public const string TreeLabelDefined = "TreeLabelDefined";
     public const string AttributeGroupDefined = "AttributeGroupDefined";
     public const string AttributeGroupRetired = "AttributeGroupRetired";
+    public const string AttributeGroupsSet = "AttributeGroupsSet";   // Mitgliedschaften eines Attributs (n:m, 29.09.2026)
     public const string ViewDefined = "ViewDefined";
     public const string ViewRetired = "ViewRetired";
     public const string UnitDefined = "UnitDefined";
@@ -544,6 +545,14 @@ public static class ReleaseWatch
 public sealed record TreeLabelDefined(string Role, string Attribute);
 
 public sealed record AttributeGroupRetired(string Key);
+
+/// <summary>
+/// Die Gruppen, in denen ein Attribut Mitglied ist (n:m, 29.09.2026): ein Attribut gilt überall, wo eine seiner
+/// Gruppen am Pfad hängt. Der Eintrag setzt die ganze Menge — der letzte gewinnt, ein leeres Feld löst alle
+/// Mitgliedschaften. Die Menge trägt keine eigenen Regeln: Typ, Einheit und Pflicht stehen am Attribut
+/// (<see cref="AttributeDefinition"/>), und <c>group</c> dort bleibt daneben gültig.
+/// </summary>
+public sealed record AttributeGroupsSet(string Key, string[] Groups);
 
 /// <summary>Eine Gruppe in einer Sicht mit der Reihenfolge ihrer Attribute dort; ungenannte Attribute hängen unten an. Gruppen, die die Sicht nicht nennt, zeigt sie nicht.</summary>
 public sealed record ViewItem(string Group, string[]? Order = null);

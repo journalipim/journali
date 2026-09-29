@@ -132,6 +132,12 @@ und Betriebsrechner. Eine Beispieladresse ist `localhost` oder ein Platzhalter, 
   3. **Inhalt** — Zuordnung, Ziel im Baum, Umfang, Sprachen. Das ist das Profil.
   4. **Ablage und Zeit** — Verzeichnis, Dateiname, Zeitplan, Trockenlauf. Das ist der Job.
 
+  **Attribut und Gruppe sind n:m** (29.09.2026, `docs/pflegestruktur.md` 36): eine Gruppe ist eine **Auswahl** von
+  Attributen, kein Besitz — dasselbe Attribut gilt in beliebig vielen Gruppen, ohne Kopie. Die Menge steht im Journal
+  (`AttributeGroupsSet`), `group` am Attribut zählt als Mitgliedschaft mit und bleibt die Heimatgruppe. Die **Pflicht
+  bleibt am Attribut**: unterscheidet sie sich zwischen zwei Verwendungen, ist es ein anderes Attribut. Am Knoten steht
+  ein Attribut einmal, auch wenn es über zwei geltende Gruppen hereinkommt.
+
   **Zugänge** (Plugin `driver`, `DriverApi.cs`, `/api/drivers`): ein Plugin fragt nach einem Zugang seiner Art
   („gib mir die vom Typ mysql“) statt selbst nach Adresse und Passwort. Zwei Sorten: einer, der **Dateien liefert**
   — mit Auflisten und Browser —, und einer, der nur **Anmeldung** ist. **Angeboten wird nur, was trägt**: Dateien

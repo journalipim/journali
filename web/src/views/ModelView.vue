@@ -102,7 +102,7 @@ const rows = computed(() => {
   const m = model.value; if (!m) return []
   switch (section.value) {
     case 'groups': return (m.groups ?? []).map(g => ({ key: g.key, label: anyLabel(g.label), right: [`⊞ ${g.attributes.length}`, g.activeFrom ? `🔒 ${icon(g.activeFrom)}` : '', g.releaseWatch === 'always' ? '⚑' : g.releaseWatch === 'never' ? '⚐' : g.watched ? '⚑ auto' : ''], _: g })).sort(byKey)
-    case 'attributes': return m.attributes.map(a => ({ key: a.key, label: anyLabel(a.label), right: [TYPE_SYM[a.type] ?? a.type, a.unique ? '①' : '', a.releaseWatch === 'always' ? '⚑' : a.releaseWatch === 'never' ? '⚐' : '', a.pattern ? '⌗' : '', a.multiple ? '≣' : '', a.perLocale ? '🗣' : '', a.perChannel ? '⇶' : '', a.group ? '▤ ' + groupLabel(a.group) : ''], _: a })).sort(byKey)   // Gruppe mit Label; ① eindeutig
+    case 'attributes': return m.attributes.map(a => ({ key: a.key, label: anyLabel(a.label), right: [TYPE_SYM[a.type] ?? a.type, a.unique ? '①' : '', a.releaseWatch === 'always' ? '⚑' : a.releaseWatch === 'never' ? '⚐' : '', a.pattern ? '⌗' : '', a.multiple ? '≣' : '', a.perLocale ? '🗣' : '', a.perChannel ? '⇶' : '', gruppenVon(a).length ? '▤ ' + gruppenVon(a).map(groupLabel).join(', ') : ''], _: a })).sort(byKey)   // Gruppen mit Label; ① eindeutig
     case 'lists': return m.lists.map(l => ({ key: l.key, label: anyLabel(l.label), right: [`☰ ${l.values.length}`], _: l })).sort(byKey)
     case 'views': return (m.views ?? []).map(v => ({ key: v.key, label: anyLabel(v.label), right: [icon(v.level), `▤ ${v.items.length}`], _: v })).sort(byKey)
     case 'units': return (m.units ?? []).map(u => ({ key: u.key, label: L(u.label), right: [u.quantity, `× ${u.factor}`], _: u })).sort(byKey)
@@ -123,7 +123,7 @@ function passes(r) {
   const f = flt.value, x = r._ ?? {}
   switch (section.value) {
     case 'attributes':
-      return (f.group === '' || (f.group === '-' ? !x.group : x.group === f.group)) && (!f.type || x.type === f.type)
+      return (f.group === '' || (f.group === '-' ? !gruppenVon(x).length : inGruppe(x, f.group))) && (!f.type || x.type === f.type)
         && (!f.locale || x.perLocale) && (!f.channel || x.perChannel) && (!f.multiple || x.multiple)
     case 'groups': return f.activeFrom === '' || (f.activeFrom === '-' ? !x.activeFrom : x.activeFrom === f.activeFrom)
     case 'views': return !f.level || x.level === f.level
@@ -159,7 +159,7 @@ function blockFor(k) {
   const m = model.value; if (!m || !k) return ''
   const used = (pred) => m.attributes.filter(pred).map(a => a.key)
   switch (section.value) {
-    case 'groups': return used(a => a.group === k).length ? t('hat noch Attribute') : ''
+    case 'groups': return used(a => inGruppe(a, k)).length ? t('hat noch Attribute') : ''
     case 'lists': { const u = used(a => a.list === k); return u.length ? t('benutzt von {0}{1}', [u.slice(0, 3).join(', '), u.length > 3 ? ' …' : '']) : '' }
     case 'units': { const u = used(a => a.unit === k); return u.length ? t('benutzt von {0}{1}', [u.slice(0, 3).join(', '), u.length > 3 ? ' …' : '']) : '' }
     case 'channels': { if (m.masterChannel === k) return t('Masterkanal'); const u = used(a => (a.channels ?? []).includes(k) || (a.required && k in a.required)); return u.length ? t('benutzt von {0}{1}', [u.slice(0, 3).join(', '), u.length > 3 ? ' …' : '']) : '' }
@@ -194,7 +194,7 @@ function rowMenu(e, r) {
     { sep: true },
     { label: t('Schlüssel kopieren'), icon: '⧉', key: 'c', action: () => navigator.clipboard?.writeText(keys.join(', ')) },
     // Gruppe mit ihren Attributen
-    section.value === 'groups' && keys.length === 1 && blockFor(keys[0]) ? { label: t('Gruppe mit {0} Attributen zurückziehen', [(model.value?.attributes ?? []).filter(a => a.group === keys[0]).length]), icon: '✕', hint: t('Werte bleiben im Journal'), danger: true, action: () => removeGroupDeep(keys[0]) } : null,
+    section.value === 'groups' && keys.length === 1 && blockFor(keys[0]) ? { label: t('Gruppe mit {0} Attributen zurückziehen', [(model.value?.attributes ?? []).filter(a => inGruppe(a, keys[0])).length]), icon: '✕', hint: t('Werte bleiben im Journal'), danger: true, action: () => removeGroupDeep(keys[0]) } : null,
     p ? { label: keys.length > 1 ? t('{0} zurückziehen', [keys.length]) : t('Zurückziehen'), icon: '✕', key: 'Delete', disabled: blocked.length > 0, hint: blocked.length ? `${blocked[0][0]}: ${blocked[0][1]}` : '', action: () => keys.length > 1 ? bulkRemove() : removeCur() }
       : null,
   ])
@@ -223,6 +223,19 @@ const curChannel = computed(() => model.value?.channels.find(c => c.key === cur.
 const curStatus = computed(() => (model.value?.statuses ?? []).find(s => s.key === cur.value) ?? null)
 const b = v => v ? 'true' : 'false'
 
+// ---- Gruppen eines Attributs (n:m, 29.09.2026): der Server liefert die Menge in groups (Zuordnung und
+// Mitgliedschaften zusammen). Geschrieben wird die ganze Menge; group bleibt als Heimatgruppe die erste daraus —
+// so sieht ein Leser, der nur group kennt, weiter eine Gruppe.
+const gruppenVon = a => a?.groups ?? (a?.group ? [a.group] : [])
+const inGruppe = (a, g) => gruppenVon(a).includes(g)
+function setzeGruppen(a, keys) {
+  const soll = [...new Set(keys)].sort()
+  const heim = soll.includes(a.group) ? a.group : (soll[0] ?? null)
+  return put(`/api/model/attributes/${a.key}`, { ...a, group: heim, groups: soll })
+}
+const aufnehmen = (a, g) => setzeGruppen(a, [...gruppenVon(a), g])
+const herausnehmen = (a, g) => setzeGruppen(a, gruppenVon(a).filter(x => x !== g))
+
 // ---- Attributgruppen
 const groupSet = (col, v) => {
   const g = curGroup.value
@@ -230,9 +243,8 @@ const groupSet = (col, v) => {
   if (col.startsWith('label_')) d.label[col.slice(6)] = v; else if (col === 'activeFrom') d.activeFrom = v || null; else if (col === 'releaseWatch') d.releaseWatch = v || null
   put(`/api/model/groups/${g.key}`, d)
 }
-const groupAttrs = computed(() => (model.value?.attributes ?? []).filter(a => a.group === curGroup.value?.key))
-const otherAttrs = computed(() => (model.value?.attributes ?? []).filter(a => a.group !== curGroup.value?.key).sort((x, y) => (x.group ?? '').localeCompare(y.group ?? '') || x.key.localeCompare(y.key)))
-function assign(a, gkey) { return put(`/api/model/attributes/${a.key}`, { ...a, group: gkey }) }
+const groupAttrs = computed(() => (model.value?.attributes ?? []).filter(a => inGruppe(a, curGroup.value?.key)))
+const otherAttrs = computed(() => (model.value?.attributes ?? []).filter(a => !inGruppe(a, curGroup.value?.key)).sort((x, y) => (x.group ?? '').localeCompare(y.group ?? '') || x.key.localeCompare(y.key)))
 // Zuordnen in der Masse: Filter nach Text und Herkunft
 // (ohne Gruppe / eine Gruppe), Haken, dann alle Gehakten in einem Rutsch.
 const pickText = ref('')
@@ -251,7 +263,7 @@ const pickSources = computed(() => {
 function togglePick(k) { const s = new Set(picked.value); s.has(k) ? s.delete(k) : s.add(k); picked.value = s }
 async function assignPicked() {
   const g = curGroup.value?.key; if (!g) return
-  for (const a of model.value.attributes.filter(x => picked.value.has(x.key))) await assign(a, g)
+  for (const a of model.value.attributes.filter(x => picked.value.has(x.key))) await aufnehmen(a, g)
   picked.value = new Set()
 }
 watch(cur, () => { picked.value = new Set() })
@@ -284,8 +296,13 @@ async function bulkApply({ kind, value }) {
   for (const [i, a] of list.entries()) {
     bulkBusy.value = `${i + 1} von ${list.length} …`
     // Ebenen: alle drei = keine Einschränkung (null); sonst die gewählten
-    const body = attrWith(a, kind, value)   // kind ist die Spalte: group, lv_<rolle>, inheritable, locale, channel, multiple, unit
-    try { await put(`/api/model/attributes/${a.key}`, body); ok++ } catch (e) { errs.push(`${a.key}: ${e.message}`) }
+    // kind ist die Spalte: group, lv_<rolle>, inheritable, locale, channel, multiple, unit.
+    // Gruppe in der Masse heisst aufnehmen (n:m): die vorhandenen Gruppen bleiben
+    try {
+      if (kind === 'group') await (value ? aufnehmen(a, value) : setzeGruppen(a, []))
+      else await put(`/api/model/attributes/${a.key}`, attrWith(a, kind, value))
+      ok++
+    } catch (e) { errs.push(`${a.key}: ${e.message}`) }
   }
   bulkBusy.value = ''
   if (errs.length) store.toast(`${ok} geändert, ${errs.length} nicht:\n` + errs.join('\n'), 'error')   // lange Listen landen von selbst im Fenster
@@ -306,7 +323,7 @@ const busy = ref(false)
 // Gruppe mit allem, was darin hängt: erst die Attribute zurückziehen, dann die Gruppe. Was gesperrt ist (★-Attribut, Kennung), bleibt stehen und wird genannt.
 async function removeGroupDeep(key = null) {
   const g = key ? (model.value?.groups ?? []).find(x => x.key === key) : curGroup.value; if (!g) return
-  const attrs = (model.value?.attributes ?? []).filter(a => a.group === g.key)
+  const attrs = (model.value?.attributes ?? []).filter(a => inGruppe(a, g.key))
   if (!await dialog.confirm({ title: t('Gruppe {0} mit {1} Attributen zurückziehen?', [L(g.label) || g.key, attrs.length]), text: attrs.length ? t('Zurückgezogen werden: {0}{1}.', [attrs.slice(0, 8).map(a => L(a.label) || a.key).join(', '), attrs.length > 8 ? ` … +${attrs.length - 8}` : '']) : '', warn: t('Werte bleiben im Journal — die Attribute sind danach nicht mehr im Modell.'), ok: t('✕ Zurückziehen'), danger: true })) return
   const kept = []
   busy.value = true
@@ -542,7 +559,7 @@ const attrLabel = k => L(model.value.attributes.find(a => a.key === k)?.label) |
           <div class="chips">
             <span v-for="a in groupAttrs" :key="a.key" class="chip" :title="`${a.key} · ${a.type}${a.multiple ? ' ≣' : ''}${a.perLocale ? ' 🗣' : ''}`">
               <a href="#" @click.prevent="goto('attributes', a.key)">{{ $L(a.label) || a.key }}</a>
-              <button @click="assign(a, null)" :title="$t('aus der Gruppe nehmen — das Attribut bleibt, ohne Gruppe gilt es an keinem Knoten')">×</button>
+              <button class="raus" @click="herausnehmen(a, curGroup.key)" :title="$t('aus dieser Gruppe nehmen — das Attribut bleibt und gilt weiter in seinen anderen Gruppen')">×</button>
             </span>
           </div>
         </div>
@@ -562,7 +579,7 @@ const attrLabel = k => L(model.value.attributes.find(a => a.key === k)?.label) |
             <label v-for="a in pickRows" :key="a.key" class="pick" :class="{ on: picked.has(a.key) }">
               <input type="checkbox" :checked="picked.has(a.key)" @change="togglePick(a.key)" />
               <span class="l">{{ $L(a.label) || a.key }}</span><span class="mono muted k">{{ a.key }}</span>
-              <span class="muted r">{{ TYPE_SYM[a.type] ?? a.type }} {{ a.group ? '▤ ' + a.group : $t('— ohne Gruppe') }}</span>
+              <span class="muted r">{{ TYPE_SYM[a.type] ?? a.type }} {{ gruppenVon(a).length ? '▤ ' + gruppenVon(a).join(', ') : $t('— ohne Gruppe') }}</span>
             </label>
             <div v-if="!pickRows.length" class="empty">{{ $t("Nichts zu „{0}“", [pickText]) }}</div>
           </div>
@@ -578,7 +595,18 @@ const attrLabel = k => L(model.value.attributes.find(a => a.key === k)?.label) |
           <tr><td class="attr">{{ $t("Name de") }}</td><Cell :value="curAttr.label?.de ?? null" @save="v => attrSet('label_de', v)" /></tr>
           <tr><td class="attr">{{ $t("Name en") }}</td><Cell :value="curAttr.label?.en ?? null" @save="v => attrSet('label_en', v)" /></tr>
           <tr><td class="attr">{{ $t("Typ") }}</td><SelectCell :value="curAttr.type" :options="TYPES" :label-of="t => `${TYPE_SYM[t]} ${TYPE_LABEL[t] ?? t}`" required @save="v => attrSet('type', v)" /></tr>
-          <tr><td class="attr" :title="$t('Gruppe in der Pflege — ohne Gruppe gilt das Attribut an keinem Knoten')">{{ $t("▤ Gruppe") }}</td><SelectCell :value="curAttr.group ?? ''" :options="model.groups.map(g => g.key)" :label-of="groupLabel" @save="v => attrSet('group', v || null)" /></tr>
+          <!-- Gruppen: eine Auswahl, kein Besitz (n:m) — das Attribut gilt überall, wo eine davon am Pfad hängt -->
+          <tr><td class="attr" :title="$t('Gruppen in der Pflege — ohne Gruppe gilt das Attribut an keinem Knoten')">{{ $t("▤ Gruppen") }}</td>
+            <td class="chips gruppen">
+              <span v-for="g in gruppenVon(curAttr)" :key="g" class="chip" :class="{ heim: g === curAttr.group }" :title="g === curAttr.group ? $t('{0} · Heimatgruppe: sie steht, wo nur eine Gruppe Platz hat', [g]) : g">
+                <a href="#" @click.prevent="goto('groups', g)">{{ groupLabel(g) }}</a>
+                <button class="raus" @click="herausnehmen(curAttr, g)" :title="$t('aus dieser Gruppe nehmen')">×</button>
+              </span>
+              <select class="zu" :value="''" @change="e => { const g = e.target.value; e.target.value = ''; if (g) aufnehmen(curAttr, g) }" :title="$t('in eine weitere Gruppe aufnehmen — ohne Kopie, dieselben Regeln')">
+                <option value="">{{ $t("+ Gruppe …") }}</option>
+                <option v-for="g in model.groups.filter(g => !inGruppe(curAttr, g.key))" :key="g.key" :value="g.key">{{ groupLabel(g.key) }}</option>
+              </select>
+            </td></tr>
           <tr v-if="curAttr.type === 'integer' || curAttr.type === 'decimal'"><td class="attr">{{ $t("⚖ Einheit") }}</td><SelectCell :value="curAttr.unit ?? ''" :options="(model.units ?? []).map(u => u.key)" @save="v => attrSet('unit', v || null)" /></tr>
           <tr v-if="curAttr.type === 'enum'"><td class="attr">{{ $t("☰ Werteliste") }}<span v-if="!curAttr.list" class="warn" :title="$t('ohne Werteliste lässt sich kein Wert setzen')"> ●</span></td><SelectCell :value="curAttr.list ?? ''" :options="model.lists.map(l => l.key)" @save="v => attrSet('list', v || null)" /></tr>
           <tr v-if="curAttr.type === 'rows'"><td class="attr" :title="$t('Spalten, jede ein Attribut, kommagetrennt')">{{ $t("≣ Spalten") }}<span v-if="!(curAttr.columns ?? []).length" class="warn" :title="$t('ohne Spalten hat eine Zeile nichts')"> ●</span></td><Cell :value="(curAttr.columns ?? []).join(', ') || null" @save="v => attrSet('columns', v)" /></tr>
@@ -734,6 +762,9 @@ const attrLabel = k => L(model.value.attributes.find(a => a.key === k)?.label) |
 </template>
 
 <style scoped>
+.chips.gruppen { padding: 2px 4px; }
+.chips.gruppen .chip.heim { border-color: var(--accent); }
+.chips.gruppen select.zu { font-size: 12px; }
 .sections { display: flex; flex-direction: column; padding: 4px; gap: 2px; }
 .part { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; padding: 8px 8px 2px; }
 .section-btn { text-align: left; border: 0; background: none; padding: 6px 8px; border-radius: 4px; display: flex; gap: 6px; align-items: center; }

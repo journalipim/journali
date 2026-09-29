@@ -1,4 +1,6 @@
 using System.Globalization;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using Journali.Core.Entries;
 using Journali.Core.Journal;
@@ -141,9 +143,23 @@ public static partial class ModelApi
             });
         });
 
-        m.MapPut("/attributes/{key}", (string key, AttributeDefinition body, HttpRequest req, Catalog c) =>
+        // Der Rumpf kommt roh: neben der Definition steht darin das Feld groups — die Gruppen, in denen das Attribut
+        // Mitglied ist (n:m, 29.09.2026). Fehlt das Feld, bleiben die Mitgliedschaften, wie sie sind
+        m.MapPut("/attributes/{key}", (string key, JsonElement raw, HttpRequest req, Catalog c) =>
             Command(req, c, key, ValidKey, (model, write) =>
             {
+                if (raw.ValueKind != JsonValueKind.Object) return Bad("Attribut: der Rumpf ist kein Objekt.");
+                AttributeDefinition? body;
+                try { body = raw.Deserialize<AttributeDefinition>(Web); }
+                catch (JsonException e) { return Bad("Attribut: {0}", e.Message); }
+                if (body is null) return Bad("Attribut: der Rumpf ist kein Objekt.");
+                string[]? mitglied = null;
+                if (raw.TryGetProperty("groups", out var gs) && gs.ValueKind == JsonValueKind.Array)
+                {
+                    mitglied = gs.EnumerateArray().Where(x => x.ValueKind == JsonValueKind.String).Select(x => x.GetString()!.Trim())
+                        .Where(x => x.Length > 0).Distinct().Order().ToArray();
+                    if (mitglied.FirstOrDefault(x => !ValidKey(x)) is { } schief) return Bad("Gruppe „{0}“: nur a-z, 0-9 und _, beginnt mit Buchstabe.", schief);
+                }
                 var force = string.Equals(req.Query["force"], "true", StringComparison.OrdinalIgnoreCase);
                 var def = body with { Key = key, Label = body.Label ?? new(), Axes = Clean(body.Axes), Channels = Clean(body.Channels),
                                       Unit = Blank(body.Unit), Group = Blank(body.Group), List = Blank(body.List), Columns = Clean(body.Columns),
@@ -201,7 +217,11 @@ public static partial class ModelApi
                         if (cd.Type == AttributeTypes.Rows) return Bad("Spalte {0}: keine Zeilen in Zeilen.", col);
                     }
                 }
-                return write(Model.AttributeStream + key, Types.AttributeDefined, def);
+                var ergebnis = write(Model.AttributeStream + key, Types.AttributeDefined, def);
+                // Mitgliedschaften: ein Eintrag je Änderung — dasselbe noch einmal zu schreiben wäre Rauschen im Journal
+                if (mitglied is not null && !mitglied.ToHashSet().SetEquals(model.AttributeGroups.GetValueOrDefault(key) ?? []))
+                    ergebnis = write(Model.AttributeStream + key, Types.AttributeGroupsSet, new AttributeGroupsSet(key, mitglied));
+                return ergebnis;
             }));
 
         m.MapDelete("/attributes/{key}", (string key, HttpRequest req, Catalog c) =>
@@ -322,16 +342,29 @@ public static partial class ModelApi
         masterChannel = model.MasterChannel,
         channels = model.Channels.Values.OrderBy(c => c.Key).ToList(),
         statuses = model.StatusesOrdered.ToList(),
-        attributes = model.Attributes.Values.OrderBy(a => a.Group).ThenBy(a => a.Key).ToList(),
+        attributes = model.Attributes.Values.OrderBy(a => a.Group).ThenBy(a => a.Key).Select(a => AttributeNode(model, a)).ToList(),
         lists = model.Lists.Values.OrderBy(l => l.Key).Select(l => new { l.Key, l.Label, columns = l.Columns ?? [], closed = l.Closed, values = l.Ordered.ToList() }).ToList(),
         units = model.Units.Values.OrderBy(u => u.Quantity).ThenByDescending(u => u.Factor).ToList(),
         views = model.Views.Values.OrderBy(v => v.Key).ToList(),
         relationTypes = model.RelationTypes.Values.OrderBy(r => r.Key).ToList(),
-        // Gruppen: definierte plus die, die nur an Attributen vorkommen (z. B. „import“ aus dem Werkzeug) — mit Attributen in Reihenfolge
-        groups = model.Groups.Keys.Union(model.Attributes.Values.Select(a => a.Group ?? "")).Where(g => g.Length > 0).Distinct().Order()
+        // Gruppen: definierte plus die, die nur an Attributen vorkommen (z. B. „import“ aus dem Werkzeug) oder nur Mitglieder haben — mit Attributen in Reihenfolge
+        groups = model.AllGroupKeys
             .Select(g => new { key = g, label = model.Groups.GetValueOrDefault(g)?.Label ?? new Labels(), activeFrom = model.Groups.GetValueOrDefault(g)?.ActiveFrom, releaseWatch = model.Groups.GetValueOrDefault(g)?.ReleaseWatch, attributes = model.AttributesOf(g).Select(a => a.Key).ToList(), defined = model.Groups.ContainsKey(g), watched = model.AttributesOf(g).Any(a => model.Watched(a.Key)) }).ToList(),
         types = AttributeTypes.All,
     };
+
+    private static readonly JsonSerializerOptions Web = new(JsonSerializerDefaults.Web);
+
+    /// <summary>
+    /// Ein Attribut für die Oberfläche: die ganze Definition, dazu <c>groups</c> — seine Zuordnung und seine
+    /// Mitgliedschaften zusammen (n:m, 29.09.2026). Das Feld ist immer da; <c>group</c> bleibt daneben stehen.
+    /// </summary>
+    private static JsonNode AttributeNode(ModelCatalog model, AttributeDefinition a)
+    {
+        var node = JsonSerializer.SerializeToNode(a, Web)!.AsObject();
+        node["groups"] = new JsonArray(model.GroupsOf(a.Key).Select(g => (JsonNode)JsonValue.Create(g)).ToArray());
+        return node;
+    }
 
     /// <summary>Vorhandene Werte (Knoten, Relationen, Medien), die zur neuen Definition nicht passen: Typ, mehrfach → einfach, Achse weg, Liste.</summary>
     public static (int Count, List<string> Examples)? Clash(Catalog c, ModelCatalog model, AttributeDefinition before, AttributeDefinition after)

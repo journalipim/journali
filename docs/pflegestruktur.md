@@ -2056,9 +2056,22 @@ wenn jemand ein Attribut einer zweiten Gruppe hinzufügt, entsteht etwas Neues.
 5. Datenblatt und Ausleitung: Der Baustein `group` nimmt die Attribute der Gruppe wie bisher; bei Mehrfachzugehörigkeit
    kann dasselbe Attribut in zwei Blöcken vorkommen — das ist gewollt und bleibt Sache der Vorlage.
 
-**Offen.** Ob die Knotenansicht zusätzlich nach Thema gliedern soll, entscheidet sich mit der zweiten Ordnung. Ob die
-heutige einzelne Zuordnung am Attribut nach der Umstellung bestehen bleibt (als „Heimatgruppe“ für Anzeige und
-Export) oder in der Menge aufgeht, wird beim Bau entschieden — die Menge ist das Ziel.
+**Gebaut (29.09.2026).** Ein Eintrag `AttributeGroupsSet(key, groups[])` im Strom des Attributs setzt die ganze Menge;
+`ModelCatalog.AttributeGroups` führt sie neben der Zuordnung, `AttributesOf` liest beide, `GroupsOf` nennt sie
+zusammen. `CompletenessRules.ActiveAttributes` gibt ein Attribut einmal aus, auch wenn es über zwei geltende Gruppen
+hereinkommt — sonst zählte seine Pflicht doppelt. `ModelApi` gibt je Attribut `groups[]` aus und nimmt das Feld beim
+Schreiben entgegen (ohne das Feld ändert sich nichts); die Gruppenliste kennt auch Gruppen, die nur Mitglieder haben.
+Im Modell steht am Attribut eine Mehrfachauswahl, die Gruppe zeigt ihre Mitglieder und nimmt welche auf. Am Knoten
+steht ein Attribut einmal — in der ersten geltenden Gruppe, die weiteren im Tooltip; eine Gruppe, deren Attribute alle
+woanders stehen, bekommt keinen leeren Block, und der Sprung auf sie führt dorthin, wo ihre Attribute stehen.
+
+**Die Zuordnung bleibt als Heimatgruppe.** Die Menge ist die Wahrheit; `group` am Attribut zählt als eine
+Mitgliedschaft unter anderen und ist die erste der Menge. Sie steht, wo nur eine Gruppe Platz hat (Listen, Filter,
+Export), und lässt jeden Leser, der die Menge nicht kennt, weiterarbeiten. Ein eigener Eintragstyp, der sie löscht,
+ist nicht nötig: ein Attribut ohne Mitgliedschaft gilt an keinem Knoten — wie vorher ohne Gruppe.
+
+**Offen.** Ob die Knotenansicht zusätzlich nach Thema gliedern soll, entscheidet sich mit der zweiten Ordnung.
+
 ## 37. scriptum — Skripte, die der Anwender schreibt und anstösst (29.09.2026, entschieden)
 
 **Die Lage.** Für Auswertungen über Systemgrenzen, eigene Transformationen und Schnittstellen zu Fremdsystemen hat

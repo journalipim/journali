@@ -70,12 +70,29 @@ public sealed class ModelCatalog : IProjection
     /// <summary>Relationstypen (18): relation:&lt;key&gt;.</summary>
     public Dictionary<string, RelationTypeDefinition> RelationTypes { get; } = new();
     public Dictionary<string, AttributeGroupDefinition> Groups { get; } = new();
+    /// <summary>Mitgliedschaften (n:m, 29.09.2026): Attribut → Gruppen, in denen es Mitglied ist — neben <c>AttributeDefinition.Group</c>.</summary>
+    public Dictionary<string, HashSet<string>> AttributeGroups { get; } = new();
     /// <summary>Welches Attribut die Knoten eines Typs im Baum benennt.</summary>
     public Dictionary<string, string> TreeLabels { get; } = new();
 
-    /// <summary>Attribute einer Gruppe, nach Schlüssel; die Reihenfolge fürs Auge kommt aus der Sicht.</summary>
+    /// <summary>Attribute einer Gruppe, nach Schlüssel; die Reihenfolge fürs Auge kommt aus der Sicht.
+    /// Dazu gehört ein Attribut über seine Zuordnung (<c>group</c>) und über jede Mitgliedschaft (n:m, 29.09.2026) — jedes einmal.</summary>
     public IEnumerable<AttributeDefinition> AttributesOf(string group) =>
-        Attributes.Values.Where(a => (a.Group ?? "") == group).OrderBy(a => a.Key);
+        Attributes.Values.Where(a => (a.Group ?? "") == group || (AttributeGroups.TryGetValue(a.Key, out var gs) && gs.Contains(group))).OrderBy(a => a.Key);
+
+    /// <summary>Die Gruppen eines Attributs: Zuordnung und Mitgliedschaften zusammen, jede einmal, nach Schlüssel.</summary>
+    public IEnumerable<string> GroupsOf(string attribute)
+    {
+        var aus = new HashSet<string>();
+        if (Attributes.TryGetValue(attribute, out var a) && a.Group is { Length: > 0 } g) aus.Add(g);
+        if (AttributeGroups.TryGetValue(attribute, out var gs)) aus.UnionWith(gs);
+        return aus.Order();
+    }
+
+    /// <summary>Jede Gruppe, die es gibt: definierte, am Attribut zugeordnete und solche, die nur Mitglieder haben.</summary>
+    public IEnumerable<string> AllGroupKeys =>
+        Groups.Keys.Concat(Attributes.Values.Select(a => a.Group ?? "")).Concat(AttributeGroups.Values.SelectMany(g => g))
+            .Where(g => g.Length > 0).Distinct().Order();
 
     /// <summary>Ist die Gruppe an dieser Rolle aktiv (Werte erfassbar)? Unbekannte Gruppen (nur an Attributen): überall.</summary>
     public bool GroupActiveAt(string group, string role) => !Groups.TryGetValue(group, out var g) || g.ActiveAt(role);
@@ -107,7 +124,9 @@ public sealed class ModelCatalog : IProjection
                 Attributes[a.Key] = a;
                 break;
             case Types.AttributeRetired:
-                Attributes.Remove(Types.Deserialize<AttributeRetired>(entry.Payload).Key);
+                var ar = Types.Deserialize<AttributeRetired>(entry.Payload).Key;
+                Attributes.Remove(ar);
+                AttributeGroups.Remove(ar);   // mit dem Attribut gehen seine Mitgliedschaften
                 break;
             case Types.ListDefined:
                 var ld = Types.Deserialize<ListDefinition>(entry.Payload);
@@ -154,7 +173,14 @@ public sealed class ModelCatalog : IProjection
                 Groups[ag.Key] = ag;
                 break;
             case Types.AttributeGroupRetired:
-                Groups.Remove(Types.Deserialize<AttributeGroupRetired>(entry.Payload).Key);
+                var agr = Types.Deserialize<AttributeGroupRetired>(entry.Payload).Key;
+                Groups.Remove(agr);
+                foreach (var set in AttributeGroups.Values) set.Remove(agr);   // eine zurückgezogene Gruppe hat keine Mitglieder mehr
+                break;
+            case Types.AttributeGroupsSet:
+                var ags = Types.Deserialize<AttributeGroupsSet>(entry.Payload);
+                var mengen = (ags.Groups ?? []).Where(g => !string.IsNullOrWhiteSpace(g)).Select(g => g.Trim()).ToHashSet();
+                if (mengen.Count == 0) AttributeGroups.Remove(ags.Key); else AttributeGroups[ags.Key] = mengen;
                 break;
             case Types.RelationTypeDefined:
                 var rt = Types.Deserialize<RelationTypeDefinition>(entry.Payload);
