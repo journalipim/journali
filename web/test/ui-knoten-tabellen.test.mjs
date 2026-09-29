@@ -55,7 +55,7 @@ const RELS = { out: [
   { id: 'r3', type: 'image', from: 'p1', to: 'm3', dir: 'out', other: { id: 'm3', role: 'media', label: 'foto.jpg', mime: 'image/jpeg', isImage: true }, values: [], lastNumber: 3 },
 ], in: [], inherited: [] }
 
-function welt({ tabellen = TABELLEN, text = TEXT_BASIS, jobs = [{ key: 'lesen', plugin: 'docs', enabled: true }], ki = null, rels = { out: [], in: [], inherited: [] }, knoten = KNOTEN, suche = { ready: true, hits: [] } } = {}) {
+function welt({ tabellen = TABELLEN, text = TEXT_BASIS, jobs = [{ key: 'lesen', plugin: 'docs', enabled: true }], ki = null, rels = { out: [], in: [], inherited: [] }, knoten = KNOTEN, suche = { ready: true, hits: [] }, lokal = false } = {}) {
   store.actor = 'u1'; store.toasts = []; store.model = MODELL; store.pendingDocTables = null; store.poll = async () => {}
   // die Knotenansicht misst Spaltenbreiten am Canvas — happy-dom hat keines
   globalThis.HTMLCanvasElement.prototype.getContext = () => ({ font: '', measureText: s => ({ width: String(s).length * 7 }) })
@@ -64,6 +64,7 @@ function welt({ tabellen = TABELLEN, text = TEXT_BASIS, jobs = [{ key: 'lesen', 
   // die KI: ohne Schlüssel aus; mit — sie antwortet, was der Test vorgibt, und der Test sieht, was gefragt wurde
   const fragen = []
   ai.available = () => !!ki
+  ai.bezahlt = () => !lokal   // lokal: das Modell auf dem eigenen Server — kostet nichts, nicht magenta
   ai.ask = async args => { fragen.push(args); if (ki instanceof Error) throw ki; return ki }
   const rufe = []
   globalThis.fetch = async (url, opt = {}) => {
@@ -553,6 +554,16 @@ test('die KI läuft erst auf Knopfdruck — was Token kostet, läuft nicht von s
   await knopf.trigger('click'); await flushPromises()
   assert.equal(fragen.length, 1); assert.equal(w.vm.ki, 'fertig')
   assert.ok(w.vm.rows.some(r => r.quelle === 'ki'))
+})
+
+test('mit dem lokalen Modell ist der Knopf nicht magenta — er kostet nichts; die ✦-Zeilen auch nicht', async () => {
+  const { w, fragen } = await dialog({ ki: KI, kiKlick: false, lokal: true })
+  const knopf = kiKnopf(w)
+  assert.ok(knopf); assert.ok(!knopf.classes('ai'), 'kein Magenta beim lokalen Modell')
+  await knopf.trigger('click'); await flushPromises()
+  assert.equal(fragen.length, 1)
+  assert.ok(!zeile(w, 'Leistung').find('td.quelle').classes('ai'), 'die Zeile trägt ✦, aber nicht die Farbe des Bezahlten')
+  assert.match(zeile(w, 'Leistung').find('td.quelle').text(), /^✦/)
 })
 
 test('ohne KI-Schlüssel gibt es keinen Knopf — nur ✦ aus', async () => {

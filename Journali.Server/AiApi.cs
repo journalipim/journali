@@ -26,6 +26,72 @@ public static class AiApi
     public sealed record AskBody(string? Provider, string? Model, string? System, string? User, int? MaxTokens, bool? Web, int? MaxSearches, string? Purpose);
     private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromMinutes(5) };
 
+    /// <summary>Der dritte Anbieter (29.09.2026): ein Modell auf dem eigenen Server, erreichbar über die Ollama-Schnittstelle.</summary>
+    public const string Lokal = "lokal";
+    /// <summary>Wer die Plugins fragen — steht am Team in <c>Models</c> unter diesem Schlüssel; kein eigener Eintragstyp.</summary>
+    public const string AnbieterWahl = "*";
+    /// <summary>Die Adresse des lokalen Modells aus der Umgebung (<c>JOURNALI_KI_LOKAL</c>, z. B. http://localhost:11434); null = kein lokales Modell.</summary>
+    public static string? LokalUrl => Normalisiere(Environment.GetEnvironmentVariable("JOURNALI_KI_LOKAL"));
+    /// <summary>Das Modell, wenn das Team keines gewählt hat (<c>JOURNALI_KI_LOKAL_MODELL</c>); sonst das erste, das der Dienst kennt.</summary>
+    public static string? LokalModell => Blank(Environment.GetEnvironmentVariable("JOURNALI_KI_LOKAL_MODELL"));
+    public static string? Normalisiere(string? url) => Blank(url) is { } u ? u.Trim().TrimEnd('/') : null;
+
+    /// <summary>
+    /// Die Anbieter eines Teams in der Reihenfolge, in der sie ohne Wahl gefragt werden: die bezahlten mit Schlüssel,
+    /// sortiert, dann das lokale Modell — ein hinterlegter Schlüssel ist eine Entscheidung, das lokale Modell der Rückfall.
+    /// </summary>
+    public static List<string> Anbieter(IEnumerable<string> keys, bool lokal)
+    {
+        var list = keys.Where(k => k != Lokal).Order().ToList();
+        if (lokal) list.Add(Lokal);
+        return list;
+    }
+
+    /// <summary>Der Anbieter, der gefragt wird: der gewünschte, wenn es ihn gibt; sonst die Wahl des Teams; sonst der erste.</summary>
+    public static string? Gewaehlt(string? want, string? wahl, IReadOnlyList<string> anbieter) =>
+        Blank(want) is { } w && anbieter.Contains(w) ? w : Blank(wahl) is { } x && anbieter.Contains(x) ? x : anbieter.FirstOrDefault();
+
+    /// <summary>Obergrenze des Kontextfensters — gemessen am 29.09.2026 auf 4 Kernen mit 8 GB: 16k passen mit einem 4B-Modell in 5 GB.</summary>
+    public const int LokalKontextMax = 16384;
+    /// <summary>
+    /// Das Kontextfenster zur Eingabe: Ollama nimmt sonst 2048–4096 Token und schneidet still ab. Geschätzt mit 3 Zeichen je
+    /// Token (deutscher Text), dazu die Antwort, in 2048er-Schritten aufgerundet, bis zur Obergrenze.
+    /// </summary>
+    public static int LokalKontext(int zeichen, int maxTokens)
+    {
+        var noetig = zeichen / 3 + maxTokens + 256;
+        var stufe = (int)Math.Ceiling(noetig / 2048.0) * 2048;
+        return Math.Clamp(stufe, 2048, LokalKontextMax);
+    }
+
+    /// <summary>Die Anfrage an das lokale Modell (Ollama: POST /api/chat, ohne Strom). num_predict begrenzt die Antwort wie max_tokens, num_ctx das Fenster.</summary>
+    public static object LokalBody(string model, string? system, string user, int maxTokens)
+    {
+        var messages = new List<object>();
+        if (!string.IsNullOrWhiteSpace(system)) messages.Add(new { role = "system", content = system });
+        messages.Add(new { role = "user", content = user });
+        return new { model, messages, stream = false, options = new { num_predict = maxTokens, num_ctx = LokalKontext((system?.Length ?? 0) + user.Length, maxTokens) } };
+    }
+
+    /// <summary>Eingang und Ausgang aus der Antwort des lokalen Modells: prompt_eval_count und eval_count.</summary>
+    public static (int In, int Out) LokalUsage(JsonElement root)
+    {
+        int Feld(string name) => root.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.Number ? v.GetInt32() : 0;
+        return (Feld("prompt_eval_count"), Feld("eval_count"));
+    }
+
+    /// <summary>Die Modelle, die der lokale Dienst kennt (GET /api/tags) — für die Wahl am Team und als Rückfall.</summary>
+    public static async Task<List<string>> LokalModelleAsync(CancellationToken ct)
+    {
+        if (LokalUrl is not { } url) return [];
+        using var res = await Http.GetAsync(url + "/api/tags", ct);
+        if (!res.IsSuccessStatusCode) return [];
+        using var doc = JsonDocument.Parse(await res.Content.ReadAsStringAsync(ct));
+        return doc.RootElement.TryGetProperty("models", out var ms) && ms.ValueKind == JsonValueKind.Array
+            ? ms.EnumerateArray().Select(m => m.TryGetProperty("name", out var n) ? n.GetString() : null).Where(n => !string.IsNullOrWhiteSpace(n)).Select(n => n!).ToList()
+            : [];
+    }
+
     /// <summary>Was die Anbieter sprechen — dieselben zwei wie im Browser (web/src/ai.js), hier serverseitig.</summary>
     /// <summary>
     /// Die Anfrage an die Anthropic-API. Der Systemtext geht als Block mit <c>cache_control</c>: wiederholt sich der Anfang
@@ -61,6 +127,11 @@ public static class AiApi
             req.Headers.TryAddWithoutValidation("anthropic-version", "2023-06-01");
             body = AnthropicBody(model, maxTokens, system, user, web, maxSearches);
         }
+        else if (provider == Lokal)
+        {
+            req.RequestUri = new Uri((LokalUrl ?? "http://localhost:11434") + "/api/chat");
+            body = LokalBody(model, system, user, maxTokens);
+        }
         else
         {
             req.RequestUri = new Uri("https://api.openai.com/v1/responses");
@@ -95,6 +166,11 @@ public static class AiApi
             }
             if (root.TryGetProperty("usage", out var us)) (tin, tout) = AnthropicUsage(us);
         }
+        else if (provider == Lokal)
+        {
+            if (root.TryGetProperty("message", out var msg) && msg.TryGetProperty("content", out var ctn)) text.Append(ctn.GetString());
+            (tin, tout) = LokalUsage(root);
+        }
         else
         {
             foreach (var o in root.GetProperty("output").EnumerateArray())
@@ -126,17 +202,22 @@ public static class AiApi
             var team = TeamApi.TeamOf(c, req.HttpContext.Items["user"] as string);
             if (team is null || c.Teams.Get(team) is not { } t) return Results.Ok(new { team = (string?)null, ready = false, reason = "kein Team" });
             var zahler = c.Teams.Payer(team); var zt = c.Teams.Get(zahler)!;
-            var keys = Secrets.Get(jobsDir, TeamApi.SecretKey(zahler)).Keys.Order().ToList();
+            var providers = Anbieter(Secrets.Get(jobsDir, TeamApi.SecretKey(zahler)).Keys, LokalUrl is not null);
             var heute = DateOnly.FromDateTime(DateTime.Today);
             var tag = c.Teams.Day(zahler, heute);
             return Results.Ok(new
             {
-                team, label = t.Label, payer = zahler, payerLabel = zt.Label, providers = keys, ready = t.Enabled && zt.Enabled && keys.Count > 0,
+                team, label = t.Label, payer = zahler, payerLabel = zt.Label, providers, ready = t.Enabled && zt.Enabled && providers.Count > 0,
+                chosen = Gewaehlt(null, zt.Models.GetValueOrDefault(AnbieterWahl), providers),   // wen die Plugins fragen
                 models = zt.Models,   // welches Modell je Anbieter gefragt wird
                 // Was journali selbst gemessen hat: Bytes hin und zurück. Keine Tokenzahl, keine Kosten.
                 volume = new { today = tag.Bytes, todayIn = tag.BytesIn, todayOut = tag.BytesOut, month = c.Teams.Month(zahler, heute.ToString("yyyy-MM")) },
             });
         }));
+
+        // Die Modelle des lokalen Dienstes — für die Wahl am Team. Die Adresse selbst bleibt beim Server
+        api.MapGet("/ai/lokal/models", async (CancellationToken ct) =>
+            Results.Ok(new { ready = LokalUrl is not null, models = LokalUrl is null ? [] : await LokalModelleAsync(ct) }));
 
         // Die eine Frage — mit dem Schlüssel des zahlenden Teams, gezählt bei ihm
         api.MapPost("/ai/ask", async (AskBody body, HttpRequest req, Catalog c, CancellationToken ct) =>
@@ -164,14 +245,17 @@ public static class AiApi
             var zahlerKey = c.Teams.Payer(mein); var zt = c.Teams.Get(zahlerKey)!;
             if (!zt.Enabled) return (Bad("Das zahlende Team „{0}“ ist abgeschaltet.", zt.Label), "", "", "", "");
             var keys = Secrets.Get(jobsDir, TeamApi.SecretKey(zahlerKey));
-            var p = Blank(wantProvider) is { } want && keys.ContainsKey(want) ? want : keys.Keys.OrderBy(x => x).FirstOrDefault();
+            var anbieter = Anbieter(keys.Keys, LokalUrl is not null);
+            var p = Gewaehlt(wantProvider, zt.Models.GetValueOrDefault(AnbieterWahl), anbieter);
             if (p is null) return (Bad("Für „{0}“ ist kein KI-Schlüssel hinterlegt.", zt.Label), "", "", "", "");
-            return ((IResult?)null, mein, zahlerKey, p, keys[p]);
+            return ((IResult?)null, mein, zahlerKey, p, p == Lokal ? "" : keys[p]);
         });
         if (fehler is not null) return (fehler, "", [], "", "", "", "");
+        if (web && provider == Lokal) return (Bad("Das lokale Modell sucht nicht im Internet."), "", [], "", "", "", "");
 
         var amTeam = c.Lesen((_, _) => c.Teams.Get(zahler)?.Models.GetValueOrDefault(provider));
-        var model = Blank(amTeam) ?? Blank(wantModel) ?? (provider == "anthropic" ? "claude-sonnet-5" : "gpt-5");
+        var model = Blank(amTeam) ?? Blank(wantModel) ?? (provider == "anthropic" ? "claude-sonnet-5" : provider == Lokal ? (LokalModell ?? (await LokalModelleAsync(ct)).FirstOrDefault() ?? "") : "gpt-5");
+        if (provider == Lokal && model == "") return (Bad("Das lokale Modell hat kein Modell geladen."), "", [], "", "", "", "");
         try
         {
             var (text, sources, hin, zurueck) = await Call(provider, key, model, system, frage, maxTokens, web, Math.Max(1, maxSearches), ct);

@@ -2806,5 +2806,11 @@
  "Adresse und Anmeldung kommen aus einem Zugang, nie aus dem Skript": "Address and login come from an access, never from the script",
  "Ein Skript prüft die Laufzeit — was schiefgeht, steht im Log des Laufs": "A script is checked by the runtime — what goes wrong is in the log of the run",
  "JavaScript · ES-Modul": "JavaScript · ES module",
- "Skript speichern": "Save script"
+ "Skript speichern": "Save script",
+ "Den Text gegen das Modell lesen lassen — das lokale Modell, kostet nichts": "Have the text read against the model — the local model, costs nothing",
+ "welchen Anbieter die Plugins fragen — ein bezahlter mit Schlüssel oder das lokale Modell": "which provider the plugins ask — a paid one with a key or the local model",
+ "Anbieter": "Provider",
+ "welches Modell der lokale Dienst nimmt — die Liste kommt vom Dienst": "which model the local service uses — the list comes from the service",
+ "Das lokale Modell sucht nicht im Internet.": "The local model does not search the web.",
+ "Das lokale Modell hat kein Modell geladen.": "The local model service has no model loaded."
 }

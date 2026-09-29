@@ -6,6 +6,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { api } from '../api.js'
 import { store } from '../store.js'
 import { dialog } from '../dialog.js'
+import { ai } from '../ai.js'
 import UsageBars from './UsageBars.vue'
 import LicenceSettings from './LicenceSettings.vue'
 import { t as t_ } from '../i18n.js'
@@ -14,6 +15,10 @@ const teams = ref([])
 const gewaehlt = ref(null)     // gezeigtes Team; mit „users“ lässt sich wechseln
 const mitglieder = ref([])
 const keyIn = ref({ anbieter: 'anthropic', wert: '' })
+// das lokale Modell (29.09.2026): gibt es eines am Server, steht es jedem Team zur Wahl — ohne Schlüssel, ohne Kosten
+const lokal = ref({ ready: false, models: [] })
+const anbieterListe = computed(() => [...(team.value?.keys ?? []), ...(lokal.value.ready ? ['lokal'] : [])])
+const anbieterGewaehlt = computed(() => { const w = team.value?.models?.['*']; return anbieterListe.value.includes(w) ? w : anbieterListe.value[0] ?? '' })
 const frei = ref([])           // wer in keinem Team ist — nur die lassen sich eintragen
 const dazu = ref('')
 const MODELLE = {
@@ -65,6 +70,7 @@ const freiTon = zeitraum => {
 
 async function load() {
   try {
+    try { const l = await api.get('/api/ai/lokal/models'); lokal.value = { ready: !!l?.ready, models: l?.models ?? [] } } catch { lokal.value = { ready: false, models: [] } }
     teams.value = await api.get('/api/teams')
     if (!teams.value.some(t => t.key === gewaehlt.value)) gewaehlt.value = teams.value[0]?.key ?? null
     await details()
@@ -102,7 +108,7 @@ async function schluesselWeg(anbieter) {
   try { await api.post(`/api/teams/${encodeURIComponent(gewaehlt.value)}/keys`, { keys: { [anbieter]: '' } }, 'PUT'); await load() } catch (e) { store.toast(e.message) }
 }
 async function modell(anbieter, wert) {
-  try { await api.post(`/api/teams/${encodeURIComponent(gewaehlt.value)}`, { models: { [anbieter]: wert } }, 'PUT'); await load() } catch (e) { store.toast(e.message) }
+  try { await api.post(`/api/teams/${encodeURIComponent(gewaehlt.value)}`, { models: { [anbieter]: wert } }, 'PUT'); await load(); ai.loadState() } catch (e) { store.toast(e.message) }
 }
 /// Was gezählt wird — die Vorgänge hinter Kinds.Counts im Kern (data, publish). Über Nichtgezähltes steht hier nichts.
 function hilfeToken() {
@@ -220,6 +226,23 @@ async function austragen(m) {
             <input v-model="keyIn.wert" type="password" :placeholder="$t('Schlüssel')" style="width:150px" @keydown.enter="schluessel" />
             <button class="x" :title="$t('Schlüssel hinterlegen — er bleibt beim Server, nie im Journal, nie im Browser')" @click="schluessel">🔒</button>
           </td><td v-else></td>
+        </tr>
+        <tr v-if="anbieterListe.length > 1">
+          <td class="muted" :title="$t('welchen Anbieter die Plugins fragen — ein bezahlter mit Schlüssel oder das lokale Modell')">{{ $t("Anbieter") }}</td>
+          <td>
+            <select :value="anbieterGewaehlt" :disabled="!fuehrt" style="width:220px" @change="modell('*', $event.target.value)">
+              <option v-for="a in anbieterListe" :key="a" :value="a">{{ a }}</option>
+            </select>
+          </td><td></td>
+        </tr>
+        <tr v-if="lokal.ready" key="mlokal">
+          <td class="muted" :title="$t('welches Modell der lokale Dienst nimmt — die Liste kommt vom Dienst')">{{ $t("Modell {0}", ['lokal']) }}</td>
+          <td>
+            <select :value="team.models?.lokal ?? ''" :disabled="!fuehrt" style="width:220px" @change="modell('lokal', $event.target.value)">
+              <option value="">{{ $t("— Vorgabe —") }}</option>
+              <option v-for="m in lokal.models" :key="m" :value="m">{{ m }}</option>
+            </select>
+          </td><td></td>
         </tr>
         <tr v-for="k in team.keys" :key="'m' + k">
           <td class="muted" :title="$t('welches Modell {0} fragt — es bestimmt Kosten und Güte', [k])">{{ $t("Modell {0}", [k]) }}</td>

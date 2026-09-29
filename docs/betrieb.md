@@ -326,7 +326,24 @@ sieht, bekommt es nirgends: nicht in Listen, nicht in der Suche, nicht als Datei
 
 ## KI
 
-journali bietet keine KI an und hat keinen eigenen Schlüssel; kein Anbieter ist im Code bevorzugt. Der Schlüssel liegt **am Team** (⚙ Einstellungen → ◍ Team), im Datenverzeichnis
+journali bietet keine KI an und hat keinen eigenen Schlüssel; kein Anbieter ist im Code bevorzugt.
+
+**Ein lokales Modell** (29.09.2026): `JOURNALI_KI_LOKAL` am Server nennt die Adresse eines Dienstes mit der
+Ollama-Schnittstelle (`http://localhost:11434`); `JOURNALI_KI_LOKAL_MODELL` das Modell, sonst das erste, das der
+Dienst kennt — wählbar am Team. Dann steht der Anbieter `lokal` jedem Team zur Verfügung, ohne Schlüssel. Die
+bezahlten Anbieter mit Schlüssel gehen vor; welchen die Plugins fragen, wählt das Team (◍ Team → Anbieter; im
+Journal `models["*"]`). Das lokale Modell sucht nicht im Internet. Gezählt wird es wie die anderen — Volumen ist
+Volumen —, aber es kostet nichts: die Oberfläche zeigt es darum nicht magenta, und es darf von selbst laufen.
+Die Adresse bleibt beim Server; die Oberfläche sieht nur, dass es ein lokales Modell gibt und welche Modelle.
+
+**Gemessen** (29.09.2026, vier Kerne, acht GB, ohne GPU, `gemma3:4b` mit vier Milliarden Parametern, drei Komma drei GB
+auf der Platte): eine kurze Zuordnungsfrage (unter hundert Token Eingabe) antwortet in rund acht Sekunden. Ein ganzes
+Datenblatt gegen eine Attributliste (rund zweitausend Token Eingabe, sechzehntausend Token Kontextfenster) braucht rund
+anderthalb Minuten, davon der grösste Teil für die Eingabe — vier Komma fünf GB Speicher im Container, mit fünf GB
+Grenze knapp, aber ohne Auslagerung. Für kurze Zuordnungs- und Benennungsfragen (Knopf) taugt das; ein ganzes Dokument
+lesen ist für einen Knopf, hinter dem jemand wartet, zu langsam — dafür bliebe ein Nachtjob.
+
+Der Schlüssel liegt **am Team** (⚙ Einstellungen → ◍ Team), im Datenverzeichnis
 des Servers (Tresor, Stück `secrets` unter `team:<key>`), nie im Journal und nie im Browser. Gefragt wird
 über `POST /api/ai/ask`: der Server nimmt den Schlüssel des **zahlenden** Teams (`keysFrom`) und das
 dort eingetragene Modell. Ohne Team keine KI; dasselbe gilt für Jobs, die über ihr `JOURNALI_TOKEN`

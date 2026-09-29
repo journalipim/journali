@@ -35,6 +35,19 @@ test('ein Aufruf hinterlässt keinen Zähler im Browser', async () => {
   assert.equal(typeof ai.teamUsed, 'undefined', 'und gibt auch keine Auskunft darüber')
 })
 
+// Der dritte Anbieter (29.09.2026): ein lokales Modell kostet nichts — die Wahl des Teams entscheidet, wer gefragt wird
+test('die Wahl des Teams entscheidet, wer gefragt wird — das lokale Modell kostet nichts', async () => {
+  const calls = server({ state: { ...STATE, providers: ['anthropic', 'lokal'], chosen: 'lokal', models: { anthropic: 'claude-sonnet-5', '*': 'lokal' } } })
+  await ai.loadState()
+  assert.equal(ai.anbieter(), 'lokal'); assert.equal(ai.bezahlt(), false)
+  await ai.ask({ user: 'hallo' })
+  assert.equal(calls.find(c => c.path === '/api/ai/ask').body.provider, 'lokal', 'die Frage geht an den gewählten Anbieter')
+  server({ state: { ...STATE, providers: ['anthropic', 'lokal'], chosen: 'anthropic' } })
+  await ai.loadState()
+  assert.equal(ai.anbieter(), 'anthropic'); assert.equal(ai.bezahlt(), true)
+  assert.match(ai.label(), /^anthropic · claude-sonnet-5/)
+})
+
 test('ohne Team und ohne Schlüssel sagt journali nur, dass es nicht geht', async () => {
   server({ state: { team: null, ready: false } })
   await ai.loadState()

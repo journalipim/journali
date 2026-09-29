@@ -80,6 +80,10 @@ export const ai = reactive({
   /// eingerichtete Anbieter (mit Schlüssel) — zum Aufzählen in Hilfen und Einstellungen
   active() { return PROVIDERS.filter(p => this.accounts[p.key]?.key) },
   available() { return !!this.server?.ready },
+  /// Der Anbieter, den der Server fragen wird: die Wahl des Teams (models["*"]), sonst der erste — der Server rechnet gleich
+  anbieter() { const s = this.server; if (!s?.ready) return null; const p = s.providers ?? []; return p.includes(s.chosen) ? s.chosen : p.includes(this.provider) ? this.provider : p[0] ?? null },
+  /// Kostet die nächste Frage Token beim Anbieter? Das lokale Modell (29.09.2026) nicht — es ist darum nicht magenta und darf von selbst laufen
+  bezahlt() { return this.anbieter() !== 'lokal' },
   /// der Anbieter, der gefragt wird: der gewählte, wenn er einen Schlüssel hat, sonst der erste eingerichtete
   current() { const p = byKey(this.provider); return p && this.accounts[p.key]?.key ? p : this.active()[0] ?? null },
   get model() { const p = this.current(); return p ? this.accounts[p.key].model : '' },
@@ -87,7 +91,7 @@ export const ai = reactive({
   label() {
     const s = this.server
     if (!s?.ready) return 'KI'
-    const a = s.providers?.[0] ?? ''
+    const a = this.anbieter() ?? ''
     return `${a} · ${s.models?.[a] ?? ''} · ${s.label ?? s.team}`.replace(/ · $/, '')
   },
   save() { try { localStorage.setItem(KEY, JSON.stringify({ accounts: this.accounts, provider: this.provider })) } catch {} },
@@ -99,7 +103,7 @@ export const ai = reactive({
     if (!this.server?.ready) throw new Error(this.server?.team ? t_('Für Team „{0}“ ist kein KI-Schlüssel hinterlegt', [this.server.label ?? this.server.team]) : t_('Kein Team — ohne Team keine KI'))
     this.busy++
     try {
-      const anbieter = this.server.providers.includes(this.provider) ? this.provider : this.server.providers[0]
+      const anbieter = this.anbieter()
       const modell = this.server.models?.[anbieter]
       const { text, sources } = await api.post('/api/ai/ask', { provider: anbieter, model: modell, system, user, maxTokens, web, maxSearches, purpose })
         .then(r => ({ text: r.text, sources: r.sources ?? [] }))

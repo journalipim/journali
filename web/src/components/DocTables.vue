@@ -539,9 +539,9 @@ async function lies(id, chunks) {
     // die Einheit im Wert, obwohl keine verlangt war: „22 mm“ → 22, wenn das Modell die Einheit kennt
     const roh = String(it.value).trim(); const split = def.unit ? splitUnit(roh, model.value) : null
     const converted = convert(split?.number ?? roh, def, model.value); const error = validate(converted, def, model.value)
-    // fest: die KI hat gegen genau dieses Attribut gelesen — das Ziel steht, kein Wähler
+    // fest: die KI hat gegen genau dieses Attribut gelesen — das Ziel steht, kein Wähler. bezahlt: ob es Token gekostet hat (magenta)
     const r = { key: def.label?.[master] || L(def.label) || def.key, value: roh, doc: id, page: it.page ?? null, heading: null, quote: it.quote ?? null,
-      confidence: sicherheit(it.confidence), quelle: 'ki', fest: true,
+      confidence: sicherheit(it.confidence), quelle: 'ki', fest: true, bezahlt: ai.bezahlt(),
       target: 'attr', attribute: def.key, newKey: def.key, newType: def.type, unit: def.unit ?? null, converted, error, why: '', inaktiv: !gruppeHier(def.key) }
     if (r.inaktiv) r.why = t_('Gruppe {0} gilt an diesem Knoten nicht', [gruppenVon(def).join(', ')])
     r.take = !r.error && !r.inaktiv && r.converted != null
@@ -556,7 +556,7 @@ async function lies(id, chunks) {
     // Bezeichnung, Synonym: ein reiner Ähnlichkeitstreffer („λ bei 50 Hz“ ≈ „Strom bei 50 Hz“) ist keiner
     if (paare[i].genannt) { const def = attrs.value.find(a => a.key === paare[i].genannt); Object.assign(v, { target: 'attr', attribute: def.key, why: t_('von der KI zugeordnet'), converted: convert(v.number ?? paare[i].value, def, model.value) }); v.error = validate(v.converted, def, model.value) }
     else if (v.target === 'attr' && /^ähnlich /.test(v.why ?? '')) Object.assign(v, { target: 'new', attribute: null, why: '', converted: convert(v.number ?? paare[i].value, { type: v.newType }, model.value), error: null })
-    const r = listeZuordnen(listeRaten(einheitRaten({ ...paare[i], ...v, quelle: 'ki', fest: false })))
+    const r = listeZuordnen(listeRaten(einheitRaten({ ...paare[i], ...v, quelle: 'ki', fest: false, bezahlt: ai.bezahlt() })))
     if (r.target === 'attr' && !gruppeHier(r.attribute)) { r.why = t_('Gruppe {0} gilt an diesem Knoten nicht', [gruppenVon(attrs.value.find(a => a.key === r.attribute)).join(', ')]); r.inaktiv = true }
     r.take = r.target !== 'skip' && !r.error && !r.inaktiv && r.converted != null
     neu.push(schonDa(r))
@@ -857,8 +857,8 @@ defineExpose({ rows, werte, bausteineZeilen, zeilenWerte, warten, hinweis, genom
         <span v-if="hochladen" class="lauf" :title="$t('Die Datei geht zum Server und wird an den Knoten gehängt')"><b class="unbestimmt"><i /></b><span class="muted">{{ $t("◌ wird hochgeladen …") }}</span></span>
         <span v-else-if="warten" class="lauf" :title="$t('Der Job „Dokumente lesen“ liest das Dokument gerade; die Zeilen erscheinen, sobald er fertig ist.')"><b class="unbestimmt"><i /></b><span class="muted">{{ $t("◌ wird gelesen …") }}</span></span>
         <span v-else-if="laeuft" class="lauf" :title="$t('{0} von {1} Abfragen — solange kommen Werte nach', [schritte.erledigt, schritte.gesamt])"><b><i :style="{ width: prozent + '%' }" /></b><span class="muted">{{ schritte.erledigt }}/{{ schritte.gesamt }}</span></span>
-        <span v-if="ki === 'läuft'" class="ai" :title="$t('Der Text geht gegen die {0} Attribute, die hier gelten', [attributeHier.length])">{{ $t("✦ KI liest …") }}</span>
-        <button v-else-if="ki !== 'aus'" class="x ai" :disabled="!kiBereit || busy" @click="kiFragen" :title="$t('Den Text gegen das Modell lesen lassen — einmal je Dokument, kostet Token')">{{ $t("✦ KI fragen") }}</button>
+        <span v-if="ki === 'läuft'" :class="ai.bezahlt() ? 'ai' : 'muted'" :title="$t('Der Text geht gegen die {0} Attribute, die hier gelten', [attributeHier.length])">{{ $t("✦ KI liest …") }}</span>
+        <button v-else-if="ki !== 'aus'" :class="ai.bezahlt() ? 'x ai' : 'x'" :disabled="!kiBereit || busy" @click="kiFragen" :title="ai.bezahlt() ? $t('Den Text gegen das Modell lesen lassen — einmal je Dokument, kostet Token') : $t('Den Text gegen das Modell lesen lassen — das lokale Modell, kostet nichts')">{{ $t("✦ KI fragen") }}</button>
         <span v-else class="muted" :title="$t('Kein KI-Schlüssel am Team — es zählen Tabellen, Zeilen und Suche')">{{ $t("✦ aus") }}</span>
         <span v-if="kiHinweis" :class="kiHinweis.startsWith('✗') ? 'neg' : 'ai'">{{ kiHinweis }}</span>
         <span v-if="hinweis" class="neg">{{ hinweis }}</span>
@@ -882,7 +882,7 @@ defineExpose({ rows, werte, bausteineZeilen, zeilenWerte, warten, hinweis, genom
             <tr v-for="(r, i) in werte" :key="r.quelle + i" class="row" :class="{ aus: !r.take, ki: r.quelle === 'ki', fertig: r.erledigt }">
               <td><span v-if="r.erledigt" class="pos" :title="$t('übernommen')">✓</span><input v-else type="checkbox" v-model="r.take" :disabled="r.target === 'skip'" @change="haken(r)" /></td>
               <td :title="(r.heading ? r.heading + ' · ' : '') + (r.page ? $t('Seite {0}', [r.page]) : '') + '\n' + (r.quote || r.value)">{{ r.key }}<div class="muted roh">{{ r.quote || r.value }}</div></td>
-              <td class="quelle" :class="r.quelle === 'ki' ? 'ai' : 'muted'" :title="quelleTitel(r)">{{ quelleText(r) }}</td>
+              <td class="quelle" :class="r.quelle === 'ki' && r.bezahlt !== false ? 'ai' : 'muted'" :title="quelleTitel(r)">{{ quelleText(r) }}</td>
               <td>
                 <select v-if="!r.fest" :value="zielWert(r)" @change="ziel(r, $event.target.value)" style="width:260px">
                   <option value="">—</option>
