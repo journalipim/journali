@@ -38,9 +38,9 @@
  "Links ein Skript wählen.": "Choose a script on the left.",
  "Skripte": "Scripts",
  "Auswertungen und Übergaben, die hier geschrieben werden: Tabelle, Text oder Datei — von Hand oder als Job": "Reports and handovers written here: table, text or file — by hand or as a job",
- "Ein Beispiel als Startpunkt in den Editor laden": "Load an example into the editor as a starting point",
  "＋ Beispiel …": "＋ Example …",
  "ein eingerichteter Zugang — der Server hängt die Anmeldung an": "a configured access — the server attaches the sign-in",
  "— Zugang wählen —": "— choose access —",
- "≡ {0}: gestartet auf {1} Knoten": "≡ {0}: started on {1} node(s)"
+ "≡ {0}: gestartet auf {1} Knoten": "≡ {0}: started on {1} node(s)",
+ "Ein Beispiel als neues Skript anlegen": "Create a new script from an example"
 }

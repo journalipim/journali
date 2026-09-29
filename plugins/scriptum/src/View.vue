@@ -138,6 +138,11 @@ const dateiLink = computed(() => ergebnis.value?.file
     <div v-if="darfSchreiben" class="toolbar" style="border-bottom:1px solid var(--line)">
       <input v-model="neu" type="text" :placeholder="$t('neues Skript (key)')" style="flex:1" @keydown.enter="anlegen" />
       <button class="primary" :disabled="!neu.trim()" @click="anlegen">+</button>
+      <select class="beispiele" style="max-width:120px" :title="$t('Ein Beispiel als neues Skript anlegen')"
+        @change="e => { beispielEinfuegen(beispiele.find(x => x.key === e.target.value)); e.target.value = '' }">
+        <option value="">{{ $t("＋ Beispiel …") }}</option>
+        <option v-for="b in beispiele" :key="b.key" :value="b.key" :title="b.description">{{ b.title }}</option>
+      </select>
     </div>
     <div class="scroll">
       <div v-for="s in liste" :key="s.key" class="zeile" :class="{ on: cur?.key === s.key }" @click="waehlen(s)" :title="s.key">
@@ -157,11 +162,6 @@ const dateiLink = computed(() => ergebnis.value?.file
         <h1>⌨ {{ cur.label || cur.key }}</h1><span class="mono muted">{{ cur.key }}</span>
         <span class="grow" />
         <span v-if="busy" class="muted">{{ busy }}</span>
-        <select v-if="darfSchreiben" class="beispiele" style="max-width:150px" :title="$t('Ein Beispiel als Startpunkt in den Editor laden')"
-          @change="e => { beispielEinfuegen(beispiele.find(x => x.key === e.target.value)); e.target.value = '' }">
-          <option value="">{{ $t("＋ Beispiel …") }}</option>
-          <option v-for="b in beispiele" :key="b.key" :value="b.key" :title="b.description">{{ b.title }}</option>
-        </select>
         <button v-if="darfSchreiben" class="editor" @click="editor = true" :title="$t('Quelltext bearbeiten — der Kopf ist das Formular')">{{ $t("⌨ Quelltext") }}</button>
         <button v-if="darfSchreiben" class="x" @click="entfernen" :title="$t('Skript entfernen — die Läufe bleiben im Journal')">✕</button>
         <button class="primary start" :disabled="!!busy" @click="ausfuehren" :title="$t('Als Lauf anstossen — Log und Ergebnis stehen danach hier')">{{ $t("▶ Ausführen") }}</button>

@@ -1,4 +1,4 @@
-(function(){const s=document.createElement('style');s.textContent="\n.zeile[data-v-b47bd8f9] { display: flex; align-items: center; gap: 6px; height: 26px; padding: 0 8px; cursor: pointer; white-space: nowrap;\n}\n.zeile.on[data-v-b47bd8f9] { background: var(--accent-soft);\n}\n.zeile .lbl[data-v-b47bd8f9] { overflow: hidden; text-overflow: ellipsis; flex: 1;\n}\n.form[data-v-b47bd8f9] { width: 100%; border-bottom: 1px solid var(--line);\n}\n.form td[data-v-b47bd8f9] { height: 30px; vertical-align: middle; white-space: normal; padding: 2px 4px;\n}\n.form td.attr[data-v-b47bd8f9] { color: var(--muted); white-space: nowrap; padding-left: 8px;\n}\n.section[data-v-b47bd8f9] { padding: 10px 8px; border-top: 1px solid var(--line);\n}\n.section h2[data-v-b47bd8f9] { font-size: 12px; margin: 0 0 6px; color: var(--muted); font-weight: 600; display: flex; align-items: center; gap: 6px;\n}\n.tabelle[data-v-b47bd8f9] { width: auto;\n}\n.text[data-v-b47bd8f9], .log[data-v-b47bd8f9] { font-family: ui-monospace, Consolas, monospace; font-size: 12px; white-space: pre-wrap; margin: 4px 0 0;\n}\n.log[data-v-b47bd8f9] { color: var(--muted); border-top: 1px solid var(--line); padding-top: 6px; margin-top: 8px;\n}\n.datei[data-v-b47bd8f9] { display: flex; gap: 6px; align-items: center;\n}\n";document.head.append(s)})();
+(function(){const s=document.createElement('style');s.textContent="\n.zeile[data-v-ceba7408] { display: flex; align-items: center; gap: 6px; height: 26px; padding: 0 8px; cursor: pointer; white-space: nowrap;\n}\n.zeile.on[data-v-ceba7408] { background: var(--accent-soft);\n}\n.zeile .lbl[data-v-ceba7408] { overflow: hidden; text-overflow: ellipsis; flex: 1;\n}\n.form[data-v-ceba7408] { width: 100%; border-bottom: 1px solid var(--line);\n}\n.form td[data-v-ceba7408] { height: 30px; vertical-align: middle; white-space: normal; padding: 2px 4px;\n}\n.form td.attr[data-v-ceba7408] { color: var(--muted); white-space: nowrap; padding-left: 8px;\n}\n.section[data-v-ceba7408] { padding: 10px 8px; border-top: 1px solid var(--line);\n}\n.section h2[data-v-ceba7408] { font-size: 12px; margin: 0 0 6px; color: var(--muted); font-weight: 600; display: flex; align-items: center; gap: 6px;\n}\n.tabelle[data-v-ceba7408] { width: auto;\n}\n.text[data-v-ceba7408], .log[data-v-ceba7408] { font-family: ui-monospace, Consolas, monospace; font-size: 12px; white-space: pre-wrap; margin: 4px 0 0;\n}\n.log[data-v-ceba7408] { color: var(--muted); border-top: 1px solid var(--line); padding-top: 6px; margin-top: 8px;\n}\n.datei[data-v-ceba7408] { display: flex; gap: 6px; align-items: center;\n}\n";document.head.append(s)})();
 const m = window.journali.vue;
 const Fragment = m.Fragment;
 const computed = m.computed;
@@ -478,28 +478,28 @@ const _hoisted_3 = {
 };
 const _hoisted_4 = ["placeholder"];
 const _hoisted_5 = ["disabled"];
-const _hoisted_6 = { class: "scroll" };
-const _hoisted_7 = ["onClick", "title"];
-const _hoisted_8 = { class: "lbl" };
-const _hoisted_9 = ["title"];
-const _hoisted_10 = ["title"];
-const _hoisted_11 = {
+const _hoisted_6 = ["title"];
+const _hoisted_7 = { value: "" };
+const _hoisted_8 = ["value", "title"];
+const _hoisted_9 = { class: "scroll" };
+const _hoisted_10 = ["onClick", "title"];
+const _hoisted_11 = { class: "lbl" };
+const _hoisted_12 = ["title"];
+const _hoisted_13 = ["title"];
+const _hoisted_14 = {
   key: 0,
   class: "empty"
 };
-const _hoisted_12 = {
+const _hoisted_15 = {
   class: "pane",
   style: { "flex": "1" }
 };
-const _hoisted_13 = { class: "toolbar" };
-const _hoisted_14 = { class: "mono muted" };
-const _hoisted_15 = {
+const _hoisted_16 = { class: "toolbar" };
+const _hoisted_17 = { class: "mono muted" };
+const _hoisted_18 = {
   key: 0,
   class: "muted"
 };
-const _hoisted_16 = ["title"];
-const _hoisted_17 = { value: "" };
-const _hoisted_18 = ["value", "title"];
 const _hoisted_19 = ["title"];
 const _hoisted_20 = ["title"];
 const _hoisted_21 = ["disabled", "title"];
@@ -794,9 +794,39 @@ const _sfc_main = {
                   class: "primary",
                   disabled: !neu.value.trim(),
                   onClick: anlegen
-                }, "+", 8, _hoisted_5)
+                }, "+", 8, _hoisted_5),
+                createElementVNode("select", {
+                  class: "beispiele",
+                  style: { "max-width": "120px" },
+                  title: _ctx.$t("Ein Beispiel als neues Skript anlegen"),
+                  onChange: _cache[1] || (_cache[1] = (e) => {
+                    beispielEinfuegen(unref(beispiele).find((x) => x.key === e.target.value));
+                    e.target.value = "";
+                  })
+                }, [
+                  createElementVNode(
+                    "option",
+                    _hoisted_7,
+                    toDisplayString(_ctx.$t("＋ Beispiel …")),
+                    1
+                    /* TEXT */
+                  ),
+                  (openBlock(true), createElementBlock(
+                    Fragment,
+                    null,
+                    renderList(unref(beispiele), (b) => {
+                      return openBlock(), createElementBlock("option", {
+                        key: b.key,
+                        value: b.key,
+                        title: b.description
+                      }, toDisplayString(b.title), 9, _hoisted_8);
+                    }),
+                    128
+                    /* KEYED_FRAGMENT */
+                  ))
+                ], 40, _hoisted_6)
               ])) : createCommentVNode("v-if", true),
-              createElementVNode("div", _hoisted_6, [
+              createElementVNode("div", _hoisted_9, [
                 (openBlock(true), createElementBlock(
                   Fragment,
                   null,
@@ -809,7 +839,7 @@ const _sfc_main = {
                     }, [
                       createElementVNode(
                         "span",
-                        _hoisted_8,
+                        _hoisted_11,
                         toDisplayString(s.label || s.key),
                         1
                         /* TEXT */
@@ -818,19 +848,19 @@ const _sfc_main = {
                         key: 0,
                         class: "pos",
                         title: _ctx.$t("freigegeben: sein Lauf braucht das Recht {0}", [s.run])
-                      }, "●", 8, _hoisted_9)) : (openBlock(), createElementBlock("span", {
+                      }, "●", 8, _hoisted_12)) : (openBlock(), createElementBlock("span", {
                         key: 1,
                         class: "muted",
                         title: _ctx.$t("nicht freigegeben — nur wer Skripte schreiben darf, kann es anstossen")
-                      }, "○", 8, _hoisted_10))
-                    ], 10, _hoisted_7);
+                      }, "○", 8, _hoisted_13))
+                    ], 10, _hoisted_10);
                   }),
                   128
                   /* KEYED_FRAGMENT */
                 )),
                 !liste2.value.length ? (openBlock(), createElementBlock(
                   "div",
-                  _hoisted_11,
+                  _hoisted_14,
                   toDisplayString(darfSchreiben.value ? _ctx.$t("Noch kein Skript.") : _ctx.$t("Kein Skript freigegeben.")),
                   1
                   /* TEXT */
@@ -842,16 +872,16 @@ const _sfc_main = {
           ),
           createVNode(unref(Splitter), {
             modelValue: unref(listW),
-            "onUpdate:modelValue": _cache[1] || (_cache[1] = ($event) => isRef(listW) ? listW.value = $event : null),
+            "onUpdate:modelValue": _cache[2] || (_cache[2] = ($event) => isRef(listW) ? listW.value = $event : null),
             min: 200,
             max: 520
           }, null, 8, ["modelValue"]),
-          createElementVNode("div", _hoisted_12, [
+          createElementVNode("div", _hoisted_15, [
             cur.value ? (openBlock(), createElementBlock(
               Fragment,
               { key: 0 },
               [
-                createElementVNode("div", _hoisted_13, [
+                createElementVNode("div", _hoisted_16, [
                   createElementVNode(
                     "h1",
                     null,
@@ -861,7 +891,7 @@ const _sfc_main = {
                   ),
                   createElementVNode(
                     "span",
-                    _hoisted_14,
+                    _hoisted_17,
                     toDisplayString(cur.value.key),
                     1
                     /* TEXT */
@@ -875,50 +905,19 @@ const _sfc_main = {
                   )),
                   busy.value ? (openBlock(), createElementBlock(
                     "span",
-                    _hoisted_15,
+                    _hoisted_18,
                     toDisplayString(busy.value),
                     1
                     /* TEXT */
                   )) : createCommentVNode("v-if", true),
-                  darfSchreiben.value ? (openBlock(), createElementBlock("select", {
-                    key: 1,
-                    class: "beispiele",
-                    style: { "max-width": "150px" },
-                    title: _ctx.$t("Ein Beispiel als Startpunkt in den Editor laden"),
-                    onChange: _cache[2] || (_cache[2] = (e) => {
-                      beispielEinfuegen(unref(beispiele).find((x) => x.key === e.target.value));
-                      e.target.value = "";
-                    })
-                  }, [
-                    createElementVNode(
-                      "option",
-                      _hoisted_17,
-                      toDisplayString(_ctx.$t("＋ Beispiel …")),
-                      1
-                      /* TEXT */
-                    ),
-                    (openBlock(true), createElementBlock(
-                      Fragment,
-                      null,
-                      renderList(unref(beispiele), (b) => {
-                        return openBlock(), createElementBlock("option", {
-                          key: b.key,
-                          value: b.key,
-                          title: b.description
-                        }, toDisplayString(b.title), 9, _hoisted_18);
-                      }),
-                      128
-                      /* KEYED_FRAGMENT */
-                    ))
-                  ], 40, _hoisted_16)) : createCommentVNode("v-if", true),
                   darfSchreiben.value ? (openBlock(), createElementBlock("button", {
-                    key: 2,
+                    key: 1,
                     class: "editor",
                     onClick: _cache[3] || (_cache[3] = ($event) => editor.value = true),
                     title: _ctx.$t("Quelltext bearbeiten — der Kopf ist das Formular")
                   }, toDisplayString(_ctx.$t("⌨ Quelltext")), 9, _hoisted_19)) : createCommentVNode("v-if", true),
                   darfSchreiben.value ? (openBlock(), createElementBlock("button", {
-                    key: 3,
+                    key: 2,
                     class: "x",
                     onClick: entfernen,
                     title: _ctx.$t("Skript entfernen — die Läufe bleiben im Journal")
@@ -1305,7 +1304,7 @@ const _sfc_main = {
     };
   }
 };
-const View = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-b47bd8f9"]]);
+const View = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-ceba7408"]]);
 refresh();
 const entry = {
   views: [{ path: "skripte", topic: "tools", label: t("Skripte"), icon: "≡", hint: t("Auswertungen und Übergaben, die hier geschrieben werden: Tabelle, Text oder Datei — von Hand oder als Job"), component: View }],
