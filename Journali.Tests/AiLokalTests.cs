@@ -69,4 +69,15 @@ public class AiLokalTests
         Assert.Null(AiApi.Normalisiere("  "));
         Assert.Null(AiApi.Normalisiere(null));
     }
+
+    [Fact]
+    public void Die_Adresse_des_Teams_geht_vor_der_Umgebung()
+    {
+        // Traegt das Team eine eigene Adresse (Schluessel „lokal“ im Tresor), gilt sie — ohne Schraegstrich am Ende
+        Assert.Equal("http://box:11434", AiApi.LokalUrlFuer(new Dictionary<string, string> { ["lokal"] = "http://box:11434/" }));
+        // Ohne eigene Adresse gilt die der Umgebung (LokalUrl) — was immer dort steht
+        Assert.Equal(AiApi.LokalUrl, AiApi.LokalUrlFuer(new Dictionary<string, string>()));
+        // Eine leere Adresse ist keine — dann faellt es auf die Umgebung zurueck
+        Assert.Equal(AiApi.LokalUrl, AiApi.LokalUrlFuer(new Dictionary<string, string> { ["lokal"] = "  " }));
+    }
 }

@@ -35,6 +35,13 @@ public static class AiApi
     /// <summary>Das Modell, wenn das Team keines gewählt hat (<c>JOURNALI_KI_LOKAL_MODELL</c>); sonst das erste, das der Dienst kennt.</summary>
     public static string? LokalModell => Blank(Environment.GetEnvironmentVariable("JOURNALI_KI_LOKAL_MODELL"));
     public static string? Normalisiere(string? url) => Blank(url) is { } u ? u.Trim().TrimEnd('/') : null;
+    /// <summary>
+    /// Die Adresse des lokalen Modells für ein Team: die eigene, wie ein Schlüssel im Tresor abgelegt (29.09.2026) —
+    /// ein Team trägt sie über denselben Weg ein wie einen echten Schlüssel (<c>PUT /teams/{key}/keys</c>, Anbieter
+    /// <c>lokal</c>), kein eigener Eintragstyp. Ohne eigene Adresse gilt die der Umgebung (<see cref="LokalUrl"/>).
+    /// </summary>
+    public static string? LokalUrlFuer(IReadOnlyDictionary<string, string> teamKeys) =>
+        Normalisiere(teamKeys.GetValueOrDefault(Lokal)) ?? LokalUrl;
 
     /// <summary>
     /// Die Anbieter eines Teams in der Reihenfolge, in der sie ohne Wahl gefragt werden: die bezahlten mit Schlüssel,
@@ -81,9 +88,9 @@ public static class AiApi
     }
 
     /// <summary>Die Modelle, die der lokale Dienst kennt (GET /api/tags) — für die Wahl am Team und als Rückfall.</summary>
-    public static async Task<List<string>> LokalModelleAsync(CancellationToken ct)
+    public static async Task<List<string>> LokalModelleAsync(string? url, CancellationToken ct)
     {
-        if (LokalUrl is not { } url) return [];
+        if (url is null) return [];
         using var res = await Http.GetAsync(url + "/api/tags", ct);
         if (!res.IsSuccessStatusCode) return [];
         using var doc = JsonDocument.Parse(await res.Content.ReadAsStringAsync(ct));
@@ -129,7 +136,7 @@ public static class AiApi
         }
         else if (provider == Lokal)
         {
-            req.RequestUri = new Uri((LokalUrl ?? "http://localhost:11434") + "/api/chat");
+            req.RequestUri = new Uri((Normalisiere(key) ?? LokalUrl ?? "http://localhost:11434") + "/api/chat");
             body = LokalBody(model, system, user, maxTokens);
         }
         else
@@ -202,7 +209,8 @@ public static class AiApi
             var team = TeamApi.TeamOf(c, req.HttpContext.Items["user"] as string);
             if (team is null || c.Teams.Get(team) is not { } t) return Results.Ok(new { team = (string?)null, ready = false, reason = "kein Team" });
             var zahler = c.Teams.Payer(team); var zt = c.Teams.Get(zahler)!;
-            var providers = Anbieter(Secrets.Get(jobsDir, TeamApi.SecretKey(zahler)).Keys, LokalUrl is not null);
+            var keysDaZahler = Secrets.Get(jobsDir, TeamApi.SecretKey(zahler));
+            var providers = Anbieter(keysDaZahler.Keys, LokalUrlFuer(keysDaZahler) is not null);
             var heute = DateOnly.FromDateTime(DateTime.Today);
             var tag = c.Teams.Day(zahler, heute);
             return Results.Ok(new
@@ -215,9 +223,17 @@ public static class AiApi
             });
         }));
 
-        // Die Modelle des lokalen Dienstes — für die Wahl am Team. Die Adresse selbst bleibt beim Server
-        api.MapGet("/ai/lokal/models", async (CancellationToken ct) =>
-            Results.Ok(new { ready = LokalUrl is not null, models = LokalUrl is null ? [] : await LokalModelleAsync(ct) }));
+        // Die Modelle des lokalen Dienstes — an der Adresse des zahlenden Teams, sonst der der Umgebung. Für die Wahl
+        // am Team; die Adresse selbst bleibt beim Server
+        api.MapGet("/ai/lokal/models", async (HttpRequest req, Catalog c, CancellationToken ct) =>
+        {
+            var url = c.Lesen((_, _) =>
+            {
+                var team = TeamApi.TeamOf(c, req.HttpContext.Items["user"] as string);
+                return team is null ? LokalUrl : LokalUrlFuer(Secrets.Get(jobsDir, TeamApi.SecretKey(c.Teams.Payer(team))));
+            });
+            return Results.Ok(new { ready = url is not null, models = url is null ? [] : await LokalModelleAsync(url, ct) });
+        });
 
         // Die eine Frage — mit dem Schlüssel des zahlenden Teams, gezählt bei ihm
         api.MapPost("/ai/ask", async (AskBody body, HttpRequest req, Catalog c, CancellationToken ct) =>
@@ -238,23 +254,24 @@ public static class AiApi
         HttpRequest req, Catalog c, string jobsDir, string? wantProvider, string? wantModel, string? system, string frage, int maxTokens, bool web, int maxSearches, string? purpose, CancellationToken ct)
     {
         if (Actor(req) is not { } actor) return (ActorMissing(), "", [], "", "", "", "");
-        var (fehler, team, zahler, provider, key) = c.Lesen((_, _) =>
+        var (fehler, team, zahler, provider, key, lokalUrl) = c.Lesen((_, _) =>
         {
             var mein = TeamApi.TeamOf(c, req.HttpContext.Items["user"] as string);
-            if (mein is null || c.Teams.Get(mein) is not { Enabled: true } t) return (Bad("Kein Team — ohne Team gibt es keine KI über den Server."), "", "", "", "");
+            if (mein is null || c.Teams.Get(mein) is not { Enabled: true } t) return (Bad("Kein Team — ohne Team gibt es keine KI über den Server."), "", "", "", "", (string?)null);
             var zahlerKey = c.Teams.Payer(mein); var zt = c.Teams.Get(zahlerKey)!;
-            if (!zt.Enabled) return (Bad("Das zahlende Team „{0}“ ist abgeschaltet.", zt.Label), "", "", "", "");
+            if (!zt.Enabled) return (Bad("Das zahlende Team „{0}“ ist abgeschaltet.", zt.Label), "", "", "", "", (string?)null);
             var keys = Secrets.Get(jobsDir, TeamApi.SecretKey(zahlerKey));
-            var anbieter = Anbieter(keys.Keys, LokalUrl is not null);
+            var url = LokalUrlFuer(keys);
+            var anbieter = Anbieter(keys.Keys, url is not null);
             var p = Gewaehlt(wantProvider, zt.Models.GetValueOrDefault(AnbieterWahl), anbieter);
-            if (p is null) return (Bad("Für „{0}“ ist kein KI-Schlüssel hinterlegt.", zt.Label), "", "", "", "");
-            return ((IResult?)null, mein, zahlerKey, p, p == Lokal ? "" : keys[p]);
+            if (p is null) return (Bad("Für „{0}“ ist kein KI-Schlüssel hinterlegt.", zt.Label), "", "", "", "", (string?)null);
+            return ((IResult?)null, mein, zahlerKey, p, p == Lokal ? (url ?? "") : keys[p], url);
         });
         if (fehler is not null) return (fehler, "", [], "", "", "", "");
         if (web && provider == Lokal) return (Bad("Das lokale Modell sucht nicht im Internet."), "", [], "", "", "", "");
 
         var amTeam = c.Lesen((_, _) => c.Teams.Get(zahler)?.Models.GetValueOrDefault(provider));
-        var model = Blank(amTeam) ?? Blank(wantModel) ?? (provider == "anthropic" ? "claude-sonnet-5" : provider == Lokal ? (LokalModell ?? (await LokalModelleAsync(ct)).FirstOrDefault() ?? "") : "gpt-5");
+        var model = Blank(amTeam) ?? Blank(wantModel) ?? (provider == "anthropic" ? "claude-sonnet-5" : provider == Lokal ? (LokalModell ?? (await LokalModelleAsync(lokalUrl, ct)).FirstOrDefault() ?? "") : "gpt-5");
         if (provider == Lokal && model == "") return (Bad("Das lokale Modell hat kein Modell geladen."), "", [], "", "", "", "");
         try
         {

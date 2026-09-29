@@ -124,12 +124,16 @@ public static class TeamApi
             });
         });
 
-        // Schlüssel hinterlegen (nie im Journal, nie zurückgelesen — nur, welche Anbieter eingerichtet sind)
+        // Schlüssel hinterlegen (nie im Journal, nie zurückgelesen — nur, welche Anbieter eingerichtet sind). Beim
+        // Anbieter „lokal“ (29.09.2026) steht statt eines Tokens eine Adresse — derselbe Weg, dieselbe Ablage, nur die
+        // Form ist eine andere: sie muss mit http:// oder https:// beginnen.
         api.MapPut("/teams/{key}/keys", (string key, KeysBody body, HttpRequest req, Catalog c) =>
         {
             if (Actor(req) is null) return ActorMissing();
             if (!Fuehrt(req, c, key)) return Bad("Dieses Team führst du nicht.");
             if (c.Lesen((_, _) => c.Teams.Get(key)) is null) return Results.NotFound();
+            if (body.Keys?.GetValueOrDefault(AiApi.Lokal) is { Length: > 0 } adresse && !(adresse.StartsWith("http://") || adresse.StartsWith("https://")))
+                return Bad("Lokales Modell: Adresse mit http:// oder https://.");
             Secrets.Set(jobsDir, SecretKey(key), body.Keys ?? new());
             return Results.Ok(new { keys = Secrets.Get(jobsDir, SecretKey(key)).Keys.Order().ToList() });
         });
