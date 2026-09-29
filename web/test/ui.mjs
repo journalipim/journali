@@ -28,6 +28,8 @@ const { i18n, t, L } = await import('../src/i18n.js')
 globalThis.journali = Object.assign(globalThis.journali ?? {}, { i18n, t, L })   // was Plugins im Browser aus window.journali bekommen
 vtu.config.global.plugins = [...(vtu.config.global.plugins ?? []), i18n]
 vtu.config.global.mocks = { ...(vtu.config.global.mocks ?? {}), $L: L }   // Bezeichnungen des Modells in der Oberflächensprache, wie $L in main.js
+// PdfPane rendert mit pdf.js im Browser — im Test (happy-dom, kein Canvas/Worker) wird es gestubbt, damit pdf.js nie lädt
+vtu.config.global.stubs = { ...(vtu.config.global.stubs ?? {}), PdfPane: true }
 export const { mount, flushPromises } = vtu
 
 /// Text eines Bauteils ohne Leerzeichenrauschen — zum Prüfen von Beschriftungen

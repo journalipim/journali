@@ -31,6 +31,7 @@ import { gruppenVon } from '../gruppen.js'
 import { attachFiles } from '../media.js'
 import { t as t_ } from '../i18n.js'
 import { L } from '../i18n.js'
+import PdfPane from './PdfPane.vue'
 
 /// media/names: Dokumente, die schon am Knoten hängen. dateien/typen: Dateien, die der Dialog selbst hochlädt und
 /// anhängt (Shift+Drop) — so steht der Fortschritt vom ersten Moment an hier, nicht erst nach dem Hochladen
@@ -40,6 +41,10 @@ const medien = ref([...props.media])
 const namen = ref({ ...props.names })
 const hochladen = ref(false)
 const emit = defineEmits(['close', 'done'])
+
+// Das Datenblatt daneben: welche Stelle die PdfPane zeigt. Ein Klick auf „Im Dokument“ setzt sie
+const aktiv = ref(null)
+function zeigen(r) { if (r?.doc) aktiv.value = { doc: r.doc, page: r.page ?? null, quote: r.quote ?? null, value: r.value ?? null } }
 
 const TYPEN = ['text', 'integer', 'decimal', 'boolean', 'date', 'enum']
 const docs = ref(new Map())      // id → { state, tables }
@@ -867,7 +872,8 @@ defineExpose({ rows, werte, bausteineZeilen, zeilenWerte, warten, hinweis, genom
         <button class="x" :disabled="busy" @click="neuLesen" :title="$t('Dokument noch einmal lesen — der Index kennt nur den Stand des Lesers von damals')">{{ $t("↻ neu lesen") }}</button>
         <button class="x" @click="emit('close')" :title="$t('schliessen (Esc)')">×</button>
       </div>
-      <div class="dt-body scroll">
+      <div class="dt-body">
+        <div class="dt-tabelle scroll">
         <table class="grid" v-if="rows.length || tabellenBloecke.length">
           <thead><tr>
             <th style="width:24px"></th>
@@ -881,7 +887,7 @@ defineExpose({ rows, werte, bausteineZeilen, zeilenWerte, warten, hinweis, genom
           <tbody>
             <tr v-for="(r, i) in werte" :key="r.quelle + i" class="row" :class="{ aus: !r.take, ki: r.quelle === 'ki', fertig: r.erledigt }">
               <td><span v-if="r.erledigt" class="pos" :title="$t('übernommen')">✓</span><input v-else type="checkbox" v-model="r.take" :disabled="r.target === 'skip'" @change="haken(r)" /></td>
-              <td :title="(r.heading ? r.heading + ' · ' : '') + (r.page ? $t('Seite {0}', [r.page]) : '') + '\n' + (r.quote || r.value)">{{ r.key }}<div class="muted roh">{{ r.quote || r.value }}</div></td>
+              <td class="stelle" @click="zeigen(r)" :title="(r.heading ? r.heading + ' · ' : '') + (r.page ? $t('Seite {0}', [r.page]) : '') + '\n' + (r.quote || r.value)">{{ r.key }}<div class="muted roh">{{ r.quote || r.value }}</div></td>
               <td class="quelle" :class="r.quelle === 'ki' && r.bezahlt !== false ? 'ai' : 'muted'" :title="quelleTitel(r)">{{ quelleText(r) }}</td>
               <td>
                 <select v-if="!r.fest" :value="zielWert(r)" @change="ziel(r, $event.target.value)" style="width:260px">
@@ -908,7 +914,7 @@ defineExpose({ rows, werte, bausteineZeilen, zeilenWerte, warten, hinweis, genom
             <tr class="step"><td colspan="7" class="step-band" style="display:table-cell;height:24px" :title="$t('Tabellen mit Spaltenkopf aus dem Dokument — als Tabellenattribut an das Produkt, mit einem Attribut je Spalte')">{{ $t("⊞ Tabellen") + ' ' }}<span class="muted">· {{ tabellenBloecke.length }}</span></td></tr>
             <tr v-for="(r, i) in tabellenBloecke" :key="'m' + i" class="row" :class="{ aus: !r.take }">
               <td><input type="checkbox" v-model="r.take" /></td>
-              <td><div class="nowrap"><b>{{ r.key }}</b></div><div class="muted roh">{{ r.spalten.map(s => s.label).join(' | ') }}</div></td>
+              <td class="stelle" @click="zeigen(r)"><div class="nowrap"><b>{{ r.key }}</b></div><div class="muted roh">{{ r.spalten.map(s => s.label).join(' | ') }}</div></td>
               <td class="quelle muted" :title="mehrere ? name(r.doc) : ''">{{ '▦ ' + (r.page != null ? $t("S. {0}", [r.page]) : '') }}</td>
               <td>{{ r.target === 'attr' ? '⊞ ' + r.attribute : '+ ' + $t("neu") + ': ' + r.newKey }}</td>
               <td class="muted">{{ $t("⊞ {0} × {1}", [r.spalten.length, r.daten.length]) }}</td>
@@ -920,7 +926,7 @@ defineExpose({ rows, werte, bausteineZeilen, zeilenWerte, warten, hinweis, genom
             <tr class="step"><td colspan="7" class="step-band" style="display:table-cell;height:24px" :title="$t('Abschnitte mit Überschrift, in der Reihenfolge des Dokuments — als html-Attribut an das Produkt, neu oder in ein bestehendes.')">{{ $t("▤ Textbausteine") + ' ' }}<span class="muted">· {{ bausteineZeilen.length }} · {{ $t("S. {0}–{1}", [bausteineSeiten[0], bausteineSeiten[1]]) }}</span></td></tr>
             <tr v-for="(r, i) in bausteineZeilen" :key="'b' + i" class="row" :class="{ aus: !r.take }">
               <td><input type="checkbox" v-model="r.take" :disabled="r.target === 'skip'" @change="haken(r)" /></td>
-              <td :title="r.value">{{ r.key }}<div class="muted roh">{{ nurText(r.converted) }}</div></td>
+              <td class="stelle" @click="zeigen(r)" :title="r.value">{{ r.key }}<div class="muted roh">{{ nurText(r.converted) }}</div></td>
               <td class="muted quelle" :title="mehrere ? name(r.doc) : ''">{{ r.page != null ? '▤ ' + $t('S. {0}', [r.page]) : '▤' }}</td>
               <td>
                 <select :value="zielWert(r)" @change="ziel(r, $event.target.value)" style="width:260px">
@@ -940,6 +946,8 @@ defineExpose({ rows, werte, bausteineZeilen, zeilenWerte, warten, hinweis, genom
           </tbody>
         </table>
         <div v-else-if="!warten && ki !== 'läuft'" class="empty">{{ $t("Kein Wert im Dokument gefunden") }}</div>
+        </div>
+        <PdfPane v-if="medien.length" class="dt-pdf" :doc="aktiv?.doc || medien[0]" :page="aktiv?.page" :quote="aktiv?.quote" :value="aktiv?.value" :names="namen" />
       </div>
       <div class="toolbar dt-foot">
         <template v-if="neueZeilen">
@@ -968,7 +976,11 @@ defineExpose({ rows, werte, bausteineZeilen, zeilenWerte, warten, hinweis, genom
 .dt-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: grid; place-items: center; z-index: 50; }
 .dt { width: min(1500px, 96vw); max-height: min(820px, 92vh); background: var(--pane); border: 1px solid var(--line); border-radius: 8px; display: flex; flex-direction: column; overflow: hidden; }
 .nowrap { white-space: nowrap; }
-.dt-body { flex: 1; min-height: 0; overflow: auto; padding: 8px; }
+.dt-body { flex: 1; min-height: 0; display: flex; overflow: hidden; }
+.dt-tabelle { flex: 1; min-width: 0; overflow: auto; padding: 8px; }
+.dt-pdf { width: 420px; flex: none; border-left: 1px solid var(--line); }
+td.stelle { cursor: pointer; }
+td.stelle:hover { color: var(--accent); }
 .dt-foot { border-top: 1px solid var(--line); gap: 8px; }
 tr.aus td { opacity: .55; }
 .roh { font-size: 11px; max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

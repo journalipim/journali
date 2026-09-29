@@ -2814,5 +2814,9 @@
  "Das lokale Modell hat kein Modell geladen.": "The local model service has no model loaded.",
  "Text mit dem lokalen Modell (": "Text with the local model (",
  ") bearbeiten — mit den Produktdaten dieses Knotens": ") — using this node's product data",
- "Zugang {0} liest und beschickt nicht über die Weiterleitung.": "Access {0} is not read or written through the relay."
+ "Zugang {0} liest und beschickt nicht über die Weiterleitung.": "Access {0} is not read or written through the relay.",
+ "◌ PDF wird geladen …": "◌ Loading PDF …",
+ "PDF konnte nicht geladen werden": "Could not load the PDF",
+ "öffnen": "open",
+ "Kein Dokument": "No document"
 }

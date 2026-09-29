@@ -1875,6 +1875,19 @@ des Dialogs ist eine eigene Liste; was übernommen wurde, steht am Wert als Bele
 Volltext (Postgres `tsvector` je Medium, `DocText`) findet Wörter, Zahlen, Normen und Kennungen. Alles, was Sinn
 meint, steht in 35.
 
+### Das Datenblatt daneben — Fundstelle im PDF (29.09.2026, Stufe 1 gebaut)
+
+Der Datenblatt-Dialog zeigt das PDF verkleinert neben der Analyse (`PdfPane`, pdf.js im Browser). Ein Klick auf eine
+ermittelte Zeile („Im Dokument“) springt zur Seite und zeichnet einen Kasten um die Fundstelle. Die Lage kommt aus der
+**Textschicht von pdf.js** — den echten Glyph-Positionen, denselben Koordinaten wie beim Lesen (Plugin docs); **welche**
+Stücke der Kasten umfasst, sagt `pdf-locate` (reine, geprüfte Logik): whitespace-unempfindlich, mit Rückfall auf die
+erste Hälfte des Zitats. pdf.js wird verzögert geladen (eigener Chunk); im Test ist `PdfPane` gestubbt, es lädt also nie.
+
+**Offen (Stufe 2).** Für pixelgenaue Kästen unabhängig vom Text-Match müsste die Extraktion die Koordinaten je Zelle
+persistieren — heute wirft `layoutDocument` sie weg (nur `{ page, heading, header, rows }` als Text), obwohl `tables()`
+sie kennt —, über einen Endpunkt ausliefern und die Ansicht sie als Overlay zeichnen. Ein Umbau bis in die Datenhaltung
+(DocText/Postgres); nachziehen, falls die Textschicht-Disambiguierung in echten Datenblättern nicht reicht.
+
 ## 35. Vektoren — Suche nach Sinn, Frage an die Dokumente, ähnliche Knoten (27.09.2026)
 
 **Entschieden und gebaut.** Drei Entscheidungen davor: das Paket wechselt auf das Image `pgvector/pgvector:pg18`
@@ -2161,17 +2174,30 @@ im Ergebnis und Rückgabewert 1 — kein Absturz.
 
 **Offen.**
 
-- **Bibliotheken.** Gebaut ist der Anfang wie vorgeschlagen: keine Pakete, nur die Standardbibliothek der Laufzeit,
-  `fetch` und der Kontext (`api`, `params`, `out`, `log`, `zugang`). Sobald jemand ein Paket will, stellt sich die Frage, wer es
-  installiert und wer dafür geradesteht.
+**Nicht bevormunden** (29.09.2026). journali ist Open Source (ELv2); wer `scriptum.write` hat, kann ohnehin alles, was
+der Serverprozess kann (er könnte längst per `fetch` Fremdcode ziehen). Einen Anwender mit erteilten Rechten davor zu
+schützen ist **nicht unsere Aufgabe** — das Sicherheitsnetz sind die gestaffelten Umgebungen des Betreibers
+(dev→test→preview→prod), nicht paternalistischer Produktcode. Was bleibt, ist **kein** Paternalismus, sondern Schutz
+Dritter bzw. Korrektheit: **Geheimnisse bleiben beim Server** (Tresor, Relay — schützt fremde Zugangsdaten, nicht den
+Admin vor sich), **Signaturen sind Manipulationsnachweis** für ausgeliefertes (keine Erlaubnisschranke), und journali
+tut **nichts Gefährliches von selbst** — der Unterschied ist „der Anwender wählt es“ gegen „es passiert automatisch“.
+
+- **Bibliotheken / npm-Pakete.** Gebaut ist der Anfang: keine Pakete, nur die Standardbibliothek der Laufzeit, `fetch`,
+  der Kontext (`api`, `params`, `out`, `log`, `zugang`). npm-Pakete sind **kein Sicherheitsproblem** (siehe „Nicht
+  bevormunden“); die offene Frage ist rein technisch — wer legt `node_modules` für den Runner an (je Skript, global, im
+  Container-Bau) und wie die Versionen.
 - **Wiederverwendung.** Ein Skript ruft kein anderes auf — nötig war es nicht. Ein Fremdsystem spricht ein Skript über
-  `ctx.zugang` an (Abschnitt 38); das war der eigentliche Bedarf, nicht Skript ruft Skript.
-- **Ein Markt fremder Snippets.** Als automatischer Import verworfen: ein Skript läuft mit allen Rechten des
-  Serverbenutzers, und davor schützt die Zertifizierung — Fremdcode aus einem öffentlichen Markt wäre das Gegenteil.
-  Der Ersatz ist eine eigene, geprüfte Beispiel-Bibliothek (Abschnitt 38). Ein offener Markt bliebe nur denkbar mit
-  Signatur und Prüfung wie bei Plugins.
+  `ctx.zugang` an (Abschnitt 38); das war der eigentliche Bedarf, nicht Skript ruft Skript. Kuratierte Helfer (etwa ein
+  `journali/scriptum`-Modul) wären der nächste Schritt für Reuse, wenn er gebraucht wird.
+- **Ein Markt fremder Snippets.** Legitim, sobald der Anwender ihn einlöst — nicht davor zu schützen ist nicht unsere
+  Aufgabe. Gebaut ist der bequeme, geprüfte Standardweg zuerst: eine eigene Beispiel-Bibliothek (Abschnitt 38). Die
+  Grenze ist nur: journali zieht Fremdcode **nicht von selbst** und führt ihn aus — gewählt statt automatisch.
 - **Ein Skript ohne Job.** Jeder Lauf legt einen Job an; ein Skript, das nur einmal laufen soll, hinterlässt also
   einen Job in der Liste. Ob der Tasker solche Läufe eigens zeigt oder verbirgt, entscheidet sich, wenn es stört.
+- **Promotion test→prod.** Offen und noch nicht gebaut: Modell und Skripte gezielt von einer Instanz auf eine andere
+  heben (mit Diff und Idempotenz, append-only-fest). Ganze-Instanz-Kopie geht heute nur *runter* (⇅ B&R); nach oben ist
+  es API-Replay über einen `http`-Zugang auf die andere Instanz, das der Betreiber selbst orchestriert. Der Baustein
+  (prod als Zugang über /api) ist da; ein Migrations-Paket wäre der Ausbau.
 
 ## 38. Fremdsysteme anbinden — Zugang `http` und `ctx.zugang` (29.09.2026, entschieden)
 

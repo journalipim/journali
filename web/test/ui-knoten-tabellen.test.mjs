@@ -1080,3 +1080,18 @@ test('zwei Werte für dasselbe Ziel halten den ganzen Lauf nicht mehr auf', asyn
   assert.ok(!werte.includes('power'), 'die widersprüchliche Zeile ging nicht mit')
   assert.ok(werte.length >= 1, 'die anderen Werte schon: ' + werte.join(', '))
 })
+
+// ── Das Datenblatt daneben (PdfPane ist im Test gestubbt — pdf.js lädt nie) ─────────────────────────────────────
+test('die PDF-Ansicht steht daneben; ein Klick auf „Im Dokument“ zeigt Seite und Fundstelle', async () => {
+  const { w } = await dialog({ ki: KI })
+  const pdf = w.findComponent({ name: 'PdfPane' })
+  assert.ok(pdf.exists(), 'das PDF steht neben der Analyse')
+  assert.equal(pdf.props('doc'), 'm1', 'per Vorgabe das erste Dokument')
+  // die KI-Zeile zur Leistung trägt Seite 2 und ein Zitat — der Klick reicht beides an die Ansicht
+  const zelle = w.findAll('td.stelle').find(td => td.text().includes('Nennleistung'))
+  assert.ok(zelle, 'eine Fundstelle mit Zitat ist klickbar')
+  await zelle.trigger('click'); await flushPromises()
+  const p2 = w.findComponent({ name: 'PdfPane' })
+  assert.equal(p2.props('page'), 2, 'springt zur Seite des Fundes')
+  assert.equal(p2.props('quote'), 'Nennleistung 35 W', 'mit dem Zitat als Fundstelle')
+})
