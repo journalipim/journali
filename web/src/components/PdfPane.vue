@@ -84,13 +84,16 @@ async function zeichne(num) {
   })
 }
 
-/// Zur Seite springen und die Fundstelle markieren
+/// Zur Seite springen und die Fundstelle markieren. Nur die PDF-Spalte scrollen (nicht scrollIntoView, das könnte
+/// übergeordnete Container mitscrollen); alles gekapselt, damit ein Fehler nie in den Dialog schlägt.
 function springen() {
-  if (!seiten.value.length) return
-  const num = seiten.value.some(s => s.num === props.page) ? props.page : seiten.value[0].num
-  markiere(num)
-  const el = canvasRefs[num]
-  if (el && el.scrollIntoView) el.scrollIntoView({ block: 'start', behavior: 'smooth' })
+  try {
+    if (!seiten.value.length) return
+    const num = seiten.value.some(s => s.num === props.page) ? props.page : seiten.value[0].num
+    markiere(num)
+    const seiteEl = canvasRefs[num]?.parentElement, box = behaelter.value
+    if (seiteEl && box) box.scrollTop += seiteEl.getBoundingClientRect().top - box.getBoundingClientRect().top - 4
+  } catch { /* die Ansicht darf nie den Dialog stören */ }
 }
 
 function markiere(num) {

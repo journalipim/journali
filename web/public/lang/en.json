@@ -2818,5 +2818,6 @@
  "◌ PDF wird geladen …": "◌ Loading PDF …",
  "PDF konnte nicht geladen werden": "Could not load the PDF",
  "öffnen": "open",
- "Kein Dokument": "No document"
+ "Kein Dokument": "No document",
+ "PDF-Ansicht nicht verfügbar": "PDF view unavailable"
 }

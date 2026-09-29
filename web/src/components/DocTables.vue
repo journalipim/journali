@@ -20,7 +20,7 @@
 // je Wert attribute.set und dazu der Beleg (value.source: Dokument, Seite, Stelle). Zielen zwei Zeilen mit demselben Wert auf ein Attribut, ist das kein Widerspruch — geschrieben wird einmal.
 // Mit verschiedenen Werten trägt keine den Haken: der Anwender wählt, nicht der Dialog.
 // props: node = die Knotenansicht (id, role, groups, attachedGroups, values); media = Ids der Dokumente; names = Id → Name
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, onErrorCaptured } from 'vue'
 import { api } from '../api.js'
 import { store } from '../store.js'
 import { ai } from '../ai.js'
@@ -45,6 +45,10 @@ const emit = defineEmits(['close', 'done'])
 // Das Datenblatt daneben: welche Stelle die PdfPane zeigt. Ein Klick auf „Im Dokument“ setzt sie
 const aktiv = ref(null)
 function zeigen(r) { if (r?.doc) aktiv.value = { doc: r.doc, page: r.page ?? null, quote: r.quote ?? null, value: r.value ?? null } }
+// Sicherheitsnetz: ein Fehler der PDF-Ansicht (pdf.js) darf den Dialog nicht leeren — die Analyse bleibt, der Fehler
+// wird sichtbar statt fatal. Der Text hilft, die Ursache zu nennen.
+const pdfFehler = ref(null)
+onErrorCaptured((e) => { pdfFehler.value = e?.message || String(e); console.error('PdfPane', e); return false })
 
 const TYPEN = ['text', 'integer', 'decimal', 'boolean', 'date', 'enum']
 const docs = ref(new Map())      // id → { state, tables }
@@ -947,7 +951,8 @@ defineExpose({ rows, werte, bausteineZeilen, zeilenWerte, warten, hinweis, genom
         </table>
         <div v-else-if="!warten && ki !== 'läuft'" class="empty">{{ $t("Kein Wert im Dokument gefunden") }}</div>
         </div>
-        <PdfPane v-if="medien.length" class="dt-pdf" :doc="aktiv?.doc || medien[0]" :page="aktiv?.page" :quote="aktiv?.quote" :value="aktiv?.value" :names="namen" />
+        <PdfPane v-if="medien.length && !pdfFehler" class="dt-pdf" :doc="aktiv?.doc || medien[0]" :page="aktiv?.page" :quote="aktiv?.quote" :value="aktiv?.value" :names="namen" />
+        <div v-else-if="medien.length && pdfFehler" class="dt-pdf pdf-fehler"><span class="neg">{{ $t("PDF-Ansicht nicht verfügbar") }}</span><span class="muted">{{ pdfFehler }}</span></div>
       </div>
       <div class="toolbar dt-foot">
         <template v-if="neueZeilen">
@@ -979,6 +984,7 @@ defineExpose({ rows, werte, bausteineZeilen, zeilenWerte, warten, hinweis, genom
 .dt-body { flex: 1; min-height: 0; display: flex; overflow: hidden; }
 .dt-tabelle { flex: 1; min-width: 0; overflow: auto; padding: 8px; }
 .dt-pdf { width: 420px; flex: none; border-left: 1px solid var(--line); }
+.pdf-fehler { display: flex; flex-direction: column; gap: 6px; padding: 12px; font-size: 12px; }
 td.stelle { cursor: pointer; }
 td.stelle:hover { color: var(--accent); }
 .dt-foot { border-top: 1px solid var(--line); gap: 8px; }
