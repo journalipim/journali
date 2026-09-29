@@ -9,6 +9,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { api, store, plugins, Splitter, ScriptEditor, paneWidth } from 'journali'
 import { t as t_ } from 'journali'
 import { kopfLesen, paramsAus } from '../kopf.mjs'
+import { refresh as refreshNodeScripts } from './nodescripts.js'
 import { beispiele } from '../beispiele.mjs'
 const listW = paneWidth('scriptum.list', 280)
 
@@ -45,6 +46,7 @@ async function beispielEinfuegen(b) {
   const leib = { source: b.source, params: kopf ? paramsAus(kopf) : [] }
   if (kopf?.label) leib.label = String(kopf.label)
   if (kopf?.role) leib.role = String(kopf.role)
+  if (kopf) leib.nodes = !!kopf.nodes
   try { await api.post(`/api/scriptum/scripts/${encodeURIComponent(key)}`, leib, 'PUT'); await laden(key); editor.value = true }
   catch (e) { store.toast(e.message) }
 }
@@ -71,11 +73,12 @@ async function speichern(quelle) {
   const leib = { source: quelle, params }
   if (kopf?.label) leib.label = String(kopf.label)
   if (kopf?.role) leib.role = String(kopf.role)
+  if (kopf) leib.nodes = !!kopf.nodes   // meta.nodes: true → im Knoten-Kontextmenü, läuft auf der Auswahl
   try {
     await api.post(`/api/scriptum/scripts/${encodeURIComponent(cur.value.key)}`, leib, 'PUT')
     editor.value = false
     store.toast(kopf ? t_('✓ Gespeichert · {0} Parameter aus dem Kopf', [params.length]) : t_('✓ Gespeichert — ohne Kopf (export const meta) hat das Skript kein Formular'), kopf ? 'ok' : 'error')
-    await laden(cur.value.key)
+    await laden(cur.value.key); refreshNodeScripts()
   } catch (e) { store.toast(e.message) }
 }
 
@@ -97,7 +100,7 @@ async function anlegen() {
 
 async function entfernen() {
   if (!cur.value) return
-  try { await api.del(`/api/scriptum/scripts/${encodeURIComponent(cur.value.key)}`); cur.value = null; await laden(null) }
+  try { await api.del(`/api/scriptum/scripts/${encodeURIComponent(cur.value.key)}`); cur.value = null; await laden(null); refreshNodeScripts() }
   catch (e) { store.toast(e.message) }
 }
 

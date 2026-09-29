@@ -2191,6 +2191,11 @@ tut **nichts Gefährliches von selbst** — der Unterschied ist „der Anwender 
   jeder Schritt mit Start, Dauer und Ausgang im Log, optional gegen ein minimales JSON-Schema geprüft (`ctx.lib`-Prüfer)
   und als Snapshot ins Fach out/ (`ctx.snapshot`). Struktur und Reuse **in einem** Skript, kein Pipeline-Motor über
   Skripte hinweg. Ein Fremdsystem spricht ein Skript weiter über `ctx.zugang` an (Abschnitt 38) — nicht Skript ruft Skript.
+- **Knoten-Skripte im Kontextmenü — gebaut (29.09.2026).** Ein Skript mit `meta.nodes: true` erscheint im
+  Kontextmenü des Baums (unter ≡ Skripte) — auch bei **Mehrfachauswahl**; ein Klick läuft **einmal** auf allen
+  selektierten Knoten, deren IDs kommen als Parameter `nodes` (Komma-getrennt). Das Flag steht am Skript
+  (`ScriptumApi.Skript.Nodes`), scriptum meldet eine multi-fähige `nodeAction` an, TreeView zeigt sie eigens (nicht in
+  der bei Mehrfachauswahl gesperrten Plugin-Gruppe). So sind Skripte kleine Helfer direkt am Knoten.
 - **Ein Markt fremder Snippets.** Legitim, sobald der Anwender ihn einlöst — nicht davor zu schützen ist nicht unsere
   Aufgabe. Gebaut ist der bequeme, geprüfte Standardweg zuerst: eine eigene Beispiel-Bibliothek (Abschnitt 38). Die
   Grenze ist nur: journali zieht Fremdcode **nicht von selbst** und führt ihn aus — gewählt statt automatisch.

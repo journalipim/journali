@@ -535,12 +535,17 @@ async function contextMenu(e, r) {
   const byTopic = new Map()
   const add = (topic, item) => { if (!byTopic.has(topic)) byTopic.set(topic, []); byTopic.get(topic).push(item) }
   // label(row) darf null liefern — der Eintrag gilt dann hier nicht (ETIM: „EC004718 Laptop“ nur mit Klasse); hint darf eine Funktion sein
-  for (const a of plugins.nodeActions.filter(a => !a.roles || a.roles.includes(r.role)).map(a => ({ ...a, _label: typeof a.label === 'function' ? a.label(r, below(r)) : a.label })).filter(a => a._label)) {
+  for (const a of plugins.nodeActions.filter(a => !a.multi && (!a.roles || a.roles.includes(r.role))).map(a => ({ ...a, _label: typeof a.label === 'function' ? a.label(r, below(r)) : a.label })).filter(a => a._label)) {
     const kind = plugins.list.find(p => p.key === a.key)?.manifest?.kind
     add(a.topic ?? KIND_TOPIC[kind] ?? 'tools', { key: a.key, order: a.order, label: a._label, icon: a.icon || '⌁', hint: typeof a.hint === 'function' ? a.hint(r) : a.hint ?? a.key, action: () => Promise.resolve(a.run(r.id, { ...plugins.ctx(a.key), tree })).catch(e => store.toast(`${a.key}: ${e.message}`)) })
   }
   // Excel am Knoten, Tabellen-Export, Datenqualität kommen als nodeActions der Basis-Plugins table und da
   if (r.role !== 'variant' && plugins.enabled('json')) add('import', { label: t_('JSON-Rohdaten hierher importieren …'), icon: '⇩', hint: 'json', action: () => { const i = document.createElement('input'); i.type = 'file'; i.accept = '.json,application/json'; i.onchange = () => { if (i.files[0]) { store.pendingImport = { file: i.files[0], parent: r.id }; router.push('/p/json/import') } }; i.click() } })
+  // Skripte am Knoten: multi-fähige nodeActions mit items (scriptum) — auch bei Mehrfachauswahl, laufen auf allen selektierten
+  const scriptMenu = []
+  for (const a of plugins.nodeActions.filter(a => a.multi && typeof a.items === 'function' && (!a.roles || a.roles.includes(r.role)))) {
+    for (const it of (a.items(r, below(r), sel) || [])) if (it && it.label) scriptMenu.push({ label: it.label, hint: it.hint, action: () => Promise.resolve(it.run({ ...plugins.ctx(a.key), tree })).catch(e => store.toast(`${a.key}: ${e.message}`)) })
+  }
   const topicMenus = TOPICS.filter(([k]) => byTopic.has(k)).map(([k, label]) => ({ label: label.slice(2), icon: label.slice(0, 1), items: plugins.sorted(byTopic.get(k), k, x => x.label), ...(picked.value.has(r.id) && picked.value.size > 1 ? { disabled: true, hint: t_('nur einzeln') } : {}) }))
   menu.open(e, [
     { label: t_('Umbenennen'), icon: '✎', key: 'u', hint: r.name ? '📌 fixiert' : t_('★ Automatik'), action: () => rename(r), ...only1 },
@@ -566,6 +571,7 @@ async function contextMenu(e, r) {
     picked.value.size ? { label: t_('Auswahl aufheben ({0})', [picked.value.size]), icon: '☐', key: 'Escape', hint: 'Esc', action: () => { picked.value = new Set() } } : null,
     { label: t_('Im Journal zeigen'), icon: '≡', key: 'j', action: () => router.push({ path: '/journal', query: { q: r.id } }), ...only1 },
     ...(topicMenus.length ? [{ sep: true }, ...topicMenus] : []),
+    ...(scriptMenu.length ? [{ label: t_('Skripte') + (sel ? ` (${sel.length})` : ''), icon: '≡', items: scriptMenu }] : []),
     { sep: true },
     sel ? { label: t_('{0} Ausgewählte zurückziehen{1}', [sel.length, sel.reduce((k, x) => k + countBelow(x.id), 0) ? ' ' + t_('(mit {0} darunter)', [sel.reduce((k, x) => k + countBelow(x.id), 0)]) : '']), icon: '🗑', key: 'Delete', danger: true, action: () => retireAll(sel) }
         : { label: kids ? t_('Mit {0} darunter zurückziehen', [countBelow(r.id)]) : t_('Zurückziehen'), icon: '🗑', key: 'Delete', danger: true, action: () => retire(r) },

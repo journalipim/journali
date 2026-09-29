@@ -41,5 +41,6 @@
  "Ein Beispiel als Startpunkt in den Editor laden": "Load an example into the editor as a starting point",
  "＋ Beispiel …": "＋ Example …",
  "ein eingerichteter Zugang — der Server hängt die Anmeldung an": "a configured access — the server attaches the sign-in",
- "— Zugang wählen —": "— choose access —"
+ "— Zugang wählen —": "— choose access —",
+ "≡ {0}: gestartet auf {1} Knoten": "≡ {0}: started on {1} node(s)"
 }

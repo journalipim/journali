@@ -306,6 +306,34 @@ export default async (ctx) => {
 `,
   },
   {
+    key: 'knoten-auflisten',
+    title: 'Auf Auswahl: Knoten auflisten',
+    description: 'Ein Knoten-Skript (meta.nodes) — erscheint im Kontextmenü des Baums und läuft auf den selektierten Knoten; hier listet es sie als Tabelle.',
+    source: `export const meta = {
+  label: 'Auf Auswahl: Knoten auflisten',
+  nodes: true,
+  params: [
+    { key: 'nodes', label: 'Knoten (IDs, vom Kontextmenü gesetzt)', type: 'text', default: '' },
+  ],
+}
+
+// Ein Knoten-Skript: meta.nodes = true lässt es im Kontextmenü des Baums erscheinen. Der Kontextmenü-Aufruf setzt den
+// Parameter „nodes" auf die IDs der selektierten Knoten (Komma-getrennt) — ein Lauf für alle. Hier nur auflisten.
+export default async (ctx) => {
+  const ids = String(ctx.params.nodes || '').split(',').map((x) => x.trim()).filter(Boolean)
+  if (!ids.length) return ctx.out.text('Keine Knoten ausgewählt.')
+  const zeilen = []
+  for (const id of ids) {
+    try {
+      const n = await ctx.api.get('/api/nodes/' + encodeURIComponent(id))
+      zeilen.push([id, String(ctx.lib.get(n, 'label', id) ?? ''), n.role || ''])
+    } catch (e) { zeilen.push([id, '(nicht gefunden)', '']) }
+  }
+  return ctx.out.table(['Knoten', 'Bezeichnung', 'Rolle'], zeilen)
+}
+`,
+  },
+  {
     key: 'bericht-zaehlen',
     title: 'Knoten je Wert zählen',
     description: 'Ein einfacher Bericht ohne Fremdsystem: wie viele Knoten je Wert eines Feldes (etwa status).',

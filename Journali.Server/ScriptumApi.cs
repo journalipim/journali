@@ -36,10 +36,10 @@ public static class ScriptumApi
     /// gesetzt heisst freigegeben, leer heisst „nur wer Skripte schreiben darf“.
     /// </summary>
     public sealed record Skript(string Key, string Label, string? Role, string? Run, string Source,
-        List<Param>? Params = null, string? Note = null, int Limit = 0)
+        List<Param>? Params = null, string? Note = null, int Limit = 0, bool Nodes = false)
     {
         /// <summary>Ohne Quelltext — das sieht, wer nur ausführen darf.</summary>
-        public object Offen(long? number = null) => new { Key, Label, Role, Run, released = Freigegeben, Params = Params ?? [], Note, Limit = Grenze, Number = number };
+        public object Offen(long? number = null) => new { Key, Label, Role, Run, released = Freigegeben, Params = Params ?? [], Note, Limit = Grenze, Nodes, Number = number };
         /// <summary>Freigegeben: am Skript steht, welches Recht sein Lauf braucht.</summary>
         [JsonIgnore] public bool Freigegeben => Run is { Length: > 0 };
         /// <summary>Zeitgrenze eines Laufs in Sekunden: was am Skript steht, sonst eine Minute; höchstens eine Stunde.</summary>
@@ -49,7 +49,7 @@ public static class ScriptumApi
     /// <summary>Ein Parameter aus dem Kopf des Skripts: daraus baut die Oberfläche das Formular.</summary>
     public sealed record Param(string Key, string? Label = null, string? Type = null, string? Default = null);
 
-    public sealed record SkriptBody(string? Label, string? Role, string? Run, string? Source, List<Param>? Params, string? Note, int? Limit);
+    public sealed record SkriptBody(string? Label, string? Role, string? Run, string? Source, List<Param>? Params, string? Note, int? Limit, bool? Nodes);
     public sealed record RunBody(Dictionary<string, string>? Params);
 
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
@@ -61,7 +61,7 @@ public static class ScriptumApi
 
         // Eines, mit Quelltext: nur mit dem Schreibrecht (Auth.Needed)
         api.MapGet("/scriptum/scripts/{key}", (string key, Catalog c) =>
-            Lies(c, key) is { } s ? Results.Ok(new { s.Key, s.Label, s.Role, s.Run, released = s.Freigegeben, s.Source, Params = s.Params ?? [], s.Note, Limit = s.Grenze }) : Results.NotFound());
+            Lies(c, key) is { } s ? Results.Ok(new { s.Key, s.Label, s.Role, s.Run, released = s.Freigegeben, s.Source, Params = s.Params ?? [], s.Note, Limit = s.Grenze, s.Nodes }) : Results.NotFound());
 
         // Nur der Quelltext, roh — den holt der Lauf mit seinem Dienst-Token
         api.MapGet("/scriptum/scripts/{key}/source", (string key, Catalog c) =>
@@ -82,7 +82,7 @@ public static class ScriptumApi
             // Ein Feld, das nicht mitkam, bleibt stehen; ein leeres Feld löscht es
             var s = new Skript(key, Blank(body.Label) ?? alt?.Label ?? key,
                 body.Role is null ? alt?.Role : Blank(body.Role), body.Run is null ? alt?.Run : Blank(body.Run),
-                quelle, prm, body.Note is null ? alt?.Note : Blank(body.Note), body.Limit ?? alt?.Limit ?? 0);
+                quelle, prm, body.Note is null ? alt?.Note : Blank(body.Note), body.Limit ?? alt?.Limit ?? 0, body.Nodes ?? alt?.Nodes ?? false);
             var eintrag = c.With((_, _, write) => write(actor, Plugins.Stream + Plugin, Types.PluginDataSet,
                 new PluginDataSet(Praefix + key, JsonSerializer.Serialize(s, Json)), null));
             return Results.Ok(s.Offen(eintrag.Number));

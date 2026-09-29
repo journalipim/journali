@@ -1,4 +1,4 @@
-(function(){const s=document.createElement('style');s.textContent="\n.zeile[data-v-dac747b1] { display: flex; align-items: center; gap: 6px; height: 26px; padding: 0 8px; cursor: pointer; white-space: nowrap;\n}\n.zeile.on[data-v-dac747b1] { background: var(--accent-soft);\n}\n.zeile .lbl[data-v-dac747b1] { overflow: hidden; text-overflow: ellipsis; flex: 1;\n}\n.form[data-v-dac747b1] { width: 100%; border-bottom: 1px solid var(--line);\n}\n.form td[data-v-dac747b1] { height: 30px; vertical-align: middle; white-space: normal; padding: 2px 4px;\n}\n.form td.attr[data-v-dac747b1] { color: var(--muted); white-space: nowrap; padding-left: 8px;\n}\n.section[data-v-dac747b1] { padding: 10px 8px; border-top: 1px solid var(--line);\n}\n.section h2[data-v-dac747b1] { font-size: 12px; margin: 0 0 6px; color: var(--muted); font-weight: 600; display: flex; align-items: center; gap: 6px;\n}\n.tabelle[data-v-dac747b1] { width: auto;\n}\n.text[data-v-dac747b1], .log[data-v-dac747b1] { font-family: ui-monospace, Consolas, monospace; font-size: 12px; white-space: pre-wrap; margin: 4px 0 0;\n}\n.log[data-v-dac747b1] { color: var(--muted); border-top: 1px solid var(--line); padding-top: 6px; margin-top: 8px;\n}\n.datei[data-v-dac747b1] { display: flex; gap: 6px; align-items: center;\n}\n";document.head.append(s)})();
+(function(){const s=document.createElement('style');s.textContent="\n.zeile[data-v-b47bd8f9] { display: flex; align-items: center; gap: 6px; height: 26px; padding: 0 8px; cursor: pointer; white-space: nowrap;\n}\n.zeile.on[data-v-b47bd8f9] { background: var(--accent-soft);\n}\n.zeile .lbl[data-v-b47bd8f9] { overflow: hidden; text-overflow: ellipsis; flex: 1;\n}\n.form[data-v-b47bd8f9] { width: 100%; border-bottom: 1px solid var(--line);\n}\n.form td[data-v-b47bd8f9] { height: 30px; vertical-align: middle; white-space: normal; padding: 2px 4px;\n}\n.form td.attr[data-v-b47bd8f9] { color: var(--muted); white-space: nowrap; padding-left: 8px;\n}\n.section[data-v-b47bd8f9] { padding: 10px 8px; border-top: 1px solid var(--line);\n}\n.section h2[data-v-b47bd8f9] { font-size: 12px; margin: 0 0 6px; color: var(--muted); font-weight: 600; display: flex; align-items: center; gap: 6px;\n}\n.tabelle[data-v-b47bd8f9] { width: auto;\n}\n.text[data-v-b47bd8f9], .log[data-v-b47bd8f9] { font-family: ui-monospace, Consolas, monospace; font-size: 12px; white-space: pre-wrap; margin: 4px 0 0;\n}\n.log[data-v-b47bd8f9] { color: var(--muted); border-top: 1px solid var(--line); padding-top: 6px; margin-top: 8px;\n}\n.datei[data-v-b47bd8f9] { display: flex; gap: 6px; align-items: center;\n}\n";document.head.append(s)})();
 const m = window.journali.vue;
 const Fragment = m.Fragment;
 const computed = m.computed;
@@ -86,6 +86,21 @@ function paramsAus(kopf) {
     type: p.type == null ? null : String(p.type),
     default: p.default == null ? null : String(p.default)
   }));
+}
+let liste = [];
+async function refresh() {
+  try {
+    liste = (await api.get("/api/scriptum/scripts")).filter((s) => s && s.nodes);
+  } catch {
+    liste = [];
+  }
+  return liste;
+}
+async function laufAufKnoten(s, ids) {
+  const knoten = ids || [];
+  const r = await api.post(`/api/scriptum/scripts/${encodeURIComponent(s.key)}/run`, { params: { nodes: knoten.join(",") } });
+  store.toast(t("≡ {0}: gestartet auf {1} Knoten", [s.label || s.key, knoten.length]));
+  return r;
 }
 const beispiele = [
   {
@@ -388,6 +403,34 @@ export default async (ctx) => {
 `
   },
   {
+    key: "knoten-auflisten",
+    title: "Auf Auswahl: Knoten auflisten",
+    description: "Ein Knoten-Skript (meta.nodes) — erscheint im Kontextmenü des Baums und läuft auf den selektierten Knoten; hier listet es sie als Tabelle.",
+    source: `export const meta = {
+  label: 'Auf Auswahl: Knoten auflisten',
+  nodes: true,
+  params: [
+    { key: 'nodes', label: 'Knoten (IDs, vom Kontextmenü gesetzt)', type: 'text', default: '' },
+  ],
+}
+
+// Ein Knoten-Skript: meta.nodes = true lässt es im Kontextmenü des Baums erscheinen. Der Kontextmenü-Aufruf setzt den
+// Parameter „nodes" auf die IDs der selektierten Knoten (Komma-getrennt) — ein Lauf für alle. Hier nur auflisten.
+export default async (ctx) => {
+  const ids = String(ctx.params.nodes || '').split(',').map((x) => x.trim()).filter(Boolean)
+  if (!ids.length) return ctx.out.text('Keine Knoten ausgewählt.')
+  const zeilen = []
+  for (const id of ids) {
+    try {
+      const n = await ctx.api.get('/api/nodes/' + encodeURIComponent(id))
+      zeilen.push([id, String(ctx.lib.get(n, 'label', id) ?? ''), n.role || ''])
+    } catch (e) { zeilen.push([id, '(nicht gefunden)', '']) }
+  }
+  return ctx.out.table(['Knoten', 'Bezeichnung', 'Rolle'], zeilen)
+}
+`
+  },
+  {
     key: "bericht-zaehlen",
     title: "Knoten je Wert zählen",
     description: "Ein einfacher Bericht ohne Fremdsystem: wie viele Knoten je Wert eines Feldes (etwa status).",
@@ -535,7 +578,7 @@ const _sfc_main = {
   __name: "View",
   setup(__props) {
     const listW = paneWidth("scriptum.list", 280);
-    const liste = ref([]);
+    const liste2 = ref([]);
     const cur = ref(null);
     const busy = ref("");
     const editor = ref(false);
@@ -570,7 +613,7 @@ const _sfc_main = {
     async function beispielEinfuegen(b) {
       if (!b) return;
       let key = b.key;
-      const da = new Set(liste.value.map((s) => s.key));
+      const da = new Set(liste2.value.map((s) => s.key));
       if (da.has(key)) {
         let n = 2;
         while (da.has(b.key + "_" + n)) n++;
@@ -580,6 +623,7 @@ const _sfc_main = {
       const leib = { source: b.source, params: kopf ? paramsAus(kopf) : [] };
       if (kopf?.label) leib.label = String(kopf.label);
       if (kopf?.role) leib.role = String(kopf.role);
+      if (kopf) leib.nodes = !!kopf.nodes;
       try {
         await api.post(`/api/scriptum/scripts/${encodeURIComponent(key)}`, leib, "PUT");
         await laden(key);
@@ -591,13 +635,13 @@ const _sfc_main = {
     onUnmounted(() => clearTimeout(poll));
     async function laden(key = cur.value?.key) {
       try {
-        liste.value = await api.get("/api/scriptum/scripts");
+        liste2.value = await api.get("/api/scriptum/scripts");
       } catch (e) {
         store.toast(e.message);
         return;
       }
-      if (key) await waehlen(liste.value.find((s) => s.key === key) ?? null);
-      else if (!cur.value && liste.value.length) await waehlen(liste.value[0]);
+      if (key) await waehlen(liste2.value.find((s) => s.key === key) ?? null);
+      else if (!cur.value && liste2.value.length) await waehlen(liste2.value[0]);
     }
     async function waehlen(s) {
       lauf.value = null;
@@ -622,11 +666,13 @@ const _sfc_main = {
       const leib = { source: quelle, params };
       if (kopf?.label) leib.label = String(kopf.label);
       if (kopf?.role) leib.role = String(kopf.role);
+      if (kopf) leib.nodes = !!kopf.nodes;
       try {
         await api.post(`/api/scriptum/scripts/${encodeURIComponent(cur.value.key)}`, leib, "PUT");
         editor.value = false;
         store.toast(kopf ? t("✓ Gespeichert · {0} Parameter aus dem Kopf", [params.length]) : t("✓ Gespeichert — ohne Kopf (export const meta) hat das Skript kein Formular"), kopf ? "ok" : "error");
         await laden(cur.value.key);
+        refresh();
       } catch (e) {
         store.toast(e.message);
       }
@@ -657,6 +703,7 @@ const _sfc_main = {
         await api.del(`/api/scriptum/scripts/${encodeURIComponent(cur.value.key)}`);
         cur.value = null;
         await laden(null);
+        refresh();
       } catch (e) {
         store.toast(e.message);
       }
@@ -722,7 +769,7 @@ const _sfc_main = {
                 createElementVNode(
                   "span",
                   _hoisted_2,
-                  toDisplayString(liste.value.length),
+                  toDisplayString(liste2.value.length),
                   1
                   /* TEXT */
                 )
@@ -747,7 +794,7 @@ const _sfc_main = {
                 (openBlock(true), createElementBlock(
                   Fragment,
                   null,
-                  renderList(liste.value, (s) => {
+                  renderList(liste2.value, (s) => {
                     return openBlock(), createElementBlock("div", {
                       key: s.key,
                       class: normalizeClass(["zeile", { on: cur.value?.key === s.key }]),
@@ -775,7 +822,7 @@ const _sfc_main = {
                   128
                   /* KEYED_FRAGMENT */
                 )),
-                !liste.value.length ? (openBlock(), createElementBlock(
+                !liste2.value.length ? (openBlock(), createElementBlock(
                   "div",
                   _hoisted_11,
                   toDisplayString(darfSchreiben.value ? _ctx.$t("Noch kein Skript.") : _ctx.$t("Kein Skript freigegeben.")),
@@ -1252,9 +1299,12 @@ const _sfc_main = {
     };
   }
 };
-const View = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-dac747b1"]]);
+const View = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-b47bd8f9"]]);
+refresh();
 const entry = {
-  views: [{ path: "skripte", topic: "tools", label: t("Skripte"), icon: "≡", hint: t("Auswertungen und Übergaben, die hier geschrieben werden: Tabelle, Text oder Datei — von Hand oder als Job"), component: View }]
+  views: [{ path: "skripte", topic: "tools", label: t("Skripte"), icon: "≡", hint: t("Auswertungen und Übergaben, die hier geschrieben werden: Tabelle, Text oder Datei — von Hand oder als Job"), component: View }],
+  // Skripte mit meta.nodes:true erscheinen im Knoten-Kontextmenü und laufen auf den selektierten Knoten (IDs als Parameter „nodes")
+  nodeActions: [{ multi: true, items: (row, below, sel) => liste.map((s) => ({ label: s.label || s.key, run: () => laufAufKnoten(s, sel && sel.length ? sel.map((x) => x.id) : [row.id]) })) }]
 };
 export {
   entry as default
