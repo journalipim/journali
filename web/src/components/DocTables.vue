@@ -979,7 +979,7 @@ defineExpose({ rows, werte, bausteineZeilen, zeilenWerte, warten, hinweis, genom
 
 <style scoped>
 .dt-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: grid; place-items: center; z-index: 50; }
-.dt { width: min(1500px, 96vw); max-height: min(820px, 92vh); background: var(--pane); border: 1px solid var(--line); border-radius: 8px; display: flex; flex-direction: column; overflow: hidden; }
+.dt { width: min(1500px, 96vw); height: min(820px, 92vh); background: var(--pane); border: 1px solid var(--line); border-radius: 8px; display: flex; flex-direction: column; overflow: hidden; }
 .nowrap { white-space: nowrap; }
 .dt-body { flex: 1; min-height: 0; display: flex; overflow: hidden; }
 .dt-tabelle { flex: 1; min-width: 0; overflow: auto; padding: 8px; }

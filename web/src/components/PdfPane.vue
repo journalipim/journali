@@ -114,19 +114,24 @@ onBeforeUnmount(() => { laufId++; if (pdfDoc) { try { pdfDoc.destroy() } catch {
 </script>
 
 <template>
-  <div class="pdf" ref="behaelter">
-    <div v-if="laden" class="hinweis muted">{{ $t("◌ PDF wird geladen …") }}</div>
-    <div v-else-if="fehler" class="hinweis neg">{{ fehler }} · <a :href="`/api/media/${doc}/file`" target="_blank" rel="noopener">{{ $t("öffnen") }}</a></div>
-    <div v-else-if="!doc" class="hinweis muted">{{ $t("Kein Dokument") }}</div>
-    <div v-for="s in seiten" :key="s.num" class="seite" :style="{ width: s.width + 'px', height: s.height + 'px' }">
-      <canvas :ref="el => setCanvas(s.num, el)" />
-      <div v-if="marke && marke.page === s.num" class="marke" :style="{ left: marke.left + 'px', top: marke.top + 'px', width: marke.width + 'px', height: marke.height + 'px' }" />
+  <!-- Aussen das Flex-Item (Breite/Spalte), innen der Scroll-Container: nur so scrollt scrollIntoView die PDF-Spalte
+       selbst und nicht den Dialog (bewiesen), und der Dialog kollabiert nicht. -->
+  <div class="pdf-pane">
+    <div class="pdf" ref="behaelter">
+      <div v-if="laden" class="hinweis muted">{{ $t("◌ PDF wird geladen …") }}</div>
+      <div v-else-if="fehler" class="hinweis neg">{{ fehler }} · <a :href="`/api/media/${doc}/file`" target="_blank" rel="noopener">{{ $t("öffnen") }}</a></div>
+      <div v-else-if="!doc" class="hinweis muted">{{ $t("Kein Dokument") }}</div>
+      <div v-for="s in seiten" :key="s.num" class="seite" :style="{ width: s.width + 'px', height: s.height + 'px' }">
+        <canvas :ref="el => setCanvas(s.num, el)" />
+        <div v-if="marke && marke.page === s.num" class="marke" :style="{ left: marke.left + 'px', top: marke.top + 'px', width: marke.width + 'px', height: marke.height + 'px' }" />
+      </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-.pdf { height: 100%; overflow: auto; background: var(--panel-2, #14161a); padding: 8px; }
+.pdf-pane { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.pdf { flex: 1; min-height: 0; overflow: auto; position: relative; background: var(--panel-2, #14161a); padding: 8px; }
 .hinweis { padding: 12px; font-size: 12px; }
 .seite { position: relative; margin: 0 auto 10px; box-shadow: 0 1px 5px rgba(0,0,0,.45); }
 .seite canvas { display: block; width: 100%; height: 100%; }
