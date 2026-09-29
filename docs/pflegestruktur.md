@@ -2059,3 +2059,71 @@ wenn jemand ein Attribut einer zweiten Gruppe hinzufügt, entsteht etwas Neues.
 **Offen.** Ob die Knotenansicht zusätzlich nach Thema gliedern soll, entscheidet sich mit der zweiten Ordnung. Ob die
 heutige einzelne Zuordnung am Attribut nach der Umstellung bestehen bleibt (als „Heimatgruppe“ für Anzeige und
 Export) oder in der Menge aufgeht, wird beim Bau entschieden — die Menge ist das Ziel.
+## 37. scriptum — Skripte, die der Anwender schreibt und anstösst (29.09.2026, entschieden)
+
+**Die Lage.** Für Auswertungen über Systemgrenzen, eigene Transformationen und Schnittstellen zu Fremdsystemen hat
+journali fast alles, was es braucht:
+
+- Ein Plugin mit `runs: process` läuft als Kindprozess des Servers (`JobRunner`), nie im Serverprozess.
+- Je Lauf gibt es ein Token mit der Rolle des Jobs (`Auth.IssueServiceToken`, `JOURNALI_TOKEN`); der Prozess spricht
+  `/api` als Bearer und darf genau das, was die Rolle erlaubt.
+- Parameter stehen im Manifest und werden zum Formular; das Profil sagt, **was** getan wird, der Job **wohin und wann**.
+- Zugänge (`driver`) tragen Adresse und Anmeldung: die offenen Felder im Journal, das Geheimnis beim Server, und es
+  geht nur an einen Prozess, nie an den Browser.
+- Fächer `in/` und `out/` holen und legen Dateien ab, auch über einen Zugang.
+- Ein Plugin bringt eigene Vue-Ansichten mit; der Lauf schreibt ein Log, hat einen Zeitplan und einen Trockenlauf.
+- Von aussen ist alles über `POST /api/jobs/{key}/run` mit Token aufrufbar.
+
+**Die Lücke.** Diese Logik muss heute als Plugin-Verzeichnis ausgeliefert, gebaut und signiert werden. Wer eine
+Auswertung für sein Haus braucht, kann sie nicht selbst schreiben. Genau das ist der häufige Fall: eine Liste, die
+zwei Systeme zusammenführt; ein Abgleich, der einmal die Woche läuft; eine Übergabe an ein Fremdsystem, die niemand
+sonst so braucht.
+
+**Die Entscheidung.** `scriptum` ist ein Plugin, dessen Programm nicht im Verzeichnis liegt, sondern **im Journal**:
+in der Oberfläche geschrieben, versioniert wie jeder andere Eintrag, ausgeführt mit der Maschinerie, die schon steht.
+
+1. **Der Quelltext steht im Journal** (Plugin-Daten, wie Profile). Damit ist er versioniert, rückholbar und in der
+   Sicherung enthalten. Ein Geheimnis steht nie darin — es kommt aus einem Zugang oder dem Tresor, denn im Journal
+   lässt sich nichts löschen.
+2. **Zwei Rechte, die nicht dasselbe sind.** `scriptum.write` schreibt und ändert Skripte; wer es hat, kann alles,
+   was der Serverbenutzer kann — das ist ein Administratorrecht. `scriptum.run` stösst ein freigegebenes Skript an
+   und sieht sein Ergebnis; damit bedient jemand die Auswertung, ohne je Quelltext zu sehen.
+3. **Ausgeführt wird als Kindprozess**, wie jedes Prozess-Plugin. Der Runner des Plugins holt den Quelltext über
+   `/api`, führt ihn als Modul aus und gibt das Ergebnis zurück. Das Token trägt die Rolle, die am Skript steht —
+   ein Skript darf nie mehr als ein Anwender mit dieser Rolle.
+4. **Das Ergebnis ist JSON auf stdout**: eine Tabelle (Spalten und Zeilen), ein Text, oder ein Verweis auf eine Datei
+   im Fach `out/`. Die Ansicht zeigt Tabelle und Text und bietet die Datei zum Herunterladen an. So entsteht eine
+   Auswertung ohne eine Zeile Oberflächencode.
+5. **Angestossen wird auf drei Wegen**, alle mit demselben Skript: von Hand in der Ansicht, als Job mit Zeitplan und
+   Fächern, oder über `/api` von einem anderen System aus.
+6. **Das Formular steht im Skript.** Ein Kopf (`export const meta = { label, params, role }`) deklariert Bezeichnung,
+   Parameter und die Rolle; Formular und Programm bleiben zusammen und können nicht auseinanderlaufen.
+
+**Abgrenzung, die scharf bleibt.** Formel und Vorlage (`Tree.Compute`) rechnen Werte **am Knoten**, ohne Aussenwelt,
+und ihr Ergebnis ist ein Attributwert. `scriptum` darf nach aussen und schreibt über `/api` wie ein Anwender. Ein
+ausgeliefertes Plugin bleibt, was es ist: ein Verzeichnis mit Zertifikat, das journali mitbringt. Ein Skript ist das
+Gegenstück dazu — nichts wird mitgeliefert, nichts signiert, alles gehört der Anlage.
+
+**Was ehrlich dabeisteht.** Ein Skript läuft als Prozess auf dem Server. Sein Token begrenzt, was es in journali
+darf; was es darüber hinaus tut (Netz, Dateisystem), begrenzt nur das Betriebssystem. Darum ist `scriptum.write` ein
+Administratorrecht, und die Oberfläche sagt das an der Stelle, an der jemand ein Skript anlegt.
+
+**Was gebaut wird.**
+
+1. Plugin `scriptum` mit `runs: process` und einem Runner, der ein Skript aus dem Journal ausführt; Parameter aus
+   `meta` des Skripts, Ergebnis als JSON auf stdout.
+2. Ablage der Skripte in den Plugin-Daten (`PluginDataSet`), mit Bezeichnung, Rolle, Freigabe und Quelltext.
+3. Ansicht: Liste links, Editor rechts (der Editor der Formeln trägt schon Hervorhebung und Tastenkürzel),
+   Parameterformular, ▶ Ausführen, Ergebnis als Tabelle, Text oder Datei; ein Lauf schreibt sein Log wie jeder Job.
+4. Rechte `scriptum.write` und `scriptum.run` im Vokabular; die Freigabe je Skript steht an ihm.
+5. Anstoss als Job: der Tasker sieht `scriptum` wie jedes Prozess-Plugin, das Skript ist der Parameter.
+
+**Offen.**
+
+- **Bibliotheken.** Ein Skript, das nur `fetch` und die Standardbibliothek nutzt, braucht nichts. Sobald jemand ein
+  Paket will, stellt sich die Frage, wer es installiert und wer dafür geradesteht. Vorschlag für den Anfang: keine
+  Pakete, nur was die Laufzeit mitbringt und was `scriptum` selbst anbietet.
+- **Wiederverwendung.** Ob ein Skript ein anderes aufrufen darf, entscheidet sich beim Bau; nötig ist es nicht von
+  Anfang an.
+- **Grenzen der Laufzeit.** Eine Zeitgrenze je Lauf und eine Grenze für die Ausgabe sind nötig, damit ein Fehler im
+  Skript nicht den Server beschäftigt. Beides gehört an den Runner, nicht an das Skript.
