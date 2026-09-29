@@ -106,7 +106,11 @@ test('eine Matrix ist kein Schlüssel/Wert — je Zeile höchstens drei gefüllt
     s('AP', 30, 624, { h: 7 }), s('2,91E-01', 200, 624, { h: 7 }), s('2,01E-04', 260, 624, { h: 7 }), s('1,17E-04', 320, 624, { h: 7 }),
   ]
   const { chunks, tables: tb } = layoutDocument([{ page: 1, items }])
-  assert.equal(tb.length, 0, 'nichts davon wird ein Attributwert')
+  // mit Spaltenkopf bleibt sie eine Tabelle: am Knoten wird daraus ein Tabellenattribut, kein einzelner Wert (29.09.2026)
+  assert.equal(tb.length, 1)
+  assert.deepEqual(tb[0].header, ['Indikator', 'A1-A3', 'C1', 'C2'])
+  assert.deepEqual(tb[0].rows[0], ['ADPE', '7,48E-03', '3,88E-09', '4,46E-09'])
+  assert.equal(tb[0].rows.every(r => istSchluesselWert(r)), false, 'als Schlüssel/Wert taugt keine Zeile')
   assert.ok(chunks.some(c => /ADPE \| 7,48E-03/.test(c.body)), 'im Text steht die Matrix weiter — sie ist durchsuchbar')
 })
 

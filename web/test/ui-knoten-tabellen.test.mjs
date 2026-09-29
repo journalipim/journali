@@ -159,7 +159,7 @@ test('neue Attribute in eine bestehende Gruppe, die hier schon gilt: keine Anlag
   const { w, rufe } = await dialog()
   assert.equal(w.vm.gruppe, 'from_document', 'Vorgabe: „aus Dokument“, weil es die Gruppe gibt')
   const wahl = w.find('.dt-foot select')
-  assert.deepEqual(wahl.findAll('option').map(o => o.text()), ['▤ Physisch', '▤ aus Dokument', '+ neue Gruppe'])
+  assert.deepEqual(wahl.findAll('option').map(o => o.text()), ['▤ je Überschrift im Dokument', '▤ Physisch', '▤ aus Dokument', '+ neue Gruppe'], 'zuerst die Wahl, die je Überschrift eine Gruppe anlegt')
   await wahl.setValue('physical'); await flushPromises()
   assert.equal(w.findAll('.dt-foot select').length, 1, 'die Gruppe gilt hier — keine Ebene zu wählen')
   await w.find('.dt-foot .primary').trigger('click'); await flushPromises()
@@ -955,4 +955,51 @@ test('Strg+Klick auf ein Asset wählt weiter aus, statt die Vorschau zu öffnen'
   await kachel.trigger('click', { ctrlKey: true }); await flushPromises()
   assert.equal(w.findComponent({ name: 'MediaPreview' }).exists(), false)
   assert.ok(kachel.classes('picked'), 'gewählt')
+})
+
+// ── ⊞ Tabellen mit Spaltenkopf ─────────────────────────────────────────────────────────────────────────────────
+
+const MATRIX = { ready: true, state: 'text', tables: [{ seq: 0, page: 2, heading: 'Oberwellengehalt des Netzstromes',
+  header: ['Typ', 'THD', '3', '5'], rows: [['PCI 2/35', '7,5', '6,0', '3,5'], ['PCI 2/70', '7,5', '4,5', '5,0']] }] }
+
+test('eine Tabelle mit Spaltenkopf bleibt eine Tabelle: ein Tabellenattribut mit einem Attribut je Spalte', async () => {
+  const { w } = await dialog({ tabellen: MATRIX })
+  assert.equal(w.vm.rows.length, 0, 'keine Schlüssel/Wert-Zeilen daraus')
+  const [m] = w.vm.tabellenBloecke
+  assert.ok(m, 'die Tabelle steht in ihrem eigenen Band')
+  assert.deepEqual([m.key, m.newKey, m.newType, m.take], ['Oberwellengehalt des Netzstromes', 'oberwellengehalt_des_netzstromes', 'rows', true])
+  assert.deepEqual(m.spalten.map(s => [s.key, s.label, s.type]), [
+    ['oberwellengehalt_des_netzstromes_typ', 'Typ', 'text'],
+    ['oberwellengehalt_des_netzstromes_thd', 'THD', 'decimal'],
+    ['oberwellengehalt_des_netzstromes_spalte_3', '3', 'decimal'],
+    ['oberwellengehalt_des_netzstromes_spalte_4', '5', 'decimal']], 'Zahlenspalten werden Zahlen; „3“ allein ist kein Schlüssel — er beginnt mit einem Buchstaben')
+  assert.match(w.find('tbody .step-band').text(), /⊞ Tabellen · 1/)
+})
+
+test('✓ mit einer Tabelle: Spaltenattribute, das Tabellenattribut, dann je Zeile row.add mit den Werten', async () => {
+  const { w, rufe } = await dialog({ tabellen: MATRIX })
+  await w.find('.dt-foot .primary').trigger('click'); await flushPromises()
+  const attr = rufe.filter(r => r.methode === 'PUT' && /\/api\/model\/attributes\//.test(r.pfad))
+  assert.deepEqual(attr.map(r => r.pfad.split('/').pop()), ['oberwellengehalt_des_netzstromes_typ', 'oberwellengehalt_des_netzstromes_thd', 'oberwellengehalt_des_netzstromes_spalte_3', 'oberwellengehalt_des_netzstromes_spalte_4', 'oberwellengehalt_des_netzstromes'])
+  const tabelle = attr.at(-1).rumpf
+  assert.equal(tabelle.type, 'rows')
+  assert.deepEqual(tabelle.columns, ['oberwellengehalt_des_netzstromes_typ', 'oberwellengehalt_des_netzstromes_thd', 'oberwellengehalt_des_netzstromes_spalte_3', 'oberwellengehalt_des_netzstromes_spalte_4'])
+  const cmds = stapel(rufe)
+  const zeilen = cmds.filter(c => c.op === 'row.add')
+  assert.equal(zeilen.length, 2, 'zwei Zeilen')
+  assert.equal(zeilen[0].args.attribute, 'oberwellengehalt_des_netzstromes')
+  const werte = cmds.filter(c => c.op === 'attribute.set' && c.args.row === '@' + zeilen[0].ref)
+  assert.deepEqual(werte.map(c => [c.args.attribute.replace('oberwellengehalt_des_netzstromes_', ''), c.args.value]), [['typ', 'PCI 2/35'], ['thd', '7,5'], ['spalte_3', '6,0'], ['spalte_4', '3,5']])
+})
+
+test('Tabellen und Bausteine gehen in die Gruppe ihrer Überschrift, wenn „je Überschrift“ gewählt ist', async () => {
+  const { w, rufe } = await dialog({ tabellen: MATRIX })
+  w.vm.gruppe = w.vm.JE_UEBERSCHRIFT; await flushPromises()
+  assert.deepEqual(w.vm.gebrauchteGruppen.map(g => g.key), ['oberwellengehalt_des_netzstromes'])
+  await w.find('.dt-foot .primary').trigger('click'); await flushPromises()
+  const gruppe = rufe.find(r => r.methode === 'PUT' && /\/api\/model\/groups\//.test(r.pfad))
+  assert.equal(gruppe.pfad.split('/').pop(), 'oberwellengehalt_des_netzstromes')
+  assert.deepEqual(gruppe.rumpf.label, { de: 'Oberwellengehalt des Netzstromes' })
+  const attr = rufe.find(r => r.methode === 'PUT' && /_typ$/.test(r.pfad))
+  assert.equal(attr.rumpf.group, 'oberwellengehalt_des_netzstromes', 'die Spalten gehören zur Gruppe der Tabelle')
 })

@@ -59,9 +59,13 @@ public sealed class DocText
                 page    INT,
                 heading TEXT,
                 rows    JSONB       NOT NULL,
+                header  JSONB,
                 at      TIMESTAMPTZ NOT NULL DEFAULT now(),
                 PRIMARY KEY (media, seq)
             );
+            -- der Spaltenkopf (29.09.2026): eine Tabelle mit Kopf ist eine Matrix und wird am Knoten ein Tabellenattribut,
+            -- eine ohne Kopf sind Schlüssel und Wert. Datenbanken, die schon stehen, bekommen die Spalte hier
+            ALTER TABLE media_table ADD COLUMN IF NOT EXISTS header JSONB;
             """, conn);
         cmd.ExecuteNonQuery();
     }
@@ -72,7 +76,7 @@ public sealed class DocText
     public sealed record Chunk(int Seq, int? Page, string? Heading, string Body);
 
     /// <summary>Eine Tabelle im Dokument: Reihenfolge, Seite, Überschrift darüber, die Zeilen als Zellen (erste Zelle der Schlüssel).</summary>
-    public sealed record Table(int Seq, int? Page, string? Heading, List<string[]> Rows);
+    public sealed record Table(int Seq, int? Page, string? Heading, List<string[]> Rows, List<string>? Header = null);
 
     /// <summary>Treffer: Medium, Abschnitt und ein Ausschnitt mit den gefundenen Wörtern.</summary>
     public sealed record Hit(string Media, string Sha256, int Seq, int? Page, string? Heading, string Snippet, double Rank);
@@ -113,11 +117,12 @@ public sealed class DocText
         foreach (var t in tables ?? [])
         {
             if (t.Rows is not { Count: > 0 }) continue;
-            await using var insT = new NpgsqlCommand("INSERT INTO media_table (media, sha256, seq, page, heading, rows) VALUES (@m, @s, @q, @p, @h, @r)", conn, tx);
+            await using var insT = new NpgsqlCommand("INSERT INTO media_table (media, sha256, seq, page, heading, rows, header) VALUES (@m, @s, @q, @p, @h, @r, @k)", conn, tx);
             insT.Parameters.AddWithValue("m", media); insT.Parameters.AddWithValue("s", sha256); insT.Parameters.AddWithValue("q", t.Seq);
             insT.Parameters.AddWithValue("p", (object?)t.Page ?? DBNull.Value);
             insT.Parameters.AddWithValue("h", (object?)Clean(t.Heading) ?? DBNull.Value);
             insT.Parameters.Add("r", NpgsqlDbType.Jsonb).Value = JsonSerializer.Serialize(t.Rows.Select(r => r.Select(c => Clean(c) ?? "").ToArray()));
+            insT.Parameters.Add("k", NpgsqlDbType.Jsonb).Value = t.Header is { Count: > 0 } ? JsonSerializer.Serialize(t.Header.Select(c => Clean(c) ?? "")) : DBNull.Value;
             await insT.ExecuteNonQueryAsync(ct);
         }
         await using (var doc = new NpgsqlCommand("""
@@ -197,12 +202,13 @@ public sealed class DocText
             await using var r = await doc.ExecuteReaderAsync(ct);
             if (await r.ReadAsync(ct)) { state = r.GetString(0); sha = r.GetString(1); }
         }
-        await using var cmd = new NpgsqlCommand("SELECT seq, page, heading, rows::text FROM media_table WHERE media = @m ORDER BY seq", conn);
+        await using var cmd = new NpgsqlCommand("SELECT seq, page, heading, rows::text, header::text FROM media_table WHERE media = @m ORDER BY seq", conn);
         cmd.Parameters.AddWithValue("m", media);
         await using var rd = await cmd.ExecuteReaderAsync(ct);
         while (await rd.ReadAsync(ct))
             tables.Add(new Table(rd.GetInt32(0), rd.IsDBNull(1) ? null : rd.GetInt32(1), rd.IsDBNull(2) ? null : rd.GetString(2),
-                JsonSerializer.Deserialize<List<string[]>>(rd.GetString(3)) ?? []));
+                JsonSerializer.Deserialize<List<string[]>>(rd.GetString(3)) ?? [],
+                rd.IsDBNull(4) ? null : JsonSerializer.Deserialize<List<string>>(rd.GetString(4))));
         return (state, sha, tables);
     }
 

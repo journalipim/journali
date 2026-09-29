@@ -46,11 +46,16 @@ const tabellenZeilen = ref([])
 const zeilenWerte = ref([])   // ohne KI aus dem Text: ▦ Zeile, ⌕ Sinnsuche
 const kiZeilen = ref([])
 const textZeilen = ref([])
+/// Tabellen mit Spaltenkopf (29.09.2026): sie bleiben eine Tabelle — am Knoten ein Tabellenattribut (Typ rows) mit
+/// einem Attribut je Spalte. Eine Tabelle ohne Kopf ist Schlüssel und Wert und wird zu einzelnen Attributen
+const matrixZeilen = ref([])
 const rows = computed(() => [...tabellenZeilen.value, ...zeilenWerte.value, ...kiZeilen.value, ...textZeilen.value])
+const alleZeilen = computed(() => [...rows.value, ...matrixZeilen.value])
 /// Die Werte nach Attribut sortiert — die Quelle nennt die Seite, die Reihenfolge des Dokuments braucht niemand
 const zielName = r => r.target === 'attr' ? (L(attrs.value.find(a => a.key === r.attribute)?.label) || r.attribute || '') : r.target === 'new' ? (r.key || r.newKey || '') : r.key || ''
 const werte = computed(() => rows.value.filter(r => !r.baustein).sort((a, b) => zielName(a).localeCompare(zielName(b), 'de', { sensitivity: 'base' })))
 const bausteineZeilen = computed(() => rows.value.filter(r => r.baustein))
+const tabellenBloecke = computed(() => matrixZeilen.value)
 /// Von welcher bis zu welcher Seite die Bausteine reichen — sie stehen in der Reihenfolge des Dokuments
 const bausteineSeiten = computed(() => { const s = bausteineZeilen.value.map(r => r.page).filter(p => p != null); return s.length ? [Math.min(...s), Math.max(...s)] : [0, 0] })
 const warten = ref(true)          // ein Dokument ist noch nicht gelesen — der Job liest es, wir fragen nach
@@ -94,7 +99,8 @@ function typBaustein(r) {
 const gilt = key => (props.node.groups ?? []).some(g => g.key === key)
 const gruppeHier = key => { const a = (model.value.attributes ?? []).find(x => x.key === key); return !a?.group || gilt(a.group) }
 const genommen = computed(() => rows.value.filter(r => r.take && r.target !== 'skip' && r.converted != null && r.converted !== ''))
-const anzahl = computed(() => rows.value.length)
+const genommeneTabellen = computed(() => matrixZeilen.value.filter(r => r.take && r.target !== 'skip'))
+const anzahl = computed(() => rows.value.length + matrixZeilen.value.length)
 const name = id => namen.value[id] ?? id
 const mehrere = computed(() => medien.value.length > 1)
 
@@ -107,7 +113,7 @@ const gruppeName = ref(t_('aus Dokument'))
 const ebene = ref(props.node.id)
 /// Der Pfad von der Wurzel bis hierher — die Ebenen, an die eine Gruppe kommen kann
 const pfad = computed(() => [...(props.node.ancestors ?? []).map(a => ({ id: a.id, role: a.role, label: a.label })), { id: props.node.id, role: props.node.role, label: tree.byId.get(props.node.id)?.label ?? props.node.id }])
-const neueZeilen = computed(() => genommen.value.some(r => r.target === 'new'))
+const neueZeilen = computed(() => genommen.value.some(r => r.target === 'new') || genommeneTabellen.value.some(r => r.target === 'new'))
 /// Schlüssel aus einem Namen: klein, Umlaute aufgelöst, alles andere ein Unterstrich
 /// Der Schlüssel eines neuen Attributs: nur a-z, 0-9 und _, und er beginnt mit einem Buchstaben — der Server nimmt
 /// nichts anderes. „2.1 Produktbeschreibung“ wird darum zu „produktbeschreibung“: die Kapitelnummer steht in der
@@ -115,10 +121,26 @@ const neueZeilen = computed(() => genommen.value.some(r => r.target === 'new'))
 const schluessel = s => String(s ?? '').toLowerCase().replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss')
   .replace(/[^a-z0-9]+/g, '_').replace(/^[_0-9]+/, '').replace(/_+$/, '')
 const gruppeKey = computed(() => gruppe.value === '+' ? schluessel(gruppeName.value) : gruppe.value)
+/// Wohin ein neues Attribut gehört (29.09.2026): in die gewählte Gruppe — oder, bei „je Überschrift“, in eine Gruppe
+/// mit dem Namen der Überschrift im Dokument. Dann steht am Knoten wieder beieinander, was im Dokument beieinander
+/// stand: „Technische Daten“, „Bestelldaten“, „Normen“. Ohne Überschrift gilt die gewählte Gruppe
+const JE_UEBERSCHRIFT = '#'
+const ueberschriftGruppe = r => {
+  const h = String(r.heading ?? '').trim()
+  const k = schluessel(h)
+  return h && k ? { key: k, label: h } : null
+}
+const gruppeFuer = r => gruppe.value === JE_UEBERSCHRIFT ? (ueberschriftGruppe(r) ?? { key: gruppeKey.value, label: gruppeName.value.trim() }) : { key: gruppeKey.value, label: gruppeName.value.trim() }
+/// Alle Gruppen, die dieses Übernehmen braucht — je Schlüssel einmal
+const gebrauchteGruppen = computed(() => {
+  const m = new Map()
+  for (const r of [...genommen.value, ...genommeneTabellen.value]) if (r.target === 'new') { const g = gruppeFuer(r); if (g.key) m.set(g.key, g) }
+  return [...m.values()]
+})
 /// Kommt die gewählte Gruppe von einem Vorfahren? Dann hängt nichts — die Ebene entfällt. Hängt sie am Knoten selbst,
 /// bleibt die Ebene wählbar: eine Ebene darüber hängt sie dort an, und der Server räumt sie hier weg (AttachGroups)
 const vonOben = key => (props.node.groups ?? []).some(g => g.key === key && g.from && g.from !== props.node.id)
-const gruppeGilt = computed(() => gruppe.value !== '+' && vonOben(gruppe.value))
+const gruppeGilt = computed(() => gruppe.value !== '+' && gruppe.value !== JE_UEBERSCHRIFT && vonOben(gruppe.value))
 
 /// Die Attribute, die an diesem Knoten gelten: aus den Gruppen am Pfad, die hier aktiv sind. Das ist die Liste,
 /// gegen die der Text gelesen wird — nicht das ganze Modell.
@@ -236,10 +258,45 @@ function typ(r) {
   r.why = r.unit ? t_('neu als {0} {1}', [r.newType, r.unit]) : t_('neu als {0}', [r.newType])
 }
 
+/// Die Spalten einer Tabelle als Attribute: Schlüssel aus Tabellenname und Spaltenname, Typ aus den Werten geraten —
+/// sind alle Zellen einer Spalte Zahlen, ist sie eine Zahl
+const NUR_ZAHL = /^[+-]?\d[\d.,\s']*(?:[eE][+-]?\d+)?$/
+function matrixZeile(id, tb) {
+  const master = model.value.masterLocale ?? 'de'
+  const name = String(tb.heading ?? '').trim() || t_('Tabelle S. {0}', [tb.page ?? '?'])
+  const basis = schluessel(name) || 'tabelle'
+  const kopf = (tb.header ?? []).map(x => String(x ?? '').trim())
+  const zeilen = (tb.rows ?? []).map(r => (r ?? []).map(c => String(c ?? '').trim()))
+  const spalten = kopf.map((h, i) => {
+    const werte = zeilen.map(r => r[i] ?? '').filter(Boolean)
+    const zahl = werte.length > 0 && werte.every(w => NUR_ZAHL.test(w))
+    const s = schluessel(h) || `spalte_${i + 1}`
+    // ein vorhandenes Attribut mit dieser Bezeichnung wird wiederverwendet — sonst hiesse dieselbe Spalte zweimal anders
+    const da = attrs.value.find(a => norm(L(a.label) || a.key) === norm(h))
+    return { key: da?.key ?? `${basis}_${s}`, label: h || t_('Spalte {0}', [i + 1]), type: da?.type ?? (zahl ? 'decimal' : 'text'), vorhanden: !!da }
+  })
+  const r = { key: name, value: '', doc: id, page: tb.page ?? null, heading: tb.heading ?? null, quote: null, confidence: null, quelle: 'tabelle',
+    matrix: true, spalten, daten: zeilen, target: 'new', attribute: null, newKey: basis, newType: 'rows', unit: null, converted: '', error: null,
+    why: '', inaktiv: false, take: true }
+  // gibt es das Tabellenattribut schon, geht die Tabelle dorthin — die Spalten sind dann seine
+  const da = attrs.value.find(a => a.key === basis) ?? (model.value.attributes ?? []).find(a => a.type === 'rows' && norm(L(a.label) || a.key) === norm(name))
+  if (da?.type === 'rows') { r.target = 'attr'; r.attribute = da.key; r.newKey = da.key; r.why = t_('gibt es schon — die Zeilen kommen dazu') }
+  else if (da) { r.why = t_('Attribut {0} ist {1}', [da.key, da.type]); r.newKey = basis + '_tabelle' }
+  return r
+}
+
 /// Aus den gelesenen Tabellen die Zeilen des Dialogs: Schlüssel links, Wert rechts, dazu der Vorschlag des Mappers.
 function baue() {
+  // Tabellen mit Spaltenkopf: als Tabellenattribut, nicht als Schlüssel/Wert
+  const mit = []
+  for (const [id, d] of docs.value) for (const tb of d.tables ?? []) {
+    const kopf = (tb.header ?? []).filter(x => String(x ?? '').trim())
+    if (kopf.length < 2 || !(tb.rows ?? []).length) continue
+    mit.push(matrixZeile(id, tb))
+  }
+  matrixZeilen.value = mit
   const paare = []; const je = new Map()
-  for (const [id, d] of docs.value) for (const tb of d.tables ?? []) for (const cells of tb.rows ?? []) {
+  for (const [id, d] of docs.value) for (const tb of (d.tables ?? []).filter(x => (x.header ?? []).filter(y => String(y ?? '').trim()).length < 2)) for (const cells of tb.rows ?? []) {
     if (!Array.isArray(cells) || cells.length < 2) continue
     const key = String(cells[0] ?? '').trim(), value = cells.slice(1).map(c => String(c ?? '').trim()).filter(Boolean).join(' ')
     if (!key || !value) continue
@@ -556,7 +613,7 @@ async function neuLesen() {
   busy.value = true
   try {
     for (const id of medien.value) await api.del(`/api/docs/${encodeURIComponent(id)}`)
-    docs.value = new Map(); tabellenZeilen.value = []; zeilenWerte.value = []; kiZeilen.value = []; textZeilen.value = []; textGeholt.clear(); texte.clear(); textZahl.value = 0
+    docs.value = new Map(); tabellenZeilen.value = []; zeilenWerte.value = []; kiZeilen.value = []; textZeilen.value = []; matrixZeilen.value = []; textGeholt.clear(); texte.clear(); textZahl.value = 0
     gestartet = false; warten.value = true; hinweis.value = ''; kiHinweis.value = ''; if (ki.value !== 'aus') ki.value = 'bereit'
     schritte.value = { gesamt: 0, erledigt: 0 }
     if (timer) { clearTimeout(timer); timer = null }
@@ -641,7 +698,8 @@ const quelleText = r => [r.quelle === 'ki' ? '✦' : r.quelle === 'suche' ? '⌕
 const quelleTitel = r => [mehrere.value ? name(r.doc) : '', r.quelle === 'ki' ? t_('von der KI im Text gefunden') : r.quelle === 'zeile' ? t_('aus einer Zeile im Text — ohne KI') : r.quelle === 'suche' ? t_('über die Suche im Dokument gefunden — ohne KI') : t_('aus einer Tabelle im Dokument'), r.heading, r.quote ? '„' + r.quote + '“' : ''].filter(Boolean).join('\n')
 
 async function uebernehmen() {
-  const liste = genommen.value; if (!liste.length) return
+  const liste = genommen.value; const tabellen = genommeneTabellen.value
+  if (!liste.length && !tabellen.length) return
   if (!store.actor) { store.toast(t_('👤 Name fehlt → Einstellungen')); return }
   busy.value = true
   const master = model.value.masterLocale
@@ -651,9 +709,11 @@ async function uebernehmen() {
     const neu = new Map()
     for (const r of liste) if (r.target === 'new') neu.set(r.newKey, r)
     const gk = gruppeKey.value
-    if (neu.size && !gk) { store.toast(t_('Gruppe ohne Namen')); busy.value = false; return }
-    if (neu.size && !gruppen.value.some(g => g.key === gk))
-      await api.post(`/api/model/groups/${encodeURIComponent(gk)}`, { key: gk, label: { [master]: gruppeName.value.trim() }, activeFrom: null }, 'PUT')
+    const neuesModell = neu.size > 0 || tabellen.some(x => x.target === 'new')
+    if (neuesModell && !gk) { store.toast(t_('Gruppe ohne Namen')); busy.value = false; return }
+    // jede gebrauchte Gruppe anlegen, die es noch nicht gibt — bei „je Überschrift“ sind das mehrere
+    for (const g of (neuesModell ? gebrauchteGruppen.value : []))
+      if (!gruppen.value.some(x => x.key === g.key)) await api.post(`/api/model/groups/${encodeURIComponent(g.key)}`, { key: g.key, label: { [master]: g.label }, activeFrom: null }, 'PUT')
     arbeit.value = { text: t_('Attribute'), erledigt: 0, gesamt: neu.size }
     await reihum([...neu], async ([key, r]) => {
       if (attrs.value.some(a => a.key === key)) { store.toast(t_('Schlüssel {0} gibt es', [key])); arbeit.value.erledigt++; return }   // nie eine Definition überschreiben
@@ -664,15 +724,17 @@ async function uebernehmen() {
         if (!(model.value.lists ?? []).some(l => l.key === key)) await api.post(`/api/model/lists/${encodeURIComponent(key)}`, { key, label: { [master]: r.key } }, 'PUT')
         await api.post(`/api/model/lists/${encodeURIComponent(key)}/values`, (r.listValues ?? []).map(v => ({ value: v.value, label: { [master]: v.label } })), 'PUT')
       }
-      await api.post(`/api/model/attributes/${encodeURIComponent(key)}`, { key, label: { [master]: r.key }, type: r.newType, unit, group: gk, ...(r.newType === 'enum' ? { list: key, multiple: !!r.multiple } : {}), ...(r.baustein && r.newType === 'html' ? { axes: ['locale'] } : {}) }, 'PUT')   // die Sprachachse heisst axes, nicht perLocale
+      await api.post(`/api/model/attributes/${encodeURIComponent(key)}`, { key, label: { [master]: r.key }, type: r.newType, unit, group: gruppeFuer(r).key, ...(r.newType === 'enum' ? { list: key, multiple: !!r.multiple } : {}), ...(r.baustein && r.newType === 'html' ? { axes: ['locale'] } : {}) }, 'PUT')   // die Sprachachse heisst axes, nicht perLocale
       arbeit.value.erledigt++
     })
     // 2. die Gruppe an die gewählte Ebene, wenn sie am Pfad noch nicht gilt — sonst gälte kein neues Attribut hier.
     // Eine Ebene darüber: erst lesen, was dort hängt — GroupsAttached ist die ganze Liste
-    if (neu.size && !vonOben(gk)) {
+    const anzuhaengen = (neuesModell ? gebrauchteGruppen.value : []).map(g => g.key).filter(k => !vonOben(k))
+    if (anzuhaengen.length) {
       const ziel = ebene.value
       const dort = ziel === props.node.id ? (props.node.attachedGroups ?? []) : ((await api.get(`/api/nodes/${encodeURIComponent(ziel)}`)).attachedGroups ?? [])
-      if (!dort.includes(gk)) await api.post(`/api/nodes/${encodeURIComponent(ziel)}/groups`, { groups: [...dort, gk] }, 'PUT')
+      const fehlen = anzuhaengen.filter(k => !dort.includes(k))
+      if (fehlen.length) await api.post(`/api/nodes/${encodeURIComponent(ziel)}/groups`, { groups: [...dort, ...fehlen] }, 'PUT')
     }
     // 2b. Sätze, die in einer vorhandenen Liste noch fehlen — einmal je Liste, vor dem Stapel
     const nachtrag = new Map()
@@ -687,7 +749,7 @@ async function uebernehmen() {
     const einmal = []; const ziele = new Set()
     for (const r of liste) { const k = zielKey(r); if (ziele.has(k)) continue; ziele.add(k); einmal.push(r) }
     for (const r of einmal) if (widerspricht(r).some(x => x.take)) { store.toast(t_('{0}: zwei Werte', [r.key])); busy.value = false; return }
-    const commands = einmal.flatMap(r => {
+    const commands = [...einmal].flatMap(r => {
       const def = r.target === 'attr' ? (r.baustein ? bausteinAttrs.value : attrs.value).find(a => a.key === r.attribute) : null
       const attribute = r.target === 'new' ? r.newKey : r.attribute
       const locale = def?.perLocale || (r.baustein && r.target === 'new' && r.newType === 'html') ? master : null
@@ -700,14 +762,35 @@ async function uebernehmen() {
         { op: 'value.source', args: { node: props.node.id, attribute, locale, source: name(r.doc), title: r.page != null ? t_('Seite {0}', [r.page]) : null, note, method: r.quelle === 'ki' ? 'ai' : 'import', checkedAt: heute } },
       ]
     })
-    arbeit.value = { text: t_('Werte'), erledigt: 0, gesamt: einmal.length }
+    // Tabellen: je Spalte ein Attribut, dann das Tabellenattribut mit diesen Spalten — danach die Zeilen als Befehle
+    if (tabellen.length) {
+      arbeit.value = { text: t_('Tabellen'), erledigt: 0, gesamt: tabellen.length }
+      for (const tb of tabellen) {
+        const gk = gruppeFuer(tb).key
+        for (const s of tb.spalten) {
+          if (s.vorhanden || attrs.value.some(a => a.key === s.key)) continue
+          await api.post(`/api/model/attributes/${encodeURIComponent(s.key)}`, { key: s.key, label: { [master]: s.label }, type: s.type, group: gk }, 'PUT')
+        }
+        if (tb.target === 'new') await api.post(`/api/model/attributes/${encodeURIComponent(tb.newKey)}`, { key: tb.newKey, label: { [master]: tb.key }, type: 'rows', group: gk, columns: tb.spalten.map(s => s.key) }, 'PUT')
+        arbeit.value.erledigt++
+      }
+      const attribute = tb => tb.target === 'new' ? tb.newKey : tb.attribute
+      for (const tb of tabellen) commands.push(...tb.daten.flatMap((zeile, zi) => {
+        const ref = `t${tabellen.indexOf(tb)}z${zi}`
+        return [{ op: 'row.add', ref, args: { node: props.node.id, attribute: attribute(tb) } },
+          ...tb.spalten.map((s, si) => ({ wert: zeile[si] ?? '', s })).filter(x => x.wert !== '')
+            .map(x => ({ op: 'attribute.set', args: { node: props.node.id, attribute: x.s.key, locale: null, channel: null, value: x.wert, values: null, row: '@' + ref } }))]
+      }))
+    }
+    if (!commands.length) { store.toast(t_('nichts zu schreiben')); busy.value = false; return }
+    arbeit.value = { text: t_('Werte'), erledigt: 0, gesamt: einmal.length + tabellen.reduce((n, tb) => n + tb.daten.length, 0) }
     const res = await api.post('/api/batch?skipErrors=true', { commands })
     arbeit.value.erledigt = einmal.length
     // gezählt werden die Werte, nicht die Belege — jeder zweite Befehl ist der Beleg zum ersten
     const n = (res.results ?? []).filter(x => x.index % 2 === 0).length
     for (const s of res.skipped ?? []) if (s.index % 2 === 0) store.toast(`${einmal[s.index / 2]?.key ?? s.index}: ${s.message}`)
     if (res.error) store.toast(res.error.message)
-    if (n) store.toast(t_('{0} Werte aus dem Dokument übernommen', [n]) + (neu.size ? ' · ' + t_('{0} Attribute neu', [neu.size]) : ''), 'ok')
+    if (n || tabellen.length) store.toast(t_('{0} Werte aus dem Dokument übernommen', [n]) + (neu.size ? ' · ' + t_('{0} Attribute neu', [neu.size]) : '') + (tabellen.length ? ' · ' + t_('{0} Tabellen', [tabellen.length]) : ''), 'ok')
     emit('done')
   } catch (e) { store.toast(e.message) }
   finally { busy.value = false; arbeit.value = null }
@@ -731,7 +814,7 @@ onMounted(async () => {
   lade()
 })
 onUnmounted(() => { window.removeEventListener('keydown', onKey); if (timer) clearTimeout(timer) })
-defineExpose({ rows, werte, bausteineZeilen, zeilenWerte, warten, hinweis, genommen, ki, kiHinweis, attributeHier, gruppe, gruppeName, ebene, zuordnen, neuLesen, kiFragen, ziel, schritte, medien, hochladen, bausteineSeiten, uebernehmen, arbeit })
+defineExpose({ rows, werte, bausteineZeilen, zeilenWerte, warten, hinweis, genommen, ki, kiHinweis, attributeHier, gruppe, gruppeName, ebene, zuordnen, neuLesen, kiFragen, ziel, schritte, medien, hochladen, bausteineSeiten, uebernehmen, arbeit, gebrauchteGruppen, JE_UEBERSCHRIFT, tabellenBloecke, genommeneTabellen })
 </script>
 
 <template>
@@ -753,7 +836,7 @@ defineExpose({ rows, werte, bausteineZeilen, zeilenWerte, warten, hinweis, genom
         <button class="x" @click="emit('close')" :title="$t('schliessen (Esc)')">×</button>
       </div>
       <div class="dt-body scroll">
-        <table class="grid" v-if="rows.length">
+        <table class="grid" v-if="rows.length || tabellenBloecke.length">
           <thead><tr>
             <th style="width:24px"></th>
             <th style="width:280px" :title="$t('die erste Spalte der Tabelle im Dokument — oder das Attribut, für das die KI eine Stelle fand')">{{ $t("Im Dokument") }}</th>
@@ -789,6 +872,18 @@ defineExpose({ rows, werte, bausteineZeilen, zeilenWerte, warten, hinweis, genom
               <td class="muted" :class="{ neg: r.error || r.inaktiv, pos: r.gleich }" style="font-size:11px" :title="whyTitel(r)">{{ r.error || r.why }}</td>
             </tr>
           </tbody>
+          <tbody v-if="tabellenBloecke.length" class="tabellen">
+            <tr class="step"><td colspan="7" class="step-band" style="display:table-cell;height:24px" :title="$t('Tabellen mit Spaltenkopf aus dem Dokument — als Tabellenattribut an das Produkt, mit einem Attribut je Spalte')">{{ $t("⊞ Tabellen") + ' ' }}<span class="muted">· {{ tabellenBloecke.length }}</span></td></tr>
+            <tr v-for="(r, i) in tabellenBloecke" :key="'m' + i" class="row" :class="{ aus: !r.take }">
+              <td><input type="checkbox" v-model="r.take" /></td>
+              <td><div class="nowrap"><b>{{ r.key }}</b></div><div class="muted roh">{{ r.spalten.map(s => s.label).join(' | ') }}</div></td>
+              <td class="quelle muted" :title="mehrere ? name(r.doc) : ''">{{ '▦ ' + (r.page != null ? $t("S. {0}", [r.page]) : '') }}</td>
+              <td>{{ r.target === 'attr' ? '⊞ ' + r.attribute : '+ ' + $t("neu") + ': ' + r.newKey }}</td>
+              <td class="muted">{{ $t("⊞ {0} × {1}", [r.spalten.length, r.daten.length]) }}</td>
+              <td class="muted roh" :title="r.daten.slice(0, 5).map(z => z.join(' | ')).join('\n')">{{ (r.daten[0] ?? []).join(' | ').slice(0, 60) }}</td>
+              <td class="muted" style="font-size:11px">{{ r.why }}</td>
+            </tr>
+          </tbody>
           <tbody v-if="bausteineZeilen.length" class="bausteine">
             <tr class="step"><td colspan="7" class="step-band" style="display:table-cell;height:24px" :title="$t('Abschnitte mit Überschrift, in der Reihenfolge des Dokuments — als html-Attribut an das Produkt, neu oder in ein bestehendes.')">{{ $t("▤ Textbausteine") + ' ' }}<span class="muted">· {{ bausteineZeilen.length }} · {{ $t("S. {0}–{1}", [bausteineSeiten[0], bausteineSeiten[1]]) }}</span></td></tr>
             <tr v-for="(r, i) in bausteineZeilen" :key="'b' + i" class="row" :class="{ aus: !r.take }">
@@ -817,7 +912,11 @@ defineExpose({ rows, werte, bausteineZeilen, zeilenWerte, warten, hinweis, genom
       <div class="toolbar dt-foot">
         <template v-if="neueZeilen">
           <span class="muted nowrap" :title="$t('Die Gruppe, in die neue Attribute kommen — eine bestehende oder eine neue')">{{ $t("Neue Attribute →") }}</span>
-          <select v-model="gruppe" style="width:200px"><option v-for="g in gruppen" :key="g.key" :value="g.key">▤ {{ $L(g.label) || g.key }}</option><option value="+">{{ $t("+ neue Gruppe") }}</option></select>
+          <select v-model="gruppe" style="width:220px" :title="$t('je Überschrift legt für jede Überschrift im Dokument eine Attributgruppe an — was im Dokument beieinander stand, steht es auch am Knoten')">
+            <option :value="JE_UEBERSCHRIFT">{{ $t("▤ je Überschrift im Dokument") }}</option>
+            <option v-for="g in gruppen" :key="g.key" :value="g.key">▤ {{ $L(g.label) || g.key }}</option><option value="+">{{ $t("+ neue Gruppe") }}</option>
+          </select>
+          <span v-if="gruppe === JE_UEBERSCHRIFT && gebrauchteGruppen.length" class="muted nowrap" :title="gebrauchteGruppen.map(g => g.label).join('\n')">{{ $t("▤ {0}", [gebrauchteGruppen.length]) }}</span>
           <input v-if="gruppe === '+'" v-model="gruppeName" class="cell-input" style="width:140px" :placeholder="$t('Name der Gruppe')" />
           <template v-if="!gruppeGilt">
             <span class="muted">{{ $t("Ebene") }}</span>
@@ -827,7 +926,7 @@ defineExpose({ rows, werte, bausteineZeilen, zeilenWerte, warten, hinweis, genom
         <span class="grow" />
         <span v-if="arbeit" class="lauf" :title="$t('{0}: {1} von {2}', [arbeit.text, arbeit.erledigt, arbeit.gesamt])"><b><i :style="{ width: (arbeit.gesamt ? Math.round(arbeit.erledigt / arbeit.gesamt * 100) : 100) + '%' }" /></b><span class="muted">{{ arbeit.text }} {{ arbeit.erledigt }}/{{ arbeit.gesamt }}</span></span>
         <button @click="emit('close')">{{ $t("Abbrechen") }}</button>
-        <button class="primary" :disabled="busy || !genommen.length" @click="uebernehmen">{{ $t("✓ {0} übernehmen", [genommen.length]) }}</button>
+        <button class="primary" :disabled="busy || !(genommen.length + genommeneTabellen.length)" @click="uebernehmen">{{ $t("✓ {0} übernehmen", [genommen.length + genommeneTabellen.length]) }}</button>
       </div>
     </div>
   </div>

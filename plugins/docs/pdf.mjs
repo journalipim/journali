@@ -12,7 +12,10 @@ export async function pdfPages(bytes) {
     try { await page.getOperatorList() } catch { /* ohne Schriftnamen geht es mit den Kennungen weiter */ }
     const content = await page.getTextContent()
     const fontName = id => { try { return (page.commonObjs.has(id) ? page.commonObjs.get(id)?.name : null) ?? id } catch { return id } }
-    const items = content.items.filter(i => i.str != null).map(i => ({ str: i.str, x: i.transform?.[4] ?? 0, y: i.transform?.[5] ?? 0, w: i.width ?? 0, h: i.height ?? 0, font: fontName(i.fontName) }))
+    // gedreht: hochkante Spaltenköpfe und Wasserzeichen stehen quer im Text. Sie behalten ihre Lage, tragen aber ein
+    // Kennzeichen — der Leser hält sie aus dem Zeilenfluss heraus (29.09.2026)
+    const items = content.items.filter(i => i.str != null).map(i => ({ str: i.str, x: i.transform?.[4] ?? 0, y: i.transform?.[5] ?? 0, w: i.width ?? 0, h: i.height ?? 0,
+      font: fontName(i.fontName), rot: Math.abs(i.transform?.[1] ?? 0) > 0.01 || Math.abs(i.transform?.[2] ?? 0) > 0.01 }))
     pages.push({ page: n, items, width: page.view?.[2] ?? null, height: page.view?.[3] ?? null })
     page.cleanup()
   }

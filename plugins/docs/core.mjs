@@ -180,4 +180,4 @@ export function pairsFromText(text, { minRows = 3 } = {}) {
 }
 
 /// Tabellen fortlaufend nummerieren — die Reihenfolge im Dokument bleibt erhalten
-export function numberedTables(tables) { return tables.map((t, i) => ({ seq: i, page: t.page ?? null, heading: t.heading ?? null, rows: t.rows })) }
+export function numberedTables(tables) { return tables.map((t, i) => ({ seq: i, page: t.page ?? null, heading: t.heading ?? null, header: t.header ?? null, rows: t.rows })) }

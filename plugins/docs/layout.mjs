@@ -22,7 +22,7 @@ const gleicheSpalte = (a, b, size) => Math.abs(a.x0 - b.x0) <= 1.0 * size || ueb
 /// Zeilen: Stücke mit gleicher Grundlinie (Toleranz halbe Schriftgrösse), von oben nach unten. In der Zeile Läufe:
 /// ein Sprung nach rechts, der grösser ist als ein Wortabstand, trennt zwei Läufe — das sind die Zellen einer Tabelle
 export function lines(items) {
-  const st = (items ?? []).filter(i => String(i.str ?? '').trim()).map(i => ({
+  const st = (items ?? []).filter(i => String(i.str ?? '').trim() && !i.rot).map(i => ({
     text: String(i.str).replace(/\s+/g, ' '), x0: num(i.x), x1: num(i.x) + num(i.w), y: num(i.y), size: num(i.h) || 1, font: String(i.font ?? '') }))
   st.sort((a, b) => b.y - a.y || a.x0 - b.x0)
   const out = []
@@ -133,6 +133,15 @@ export function tables(ls, gesperrt = paragraphs(ls)) {
     const daten = reihen.slice(k)
     if (daten.length < 2) { i++; continue }
     sp = spaltenVon(daten.flatMap(r => r.zellen))
+    // Eine Spalte ganz rechts, die kaum eine Reihe füllt, gehört nicht zur Tabelle: daneben steht etwas anderes auf
+    // gleicher Höhe — im Datenblatt die Zahlen der Tabelle rechts (29.09.2026)
+    while (sp.length > 2) {
+      const letzte = sp.length - 1
+      const gefuellt = daten.filter(r => r.zellen.some(z => spalteVon(z, sp) === letzte)).length
+      if (gefuellt >= daten.length / 2) break
+      for (const r of daten) r.zellen = r.zellen.filter(z => spalteVon(z, sp) !== letzte)
+      sp = spaltenVon(daten.flatMap(r => r.zellen))
+    }
     const kopfZeilen = reihen.slice(0, k).flatMap(r => r.zeilen)
     // Zeilen über der Tabelle, deren Läufe in den Spalten stehen, in einem anderen Schnitt als die Daten — bis zu sechs
     const oberste = () => (kopfZeilen[0] ?? daten[0].zeilen[0])
@@ -352,7 +361,16 @@ export function layoutDocument(pages, { max = 900, minRows = 3 } = {}) {
         heading = t.replace(/\n/g, ' ').replace(/\s*:$/, ''); offen = heading; continue
       }
       if (b.table) {
-        if (b.rows.length >= minRows && b.rows.every(istSchluesselWert)) tabellen.push({ page: s.page, heading, rows: b.rows.map(r => [r[0].replace(/:$/, ''), ...wertZellen(r)]) })
+        const kopf = b.header && b.header.filter(Boolean).length >= 2
+        // mit Kopf: die Tabelle bleibt eine Tabelle — Spalten und Zeilen, am Knoten ein Tabellenattribut
+        if (kopf && b.rows.length >= 1) tabellen.push({ page: s.page, heading, header: b.header, rows: b.rows })
+        // ohne Kopf: Schlüssel links, Wert rechts — am Knoten je Zeile ein Attribut. Einzelne Störzeilen (ein Symbol
+        // aus einer Zeichenschrift, eine Zwischenzeile) lassen die Tabelle nicht durchfallen, solange die
+        // Schlüssel/Wert-Zeilen die Mehrheit sind (29.09.2026)
+        else {
+          const kv = b.rows.filter(istSchluesselWert)
+          if (kv.length >= minRows && kv.length >= b.rows.length / 2) tabellen.push({ page: s.page, heading, header: null, rows: kv.map(r => [r[0].replace(/:$/, ''), ...wertZellen(r)]) })
+        }
         push((b.header && b.header.some(Boolean) ? b.header.join(' | ') + '\n' : '') + t); offen = null; continue
       }
       push(t); offen = null
