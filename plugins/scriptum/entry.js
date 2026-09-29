@@ -1,4 +1,4 @@
-(function(){const s=document.createElement('style');s.textContent="\n.zeile[data-v-d19b0f47] { display: flex; align-items: center; gap: 6px; height: 26px; padding: 0 8px; cursor: pointer; white-space: nowrap;\n}\n.zeile.on[data-v-d19b0f47] { background: var(--accent-soft);\n}\n.zeile .lbl[data-v-d19b0f47] { overflow: hidden; text-overflow: ellipsis; flex: 1;\n}\n.form[data-v-d19b0f47] { width: 100%; border-bottom: 1px solid var(--line);\n}\n.form td[data-v-d19b0f47] { height: 30px; vertical-align: middle; white-space: normal; padding: 2px 4px;\n}\n.form td.attr[data-v-d19b0f47] { color: var(--muted); white-space: nowrap; padding-left: 8px;\n}\n.section[data-v-d19b0f47] { padding: 10px 8px; border-top: 1px solid var(--line);\n}\n.section h2[data-v-d19b0f47] { font-size: 12px; margin: 0 0 6px; color: var(--muted); font-weight: 600; display: flex; align-items: center; gap: 6px;\n}\n.tabelle[data-v-d19b0f47] { width: auto;\n}\n.text[data-v-d19b0f47], .log[data-v-d19b0f47] { font-family: ui-monospace, Consolas, monospace; font-size: 12px; white-space: pre-wrap; margin: 4px 0 0;\n}\n.log[data-v-d19b0f47] { color: var(--muted); border-top: 1px solid var(--line); padding-top: 6px; margin-top: 8px;\n}\n.datei[data-v-d19b0f47] { display: flex; gap: 6px; align-items: center;\n}\n";document.head.append(s)})();
+(function(){const s=document.createElement('style');s.textContent="\n.zeile[data-v-dac747b1] { display: flex; align-items: center; gap: 6px; height: 26px; padding: 0 8px; cursor: pointer; white-space: nowrap;\n}\n.zeile.on[data-v-dac747b1] { background: var(--accent-soft);\n}\n.zeile .lbl[data-v-dac747b1] { overflow: hidden; text-overflow: ellipsis; flex: 1;\n}\n.form[data-v-dac747b1] { width: 100%; border-bottom: 1px solid var(--line);\n}\n.form td[data-v-dac747b1] { height: 30px; vertical-align: middle; white-space: normal; padding: 2px 4px;\n}\n.form td.attr[data-v-dac747b1] { color: var(--muted); white-space: nowrap; padding-left: 8px;\n}\n.section[data-v-dac747b1] { padding: 10px 8px; border-top: 1px solid var(--line);\n}\n.section h2[data-v-dac747b1] { font-size: 12px; margin: 0 0 6px; color: var(--muted); font-weight: 600; display: flex; align-items: center; gap: 6px;\n}\n.tabelle[data-v-dac747b1] { width: auto;\n}\n.text[data-v-dac747b1], .log[data-v-dac747b1] { font-family: ui-monospace, Consolas, monospace; font-size: 12px; white-space: pre-wrap; margin: 4px 0 0;\n}\n.log[data-v-dac747b1] { color: var(--muted); border-top: 1px solid var(--line); padding-top: 6px; margin-top: 8px;\n}\n.datei[data-v-dac747b1] { display: flex; gap: 6px; align-items: center;\n}\n";document.head.append(s)})();
 const m = window.journali.vue;
 const Fragment = m.Fragment;
 const computed = m.computed;
@@ -543,7 +543,6 @@ const _sfc_main = {
     const werte = ref({});
     const lauf = ref(null);
     const zugaenge = ref([]);
-    const vorlage = ref(null);
     const darfSchreiben = computed(() => store.can("scriptum.write"));
     const rollen = ref([]);
     const RECHTE = ref([]);
@@ -568,10 +567,26 @@ const _sfc_main = {
         }
       }
     });
-    function beispielEinfuegen(b) {
+    async function beispielEinfuegen(b) {
       if (!b) return;
-      vorlage.value = b.source;
-      editor.value = true;
+      let key = b.key;
+      const da = new Set(liste.value.map((s) => s.key));
+      if (da.has(key)) {
+        let n = 2;
+        while (da.has(b.key + "_" + n)) n++;
+        key = b.key + "_" + n;
+      }
+      const kopf = kopfLesen(b.source);
+      const leib = { source: b.source, params: kopf ? paramsAus(kopf) : [] };
+      if (kopf?.label) leib.label = String(kopf.label);
+      if (kopf?.role) leib.role = String(kopf.role);
+      try {
+        await api.post(`/api/scriptum/scripts/${encodeURIComponent(key)}`, leib, "PUT");
+        await laden(key);
+        editor.value = true;
+      } catch (e) {
+        store.toast(e.message);
+      }
     }
     onUnmounted(() => clearTimeout(poll));
     async function laden(key = cur.value?.key) {
@@ -697,7 +712,7 @@ const _sfc_main = {
                   1
                   /* TEXT */
                 ),
-                _cache[9] || (_cache[9] = createElementVNode(
+                _cache[8] || (_cache[8] = createElementVNode(
                   "span",
                   { class: "grow" },
                   null,
@@ -798,7 +813,7 @@ const _sfc_main = {
                     1
                     /* TEXT */
                   ),
-                  _cache[10] || (_cache[10] = createElementVNode(
+                  _cache[9] || (_cache[9] = createElementVNode(
                     "span",
                     { class: "grow" },
                     null,
@@ -864,7 +879,7 @@ const _sfc_main = {
                 ]),
                 createElementVNode("div", _hoisted_22, [
                   darfSchreiben.value ? (openBlock(), createElementBlock("table", _hoisted_23, [
-                    _cache[11] || (_cache[11] = createElementVNode(
+                    _cache[10] || (_cache[10] = createElementVNode(
                       "colgroup",
                       null,
                       [
@@ -999,7 +1014,7 @@ const _sfc_main = {
                       )
                     ]),
                     (cur.value.params ?? []).length ? (openBlock(), createElementBlock("table", _hoisted_39, [
-                      _cache[12] || (_cache[12] = createElementVNode(
+                      _cache[11] || (_cache[11] = createElementVNode(
                         "colgroup",
                         null,
                         [
@@ -1097,7 +1112,7 @@ const _sfc_main = {
                         1
                         /* TEXT */
                       ),
-                      _cache[13] || (_cache[13] = createElementVNode(
+                      _cache[12] || (_cache[12] = createElementVNode(
                         "span",
                         { class: "grow" },
                         null,
@@ -1223,17 +1238,11 @@ const _sfc_main = {
             editor.value && cur.value ? (openBlock(), createBlock(unref(ScriptEditor), {
               key: 2,
               lang: "js",
-              "model-value": vorlage.value ?? cur.value.source ?? "",
+              "model-value": cur.value.source ?? "",
               title: cur.value.label || cur.value.key,
               "draft-key": "scriptum." + cur.value.key,
-              onSave: _cache[7] || (_cache[7] = (q) => {
-                vorlage.value = null;
-                speichern(q);
-              }),
-              onClose: _cache[8] || (_cache[8] = ($event) => {
-                editor.value = false;
-                vorlage.value = null;
-              })
+              onSave: speichern,
+              onClose: _cache[7] || (_cache[7] = ($event) => editor.value = false)
             }, null, 8, ["model-value", "title", "draft-key"])) : createCommentVNode("v-if", true)
           ])
         ],
@@ -1243,7 +1252,7 @@ const _sfc_main = {
     };
   }
 };
-const View = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-d19b0f47"]]);
+const View = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-dac747b1"]]);
 const entry = {
   views: [{ path: "skripte", topic: "tools", label: t("Skripte"), icon: "≡", hint: t("Auswertungen und Übergaben, die hier geschrieben werden: Tabelle, Text oder Datei — von Hand oder als Job"), component: View }]
 };

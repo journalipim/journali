@@ -140,15 +140,16 @@ test('ein Parameter vom Typ driver ist eine Auswahl eingerichteter Zugänge', as
   assert.ok(opts.includes('SAP Prod') && opts.includes('Frontify'), 'die eingerichteten Zugänge stehen zur Wahl')
 })
 
-test('＋ Beispiel lädt einen geprüften Startpunkt in den Editor', async () => {
-  const { w } = welt()
+test('＋ Beispiel legt ein NEUES Skript aus der Vorlage an — überschreibt nicht das gewählte', async () => {
+  const { w, rufe } = welt()   // gewählt ist „preise“
   await warte(w)
   const sel = w.find('select.beispiele')
   assert.ok(sel.exists(), 'die Beispiel-Auswahl steht da')
   assert.equal(sel.findAll('option').length, beispiele.length + 1, 'jedes Beispiel plus der Platzhalter')
   await sel.setValue(beispiele[0].key)
   await warte(w)
-  const ed = w.findComponent({ name: 'ScriptEditor' })
-  assert.ok(ed.exists(), 'der Editor ist offen')
-  assert.equal(ed.props('modelValue'), beispiele[0].source, 'mit dem Quelltext des Beispiels')
+  const put = rufe.find(r => r.opt.method === 'PUT' && new RegExp('/scriptum/scripts/' + beispiele[0].key + '$').test(r.pfad))
+  assert.ok(put, 'ein neues Skript unter dem Beispiel-Schlüssel')
+  assert.equal(JSON.parse(put.opt.body).source, beispiele[0].source, 'mit dem Quelltext der Vorlage')
+  assert.ok(!rufe.some(r => r.opt.method === 'PUT' && /\/scriptum\/scripts\/preise$/.test(r.pfad)), 'das gewählte Skript „preise“ bleibt unberührt')
 })

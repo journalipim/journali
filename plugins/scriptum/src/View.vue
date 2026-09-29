@@ -20,7 +20,6 @@ const neu = ref('')
 const werte = ref({})            // Werte des Formulars
 const lauf = ref(null)           // { job, run, laeuft, status, ergebnis, log }
 const zugaenge = ref([])         // eingerichtete Zugaenge — fuer Parameter vom Typ driver
-const vorlage = ref(null)        // Quelltext eines Beispiels, wenn eines eingefuegt wird
 const darfSchreiben = computed(() => store.can('scriptum.write'))
 const rollen = ref([])
 const RECHTE = ref([])
@@ -35,8 +34,20 @@ onMounted(async () => {
   }
 })
 
-// Ein Beispiel als Startpunkt in den Editor laden — der Autor speichert es als neues oder als dieses Skript
-function beispielEinfuegen(b) { if (!b) return; vorlage.value = b.source; editor.value = true }
+// Aus einem Beispiel ein NEUES Skript anlegen (nie das gewählte überschreiben): eindeutiger Schlüssel, Kopf als
+// Bezeichnung/Parameter, dann wählen und im Editor öffnen
+async function beispielEinfuegen(b) {
+  if (!b) return
+  let key = b.key
+  const da = new Set(liste.value.map(s => s.key))
+  if (da.has(key)) { let n = 2; while (da.has(b.key + '_' + n)) n++; key = b.key + '_' + n }
+  const kopf = kopfLesen(b.source)
+  const leib = { source: b.source, params: kopf ? paramsAus(kopf) : [] }
+  if (kopf?.label) leib.label = String(kopf.label)
+  if (kopf?.role) leib.role = String(kopf.role)
+  try { await api.post(`/api/scriptum/scripts/${encodeURIComponent(key)}`, leib, 'PUT'); await laden(key); editor.value = true }
+  catch (e) { store.toast(e.message) }
+}
 onUnmounted(() => clearTimeout(poll))
 
 async function laden(key = cur.value?.key) {
@@ -205,8 +216,8 @@ const dateiLink = computed(() => ergebnis.value?.file
     </template>
     <div v-else class="empty">{{ $t("Links ein Skript wählen.") }}</div>
 
-    <ScriptEditor v-if="editor && cur" lang="js" :model-value="vorlage ?? cur.source ?? ''" :title="cur.label || cur.key"
-      :draft-key="'scriptum.' + cur.key" @save="q => { vorlage = null; speichern(q) }" @close="editor = false; vorlage = null" />
+    <ScriptEditor v-if="editor && cur" lang="js" :model-value="cur.source ?? ''" :title="cur.label || cur.key"
+      :draft-key="'scriptum.' + cur.key" @save="speichern" @close="editor = false" />
   </div>
 </template>
 
