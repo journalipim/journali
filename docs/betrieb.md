@@ -549,6 +549,11 @@ Ein Skript ist ein ES-Modul, das **im Journal** steht (Plugin-Daten von `scriptu
 Kindprozess läuft — nie im Serverprozess. Geschrieben wird es unter ⌨ Skripte, angestossen von Hand, als Job mit
 Zeitplan oder über `/api`; jeder Lauf ist ein Job `scriptum_<key>` mit Log, Zeitgrenze und Fächern.
 
+**Ab Pro+** (29.09.2026): in Kostenlos und Pro gibt es `scriptum` nicht. Ein Skript läuft als Prozess auf dem Server,
+und wer eines schreibt, kann alles, was der Serverbenutzer kann — das gehört zu den Tarifen, die auch die
+Verantwortung dafür tragen. Ausserhalb des Tarifs lädt das Plugin nicht, lässt sich nicht einschalten und kein Lauf
+startet (403).
+
 Der Kopf des Skripts ist sein Formular, das Programm ist seine Standardfunktion:
 
 ```js
@@ -645,7 +650,7 @@ weitere Team ohne Abo und Schlüssel hat nichts und rechnet über ein anderes ab
 |---|---|---|---|
 | Kostenlos (`free`) | 10 000 / 50 000 | 1 | Tabelle: `table`, `csv`, `excel`, `json`; `exceladdin` (Add-in), `ooaddin`, `derive` (Vorschaubilder), `export` — und der `tasker`, den die beiden letzten brauchen (er startet nur Jobs erlaubter Plugins) |
 | Pro (`pro`) | 50 000 / 250 000 | 5 | dazu `datasheet`, `xliff`, `xport` (BMEcat), `etim` — und was sie brauchen: `da`; `backup` als Job |
-| Pro+ (`proplus`) | 50 000 / 250 000 | 5 | alle („All-Plugin“ zu Pro, gilt systemweit) |
+| Pro+ (`proplus`) | 50 000 / 250 000 | 5 | alle („All-Plugin“ zu Pro, gilt systemweit) — dazu `scriptum` (Skripte), das es in Kostenlos und Pro nicht gibt |
 | Enterprise (`enterprise`) | 200 000 / 1 000 000 | ohne Grenze | alle |
 | Unlimited (`unlimited`) | ohne Grenze | ohne Grenze | alle |
 

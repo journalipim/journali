@@ -2151,6 +2151,10 @@ Quelltext (`plugins/scriptum/kopf.mjs`, nur der Ausdruck, nicht das Programm) un
 daraus baut das Formular, auch für den, der den Quelltext nicht sehen darf. Beim Lauf liest der Runner denselben Kopf
 noch einmal und nimmt seine Vorgaben; so können Programm und Maske nicht auseinanderlaufen.
 
+**Ab Pro+, nicht in Pro** (29.09.2026, entschieden). Ein Skript läuft als Prozess auf dem Server, und wer eines
+schreibt, kann alles, was der Serverbenutzer kann. Darum steht `scriptum` in keiner Plugin-Liste des Saatguts und gilt
+erst, wo der Tarif alle Plugins enthält — Pro+, Enterprise, Unlimited. Kostenlos und Pro bleiben ohne.
+
 **Grenzen, an den Runner.** Zeitgrenze je Lauf (Vorgabe 60 s, am Skript einstellbar, höchstens eine Stunde),
 höchstens 20 000 Zeilen und 4 000 Zeichen je Zelle, Text bis 200 000 Zeichen. Ein Fehler des Skripts ist eine Meldung
 im Ergebnis und Rückgabewert 1 — kein Absturz.
