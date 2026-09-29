@@ -5,7 +5,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { api, when } from '../api.js'
 import { store } from '../store.js'
-import { plugins } from '../plugins.js'
+import { plugins, ladbar } from '../plugins.js'
 import { baseTopics, topicOf, entries } from '../topics.js'
 import { dialog } from '../dialog.js'
 import Splitter from '../components/Splitter.vue'
@@ -222,7 +222,7 @@ function pick(k) { cur.value = k }
         <h2>{{ $t("▤ In Excel einrichten") }}</h2>
         <div class="muted" style="font-size:12px;line-height:1.6">{{ ' ' + $t("Manifest:") + ' ' }}<a :href="`/plugins/${current.key}/manifest.xml`" download="manifest.xml">{{ $t("manifest.xml herunterladen") }}</a> <span :title="$t('In Excel über einen vertrauenswürdigen Add-In-Katalog (freigegebener Ordner) oder „Mein Add-In hochladen“.')">{{ $t("— einbinden") }}</span>{{ ' ' + $t("· Anleitung:") + ' ' }}<a :href="`/plugins/${current.key}/README.md`" target="_blank">{{ $t("README") }}</a>{{ $t(". Aufgabenbereich:") + ' ' }}<a :href="`/plugins/${current.key}/taskpane.html`" target="_blank">{{ $t("taskpane.html") }}</a> <span :title="$t('Ausserhalb von Excel nur zur Ansicht.')">{{ $t("· Ansicht") }}</span>{{ ' ' + $t("· HTTPS ausser für localhost") + ' ' }}</div>
       </div>
-      <div class="section" v-if="manifest.runs === 'browser'">
+      <div class="section" v-if="ladbar(manifest)">
         <h2>{{ $t("Ansichten") }}</h2>
         <div class="chips"><router-link v-for="v in plugins.views.filter(x => x.key === current.key)" :key="v.path" :to="`/p/${current.key}/${v.path}`" class="chip">{{ v.icon }} {{ v.label }}</router-link>
           <span v-if="!plugins.views.some(x => x.key === current.key)" class="muted">{{ current.enabled ? $t('keine (oder Modul nicht geladen — neu laden)') : 'aus' }}</span></div>
