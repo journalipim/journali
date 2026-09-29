@@ -16,6 +16,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import os from 'node:os'
+import { pathToFileURL } from 'node:url'
 import { lib, pruefeSchema } from './lib.mjs'
 
 export const MARKE = '⟦scriptum⟧'
@@ -196,4 +197,6 @@ async function main() {
 }
 
 // Als Modul geladen (Prüfstand) tut die Datei nichts von selbst.
-if (process.argv[1] && import.meta.url === `file://${process.argv[1]}`) main().catch(e => { console.error('✗ ' + e.message); return raus(1) })
+// process.argv[1] ist auf Windows relativ (runner.mjs), import.meta.url absolut (file:///C:/…/runner.mjs) —
+// pathToFileURL(path.resolve(…)) bringt beides auf denselben Stand.
+if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) main().catch(e => { console.error('✗ ' + e.message); return raus(1) })

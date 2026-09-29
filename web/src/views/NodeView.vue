@@ -1252,8 +1252,6 @@ function cellMenu(e, def, col, block) {
       </div>
     </div>
 
-    <div class="toolbar hint muted" style="border-top:1px solid var(--line);border-bottom:0;font-size:12px">
-      <kbd>{{ $t("Tab") }}</kbd>{{ ' ' + $t("Zelle ·") + ' ' }}<kbd>{{ $t("Enter") }}</kbd>{{ ' ' + $t("bearbeiten/speichern ·") + ' ' }}<kbd>{{ $t("Esc") }}</kbd>{{ ' ' + $t("verwerfen ·") + ' ' }}<kbd>{{ $t("Entf") }}</kbd> <span :title="$t('Eigenen Wert löschen · schraffiert = Achse gibt es nicht · ⌀ = Gruppe hier nicht aktiv')">{{ $t("löschen · schraffiert · ⌀") }}</span> <i>{{ $t("kursiv") }}</i>{{ ' ' + $t("= geerbt") + ' ' }}</div>
   </div>
   <div v-else class="pane" style="flex:3"><div class="empty">…</div></div>
 

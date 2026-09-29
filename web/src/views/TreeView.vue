@@ -34,6 +34,7 @@ const KEYS = [
   ['status:', 'Status (Modell → Status)'], ['group:', t_('Attributgruppe gilt hier')],
   ['under:', t_('nur im Teilbaum eines Knotens')], ['by:', t_('Urheber der letzten Änderung')], ['since:', t_('geändert seit (Datum)')],
   ['media:', t_('hat Medien: any · image / document · Name (*.pdf)')], ['folder:', t_('Medium im Medienordner: Name, Pfad (a/b) oder none')], ['rel:', t_('hat Relation: any · Typ · Typ=Partner (Name, SKU, Id)')],
+  ['sem:', t_('semantische Suche (Vektoren)')],
 ]
 const sugg = ref([])          // [{ value, label, hint }]
 const suggIdx = ref(0)
@@ -121,14 +122,24 @@ watch(() => props.id, id => { if (id) { store.lastNode = id; try { sessionStorag
 const selected = computed(() => props.id ? tree.byId.get(props.id) : null)
 
 // Filter: Label/SKU/Id sofort im Client, ab 2 Zeichen zusätzlich die Server-Suche über alle Werte.
+// sem:Suchbegriff: semantische Suche über die Vektoren (29.09.2026) — findet sinnverwandte Knoten statt Wortübereinstimmungen.
+const semMatch = s => /^sem:(.+)/.exec(s)
 watch(q, v => {
   clearTimeout(searchTimer)
   const s = v.trim()
   if (s.length < 2 && !/^-?[a-z]+:/.test(s)) { hits.value = new Map(); return }
+  const sem = semMatch(s)
   searchTimer = setTimeout(async () => {
-    try { hits.value = new Map((await api.get(`/api/search?q=${encodeURIComponent(s)}`)).map(h => [h.row.id, h.hit])) }
-    catch (e) { store.toast(e.message) }
-  }, 250)
+    try {
+      if (sem && sem[1].trim().length > 1) {
+        const r = await api.get(`/api/nodes/semantic?q=${encodeURIComponent(sem[1].trim())}`)
+        if (!r.ready) { store.toast(r.reason ?? t_('Semantische Suche nicht bereit')); return }
+        hits.value = new Map((r.hits ?? []).map(h => [h.id, h.score != null ? `${(h.score * 100).toFixed(0)} %` : '≈']))
+      } else {
+        hits.value = new Map((await api.get(`/api/search?q=${encodeURIComponent(s)}`)).map(h => [h.row.id, h.hit]))
+      }
+    } catch (e) { store.toast(e.message) }
+  }, sem ? 500 : 250)
 })
 
 // Sichtbare Zeilen: aufgeklappt oder — mit Filter — alle Treffer samt Pfad.
@@ -784,8 +795,6 @@ function onDialogKey(e) {
       <div v-if="tree.loaded && !tree.rows.length" class="empty">{{ $t("Leer — oben") + ' ' }}<b>+ ▣</b>{{ ' ' + $t("legt die erste Gruppe an.") }}</div>
       <div v-else-if="q && !visible.length" class="empty">{{ $t("Nichts zu „{0}“", [q]) }}</div>
     </div>
-    <div class="toolbar hint muted" style="border-top:1px solid var(--line);border-bottom:0;font-size:12px">
-      <kbd>↑</kbd><kbd>↓</kbd> · <kbd>{{ $t("Entf") }}</kbd>{{ ' ' + $t("zurückziehen ·") + ' ' }}<kbd>/</kbd>{{ ' ' + $t("Suche ·") + ' ' }}<kbd>{{ $t("Strg") }}</kbd>{{ $t("+Klick auswählen · ziehen = umhängen, mit") + ' ' }}<kbd>{{ $t("Shift") }}</kbd>{{ ' ' + $t("= verknüpfen ·") + ' ' }}<i>{{ $t("kursiv") }}</i>{{ ' ' + $t("= angeheftet") + ' ' }}</div>
   </div>
 
   <Splitter v-model="treeW" :min="200" :max="800" />

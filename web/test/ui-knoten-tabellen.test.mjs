@@ -952,7 +952,7 @@ test('Klick auf ein Asset zeigt es gross — der Download-Link trägt den Namen,
   assert.ok(v.exists(), 'die Vorschau steht da')
   assert.equal(v.find('h1').text().startsWith('datenblatt.pdf'), true)
   assert.equal(v.find('a.x').attributes('href'), '/api/media/m1/file?name=datenblatt.pdf', 'der Link trägt den Namen — eine andere Adresse als die gecachte ohne Dateinamen')
-  assert.ok(v.find('iframe').exists(), 'ein PDF steht als Blatt da, nicht als Bild')
+  assert.ok(v.find('img.seite').exists(), 'ein PDF steht als Seitenvorschau da (Thumbnail, nicht iframe)')
   // blättern: das nächste Medium des Knotens, ohne das Fenster zu schliessen
   await v.findAll('button.x').find(b => b.text() === '›').trigger('click'); await flushPromises()
   assert.match(v.find('h1').text(), /massblatt\.pdf/)
