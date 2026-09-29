@@ -167,6 +167,48 @@ export default async (ctx) => {
 `
   },
   {
+    key: "sap-odata",
+    title: "SAP OData lesen",
+    description: "Ein SAP-Gateway-OData-Service (v2 oder v4) über einen Zugang lesen: $format=json, Blättern mit $skip/$top, das Ergebnis als Tabelle.",
+    source: `export const meta = {
+  label: 'SAP OData lesen',
+  params: [
+    { key: 'system', label: 'Zugang (HTTP/REST)', type: 'driver', default: '' },
+    { key: 'service', label: 'OData-Service und Entität', type: 'text', default: '/sap/opu/odata/sap/ZMY_SRV/ProductSet' },
+    { key: 'select', label: 'Felder ($select, leer = alle)', type: 'text', default: '' },
+    { key: 'grenze', label: 'Höchstens so viele', type: 'number', default: '200' },
+  ],
+}
+
+// SAP Gateway über einen Zugang lesen. Die Anmeldung (Basic oder Bearer) hängt der Server an — hier steht nur der Pfad
+// hinter der Adresse. $format=json, weil SAP sonst XML liefert; geblättert wird mit $skip/$top. Die Antwort ist bei
+// OData v2 { d: { results: [...] } }, bei v4 { value: [...] }. __metadata gehört nicht in die Tabelle.
+export default async (ctx) => {
+  const zugang = ctx.zugang(ctx.params.system)
+  const service = ctx.params.service || '/'
+  const select = String(ctx.params.select || '').trim()
+  const grenze = Number(ctx.params.grenze) || 200
+  const seite = 100
+  const zeilen = []
+  for (let skip = 0; skip < grenze; skip += seite) {
+    const top = Math.min(seite, grenze - skip)
+    let pfad = service + (service.indexOf('?') >= 0 ? '&' : '?') + '$format=json&$top=' + top + '&$skip=' + skip
+    if (select) pfad = pfad + '&$select=' + encodeURIComponent(select)
+    const antwort = await zugang.get(pfad)
+    const d = antwort && antwort.d ? antwort.d : antwort
+    const teil = d && Array.isArray(d.results) ? d.results
+      : (antwort && Array.isArray(antwort.value) ? antwort.value : (Array.isArray(d) ? d : []))
+    for (const e of teil) zeilen.push(e)
+    if (teil.length < top) break
+  }
+  if (!zeilen.length) return ctx.out.text('Keine Datensätze.')
+  const spalten = Object.keys(zeilen[0]).filter((k) => k !== '__metadata')
+  const zelle = (w) => w == null ? '' : (typeof w === 'object' ? JSON.stringify(w) : String(w))
+  return ctx.out.table(spalten, zeilen.map((e) => spalten.map((s) => zelle(e[s]))))
+}
+`
+  },
+  {
     key: "bericht-zaehlen",
     title: "Knoten je Wert zählen",
     description: "Ein einfacher Bericht ohne Fremdsystem: wie viele Knoten je Wert eines Feldes (etwa status).",
