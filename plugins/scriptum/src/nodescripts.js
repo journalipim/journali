@@ -10,9 +10,12 @@ export async function refresh() {
   return liste
 }
 
-export async function laufAufKnoten(s, ids) {
+export async function laufAufKnoten(s, ids, ctx) {
   const knoten = ids || []
   const r = await api.post(`/api/scriptum/scripts/${encodeURIComponent(s.key)}/run`, { params: { nodes: knoten.join(',') } })
-  store.toast(t('≡ {0}: gestartet auf {1} Knoten', [s.label || s.key, knoten.length]))
+  // den Lauf vermerken und in die Skript-Ansicht fuehren — dort steht das Ergebnis mit Download-Link
+  try { localStorage.setItem('journali.scriptum.run', JSON.stringify({ key: s.key, job: r.job, run: r.run })) } catch { /* egal */ }
+  store.toast(t('≡ {0}: läuft … ({1} Knoten) — Ergebnis in ⌨ Skripte', [s.label || s.key, knoten.length]))
+  if (ctx && ctx.go) ctx.go('/p/scriptum/skripte')
   return r
 }

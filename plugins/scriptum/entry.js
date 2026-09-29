@@ -1,4 +1,4 @@
-(function(){const s=document.createElement('style');s.textContent="\n.zeile[data-v-a8e03d4f] { display: flex; align-items: center; gap: 6px; height: 26px; padding: 0 8px; cursor: pointer; white-space: nowrap;\n}\n.zeile.on[data-v-a8e03d4f] { background: var(--accent-soft);\n}\n.zeile .lbl[data-v-a8e03d4f] { overflow: hidden; text-overflow: ellipsis; flex: 1;\n}\n.form[data-v-a8e03d4f] { width: 100%; border-bottom: 1px solid var(--line);\n}\n.form td[data-v-a8e03d4f] { height: 30px; vertical-align: middle; white-space: normal; padding: 2px 4px;\n}\n.form td.attr[data-v-a8e03d4f] { color: var(--muted); white-space: nowrap; padding-left: 8px;\n}\n.section[data-v-a8e03d4f] { padding: 10px 8px; border-top: 1px solid var(--line);\n}\n.section h2[data-v-a8e03d4f] { font-size: 12px; margin: 0 0 6px; color: var(--muted); font-weight: 600; display: flex; align-items: center; gap: 6px;\n}\n.tabelle[data-v-a8e03d4f] { width: auto;\n}\n.text[data-v-a8e03d4f], .log[data-v-a8e03d4f] { font-family: ui-monospace, Consolas, monospace; font-size: 12px; white-space: pre-wrap; margin: 4px 0 0;\n}\n.log[data-v-a8e03d4f] { color: var(--muted); border-top: 1px solid var(--line); padding-top: 6px; margin-top: 8px;\n}\n.datei[data-v-a8e03d4f] { display: flex; gap: 6px; align-items: center;\n}\n";document.head.append(s)})();
+(function(){const s=document.createElement('style');s.textContent="\n.zeile[data-v-42438318] { display: flex; align-items: center; gap: 6px; height: 26px; padding: 0 8px; cursor: pointer; white-space: nowrap;\n}\n.zeile.on[data-v-42438318] { background: var(--accent-soft);\n}\n.zeile .lbl[data-v-42438318] { overflow: hidden; text-overflow: ellipsis; flex: 1;\n}\n.form[data-v-42438318] { width: 100%; border-bottom: 1px solid var(--line);\n}\n.form td[data-v-42438318] { height: 30px; vertical-align: middle; white-space: normal; padding: 2px 4px;\n}\n.form td.attr[data-v-42438318] { color: var(--muted); white-space: nowrap; padding-left: 8px;\n}\n.section[data-v-42438318] { padding: 10px 8px; border-top: 1px solid var(--line);\n}\n.section h2[data-v-42438318] { font-size: 12px; margin: 0 0 6px; color: var(--muted); font-weight: 600; display: flex; align-items: center; gap: 6px;\n}\n.tabelle[data-v-42438318] { width: auto;\n}\n.text[data-v-42438318], .log[data-v-42438318] { font-family: ui-monospace, Consolas, monospace; font-size: 12px; white-space: pre-wrap; margin: 4px 0 0;\n}\n.log[data-v-42438318] { color: var(--muted); border-top: 1px solid var(--line); padding-top: 6px; margin-top: 8px;\n}\n.datei[data-v-42438318] { display: flex; gap: 6px; align-items: center;\n}\n";document.head.append(s)})();
 const m = window.journali.vue;
 const Fragment = m.Fragment;
 const computed = m.computed;
@@ -96,10 +96,15 @@ async function refresh() {
   }
   return liste;
 }
-async function laufAufKnoten(s, ids) {
+async function laufAufKnoten(s, ids, ctx) {
   const knoten = ids || [];
   const r = await api.post(`/api/scriptum/scripts/${encodeURIComponent(s.key)}/run`, { params: { nodes: knoten.join(",") } });
-  store.toast(t("≡ {0}: gestartet auf {1} Knoten", [s.label || s.key, knoten.length]));
+  try {
+    localStorage.setItem("journali.scriptum.run", JSON.stringify({ key: s.key, job: r.job, run: r.run }));
+  } catch {
+  }
+  store.toast(t("≡ {0}: läuft … ({1} Knoten) — Ergebnis in ⌨ Skripte", [s.label || s.key, knoten.length]));
+  if (ctx && ctx.go) ctx.go("/p/scriptum/skripte");
   return r;
 }
 const beispiele = [
@@ -611,6 +616,21 @@ const _sfc_main = {
         } catch {
           RECHTE.value = [];
         }
+      }
+      try {
+        const roh = localStorage.getItem("journali.scriptum.run");
+        if (roh) {
+          localStorage.removeItem("journali.scriptum.run");
+          const { key, job, run } = JSON.parse(roh);
+          const s = liste2.value.find((x) => x.key === key);
+          if (s && job && run) {
+            await waehlen(s);
+            lauf.value = { job, run, laeuft: true };
+            busy.value = t("läuft …");
+            frage();
+          }
+        }
+      } catch {
       }
     });
     onUnmounted(() => clearTimeout(poll));
@@ -1250,12 +1270,12 @@ const _sfc_main = {
     };
   }
 };
-const View = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-a8e03d4f"]]);
+const View = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-42438318"]]);
 refresh();
 const entry = {
-  views: [{ path: "skripte", topic: "tools", label: t("Skripte"), icon: "≡", hint: t("Auswertungen und Übergaben, die hier geschrieben werden: Tabelle, Text oder Datei — von Hand oder als Job"), component: View }],
+  views: [{ path: "skripte", topic: "tools", label: t("Skripte"), icon: "λ", hint: t("Auswertungen und Übergaben, die hier geschrieben werden: Tabelle, Text oder Datei — von Hand oder als Job"), component: View }],
   // Skripte mit meta.nodes:true erscheinen im Knoten-Kontextmenü und laufen auf den selektierten Knoten (IDs als Parameter „nodes")
-  nodeActions: [{ multi: true, items: (row, below, sel) => liste.map((s) => ({ label: s.label || s.key, run: () => laufAufKnoten(s, sel && sel.length ? sel.map((x) => x.id) : [row.id]) })) }]
+  nodeActions: [{ multi: true, items: (row, below, sel) => liste.map((s) => ({ label: s.label || s.key, run: (ctx) => laufAufKnoten(s, sel && sel.length ? sel.map((x) => x.id) : [row.id], ctx) })) }]
 };
 export {
   entry as default

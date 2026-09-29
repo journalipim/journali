@@ -571,7 +571,7 @@ async function contextMenu(e, r) {
     picked.value.size ? { label: t_('Auswahl aufheben ({0})', [picked.value.size]), icon: '☐', key: 'Escape', hint: 'Esc', action: () => { picked.value = new Set() } } : null,
     { label: t_('Im Journal zeigen'), icon: '≡', key: 'j', action: () => router.push({ path: '/journal', query: { q: r.id } }), ...only1 },
     ...(topicMenus.length ? [{ sep: true }, ...topicMenus] : []),
-    ...(scriptMenu.length ? [{ label: t_('Skripte') + (sel ? ` (${sel.length})` : ''), icon: '≡', items: scriptMenu }] : []),
+    ...(scriptMenu.length ? [{ label: t_('Skripte') + (sel ? ` (${sel.length})` : ''), icon: 'λ', items: scriptMenu }] : []),
     { sep: true },
     sel ? { label: t_('{0} Ausgewählte zurückziehen{1}', [sel.length, sel.reduce((k, x) => k + countBelow(x.id), 0) ? ' ' + t_('(mit {0} darunter)', [sel.reduce((k, x) => k + countBelow(x.id), 0)]) : '']), icon: '🗑', key: 'Delete', danger: true, action: () => retireAll(sel) }
         : { label: kids ? t_('Mit {0} darunter zurückziehen', [countBelow(r.id)]) : t_('Zurückziehen'), icon: '🗑', key: 'Delete', danger: true, action: () => retire(r) },

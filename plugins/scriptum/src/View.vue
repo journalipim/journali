@@ -33,6 +33,16 @@ onMounted(async () => {
     try { rollen.value = await api.get('/api/auth/roles') } catch { rollen.value = [] }
     try { RECHTE.value = await api.get('/api/auth/rights') } catch { RECHTE.value = [] }
   }
+  // ein Lauf vom Knoten-Kontextmenü: das Skript wählen und sein Ergebnis (mit Download-Link) zeigen
+  try {
+    const roh = localStorage.getItem('journali.scriptum.run')
+    if (roh) {
+      localStorage.removeItem('journali.scriptum.run')
+      const { key, job, run } = JSON.parse(roh)
+      const s = liste.value.find(x => x.key === key)
+      if (s && job && run) { await waehlen(s); lauf.value = { job, run, laeuft: true }; busy.value = t_('läuft …'); frage() }
+    }
+  } catch { /* egal */ }
 })
 
 onUnmounted(() => clearTimeout(poll))
