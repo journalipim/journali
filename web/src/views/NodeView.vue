@@ -28,6 +28,7 @@ import RowsBlock from '../components/RowsBlock.vue'
 import VersionsPanel from '../components/VersionsPanel.vue'
 import MediaThumb from '../components/MediaThumb.vue'
 import MediaPreview from '../components/MediaPreview.vue'
+import { inGruppe, gruppenVon } from '../gruppen.js'
 import MediaPicker from '../components/MediaPicker.vue'
 import DocTables from '../components/DocTables.vue'
 import { mediaTypesFor, attachFiles, meldung as medienMeldung, IST_DOKUMENT } from '../media.js'
@@ -585,7 +586,7 @@ const attach = groups => command(() => api.post(`${nodeUrl()}/groups`, { groups 
 // ---- Relationen (18): je Typ ausgehend (→) und eingehend (←, mit umgekehrter Bezeichnung); Werte an der Relation aus der Gruppe des Typs
 const relTypes = computed(() => model.value?.relationTypes ?? [])
 const relType = key => relTypes.value.find(t => t.key === key)
-const relGroupAttrs = key => { const g = relType(key)?.group; return g ? (model.value?.attributes ?? []).filter(a => a.group === g && a.type !== 'rows' && a.type !== 'html') : [] }
+const relGroupAttrs = key => { const g = relType(key)?.group; return g ? (model.value?.attributes ?? []).filter(a => inGruppe(a, g) && a.type !== 'rows' && a.type !== 'html') : [] }
 const isMediaType = key => (relType(key)?.to ?? []).includes('media')
 const relBlocks = computed(() => {
   const out = new Map()
@@ -942,6 +943,7 @@ function cellMenu(e, def, col, block) {
          Die Sicht (Sprachen, Kanal, Attributsicht, Anordnung) gehört zum Abschnitt Attribute — darum unter dessen Band. -->
     <h2 class="band" @click="toggle('attributes')"><span class="caret">{{ open('attributes') ? '▾' : '▸' }}</span>{{ $t("▤ Attribute") + ' ' }}<span class="muted">{{ $t("· {0} Gruppen · {1} Attribute", [blocks.length, blocks.reduce((n, b) => n + b.defs.length, 0)]) }}</span></h2>
     <template v-if="open('attributes')">
+    <div class="attr-block">
     <!-- Leiste in drei Gruppen: WAS gezeigt wird (Sprachen, Kanal, Sicht, Filter, Suche) · WIE es angeordnet ist (flach/Reiter) · WIE es beschriftet ist (Namen) -->
     <div class="toolbar view">
       <MatrixPicker :model-value="store.viewCells" @update:model-value="setCells" :locales="locales" :channels="channels" :master-locale="master" :master-channel="masterChannel" />
@@ -1056,6 +1058,7 @@ function cellMenu(e, def, col, block) {
       </table>
       <div v-if="!blocks.length && !sourceRows.length && props.pub && node.role === 'rubric'" class="empty" :title="$t('an der Wurzel angehängt gilt sie für alle Rubriken und Verweise darunter, hier nur ab dieser Rubrik')">{{ $t("Keine Attributgruppe — unten anhängen.") }}</div>
       <div v-else-if="!blocks.length" class="empty"><span :title="$t('Unten eine anhängen, oder oben am Pfad.')">{{ $t("Keine Attributgruppe gilt hier") }}</span></div>
+    </div>
     </template>
 
       <div class="section" :class="{ over: mediaDrag }" @dragover.prevent="mediaDrag = true" @dragleave="mediaDrag = false" @drop.prevent="uploadMedia([...$event.dataTransfer.files], $event.ctrlKey || $event.metaKey)">
@@ -1285,7 +1288,9 @@ select.on { color: var(--accent); border-color: var(--accent); }
 th.master { color: var(--accent); font-weight: 700; }
 .view select, .view button { font-size: 12px; padding: 1px 6px; }
 /* Reiter: einzeilig, klein, umbrechend — mit Echtdaten sind es zwanzig und mehr */
-.tabs { display: flex; flex-wrap: wrap; gap: 2px; padding: 4px 8px 0; border-bottom: 1px solid var(--line); background: var(--bg); position: sticky; top: 57px; z-index: 3; }
+.tabs { display: flex; flex-wrap: wrap; gap: 2px; padding: 4px 8px 0; border-bottom: 1px solid var(--line); background: var(--bg); position: sticky; top: 57px; z-index: 3;
+  max-height: 84px; overflow-y: auto; }   /* vierzig Gruppen sind vier Zeilen — darüber rollt die Leiste in sich */
+.attr-block { position: relative; }
 .tabbtn { border: 1px solid var(--line); border-bottom: 0; border-radius: 6px 6px 0 0; background: var(--bg); color: var(--muted); padding: 1px 8px; font-size: 12px; line-height: 18px; white-space: nowrap; max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
 .tabbtn .n { font-size: 10px; }
 /* aktiv: Farbe und Kante, nie fett — fett ist breiter und liesse die Reiterzeile anders umbrechen */

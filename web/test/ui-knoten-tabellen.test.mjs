@@ -1003,3 +1003,69 @@ test('Tabellen und Bausteine gehen in die Gruppe ihrer Überschrift, wenn „je 
   const attr = rufe.find(r => r.methode === 'PUT' && /_typ$/.test(r.pfad))
   assert.equal(attr.rumpf.group, 'oberwellengehalt_des_netzstromes', 'die Spalten gehören zur Gruppe der Tabelle')
 })
+
+// ── n:m: ein Attribut gehört mehreren Gruppen an (29.09.2026, pflegestruktur 36) ──────────────────────────────
+
+test('ein Attribut gilt hier über seine Mitgliedschaft, nicht nur über die Heimatgruppe', async () => {
+  // ip liegt in der Gruppe other, die hier nicht hängt — als Mitglied von physical gilt es trotzdem
+  const modell = { ...MODELL, attributes: MODELL.attributes.map(a => a.key === 'ip' ? { ...a, group: 'other', groups: ['other', 'physical'] } : a) }
+  const knoten = { ...KNOTEN, groups: [{ ...KNOTEN.groups[0], attributes: [...KNOTEN.groups[0].attributes, 'ip'] }] }
+  welt({ tabellen: { ready: true, state: 'text', tables: [{ seq: 0, page: 1, heading: null, rows: [['Schutzart', 'IP20'], ['a', '1'], ['b', '2']] }] } })
+  store.model = modell
+  const w = mount(DocTables, { props: { node: knoten, media: ['m1'], names: { m1: 'datenblatt.pdf' } } })
+  await flushPromises()
+  const r = w.vm.rows.find(x => x.attribute === 'ip')
+  assert.ok(r, `Schutzart fehlt — da sind: ${w.vm.rows.map(x => x.attribute).join(', ')}`)
+  assert.equal(r.inaktiv ?? false, false, 'die Gruppe other gilt hier nicht, physical schon')
+  assert.equal(r.take, true)
+  assert.doesNotMatch(r.why ?? '', /gilt an diesem Knoten nicht/)
+})
+
+test('gehört keine Gruppe des Attributs hierher, nennt der Grund alle', async () => {
+  const modell = { ...MODELL, attributes: MODELL.attributes.map(a => a.key === 'ip' ? { ...a, group: 'other', groups: ['other', 'weiteres'] } : a) }
+  welt({ tabellen: { ready: true, state: 'text', tables: [{ seq: 0, page: 1, heading: null, rows: [['Schutzart', 'IP20'], ['a', '1'], ['b', '2']] }] } })
+  store.model = modell
+  const w = mount(DocTables, { props: { node: KNOTEN, media: ['m1'], names: { m1: 'datenblatt.pdf' } } })
+  await flushPromises()
+  const r = w.vm.rows.find(x => x.attribute === 'ip')
+  assert.deepEqual([r.inaktiv, r.take], [true, false])
+  assert.match(r.why, /Gruppe other, weiteres gilt an diesem Knoten nicht/)
+})
+
+// ── Ein Fehler mitten im Übernehmen (29.09.2026) ──────────────────────────────────────────────────────────────
+
+test('scheitert ein Schritt, bleibt der Dialog stehen: was durch ist, ist abgehakt, der Rest wiederholbar', async () => {
+  const tabellen = { ready: true, state: 'text', tables: [{ seq: 0, page: 1, heading: null, rows: [['Leistung', '35 W'], ['Farbe', 'blau'], ['Durchmesser', '22 mm']] }] }
+  const { w, rufe } = await dialog({ tabellen })
+  const echt = globalThis.fetch
+  // das Anhängen der Gruppen scheitert — die Werte müssen trotzdem losgehen
+  globalThis.fetch = async (url, opt = {}) => {
+    if (/\/api\/nodes\/[^/]+\/groups$/.test(String(url))) return { ok: false, status: 400, text: async () => JSON.stringify({ error: 'Unbekannte Gruppe: alt' }), json: async () => ({ error: 'Unbekannte Gruppe: alt' }) }
+    return echt(url, opt)
+  }
+  const vorher = w.vm.genommen.length
+  assert.ok(vorher >= 2)
+  await w.find('.dt-foot .primary').trigger('click'); await flushPromises()
+  assert.ok(w.vm.lauf, 'der Stand des Laufs steht im Dialog')
+  assert.match(w.find('.toolbar .neg').text(), /geschrieben/)
+  assert.ok(stapel(rufe).some(c => c.op === 'attribute.set'), 'die Werte gingen trotzdem los')
+  // was durch ist, trägt keinen Haken mehr und geht beim nächsten Klick nicht noch einmal mit
+  assert.ok(w.vm.rows.some(r => r.erledigt), 'erledigte Zeilen sind abgehakt')
+  assert.ok(w.find('tbody tr.fertig').exists())
+  assert.equal(w.vm.genommen.length, 0, 'nichts Offenes mehr — der Fehler betraf nur das Anhängen')
+  globalThis.fetch = echt
+})
+
+test('zwei Werte für dasselbe Ziel halten den ganzen Lauf nicht mehr auf', async () => {
+  // Tabelle und KI sagen etwas anderes zur Leistung: diese eine Zeile bleibt offen, die anderen gehen durch
+  const tabellen = { ready: true, state: 'text', tables: [{ seq: 0, page: 1, heading: null, rows: [['Leistung', '35 W'], ['Farbe', 'blau'], ['Durchmesser', '22 mm']] }] }
+  const { w, rufe } = await dialog({ tabellen })
+  const p = w.vm.rows.find(r => r.attribute === 'power')
+  const kopie = { ...p, converted: '99', quelle: 'ki', take: true, erledigt: false }
+  w.vm.rows.push(kopie)   // eine zweite Zeile mit demselben Ziel und anderem Wert
+  await flushPromises()
+  await w.find('.dt-foot .primary').trigger('click'); await flushPromises()
+  const werte = stapel(rufe).filter(c => c.op === 'attribute.set').map(c => c.args.attribute)
+  assert.ok(!werte.includes('power'), 'die widersprüchliche Zeile ging nicht mit')
+  assert.ok(werte.length >= 1, 'die anderen Werte schon: ' + werte.join(', '))
+})

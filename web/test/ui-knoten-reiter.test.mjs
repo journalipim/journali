@@ -52,3 +52,20 @@ test('Reiter kleben beim Rollen unter Band und Sicht-Zeile', () => {
   assert.equal(Number(tabs.match(/top: (\d+)px/)[1]), hoehe(band) + hoehe(sicht), `Band ${hoehe(band)} + Sicht ${hoehe(sicht)}`)
   assert.match(tabs, /z-index: 3/)
 })
+
+test('Reiter und Werte stehen in einem Block — sonst klebten die Reiter weiter, während der nächste Abschnitt läuft', async () => {
+  const w = welt(); await flushPromises()
+  const block = w.find('.attr-block')
+  assert.ok(block.exists(), 'der Abschnitt Attribute ist ein Block')
+  assert.ok(block.find('.tabs').exists(), 'die Reiter stehen darin')
+  assert.ok(block.find('table.values').exists(), 'die Werte auch')
+  // das Band des nächsten Abschnitts steht ausserhalb
+  const bands = w.findAll('h2.band').map(b => b.text())
+  assert.ok(bands.some(x => /Attribute/.test(x)))
+  assert.equal(block.findAll('h2.band').length, 0, 'kein Band im Block — es würde mitkleben')
+})
+
+test('die Reiterzeile rollt in sich, wenn es viele Gruppen sind', () => {
+  const regel = QUELLE.match(/^\.tabs \{([^}]*)\}/m)[1]
+  assert.match(regel, /max-height:/); assert.match(regel, /overflow-y: auto/)
+})

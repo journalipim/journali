@@ -699,7 +699,7 @@ const attrLabel = k => L(model.value.attributes.find(a => a.key === k)?.label) |
           <tr v-for="r in [...roles, 'media']" :key="'t' + r"><td class="attr" :title="$t('darf zu {0} führen', [roleLabel[r] ?? $t('🖼 Medium')])">{{ $t("zu {0}", [roleLabel[r] ?? $t('🖼 Medium')]) }}</td><ToggleCell :value="b(!curRel.to || curRel.to.includes(r))" @save="v => relSet('to_' + r, v === 'true')" /></tr>
           <tr><td class="attr" :title="$t('Attributgruppe, deren Attribute an der Relation stehen (Menge, Slot …); ohne Gruppe hat die Relation keine Werte')">{{ $t("▤ Werte aus Gruppe") }}</td><SelectCell :value="curRel.group ?? ''" :options="model.groups.map(g => g.key)" :label-of="groupLabel" @save="v => relSet('group', v || null)" /></tr>
         </tbody></table>
-        <div class="section muted" style="font-size:12px" v-if="curRel.group">{{ $t("⊞ an der Relation: {0}", [model.attributes.filter(a => a.group === curRel.group).map(a => $L(a.label) || a.key).join(', ') || $t('— die Gruppe hat noch keine Attribute')]) }}</div>
+        <div class="section muted" style="font-size:12px" v-if="curRel.group">{{ $t("⊞ an der Relation: {0}", [model.attributes.filter(a => inGruppe(a, curRel.group)).map(a => $L(a.label) || a.key).join(', ') || $t('— die Gruppe hat noch keine Attribute')]) }}</div>
       </div>
     </template>
 

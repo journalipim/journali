@@ -27,6 +27,7 @@ import { ai } from '../ai.js'
 import { icon, tree } from '../tree.js'
 import { ensureUnit } from '../compliance.js'
 import { suggestPairs, convert, validate, splitUnit, norm, similarity, SYNONYMS, DOC_GROUP } from '../mapper.js'
+import { gruppenVon } from '../gruppen.js'
 import { attachFiles } from '../media.js'
 import { t as t_ } from '../i18n.js'
 import { L } from '../i18n.js'
@@ -68,6 +69,10 @@ const busy = ref(false)
 /// Was das Übernehmen gerade tut: Attribute anlegen, Listen ergänzen, Werte schreiben — mit Zähler, weil achtzig neue
 /// Attribute achtzig Anfragen sind (28.09.2026)
 const arbeit = ref(null)   // { text, erledigt, gesamt } oder null
+/// Was der letzte Lauf ergab (29.09.2026): Ein Übernehmen schreibt in Schritten — Gruppen, Attribute, Werte. Bricht
+/// einer ab, steht ein Teil schon im Journal; zurücknehmen lässt sich das nicht. Darum merkt sich der Dialog, welche
+/// Zeile durch ist, zeigt sie als übernommen und lässt nur den Rest offen — der Knopf wiederholt dann genau ihn.
+const lauf = ref(null)   // { geschrieben, offen, meldung } oder null
 /// Mehrere Anfragen zugleich: vier Stränge über dieselbe Liste — die Reihenfolge ist egal, jede Sache steht für sich
 async function reihum(liste, f, straenge = 4) {
   const rest = [...liste]
@@ -97,9 +102,10 @@ function typBaustein(r) {
   else { r.listValues = null; r.multiple = false; r.converted = alsHtml(r.value); r.error = null; r.why = '' }
 }
 const gilt = key => (props.node.groups ?? []).some(g => g.key === key)
-const gruppeHier = key => { const a = (model.value.attributes ?? []).find(x => x.key === key); return !a?.group || gilt(a.group) }
-const genommen = computed(() => rows.value.filter(r => r.take && r.target !== 'skip' && r.converted != null && r.converted !== ''))
-const genommeneTabellen = computed(() => matrixZeilen.value.filter(r => r.take && r.target !== 'skip'))
+// n:m: ein Attribut gilt hier, sobald EINE seiner Gruppen am Knoten haengt (29.09.2026)
+const gruppeHier = key => { const gs = gruppenVon((model.value.attributes ?? []).find(x => x.key === key)); return !gs.length || gs.some(gilt) }
+const genommen = computed(() => rows.value.filter(r => r.take && !r.erledigt && r.target !== 'skip' && r.converted != null && r.converted !== ''))
+const genommeneTabellen = computed(() => matrixZeilen.value.filter(r => r.take && !r.erledigt && r.target !== 'skip'))
 const anzahl = computed(() => rows.value.length + matrixZeilen.value.length)
 const name = id => namen.value[id] ?? id
 const mehrere = computed(() => medien.value.length > 1)
@@ -308,7 +314,7 @@ function baue() {
   tabellenZeilen.value = vorschlag.map((v, i) => {
     const r = listeZuordnen(listeRaten(einheitRaten({ ...paare[i], ...v, quelle: 'tabelle', quote: null, confidence: null })))
     // ein gefundenes Attribut, dessen Gruppe hier nicht gilt: der Server lehnte den Wert ab — als Hinweis, nicht als Sperre
-    if (r.target === 'attr' && !gruppeHier(r.attribute)) { r.why = t_('Gruppe {0} gilt an diesem Knoten nicht', [attrs.value.find(a => a.key === r.attribute)?.group ?? '']); r.inaktiv = true }
+    if (r.target === 'attr' && !gruppeHier(r.attribute)) { r.why = t_('Gruppe {0} gilt an diesem Knoten nicht', [gruppenVon(attrs.value.find(a => a.key === r.attribute)).join(', ')]); r.inaktiv = true }
     r.take = r.target !== 'skip' && !r.error && !r.inaktiv && r.converted != null
     return schonDa(r)
   })
@@ -343,7 +349,7 @@ function bausteine(id, chunks) {
     // die Überschrift sucht ein Attribut — „Funkentstörung“ trifft die Liste, die es schon gibt
     const [v] = suggestPairs([{ key: g.heading, value: r.saetze[0] ?? g.body }], model.value, { role: props.node.role })
     const def = v?.target === 'attr' ? (model.value.attributes ?? []).find(a => a.key === v.attribute) : null
-    if (def && (def.type === 'enum' || def.type === 'html')) { r.target = 'attr'; r.attribute = def.key; r.inaktiv = !gruppeHier(def.key); r.why = r.inaktiv ? t_('Gruppe {0} gilt an diesem Knoten nicht', [def.group ?? '']) : '' }
+    if (def && (def.type === 'enum' || def.type === 'html')) { r.target = 'attr'; r.attribute = def.key; r.inaktiv = !gruppeHier(def.key); r.why = r.inaktiv ? t_('Gruppe {0} gilt an diesem Knoten nicht', [gruppenVon(def).join(', ')]) : '' }
     // die Überschrift trifft ein Attribut anderen Typs („Gewicht“ ist eine Zahl): der Baustein bekommt einen eigenen
     // Schlüssel — sonst überschriebe der ✓ die Definition des Attributs, und der Server lehnte ab (626 Werte, 28.09.2026)
     else if (def || (model.value.attributes ?? []).some(a => a.key === r.newKey)) { r.why = def ? t_('Attribut {0} ist {1}', [def.key, def.type]) : t_('Schlüssel {0} gibt es', [r.newKey]); r.newKey = r.newKey + '_text' }
@@ -408,7 +414,7 @@ function wertZeile(def, id, kv, page, quelle, sc) {
   const converted = convert(numerisch ? zahl : kv.value, def, model.value), error = validate(converted, def, model.value)
   const r = { key: def.label?.[master] || L(def.label) || def.key, value: kv.value, doc: id, page, heading: null, quote: `${kv.key}: ${kv.value}`, confidence: Math.round(sc * 100) / 100,
     quelle, fest: true, target: 'attr', attribute: def.key, newKey: def.key, newType: def.type, unit: def.unit ?? null, converted, error, why: '', inaktiv: !gruppeHier(def.key) }
-  if (r.inaktiv) r.why = t_('Gruppe {0} gilt an diesem Knoten nicht', [def.group ?? ''])
+  if (r.inaktiv) r.why = t_('Gruppe {0} gilt an diesem Knoten nicht', [gruppenVon(def).join(', ')])
   // ein Vorschlag unter der Schwelle der Zeilenregel (die erste Überschrift als Name) steht da, aber ohne Haken
   r.take = !r.error && !r.inaktiv && r.converted != null && sc >= 0.72
   return schonDa(listeZuordnen(r))
@@ -537,7 +543,7 @@ async function lies(id, chunks) {
     const r = { key: def.label?.[master] || L(def.label) || def.key, value: roh, doc: id, page: it.page ?? null, heading: null, quote: it.quote ?? null,
       confidence: sicherheit(it.confidence), quelle: 'ki', fest: true,
       target: 'attr', attribute: def.key, newKey: def.key, newType: def.type, unit: def.unit ?? null, converted, error, why: '', inaktiv: !gruppeHier(def.key) }
-    if (r.inaktiv) r.why = t_('Gruppe {0} gilt an diesem Knoten nicht', [def.group ?? ''])
+    if (r.inaktiv) r.why = t_('Gruppe {0} gilt an diesem Knoten nicht', [gruppenVon(def).join(', ')])
     r.take = !r.error && !r.inaktiv && r.converted != null
     neu.push(schonDa(r))
   }
@@ -551,7 +557,7 @@ async function lies(id, chunks) {
     if (paare[i].genannt) { const def = attrs.value.find(a => a.key === paare[i].genannt); Object.assign(v, { target: 'attr', attribute: def.key, why: t_('von der KI zugeordnet'), converted: convert(v.number ?? paare[i].value, def, model.value) }); v.error = validate(v.converted, def, model.value) }
     else if (v.target === 'attr' && /^ähnlich /.test(v.why ?? '')) Object.assign(v, { target: 'new', attribute: null, why: '', converted: convert(v.number ?? paare[i].value, { type: v.newType }, model.value), error: null })
     const r = listeZuordnen(listeRaten(einheitRaten({ ...paare[i], ...v, quelle: 'ki', fest: false })))
-    if (r.target === 'attr' && !gruppeHier(r.attribute)) { r.why = t_('Gruppe {0} gilt an diesem Knoten nicht', [attrs.value.find(a => a.key === r.attribute)?.group ?? '']); r.inaktiv = true }
+    if (r.target === 'attr' && !gruppeHier(r.attribute)) { r.why = t_('Gruppe {0} gilt an diesem Knoten nicht', [gruppenVon(attrs.value.find(a => a.key === r.attribute)).join(', ')]); r.inaktiv = true }
     r.take = r.target !== 'skip' && !r.error && !r.inaktiv && r.converted != null
     neu.push(schonDa(r))
   })
@@ -678,7 +684,7 @@ function ziel(r, v) {
     if (v === '+') { r.target = 'new'; r.attribute = null; r.inaktiv = false; r.why = ''; typBaustein(r); r.take = true; haken(r); return }
     const def = bausteinAttrs.value.find(a => a.key === v)
     r.target = 'attr'; r.attribute = v; r.inaktiv = !gruppeHier(v); r.take = !r.inaktiv
-    r.why = r.inaktiv ? t_('Gruppe {0} gilt an diesem Knoten nicht', [def?.group ?? '']) : ''
+    r.why = r.inaktiv ? t_('Gruppe {0} gilt an diesem Knoten nicht', [gruppenVon(def).join(', ')]) : ''
     if (def?.type === 'enum') { alsListe(r, r.saetze, def); r.take = !r.inaktiv && !r.error }
     else { r.newType = 'html'; r.listValues = null; r.multiple = false; r.converted = alsHtml(r.value) }
     schonDa(r); haken(r); return
@@ -687,7 +693,7 @@ function ziel(r, v) {
   const def = attrs.value.find(a => a.key === v)
   r.target = 'attr'; r.attribute = v; r.inaktiv = !gruppeHier(v); r.listValues = null; r.multiple = false
   r.converted = convert(r.number ?? r.value, def, model.value); r.error = validate(r.converted, def, model.value)
-  r.take = !r.inaktiv && !r.error; r.why = r.inaktiv ? t_('Gruppe {0} gilt an diesem Knoten nicht', [def?.group ?? '']) : ''
+  r.take = !r.inaktiv && !r.error; r.why = r.inaktiv ? t_('Gruppe {0} gilt an diesem Knoten nicht', [gruppenVon(def).join(', ')]) : ''
   if (def?.type === 'enum') { listeZuordnen(r); r.take = !r.inaktiv && !r.error }
   schonDa(r); haken(r)
 }
@@ -702,8 +708,10 @@ async function uebernehmen() {
   if (!liste.length && !tabellen.length) return
   if (!store.actor) { store.toast(t_('👤 Name fehlt → Einstellungen')); return }
   busy.value = true
+  lauf.value = null
   const master = model.value.masterLocale
   const heute = new Date().toISOString().slice(0, 10)
+  const probleme = []   // was nicht ging — bleibt im Dialog stehen, mit Grund
   try {
     // 1. Modell: die Gruppe, wenn sie neu ist; dann jedes neue Attribut einmal — Bezeichnung ist der Schlüssel aus dem Dokument
     const neu = new Map()
@@ -713,10 +721,13 @@ async function uebernehmen() {
     if (neuesModell && !gk) { store.toast(t_('Gruppe ohne Namen')); busy.value = false; return }
     // jede gebrauchte Gruppe anlegen, die es noch nicht gibt — bei „je Überschrift“ sind das mehrere
     for (const g of (neuesModell ? gebrauchteGruppen.value : []))
-      if (!gruppen.value.some(x => x.key === g.key)) await api.post(`/api/model/groups/${encodeURIComponent(g.key)}`, { key: g.key, label: { [master]: g.label }, activeFrom: null }, 'PUT')
+      if (!gruppen.value.some(x => x.key === g.key))
+        try { await api.post(`/api/model/groups/${encodeURIComponent(g.key)}`, { key: g.key, label: { [master]: g.label }, activeFrom: null }, 'PUT') }
+        catch (e) { probleme.push(t_('Gruppe {0}: {1}', [g.key, e.message])) }
     arbeit.value = { text: t_('Attribute'), erledigt: 0, gesamt: neu.size }
     await reihum([...neu], async ([key, r]) => {
-      if (attrs.value.some(a => a.key === key)) { store.toast(t_('Schlüssel {0} gibt es', [key])); arbeit.value.erledigt++; return }   // nie eine Definition überschreiben
+      if (attrs.value.some(a => a.key === key)) { r.why = t_('Schlüssel {0} gibt es', [key]); r.take = false; arbeit.value.erledigt++; return }   // nie eine Definition überschreiben
+      try {
       // eine Einheit, die das Modell nicht kennt, wird angelegt — Schlüssel ist das Symbol (ensureUnit)
       const unit = r.unit ? (r.unitNeu ? await ensureUnit(r.unit) : r.unit) : null
       // eine Werteliste: die Liste unter dem Schlüssel des Attributs, ihre Werte aus dem Dokument, dann das Attribut darauf
@@ -725,6 +736,7 @@ async function uebernehmen() {
         await api.post(`/api/model/lists/${encodeURIComponent(key)}/values`, (r.listValues ?? []).map(v => ({ value: v.value, label: { [master]: v.label } })), 'PUT')
       }
       await api.post(`/api/model/attributes/${encodeURIComponent(key)}`, { key, label: { [master]: r.key }, type: r.newType, unit, group: gruppeFuer(r).key, ...(r.newType === 'enum' ? { list: key, multiple: !!r.multiple } : {}), ...(r.baustein && r.newType === 'html' ? { axes: ['locale'] } : {}) }, 'PUT')   // die Sprachachse heisst axes, nicht perLocale
+      } catch (e) { r.why = e.message; r.take = false; probleme.push(`${r.key}: ${e.message}`) }
       arbeit.value.erledigt++
     })
     // 2. die Gruppe an die gewählte Ebene, wenn sie am Pfad noch nicht gilt — sonst gälte kein neues Attribut hier.
@@ -732,9 +744,11 @@ async function uebernehmen() {
     const anzuhaengen = (neuesModell ? gebrauchteGruppen.value : []).map(g => g.key).filter(k => !vonOben(k))
     if (anzuhaengen.length) {
       const ziel = ebene.value
-      const dort = ziel === props.node.id ? (props.node.attachedGroups ?? []) : ((await api.get(`/api/nodes/${encodeURIComponent(ziel)}`)).attachedGroups ?? [])
-      const fehlen = anzuhaengen.filter(k => !dort.includes(k))
-      if (fehlen.length) await api.post(`/api/nodes/${encodeURIComponent(ziel)}/groups`, { groups: [...dort, ...fehlen] }, 'PUT')
+      try {
+        const dort = ziel === props.node.id ? (props.node.attachedGroups ?? []) : ((await api.get(`/api/nodes/${encodeURIComponent(ziel)}`)).attachedGroups ?? [])
+        const fehlen = anzuhaengen.filter(k => !dort.includes(k))
+        if (fehlen.length) await api.post(`/api/nodes/${encodeURIComponent(ziel)}/groups`, { groups: [...dort, ...fehlen] }, 'PUT')
+      } catch (e) { probleme.push(t_('Gruppen anhängen: {0}', [e.message])) }   // die Werte gehen trotzdem los; was nicht gilt, sagt der Stapel
     }
     // 2b. Sätze, die in einer vorhandenen Liste noch fehlen — einmal je Liste, vor dem Stapel
     const nachtrag = new Map()
@@ -748,7 +762,10 @@ async function uebernehmen() {
     // demselben Ziel und Wert (Tabelle und KI sagen dasselbe) schreiben einmal; die Werte sind sonst nicht in Einklang
     const einmal = []; const ziele = new Set()
     for (const r of liste) { const k = zielKey(r); if (ziele.has(k)) continue; ziele.add(k); einmal.push(r) }
-    for (const r of einmal) if (widerspricht(r).some(x => x.take)) { store.toast(t_('{0}: zwei Werte', [r.key])); busy.value = false; return }
+    for (const r of einmal.slice()) if (widerspricht(r).some(x => x.take)) {
+      r.take = false; r.why = t_('{0}: zwei Werte', [r.key]); probleme.push(r.why)
+      einmal.splice(einmal.indexOf(r), 1)   // diese Zeile geht nicht mit, die anderen schon
+    }
     const commands = [...einmal].flatMap(r => {
       const def = r.target === 'attr' ? (r.baustein ? bausteinAttrs.value : attrs.value).find(a => a.key === r.attribute) : null
       const attribute = r.target === 'new' ? r.newKey : r.attribute
@@ -788,11 +805,25 @@ async function uebernehmen() {
     arbeit.value.erledigt = einmal.length
     // gezählt werden die Werte, nicht die Belege — jeder zweite Befehl ist der Beleg zum ersten
     const n = (res.results ?? []).filter(x => x.index % 2 === 0).length
-    for (const s of res.skipped ?? []) if (s.index % 2 === 0) store.toast(`${einmal[s.index / 2]?.key ?? s.index}: ${s.message}`)
-    if (res.error) store.toast(res.error.message)
+    const gescheitert = new Set()
+    for (const s of res.skipped ?? []) if (s.index % 2 === 0) {
+      const r = einmal[s.index / 2]
+      if (r) { r.why = s.message; r.take = false; gescheitert.add(r) }
+      probleme.push(`${r?.key ?? s.index}: ${s.message}`)
+    }
+    // was durch ist, ist durch: die Zeile steht als übernommen da und geht beim nächsten Klick nicht noch einmal mit
+    for (const r of einmal) if (!gescheitert.has(r)) { r.erledigt = true; r.take = false }
+    for (const tb of tabellen) tb.erledigt = true
+    if (res.error) probleme.push(res.error.message)
     if (n || tabellen.length) store.toast(t_('{0} Werte aus dem Dokument übernommen', [n]) + (neu.size ? ' · ' + t_('{0} Attribute neu', [neu.size]) : '') + (tabellen.length ? ' · ' + t_('{0} Tabellen', [tabellen.length]) : ''), 'ok')
-    emit('done')
-  } catch (e) { store.toast(e.message) }
+    // Alles durch: der Dialog schliesst. Blieb etwas offen, bleibt er stehen und sagt, was — der Knopf wiederholt den Rest
+    if (!probleme.length) { emit('done'); return }
+    lauf.value = { geschrieben: n, offen: genommen.value.length + genommeneTabellen.value.length, meldung: probleme.slice(0, 3).join(' · ') + (probleme.length > 3 ? ` · +${probleme.length - 3}` : '') }
+    await store.poll(true)   // das Modell hat sich geändert: die Zeilen zeigen die neuen Attribute
+  } catch (e) {
+    probleme.push(e.message)
+    lauf.value = { geschrieben: 0, offen: genommen.value.length + genommeneTabellen.value.length, meldung: probleme.slice(0, 3).join(' · ') }
+  }
   finally { busy.value = false; arbeit.value = null }
 }
 
@@ -814,7 +845,7 @@ onMounted(async () => {
   lade()
 })
 onUnmounted(() => { window.removeEventListener('keydown', onKey); if (timer) clearTimeout(timer) })
-defineExpose({ rows, werte, bausteineZeilen, zeilenWerte, warten, hinweis, genommen, ki, kiHinweis, attributeHier, gruppe, gruppeName, ebene, zuordnen, neuLesen, kiFragen, ziel, schritte, medien, hochladen, bausteineSeiten, uebernehmen, arbeit, gebrauchteGruppen, JE_UEBERSCHRIFT, tabellenBloecke, genommeneTabellen })
+defineExpose({ rows, werte, bausteineZeilen, zeilenWerte, warten, hinweis, genommen, ki, kiHinweis, attributeHier, gruppe, gruppeName, ebene, zuordnen, neuLesen, kiFragen, ziel, schritte, medien, hochladen, bausteineSeiten, uebernehmen, arbeit, gebrauchteGruppen, JE_UEBERSCHRIFT, tabellenBloecke, genommeneTabellen, lauf })
 </script>
 
 <template>
@@ -831,6 +862,7 @@ defineExpose({ rows, werte, bausteineZeilen, zeilenWerte, warten, hinweis, genom
         <span v-else class="muted" :title="$t('Kein KI-Schlüssel am Team — es zählen Tabellen, Zeilen und Suche')">{{ $t("✦ aus") }}</span>
         <span v-if="kiHinweis" :class="kiHinweis.startsWith('✗') ? 'neg' : 'ai'">{{ kiHinweis }}</span>
         <span v-if="hinweis" class="neg">{{ hinweis }}</span>
+        <span v-if="lauf" class="neg" :title="lauf.meldung">{{ $t("✗ {0} geschrieben, {1} offen", [lauf.geschrieben, lauf.offen]) }}</span>
         <span class="grow" />
         <button class="x" :disabled="busy" @click="neuLesen" :title="$t('Dokument noch einmal lesen — der Index kennt nur den Stand des Lesers von damals')">{{ $t("↻ neu lesen") }}</button>
         <button class="x" @click="emit('close')" :title="$t('schliessen (Esc)')">×</button>
@@ -847,8 +879,8 @@ defineExpose({ rows, werte, bausteineZeilen, zeilenWerte, warten, hinweis, genom
             <th></th>
           </tr></thead>
           <tbody>
-            <tr v-for="(r, i) in werte" :key="r.quelle + i" class="row" :class="{ aus: !r.take, ki: r.quelle === 'ki' }">
-              <td><input type="checkbox" v-model="r.take" :disabled="r.target === 'skip'" @change="haken(r)" /></td>
+            <tr v-for="(r, i) in werte" :key="r.quelle + i" class="row" :class="{ aus: !r.take, ki: r.quelle === 'ki', fertig: r.erledigt }">
+              <td><span v-if="r.erledigt" class="pos" :title="$t('übernommen')">✓</span><input v-else type="checkbox" v-model="r.take" :disabled="r.target === 'skip'" @change="haken(r)" /></td>
               <td :title="(r.heading ? r.heading + ' · ' : '') + (r.page ? $t('Seite {0}', [r.page]) : '') + '\n' + (r.quote || r.value)">{{ r.key }}<div class="muted roh">{{ r.quote || r.value }}</div></td>
               <td class="quelle" :class="r.quelle === 'ki' ? 'ai' : 'muted'" :title="quelleTitel(r)">{{ quelleText(r) }}</td>
               <td>
@@ -942,6 +974,7 @@ tr.aus td { opacity: .55; }
 .roh { font-size: 11px; max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .quelle { font-size: 11px; white-space: nowrap; }
 .empty { padding: 24px; text-align: center; color: var(--muted); }
+tr.fertig td { opacity: .5; }
 .lauf { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; white-space: nowrap; }
 .lauf b { display: block; width: 120px; height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
 .lauf b i { display: block; height: 100%; background: var(--accent); transition: width .3s; }

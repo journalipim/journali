@@ -34,6 +34,8 @@ const newItem = t => t.kind === 'section' ? { id: nid(), kind: 'section', title:
   : { id: nid(), kind: t.kind }
 
 // ---- Wiedergabe: dieselbe für Designer (edit) und Blatt -------------------------------------
+/// n:m (29.09.2026): ein Attribut gehoert zu einer Gruppe ueber seine Zuordnung oder eine Mitgliedschaft
+const inGruppe = (a, key) => !!key && (a?.groups ?? (a?.group ? [a.group] : [])).includes(key)
 const fill = (s, d) => String(s ?? '').replace(/\{(\w+)\}/g, (_, k) => d[k] ?? d.attr?.[k] ?? '')
 const esc = s => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 function valueCell(d, key) {
@@ -47,7 +49,7 @@ function renderItem(it, d, model, edit, ctx) {
   switch (it.kind) {
     case 'group': {
       const g = model.groups.find(x => x.key === it.group)
-      const keys = model.attributes.filter(a => a.group === it.group && !['rows', 'html'].includes(a.type)).map(a => a.key)
+      const keys = model.attributes.filter(a => inGruppe(a, it.group) && !['rows', 'html'].includes(a.type)).map(a => a.key)
       const rows = keys.map(k => [k, valueCell(d, k)]).filter(([, v]) => it.empty || v)
       e = el('div', { class: 'ds-group' })
       if (it.title !== false) e.append(el('h3', {}, g?.label?.[d.locale] || g?.label?.de || it.group))
@@ -87,7 +89,7 @@ function renderItem(it, d, model, edit, ctx) {
       // Datentabelle: eine Zeile je Subitem — Varianten am Produkt, Produkte an der Gruppe; Spalten aus einer Gruppe, einzeln oder die Achsen
       const vs = d.children ?? d.variants ?? []
       const axes = [...new Set(vs.flatMap(v => (v.axes ?? []).map(a => a.key)))]
-      const cols = it.group ? model.attributes.filter(a => a.group === it.group && !['rows', 'html'].includes(a.type)).map(a => a.key) : it.attrs?.length ? it.attrs : axes
+      const cols = it.group ? model.attributes.filter(a => inGruppe(a, it.group) && !['rows', 'html'].includes(a.type)).map(a => a.key) : it.attrs?.length ? it.attrs : axes
       e = el('table', { class: 'ds-table ds-variants' })
       const first = vs.some(v => v.role === 'variant') ? 'SKU' : 'Name'
       e.append(el('tr', {}, el('th', {}, first), ...cols.map(k => el('th', {}, label(k)))))
@@ -98,7 +100,7 @@ function renderItem(it, d, model, edit, ctx) {
     case 'compare': {
       // Spalten: Knoten (Varianten, Subitems oder gewählte); Zeilen: Attribute einer Gruppe oder einzeln; Werte aus dem Cache je Knoten
       const ids = compareNodes(it, d, ctx?.tree)
-      const keys = it.group ? model.attributes.filter(a => a.group === it.group && !['rows', 'html'].includes(a.type)).map(a => a.key) : (it.attrs ?? [])
+      const keys = it.group ? model.attributes.filter(a => inGruppe(a, it.group) && !['rows', 'html'].includes(a.type)).map(a => a.key) : (it.attrs ?? [])
       const datas = ids.map(id => d.cache?.[id] ?? null)
       ids.forEach((id, i) => { if (!datas[i]) ctx?.need?.(id) })
       e = el('table', { class: 'ds-table ds-compare' })

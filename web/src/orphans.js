@@ -6,6 +6,7 @@
 import { api } from './api.js'
 import { dialog } from './dialog.js'
 import { t as t_ } from './i18n.js'
+import { gruppenVon } from './gruppen.js'
 
 // Gruppen, die am Ziel gelten (Knoten + Pfad); ohne Ziel (Wurzel) keine
 export async function groupsAt(targetId) {
@@ -15,7 +16,8 @@ export async function groupsAt(targetId) {
 
 // Für einen Knoten im eigenen Baum: eigene Werte des Knotens und aller Nachfahren → benötigte Gruppen (nach Modell)
 export async function neededByNode(nodeId, model) {
-  const groupOf = new Map(model.attributes.map(a => [a.key, a.group]))
+  // n:m: ein Wert ist erst verwaist, wenn KEINE Gruppe seines Attributs am Ziel gilt (29.09.2026)
+  const groupsOf = new Map(model.attributes.map(a => [a.key, gruppenVon(a)]))
   const used = new Set()
   const n = await api.get(`/api/nodes/${encodeURIComponent(nodeId)}`)
   for (const v of n.values ?? []) used.add(v.attribute)
@@ -25,7 +27,7 @@ export async function neededByNode(nodeId, model) {
     for (const r of t.rows) for (const [k, v] of Object.entries(r.values)) if (v.own) used.add(k)
   } catch {}
   const need = new Map()
-  for (const a of used) { const g = groupOf.get(a); if (!g) continue; if (!need.has(g)) need.set(g, []); need.get(g).push(a) }
+  for (const a of used) { const gs = groupsOf.get(a) ?? []; if (!gs.length) continue; for (const g of gs) { if (!need.has(g)) need.set(g, []); need.get(g).push(a) } }
   return { need, own: new Set(n.attachedGroups ?? []) }
 }
 

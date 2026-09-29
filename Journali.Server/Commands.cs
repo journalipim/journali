@@ -137,8 +137,12 @@ public static class Commands
     {
         if (!c.Tree.Nodes.TryGetValue(id, out var n)) return Outcome.Missing;
         var list = groups?.Select(g => g.Trim()).Where(g => g.Length > 0).Distinct().ToArray() ?? [];
+        // Bekannt ist jede Gruppe des Modells (definiert, zugeordnet oder über eine Mitgliedschaft, n:m) — und was der
+        // Knoten schon trägt, darf er behalten: eine Gruppe, deren letztes Attribut umgezogen ist, hängt sonst fest und
+        // liesse sich nie wieder mitschicken (29.09.2026)
+        var bekannt = c.Model.AllGroupKeys.ToHashSet(StringComparer.Ordinal);
         foreach (var g in list)
-            if (!c.Model.Groups.ContainsKey(g) && !c.Model.Attributes.Values.Any(a => a.Group == g)) return Outcome.Bad("Unbekannte Gruppe: {0}", g);
+            if (!bekannt.Contains(g) && !n.Groups.Contains(g)) return Outcome.Bad("Unbekannte Gruppe: {0}", g);
         // Was von einem Vorfahren schon gilt, wird hier nicht noch einmal angeheftet — es wäre nur eine Doppelung
         var vonOben = c.Tree.EffectiveGroups(n).Where(x => x.From.Id != n.Id).Select(x => x.Group).ToHashSet();
         list = list.Where(g => !vonOben.Contains(g)).ToArray();

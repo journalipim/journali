@@ -6,6 +6,7 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { api, when } from '../api.js'
 import { store } from '../store.js'
+import { inGruppe } from '../gruppen.js'
 import { dialog } from '../dialog.js'
 import { menu } from '../menu.js'
 import { mediaTypesFor, attachMedia, meldung as medienMeldung } from '../media.js'
@@ -32,7 +33,7 @@ const fileInput = ref(null)
 const model = computed(() => store.model)
 const locales = computed(() => model.value?.locales.map(l => l.code) ?? [])
 const master = computed(() => model.value?.masterLocale ?? locales.value[0] ?? null)
-const mediaAttrs = computed(() => (model.value?.attributes ?? []).filter(a => a.group === 'media' && a.type !== 'rows' && a.type !== 'html'))
+const mediaAttrs = computed(() => (model.value?.attributes ?? []).filter(a => inGruppe(a, 'media') && a.type !== 'rows' && a.type !== 'html'))
 const current = computed(() => items.value.find(m => m.id === cur.value) ?? null)
 
 // ---- Ordner: 'all' = alles, '-' = ohne Ordner, sonst Ordner-Id; deep = mit Unterordnern
