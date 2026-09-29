@@ -24,7 +24,8 @@ import Splitter from './components/Splitter.vue'
 import ImportHead from './components/ImportHead.vue'
 import ProfileBar from './components/ProfileBar.vue'
 import TreePicker from './components/TreePicker.vue'
+import ScriptEditor from './components/ScriptEditor.vue'
 
 /// Was ein Plugin mit `import { … } from 'journali'` bekommt — die Namen stehen auch in web/build-plugins.mjs (Shim)
-export const host = { vue, vueRouter, api, store, tree, icon, gruppen, mapper, transform, recentFiles, dialog, treePicker, filePicker, paneWidth, plugins, menu, orphans, compliance, ai, i18n, t, L, setLang, LANGS, Splitter, ImportHead, ProfileBar, TreePicker }
+export const host = { vue, vueRouter, api, store, tree, icon, gruppen, mapper, transform, recentFiles, dialog, treePicker, filePicker, paneWidth, plugins, menu, orphans, compliance, ai, i18n, t, L, setLang, LANGS, Splitter, ImportHead, ProfileBar, TreePicker, ScriptEditor }
 window.journali = host

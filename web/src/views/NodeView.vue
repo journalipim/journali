@@ -597,6 +597,8 @@ const relBlocks = computed(() => {
 const relCount = computed(() => (rels.value.out?.length ?? 0) + (rels.value.in?.length ?? 0))
 // zurück in den Publikationsbaum, aus dem wir gekommen sind: der Weg steht im Store
 function backToPub() { const b = store.pubBack; store.pubBack = null; if (b) router.push(b.path) }
+/// Die Sprachen der Sicht — die erste trägt Bezeichnungen und einspaltige Zellen (Zeilen, Relationen)
+const viewLocales = computed(() => store.viewLocales ?? [])
 const relValue = (r, def) => { const loc = def.perLocale ? (viewLocales.value[0] ?? locales.value[0]) : null; return r.values.find(v => v.attribute === def.key && (v.locale ?? null) === loc && !v.channel)?.value ?? null }
 const setRelValue = (r, def, v) => command(() => api.post(`/api/relations/${r.id}/attributes`, { attribute: def.key, locale: def.perLocale ? (viewLocales.value[0] ?? locales.value[0]) : null, value: v }))
 const retireRel = r => command(() => api.del(`/api/relations/${r.id}`))

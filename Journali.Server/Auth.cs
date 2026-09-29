@@ -158,6 +158,7 @@ public static class Auth
             var token = auth[7..].Trim();
             if (token.StartsWith("svc_") && Service.TryGetValue(token, out var svc))
             {
+                ctx.Items["dienst"] = true;   // ein Lauf, kein Browser (Quelltext eines Skripts, 29.09.2026)
                 // Die Rolle des Jobs, wenn es sie gibt — sonst wie bisher editor (und ohne Rollen im Journal: $service)
                 var rolle = svc.Role is { Length: > 0 } r && c.Lesen((_, _) => c.Users.Roles.ContainsKey(r)) ? r
                     : c.Lesen((_, _) => c.Users.Roles.ContainsKey("editor")) ? "editor" : "$service";
@@ -191,6 +192,12 @@ public static class Auth
         // Die Liste der Zugänge (ohne Geheimnisse) und die Weiterleitung einer Anmeldung braucht, wer importiert — das ist Pflege
         if (path.StartsWith("/api/drivers") && read && (path is "/api/drivers" or "/api/drivers/arten" || path.EndsWith("/relay"))) return Rights.Write;
         if (path.StartsWith("/api/files") || path.StartsWith("/api/drivers")) return Rights.Jobs;   // Dateibrowser und Zugänge: Jobs — oder Storage (Allowed)
+        // Skripte (37): der Quelltext gehört dem, der schreiben darf. Die Liste ohne Quelltext, das Anstossen und der
+        // Stand eines Laufs gehören dem anderen Recht — so bedient jemand eine Auswertung, ohne je Quelltext zu sehen.
+        // Den Quelltext bekommt ausserdem der Lauf selbst (Dienst-Token, siehe Allowed)
+        if (path is "/api/scriptum/scripts" || path.StartsWith("/api/scriptum/runs/") || (path.StartsWith("/api/scriptum/") && path.EndsWith("/run"))) return Rights.ScriptumRun;
+        if (path.StartsWith("/api/scriptum")) return Rights.ScriptumWrite;
+        if (path.StartsWith("/api/plugins/scriptum/data")) return Rights.ScriptumWrite;   // dort steht der Quelltext
         if (path.StartsWith("/api/jobs") && (path.EndsWith("/uebergabe") || path.EndsWith("/pause") || path.EndsWith("/resume"))) return Rights.Write;   // einen Import abgeben und anhalten ist Pflege, kein Jobbau
         if (path.StartsWith("/api/jobs") && path.EndsWith("/signal")) return Rights.Read;   // der Lauf fragt selbst, ob er warten soll
         if (path.StartsWith("/api/jobs")) return read && !path.Contains("/log") && !path.Contains("/runs") ? Rights.Read : Rights.Jobs;
@@ -226,7 +233,14 @@ public static class Auth
     }
 
     public static bool Allowed(Catalog c, string role, HttpRequest req) => Needed(req) is not { } need || RightsOf(c, role).Contains(need)
-        || ((req.Path.StartsWithSegments("/api/files") || req.Path.StartsWithSegments("/api/drivers")) && RightsOf(c, role).Contains(Rights.Storage));   // der Dateibrowser dient auch dem Medienspeicher
+        || ((req.Path.StartsWithSegments("/api/files") || req.Path.StartsWithSegments("/api/drivers")) && RightsOf(c, role).Contains(Rights.Storage))   // der Dateibrowser dient auch dem Medienspeicher
+        // Den Quelltext eines Skripts holt der Lauf, der es ausführt: ein Dienst-Token gehört einem Prozess auf diesem
+        // Server, nie einem Browser — ein Anwender bekommt so ein Token nicht in die Hand (29.09.2026)
+        || (IstDienst(req) && (req.Path.Value ?? "").StartsWith("/api/scriptum/scripts/", StringComparison.Ordinal) && (req.Path.Value ?? "").EndsWith("/source", StringComparison.Ordinal));
+    /// <summary>Kommt die Anfrage von einem Lauf (Dienst-Token) statt aus einem Browser? Das Token gibt es nur als
+    /// Umgebung eines Kindprozesses — kein Anwender bekommt es zu sehen.</summary>
+    public static bool IstDienst(HttpRequest req) => req.HttpContext.Items["dienst"] is true;
+
     /// <summary>Hat der Anfragende dieses Recht? Ohne Benutzer (offen) ja; sonst die Rolle aus der Sitzung (Middleware legt sie in Items).</summary>
     public static bool Has(HttpRequest req, Catalog c, string right) => !Enabled(c) || (req.HttpContext.Items["role"] is string role && RightsOf(c, role).Contains(right));
 
