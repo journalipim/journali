@@ -2162,8 +2162,38 @@ im Ergebnis und Rückgabewert 1 — kein Absturz.
 **Offen.**
 
 - **Bibliotheken.** Gebaut ist der Anfang wie vorgeschlagen: keine Pakete, nur die Standardbibliothek der Laufzeit,
-  `fetch` und der Kontext (`api`, `params`, `out`, `log`). Sobald jemand ein Paket will, stellt sich die Frage, wer es
+  `fetch` und der Kontext (`api`, `params`, `out`, `log`, `zugang`). Sobald jemand ein Paket will, stellt sich die Frage, wer es
   installiert und wer dafür geradesteht.
-- **Wiederverwendung.** Ein Skript ruft kein anderes auf — nötig war es nicht.
+- **Wiederverwendung.** Ein Skript ruft kein anderes auf — nötig war es nicht. Ein Fremdsystem spricht ein Skript über
+  `ctx.zugang` an (Abschnitt 38); das war der eigentliche Bedarf, nicht Skript ruft Skript.
+- **Ein Markt fremder Snippets.** Als automatischer Import verworfen: ein Skript läuft mit allen Rechten des
+  Serverbenutzers, und davor schützt die Zertifizierung — Fremdcode aus einem öffentlichen Markt wäre das Gegenteil.
+  Der Ersatz ist eine eigene, geprüfte Beispiel-Bibliothek (Abschnitt 38). Ein offener Markt bliebe nur denkbar mit
+  Signatur und Prüfung wie bei Plugins.
 - **Ein Skript ohne Job.** Jeder Lauf legt einen Job an; ein Skript, das nur einmal laufen soll, hinterlässt also
   einen Job in der Liste. Ob der Tasker solche Läufe eigens zeigt oder verbirgt, entscheidet sich, wenn es stört.
+
+## 38. Fremdsysteme anbinden — Zugang `http` und `ctx.zugang` (29.09.2026, entschieden)
+
+**Der Bedarf.** Ein PIM muss Fremdsysteme (Warenwirtschaft, Medienverwaltung, jede REST-Schnittstelle) über deren API
+anbinden — lesen und beschicken —, **ohne für jedes System ein Plugin zu schreiben**. journali bleibt dabei PIM und
+Datenwahrheit; ein vollständiges Process-Framework ist nicht sein Sinn. Die Ablauflogik (welcher Schritt wann, welche
+Route) bleibt draussen; journali ist Quelle und Ziel und lässt sich von aussen anstossen (`POST
+/api/scriptum/scripts/{key}/run`, Bearer-Token).
+
+**Zwei Stücke, beide auf Bestehendem.**
+1. **Eine allgemeine Art `http`** in den Zugängen (`DriverApi`): Adresse (`url`), Anmeldung (`auth`: ohne, Bearer,
+   Basic, eigener Kopf), Anwendername, Kopfname; das Geheimnis (`secret`) im Tresor. Wie die anderen Anmeldungen (IXP,
+   Solr) wird sie über die **Weiterleitung** gelesen — jetzt auch schreibend (GET/POST/PUT/DELETE mit Rumpf). Der
+   Server hängt die Anmeldung an und bleibt der einzige, der das Geheimnis kennt; die Weiterleitung bleibt auf den
+   einen Host des Zugangs beschränkt (`WeiterUrl`), so wird sie kein offenes Tor.
+2. **`ctx.zugang(name)` im Runner** von scriptum: ein Skript spricht ein Fremdsystem über die Weiterleitung an
+   (`get/post/put/del`), ohne dessen Token je zu sehen. Der Name kommt aus einem Parameter vom Typ `driver` (im
+   Formular eine Auswahl der eingerichteten Zugänge) oder steht im Skript.
+
+Damit ist ein neues System **ein Zugang plus ein Skript** — keine gebaute, signierte Erweiterung.
+
+**Die Beispiel-Bibliothek — statt eines Marktes.** Damit niemand jedes Skript bei null beginnt, liefert journali
+**kuratierte Beispiele** mit (`plugins/scriptum/beispiele.mjs`): CSV-Export, Fremdsystem lesen, Fremdsystem beschicken,
+ein einfacher Bericht. Der Autor lädt eines in den Editor (＋ Beispiel …) und passt es an. Kein Fremdcode aus einem
+öffentlichen Markt — dazu die Begründung unter „Offen“ in Abschnitt 37.

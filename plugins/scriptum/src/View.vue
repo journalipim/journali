@@ -9,6 +9,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { api, store, plugins, Splitter, ScriptEditor, paneWidth } from 'journali'
 import { t as t_ } from 'journali'
 import { kopfLesen, paramsAus } from '../kopf.mjs'
+import { beispiele } from '../beispiele.mjs'
 const listW = paneWidth('scriptum.list', 280)
 
 const liste = ref([])
@@ -18,6 +19,8 @@ const editor = ref(false)
 const neu = ref('')
 const werte = ref({})            // Werte des Formulars
 const lauf = ref(null)           // { job, run, laeuft, status, ergebnis, log }
+const zugaenge = ref([])         // eingerichtete Zugaenge — fuer Parameter vom Typ driver
+const vorlage = ref(null)        // Quelltext eines Beispiels, wenn eines eingefuegt wird
 const darfSchreiben = computed(() => store.can('scriptum.write'))
 const rollen = ref([])
 const RECHTE = ref([])
@@ -25,11 +28,15 @@ const RECHTE = ref([])
 let poll = null
 onMounted(async () => {
   await laden()
+  try { zugaenge.value = await api.get('/api/drivers') } catch { zugaenge.value = [] }
   if (darfSchreiben.value) {
     try { rollen.value = await api.get('/api/auth/roles') } catch { rollen.value = [] }
     try { RECHTE.value = await api.get('/api/auth/rights') } catch { RECHTE.value = [] }
   }
 })
+
+// Ein Beispiel als Startpunkt in den Editor laden — der Autor speichert es als neues oder als dieses Skript
+function beispielEinfuegen(b) { if (!b) return; vorlage.value = b.source; editor.value = true }
 onUnmounted(() => clearTimeout(poll))
 
 async function laden(key = cur.value?.key) {
@@ -136,6 +143,11 @@ const dateiLink = computed(() => ergebnis.value?.file
         <h1>⌨ {{ cur.label || cur.key }}</h1><span class="mono muted">{{ cur.key }}</span>
         <span class="grow" />
         <span v-if="busy" class="muted">{{ busy }}</span>
+        <select v-if="darfSchreiben" class="beispiele" style="max-width:150px" :title="$t('Ein Beispiel als Startpunkt in den Editor laden')"
+          @change="e => { beispielEinfuegen(beispiele.find(x => x.key === e.target.value)); e.target.value = '' }">
+          <option value="">{{ $t("＋ Beispiel …") }}</option>
+          <option v-for="b in beispiele" :key="b.key" :value="b.key" :title="b.description">{{ b.title }}</option>
+        </select>
         <button v-if="darfSchreiben" class="editor" @click="editor = true" :title="$t('Quelltext bearbeiten — der Kopf ist das Formular')">{{ $t("⌨ Quelltext") }}</button>
         <button v-if="darfSchreiben" class="x" @click="entfernen" :title="$t('Skript entfernen — die Läufe bleiben im Journal')">✕</button>
         <button class="primary start" :disabled="!!busy" @click="ausfuehren" :title="$t('Als Lauf anstossen — Log und Ergebnis stehen danach hier')">{{ $t("▶ Ausführen") }}</button>
@@ -161,7 +173,11 @@ const dateiLink = computed(() => ergebnis.value?.file
           <h2>{{ $t("Parameter") + ' ' }}<span class="muted">{{ $t("· aus dem Kopf des Skripts") }}</span></h2>
           <table v-if="(cur.params ?? []).length" class="grid form"><colgroup><col style="width:150px" /><col /></colgroup><tbody>
             <tr v-for="p in cur.params" :key="p.key"><td class="attr" :title="p.key">{{ p.label || p.key }}</td>
-              <td><input v-if="p.type !== 'boolean'" class="param" :data-key="p.key" :type="p.type === 'number' ? 'number' : 'text'" v-model="werte[p.key]" style="width:100%" />
+              <td><select v-if="p.type === 'driver'" class="param" :data-key="p.key" v-model="werte[p.key]" style="width:100%" :title="$t('ein eingerichteter Zugang — der Server hängt die Anmeldung an')">
+                  <option value="">{{ $t("— Zugang wählen —") }}</option>
+                  <option v-for="z in zugaenge" :key="z.key" :value="z.key">{{ z.label || z.key }}</option>
+                </select>
+                <input v-else-if="p.type !== 'boolean'" class="param" :data-key="p.key" :type="p.type === 'number' ? 'number' : 'text'" v-model="werte[p.key]" style="width:100%" />
                 <input v-else class="param" :data-key="p.key" type="checkbox" :checked="String(werte[p.key]) === 'true'" @change="e => werte[p.key] = String(e.target.checked)" /></td></tr>
           </tbody></table>
           <div v-else class="muted">{{ $t("Dieses Skript hat keine Parameter.") }}</div>
@@ -189,8 +205,8 @@ const dateiLink = computed(() => ergebnis.value?.file
     </template>
     <div v-else class="empty">{{ $t("Links ein Skript wählen.") }}</div>
 
-    <ScriptEditor v-if="editor && cur" lang="js" :model-value="cur.source ?? ''" :title="cur.label || cur.key"
-      :draft-key="'scriptum.' + cur.key" @save="speichern" @close="editor = false" />
+    <ScriptEditor v-if="editor && cur" lang="js" :model-value="vorlage ?? cur.source ?? ''" :title="cur.label || cur.key"
+      :draft-key="'scriptum.' + cur.key" @save="q => { vorlage = null; speichern(q) }" @close="editor = false; vorlage = null" />
   </div>
 </template>
 

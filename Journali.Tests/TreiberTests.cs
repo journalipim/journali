@@ -161,6 +161,30 @@ public class TreiberTests
         Assert.All(DriverApi.Arten.Where(a => DriverApi.Anmeldungen.Contains(a.Key)), a => Assert.False(a.Dateien));
     }
 
+    [Fact]
+    public void Die_Art_http_traegt_ihre_Anmeldung_je_Wahl()
+    {
+        var basis = new Dictionary<string, string> { ["url"] = "https://api.example.invalid" };
+        // Bearer: das Geheimnis „secret“ als Token, kein zusaetzlicher Kopf
+        var bearer = new DriverApi.Zugang("h", "http", "H", new(basis) { ["auth"] = "bearer" });
+        var b = DriverApi.Anmeldung(bearer, new Dictionary<string, string> { ["secret"] = "t0k" })!;
+        Assert.Equal(("Bearer", "t0k"), (b.Scheme, b.Parameter));
+        Assert.Null(DriverApi.Kopf(bearer, new Dictionary<string, string> { ["secret"] = "t0k" }));
+        // Basic: Anwender und Geheimnis
+        var basic = new DriverApi.Zugang("h", "http", "H", new(basis) { ["auth"] = "basic", ["user"] = "u" });
+        var ba = DriverApi.Anmeldung(basic, new Dictionary<string, string> { ["secret"] = "pw" })!;
+        Assert.Equal("Basic", ba.Scheme);
+        Assert.Equal("u:pw", Encoding.UTF8.GetString(Convert.FromBase64String(ba.Parameter!)));
+        // Eigener Kopf: kein Authorization, sondern ein benannter Kopf (X-API-Key)
+        var kopf = new DriverApi.Zugang("h", "http", "H", new(basis) { ["auth"] = "header", ["header"] = "X-API-Key" });
+        Assert.Null(DriverApi.Anmeldung(kopf, new Dictionary<string, string> { ["secret"] = "k" }));
+        Assert.Equal(("X-API-Key", "k"), DriverApi.Kopf(kopf, new Dictionary<string, string> { ["secret"] = "k" })!.Value);
+        // ohne Wahl: keine Anmeldung; http wird ueber die Weiterleitung gelesen und beschickt, liefert keine Dateien
+        Assert.Null(DriverApi.Anmeldung(new DriverApi.Zugang("h", "http", "H", new(basis)), new Dictionary<string, string> { ["secret"] = "x" }));
+        Assert.Contains("http", DriverApi.Anmeldungen);
+        Assert.False(DriverApi.ArtVon("http")!.Dateien);
+    }
+
     // ---- Fächer an einem Zugang und Parameter vom Typ driver ------------------------------
 
     /// <summary>Ein Zugang im Speicher — derselbe Vertrag wie WebDAV und FTP, ohne Netz.</summary>

@@ -5,6 +5,7 @@ import assert from 'node:assert/strict'
 import { mount, flushPromises, win } from './ui.mjs'
 import { store } from '../src/store.js'
 import { kopfLesen, paramsAus } from '../../plugins/scriptum/kopf.mjs'
+import { beispiele } from '../../plugins/scriptum/beispiele.mjs'
 
 const View = (await import('../../plugins/scriptum/src/View.vue')).default
 
@@ -14,7 +15,7 @@ const SKRIPT = {
   source: "export const meta = { label: 'Preise prüfen', params: [{ key: 'root', label: 'Teilbaum', default: 'g1' }] }\nexport default async ({ out }) => out.text('ok')",
 }
 
-function welt({ rechte = ['read', 'scriptum.write', 'scriptum.run'], laeufe = [] } = {}) {
+function welt({ rechte = ['read', 'scriptum.write', 'scriptum.run'], laeufe = [], skript = SKRIPT, drivers = [] } = {}) {
   store.actor = 'u1'; store.toasts = []; store.server = ''
   store.auth = { known: true, enabled: true, user: 'u1', role: 'admin', name: 'A', rights: rechte }
   const rufe = []
@@ -23,9 +24,10 @@ function welt({ rechte = ['read', 'scriptum.write', 'scriptum.run'], laeufe = []
     const pfad = String(url); rufe.push({ pfad, opt })
     const json = opt.body ? JSON.parse(opt.body) : null
     let antwort = {}
-    if (/\/api\/scriptum\/scripts$/.test(pfad)) antwort = [{ ...SKRIPT, source: undefined }]
-    else if (/\/api\/scriptum\/scripts\/preise$/.test(pfad) && opt.method === 'PUT') antwort = { ...SKRIPT, ...json }
-    else if (/\/api\/scriptum\/scripts\/preise$/.test(pfad)) antwort = SKRIPT
+    if (/\/api\/scriptum\/scripts$/.test(pfad)) antwort = [{ ...skript, source: undefined }]
+    else if (/\/api\/scriptum\/scripts\/preise$/.test(pfad) && opt.method === 'PUT') antwort = { ...skript, ...json }
+    else if (/\/api\/scriptum\/scripts\/preise$/.test(pfad)) antwort = skript
+    else if (/\/api\/drivers(\?|$)/.test(pfad)) antwort = drivers
     else if (/\/run$/.test(pfad)) antwort = { job: 'scriptum_preise', run: 'r1' }
     else if (/\/api\/scriptum\/runs\//.test(pfad)) antwort = laeufe[Math.min(i++, laeufe.length - 1)] ?? { laeuft: false }
     else if (/\/api\/auth\/roles/.test(pfad)) antwort = [{ key: 'editor', label: 'PIM-Editor' }]
@@ -125,4 +127,28 @@ test('speichern schreibt den Kopf als Parameter mit', async () => {
   assert.equal(leib.role, 'admin')
   assert.deepEqual(leib.params, [{ key: 'n', label: 'Anzahl', type: 'number', default: '5' }])
   assert.match(leib.source, /export default/)
+})
+
+test('ein Parameter vom Typ driver ist eine Auswahl eingerichteter Zugänge', async () => {
+  const skript = { ...SKRIPT, params: [{ key: 'sys', label: 'System', type: 'driver', default: '' }] }
+  const { w } = welt({ skript, drivers: [{ key: 'sap', label: 'SAP Prod' }, { key: 'frontify', label: 'Frontify' }] })
+  await warte(w)
+  const sel = w.find('select.param')
+  assert.ok(sel.exists(), 'der driver-Parameter ist eine Auswahl, kein Textfeld')
+  assert.equal(sel.attributes('data-key'), 'sys')
+  const opts = sel.findAll('option').map(o => o.text())
+  assert.ok(opts.includes('SAP Prod') && opts.includes('Frontify'), 'die eingerichteten Zugänge stehen zur Wahl')
+})
+
+test('＋ Beispiel lädt einen geprüften Startpunkt in den Editor', async () => {
+  const { w } = welt()
+  await warte(w)
+  const sel = w.find('select.beispiele')
+  assert.ok(sel.exists(), 'die Beispiel-Auswahl steht da')
+  assert.equal(sel.findAll('option').length, beispiele.length + 1, 'jedes Beispiel plus der Platzhalter')
+  await sel.setValue(beispiele[0].key)
+  await warte(w)
+  const ed = w.findComponent({ name: 'ScriptEditor' })
+  assert.ok(ed.exists(), 'der Editor ist offen')
+  assert.equal(ed.props('modelValue'), beispiele[0].source, 'mit dem Quelltext des Beispiels')
 })

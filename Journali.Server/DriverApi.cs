@@ -41,10 +41,11 @@ public static class DriverApi
         new("ftp", "FTP", true, ["host", "port", "user", "pfad", "tls"], ["password"]),
         new("ixp", "IXP (Anmeldung)", false, ["url"], ["token"]),
         new("solr", "Solr (Anmeldung)", false, ["url", "user"], ["password"]),
+        new("http", "HTTP/REST", false, ["url", "auth", "user", "header"], ["secret"]),
     ];
 
-    /// <summary>Arten, deren Quelle der Browser über die Weiterleitung liest.</summary>
-    public static readonly IReadOnlySet<string> Anmeldungen = new HashSet<string> { "ixp", "solr" };
+    /// <summary>Arten, deren Quelle über die Weiterleitung gelesen und beschickt wird — nie direkt, denn das Geheimnis bleibt beim Server.</summary>
+    public static readonly IReadOnlySet<string> Anmeldungen = new HashSet<string> { "ixp", "solr", "http" };
 
     public static Art? ArtVon(string? key) => Arten.FirstOrDefault(a => a.Key == key);
 
@@ -164,15 +165,24 @@ public static class DriverApi
             { return Results.Ok(new { ok = false, text = e.Message }); }
         });
 
-        // Die Weiterleitung einer Anmeldung: der Browser liest die Quelle (IXP, Solr) über den Server, der die Anmeldung
-        // anhängt — das Geheimnis verlässt ihn nicht. Nur GET, nur unterhalb der Adresse des Zugangs (path relativ, ohne ..)
-        api.MapGet("/drivers/{zugang}/relay", async (string zugang, string? path, HttpContext http, Catalog c, CancellationToken ct) =>
+        // Die Weiterleitung: der Server liest die Quelle (IXP, Solr, HTTP) und beschickt sie, hängt die Anmeldung an —
+        // das Geheimnis verlässt ihn nie. GET liest, POST/PUT/DELETE schreiben mit Rumpf; nur unterhalb der Adresse des
+        // Zugangs (path relativ, ohne ..). So spricht ein Skript ein Fremdsystem an, ohne dessen Anmeldung zu kennen
+        api.MapMethods("/drivers/{zugang}/relay", ["GET", "POST", "PUT", "DELETE"], async (string zugang, string? path, HttpContext http, Catalog c, CancellationToken ct) =>
         {
             if (Alle(c).FirstOrDefault(x => x.Key == zugang) is not { } z) return Bad("Zugang {0} gibt es nicht.", zugang);
-            if (!Anmeldungen.Contains(z.Art)) return Bad("Zugang {0} ist keine Anmeldung.", zugang);
+            if (!Anmeldungen.Contains(z.Art)) return Bad("Zugang {0} liest und beschickt nicht über die Weiterleitung.", zugang);
+            var methode = new HttpMethod(http.Request.Method);
+            string? rumpf = null, rumpfTyp = null;
+            if (methode != HttpMethod.Get && methode != HttpMethod.Delete)
+            {
+                using var sr = new StreamReader(http.Request.Body);
+                rumpf = await sr.ReadToEndAsync(ct);
+                rumpfTyp = http.Request.ContentType;
+            }
             try
             {
-                var res = await Weiter(z, Geheim(jobsDir, z.Key), path ?? "/", ct);
+                var res = await Weiter(z, Geheim(jobsDir, z.Key), path ?? "/", ct, methode, rumpf, rumpfTyp);
                 http.Response.RegisterForDispose(res);
                 var typ = res.Content.Headers.ContentType?.ToString() ?? "application/octet-stream";
                 return Results.Stream(await res.Content.ReadAsStreamAsync(ct), typ, enableRangeProcessing: false) is var ok && res.IsSuccessStatusCode
@@ -249,20 +259,36 @@ public static class DriverApi
         return u;
     }
 
-    /// <summary>Die Anmeldung einer Art als Kopf: IXP Bearer mit Token, Solr Basic mit Name und Passwort, sonst keiner.</summary>
+    /// <summary>
+    /// Die Anmeldung einer Art als Authorization-Kopf: IXP Bearer mit Token, Solr Basic mit Name und Passwort; HTTP je
+    /// nach Wahl (<c>auth</c>) Bearer oder Basic mit dem Geheimnis <c>secret</c>. Der eigene Kopf (auth=header) steht in
+    /// <see cref="Kopf"/>, nicht hier — er ist kein Authorization.
+    /// </summary>
     public static System.Net.Http.Headers.AuthenticationHeaderValue? Anmeldung(Zugang z, IReadOnlyDictionary<string, string> geheim) => z.Art switch
     {
         "ixp" when geheim.GetValueOrDefault("token") is { Length: > 0 } t => new("Bearer", t),
         "solr" when z.Felder.GetValueOrDefault("user") is { Length: > 0 } u =>
             new("Basic", Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes($"{u}:{geheim.GetValueOrDefault("password")}"))),
+        "http" when z.Felder.GetValueOrDefault("auth") == "bearer" && geheim.GetValueOrDefault("secret") is { Length: > 0 } t => new("Bearer", t),
+        "http" when z.Felder.GetValueOrDefault("auth") == "basic" && z.Felder.GetValueOrDefault("user") is { Length: > 0 } u =>
+            new("Basic", Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes($"{u}:{geheim.GetValueOrDefault("secret")}"))),
         _ => null,
     };
 
-    private static async Task<HttpResponseMessage> Weiter(Zugang z, IReadOnlyDictionary<string, string> geheim, string pfad, CancellationToken ct)
+    /// <summary>Ein Kopf über Authorization hinaus: HTTP mit <c>auth=header</c> trägt sein Geheimnis in einem eigenen Kopf (etwa <c>X-API-Key</c>).</summary>
+    public static (string Name, string Wert)? Kopf(Zugang z, IReadOnlyDictionary<string, string> geheim) =>
+        z.Art == "http" && z.Felder.GetValueOrDefault("auth") == "header"
+            && z.Felder.GetValueOrDefault("header") is { Length: > 0 } h && geheim.GetValueOrDefault("secret") is { Length: > 0 } s
+            ? (h, s) : null;
+
+    private static async Task<HttpResponseMessage> Weiter(Zugang z, IReadOnlyDictionary<string, string> geheim, string pfad, CancellationToken ct,
+        HttpMethod? methode = null, string? rumpf = null, string? typ = null)
     {
-        using var req = new HttpRequestMessage(HttpMethod.Get, WeiterUrl(z, pfad));
+        using var req = new HttpRequestMessage(methode ?? HttpMethod.Get, WeiterUrl(z, pfad));
         req.Headers.Authorization = Anmeldung(z, geheim);
+        if (Kopf(z, geheim) is { } k) req.Headers.TryAddWithoutValidation(k.Name, k.Wert);
         req.Headers.Accept.ParseAdd("application/json");
+        if (rumpf is not null) req.Content = new StringContent(rumpf, System.Text.Encoding.UTF8, typ is { Length: > 0 } t ? t : "application/json");
         var http = Handler is null ? Http : new HttpClient(Handler, disposeHandler: false);
         return await http.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, ct);
     }

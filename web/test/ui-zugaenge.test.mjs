@@ -130,3 +130,24 @@ test('⟳ prüft einen Zugang und schreibt die Antwort an die Zeile', async () =
     assert.ok(erp.classes('neg'))
   } finally { api.get = get; api.post = post }
 })
+
+// ---- 29.09.2026: die Art HTTP/REST — ein Fremdsystem per API anbinden, ohne ein Plugin zu schreiben
+test('die Art HTTP/REST: die Anmeldung ist eine Wahl, das Geheimnis ist ein Passwortfeld', async () => {
+  const get = api.get
+  api.get = async p => (p === '/api/drivers/arten'
+    ? [{ key: 'file', label: 'x', dateien: true, felder: [], geheim: [] }, { key: 'http', label: 'HTTP/REST', dateien: false, felder: ['url', 'auth', 'user', 'header'], geheim: ['secret'] }]
+    : [{ key: 'lokal', art: 'file', label: '⌂ Dieser Server', felder: {}, dateien: true, geheim: [] }])
+  try {
+    const { default: View } = await import('../../plugins/driver/src/View.vue')
+    const w = mount(View)
+    await new Promise(r => setTimeout(r, 0)); await w.vm.$nextTick()
+    // die Art HTTP/REST wählen — dann steht ihr Formular da
+    await w.find('select').setValue('http')
+    await w.vm.$nextTick()
+    // die Anmeldung ist ein Auswahlfeld, kein Freitext
+    const selects = w.findAll('select')
+    assert.ok(selects.some(s => s.text().includes('Bearer-Token') && s.text().includes('eigener Kopf')), 'Bearer/Basic/eigener Kopf zur Wahl')
+    assert.equal(w.findAll('input[type=password]').length, 1, 'das Geheimnis ist ein Passwortfeld')
+    assert.match(w.text(), /Kopf/)
+  } finally { api.get = get }
+})

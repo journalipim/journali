@@ -16,11 +16,12 @@ const bearbeitet = ref('')
 
 const art = computed(() => arten.value.find(a => a.key === form.value.art) ?? null)
 // Wie Arten und Felder im Formular heissen — der Server kennt nur ihre Schlüssel
-const ARTNAME = { file: t_('Dateisystem des Servers'), webdav: 'WebDAV', ftp: 'FTP', ixp: t_('IXP (Anmeldung)'), solr: t_('Solr (Anmeldung)') }
-const FELD = { url: t_('Adresse'), user: t_('Anwendername'), password: t_('Passwort'), host: t_('Rechner'), port: t_('Port'), pfad: t_('Startverzeichnis'), tls: t_('TLS'), token: t_('Token') }
+const ARTNAME = { file: t_('Dateisystem des Servers'), webdav: 'WebDAV', ftp: 'FTP', ixp: t_('IXP (Anmeldung)'), solr: t_('Solr (Anmeldung)'), http: 'HTTP/REST' }
+const FELD = { url: t_('Adresse'), user: t_('Anwendername'), password: t_('Passwort'), host: t_('Rechner'), port: t_('Port'), pfad: t_('Startverzeichnis'), tls: t_('TLS'), token: t_('Token'), auth: t_('Anmeldung'), header: t_('Kopf'), secret: t_('Geheimnis') }
 const HILFE = {
-  url: t_('https://… — bei WebDAV das Verzeichnis, bei IXP die Basis der API, bei Solr der Kern'),
+  url: t_('https://… — bei WebDAV das Verzeichnis, bei IXP die Basis der API, bei Solr der Kern, bei HTTP die Basis der Schnittstelle'),
   host: t_('nur der Name, ohne ftp:// und ohne Pfad'), port: t_('leer = 21'), pfad: t_('leer = das Verzeichnis nach der Anmeldung'),
+  header: t_('Name des Kopfs, in dem das Geheimnis steht — z. B. X-API-Key'), secret: t_('Token, Schlüssel oder Passwort — bleibt beim Server'),
 }
 const artName = a => ARTNAME[a?.key ?? a] ?? a?.label ?? a
 const feldName = f => FELD[f] ?? f
@@ -119,6 +120,12 @@ function browsen(z) {
       <tr><td class="attr">{{ $t("Bezeichnung") }}</td><td><input v-model="form.label" :placeholder="$t('wie es in der Auswahl steht')" style="width:240px" /></td></tr>
       <tr v-for="f in art?.felder ?? []" :key="f"><td class="attr">{{ feldName(f) }}</td>
         <td><select v-if="f === 'tls'" v-model="form.felder[f]" style="width:240px"><option value="">{{ $t("nein") }}</option><option value="ja">{{ $t("ja — explizites TLS") }}</option></select>
+          <select v-else-if="f === 'auth'" v-model="form.felder[f]" style="width:240px">
+            <option value="">{{ $t("ohne") }}</option>
+            <option value="bearer">{{ $t("Bearer-Token") }}</option>
+            <option value="basic">{{ $t("Basic (Anwender und Geheimnis)") }}</option>
+            <option value="header">{{ $t("eigener Kopf") }}</option>
+          </select>
           <input v-else v-model="form.felder[f]" style="width:240px" autocomplete="off" :placeholder="HILFE[f] ?? ''" :title="HILFE[f] ?? ''" /></td></tr>
       <tr v-for="g in art?.geheim ?? []" :key="g"><td class="attr">{{ feldName(g) }}</td>
         <td><input v-model="form.geheim[g]" type="password" autocomplete="new-password" style="width:240px"

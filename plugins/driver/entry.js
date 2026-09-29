@@ -1,4 +1,4 @@
-(function(){const s=document.createElement('style');s.textContent="\n.x[data-v-5ab799ff] { border: 0; background: none; color: var(--muted); padding: 0 4px; cursor: pointer;\n}\n.x[data-v-5ab799ff]:hover { color: var(--accent);\n}\n.form td.attr[data-v-5ab799ff] { white-space: nowrap; color: var(--muted);\n}\n";document.head.append(s)})();
+(function(){const s=document.createElement('style');s.textContent="\n.x[data-v-3c157226] { border: 0; background: none; color: var(--muted); padding: 0 4px; cursor: pointer;\n}\n.x[data-v-3c157226]:hover { color: var(--accent);\n}\n.form td.attr[data-v-3c157226] { white-space: nowrap; color: var(--muted);\n}\n";document.head.append(s)})();
 const m = window.journali.vue;
 const Fragment = m.Fragment;
 const computed = m.computed;
@@ -68,11 +68,16 @@ const _hoisted_25 = { class: "attr" };
 const _hoisted_26 = ["onUpdate:modelValue"];
 const _hoisted_27 = { value: "" };
 const _hoisted_28 = { value: "ja" };
-const _hoisted_29 = ["onUpdate:modelValue", "placeholder", "title"];
-const _hoisted_30 = { class: "attr" };
-const _hoisted_31 = ["onUpdate:modelValue", "placeholder"];
-const _hoisted_32 = { class: "muted" };
-const _hoisted_33 = { class: "row" };
+const _hoisted_29 = ["onUpdate:modelValue"];
+const _hoisted_30 = { value: "" };
+const _hoisted_31 = { value: "bearer" };
+const _hoisted_32 = { value: "basic" };
+const _hoisted_33 = { value: "header" };
+const _hoisted_34 = ["onUpdate:modelValue", "placeholder", "title"];
+const _hoisted_35 = { class: "attr" };
+const _hoisted_36 = ["onUpdate:modelValue", "placeholder"];
+const _hoisted_37 = { class: "muted" };
+const _hoisted_38 = { class: "row" };
 const _sfc_main = {
   __name: "View",
   setup(__props) {
@@ -82,13 +87,15 @@ const _sfc_main = {
     const form = ref({ key: "", art: "ftp", label: "", felder: {}, geheim: {} });
     const bearbeitet = ref("");
     const art = computed(() => arten.value.find((a) => a.key === form.value.art) ?? null);
-    const ARTNAME = { file: t("Dateisystem des Servers"), webdav: "WebDAV", ftp: "FTP", ixp: t("IXP (Anmeldung)"), solr: t("Solr (Anmeldung)") };
-    const FELD = { url: t("Adresse"), user: t("Anwendername"), password: t("Passwort"), host: t("Rechner"), port: t("Port"), pfad: t("Startverzeichnis"), tls: t("TLS"), token: t("Token") };
+    const ARTNAME = { file: t("Dateisystem des Servers"), webdav: "WebDAV", ftp: "FTP", ixp: t("IXP (Anmeldung)"), solr: t("Solr (Anmeldung)"), http: "HTTP/REST" };
+    const FELD = { url: t("Adresse"), user: t("Anwendername"), password: t("Passwort"), host: t("Rechner"), port: t("Port"), pfad: t("Startverzeichnis"), tls: t("TLS"), token: t("Token"), auth: t("Anmeldung"), header: t("Kopf"), secret: t("Geheimnis") };
     const HILFE = {
-      url: t("https://… — bei WebDAV das Verzeichnis, bei IXP die Basis der API, bei Solr der Kern"),
+      url: t("https://… — bei WebDAV das Verzeichnis, bei IXP die Basis der API, bei Solr der Kern, bei HTTP die Basis der Schnittstelle"),
       host: t("nur der Name, ohne ftp:// und ohne Pfad"),
       port: t("leer = 21"),
-      pfad: t("leer = das Verzeichnis nach der Anmeldung")
+      pfad: t("leer = das Verzeichnis nach der Anmeldung"),
+      header: t("Name des Kopfs, in dem das Geheimnis steht — z. B. X-API-Key"),
+      secret: t("Token, Schlüssel oder Passwort — bleibt beim Server")
     };
     const artName = (a) => ARTNAME[a?.key ?? a] ?? a?.label ?? a;
     const feldName = (f) => FELD[f] ?? f;
@@ -446,14 +453,49 @@ const _sfc_main = {
                       )
                     ], 8, _hoisted_26)), [
                       [vModelSelect, form.value.felder[f]]
-                    ]) : withDirectives((openBlock(), createElementBlock("input", {
+                    ]) : f === "auth" ? withDirectives((openBlock(), createElementBlock("select", {
                       key: 1,
+                      "onUpdate:modelValue": ($event) => form.value.felder[f] = $event,
+                      style: { "width": "240px" }
+                    }, [
+                      createElementVNode(
+                        "option",
+                        _hoisted_30,
+                        toDisplayString(_ctx.$t("ohne")),
+                        1
+                        /* TEXT */
+                      ),
+                      createElementVNode(
+                        "option",
+                        _hoisted_31,
+                        toDisplayString(_ctx.$t("Bearer-Token")),
+                        1
+                        /* TEXT */
+                      ),
+                      createElementVNode(
+                        "option",
+                        _hoisted_32,
+                        toDisplayString(_ctx.$t("Basic (Anwender und Geheimnis)")),
+                        1
+                        /* TEXT */
+                      ),
+                      createElementVNode(
+                        "option",
+                        _hoisted_33,
+                        toDisplayString(_ctx.$t("eigener Kopf")),
+                        1
+                        /* TEXT */
+                      )
+                    ], 8, _hoisted_29)), [
+                      [vModelSelect, form.value.felder[f]]
+                    ]) : withDirectives((openBlock(), createElementBlock("input", {
+                      key: 2,
                       "onUpdate:modelValue": ($event) => form.value.felder[f] = $event,
                       style: { "width": "240px" },
                       autocomplete: "off",
                       placeholder: HILFE[f] ?? "",
                       title: HILFE[f] ?? ""
-                    }, null, 8, _hoisted_29)), [
+                    }, null, 8, _hoisted_34)), [
                       [vModelText, form.value.felder[f]]
                     ])
                   ])
@@ -469,7 +511,7 @@ const _sfc_main = {
                 return openBlock(), createElementBlock("tr", { key: g }, [
                   createElementVNode(
                     "td",
-                    _hoisted_30,
+                    _hoisted_35,
                     toDisplayString(feldName(g)),
                     1
                     /* TEXT */
@@ -481,12 +523,12 @@ const _sfc_main = {
                       autocomplete: "new-password",
                       style: { "width": "240px" },
                       placeholder: bearbeitet.value ? _ctx.$t("hinterlegt — leer lassen, um es zu behalten") : ""
-                    }, null, 8, _hoisted_31), [
+                    }, null, 8, _hoisted_36), [
                       [vModelText, form.value.geheim[g]]
                     ]),
                     createElementVNode(
                       "span",
-                      _hoisted_32,
+                      _hoisted_37,
                       toDisplayString(" " + _ctx.$t("bleibt beim Server, nie im Journal")),
                       1
                       /* TEXT */
@@ -506,7 +548,7 @@ const _sfc_main = {
                 /* CACHED */
               )),
               createElementVNode("td", null, [
-                createElementVNode("div", _hoisted_33, [
+                createElementVNode("div", _hoisted_38, [
                   createElementVNode(
                     "button",
                     {
@@ -536,7 +578,7 @@ const _sfc_main = {
     };
   }
 };
-const View = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-5ab799ff"]]);
+const View = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-3c157226"]]);
 const entry = {
   views: [{ path: "zugaenge", topic: "tools", label: t("Zugänge"), icon: "⌁", hint: t("Dateisystem, FTP, WebDAV, Anmeldungen an MySQL, Solr, IXP — einmal einrichten, von jedem Plugin nutzbar"), component: View }]
 };

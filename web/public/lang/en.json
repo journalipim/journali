@@ -2670,7 +2670,6 @@
  "Abmessungen des fertigen Bildes — eine EXIF-Drehung ist eingerechnet.": "Dimensions of the finished image — an EXIF rotation is included.",
  "Der Job probe liest die Abmessungen nach.": "The job probe reads the dimensions.",
  "Die Wurzel eines Zugangs lässt sich nicht umbenennen.": "The root of an access cannot be renamed.",
- "Zugang {0} ist keine Anmeldung.": "Access {0} is not a login.",
  "Quelle nicht erreichbar: {0}": "Source not reachable: {0}",
  "Zugang nicht erreichbar: {0}": "Access not reachable: {0}",
  "Zugang ohne Adresse (url mit http:// oder https://).": "Access without address (url with http:// or https://).",
@@ -2814,5 +2813,6 @@
  "Das lokale Modell sucht nicht im Internet.": "The local model does not search the web.",
  "Das lokale Modell hat kein Modell geladen.": "The local model service has no model loaded.",
  "Text mit dem lokalen Modell (": "Text with the local model (",
- ") bearbeiten — mit den Produktdaten dieses Knotens": ") — using this node's product data"
+ ") bearbeiten — mit den Produktdaten dieses Knotens": ") — using this node's product data",
+ "Zugang {0} liest und beschickt nicht über die Weiterleitung.": "Access {0} is not read or written through the relay."
 }

@@ -84,6 +84,24 @@ test('die API des Skripts spricht journali mit dem Token des Laufs', async () =>
   } finally { globalThis.fetch = alt }
 })
 
+test('ctx.zugang spricht ein Fremdsystem über die Weiterleitung — mit dem Pfad hinter der Adresse', async () => {
+  const rufe = []
+  const alt = globalThis.fetch
+  globalThis.fetch = async (url, opt = {}) => { rufe.push({ url: String(url), opt }); return { ok: true, status: 200, text: async () => JSON.stringify([{ id: 'a' }]) } }
+  try {
+    const ctx = kontext({ server: 'http://localhost:5000', token: 'svc_1', actor: 'job:scriptum_x', params: { sys: 'sap' } })
+    const z = ctx.zugang(ctx.params.sys)
+    assert.deepEqual(await z.get('/odata/Products?$top=2'), [{ id: 'a' }])
+    assert.equal(rufe[0].url, 'http://localhost:5000/api/drivers/sap/relay?path=' + encodeURIComponent('/odata/Products?$top=2'))
+    assert.equal(rufe[0].opt.headers.Authorization, 'Bearer svc_1', 'das Token des Laufs, nie das des Fremdsystems')
+    await z.post('/items', { id: 'x' })
+    assert.equal(rufe[1].opt.method, 'POST')
+    assert.equal(rufe[1].url, 'http://localhost:5000/api/drivers/sap/relay?path=' + encodeURIComponent('/items'))
+    assert.equal(JSON.parse(rufe[1].opt.body).id, 'x')
+    assert.throws(() => ctx.zugang(''), /kein Zugang/)
+  } finally { globalThis.fetch = alt }
+})
+
 test('ein Fehler des Skripts ist eine Meldung, kein Absturz', async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'scriptum-fehler-'))
   try {

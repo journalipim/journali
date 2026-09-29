@@ -43,7 +43,6 @@
  "Startverzeichnis": "Start directory",
  "TLS": "TLS",
  "Token": "Token",
- "https://… — bei WebDAV das Verzeichnis, bei IXP die Basis der API, bei Solr der Kern": "https://… — for WebDAV the directory, for IXP the API base, for Solr the core",
  "nur der Name, ohne ftp:// und ohne Pfad": "the name only, without ftp:// and without a path",
  "leer = 21": "empty = 21",
  "leer = das Verzeichnis nach der Anmeldung": "empty = the directory after sign-in",
@@ -51,5 +50,14 @@
  "nicht erreichbar": "not reachable",
  "prüfen, ob der Zugang ankommt": "check whether the access gets through",
  "nein": "no",
- "ja — explizites TLS": "yes — explicit TLS"
+ "ja — explizites TLS": "yes — explicit TLS",
+ "Anmeldung": "Sign-in",
+ "Kopf": "Header",
+ "https://… — bei WebDAV das Verzeichnis, bei IXP die Basis der API, bei Solr der Kern, bei HTTP die Basis der Schnittstelle": "https://… — for WebDAV the directory, for IXP the API base, for Solr the core, for HTTP the interface base",
+ "Name des Kopfs, in dem das Geheimnis steht — z. B. X-API-Key": "Name of the header that carries the secret — e.g. X-API-Key",
+ "Token, Schlüssel oder Passwort — bleibt beim Server": "Token, key or password — stays on the server",
+ "ohne": "none",
+ "Bearer-Token": "Bearer token",
+ "Basic (Anwender und Geheimnis)": "Basic (user and secret)",
+ "eigener Kopf": "custom header"
 }

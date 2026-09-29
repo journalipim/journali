@@ -94,7 +94,20 @@ export function kontext({ server, token, actor, params, outDir, log = console.lo
       return { file: sicher, bytes: fs.statSync(ziel).size }
     },
   }
-  return { api, params, journali: server, actor, out, log }
+  /// Ein Zugang: der Server (Weiterleitung) haengt die Anmeldung an und spricht das Fremdsystem an — das Geheimnis
+  /// bleibt bei ihm, das Skript sieht es nie. Der Pfad ist relativ zur Adresse des Zugangs; die Antwort ist geparstes
+  /// JSON, sonst Text. Der Name kommt aus einem Parameter (Typ driver) oder steht im Skript.
+  const zugang = name => {
+    if (!name) throw new Error('kein Zugang genannt')
+    const weiter = (method, pfad, body) => anfrage(method, `/api/drivers/${encodeURIComponent(name)}/relay?path=${encodeURIComponent(pfad || '/')}`, body)
+    return {
+      get: pfad => weiter('GET', pfad),
+      post: (pfad, body) => weiter('POST', pfad, body),
+      put: (pfad, body) => weiter('PUT', pfad, body),
+      del: pfad => weiter('DELETE', pfad),
+    }
+  }
+  return { api, params, journali: server, actor, out, log, zugang }
 }
 
 /// Den Quelltext in eine Datei schreiben und als Modul laden — ein Skript ist ein ES-Modul, kein String im Server.
