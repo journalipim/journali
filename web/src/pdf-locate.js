@@ -41,3 +41,22 @@ export function kastenAus(items, spanne, rand = 2) {
   const right = Math.max(...teil.map(i => i.left + (i.width || 0))), bottom = Math.max(...teil.map(i => i.top + (i.height || 0)))
   return { left: left - rand, top: top - rand, width: right - left + 2 * rand, height: bottom - top + 2 * rand }
 }
+
+/// Alle Vorkommen eines Texts in den Stuecken finden (fuer die Suche im PDF).
+export function findeAlleSpannen(items, text) {
+  const ziel = strip(text)
+  if (ziel.length < 2 || !Array.isArray(items) || !items.length) return []
+  let hay = ''
+  const stueck = []
+  for (let i = 0; i < items.length; i++) {
+    for (const ch of strip(items[i]?.str)) { hay += ch; stueck.push(i) }
+  }
+  const alle = []
+  let pos = 0
+  while ((pos = hay.indexOf(ziel, pos)) >= 0) {
+    const a = stueck[pos], b = stueck[Math.min(pos + ziel.length - 1, stueck.length - 1)]
+    if (a != null && b != null) alle.push({ von: Math.min(a, b), bis: Math.max(a, b) })
+    pos += 1
+  }
+  return alle
+}

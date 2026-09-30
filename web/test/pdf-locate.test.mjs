@@ -2,7 +2,7 @@
 // gegen Leerzeichen und Umbrüche —, und daraus den umschliessenden Kasten. Reine Logik, ohne pdf.js.
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { findeSpanne, kastenAus } from '../src/pdf-locate.js'
+import { findeSpanne, findeAlleSpannen, kastenAus } from '../src/pdf-locate.js'
 
 const stuecke = strs => strs.map(s => ({ str: s }))
 
@@ -44,4 +44,19 @@ test('der Kasten umschliesst die Lagen der Stücke, mit Rand', () => {
   assert.deepEqual(k, { left: 8, top: 18, width: 44, height: 16 })   // 10..50 breit, 20..32 hoch, +2 Rand
   assert.equal(kastenAus(items, null), null)
   assert.equal(kastenAus([{ str: 'x' }], { von: 0, bis: 0 }), null, 'ohne Lagen kein Kasten')
+})
+
+test('findeAlleSpannen findet alle Vorkommen, nicht nur das erste', () => {
+  const items = stuecke(['ab', 'c', 'ab', 'c', 'de', 'ab', 'c'])
+  const alle = findeAlleSpannen(items, 'abc')
+  assert.equal(alle.length, 3, 'drei Vorkommen')
+  assert.deepEqual(alle[0], { von: 0, bis: 1 })
+  assert.deepEqual(alle[1], { von: 2, bis: 3 })
+  assert.deepEqual(alle[2], { von: 5, bis: 6 })
+})
+
+test('findeAlleSpannen: zu kurz, leer, nichts → leeres Feld', () => {
+  assert.deepEqual(findeAlleSpannen(stuecke(['abc']), 'x'), [])
+  assert.deepEqual(findeAlleSpannen(stuecke(['abc']), 'a'), [], 'ein Zeichen reicht nicht')
+  assert.deepEqual(findeAlleSpannen([], 'abc'), [])
 })

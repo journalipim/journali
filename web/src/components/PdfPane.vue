@@ -6,7 +6,7 @@
 // Zoom (30.09.2026): CSS-Transform auf dem Inhalt, nicht neu rendern — schnell, der Zoomlevel bleibt beim Attributwechsel.
 import { ref, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { t as t_ } from '../i18n.js'
-import { findeSpanne, kastenAus } from '../pdf-locate.js'
+import { findeSpanne, findeAlleSpannen, kastenAus } from '../pdf-locate.js'
 
 const props = defineProps({
   doc: { type: String, default: null },
@@ -27,6 +27,11 @@ const canvasRefs = {}
 let pdfDoc = null
 let laufId = 0
 let basisBreite = 400           // die Breite, auf die das PDF bei zoom=1 passt
+
+const suchtext = ref('')
+const treffer = ref([])          // [{ page, left, top, width, height }]
+const trefferNr = ref(-1)
+let suchTimer = null
 
 function setCanvas(num, el) { if (el) canvasRefs[num] = el }
 
@@ -154,7 +159,42 @@ function zoomen(delta) {
 }
 function onWheel(e) { if (e.ctrlKey) { e.preventDefault(); zoomen(e.deltaY < 0 ? 0.2 : -0.2) } }
 
-watch(() => props.doc, id => { zoom.value = 1; ladeDoc(id) })
+function suchen() {
+  treffer.value = []; trefferNr.value = -1
+  const s = suchtext.value
+  if (!s || s.length < 2) return
+  const alle = []
+  for (const [num, t] of tech) {
+    if (!t.items.length) continue
+    for (const spanne of findeAlleSpannen(t.items, s)) {
+      const k = kastenAus(t.items, spanne)
+      if (k) alle.push({ page: num, ...k })
+    }
+  }
+  alle.sort((a, b) => a.page - b.page || a.top - b.top)
+  treffer.value = alle
+  if (alle.length) { trefferNr.value = 0; zumTreffer() }
+}
+function zumTreffer() {
+  const t = treffer.value[trefferNr.value]
+  if (!t) return
+  nextTick(() => { requestAnimationFrame(() => {
+    const el = behaelter.value?.querySelector('.such-treffer.aktuell')
+    if (el) el.scrollIntoView({ block: 'center', inline: 'center', behavior: 'smooth' })
+  }) })
+}
+function naechsterTreffer(d = 1) {
+  if (!treffer.value.length) return
+  trefferNr.value = (trefferNr.value + d + treffer.value.length) % treffer.value.length
+  zumTreffer()
+}
+function suchTaste(e) {
+  if (e.key === 'Enter') { e.preventDefault(); naechsterTreffer(e.shiftKey ? -1 : 1) }
+  else if (e.key === 'Escape') { suchtext.value = ''; treffer.value = []; trefferNr.value = -1 }
+}
+watch(suchtext, () => { clearTimeout(suchTimer); suchTimer = setTimeout(suchen, 200) })
+
+watch(() => props.doc, id => { zoom.value = 1; suchtext.value = ''; treffer.value = []; trefferNr.value = -1; ladeDoc(id) })
 watch(() => [props.page, props.quote, props.value], () => springen())
 onMounted(() => ladeDoc(props.doc))
 onBeforeUnmount(() => { laufId++; if (pdfDoc) { try { pdfDoc.destroy() } catch { /* egal */ } } })
@@ -169,6 +209,13 @@ onBeforeUnmount(() => { laufId++; if (pdfDoc) { try { pdfDoc.destroy() } catch {
       <span class="muted" :title="$t('Strg+Mausrad zum Zoomen')">{{ Math.round(zoom * 100) }}%</span>
       <button class="x" @click="zoomen(0.2)" :disabled="zoom >= 4" title="+">+</button>
       <button v-if="zoom !== 1" class="x muted" @click="zoom = 1" title="1:1">⌂</button>
+      <span class="grow" />
+      <input class="such-feld" v-model="suchtext" :placeholder="$t('Suchen')" @keydown="suchTaste" />
+      <template v-if="treffer.length">
+        <span class="muted such-nr">{{ (trefferNr + 1) + '/' + treffer.length }}</span>
+        <button class="x" @click="naechsterTreffer(-1)" title="↑">‹</button>
+        <button class="x" @click="naechsterTreffer(1)" title="↓">›</button>
+      </template>
     </div>
     <div class="pdf" ref="behaelter" @wheel="onWheel">
       <div v-if="laden" class="hinweis muted">{{ $t("◌ PDF wird geladen …") }}</div>
@@ -178,6 +225,9 @@ onBeforeUnmount(() => { laufId++; if (pdfDoc) { try { pdfDoc.destroy() } catch {
         <div v-for="s in seiten" :key="s.num" class="seite" :style="{ width: s.width + 'px', height: s.height + 'px' }">
           <canvas :ref="el => setCanvas(s.num, el)" />
           <div v-if="marke && marke.page === s.num" class="marke" :style="{ left: marke.left + 'px', top: marke.top + 'px', width: marke.width + 'px', height: marke.height + 'px' }" />
+          <template v-for="(t, ti) in (treffer.filter(t => t.page === s.num))" :key="'s' + ti">
+            <div class="such-treffer" :class="{ aktuell: treffer.indexOf(t) === trefferNr }" :style="{ left: t.left + 'px', top: t.top + 'px', width: t.width + 'px', height: t.height + 'px' }" />
+          </template>
         </div>
       </div>
     </div>
@@ -194,4 +244,9 @@ onBeforeUnmount(() => { laufId++; if (pdfDoc) { try { pdfDoc.destroy() } catch {
 .seite { position: relative; margin: 0 auto 10px; box-shadow: 0 1px 5px rgba(0,0,0,.45); }
 .seite canvas { display: block; width: 100%; height: 100%; }
 .marke { position: absolute; background: color-mix(in srgb, var(--accent, #e0189a) 26%, transparent); outline: 2px solid var(--accent, #e0189a); border-radius: 2px; pointer-events: none; transition: left .2s, top .2s, width .2s, height .2s; }
+.such-feld { width: 100px; font-size: 12px; padding: 1px 4px; border: 1px solid var(--line); border-radius: 3px; background: var(--bg); color: var(--text); outline: none; }
+.such-feld:focus { border-color: var(--accent); }
+.such-nr { font-size: 11px; min-width: 32px; text-align: center; }
+.such-treffer { position: absolute; background: rgba(255, 196, 0, 0.3); outline: 1px solid rgba(255, 196, 0, 0.6); border-radius: 1px; pointer-events: none; }
+.such-treffer.aktuell { background: rgba(255, 140, 0, 0.45); outline: 2px solid rgba(255, 140, 0, 0.9); }
 </style>
