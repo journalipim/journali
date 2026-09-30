@@ -601,41 +601,63 @@ export async function mount(root, ctx, catalog) {
   return () => {}
 
   // Analyse (kein Schreiben): was fehlt, damit der Katalog am aktuellen Ast greift.
+  // Rueckgabe: { wurzel, gruppeFehlt, fehlendeItems[], zuOrdnende[{item,attr}], haengtNicht, allesOk }
+  //   fehlendeItems: das Modell-Attribut fehlt und wird neu angelegt
+  //   zuOrdnende:   das Modell-Attribut existiert, ist aber nicht in der Katalog-Gruppe
   function analyseEinrichtung() {
     let wurzel = tree.byId.get(st.root)
     while (wurzel?.parent) wurzel = tree.byId.get(wurzel.parent) ?? wurzel
-    if (!wurzel) return { status: 'ok' }
-    const gruppeDa = (model.groups ?? []).some(g => g.key === catalog.groupKey)
+    if (!wurzel) return { allesOk: true }
+    const gruppeFehlt = !(model.groups ?? []).some(g => g.key === catalog.groupKey)
     const alleItems = catalog.groups.flatMap(g => g.items)
-    const modellKeys = new Set((model.attributes ?? []).map(a => a.key))
-    const fehlendeItems = alleItems.filter(it => !modellKeys.has((catalog.prefix ?? '') + it.key))
+    const attrByKey = new Map((model.attributes ?? []).map(a => [a.key, a]))
+    const gruppenVon = a => a?.groups ?? (a?.group ? [a.group] : [])
+    const fehlendeItems = []
+    const zuOrdnende = []
+    for (const it of alleItems) {
+      const key = (catalog.prefix ?? '') + it.key
+      const attr = attrByKey.get(key)
+      if (!attr) fehlendeItems.push(it)
+      else if (!gruppenVon(attr).includes(catalog.groupKey)) zuOrdnende.push({ item: it, attr })
+    }
     const wurzelGroups = (wurzel.groups ?? '').split(',').map(s => s.trim()).filter(Boolean)
-    const haengtAnWurzel = wurzelGroups.includes(catalog.groupKey)
-    if (!gruppeDa) return { status: 'gruppe', wurzel, fehlendeItems, haengtNicht: true }
-    if (!haengtAnWurzel && fehlendeItems.length) return { status: 'ergaenzen_und_anhaengen', wurzel, fehlendeItems, haengtNicht: true }
-    if (!haengtAnWurzel) return { status: 'anhaengen', wurzel, fehlendeItems: [], haengtNicht: true }
-    if (fehlendeItems.length) return { status: 'ergaenzen', wurzel, fehlendeItems, haengtNicht: false }
-    return { status: 'ok', wurzel, fehlendeItems: [], haengtNicht: false }
+    const haengtNicht = !wurzelGroups.includes(catalog.groupKey)
+    const allesOk = !gruppeFehlt && !fehlendeItems.length && !zuOrdnende.length && !haengtNicht
+    return { wurzel, gruppeFehlt, fehlendeItems, zuOrdnende, haengtNicht, allesOk }
   }
 
   async function einrichten() {
     const a = analyseEinrichtung()
-    if (a.status === 'ok') return true
-    const titel = {
-      gruppe: t_('{0} einrichten fuer "{1}"', [catalog.label, a.wurzel.label]),
-      anhaengen: t_('{0}: Gruppe an "{1}" anhaengen', [catalog.label, a.wurzel.label]),
-      ergaenzen: t_('{0}: {1} neue Datenpunkte laut Katalog', [catalog.label, a.fehlendeItems.length]),
-      ergaenzen_und_anhaengen: t_('{0}: Gruppe an "{1}" anhaengen und {2} Datenpunkte ergaenzen', [catalog.label, a.wurzel.label, a.fehlendeItems.length]),
-    }[a.status]
+    if (a.allesOk) return true
+    // Titel adaptiv: was ist die grosse Wirkung? (Anlegen > Zuordnen > Anhaengen)
+    const titel = a.gruppeFehlt || a.fehlendeItems.length
+      ? t_('{0} einrichten fuer "{1}"', [catalog.label, a.wurzel.label])
+      : a.zuOrdnende.length && a.haengtNicht
+        ? t_('{0}: {1} Attribute der Gruppe zuordnen und an "{2}" anhaengen', [catalog.label, a.zuOrdnende.length, a.wurzel.label])
+        : a.zuOrdnende.length
+          ? t_('{0}: {1} Attribute der Gruppe {2} zuordnen', [catalog.label, a.zuOrdnende.length, catalog.groupKey])
+          : t_('{0}: Gruppe an "{1}" anhaengen', [catalog.label, a.wurzel.label])
     const zeilen = []
-    if (a.status === 'gruppe') zeilen.push(t_('Attributgruppe {0} anlegen', [catalog.groupKey]))
+    if (a.gruppeFehlt) zeilen.push(t_('Attributgruppe {0} anlegen', [catalog.groupKey]))
     if (a.fehlendeItems.length) zeilen.push(t_('{0} Attribute anlegen: {1}', [a.fehlendeItems.length, a.fehlendeItems.slice(0, 6).map(x => x.label).join(', ') + (a.fehlendeItems.length > 6 ? ', ...' : '')]))
+    if (a.zuOrdnende.length) zeilen.push(t_('{0} vorhandene Attribute der Gruppe {1} zuordnen (kein Kopieren): {2}', [a.zuOrdnende.length, catalog.groupKey, a.zuOrdnende.slice(0, 6).map(x => x.item.label).join(', ') + (a.zuOrdnende.length > 6 ? ', ...' : '')]))
     if (a.haengtNicht) zeilen.push(t_('Gruppe {0} an "{1}" anhaengen', [catalog.groupKey, a.wurzel.label]))
-    const knopf = a.status === 'anhaengen' ? t_('Anhaengen') : a.status === 'ergaenzen' ? t_('Ergaenzen') : t_('Einrichten')
+    const knopf = a.gruppeFehlt || a.fehlendeItems.length ? t_('Einrichten')
+      : a.zuOrdnende.length && a.haengtNicht ? t_('Zuordnen und anhaengen')
+      : a.zuOrdnende.length ? t_('Zuordnen')
+      : t_('Anhaengen')
     const ok = await dialog.confirm({ title: titel, warn: t_('Modellpflege — Auswirkung auf das Modell und den Baum'), list: zeilen, ok: knopf })
     if (!ok) return false
     try {
       if (a.fehlendeItems.length) { say(t_('lege {0} Attribute an ...', [a.fehlendeItems.length])); await createAttributes(catalog, a.fehlendeItems, st.mapping); await remember() }
+      if (a.zuOrdnende.length) {
+        say(t_('ordne {0} Attribute der Gruppe {1} zu ...', [a.zuOrdnende.length, catalog.groupKey]))
+        for (const { attr } of a.zuOrdnende) {
+          const gruppenVon = a => a?.groups ?? (a?.group ? [a.group] : [])
+          const soll = [...new Set([...gruppenVon(attr), catalog.groupKey])].sort()
+          await api.post(`/api/model/attributes/${encodeURIComponent(attr.key)}`, { ...attr, groups: soll }, 'PUT')
+        }
+      }
       if (a.haengtNicht) {
         const have = (a.wurzel.groups ?? '').split(',').map(s => s.trim()).filter(Boolean)
         if (!have.includes(catalog.groupKey)) { await api.post(`/api/nodes/${encodeURIComponent(a.wurzel.id)}/groups`, { groups: [...have, catalog.groupKey] }, 'PUT') }
