@@ -5,6 +5,7 @@
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { store } from '../store.js'
 import { t as t_ } from '../i18n.js'
+import PdfPane from './PdfPane.vue'
 
 const props = defineProps({
   media: { type: Array, required: true },   // [{ id, label, mime, isImage, hasThumb }]
@@ -21,12 +22,7 @@ const darf = computed(() => store.can('download'))
 const datei = m => `/api/media/${encodeURIComponent(m.id)}/file`
 const link = m => `${datei(m)}?name=${encodeURIComponent(m.label ?? '')}`
 const fehler = ref(false)
-/// Ein PDF zeigt zuerst die gerechnete Seitenvorschau (Thumbnail) — die funktioniert immer und ist sofort da.
-/// Der Schalter ▤/▨ wechselt zum iframe mit dem Betrachter des Browsers; navigator.pdfViewerEnabled ist unzuverlässig
-/// (sagt true, obwohl der iframe nur einen Platzhalter zeigt), darum kein Automatismus (29.09.2026)
-const alsBild = ref(true)
-watch(cur, () => { fehler.value = false; alsBild.value = true })
-const blatt = computed(() => istPdf(cur.value) && !alsBild.value)
+watch(cur, () => { fehler.value = false })
 
 function weiter(n) { if (!mehrere.value) return; i.value = (i.value + n + props.media.length) % props.media.length }
 function onKey(e) {
@@ -46,15 +42,12 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
         <span class="grow" />
         <button v-if="mehrere" class="x" @click="weiter(-1)" :title="$t('vorheriges (←)')">‹</button>
         <button v-if="mehrere" class="x" @click="weiter(1)" :title="$t('nächstes (→)')">›</button>
-        <button v-if="istPdf(cur) && darf" class="x" @click="alsBild = !alsBild" :title="$t('Zeigt der Betrachter das Blatt nicht, steht hier die gerechnete Seitenvorschau')">{{ alsBild ? '▤' : '▨' }}</button>
         <a v-if="darf" class="x" :href="link(cur)" target="_blank" :title="$t('Datei herunterladen')">⤓</a>
         <button class="x" @click="emit('close')" :title="$t('schliessen (Esc)')">×</button>
       </div>
       <div class="mv-body">
         <div v-if="!darf" class="leer muted">{{ $t("Kein Recht zum Herunterladen") }}</div>
-        <iframe v-else-if="blatt" :src="`${datei(cur)}#view=FitH`" :title="cur.label"></iframe>
-        <img v-else-if="istPdf(cur) && !fehler" class="seite" :src="`/api/media/${cur.id}/thumb`" :alt="cur.label" @error="fehler = true" />
-        <div v-else-if="istPdf(cur)" class="leer muted" :title="$t('Der Job „Vorschauen rechnen“ rechnet die erste Seite')">{{ $t("Noch keine Seitenvorschau") }}</div>
+        <PdfPane v-else-if="istPdf(cur)" :doc="cur.id" />
         <img v-else-if="istBild(cur) && !fehler" :src="datei(cur)" :alt="cur.label" @error="fehler = true" />
         <img v-else-if="cur.hasThumb && !fehler" :src="`/api/media/${cur.id}/thumb`" :alt="cur.label" @error="fehler = true" />
         <div v-else class="leer muted">{{ $t("Keine Vorschau für {0}", [cur.mime || '?']) }}</div>
@@ -68,9 +61,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
 .mv { width: min(1200px, 94vw); height: min(900px, 92vh); background: var(--pane); border: 1px solid var(--line); border-radius: 8px; display: flex; flex-direction: column; overflow: hidden; }
 .mv-body { flex: 1; min-height: 0; display: grid; place-items: center; background: var(--bg); padding: 8px; }
 .mv-body img { max-width: 100%; max-height: 100%; object-fit: contain; }
-/* die gerechnete Seite ist klein (256 px) — in der Vorschau auf die volle Fläche skalieren, damit sie nutzbar ist */
-.mv-body img.seite { max-width: 100%; max-height: 100%; object-fit: contain; image-rendering: auto; }
-.mv-body iframe { width: 100%; height: 100%; border: 0; background: #fff; }
+.mv-body .pdf-pane { width: 100%; height: 100%; }
 .leer { padding: 24px; }
 .toolbar a.x { display: inline-flex; align-items: center; text-decoration: none; }
 </style>
