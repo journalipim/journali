@@ -12,7 +12,7 @@ const MATERIALS = ['PET', 'HDPE', 'PVC', 'LDPE', 'PP', 'PS', 'Kunststoff sonstig
 const isYesNo = v => ['true', 'false', 'ja', 'nein', 'yes', 'no'].includes(String(v).trim().toLowerCase()) ? null : 'ja/nein erwartet'
 
 export default {
-  key: 'ppwr', label: 'Verpackung (PPWR)', icon: '▧', autoCreate: true,
+  key: 'ppwr', label: 'Verpackung (PPWR)', icon: '▧',
   // Geltung aus der ETIM-Klasse: Gefahrgut (Gasflaschen, Aerosole, Kraftstoffe, Sprengmittel), Medizin/Pharma, Lebensmittelkontakt
   scopeRules: [
     { scope: 'hazmat', match: [/gas (cylinder|bottle)/i, /aerosol/i, /\bfuel\b/i, /explosive/i, /flammable/i, /\bacid\b/i, /\bsolvent/i, /lithium/i], why: 'ETIM-Klasse deutet auf Gefahrgut' },
