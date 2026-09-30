@@ -222,6 +222,9 @@ function pickNode(preset, title) {
 // ---- Die Ansicht — dieselbe für jeden Katalog (das Plugin ruft mount(root, ctx, catalog))
 export async function mount(root, ctx, catalog) {
   if (!tree.loaded) await tree.load()
+  // KI-Status frisch: die Knöpfe werden einmal gezeichnet — wenn ai.server hier null ist,
+  // bleiben sie deaktiviert, auch wenn die KI längst bereit ist.
+  try { await ai.loadState() } catch { /* egal, Knöpfe bleiben dann deaktiviert */ }
   const model = store.model
   const st = { root: localStorage.getItem(`journali.cmp.${catalog.key}.root`) || tree.rows.find(r => !r.parent)?.id, mapping: null, res: null, sugg: [], filter: 'all', picked: new Set(), levels: new Set(['must', 'should', 'may']), only: 'all' }
   const saved = await ctx.data.get('mapping')
@@ -530,19 +533,19 @@ export async function mount(root, ctx, catalog) {
     const box = el('div', { style: 'margin-top:10px' })
     const bar = el('div', { class: 'chips' },
       el('button', { onclick: () => { st.sugg = deriveSuggestions(catalog, st.mapping, r); drawSugg() }, title: t_('aus vorhandenen Werten ableiten (Regeln des Katalogs)') }, t_('⚙ Vorschläge (regelbasiert)')),
-      el('button', { class: ai.available() ? 'primary ai' : 'ai', disabled: ai.available() ? null : 'disabled', title: ai.available() ? t_('KI ({0}) schlägt Werte für die angehakten Knoten vor', [ai.label()]) : t_('kein KI-Schlüssel — Einstellungen → KI'), onclick: async () => {
+      el('button', { class: ai.available() ? 'primary ai' : 'ai', disabled: ai.available() ? null : 'disabled', title: ai.available() ? t_('KI ({0}) schlägt Werte für die angehakten Knoten vor', [ai.label()]) : t_('KI nicht eingerichtet — Einstellungen → Team → KI'), onclick: async () => {
         const ids = st.picked.size ? [...st.picked] : r.nodes.filter(n => n.leaf && n.score != null && n.score < 100).slice(0, 10).map(n => n.row.id)
         if (!ids.length) { store.toast(t_('keine Knoten mit Lücken')); return }
         if (ids.length > 25 && !(await dialog.confirm({ title: t_('{0} Knoten an die KI schicken?', [ids.length]), warn: t_('{0} Anfragen an {1}', [ids.length, ai.label()]), ok: t_('✦ Schicken') }))) return
         const s = await aiSuggestions(catalog, st.mapping, r, ids, say); st.sugg = [...st.sugg.filter(x => x.source !== 'ai'), ...s]; say(t_('{0} KI-Vorschläge', [s.filter(x => !x.error).length])); drawSugg()
-      } }, t_('✦ Vorschläge mit KI{0}', [ai.available() ? '' : ' ' + t_('(kein Schlüssel)')])),
+      } }, t_('✦ Vorschläge mit KI{0}', [ai.available() ? '' : ' ' + t_('(nicht eingerichtet)')])),
       // Fremde Produkte (Handelsware): die Daten stehen beim Hersteller — die KI sucht im Internet, jeder Wert mit Quelle
-      el('button', { class: ai.available() ? 'primary ai' : 'ai', disabled: ai.available() ? null : 'disabled', title: ai.available() ? t_('KI ({0}) sucht im Internet nach Hersteller, Typ, EAN — Datenblätter, Kataloge; je Wert die Quelle. Kostet je Suche extra beim Anbieter', [ai.label()]) : t_('kein KI-Schlüssel — Einstellungen → KI'), onclick: async () => {
+      el('button', { class: ai.available() ? 'primary ai' : 'ai', disabled: ai.available() ? null : 'disabled', title: ai.available() ? t_('KI ({0}) sucht im Internet nach Hersteller, Typ, EAN — Datenblätter, Kataloge; je Wert die Quelle. Kostet je Suche extra beim Anbieter', [ai.label()]) : t_('KI nicht eingerichtet — Einstellungen → Team → KI'), onclick: async () => {
         const ids = st.picked.size ? [...st.picked] : r.nodes.filter(n => n.leaf && n.score != null && n.score < 100).slice(0, 5).map(n => n.row.id)
         if (!ids.length) { store.toast(t_('keine Knoten mit Lücken')); return }
         if (ids.length > 10 && !(await dialog.confirm({ title: t_('{0} Knoten recherchieren?', [ids.length]), warn: t_('{0} Anfragen mit bis zu 6 Suchen an {1}', [ids.length, ai.label()]), ok: t_('✦ Recherchieren') }))) return
         const s = await aiSuggestions(catalog, st.mapping, r, ids, say, { web: true }); st.sugg = [...st.sugg.filter(x => x.source !== 'web'), ...s]; say(t_('{0} Vorschläge aus der Recherche', [s.filter(x => !x.error).length])); drawSugg()
-      } }, t_('⌕ Recherche im Internet{0}', [ai.available() ? '' : ' ' + t_('(kein Schlüssel)')])),
+      } }, t_('⌕ Recherche im Internet{0}', [ai.available() ? '' : ' ' + t_('(nicht eingerichtet)')])),
       el('span', { class: 'muted', style: 'font-size:12px' }, st.picked.size ? t_('{0} Knoten angehakt', [st.picked.size]) : t_('ohne Haken: die ersten 10 mit Lücken')))
     box.append(bar); const list = el('div'); box.append(list); s3.append(box)
     function drawSugg() {
