@@ -2,7 +2,7 @@
 // Läuft ohne Browser und ohne Server: `npm test` in web/ (node --test).
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { analyze, resolvePlaceholders, resolveWert, gelesenAus, findeZyklus, einrichtungsBedarf } from '../src/compliance-core.js'
+import { analyze, einrichtungsBedarf } from '../src/compliance-core.js'
 import dpp from '../../plugins/dpp/catalog.js'
 
 // Modell: die Attribute, die die Zuordnung braucht, dazu das Geltungsattribut dpp_scope (vererbbar, Gruppe dpp)
@@ -117,173 +117,6 @@ test('Pflicht-Quote: nur Pflicht-Datenpunkte zählen; na zählt nicht mit', () =
   assert.equal(p.score, Math.round(p.mustOk / p.must * 100))
 })
 
-// ── Platzhalter im Wert: {key} wird durch den Wert des Ziel-Attributs am selben Knoten ersetzt
-// (mit Vererbung, so wie r.values das Attribut fuehrt). Rekursiv, mit Zyklus-Schutz.
-
-test('resolvePlaceholders: kein Platzhalter → der Text unveraendert', () => {
-  assert.equal(resolvePlaceholders('WAKOL Sealing', { name: { value: 'X' } }), 'WAKOL Sealing')
-  assert.equal(resolvePlaceholders('', {}), '')
-  assert.equal(resolvePlaceholders(null, {}), null)
-})
-
-test('resolvePlaceholders: ein Platzhalter → der Wert am Knoten', () => {
-  assert.equal(resolvePlaceholders('{name}', { name: { value: 'EliteBook' } }), 'EliteBook')
-})
-
-test('resolvePlaceholders: mehrere Platzhalter mit Literalen dazwischen', () => {
-  const v = { name: { value: 'EliteBook' }, sku: { value: 'A1' } }
-  assert.equal(resolvePlaceholders('{name} · {sku}', v), 'EliteBook · A1')
-})
-
-test('resolvePlaceholders: leeres Ziel → der Platzhalter wird nichts, der Rest bleibt', () => {
-  const v = { name: { value: 'EliteBook' }, sku: { value: '' } }
-  assert.equal(resolvePlaceholders('{name} · {sku}', v), 'EliteBook · ')
-})
-
-test('resolvePlaceholders: verschachtelter Platzhalter (Ziel enthaelt selbst {key})', () => {
-  const v = { a: { value: '{b}' }, b: { value: 'X' } }
-  assert.equal(resolvePlaceholders('{a}', v), 'X')
-})
-
-test('resolvePlaceholders: Zyklus (a → b → a) → null', () => {
-  const v = { a: { value: '{b}' }, b: { value: '{a}' } }
-  assert.equal(resolvePlaceholders('{a}', v), null)
-})
-
-test('resolvePlaceholders: Selbst-Referenz (a → a) → null', () => {
-  const v = { a: { value: '{a}' } }
-  assert.equal(resolvePlaceholders('{a}', v), null)
-})
-
-test('resolvePlaceholders: nicht existierendes Ziel → nichts (wie ein leeres Ziel)', () => {
-  assert.equal(resolvePlaceholders('vor {fehlt} nach', {}), 'vor  nach')
-})
-
-test('resolvePlaceholders: leere Klammern {} bleiben unangetastet', () => {
-  assert.equal(resolvePlaceholders('a{}b', {}), 'a{}b')
-})
-
-test('analyze: dpp_handelsname = {name} → aufgeloest zum Namen des Knotens (state ok)', () => {
-  const m = { ...mapping }
-  const rowsMitTpl = [
-    { row: product, values: V({ name: 'EliteBook', ean: '4000000000006', sku: 'A1' }) },
-    { row: variant, values: V({ name: 'EliteBook 16', dpp_batch: 'L1' }) },
-  ]
-  // Der 'name'-Wert im Modell existiert; das Mapping trade_name → name gilt.
-  // Wir setzen jetzt einen Wert auf 'name' der ein Platzhalter ist: das Attribut, das den Wert traegt, ist name selbst.
-  // Ein direktes Beispiel: das Attribut 'name' hat den Wert '{sku}' → aufgeloest = 'A1'.
-  const rowsRef = [
-    { row: product, values: V({ name: '{sku}', sku: 'A1', ean: '4000000000006' }) },
-  ]
-  const res = analyze({ catalog: dpp, mapping: m, model, rows: rowsRef, scopeAttr: 'dpp_scope' })
-  const node = res.nodes.find(n => n.row.id === 'p-1')
-  // trade_name ist auf 'name' gemappt; 'name' = '{sku}' → 'A1' → also ok
-  assert.equal(node.states['trade_name'], 'ok')
-})
-
-test('analyze: Wert ist reiner Platzhalter, Ziel leer → state empty', () => {
-  const m = { ...mapping }
-  const rowsRef = [
-    { row: product, values: V({ name: '{sku}', sku: '', ean: '4000000000006' }) },
-  ]
-  const res = analyze({ catalog: dpp, mapping: m, model, rows: rowsRef, scopeAttr: 'dpp_scope' })
-  const node = res.nodes.find(n => n.row.id === 'p-1')
-  assert.equal(node.states['trade_name'], 'empty')
-})
-
-// ── Transform-Kette 'f:[...]' als Wertform: nutzt die Ops aus dem Import-Mapper (plugins/table/transform.mjs).
-// Der aufgeloeste Wert wird beim Pruefen verwendet.
-
-test('resolveWert: woertlicher Text bleibt woertlich', () => {
-  assert.equal(resolveWert('egon maier', { name: { value: 'x' } }), 'egon maier')
-})
-
-test('resolveWert: {key}-Platzhalter wie zuvor', () => {
-  assert.equal(resolveWert('{name}', { name: { value: 'A1' } }), 'A1')
-})
-
-test('resolveWert: f:[combine] mit zwei Spalten', () => {
-  const steps = [{ op: 'combine', columns: '{name},{material}', sep: ' - ' }]
-  const wert = 'f:' + JSON.stringify(steps)
-  // combine liest ctx.get(c); '{name}' und '{material}' als Spaltennamen (nicht mit Klammern)
-  // Also: die columns muss ohne {} sein, sonst versucht combine die {} als Marker fuer den akt. Wert
-  const steps2 = [{ op: 'combine', columns: 'name,material', sep: ' - ' }]
-  const wert2 = 'f:' + JSON.stringify(steps2)
-  const res = resolveWert(wert2, { name: { value: 'WAKOL' }, material: { value: 'Acrylat' } })
-  assert.equal(res, 'WAKOL - Acrylat')
-})
-
-test('resolveWert: f:[default] setzt Fallback ein', () => {
-  const steps = [{ op: 'combine', columns: 'name', sep: '' }, { op: 'default', text: 'ohne Name' }]
-  const wert = 'f:' + JSON.stringify(steps)
-  assert.equal(resolveWert(wert, { name: { value: 'A' } }), 'A')
-  assert.equal(resolveWert(wert, { name: { value: '' } }), 'ohne Name')
-  assert.equal(resolveWert(wert, {}), 'ohne Name')
-})
-
-test('resolveWert: f:[map] macht ja/nein', () => {
-  const steps = [{ op: 'combine', columns: 'siegel' }, { op: 'map', pairs: 'blauer_engel=true; kein=false' }]
-  const wert = 'f:' + JSON.stringify(steps)
-  assert.equal(resolveWert(wert, { siegel: { value: 'blauer_engel' } }), 'true')
-  assert.equal(resolveWert(wert, { siegel: { value: 'kein' } }), 'false')
-})
-
-test('resolveWert: f:[...] ungueltiges JSON → null', () => {
-  assert.equal(resolveWert('f:kein_json', {}), null)
-})
-
-test('resolveWert: f:[...] Zyklus (a → b → a) → leerer String (kein Absturz)', () => {
-  // Ein Attribut a enthaelt eine Kette, die b liest; b enthaelt eine Kette, die a liest.
-  const chainA = 'f:' + JSON.stringify([{ op: 'combine', columns: 'b' }])
-  const chainB = 'f:' + JSON.stringify([{ op: 'combine', columns: 'a' }])
-  // Aus a heraus starten: a → resolve → get(b) → resolveWert(b) → get(a) → seen.has(a) → '' → combine liefert ''
-  const res = resolveWert(chainA, { a: { value: chainA }, b: { value: chainB } })
-  // combine mit einer leeren Spalte → '' (parts wird gefiltert)
-  assert.equal(res, '')
-})
-
-test('analyze: dpp_handelsname = f:[combine name,material] → aufgeloeste Kombination', () => {
-  const m = { ...mapping }
-  const steps = [{ op: 'combine', columns: 'name,material', sep: ' ' }]
-  const wert = 'f:' + JSON.stringify(steps)
-  const rowsRef = [
-    { row: product, values: V({ name: wert, material: 'Acrylat', ean: '4000000000006' }) },
-  ]
-  // Zusatz-Attribut 'material' im Modell (sonst leer)
-  const modelPlus = { ...model, attributes: [...model.attributes, { key: 'material', type: 'text', group: 'mastergroup' }] }
-  const res = analyze({ catalog: dpp, mapping: m, model: modelPlus, rows: rowsRef, scopeAttr: 'dpp_scope' })
-  const node = res.nodes.find(n => n.row.id === 'p-1')
-  // trade_name ist auf 'name' gemappt; 'name' = 'f:...' → 'EliteBook Acrylat'
-  // (name-Wert ist die Kette, die aus ctx.get('name') NICHT rekursiv liest sondern get('material') und get(name))
-  // Achtung: get(name) → seen enthaelt name → '' — also nur 'material' zaehlt
-  assert.equal(node.states['trade_name'], 'ok')
-})
-
-// ── Zyklus-Schutz beim Speichern: ein Ausdruck darf sein Ziel nicht (auch nicht ueber andere Attribute) lesen
-
-test('gelesenAus: Platzhalter im Text, combine-Spalten in der Kette ({} zaehlt nicht)', () => {
-  assert.deepEqual(gelesenAus('{name} {sku}'), ['name', 'sku'])
-  assert.deepEqual(gelesenAus('wortlich'), [])
-  assert.deepEqual(gelesenAus('f:' + JSON.stringify([{ op: 'combine', columns: '{},name, material', sep: ' ' }, { op: 'upper' }])), ['name', 'material'])
-  assert.deepEqual(gelesenAus('f:kein_json'), [])
-})
-
-test('findeZyklus: direkt (a liest a) und indirekt (a liest b, b liest a)', () => {
-  assert.equal(findeZyklus('{a}', 'a', {}), true)
-  assert.equal(findeZyklus('{b}', 'a', { b: { value: '{a}' } }), true)
-  assert.equal(findeZyklus('f:' + JSON.stringify([{ op: 'combine', columns: 'b' }]), 'a', { b: { value: 'f:' + JSON.stringify([{ op: 'combine', columns: 'c' }]) }, c: { value: '{a}' } }), true)
-})
-
-test('findeZyklus: gleiche Quelle zweimal ist kein Kreis; wortlicher Text auch nicht', () => {
-  assert.equal(findeZyklus('{b} {b}', 'a', { b: { value: 'x' } }), false)
-  assert.equal(findeZyklus('egon', 'a', {}), false)
-  assert.equal(findeZyklus('{b} {c}', 'a', { b: { value: '{c}' }, c: { value: 'x' } }), false)
-})
-
-test('findeZyklus: ein Kreis, der ziel nicht enthaelt (b liest c, c liest b), haengt nicht', () => {
-  assert.equal(findeZyklus('{b}', 'a', { b: { value: '{c}' }, c: { value: '{b}' } }), false)
-})
-
 // ── Einrichtungsassistent: was fehlt am Ast? (Ebenen nachziehen)
 const katalog = { groupKey: 'k', prefix: 'k_', groups: [{ items: [{ key: 'charge', roles: ['variant'] }, { key: 'hersteller' }, { key: 'neu', roles: ['variant'] }] }] }
 const bedarf = attribute => einrichtungsBedarf(katalog, { groups: [{ key: 'k' }], attributes: attribute }, { groups: 'k' })
@@ -305,11 +138,4 @@ test('Bedarf: fehlendes Attribut kommt in fehlendeItems (es wird mit Ebenen ange
   assert.deepEqual(b.fehlendeItems.map(i => i.key), ['neu'])
   assert.deepEqual(b.zuOrdnende.map(x => x.item.key), ['charge'])
   assert.deepEqual(b.nachziehen, [])
-})
-
-test('Kreis-Schutz liest auch {attribut} in den Textfeldern der Kette', () => {
-  const kette = 'f:' + JSON.stringify([{ op: 'prefix', text: '{b} ' }, { op: 'when', test: 'empty', then: '{c}', else: '{}' }])
-  assert.deepEqual(gelesenAus(kette).sort(), ['b', 'c'])
-  assert.equal(findeZyklus(kette, 'c', {}), true)
-  assert.equal(findeZyklus(kette, 'a', { b: { value: 'x' } }), false)
 })

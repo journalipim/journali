@@ -2,7 +2,6 @@
 // Der Dialog selbst (dialog.js): Titel, Text, bei prompt ein Feld; Enter = OK, Esc = Abbrechen; Klick daneben = Abbrechen.
 import { ref, watch, nextTick } from 'vue'
 import { dialog } from '../dialog.js'
-import StepsEditor from './StepsEditor.vue'
 const okBtn = ref(null)
 const field = ref(null)
 watch(() => dialog.open, async v => { if (!v) return; await nextTick(); (dialog.kind === 'prompt' ? field.value : okBtn.value)?.focus(); field.value?.select?.() })
@@ -15,7 +14,7 @@ function onKey(e) {
 <template>
   <Teleport to="body">
     <div v-if="dialog.open" class="overlay" @mousedown.self="dialog.done(false)" @keydown="onKey">
-      <div class="dlg" role="dialog" :style="dialog.kind === 'steps' ? 'max-width:820px;min-width:640px' : ''">
+      <div class="dlg" role="dialog">
         <div class="title">{{ dialog.title }}</div>
         <div v-if="dialog.warn" class="warnline">⚠ {{ dialog.warn }}</div>
         <div v-if="dialog.kind === 'help'" class="keys-box"><table class="keys"><tr v-for="([k, what], i) in dialog.list" :key="i"><td class="k"><kbd>{{ k }}</kbd></td><td>{{ what }}</td></tr></table></div>
@@ -24,7 +23,6 @@ function onKey(e) {
         <label v-if="dialog.option" class="option"><input type="checkbox" v-model="dialog.option.checked" /> {{ dialog.option.label }}</label>
         <select v-if="dialog.kind === 'prompt' && dialog.choices" ref="field" v-model="dialog.value" style="width:100%;margin-top:10px"><option v-for="c in dialog.choices" :key="c.value" :value="c.value">{{ c.label }}</option></select>
         <input v-else-if="dialog.kind === 'prompt'" ref="field" v-model="dialog.value" class="cell-input" style="width:100%;margin-top:10px" :placeholder="dialog.placeholder" :type="dialog.secret ? 'password' : 'text'" :autocomplete="dialog.secret ? 'current-password' : 'off'" />
-        <StepsEditor v-else-if="dialog.kind === 'steps'" v-model="dialog.value" :attributes="dialog.attributes ?? []" :values="dialog.sourceValues ?? {}" style="margin-top:10px" />
         <label v-if="dialog.extra" class="extra">{{ dialog.extra.label }}<input v-model="dialog.extra.value" class="cell-input" :type="dialog.extra.type" :placeholder="dialog.extra.placeholder ?? ''" /></label>
         <div class="buttons">
           <button v-if="dialog.cancel" @click="dialog.done(false)">{{ dialog.cancel }}</button>

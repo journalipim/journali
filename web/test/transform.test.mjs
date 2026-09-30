@@ -48,24 +48,3 @@ test('Bedingung, Werte übersetzen, HTML, Kette und kaputter Schritt', () => {
   assert.equal(apply(null, 5), 5)
   assert.equal(describe([{ op: 'trim' }, { op: 'number', decimal: ',' }]), 'Leerzeichen kürzen → Zahl (,)')
 })
-
-// ── {attribut} in den Textfeldern (nur mit ctx.platzhalter): Vorlage-Verhalten für Richtlinien und Zelle
-test('Platzhalter: Voranstellen/Anhängen/Fester Wert/Wenn leer setzen den Wert des Attributs ein', () => {
-  const get = k => ({ marke: 'WAKOL', art: 'D 3965' })[k] ?? ''
-  const ctx = { get, platzhalter: true }
-  assert.equal(apply([{ op: 'prefix', text: '{marke} ' }], 'Kleber', ctx), 'WAKOL Kleber')
-  assert.equal(apply([{ op: 'suffix', text: ' ({art})' }], 'Kleber', ctx), 'Kleber (D 3965)')
-  assert.equal(apply([{ op: 'static', text: '{marke} {art}' }], 'egal', ctx), 'WAKOL D 3965')
-  assert.equal(apply([{ op: 'default', text: '{marke}' }], '', ctx), 'WAKOL')
-  assert.equal(apply([{ op: 'replace', find: 'X', with: '{art}' }], 'aXb', ctx), 'aD 3965b')
-})
-
-test('Platzhalter: Bedingung — dann/sonst mit Attribut und {} für die Quelle nebeneinander', () => {
-  const ctx = { get: k => ({ marke: 'WAKOL' })[k] ?? '', platzhalter: true }
-  assert.equal(apply([{ op: 'when', test: 'empty', then: '{marke}', else: '{} von {marke}' }], '', ctx), 'WAKOL')
-  assert.equal(apply([{ op: 'when', test: 'empty', then: '{marke}', else: '{} von {marke}' }], 'Kleber', ctx), 'Kleber von WAKOL')
-})
-
-test('Platzhalter: ohne ctx.platzhalter (Import-Mapper) bleibt {text} ein gewöhnlicher Text', () => {
-  assert.equal(apply([{ op: 'prefix', text: '{marke} ' }], 'Kleber', { get: () => 'X' }), '{marke} Kleber')
-})

@@ -69,8 +69,6 @@ const fill = (t, v) => S(t).replace(/\{\}/g, v)
 export function apply(steps, value, ctx = {}) {
   if (!Array.isArray(steps) || !steps.length) return value
   let v = value == null ? '' : String(value)
-  // {attribut} in den Textfeldern: der Wert dieses Attributs am Knoten (nur mit ctx.platzhalter; {} bleibt für die Quelle)
-  const E = s => ctx.platzhalter ? S(s).replace(/\{([^{}]+)\}/g, (_, k) => S(ctx.get?.(k.trim()))) : S(s)
   for (const st of steps) {
     const op = st?.op
     try {
@@ -78,11 +76,11 @@ export function apply(steps, value, ctx = {}) {
         case 'trim': v = v.trim().replace(/\s+/g, ' '); break
         case 'upper': v = v.toUpperCase(); break
         case 'lower': v = v.toLowerCase(); break
-        case 'replace': { const f = S(st.find); if (!f) break; v = st.regex ? v.replace(new RegExp(f, 'gi'), E(st.with)) : v.split(f).join(E(st.with)); break }
-        case 'prefix': if (v !== '') v = E(st.text) + v; break
-        case 'suffix': if (v !== '') v = v + E(st.text); break
-        case 'static': v = E(st.text); break
-        case 'default': if (v.trim() === '') v = E(st.text); break
+        case 'replace': { const f = S(st.find); if (!f) break; v = st.regex ? v.replace(new RegExp(f, 'gi'), S(st.with)) : v.split(f).join(S(st.with)); break }
+        case 'prefix': if (v !== '') v = S(st.text) + v; break
+        case 'suffix': if (v !== '') v = v + S(st.text); break
+        case 'static': v = S(st.text); break
+        case 'default': if (v.trim() === '') v = S(st.text); break
         case 'combine': {
           const cols = S(st.columns).split(',').map(s => s.trim()).filter(Boolean)
           const parts = cols.map(c => c === '{}' ? v : S(ctx.get?.(c))).filter(p => p !== '')
@@ -114,12 +112,12 @@ export function apply(steps, value, ctx = {}) {
         case 'map': {
           const pairs = S(st.pairs).split(';').map(p => p.split('=')).filter(p => p.length === 2).map(([a, b]) => [a.trim().toLowerCase(), b.trim()])
           const hit = pairs.find(([a]) => a === v.trim().toLowerCase())
-          v = hit ? hit[1] : (st.other != null && st.other !== '' ? E(st.other) : v); break
+          v = hit ? hit[1] : (st.other != null && st.other !== '' ? S(st.other) : v); break
         }
         case 'when': {
           const val = S(st.value); const t = v.trim()
           const ok = st.test === 'empty' ? t === '' : st.test === 'equals' ? t.toLowerCase() === val.toLowerCase() : st.test === 'contains' ? t.toLowerCase().includes(val.toLowerCase()) : st.test === 'matches' ? new RegExp(val, 'i').test(t) : false
-          v = fill(E(ok ? st.then : (st.else ?? '{}')), v); break
+          v = fill(ok ? st.then : (st.else ?? '{}'), v); break
         }
         default: break
       }

@@ -501,8 +501,6 @@ const redoStack = computed(() => stacksOf(props.id).redo)
 // Einen Wert setzen. Leer über einem geerbten Wert heisst „hier gilt nichts“ (27.09.2026) und wird als eigener leerer
 // Wert geschrieben — sonst käme der geerbte zurück, und das Löschen sah aus, als würde es nicht gespeichert. Zurück zur
 // Vererbung führt das ↓ an der Attributzeile und „Eigenen Wert löschen“ im Kontextmenü (beide rufen unsetValue).
-// Alle Werte dieses Knotens auf einer Achse (eigener, sonst geerbter) — Vorschau der Umwandlungskette
-const werteAn = col => Object.fromEntries((model.value.attributes ?? []).filter(a => !['rows', 'formula', 'template'].includes(a.type)).map(a => [a.key, ownOrAxis(a, col) ?? inherited(a, col).value ?? null]))
 const setValue = (def, col, value, row = null) => {
   const k = key(def.key, col.locale, col.channel, row)
   const before = own.value.get(k) ?? ''
@@ -1044,7 +1042,7 @@ function cellMenu(e, def, col, block) {
               <DateCell v-else-if="def.type === 'date'" :class="frischCls(def, c)" :value="ownOrAxis(def, c)" :inherited="inherited(def, c).value" :disabled="!enabled(def, c, b)" @save="v => setValue(def, c, v)" @contextmenu="cellMenu($event, def, c, b)" />
               <HtmlCell v-else-if="def.type === 'html'" :class="frischCls(def, c)" :value="ownOrAxis(def, c)" :inherited="inherited(def, c).value" :disabled="!enabled(def, c, b)" :title="`${store.name(def)} · ${c.label}`" :node="id" :locale="c.locale ?? null" :label="store.label(def)"
                 :origin="inherited(def, c).from ? `${icon(inherited(def, c).from.role)} ${inherited(def, c).from.label}` : null" @save="v => setValue(def, c, v)" @contextmenu="cellMenu($event, def, c, b)" />
-              <Cell v-else :formel="def.type === 'text'" :formel-attribut="def.key" :formel-werte="() => werteAn(c)" :class="frischCls(def, c)" :value="ownOrAxis(def, c)" :inherited="inherited(def, c).value" :disabled="!enabled(def, c, b)" :node="id" :locale="c.locale ?? null" :label="store.label(def)"
+              <Cell v-else :class="frischCls(def, c)" :value="ownOrAxis(def, c)" :inherited="inherited(def, c).value" :disabled="!enabled(def, c, b)" :node="id" :locale="c.locale ?? null" :label="store.label(def)"
                 :mark="stale(def, c) ? '⟳' : (inherited(def, c).master && ownValue(def.key, c) == null ? '◌' : null)" :mark-title="stale(def, c) ? $t('zu überarbeiten · {0} später geändert', [master]) : (c.locale ? $t('{0}-Text als Übersetzung übernehmen', [master]) : $t('{0}-Text als Grundtext übernehmen', [master]))" :mark-click="!stale(def, c) && inherited(def, c).master && ownValue(def.key, c) == null ? () => setValue(def, c, inherited(def, c).value) : null"
                 :origin="inherited(def, c).from ? `${icon(inherited(def, c).from.role)} ${inherited(def, c).from.label}` : null" :source="sourceOf(def, c)" @save="v => setValue(def, c, v)" @contextmenu="cellMenu($event, def, c, b)" />
             </template>
