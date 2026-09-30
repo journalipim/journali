@@ -446,20 +446,20 @@ export async function mount(root, ctx, catalog) {
       const cur = rootNode?.raw?.[to]
       const isChain = typeof cur === 'string' && cur.startsWith('f:')
       let stepsBeschreibung = ''
-      if (isChain) { try { stepsBeschreibung = transform.describe(JSON.parse(cur.slice(2)) || []) || t_('Kette') } catch { stepsBeschreibung = t_('Kette (ungueltig)') } }
+      if (isChain) { try { stepsBeschreibung = transform.describe(JSON.parse(cur.slice(2)) || []) || t_('Kette') } catch { stepsBeschreibung = t_('Kette (ungültig)') } }
       const label = isChain ? 'ƒ ' + stepsBeschreibung.slice(0, 40) : 'ƒ'
       return el('button', { class: 'x' + (isChain ? ' on' : ''), title: isChain
         ? t_('Umwandlung: {0} — Klick zum Bearbeiten', [stepsBeschreibung])
-        : t_('Umwandlung an "{0}" setzen (vererbt sich): mehrere Attribute verbinden, ja/nein, Fallback, ...', [tree.byId.get(st.root)?.label ?? '']),
+        : t_('Umwandlung an „{0}“ setzen (vererbt sich): Attribute verbinden, Ja/Nein, Vorgabe …', [tree.byId.get(st.root)?.label ?? '']),
         onclick: async () => {
           let initial = []
           if (isChain) { try { initial = JSON.parse(cur.slice(2)) || [] } catch { initial = [] } }
           const attrsList = (model.attributes ?? []).filter(a => a.key !== to && !['rows', 'formula', 'template'].includes(a.type)).map(a => ({ key: a.key, label: L(a.label) }))
-          const next = await dialog.steps({ title: t_('Umwandlung fuer {0} an "{1}"', [it.label, tree.byId.get(st.root)?.label ?? '']), text: t_('Die Kette lief mit den Werten der Wurzel als Vorschau; sie wird als Attributwert gespeichert und vererbt sich nach unten.'), value: initial, attributes: attrsList, values: rootNode?.raw ?? {}, ok: t_('Uebernehmen') })
+          const next = await dialog.steps({ title: t_('Umwandlung für {0} an „{1}“', [it.label, tree.byId.get(st.root)?.label ?? '']), text: t_('Die Vorschau rechnet mit den Werten der Wurzel; die Kette wird als Attributwert gespeichert und vererbt sich nach unten.'), value: initial, attributes: attrsList, values: rootNode?.raw ?? {}, ok: t_('Übernehmen') })
           if (next == null) return
           const newVal = next.length ? 'f:' + JSON.stringify(next) : null
           const werte = Object.fromEntries(Object.entries(rootNode?.raw ?? {}).map(([k, v]) => [k, { value: v }]))
-          if (newVal && findeZyklus(newVal, to, werte)) { store.toast(t_('Die Umwandlung liest {0} selbst \u2014 ein Kreis, nicht gespeichert.', [to])); return }
+          if (newVal && findeZyklus(newVal, to, werte)) { store.toast(t_('Die Umwandlung liest {0} selbst — ein Kreis, nicht gespeichert.', [to])); return }
           try { await api.post(`/api/nodes/${encodeURIComponent(st.root)}/attributes`, { attribute: to, locale: null, channel: null, value: newVal, row: null }); await store.poll(true); await run() } catch (e) { store.toast(e.message); say('✗ ' + e.message) }
         }
       }, label)
@@ -657,27 +657,27 @@ export async function mount(root, ctx, catalog) {
     if (a.allesOk) return true
     // Titel adaptiv: was ist die grosse Wirkung? (Anlegen > Zuordnen > Anhaengen)
     const titel = a.gruppeFehlt || a.fehlendeItems.length
-      ? t_('{0} einrichten fuer "{1}"', [catalog.label, a.wurzel.label])
+      ? t_('{0} einrichten für „{1}“', [catalog.label, a.wurzel.label])
       : a.zuOrdnende.length && a.haengtNicht
-        ? t_('{0}: {1} Attribute der Gruppe zuordnen und an "{2}" anhaengen', [catalog.label, a.zuOrdnende.length, a.wurzel.label])
+        ? t_('{0}: {1} Attribute der Gruppe zuordnen und an „{2}“ anhängen', [catalog.label, a.zuOrdnende.length, a.wurzel.label])
         : a.zuOrdnende.length
           ? t_('{0}: {1} Attribute der Gruppe {2} zuordnen', [catalog.label, a.zuOrdnende.length, catalog.groupKey])
-          : t_('{0}: Gruppe an "{1}" anhaengen', [catalog.label, a.wurzel.label])
+          : t_('{0}: Gruppe an „{1}“ anhängen', [catalog.label, a.wurzel.label])
     const zeilen = []
     if (a.gruppeFehlt) zeilen.push(t_('Attributgruppe {0} anlegen', [catalog.groupKey]))
-    if (a.fehlendeItems.length) zeilen.push(t_('{0} Attribute anlegen: {1}', [a.fehlendeItems.length, a.fehlendeItems.slice(0, 6).map(x => x.label).join(', ') + (a.fehlendeItems.length > 6 ? ', ...' : '')]))
-    if (a.zuOrdnende.length) zeilen.push(t_('{0} vorhandene Attribute der Gruppe {1} zuordnen (kein Kopieren): {2}', [a.zuOrdnende.length, catalog.groupKey, a.zuOrdnende.slice(0, 6).map(x => x.item.label).join(', ') + (a.zuOrdnende.length > 6 ? ', ...' : '')]))
-    if (a.haengtNicht) zeilen.push(t_('Gruppe {0} an "{1}" anhaengen', [catalog.groupKey, a.wurzel.label]))
+    if (a.fehlendeItems.length) zeilen.push(t_('{0} Attribute anlegen: {1}', [a.fehlendeItems.length, a.fehlendeItems.slice(0, 6).map(x => x.label).join(', ') + (a.fehlendeItems.length > 6 ? ', …' : '')]))
+    if (a.zuOrdnende.length) zeilen.push(t_('{0} vorhandene Attribute der Gruppe {1} zuordnen (kein Kopieren): {2}', [a.zuOrdnende.length, catalog.groupKey, a.zuOrdnende.slice(0, 6).map(x => x.item.label).join(', ') + (a.zuOrdnende.length > 6 ? ', …' : '')]))
+    if (a.haengtNicht) zeilen.push(t_('Gruppe {0} an „{1}“ anhängen', [catalog.groupKey, a.wurzel.label]))
     const knopf = a.gruppeFehlt || a.fehlendeItems.length ? t_('Einrichten')
-      : a.zuOrdnende.length && a.haengtNicht ? t_('Zuordnen und anhaengen')
+      : a.zuOrdnende.length && a.haengtNicht ? t_('Zuordnen und anhängen')
       : a.zuOrdnende.length ? t_('Zuordnen')
-      : t_('Anhaengen')
+      : t_('Anhängen')
     const ok = await dialog.confirm({ title: titel, warn: t_('Modellpflege — Auswirkung auf das Modell und den Baum'), list: zeilen, ok: knopf })
     if (!ok) return false
     try {
-      if (a.fehlendeItems.length) { say(t_('lege {0} Attribute an ...', [a.fehlendeItems.length])); await createAttributes(catalog, a.fehlendeItems, st.mapping); await remember() }
+      if (a.fehlendeItems.length) { say(t_('lege {0} Attribute an …', [a.fehlendeItems.length])); await createAttributes(catalog, a.fehlendeItems, st.mapping); await remember() }
       if (a.zuOrdnende.length) {
-        say(t_('ordne {0} Attribute der Gruppe {1} zu ...', [a.zuOrdnende.length, catalog.groupKey]))
+        say(t_('ordne {0} Attribute der Gruppe {1} zu …', [a.zuOrdnende.length, catalog.groupKey]))
         for (const { attr } of a.zuOrdnende) {
           const gruppenVon = a => a?.groups ?? (a?.group ? [a.group] : [])
           const soll = [...new Set([...gruppenVon(attr), catalog.groupKey])].sort()

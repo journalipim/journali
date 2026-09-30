@@ -88,7 +88,7 @@ const vorschau = computed(() => {
         <option value="">{{ $t("+ Schritt …") }}</option>
         <option v-for="o in OPS" :key="o[0]" :value="o[0]" :title="o[2]">{{ o[1] }}</option>
       </select>
-      <span class="muted" style="font-size:11px">{{ steps.length ? $t('Vorschau: {0}', [vorschau]) : $t('Kette leer — ein Schritt nach dem anderen') }}</span>
+      <span class="muted" style="font-size:11px">{{ steps.length ? $t('Vorschau: {0}', [vorschau]) : $t('Kette ohne Schritte') }}</span>
     </div>
   </div>
 </template>
