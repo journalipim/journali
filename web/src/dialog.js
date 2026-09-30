@@ -28,8 +28,15 @@ export const dialog = reactive({
   prompt({ title, text = '', value = '', placeholder = '', ok = 'OK', cancel = t('Abbrechen'), warn = '', danger = false, choices = null, secret = false, extra = null }) {
     return new Promise(resolve => { Object.assign(this, { open: true, kind: 'prompt', title, text, warn, list: [], value, placeholder, ok, cancel, danger, option: null, extra: extra ? { type: 'text', value: '', ...extra } : null, choices, secret, _resolve: resolve }) })
   },
+  // Transform-Kette bearbeiten (StepsEditor). value: Array [{ op, ... }], attributes: [{ key, label }],
+  // values: { key: aktueller Wert } fuer Vorschau. Rueckgabe: das neue Steps-Array oder null (Abbruch).
+  steps({ title, text = '', value = [], attributes = [], values = {}, ok = 'OK', cancel = t('Abbrechen') }) {
+    return new Promise(resolve => { Object.assign(this, { open: true, kind: 'steps', title, text, warn: '', list: [], value: Array.isArray(value) ? [...value] : [], ok, cancel, danger: false, option: null, extra: null, attributes, sourceValues: values, _resolve: resolve }) })
+  },
   done(yes) {
     const r = this._resolve; this.open = false; this._resolve = null
-    r?.(this.kind === 'prompt' ? (yes ? this.value : null) : yes)
+    r?.(this.kind === 'prompt' ? (yes ? this.value : null)
+      : this.kind === 'steps' ? (yes ? this.value : null)
+      : yes)
   },
 })

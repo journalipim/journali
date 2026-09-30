@@ -13,6 +13,7 @@ import { dialog } from './dialog.js'
 import { ai } from './ai.js'
 import { norm, similarity } from './mapper.js'
 import { analyze } from './compliance-core.js'
+import * as transform from './transform.js'
 import { treePicker } from './treePicker.js'
 import { t as t_ } from './i18n.js'
 import { L } from './i18n.js'
@@ -438,8 +439,31 @@ export async function mount(root, ctx, catalog) {
       mk.textContent = t_('+ anlegen in {0}', [catalog.groupKey])
       return el('span', { style: 'display:inline-flex;gap:4px;align-items:center' }, sel, mk)
     }
+    // Umwandlungs-Zelle (ƒ): fuer zugeordnete Datenpunkte — Kette am Wurzelknoten setzen, vererbt sich nach unten.
+    // Beginnt der aktuelle Wert mit 'f:', wird die Kette in den Editor geladen; sonst wird eine neue angelegt.
+    const fCell = (it, to) => {
+      const rootNode = r.nodes.find(n => n.row.id === st.root)
+      const cur = rootNode?.raw?.[to]
+      const isChain = typeof cur === 'string' && cur.startsWith('f:')
+      let stepsBeschreibung = ''
+      if (isChain) { try { stepsBeschreibung = transform.describe(JSON.parse(cur.slice(2)) || []) || t_('Kette') } catch { stepsBeschreibung = t_('Kette (ungueltig)') } }
+      const label = isChain ? 'ƒ ' + stepsBeschreibung.slice(0, 40) : 'ƒ'
+      return el('button', { class: 'x' + (isChain ? ' on' : ''), title: isChain
+        ? t_('Umwandlung: {0} — Klick zum Bearbeiten', [stepsBeschreibung])
+        : t_('Umwandlung an "{0}" setzen (vererbt sich): mehrere Attribute verbinden, ja/nein, Fallback, ...', [tree.byId.get(st.root)?.label ?? '']),
+        onclick: async () => {
+          let initial = []
+          if (isChain) { try { initial = JSON.parse(cur.slice(2)) || [] } catch { initial = [] } }
+          const attrsList = (model.attributes ?? []).filter(a => a.key !== to && !['rows', 'formula', 'template'].includes(a.type)).map(a => ({ key: a.key, label: L(a.label) }))
+          const next = await dialog.steps({ title: t_('Umwandlung fuer {0} an "{1}"', [it.label, tree.byId.get(st.root)?.label ?? '']), text: t_('Die Kette lief mit den Werten der Wurzel als Vorschau; sie wird als Attributwert gespeichert und vererbt sich nach unten.'), value: initial, attributes: attrsList, values: rootNode?.raw ?? {}, ok: t_('Uebernehmen') })
+          if (next == null) return
+          const newVal = next.length ? 'f:' + JSON.stringify(next) : null
+          try { await api.post(`/api/nodes/${encodeURIComponent(st.root)}/attributes`, { attribute: to, locale: null, channel: null, value: newVal, row: null }); await store.poll(true); await run() } catch (e) { store.toast(e.message); say('✗ ' + e.message) }
+        }
+      }, label)
+    }
     const unm = r.items.filter(it => !st.mapping[it.key]?.to && !hidden.includes(it))
-    for (const it of r.items) { const c = r.byItem.get(it.key); const to = st.mapping[it.key]?.to; if (hidden.includes(it)) continue; sb.append(el('tr', {}, el('td', {}, `${it.level === 'must' ? '●' : it.level === 'should' ? '◐' : '○'} ${it.label} `, infoBtn(it)), el('td', { class: 'num ' + (c.ok + c.below ? 'pos' : 'muted'), title: c.below ? t_('{0} selbst, {1} über die Varianten darunter', [c.ok, c.below]) : '' }, String(c.ok + c.below)), el('td', { class: 'num ' + (c.empty + c.inactive ? (it.level === 'must' ? 'neg' : 'warn') : 'muted'), style: c.empty || c.pending ? 'cursor:pointer;text-decoration:underline dotted' : '', onclick: c.empty || c.pending ? () => fillList(it) : null, title: c.empty ? t_('{0} leer eintragen (Knoten für Knoten, Wert oder „angefragt bei …“)', [c.empty]) + (c.inactive ? ' ' + t_('· {0} ohne gültiges Attribut', [c.inactive]) : '') : c.inactive ? t_('davon {0} ohne gültiges Attribut (Gruppe nicht am Pfad)', [c.inactive]) : '' }, String(c.empty + c.inactive), c.pending ? el('span', { class: 'warn', title: t_('{0} Anfragen anzeigen (bei wem, bis wann)', [c.pending]) }, ` ⏳${c.pending}`) : null), el('td', { class: 'num ' + (c.bad ? 'neg' : 'muted') }, String(c.bad)), el('td', { class: to ? 'muted' : it.level === 'must' ? 'neg' : it.level === 'should' ? 'warn' : 'muted', style: 'font-size:11px' }, to ? '' : mapCell(it)))) }   // Farbe sagt den Stand: grün nur, wo etwas erfüllt ist; leer/kein Attribut bei Pflicht rot, bei empfohlen orange
+    for (const it of r.items) { const c = r.byItem.get(it.key); const to = st.mapping[it.key]?.to; if (hidden.includes(it)) continue; sb.append(el('tr', {}, el('td', {}, `${it.level === 'must' ? '●' : it.level === 'should' ? '◐' : '○'} ${it.label} `, infoBtn(it)), el('td', { class: 'num ' + (c.ok + c.below ? 'pos' : 'muted'), title: c.below ? t_('{0} selbst, {1} über die Varianten darunter', [c.ok, c.below]) : '' }, String(c.ok + c.below)), el('td', { class: 'num ' + (c.empty + c.inactive ? (it.level === 'must' ? 'neg' : 'warn') : 'muted'), style: c.empty || c.pending ? 'cursor:pointer;text-decoration:underline dotted' : '', onclick: c.empty || c.pending ? () => fillList(it) : null, title: c.empty ? t_('{0} leer eintragen (Knoten für Knoten, Wert oder „angefragt bei …“)', [c.empty]) + (c.inactive ? ' ' + t_('· {0} ohne gültiges Attribut', [c.inactive]) : '') : c.inactive ? t_('davon {0} ohne gültiges Attribut (Gruppe nicht am Pfad)', [c.inactive]) : '' }, String(c.empty + c.inactive), c.pending ? el('span', { class: 'warn', title: t_('{0} Anfragen anzeigen (bei wem, bis wann)', [c.pending]) }, ` ⏳${c.pending}`) : null), el('td', { class: 'num ' + (c.bad ? 'neg' : 'muted') }, String(c.bad)), el('td', { class: to ? 'muted' : it.level === 'must' ? 'neg' : it.level === 'should' ? 'warn' : 'muted', style: 'font-size:11px' }, to ? fCell(it, to) : mapCell(it)))) }   // Farbe sagt den Stand: grün nur, wo etwas erfüllt ist; leer/kein Attribut bei Pflicht rot, bei empfohlen orange
     if (hidden.length) sb.append(el('tr', {}, el('td', { class: 'muted', colspan: '5' }, t_('… {0} weitere Datenpunkte gelten an keinem der {1} Knoten (andere Klasse oder Rolle)', [hidden.length, r.nodes.length]))))
     // Gruppe fürs Anlegen: wählbar (vorhandene oder neuer Schlüssel), je Katalog gemerkt — steht am Knopf und in jeder Zeile
     const grpSel = el('select', { title: t_('Attributgruppe, in der fehlende Attribute angelegt werden — vorhandene wählen oder neu') }, ...[...new Set([catalog.groupKey, ...(model.groups ?? []).map(g => g.key)])].map(k => el('option', { value: k }, `${L((model.groups ?? []).find(g => g.key === k)?.label) || (k === catalog.groupKey ? catalog.groupLabel || k : k)} (${k})${(model.groups ?? []).some(g => g.key === k) ? '' : ' — neu'}`)), el('option', { value: '__new__' }, t_('+ neue Gruppe …')))
