@@ -101,11 +101,12 @@ function onInput(e) {
 }
 
 // Umwandlungskette (ƒ): der Wert ist 'f:' + JSON der Schritte; der Editor ist derselbe wie in der Prüfansicht
-const kette = computed(() => {
-  const v = props.value
+const kettenText = v => {
   if (!props.formel || typeof v !== 'string' || !v.startsWith('f:')) return null
   try { const s = JSON.parse(v.slice(2)); return Array.isArray(s) ? (describe(s) || t_('Kette')) : null } catch { return null }
-})
+}
+const kette = computed(() => kettenText(props.value))
+const ketteGeerbt = computed(() => props.value == null ? kettenText(props.inherited) : null)
 async function openFormel(wert) {
   let schritte = []
   if (wert) { try { const s = JSON.parse(String(wert).slice(2)); if (Array.isArray(s)) schritte = s } catch { /* ungültig: leer beginnen */ } }
@@ -151,7 +152,7 @@ function onEditKey(e) {
       :tabindex="disabled ? undefined : 0" @click="clickEdit && open('end')" @dblclick="clickEdit || open('end')" @keydown="onKey" :title="disabled ? $t('Achse gibt es hier nicht') : (value == null && inherited != null ? 'geerbt' + (origin ? ' von ' + origin : '') + ' ' + $t('— Enter überschreibt') : '')">
       <template v-if="disabled"></template>
       <template v-else-if="value != null">{{ kette != null ? 'ƒ ' + kette : value }}</template>
-      <template v-else-if="inherited != null">{{ inherited }}</template>
+      <template v-else-if="inherited != null">{{ ketteGeerbt != null ? 'ƒ ' + ketteGeerbt : inherited }}</template>
       <span v-if="mark && !disabled" class="mark" :class="{ btn: !!markClick }" :title="markTitle" @click.stop="markClick && markClick()" @mousedown.stop>{{ mark }}</span>
       <a v-if="source && !disabled && value != null" class="src" :class="{ stale: source.stale, link: isUrl(source.source) }" :href="isUrl(source.source) ? source.source : null" target="_blank" rel="noopener" @mousedown.stop @click.stop="isUrl(source.source) || $event.preventDefault()"
         :title="(source.stale ? $t('Beleg veraltet — der Wert wurde danach geändert ·') + ' ' : '') + $t('Quelle:') + ' ' + source.source + (source.title ? ' — ' + source.title : '') + ' · ' + ({ web: $t('Recherche'), ai: 'KI', rule: $t('Regel'), import: $t('Import'), manual: $t('von Hand'), pending: '⏳ angefragt' }[source.method] ?? source.method) + ' ' + $t('· geprüft') + ' ' + source.checkedAt + ' · ' + source.actor + (source.note ? ' · ' + source.note : '')">↗</a>

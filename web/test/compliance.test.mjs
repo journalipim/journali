@@ -2,7 +2,7 @@
 // Läuft ohne Browser und ohne Server: `npm test` in web/ (node --test).
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { analyze, resolvePlaceholders, resolveWert, gelesenAus, findeZyklus, einrichtungsBedarf, umwandlungsZiele, umwandlungsPlan } from '../src/compliance-core.js'
+import { analyze, resolvePlaceholders, resolveWert, gelesenAus, findeZyklus, einrichtungsBedarf } from '../src/compliance-core.js'
 import dpp from '../../plugins/dpp/catalog.js'
 
 // Modell: die Attribute, die die Zuordnung braucht, dazu das Geltungsattribut dpp_scope (vererbbar, Gruppe dpp)
@@ -305,27 +305,4 @@ test('Bedarf: fehlendes Attribut kommt in fehlendeItems (es wird mit Ebenen ange
   assert.deepEqual(b.fehlendeItems.map(i => i.key), ['neu'])
   assert.deepEqual(b.zuOrdnende.map(x => x.item.key), ['charge'])
   assert.deepEqual(b.nachziehen, [])
-})
-
-// ── Umwandlungskette je Datenpunkt: Ziele und Schreibplan
-const knoten = (id, leaf, zustand, raw = {}, from = {}) => ({ row: { id }, leaf, states: { k: zustand }, raw, from })
-const kette = 'f:[{"op":"upper"}]'
-
-test('Ziele: nur Blätter, an denen der Datenpunkt gilt (nicht „gilt nicht“, nicht „Gruppe fehlt“)', () => {
-  const res = { nodes: [knoten('g', false, 'empty'), knoten('v1', true, 'empty'), knoten('v2', true, 'na'), knoten('v3', true, 'inactive'), knoten('v4', true, 'ok')] }
-  assert.deepEqual(umwandlungsZiele(res, 'k').map(n => n.row.id), ['v1', 'v4'])
-})
-
-test('Plan schreiben: was die Kette schon eigen trägt, bleibt; geerbtes und anderes wird geschrieben', () => {
-  const a = knoten('a', true, 'ok', { x: kette }, {}), b = knoten('b', true, 'ok', { x: kette }, { x: 'oben' }), c = knoten('c', true, 'empty', {}, {}), d = knoten('d', true, 'ok', { x: 'anders' }, { x: 'd' })
-  const plan = umwandlungsPlan([a, b, c, d], 'x', kette)
-  assert.deepEqual(plan.schreiben.map(n => n.row.id), ['b', 'c', 'd'])
-  assert.deepEqual(plan.loeschen, [])
-})
-
-test('Plan entfernen: nur eigene Ketten werden gelöscht, geerbte und gewöhnliche Werte bleiben', () => {
-  const a = knoten('a', true, 'ok', { x: kette }, {}), b = knoten('b', true, 'ok', { x: kette }, { x: 'oben' }), c = knoten('c', true, 'ok', { x: 'Text' }, {})
-  const plan = umwandlungsPlan([a, b, c], 'x', null)
-  assert.deepEqual(plan.loeschen.map(n => n.row.id), ['a'])
-  assert.deepEqual(plan.schreiben, [])
 })

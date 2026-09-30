@@ -110,17 +110,6 @@ export function einrichtungsBedarf(catalog, model, wurzel) {
   return { gruppeFehlt, fehlendeItems, zuOrdnende, nachziehen, haengtNicht, allesOk }
 }
 
-// Umwandlungskette je Datenpunkt: sie steht als Wert an jedem verkaeuflichen Knoten (Blatt), an dem der Datenpunkt gilt.
-export const umwandlungsZiele = (res, itemKey) => res.nodes.filter(n => n.leaf && !['na', 'inactive'].includes(n.states[itemKey]))
-// Was zu schreiben und was zu loeschen ist. Ein Wert, der nur von oben geerbt ist, zaehlt nicht als eigener.
-// wert null = die Kette entfernen: geloescht wird nur, was eine eigene Kette ('f:…') ist.
-export function umwandlungsPlan(ziele, attribut, wert) {
-  const eigen = n => { const f = n.from?.[attribut]; return !f || f === n.row.id }
-  const istKette = v => typeof v === 'string' && v.startsWith('f:')
-  if (wert == null) return { schreiben: [], loeschen: ziele.filter(n => eigen(n) && istKette(n.raw?.[attribut])) }
-  return { schreiben: ziele.filter(n => !(eigen(n) && n.raw?.[attribut] === wert)), loeschen: [] }
-}
-
 export function analyze({ catalog, mapping, model, rows, locale = 'de', scopeAttr = null, onPath = () => true, today = new Date().toISOString().slice(0, 10) }) {
   const items = catalog.groups.flatMap(g => g.items.map(it => ({ ...it, group: g })))
   const defs = new Map(model.attributes.map(a => [a.key, a]))

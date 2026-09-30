@@ -66,3 +66,11 @@ test('ohne formel bleibt f: ein gewöhnlicher Text', async () => {
   assert.ok(w.find('input.cell-input').exists(), 'das Eingabefeld bleibt')
   w.unmount()
 })
+
+test('eine geerbte Kette steht grau als ƒ Beschreibung da (der eigene Wert fehlt)', async () => {
+  const w = zelle({ formel: true, formelAttribut: 'dpp_batch', value: null, inherited: 'f:[{"op":"upper"}]' })
+  const box = w.find('.cell-box')
+  assert.match(box.text(), /^ƒ /)
+  assert.ok(box.classes().includes('inherited'))
+  w.unmount()
+})
