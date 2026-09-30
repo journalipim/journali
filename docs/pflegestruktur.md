@@ -841,6 +841,12 @@ Export-Konfiguration im Klassifikations-Plugin („welche Klassen, ab welcher St
   dann ist es das Attribut des Kunden, das die nächste Klassifikation wiederverwendet. Die
   Zuordnung (`map`: Schlüssel oder `{ to, steps }`) ist Modellwahrheit, einmal je Journal —
   **kein Profil im Klassifikations-Plugin**; eine aktive Release, Wechsel = Abgleich.
+- **Gemeinsames liegt im Server, nicht in einem dritten Plugin** (30.09.2026, `ClassificationApi.cs`): je System ein eigenes
+  Plugin (`etim`, später `eclass`), das seine Dateien liest und sagt, was ein Merkmal in seinem System ist. Anlegen im
+  Modell (Gruppe, Klassenattribut mit Werteliste, Merkmalsattribute mit Bedingung, Einheit und Liste), Klasse zuweisen
+  (Gruppe an den Pfad, Klasse an den Knoten) und die Bereitschaft (`POST /api/classification/ensure|assign|readiness`)
+  macht der Server aus einer neutralen Beschreibung; er kennt kein System. Nicht übernommen: die Nachreparatur älterer
+  ETIM-Attribute ohne Bedingung in der Gruppe — sie wird beim nächsten Zuweisen der Klasse nachgezogen.
 - **Bedient wird beim Gegenstand, nicht im Plugin**. Neuer Beitragspunkt **`nodeBands`**: ein Plugin zeichnet je Knoten ein Band in
   der Knotenansicht (`mount({ head, body }, nodeId, ctx)`, wie das Workflow-Band). Das Band
   ⌗ ETIM zeigt in einer Zeile Klasse (eigen/geerbt, ≠ abweichende darunter) · Attribute n/m

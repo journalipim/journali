@@ -343,6 +343,7 @@ SemanticApi.Map(api, jobDir);   // Vektoren (35): offene Postenliste für embed,
 
 TreeApi.Map(api);
 RelationApi.Map(api);
+ClassificationApi.Map(api);
 MediaApi.Map(api);
 DeriveApi.Map(api);   // Vorschau-Presets und Ableitungen (Plugin derive rechnet)
 ProbeApi.Map(api);

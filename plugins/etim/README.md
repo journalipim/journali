@@ -30,6 +30,15 @@ erlaubten Werten, alles mit Übersetzungen (`de-DE`, `EN`, …).
    Zahl, Ja/Nein, Bereich, Wert nicht in der Liste), ETIM-Attribute ohne Attribut und Belegung (ℹ).
    Dieselbe Regel läuft in ✓ Datenqualität (`checks`).
 
+## Was der Server macht
+
+Was im Modell anzulegen ist, macht der Server (`/api/classification`, `Journali.Server/ClassificationApi.cs`), nicht das
+Plugin: die Gruppe des Systems, das Klassenattribut mit seiner Werteliste, je ETIM-Attribut ein Attribut mit Bedingung,
+Einheit und Liste, die Gruppe an den Pfad des Knotens und die Klasse an den Knoten. Das Plugin schickt dazu eine
+neutrale Beschreibung (Klasse, Merkmale mit Typ `decimal`, `boolean`, `text` oder `enum`); was ein ETIM-Attribut ist und
+wie es auf diese Typen abgebildet wird, steht im Plugin. Bei einer Namenskollision weicht der Server aus und nennt den
+gewählten Schlüssel; das Plugin merkt ihn sich. Wo sich das Modell ändern müsste, verlangt der Server das Modell-Recht.
+
 ## Datenanalyse (✓ Datenanalyse → ⌗ ETIM-Attribute)
 
 Dieselbe Prüfmaschine wie DPP/PPWR (`ctx.compliance`), der Katalog ist dynamisch: Datenpunkte =

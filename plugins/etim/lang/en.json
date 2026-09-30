@@ -7,11 +7,8 @@
  "{0} Knoten im Teilbaum {1} diese Klasse zugewiesen": "{0} nodes in the subtree {1} assigned this class",
  "am Pfad:": "on the path:",
  "{0} am Pfad ist diese Klasse zugewiesen — sie erbt schon hierher": "{0} on the path is assigned this class — it already inherits to here",
- "⚠ Gruppe etim gehört schon anderen Attributen — ETIM benutzt {0}": "⚠ Group etim already belongs to other attributes — ETIM uses {0}",
  "⚠ {0} gehört schon einem anderen Attribut — ETIM benutzt {1}": "⚠ {0} already belongs to another attribute — ETIM uses {1}",
  "ETIM class": "ETIM class",
- "Numeric": "Numeric",
- "Logical": "Logical",
  "Range": "Range",
  "Alphanumeric": "Alphanumeric",
  "{0} · {1}{2} · in {3} Klasse{4}: {5}{6}": "{0} · {1}{2} · in {3} class{4}: {5}{6}",
@@ -35,8 +32,6 @@
  "Alle haben schon ein Attribut im Modell.": "All already have an attribute in the model.",
  "{0} Knoten darunter haben eine eigene Klasse — die behalten sie.": "{0} nodes below have their own class — they keep it.",
  "weise {0} zu …": "assigning {0} …",
- "Gruppe {0} an {1} gehängt …": "Group {0} attached to {1} …",
- "lege an {0}: {1} …": "creating {0}: {1} …",
  "{0} {1} wählen": "Choose {0} {1}",
  "nicht in der Bibliothek": "not in the library",
  "· {0} ETIM-Attribute": "· {0} ETIM attributes",
@@ -271,5 +266,8 @@
  "Klasse geerbt · ETIM-Attribute pflegen": "Class inherited · maintain ETIM attributes",
  "ETIM-Klasse ändern (+)": "Change ETIM class (+)",
  "ETIM-Klasse (+)": "ETIM class (+)",
- "Klasse wählen — Vorschlag, Umfeld, Suche": "Choose a class — suggestion, surroundings, search"
+ "Klasse wählen — Vorschlag, Umfeld, Suche": "Choose a class — suggestion, surroundings, search",
+ "⚠ Gruppe {0} gehört schon anderen Attributen — ETIM benutzt {1}": "⚠ Group {0} already belongs to other attributes — ETIM uses {1}",
+ "Gruppe {0} angehängt …": "Group {0} attached …",
+ "lege {0} Attribute an …": "creating {0} attributes …"
 }

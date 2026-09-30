@@ -213,27 +213,27 @@ test('install beim Einschalten: Gruppe etim anlegen und an die Wurzel hängen', 
   const groups = MODEL.groups; MODEL.groups = groups.filter(g => g.key !== 'etim')   // Gruppe fehlt im Modell
   const rootRow = { id: 'g-root', role: 'group', label: 'Mastertree', parent: null, groups: '' }
   TREE.push(rootRow); const g1 = TREE.find(r => r.id === 'g-1'); g1.parent = 'g-root'
-  const ctx2 = { ...ctx, api: { ...ctx.api, post: async (p, b, m) => { calls.push([p, b, m ?? 'POST']); return {} } },
+  const ctx2 = { ...ctx, api: { ...ctx.api, post: async (p, b, m) => { calls.push([p, b, m ?? 'POST']); return p === '/api/classification/ensure' ? { group: b.system.group, classAttr: b.system.classAttr } : {} } },
     tree: { ...ctx.tree, rows: TREE, byId: new Map(TREE.map(r => [r.id, r])), load: async () => {} }, store: { ...ctx.store, poll: async () => {} } }
   await mod.default.install(ctx2)
-  assert.ok(calls.some(([p, b, m]) => p === '/api/model/groups/etim' && m === 'PUT'), 'Gruppe angelegt: ' + JSON.stringify(calls.map(c => c[0])))
+  // das Anlegen im Modell macht der Server; beim Einschalten nur die Gruppe, nicht das Klassenattribut
+  const ensure = calls.find(([p]) => p === '/api/classification/ensure')
+  assert.ok(ensure, 'Gruppe angefordert: ' + JSON.stringify(calls.map(c => c[0])))
+  assert.equal(ensure[1].groupOnly, true); assert.equal(ensure[1].system.group, 'etim'); assert.deepEqual(ensure[1].classes, [])
   const attach = calls.find(([p, , m]) => p === '/api/nodes/g-root/groups' && m === 'PUT')
   assert.ok(attach, 'an die Wurzel gehängt'); assert.deepEqual(attach[1].groups, ['etim'])
   MODEL.groups = groups; g1.parent = null; TREE.splice(TREE.indexOf(rootRow), 1)
 })
 
-test('Namenskollision: fremde Gruppe etim wird nicht übernommen — ETIM weicht aus', async () => {
+test('Namenskollision: nennt der Server eine andere Gruppe, gilt sie ab jetzt — sie wird an die Wurzel gehängt und gemerkt', async () => {
   const mod = await import('../../plugins/etim/entry.js')
-  const calls = []
-  const groups = MODEL.groups, attrs = MODEL.attributes
-  MODEL.groups = [...groups, { key: 'etim', label: { de: 'ETIM (fremd)' }, attributes: ['kundenfeld'] }]
-  MODEL.attributes = [...attrs, { key: 'kundenfeld', type: 'text', group: 'etim', label: { de: 'Kundenfeld' } }]   // fremdes Attribut in der Gruppe
-  const ctx2 = { ...ctx, api: { ...ctx.api, post: async (p, b, m) => { calls.push([p, b, m ?? 'POST']); return {} } },
-    data: { ...ctx.data, set: async () => {} }, store: { ...ctx.store, poll: async () => {}, toast: () => {} } }
+  const calls = [], gemerkt = []
+  // der Server hat die Kollision erkannt (seine Regel: ClassificationTests.cs) und weicht auf etim_std aus
+  const ctx2 = { ...ctx, api: { ...ctx.api, post: async (p, b, m) => { calls.push([p, b, m ?? 'POST']); return p === '/api/classification/ensure' ? { group: 'etim_std', classAttr: 'etim_class', groupRenamed: { from: 'etim', to: 'etim_std' } } : {} } },
+    data: { ...ctx.data, set: async (k, v) => { gemerkt.push([k, v.group]) } }, store: { ...ctx.store, poll: async () => {}, toast: () => {} } }
   await mod.default.install(ctx2)
-  const made = calls.filter(([p, , m]) => p.startsWith('/api/model/groups/') && m === 'PUT').map(([p]) => p)
-  assert.deepEqual(made, ['/api/model/groups/etim_std'], 'nicht in die fremde Gruppe, sondern etim_std: ' + JSON.stringify(made))
+  assert.equal(calls.find(([p]) => p === '/api/classification/ensure')[1].system.group, 'etim', 'angefragt wird der gewünschte Schlüssel')
+  assert.deepEqual(gemerkt, [['settings', 'etim_std']])
   const attach = calls.find(([p, , m]) => /\/groups$/.test(p) && m === 'PUT' && p.startsWith('/api/nodes/'))
   assert.ok(attach[1].groups.includes('etim_std'))
-  MODEL.groups = groups; MODEL.attributes = attrs
 })

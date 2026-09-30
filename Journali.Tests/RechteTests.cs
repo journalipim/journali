@@ -31,6 +31,14 @@ public class RechteTests
     public void Die_Datei_braucht_download_die_Kachel_nur_lesen(string pfad, string recht) => Assert.Equal(recht, Braucht(pfad));
 
     [Fact]
+    public void Klassifikation_anlegen_und_zuweisen_ist_Pflege_die_Bereitschaft_nur_lesen()
+    {
+        Assert.Equal(Rights.Write, Braucht("/api/classification/ensure", "POST"));
+        Assert.Equal(Rights.Write, Braucht("/api/classification/assign", "POST"));
+        Assert.Equal(Rights.Read, Braucht("/api/classification/readiness", "POST"));
+    }
+
+    [Fact]
     public void Wer_pflegt_laedt()
     {
         Assert.Contains(Rights.Download, Rights.Effective([Rights.Write]));

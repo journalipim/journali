@@ -2846,5 +2846,8 @@
  "lokal": "local",
  "Adresse": "Address",
  "Adresse fehlt": "Address missing",
- "Adresse des lokalen Modells hinterlegen — sie bleibt beim Server, nie im Journal, nie im Browser": "Store the address of the local model — it stays on the server, never in the journal, never in the browser"
+ "Adresse des lokalen Modells hinterlegen — sie bleibt beim Server, nie im Journal, nie im Browser": "Store the address of the local model — it stays on the server, never in the journal, never in the browser",
+ "System: Gruppe und Klassenattribut fehlen.": "System: group and class attribute are missing.",
+ "Klasse fehlt.": "Class is missing.",
+ "Das Modell ändert sich ({0} Änderungen) — das verlangt das Modell-Recht.": "The model changes ({0} changes) — this requires the model right."
 }

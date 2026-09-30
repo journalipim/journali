@@ -100,100 +100,58 @@ function modelOps(ctx) {
   const model = () => store.model
   const locale = model().masterLocale ?? 'de'
   const hasAttr = key => model().attributes.some(a => a.key === key)
-  // Bezeichnung je Sprache des Modells; fehlt die Mastersprache (ETIM International: nur Englisch), steht dort der englische Name — sonst zeigt die Oberfläche den Schlüssel
-  const labelsOf = names => { const out = {}; for (const l of model().locales.map(x => x.code)) if (names?.[l]) out[l] = names[l]; if (!out[locale]) out[locale] = nameOf(names, locale); return out }
-  const put = (path, body) => api.post('/api/model' + path, body, 'PUT')
-  // Die Gruppe gilt überall — die Klasse steht an der Gruppe („Mobile Geräte“) und erbt nach unten. Die ETIM-Attribute gelten seit dem
-  // 22.09.2026 ebenfalls überall: sie sind vererbbar,
-  // ein Wert an der Gruppe gilt also für alles darunter, und die Ausleitung nimmt am Artikel den aufgelösten Wert.
-  // Eine alte Gruppe mit activeFrom wird einmal repariert, ebenso Attribute, die noch nur an Produkt und Variante galten.
-  // Namenskollision: der Name bleibt sprechend, dafür wird geprüft,
-  // ob eine vorhandene Gruppe wirklich unsere ist — sie ist es, wenn sie leer ist oder nur ETIM-Attribute (ef…) und das
-  // Klassenattribut enthält. Sonst weicht die Einrichtung auf etim_std aus und sagt es; in den Einstellungen ist die Gruppe wählbar.
-  const isOurs = key => {
-    const attrs = (model().attributes ?? []).filter(a => a.group === key)
-    return attrs.every(a => /^ef\d+$/.test(a.key) || a.key === cache.settings.classAttr)
+  // Was im Modell anzulegen ist, macht der Server (/api/classification, ClassificationApi.cs): Gruppe, Klassenattribut mit Werteliste,
+  // ein Attribut je Merkmal mit Bedingung, Einheit und Liste; bei einer Namenskollision weicht er aus und sagt es. Hier steht nur,
+  // was ETIM ausmacht: wie ein ETIM-Attribut auf die neutralen Typen abgebildet wird.
+  const system = () => ({ group: groupKey(), groupLabel: { de: 'ETIM', en: 'ETIM' }, classAttr: cache.settings.classAttr, classLabel: { de: 'ETIM-Klasse', en: t_('ETIM class') },
+    classAttrAlternatives: ['etim_klasse', 'etim_class_std'], ownPattern: '^ef\\d+$' })
+  const classSpec = c => ({ code: c.code, name: c.name, section: c.group ? (nameOf(c.group.name, locale) || c.group.code) : null })
+  const TYPES = { Numeric: 'decimal', Logical: 'boolean', Range: 'text', Alphanumeric: 'enum' }
+  const RANGE = '^\\s*-?[\\d.,]+(\\s*(-|\\.\\.|…)\\s*-?[\\d.,]+)?\\s*$'
+  const featureSpec = f => {
+    const classes = [...cache.classes.values()].filter(c => c.features.some(x => x.code === f.code)).map(c => c.code)   // Bedingung: alle Klassen, die es führen
+    const spec = { key: f.code.toLowerCase(), name: f.name, type: TYPES[f.type] ?? 'text', classes, target: attrKeyOf(f.code) }
+    if (f.type === 'Numeric' && f.unit) spec.unit = { code: f.unit.code, abbr: f.unit.abbr, name: f.unit.name }
+    if (f.type === 'Range') { spec.pattern = RANGE; spec.patternHint = `von - bis${f.unit ? ' in ' + (nameOf(f.unit.abbr, locale) || f.unit.code) : ''}` }
+    if (f.type === 'Alphanumeric') spec.values = f.values.map(v => ({ code: v.code, name: v.name }))
+    return spec
   }
-  /// freier Gruppenschlüssel: der gewünschte, wenn er frei oder unserer ist — sonst etim_std, etim_std2 …
-  function freeGroupKey(wanted = groupKey()) {
-    if (!(model().groups ?? []).some(g => g.key === wanted) || isOurs(wanted)) return wanted
-    for (let i = 0; i < 20; i++) { const k = i ? `etim_std${i + 1}` : 'etim_std'; if (!(model().groups ?? []).some(g => g.key === k) || isOurs(k)) return k }
-    return wanted
-  }
-  async function ensureGroup() {
-    let g = freeGroupKey()
-    if (g !== groupKey()) { cache.settings.group = g; await ctx.data.set('settings', cache.settings); store.toast(t_('⚠ Gruppe etim gehört schon anderen Attributen — ETIM benutzt {0}', [g])) }
-    const have = (model().groups ?? []).find(x => x.key === g)
-    if (!have) await put(`/groups/${g}`, { key: g, label: { de: g === 'etim' ? 'ETIM' : `ETIM (${g})`, en: g === 'etim' ? 'ETIM' : `ETIM (${g})` } })
-    else if (have.activeFrom) await put(`/groups/${g}`, { ...have, activeFrom: null })
-  }
-  const FEATURE_LEVELS = ['group', 'product', 'variant']   // überall pflegbar, vererbt nach unten
-  const OLD_LEVELS = ['product', 'variant']   // was frühere Fassungen anlegten — wird beim nächsten Durchlauf gehoben
-  async function ensureClassAttr() {
-    await ensureGroup()   // Gruppe überall aktiv (repariert eine alte mit activeFrom) — sonst „etim_class gilt hier nicht“ an der Gruppe
-    // Kollision beim Klassenattribut: ein vorhandenes Attribut dieses Schlüssels, das nicht zu uns gehört (andere Gruppe,
-    // keine Liste der Klassen), wird nicht übernommen — dann heißt unseres etim_klasse
-    {
-      const k0 = cache.settings.classAttr
-      const a0 = model().attributes.find(a => a.key === k0)
-      const ours = !a0 || a0.group === groupKey() || (a0.type === 'enum' && a0.list === k0)
-      if (!ours) {
-        const alt = ['etim_klasse', 'etim_class_std'].find(k => !model().attributes.some(a => a.key === k)) ?? 'etim_klasse'
-        cache.settings.classAttr = alt; await ctx.data.set('settings', cache.settings)
-        store.toast(t_('⚠ {0} gehört schon einem anderen Attribut — ETIM benutzt {1}', [k0, alt]))
-      }
-    }
+  /// Die Klassen, die dem Server mitgehen: die in der Werteliste noch fehlen — alle, wenn es die Liste oder ihre Spalte „group“ nicht gibt
+  /// oder das Klassenattribut einem anderen gehört (dann legt der Server ein eigenes an)
+  function classesToSend(also = null) {
     const key = cache.settings.classAttr
-    const existing = model().attributes.find(a => a.key === key)
-    if (existing && !(existing.type === 'enum' && existing.list === key)) return key   // ein vorhandenes Text-/Listenattribut bleibt, wie es ist
-    if (!(model().lists ?? []).some(l => l.key === key)) await put(`/lists/${key}`, { key, label: { de: 'ETIM-Klasse', en: t_('ETIM class') }, columns: ['group'], closed: true })
-    let rewrite = false
-    if (!((model().lists ?? []).find(l => l.key === key)?.columns ?? []).includes('group')) { const l = (model().lists ?? []).find(x => x.key === key); if (l) { await put(`/lists/${key}`, { ...l, columns: [...(l.columns ?? []), 'group'] }); rewrite = true } }   // Gruppe nachtragen: alle Werte neu schreiben
-    const have = rewrite ? new Set() : new Set((model().lists ?? []).find(l => l.key === key)?.values?.map(v => v.value) ?? [])
-    // alle Klassen der Version als Listenwerte, ein Stapel
-    const missing = [...cache.classes.values()].filter(c => !have.has(c.code)).sort((a, b) => a.code.localeCompare(b.code)).map(c => ({ value: c.code, label: Object.fromEntries(Object.entries(labelsOf(c.name)).map(([l, n]) => [l, `${n}`])), extra: c.group ? { group: nameOf(c.group.name, locale) || c.group.code } : null }))
-    for (let k = 0; k < missing.length; k += 1000) await put(`/lists/${key}/values`, missing.slice(k, k + 1000))
-    let i = 0
-    if (!hasAttr(key)) await put(`/attributes/${key}`, { key, label: { de: 'ETIM-Klasse', en: t_('ETIM class') }, type: 'enum', list: key, group: groupKey(), inheritable: true })
-    else { const a = model().attributes.find(x => x.key === key); if (a.levels) await put(`/attributes/${key}`, { ...a, levels: null }) }   // die Klasse darf an jeder Ebene stehen
-    for (const l of (model().lists ?? []).filter(l => (l.key === key || /^ef\d+$/.test(l.key)) && !l.closed)) await put(`/lists/${l.key}`, { ...l, closed: true })
-    // ETIM-Attribute ohne Bedingung (aus früheren Läufen) bekommen sie nachgetragen — sonst gälten sie an jedem Knoten
-    for (const a of model().attributes.filter(a => a.group === groupKey() && /^ef\d+$/.test(a.key) && !a.label?.[locale] && Object.keys(a.label ?? {}).length)) await put(`/attributes/${a.key}`, { ...a, label: { ...a.label, [locale]: nameOf(a.label, locale) } })
-    for (const a of model().attributes.filter(a => a.group === groupKey() && /^ef\d+$/.test(a.key) && (!a.when || !a.inheritable))) { const w = a.when ?? { attribute: key, values: [...cache.classes.values()].filter(c => c.features.some(x => x.code === a.key.toUpperCase())).map(c => c.code) }; if (w.values.length) await put(`/attributes/${a.key}`, { ...a, when: w, inheritable: true }) }
-    return key
+    const list = (model().lists ?? []).find(l => l.key === key), a = model().attributes.find(x => x.key === key)
+    const foreign = a && !(a.group === groupKey() || (a.type === 'enum' && a.list === key))
+    const have = !list || foreign || !(list.columns ?? []).includes('group') ? new Set() : new Set((list.values ?? []).map(v => v.value))
+    const out = [...cache.classes.values()].filter(c => !have.has(c.code))
+    if (also && !out.some(c => c.code === also.code)) out.push(also)
+    return out.sort((a, b) => a.code.localeCompare(b.code)).map(classSpec)
   }
-  async function unitKeyFor(u) {
-    if (!u) return null
-    const abbr = nameOf(u.abbr, locale) || u.code; const units = model().units ?? []
-    const hit = units.find(x => x.key === abbr.toLowerCase() || Object.values(x.label ?? {}).some(l => l === abbr)); if (hit) return hit.key
-    const key = ('u_' + abbr.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/_+$/, '')).slice(0, 30)
-    if (!units.some(x => x.key === key)) await put(`/units/${key}`, { key, label: { de: abbr, en: abbr }, quantity: nameOf(u.name, locale) || abbr, factor: 1 })
-    return key
+  /// Was der Server wegen einer Namenskollision gewählt hat, gilt ab jetzt
+  async function adopt(r) {
+    let changed = false
+    if (r?.groupRenamed) { cache.settings.group = r.group; changed = true; store.toast(t_('⚠ Gruppe {0} gehört schon anderen Attributen — ETIM benutzt {1}', [r.groupRenamed.from, r.group])) }
+    if (r?.classAttrRenamed) { cache.settings.classAttr = r.classAttr; changed = true; store.toast(t_('⚠ {0} gehört schon einem anderen Attribut — ETIM benutzt {1}', [r.classAttrRenamed.from, r.classAttr])) }
+    if (changed) await ctx.data.set('settings', cache.settings)
+    return r
   }
-  // ein ETIM-Attribut → Attribut ef… (Numeric: decimal + Einheit, Logical: boolean, Alphanumeric: enum mit Werteliste EV-Code → Name, Range: text mit Muster)
-  // Bedingung: das ETIM-Attribut gilt nur an Knoten, deren Klasse es hat — alle Klassen der Version, die das ETIM-Attribut führen
-  // Bedingung am ETIM-Attribut: alle Klassen, die es führen — über Fassungen hinweg VEREINIGT. Sonst nähme ein Wechsel auf ETIM 9 den Klassen aus ETIM 10 ihre Attribute weg.
-  const whenOf = (code, have = null) => {
-    const now = [...cache.classes.values()].filter(c => c.features.some(x => x.code === code)).map(c => c.code)
-    const old = have?.attribute === cache.settings.classAttr ? (have.values ?? []) : []
-    return { attribute: cache.settings.classAttr, values: [...new Set([...old, ...now])].sort() }
+  async function ensure({ groupOnly = false, features = [] } = {}) {
+    return adopt(await api.post('/api/classification/ensure', { system: system(), groupOnly, classes: groupOnly ? [] : classesToSend(), features: features.map(featureSpec) }))
   }
-  async function createFeature(f) {
-    await ensureGroup()
-    const key = f.code.toLowerCase()
-    if (hasAttr(key)) { const a = model().attributes.find(x => x.key === key); const w = whenOf(f.code, a.when); const lv = !a.levels || JSON.stringify([...a.levels].sort()) === JSON.stringify([...OLD_LEVELS].sort()) ? FEATURE_LEVELS : a.levels;
-      if (a.group === groupKey() && (JSON.stringify(a.when?.values ?? []) !== JSON.stringify(w.values) || !a.inheritable || JSON.stringify(a.levels ?? []) !== JSON.stringify(lv))) await put(`/attributes/${key}`, { ...a, when: w, inheritable: true, levels: lv }); return key }
-    const base = { key, label: labelsOf(f.name), group: groupKey(), when: whenOf(f.code), inheritable: true, levels: FEATURE_LEVELS }   // neu: nur die Klassen der aktiven Fassung; vorhandene ergänzen (Vereinigung)   // gilt auf jeder Ebene und erbt nach unten; die Bedingung when hält es dort zurück, wo die Klasse das Merkmal nicht kennt
-    if (f.type === t_('Numeric')) await put(`/attributes/${key}`, { ...base, type: 'decimal', unit: await unitKeyFor(f.unit) })
-    else if (f.type === t_('Logical')) await put(`/attributes/${key}`, { ...base, type: 'boolean' })
-    else if (f.type === t_('Range')) await put(`/attributes/${key}`, { ...base, type: 'text', pattern: '^\\s*-?[\\d.,]+(\\s*(-|\\.\\.|…)\\s*-?[\\d.,]+)?\\s*$', patternHint: `von - bis${f.unit ? ' in ' + (nameOf(f.unit.abbr, locale) || f.unit.code) : ''}` })
-    else {
-      if (!(model().lists ?? []).some(l => l.key === key)) await put(`/lists/${key}`, { key, label: labelsOf(f.name), closed: true })   // EV-Werte sind Norm: geschlossen
-      let i = 0; for (const v of f.values) await put(`/lists/${key}/values/${v.code}`, { value: v.code, label: labelsOf(v.name), order: i++ })
-      await put(`/attributes/${key}`, { ...base, type: 'enum', list: key })
-    }
-    if (cache.map[f.code] && cache.map[f.code] !== key) delete cache.map[f.code]
-    return key
+  const ensureGroup = async () => (await ensure({ groupOnly: true })).group
+  const ensureClassAttr = async () => (await ensure()).classAttr
+  /// Merkmale anlegen (oder die Bedingung nachziehen) — ein Aufruf für alle
+  async function createFeatures(list) {
+    const r = await ensure({ features: list })
+    for (const f of list) { const key = f.code.toLowerCase(); if (cache.map[f.code] && cache.map[f.code] !== key) delete cache.map[f.code] }
+    return r
+  }
+  const createFeature = async f => { await createFeatures([f]); return f.code.toLowerCase() }
+  /// Klasse zuweisen: Modell, Gruppe an den Pfad des Knotens, Klasse an den Knoten — und ob sie danach pflegbar ist
+  async function assign(nodeId, cls, { withFeatures = true } = {}) {
+    const r = await adopt(await api.post('/api/classification/assign', { node: nodeId, class: cls.code, system: system(), classes: classesToSend(cls), features: withFeatures ? cls.features.map(featureSpec) : [] }))
+    if (withFeatures) for (const f of cls.features) { const key = f.code.toLowerCase(); if (cache.map[f.code] && cache.map[f.code] !== key) delete cache.map[f.code] }
+    return r
   }
   // Attributsicht je Klasse: ein Reiter am Knoten mit genau den
   // Attributen dieser Klasse, in der Reihenfolge der Klasse — je Rolle eine Sicht (eine Sicht gilt für einen Knotentyp).
@@ -214,7 +172,7 @@ function modelOps(ctx) {
     for (const v of mine) await api.del(`/api/model/views/${encodeURIComponent(v.key)}`).catch(() => {})
     return mine.length
   }
-  return { ensureGroup, ensureClassAttr, createFeature, hasAttr, viewItems, dropOldViews, viewKeyOf }
+  return { ensureGroup, ensureClassAttr, createFeature, createFeatures, assign, hasAttr, viewItems, dropOldViews, viewKeyOf }
 }
 /// Alle ETIM-Attribute der übernommenen Klassen, je Code einmal (Werte vereinigt), mit den Klassen, in denen es vorkommt
 function allFeatures() {
@@ -347,29 +305,18 @@ async function classDialog(nodeId, ctx, onDone = null) {
     const c = cache.classes.get(code); const at = tree.byId.get(atId) ?? row
     await run(t_('weise {0} zu …', [code]), async () => {
       // Jede Zuweisung stellt sicher, dass die Klasse danach pflegbar ist: Gruppe da und am Pfad, Klassenattribut,
-      // je ETIM-Attribut ein Attribut im Modell. Am Ende wird geprüft und berichtet, was noch fehlt.
-      await ops.ensureGroup(); const k = await ops.ensureClassAttr(); await store.poll(true)
-      // Gruppe am Pfad des Knotens, an den zugewiesen wird — hängt sie nirgends darüber, kommt sie an die Wurzel dieses Baums
-      const onPath = id => { for (let p = id; p; p = tree.byId.get(p)?.parent) if ((tree.byId.get(p)?.groups ?? '').split(',').includes(groupKey())) return true; return false }
-      if (!onPath(atId)) {
-        let top = tree.byId.get(atId) ?? at; while (top.parent && tree.byId.get(top.parent)) top = tree.byId.get(top.parent)
-        const have = (top.groups ?? '').split(',').filter(Boolean)
-        await api.post(`/api/nodes/${encodeURIComponent(top.id)}/groups`, { groups: [...new Set([...have, groupKey()])] }, 'PUT')
-        say(t_('Gruppe {0} an {1} gehängt …', [groupKey(), top.label]))
-      }
-      await api.post(`/api/nodes/${encodeURIComponent(atId)}/attributes`, { attribute: k, locale: null, channel: null, value: code, row: null })
+      // je ETIM-Attribut ein Attribut im Modell — das macht der Server in einem Aufruf und sagt, ob danach alles da ist.
+      const r = await ops.assign(atId, c)
+      await store.poll(true)
+      if (r.groupAttached) say(t_('Gruppe {0} angehängt …', [r.group]))
       cache.used.add(code); if (atId !== nodeId) store.toast(`✓ ${code} ab ${at.label}`, 'ok')
       loadUsed()   // Klassen je Knoten für Baummenü und Band
-      let n = 0
-      for (const f of c.features) { if (!ops.hasAttr(attrKeyOf(f.code))) { say(t_('lege an {0}: {1} …', [++n, featureText(f, locale)])); await ops.createFeature(f); await store.poll(true) } else await ops.createFeature(f) }
-      await store.poll(true); await tree.load()
-      // Prüfung nach dem Zuweisen: ist alles da? Sonst sagt die Meldung, was fehlt (und das Band bietet den Knopf dazu)
-      const node = await api.get(`/api/nodes/${encodeURIComponent(atId)}`).catch(() => null)
-      const r = readiness({ cls: c, map: mergedMap(), hasAttr: ops.hasAttr, groupExists: (model().groups ?? []).some(g => g.key === groupKey()), groupOn: (node?.groups ?? []).some(g => g.key === groupKey() && g.active !== false) })
+      await tree.load()
+      const rd = r.readiness
       say('')
-      store.toast(r.ready
-        ? `✓ ${code} an ${at.label} · ${c.features.length} Attribute${n ? ` · ${n} neu` : ''}`
-        : `⚠ ${code} an ${at.label} · ${!r.groupExists ? `Gruppe ${groupKey()} fehlt` : !r.groupOn ? `Gruppe ${groupKey()} gilt hier nicht` : `${r.missing.length} ohne Attribut`}`, r.ready ? 'ok' : 'error')
+      store.toast(rd.ready
+        ? `✓ ${code} an ${at.label} · ${c.features.length} Attribute${r.attributes ? ` · ${r.attributes} neu` : ''}`
+        : `⚠ ${code} an ${at.label} · ${!rd.groupExists ? `Gruppe ${r.group} fehlt` : !rd.groupOn ? `Gruppe ${r.group} gilt hier nicht` : `${rd.missing.length} ohne Attribut`}`, rd.ready ? 'ok' : 'error')
       checkStep(code)
     })
   }
@@ -725,12 +672,9 @@ async function mount(root, ctx) {
     if (!cache.classes.has(code)) { const cls = st.rel?.classes.find(x => x.code === code); if (!cls) { store.toast(t_('Klasse {0} nicht übernommen', [code])); return } await takeClass(cls, true) }
     await busy(t_('weise {0} zu …', [code]), async () => {
       cache.used.add(code)
-      const key = await ops.ensureClassAttr(); await store.poll(true)
-      const onPath = id => { for (let p = id; p; p = tree.byId.get(p)?.parent) if ((tree.byId.get(p)?.groups ?? '').split(',').includes(groupKey())) return true; return false }
-      if (!onPath(nodeId)) { const groups = [...new Set([...(row.groups ?? '').split(',').filter(Boolean), groupKey()])]; await api.post(`/api/nodes/${encodeURIComponent(nodeId)}/groups`, { groups }, 'PUT') }
-      await api.post(`/api/nodes/${encodeURIComponent(nodeId)}/attributes`, { attribute: key, locale: null, channel: null, value: code, row: null })
+      const r = await ops.assign(nodeId, cache.classes.get(code), { withFeatures: false }); await store.poll(true)
       await tree.load?.()
-      say(`${code} → ${row.label}${onPath(nodeId) ? '' : ` (Gruppe ${groupKey()} angehängt)`}`); store.toast(`✓ ${code} an ${row.label}`, 'ok')
+      say(`${code} → ${row.label}${r.groupAttached ? ` (Gruppe ${r.group} angehängt)` : ''}`); store.toast(`✓ ${code} an ${row.label}`, 'ok')
     })
   }
   const assignPick = el('div', { class: 'picker', style: 'position:absolute;left:0;top:28px;z-index:6;width:380px;display:none;padding:6px;background:var(--pane)' })
@@ -787,7 +731,7 @@ async function mount(root, ctx) {
     await busy(t_('lege Attribute an …'), async () => {
       await store.poll(true); await ops.ensureClassAttr()
       let n = 0; const todo = [...allFeatures().values()].filter(f => !hasAttr(attrKeyOf(f.code)))
-      for (const f of todo) { say(`${++n}/${todo.length} ${f.code} ${nameOf(f.name, locale)}`); await ops.createFeature(f) }
+      say(t_('lege {0} Attribute an …', [todo.length])); if (todo.length) await ops.createFeatures(todo)
       await saveMap(); await store.poll(true)
       say(t_('{0} Attribute angelegt · Klassenattribut {1} mit {2} Klassen', [todo.length, cache.settings.classAttr, cache.classes.size])); draw()
     })
