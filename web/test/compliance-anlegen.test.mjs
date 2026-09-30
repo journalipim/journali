@@ -34,3 +34,17 @@ test('ein Datenpunkt ohne Rollen wird ohne Beschränkung angelegt (levels null: 
   const [a] = await anlegen([item('manufacturer')])
   assert.equal(a.body.levels, null)
 })
+
+test('Text wird Vorlage, Zahl wird Formel, Liste bleibt Liste', async () => {
+  const [text, zahl, liste] = await anlegen([item('gtin'), item('recycled_content'), item('energy_class')])
+  assert.equal(text.body.type, 'template')
+  assert.equal(zahl.body.type, 'formula')
+  assert.equal(liste.body.type, 'enum')
+})
+
+test('Handelsname und Modell sind vererbbar: eine Vorlage am oberen Knoten gilt darunter', async () => {
+  const [name, modell, gtin] = await anlegen([item('trade_name'), item('model_number'), item('gtin')])
+  assert.equal(name.body.inheritable, true)
+  assert.equal(modell.body.inheritable, true)
+  assert.equal(gtin.body.inheritable, false, 'eine GTIN erbt nicht')
+})

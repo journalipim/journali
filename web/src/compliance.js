@@ -12,7 +12,7 @@ import { tree } from './tree.js'
 import { dialog } from './dialog.js'
 import { ai } from './ai.js'
 import { norm, similarity } from './mapper.js'
-import { analyze, einrichtungsBedarf } from './compliance-core.js'
+import { analyze, einrichtungsBedarf, berechneterTyp } from './compliance-core.js'
 import { gruppenVon } from './gruppen.js'
 import { treePicker } from './treePicker.js'
 import { t as t_ } from './i18n.js'
@@ -139,7 +139,7 @@ export async function createAttributes(catalog, items, mapping) {
     const key = (catalog.prefix ?? '') + it.key.replace(/[^a-z0-9_]/g, '_')
     // Einheit: vorhandene nehmen (Schlüssel oder Bezeichnung), sonst anlegen — „Unbekannte Einheit: %“ war der Abbruch
     const unit = it.unit ? await ensureUnit(it.unit) : null
-    const body = { key, label: { de: it.label, en: it.labelEn ?? it.label }, type: it.type === 'enum' && !it.values ? 'text' : (it.type ?? 'text'), group: gkey, levels: it.roles?.length ? it.roles : null, unit, axes: it.perLocale ? ['locale'] : [], inheritable: !!it.inheritable, required: it.level === 'must' && it.requiredChannels ? it.requiredChannels : null }
+    const body = { key, label: { de: it.label, en: it.labelEn ?? it.label }, type: berechneterTyp(it) ?? (it.type === 'enum' && !it.values ? 'text' : it.type), group: gkey, levels: it.roles?.length ? it.roles : null, unit, axes: it.perLocale ? ['locale'] : [], inheritable: !!it.inheritable, required: it.level === 'must' && it.requiredChannels ? it.requiredChannels : null }
     await api.post(`/api/model/attributes/${key}`, body, 'PUT')
     mapping[it.key] = { to: key, why: 'angelegt', sure: true }
   }
@@ -615,51 +615,49 @@ export async function mount(root, ctx, catalog) {
   async function einrichten() {
     const a = analyseEinrichtung()
     if (a.allesOk) return true
-    // Titel adaptiv: was ist die grosse Wirkung? (Anlegen > Zuordnen > Anhaengen)
-    const titel = a.gruppeFehlt || a.fehlendeItems.length
-      ? t_('{0} einrichten für „{1}“', [catalog.label, a.wurzel.label])
-      : a.zuOrdnende.length && a.haengtNicht
-        ? t_('{0}: {1} Attribute der Gruppe zuordnen und an „{2}“ anhängen', [catalog.label, a.zuOrdnende.length, a.wurzel.label])
-        : a.zuOrdnende.length
-          ? t_('{0}: {1} Attribute der Gruppe {2} zuordnen', [catalog.label, a.zuOrdnende.length, catalog.groupKey])
-          : a.nachziehen.length && !a.haengtNicht
-            ? t_('{0}: {1} Attribute auf ihre Ebenen beschränken', [catalog.label, a.nachziehen.length])
-            : t_('{0}: Gruppe an „{1}“ anhängen', [catalog.label, a.wurzel.label])
+    // Titel und Knopf nach der grössten Wirkung: Anlegen > Zuordnen > Umwandeln > Ebenen > Anhängen
+    const stufen = [
+      [a.gruppeFehlt || a.fehlendeItems.length, t_('{0} einrichten für „{1}“', [catalog.label, a.wurzel.label]), t_('Einrichten')],
+      [a.zuOrdnende.length && a.haengtNicht, t_('{0}: {1} Attribute der Gruppe zuordnen und an „{2}“ anhängen', [catalog.label, a.zuOrdnende.length, a.wurzel.label]), t_('Zuordnen und anhängen')],
+      [a.zuOrdnende.length, t_('{0}: {1} Attribute der Gruppe {2} zuordnen', [catalog.label, a.zuOrdnende.length, catalog.groupKey]), t_('Zuordnen')],
+      [a.umwandeln.length && !a.haengtNicht, t_('{0}: {1} Attribute in Vorlagen und Formeln umwandeln', [catalog.label, a.umwandeln.length]), t_('Umwandeln')],
+      [a.nachziehen.length && !a.haengtNicht, t_('{0}: {1} Attribute auf ihre Ebenen beschränken', [catalog.label, a.nachziehen.length]), t_('Beschränken')],
+      [true, t_('{0}: Gruppe an „{1}“ anhängen', [catalog.label, a.wurzel.label]), t_('Anhängen')],
+    ]
+    const [, titel, knopf] = stufen.find(s => s[0])
     const zeilen = []
     if (a.gruppeFehlt) zeilen.push(t_('Attributgruppe {0} anlegen', [catalog.groupKey]))
     if (a.fehlendeItems.length) zeilen.push(t_('{0} Attribute anlegen: {1}', [a.fehlendeItems.length, a.fehlendeItems.slice(0, 6).map(x => x.label).join(', ') + (a.fehlendeItems.length > 6 ? ', …' : '')]))
     if (a.zuOrdnende.length) zeilen.push(t_('{0} vorhandene Attribute der Gruppe {1} zuordnen (kein Kopieren): {2}', [a.zuOrdnende.length, catalog.groupKey, a.zuOrdnende.slice(0, 6).map(x => x.item.label).join(', ') + (a.zuOrdnende.length > 6 ? ', …' : '')]))
+    if (a.umwandeln.length) zeilen.push(t_('{0} vorhandene Attribute in Vorlagen und Formeln umwandeln (vorhandene Werte bleiben erhalten): {1}', [a.umwandeln.length, a.umwandeln.slice(0, 6).map(x => x.item.label).join(', ') + (a.umwandeln.length > 6 ? ', …' : '')]))
     if (a.nachziehen.length) zeilen.push(t_('{0} vorhandene Attribute auf die Ebenen des Katalogs beschränken: {1}', [a.nachziehen.length, a.nachziehen.slice(0, 6).map(x => x.item.label).join(', ') + (a.nachziehen.length > 6 ? ', …' : '')]))
     if (a.haengtNicht) zeilen.push(t_('Gruppe {0} an „{1}“ anhängen', [catalog.groupKey, a.wurzel.label]))
-    const knopf = a.gruppeFehlt || a.fehlendeItems.length ? t_('Einrichten')
-      : a.zuOrdnende.length && a.haengtNicht ? t_('Zuordnen und anhängen')
-      : a.zuOrdnende.length ? t_('Zuordnen')
-      : a.nachziehen.length && !a.haengtNicht ? t_('Beschränken')
-      : t_('Anhängen')
     const ok = await dialog.confirm({ title: titel, warn: t_('Modellpflege — Auswirkung auf das Modell und den Baum'), list: zeilen, ok: knopf })
     if (!ok) return false
     try {
       if (a.fehlendeItems.length) { say(t_('lege {0} Attribute an …', [a.fehlendeItems.length])); await createAttributes(catalog, a.fehlendeItems, st.mapping); await remember() }
-      // Zuordnen und Ebenen nachziehen in einem Schreiben je Attribut (zwei Schreiben mit demselben alten Stand überschrieben sich)
+      // Zuordnen, Ebenen und Typ in einem Schreiben je Attribut (zwei Schreiben mit demselben alten Stand überschrieben sich)
       const aendern = new Map()
       for (const { attr } of a.zuOrdnende) aendern.set(attr.key, { attr, gruppe: true })
       for (const { attr, item } of a.nachziehen) aendern.set(attr.key, { ...aendern.get(attr.key), attr, ebenen: item.roles })
+      for (const { attr, zu } of a.umwandeln) aendern.set(attr.key, { ...aendern.get(attr.key), attr, typ: zu })
       if (aendern.size) {
         say(t_('passe {0} Attribute an …', [aendern.size]))
-        const ohneEbenen = []; let grund = ''
-        for (const { attr, gruppe, ebenen } of aendern.values()) {
+        const nichtGeaendert = []; let grund = ''
+        for (const { attr, gruppe, ebenen, typ } of aendern.values()) {
           const body = { ...attr }
           if (gruppe) body.groups = [...new Set([...gruppenVon(attr), catalog.groupKey])].sort()
           if (ebenen) body.levels = ebenen
+          if (typ) body.type = typ
           const url = `/api/model/attributes/${encodeURIComponent(attr.key)}`
           try { await api.post(url, body, 'PUT') }
           catch (e) {
-            if (!ebenen) throw e
-            ohneEbenen.push(attr.key); grund ||= e.message
-            if (gruppe) { body.levels = attr.levels ?? null; await api.post(url, body, 'PUT') }
+            if (!ebenen && !typ) throw e
+            nichtGeaendert.push(attr.key); grund ||= e.message
+            if (gruppe) { body.levels = attr.levels ?? null; body.type = attr.type; await api.post(url, body, 'PUT') }
           }
         }
-        if (ohneEbenen.length) store.toast(t_('Ebenen nicht gesetzt an {0} — {1}', [ohneEbenen.join(', '), grund]))
+        if (nichtGeaendert.length) store.toast(t_('Nicht geändert an {0} — {1}', [nichtGeaendert.join(', '), grund]))
       }
       if (a.haengtNicht) {
         const have = (a.wurzel.groups ?? '').split(',').map(s => s.trim()).filter(Boolean)

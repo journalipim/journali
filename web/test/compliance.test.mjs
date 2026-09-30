@@ -139,3 +139,12 @@ test('Bedarf: fehlendes Attribut kommt in fehlendeItems (es wird mit Ebenen ange
   assert.deepEqual(b.zuOrdnende.map(x => x.item.key), ['charge'])
   assert.deepEqual(b.nachziehen, [])
 })
+
+test('Bedarf: Text → Vorlage, Zahl → Formel; schon berechnet, falscher Typ und Liste bleiben', () => {
+  const kat = { groupKey: 'k', prefix: 'k_', groups: [{ items: [{ key: 'a', type: 'text' }, { key: 'b' }, { key: 'c', type: 'decimal' }, { key: 'd', type: 'text' }, { key: 'e', type: 'integer' }, { key: 'f', type: 'enum' }, { key: 'g', type: 'decimal' }] }] }
+  const b = einrichtungsBedarf(kat, { groups: [{ key: 'k' }], attributes: [
+    { key: 'k_a', type: 'text', group: 'k' }, { key: 'k_b', type: 'text', group: 'k' }, { key: 'k_c', type: 'decimal', group: 'k' },
+    { key: 'k_d', type: 'template', group: 'k' }, { key: 'k_e', type: 'integer', group: 'k' }, { key: 'k_f', type: 'enum', group: 'k' }, { key: 'k_g', type: 'text', group: 'k' }] }, { groups: 'k' })
+  assert.deepEqual(b.umwandeln.map(x => [x.item.key, x.zu]), [['a', 'template'], ['b', 'template'], ['c', 'formula'], ['e', 'formula']])
+  assert.equal(b.allesOk, false)
+})

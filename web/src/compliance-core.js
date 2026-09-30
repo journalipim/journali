@@ -6,25 +6,32 @@
 import { convert, validate } from './mapper.js'
 import { gruppenVon } from './gruppen.js'
 
+// Welchen berechneten Typ bekommt ein Datenpunkt? Text → Vorlage ({attribut} oder fester Text), Zahl → Formel ($a * $b);
+// der Server rechnet beides beim Lesen. Datum, Ja/Nein und Liste bleiben typisiert (null).
+export const berechneterTyp = item => (item.type ?? 'text') === 'text' ? 'template' : item.type === 'decimal' || item.type === 'integer' ? 'formula' : null
+
 // Was fehlt, damit ein Katalog am Ast greift? Reine Analyse (der Assistent in compliance.js schreibt danach).
 //   fehlendeItems: das Attribut fehlt im Modell (wird mit Gruppe und Ebenen angelegt)
 //   zuOrdnende:    das Attribut gibt es, es gehoert aber nicht zur Katalog-Gruppe
 //   nachziehen:    das Attribut gibt es ohne Ebenen-Beschraenkung, der Katalog nennt Rollen (item.roles).
 //                  Eine andere, bewusst gesetzte Beschraenkung bleibt unberuehrt.
+//   umwandeln:     das Attribut ist noch ein einfacher Text bzw. eine einfache Zahl: es wird eine Vorlage bzw. Formel (zu)
 //   haengtNicht:   die Katalog-Gruppe haengt nicht am obersten Knoten des Astes (wurzel)
 export function einrichtungsBedarf(catalog, model, wurzel) {
   const gruppeFehlt = !(model.groups ?? []).some(g => g.key === catalog.groupKey)
   const attrByKey = new Map((model.attributes ?? []).map(a => [a.key, a]))
-  const fehlendeItems = [], zuOrdnende = [], nachziehen = []
+  const fehlendeItems = [], zuOrdnende = [], nachziehen = [], umwandeln = []
   for (const item of catalog.groups.flatMap(g => g.items)) {
     const attr = attrByKey.get((catalog.prefix ?? '') + item.key)
     if (!attr) { fehlendeItems.push(item); continue }
     if (!gruppenVon(attr).includes(catalog.groupKey)) zuOrdnende.push({ item, attr })
     if (item.roles?.length && !attr.levels?.length) nachziehen.push({ item, attr })
+    const zu = berechneterTyp(item)
+    if ((zu === 'template' && attr.type === 'text') || (zu === 'formula' && (attr.type === 'decimal' || attr.type === 'integer'))) umwandeln.push({ item, attr, zu })
   }
   const haengtNicht = !(wurzel?.groups ?? '').split(',').map(s => s.trim()).filter(Boolean).includes(catalog.groupKey)
-  const allesOk = !gruppeFehlt && !fehlendeItems.length && !zuOrdnende.length && !nachziehen.length && !haengtNicht
-  return { gruppeFehlt, fehlendeItems, zuOrdnende, nachziehen, haengtNicht, allesOk }
+  const allesOk = !gruppeFehlt && !fehlendeItems.length && !zuOrdnende.length && !nachziehen.length && !umwandeln.length && !haengtNicht
+  return { gruppeFehlt, fehlendeItems, zuOrdnende, nachziehen, umwandeln, haengtNicht, allesOk }
 }
 
 export function analyze({ catalog, mapping, model, rows, locale = 'de', scopeAttr = null, onPath = () => true, today = new Date().toISOString().slice(0, 10) }) {
