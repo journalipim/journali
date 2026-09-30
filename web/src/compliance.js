@@ -421,6 +421,17 @@ export async function mount(root, ctx, catalog) {
   }
   async function askPending(n, it, pend, bad = null) {
     const to = st.mapping[it.key]?.to; if (!to) return
+    const def = store.model.attributes.find(a => a.key === to)
+    if (def?.type === 'template' || def?.type === 'formula') {
+      // Vorlage und Formel schreibt man im Editor; er lädt den Text des Knotens, sonst den des Vorfahren, von dem er kommt
+      const locale = def.perLocale ? st.res.locale : null
+      let text = ''
+      try { const ansicht = await api.get(`/api/nodes/${encodeURIComponent(n.from?.[to] ?? n.row.id)}`); text = (ansicht.values ?? []).find(x => x.attribute === to && (x.locale ?? null) === locale && !x.row)?.value ?? '' } catch { /* leer beginnen */ }
+      editorOeffnen({ title: `${it.label} · ${n.row.label}`, draftKey: `${n.row.id}.${to}.pruefung`, type: def.type, node: n.row.id, locale: locale ?? undefined, modelValue: text,
+        attributes: (store.model.attributes ?? []).filter(a => a.key !== to && a.type !== 'rows' && a.type !== 'html'),
+        onSave: async v => { try { await api.post(`/api/nodes/${encodeURIComponent(n.row.id)}/attributes`, { attribute: to, locale, channel: null, value: v, row: null }); await run() } catch (e) { store.toast(e.message) } } })
+      return
+    }
     const v = await dialog.prompt({ title: `${it.label} · ${n.row.label}`, value: bad?.value ?? '', text: bad ? t_('✗ {0} — Wert korrigieren{1}.', [bad.message, it.unit ? ` (in ${it.unit})` : '']) : pend ? t_('⏳ angefragt{0}, Wiedervorlage {1}. Wert eintragen — oder leer lassen und die Anfrage ändern.', [pend.source ? ' bei ' + pend.source : '', pend.checkedAt ?? '—']) : t_('Wert eintragen — oder leer lassen: dann „weiss ich noch nicht, frage bei …“ mit Wiedervorlage.'), value: '', placeholder: it.unit ? t_('Wert in {0}', [it.unit]) : t_('Wert'), ok: t_('Eintragen') })
     if (v == null) return
     try {
