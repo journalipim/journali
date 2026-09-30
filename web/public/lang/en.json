@@ -2504,6 +2504,8 @@
  "{0} vorhandene Attribute auf die Ebenen des Katalogs beschränken: {1}": "Restrict {0} existing attributes to the levels of the catalogue: {1}",
  "passe {0} Attribute an …": "adjusting {0} attributes …",
  "Ebenen nicht gesetzt an {0} — {1}": "Levels not set on {0} — {1}",
+ "Umwandlung für {0}": "Conversion for {0}",
+ "Die Vorschau rechnet mit den Werten dieses Knotens; die Kette wird als Attributwert gespeichert.": "The preview uses the values of this node; the chain is saved as an attribute value.",
  "kein Schlüssel": "not a key",
  "◆ Test · {0}": "◆ Trial · {0}",
  "Test einer neuen Instanz, ab dem ersten Eintrag im Journal": "Trial of a new instance, from the first journal entry",

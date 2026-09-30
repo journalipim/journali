@@ -3,8 +3,13 @@
 // am Ende, Enter/F2 mit dem bisherigen Wert vorselektiert, Tippen hängt an den
 // bisherigen Wert an (überschreibt nie). Enter speichert, Esc
 // verwirft, Tab speichert und springt weiter.
-import { ref, nextTick, watch, onUnmounted } from 'vue'
+import { ref, computed, nextTick, watch, onUnmounted } from 'vue'
 import AiBar from './AiBar.vue'
+import { store } from '../store.js'
+import { dialog } from '../dialog.js'
+import { describe } from '../transform.js'
+import { findeZyklus } from '../compliance-core.js'
+import { t as t_, L } from '../i18n.js'
 
 const isUrl = s => /^https?:\/\//i.test(String(s ?? ''))
 const props = defineProps({
@@ -19,6 +24,9 @@ const props = defineProps({
   clickEdit: { type: Boolean, default: true },   // false (Tabelle): Klick markiert nur, Doppelklick bearbeitet
   node: String, locale: String, label: String,    // für ✦ KI im grossen Editor
   suggest: Array,         // Ergänzung beim Tippen wie in Excel: Werte, die es in der Spalte schon gibt; der Rest steht markiert, Enter nimmt ihn
+  formel: Boolean,        // Tippen von f: (oder Bearbeiten eines Werts f:[…]) öffnet den Editor der Umwandlungskette
+  formelAttribut: String, // Schlüssel des Attributs (für den Kreis-Schutz und die Auswahl)
+  formelWerte: Function,  // liefert { Attribut: Wert } an diesem Knoten (Vorschau und Kreis-Schutz)
 })
 const emit = defineEmits(['save'])
 
@@ -64,10 +72,12 @@ const box = ref(null)
 // mode: 'select' = alles vorselektiert (Enter/F2), 'end' = Cursor ans Ende (Klick), sonst = getippte Taste anhängen
 async function open(mode) {
   if (props.disabled) return
+  if (props.formel && (mode === 'select' || mode === 'end') && String(props.value ?? '').startsWith('f:')) return openFormel(props.value)
   if ((mode === 'select' || mode === 'end') && isLong(props.value ?? props.inherited)) return openBig()
   const cur = props.value ?? ''
   // getipptes Zeichen: Knotenansicht hängt an, Tabelle (clickEdit=false) ersetzt wie Excel
   draft.value = mode === 'select' || mode === 'end' ? cur : (props.clickEdit ? cur + mode : mode)
+  if (props.formel && draft.value === 'f:') return openFormel('')
   openMode.value = mode === 'select' || mode === 'end' ? 'edit' : 'typed'   // Excel: Bearbeiten- vs. Eingeben-Modus
   editing.value = true
   await nextTick()
@@ -85,7 +95,31 @@ function complete() {
   draft.value = typed + hit.slice(typed.length)
   nextTick(() => el.setSelectionRange(typed.length, draft.value.length))
 }
-function onInput(e) { if (props.suggest?.length && e.inputType?.startsWith('insert')) complete() }
+function onInput(e) {
+  if (props.formel && draft.value === 'f:') { editing.value = false; return openFormel('') }
+  if (props.suggest?.length && e.inputType?.startsWith('insert')) complete()
+}
+
+// Umwandlungskette (ƒ): der Wert ist 'f:' + JSON der Schritte; der Editor ist derselbe wie in der Prüfansicht
+const kette = computed(() => {
+  const v = props.value
+  if (!props.formel || typeof v !== 'string' || !v.startsWith('f:')) return null
+  try { const s = JSON.parse(v.slice(2)); return Array.isArray(s) ? (describe(s) || t_('Kette')) : null } catch { return null }
+})
+async function openFormel(wert) {
+  let schritte = []
+  if (wert) { try { const s = JSON.parse(String(wert).slice(2)); if (Array.isArray(s)) schritte = s } catch { /* ungültig: leer beginnen */ } }
+  const werte = props.formelWerte?.() ?? {}
+  const attribute = (store.model?.attributes ?? []).filter(a => a.key !== props.formelAttribut && !['rows', 'formula', 'template'].includes(a.type)).map(a => ({ key: a.key, label: L(a.label) }))
+  const neu = await dialog.steps({ title: t_('Umwandlung für {0}', [props.label ?? '']), text: t_('Die Vorschau rechnet mit den Werten dieses Knotens; die Kette wird als Attributwert gespeichert.'), value: schritte, attributes: attribute, values: werte, ok: t_('Übernehmen') })
+  nextTick(() => box.value?.focus())
+  if (neu == null) return
+  const v = neu.length ? 'f:' + JSON.stringify(neu) : ''
+  if (v && props.formelAttribut && findeZyklus(v, props.formelAttribut, Object.fromEntries(Object.entries(werte).map(([k, x]) => [k, { value: x }])))) {
+    store.toast(t_('Die Umwandlung liest {0} selbst — ein Kreis, nicht gespeichert.', [props.formelAttribut])); return
+  }
+  if (v !== (props.value ?? '')) emit('save', v)
+}
 
 function commit() {
   if (!editing.value) return   // blur nach Enter kommt ein zweites Mal
@@ -116,7 +150,7 @@ function onEditKey(e) {
     <div v-if="!editing" ref="box" class="cell-box" :class="{ inherited: !disabled && value == null && inherited != null, disabled }"
       :tabindex="disabled ? undefined : 0" @click="clickEdit && open('end')" @dblclick="clickEdit || open('end')" @keydown="onKey" :title="disabled ? $t('Achse gibt es hier nicht') : (value == null && inherited != null ? 'geerbt' + (origin ? ' von ' + origin : '') + ' ' + $t('— Enter überschreibt') : '')">
       <template v-if="disabled"></template>
-      <template v-else-if="value != null">{{ value }}</template>
+      <template v-else-if="value != null">{{ kette != null ? 'ƒ ' + kette : value }}</template>
       <template v-else-if="inherited != null">{{ inherited }}</template>
       <span v-if="mark && !disabled" class="mark" :class="{ btn: !!markClick }" :title="markTitle" @click.stop="markClick && markClick()" @mousedown.stop>{{ mark }}</span>
       <a v-if="source && !disabled && value != null" class="src" :class="{ stale: source.stale, link: isUrl(source.source) }" :href="isUrl(source.source) ? source.source : null" target="_blank" rel="noopener" @mousedown.stop @click.stop="isUrl(source.source) || $event.preventDefault()"
