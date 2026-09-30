@@ -20,8 +20,7 @@ test('ƒ-Editor: ein Schritt aus der Liste kommt an die Kette, ohne Schritte ste
 
 test('ƒ-Editor: combine — Attribut aus der Liste wird mit Komma angehängt, die Vorschau rechnet mit den Werten', async () => {
   const w = editor([{ op: 'combine', columns: 'name', sep: ' ' }], { name: 'WAKOL', material: 'Acrylat' })
-  const spalten = w.findAll('select').find(s => s.text().includes('+ Attribut'))
-  await spalten.setValue('material')
+  await w.find('input.attr-wahl[data-feld="columns"]').setValue('Material (material)')
   assert.equal(letzte(w)[0].columns, 'name,material')
   const w2 = editor([{ op: 'combine', columns: 'name,material', sep: ' - ' }], { name: 'WAKOL', material: 'Acrylat' })
   assert.match(w2.text(), /Vorschau: WAKOL - Acrylat/)
@@ -70,10 +69,27 @@ test('dialog.steps: der Dialog ändert die übergebene Kette nicht, bis übernom
 
 test('ƒ-Editor: neben Textfeldern setzt eine Auswahl {attribut} ein, die Vorschau rechnet damit', async () => {
   const w = editor([{ op: 'prefix', text: 'Marke: ' }], { name: 'WAKOL' })
-  const einsetzen = w.findAll('select').find(s => s.attributes('title')?.includes('Attributwert einsetzen'))
-  assert.ok(einsetzen, 'Auswahl neben dem Textfeld')
-  await einsetzen.setValue('name')
+  const einsetzen = w.find('input.attr-wahl[data-feld="text"]')
+  assert.ok(einsetzen, 'Suchfeld neben dem Textfeld')
+  await einsetzen.setValue('Name (name)')
   assert.equal(letzte(w)[0].text, 'Marke: {name}')
   const w2 = editor([{ op: 'static', text: 'Marke: {name}' }], { name: 'WAKOL' })
   assert.match(w2.text(), /Vorschau: Marke: WAKOL/)
+})
+
+test('ƒ-Editor: die Attribut-Vorschläge sind nach Bezeichnung sortiert, tippen des Schlüssels genügt', async () => {
+  const w = mount(StepsEditor, { props: { modelValue: [{ op: 'static', text: '' }], attributes: [{ key: 'z_sku', label: 'SKU' }, { key: 'a_name', label: 'Name' }, { key: 'm', label: 'Material' }], values: {} } })
+  const texte = w.findAll('datalist option').map(o => o.attributes('value'))
+  assert.deepEqual(texte.slice(1), ['Material (m)', 'Name (a_name)', 'SKU (z_sku)'])
+  await w.find('input.attr-wahl').setValue('z_sku')
+  assert.equal(letzte(w)[0].text, '{z_sku}')
+})
+
+test('dialog.steps: bleibt der Startschritt leer, wird nichts gespeichert (Kette leer)', async () => {
+  const w = dlg()
+  const p = dialog.steps({ title: 'Umwandlung', value: [{ op: 'static', text: '' }], attributes: attribute, ok: 'Übernehmen' })
+  await flushPromises()
+  await klick(knopf('Übernehmen'))
+  assert.deepEqual(await p, [{ op: 'static', text: '' }])
+  w.unmount()
 })

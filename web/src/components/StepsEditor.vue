@@ -25,7 +25,19 @@ function addStep(op) {
 function delStep(i) { const n = [...steps.value]; n.splice(i, 1); set(n) }
 function moveStep(i, d) { const j = i + d; if (j < 0 || j >= steps.value.length) return; const n = [...steps.value]; [n[i], n[j]] = [n[j], n[i]]; set(n) }
 function updateField(i, f, v) { const n = [...steps.value]; n[i] = { ...n[i], [f]: v }; set(n) }
-function einsetzen(i, f, key) { if (key) updateField(i, f, (steps.value[i]?.[f] ?? '') + '{' + key + '}') }
+function einsetzen(i, f, key) { if (key) updateField(i, f, (steps.value[i]?.[f] ?? '') + (key === '{}' ? '{}' : '{' + key + '}')) }
+// Attribut suchen: ein Feld mit Vorschlagsliste (tippen filtert), alphabetisch nach Bezeichnung
+const listeId = 'attrs-' + Math.random().toString(36).slice(2, 8)
+const optionen = computed(() => [{ key: '{}', text: t_('{} · Ausgangswert') }, ...[...props.attributes]
+  .sort((a, b) => (a.label || a.key).localeCompare(b.label || b.key, 'de'))
+  .map(a => ({ key: a.key, text: `${a.label || a.key} (${a.key})` }))])
+function wahl(i, f, e) {
+  const feld = e.target, eingabe = feld.value.trim(); if (!eingabe) return
+  const treffer = optionen.value.find(o => o.text === eingabe) ?? optionen.value.find(o => o.key === eingabe)
+  if (!treffer) return
+  if (f === 'columns') addColumn(i, treffer.key); else einsetzen(i, f, treffer.key)
+  feld.value = ''
+}
 function addColumn(i, col) { if (!col) return; const cur = steps.value[i]?.columns ?? ''; updateField(i, 'columns', cur ? cur + ',' + col : col) }
 
 const vorschau = computed(() => {
@@ -39,6 +51,7 @@ const vorschau = computed(() => {
 
 <template>
   <div class="steps-editor">
+    <datalist :id="listeId"><option v-for="o in optionen" :key="o.key" :value="o.text" /></datalist>
     <div v-for="(s, si) in steps" :key="si" class="tstep">
       <span class="muted mono" style="width:18px">{{ si + 1 }}</span>
       <select :value="s.op" @change="updateField(si, 'op', $event.target.value)" :title="opHint(s.op)">
@@ -73,17 +86,9 @@ const vorschau = computed(() => {
             :placeholder="FIELD_HINT[f] ?? f"
             :title="(FIELD_HINT[f] ?? f) + ' — ' + opHint(s.op)" style="width:200px" />
         </span>
-        <select v-if="TEXTFELDER.includes(f) && attributes.length" :value="''" :title="$t('Attributwert einsetzen (steht als Platzhalter im Feld)')"
-          @change="einsetzen(si, f, $event.target.value); $event.target.value = ''">
-          <option value="">{{ $t("+ Attribut …") }}</option>
-          <option v-for="a in attributes" :key="a.key" :value="a.key">{{ a.label || a.key }} ({{ a.key }})</option>
-        </select>
-        <select v-if="f === 'columns'" :value="''" :title="$t('Attribut anklicken statt tippen — wird mit Komma angehängt')"
-          @change="addColumn(si, $event.target.value); $event.target.value = ''">
-          <option value="">{{ $t("+ Attribut …") }}</option>
-          <option value="{}">{{ $t("{} · Ausgangswert") }}</option>
-          <option v-for="a in attributes" :key="a.key" :value="a.key">{{ a.label || a.key }} ({{ a.key }})</option>
-        </select>
+        <input v-if="(TEXTFELDER.includes(f) || f === 'columns') && attributes.length" class="attr-wahl" :data-feld="f" :list="listeId"
+          :placeholder="$t('+ Attribut …')" :title="f === 'columns' ? $t('Attribut suchen — wird mit Komma angehängt') : $t('Attributwert einsetzen (steht als Platzhalter im Feld)')"
+          @input="wahl(si, f, $event)" @change="wahl(si, f, $event)" />
       </template>
       <span class="grow" />
       <button class="x" :disabled="si === 0" @click="moveStep(si, -1)" title="↑">↑</button>
@@ -95,7 +100,7 @@ const vorschau = computed(() => {
         <option value="">{{ $t("+ Schritt …") }}</option>
         <option v-for="o in OPS" :key="o[0]" :value="o[0]" :title="o[2]">{{ o[1] }}</option>
       </select>
-      <span class="muted" style="font-size:11px">{{ steps.length ? $t('Vorschau: {0}', [vorschau]) : $t('Kette ohne Schritte') }}</span>
+      <span :class="steps.length ? 'vorschau' : 'muted'">{{ steps.length ? $t('Vorschau: {0}', [vorschau]) : $t('Kette ohne Schritte') }}</span>
     </div>
   </div>
 </template>
@@ -106,4 +111,6 @@ const vorschau = computed(() => {
 .tstep .fld { display: inline-flex; align-items: center; gap: 4px; }
 .tstep .grow { flex: 1; }
 .tstep button.x { min-width: 24px; }
+.attr-wahl { width: 170px; }
+.vorschau { font-size: 13px; font-weight: 600; }
 </style>

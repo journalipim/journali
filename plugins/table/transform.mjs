@@ -133,7 +133,7 @@ export function describe(steps) {
   if (!Array.isArray(steps) || !steps.length) return ''
   return steps.map(s => {
     switch (s.op) {
-      case 'replace': return `ersetze „${s.find}“→„${s.with ?? ''}“`
+      case 'replace': return `ersetze „${s.find ?? ''}“→„${s.with ?? ''}“`
       case 'prefix': case 'suffix': case 'static': case 'default': return `${OPS.find(o => o[0] === s.op)?.[1]} „${s.text ?? ''}“`
       case 'combine': return `verbinde ${s.columns}`
       case 'split': return `teile „${s.sep ?? ','}“ [${s.index ?? 'alle'}]`

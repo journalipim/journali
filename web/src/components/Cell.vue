@@ -8,7 +8,7 @@ import AiBar from './AiBar.vue'
 import { store } from '../store.js'
 import { dialog } from '../dialog.js'
 import { describe } from '../transform.js'
-import { findeZyklus } from '../compliance-core.js'
+import { findeZyklus, resolveWert } from '../compliance-core.js'
 import { t as t_, L } from '../i18n.js'
 
 const isUrl = s => /^https?:\/\//i.test(String(s ?? ''))
@@ -101,9 +101,14 @@ function onInput(e) {
 }
 
 // Umwandlungskette (ƒ): der Wert ist 'f:' + JSON der Schritte; der Editor ist derselbe wie in der Prüfansicht
+// In der Zelle steht das Ergebnis der Kette (mit den Werten dieses Knotens); ist es leer, ihre Beschreibung
 const kettenText = v => {
   if (!props.formel || typeof v !== 'string' || !v.startsWith('f:')) return null
-  try { const s = JSON.parse(v.slice(2)); return Array.isArray(s) ? (describe(s) || t_('Kette')) : null } catch { return null }
+  let s; try { s = JSON.parse(v.slice(2)) } catch { return null }
+  if (!Array.isArray(s)) return null
+  let ergebnis = ''
+  try { const w = props.formelWerte?.() ?? {}; ergebnis = resolveWert(v, Object.fromEntries(Object.entries(w).map(([k, x]) => [k, { value: x }]))) ?? '' } catch { /* Beschreibung */ }
+  return ergebnis || describe(s) || t_('Kette')
 }
 const kette = computed(() => kettenText(props.value))
 const ketteGeerbt = computed(() => props.value == null ? kettenText(props.inherited) : null)
@@ -112,9 +117,11 @@ async function openFormel(wert) {
   if (wert) { try { const s = JSON.parse(String(wert).slice(2)); if (Array.isArray(s)) schritte = s } catch { /* ungültig: leer beginnen */ } }
   const werte = props.formelWerte?.() ?? {}
   const attribute = (store.model?.attributes ?? []).filter(a => a.key !== props.formelAttribut && !['rows', 'formula', 'template'].includes(a.type)).map(a => ({ key: a.key, label: L(a.label) }))
-  const neu = await dialog.steps({ title: t_('Umwandlung für {0}', [props.label ?? '']), text: t_('Die Vorschau rechnet mit den Werten dieses Knotens; die Kette wird als Attributwert gespeichert.'), value: schritte, attributes: attribute, values: werte, ok: t_('Übernehmen') })
+  const start = schritte.length ? schritte : [{ op: 'static', text: '' }]   // ein Textfeld, in das {attribut} gehört
+  const roh = await dialog.steps({ title: t_('Umwandlung für {0}', [props.label ?? '']), text: t_('Die Vorschau rechnet mit den Werten dieses Knotens; die Kette wird als Attributwert gespeichert.'), value: start, attributes: attribute, values: werte, ok: t_('Übernehmen') })
   nextTick(() => box.value?.focus())
-  if (neu == null) return
+  if (roh == null) return
+  const neu = roh.length === 1 && roh[0].op === 'static' && !roh[0].text ? [] : roh
   const v = neu.length ? 'f:' + JSON.stringify(neu) : ''
   if (v && props.formelAttribut && findeZyklus(v, props.formelAttribut, Object.fromEntries(Object.entries(werte).map(([k, x]) => [k, { value: x }])))) {
     store.toast(t_('Die Umwandlung liest {0} selbst — ein Kreis, nicht gespeichert.', [props.formelAttribut])); return

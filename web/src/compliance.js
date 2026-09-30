@@ -459,9 +459,10 @@ export async function mount(root, ctx, catalog) {
           let initial = []
           if (kette) { try { initial = JSON.parse(kette.slice(2)) || [] } catch { initial = [] } }
           const attrsList = (store.model.attributes ?? []).filter(a => a.key !== to && !['rows', 'formula', 'template'].includes(a.type)).map(a => ({ key: a.key, label: L(a.label) }))
-          const next = await dialog.steps({ title: t_('Umwandlung für {0} an „{1}“', [it.label, knoten]), text: t_('Die Vorschau rechnet mit den Werten dieses Knotens; die Kette wird als Attributwert gespeichert.'), value: initial, attributes: attrsList, values: wurzel.raw ?? {}, ok: t_('Übernehmen') })
+          const next = await dialog.steps({ title: t_('Umwandlung für {0} an „{1}“', [it.label, knoten]), text: t_('Die Vorschau rechnet mit den Werten dieses Knotens; die Kette wird als Attributwert gespeichert.'), value: initial.length ? initial : [{ op: 'static', text: '' }], attributes: attrsList, values: wurzel.raw ?? {}, ok: t_('Übernehmen') })
           if (next == null) return
-          const wert = next.length ? 'f:' + JSON.stringify(next) : null
+          const leer = next.length === 1 && next[0].op === 'static' && !next[0].text
+          const wert = next.length && !leer ? 'f:' + JSON.stringify(next) : null
           const werte = Object.fromEntries(Object.entries(wurzel.raw ?? {}).map(([k, v]) => [k, { value: v }]))
           if (wert && findeZyklus(wert, to, werte)) { store.toast(t_('Die Umwandlung liest {0} selbst — ein Kreis, nicht gespeichert.', [to])); return }
           try {

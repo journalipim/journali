@@ -37,8 +37,8 @@ test('f: getippt, Abbrechen → nichts gespeichert', async () => {
 })
 
 test('ein Wert f:[…] steht als ƒ Beschreibung da und öffnet beim Bearbeiten den Editor mit der Kette', async () => {
-  const w = zelle({ formel: true, formelAttribut: 'dpp_batch', value: 'f:[{"op":"combine","columns":"name,material"}]' })
-  assert.match(w.find('.cell-box').text(), /^ƒ verbinde name,material/)
+  const w = zelle({ formel: true, formelAttribut: 'dpp_batch', value: 'f:[{"op":"combine","columns":"name,material"}]', formelWerte: () => ({ name: 'WAKOL', material: 'Acrylat' }) })
+  assert.match(w.find('.cell-box').text(), /^ƒ WAKOL Acrylat/, 'die Zelle zeigt das Ergebnis')
   taste(w.find('.cell-box').element, 'Enter'); await flushPromises()
   assert.equal(dialog.kind, 'steps'); assert.deepEqual(dialog.value, [{ op: 'combine', columns: 'name,material' }])
   await zu(false); w.unmount()
@@ -72,5 +72,16 @@ test('eine geerbte Kette steht grau als ƒ Beschreibung da (der eigene Wert fehl
   const box = w.find('.cell-box')
   assert.match(box.text(), /^ƒ /)
   assert.ok(box.classes().includes('inherited'))
+  w.unmount()
+})
+
+test('f: getippt → der Editor beginnt mit einem Textfeld (Fester Wert); unverändert leer wird nichts gespeichert', async () => {
+  const w = zelle({ formel: true, formelAttribut: 'dpp_batch', value: null })
+  taste(w.find('.cell-box').element, 'f'); await flushPromises()
+  const eingabe = w.find('input.cell-input')
+  eingabe.element.value = 'f:'; eingabe.element.dispatchEvent(new win.Event('input', { bubbles: true })); await flushPromises()
+  assert.deepEqual(dialog.value, [{ op: 'static', text: '' }])
+  await zu(true)
+  assert.deepEqual(gespeichert(w), [])
   w.unmount()
 })
