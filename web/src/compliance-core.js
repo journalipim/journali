@@ -4,6 +4,7 @@
 // onPath(nodeId, group): hängt die Attributgruppe an einem Knoten des Pfads? Liefert je Knoten und Datenpunkt den Zustand:
 // ok · empty · bad · unmapped · na (gilt nicht: Rolle, Geltung) · below (alle Blätter darunter haben es) · inactive (Gruppe fehlt) · pending (angefragt).
 import { convert, validate } from './mapper.js'
+import { apply } from './transform.js'
 
 // {key} im Wert aufloesen: der Wert des Ziel-Attributs am selben Knoten (mit Vererbung, so wie er in values steht)
 // wird eingesetzt. Rekursiv, mit Zyklus-Schutz. Ist ein Ziel leer, wird nichts eingesetzt (der Rest bleibt).
@@ -39,6 +40,30 @@ export function resolvePlaceholders(text, values, seen = new Set()) {
   return out
 }
 
+// Ein Wert eines Richtlinien-Attributs kann drei Formen haben:
+// - woertlicher Text                            → wie gespeichert
+// - Text mit {key}-Platzhaltern                 → resolvePlaceholders
+// - 'f:<JSON-Array>' (Transform-Kette)          → apply(steps, '', ctx) aus dem Import-Mapper
+// Die Kette laeuft ohne Ausgangswert; ctx.get(k) holt den aufgeloesten Wert des Attributs k am
+// selben Knoten (rekursiv, mit Zyklus-Schutz). Ungueltiges JSON → null (Aufrufer: 'empty').
+export function resolveWert(text, values, seen = new Set()) {
+  if (text == null || typeof text !== 'string') return text
+  if (text.startsWith('f:')) {
+    let steps
+    try { steps = JSON.parse(text.slice(2)) } catch { return null }
+    if (!Array.isArray(steps)) return null
+    const ctx = { get: k => {
+      if (seen.has(k)) return ''
+      const v = values?.[k]?.value
+      if (v == null || v === '') return ''
+      const sub = resolveWert(String(v), values, new Set([...seen, k]))
+      return sub == null ? '' : String(sub)
+    } }
+    try { return apply(steps, '', ctx) } catch { return null }
+  }
+  return resolvePlaceholders(text, values, seen)
+}
+
 export function analyze({ catalog, mapping, model, rows, locale = 'de', scopeAttr = null, onPath = () => true, today = new Date().toISOString().slice(0, 10) }) {
   const items = catalog.groups.flatMap(g => g.items.map(it => ({ ...it, group: g })))
   const defs = new Map(model.attributes.map(a => [a.key, a]))
@@ -62,8 +87,8 @@ export function analyze({ catalog, mapping, model, rows, locale = 'de', scopeAtt
       if (it.group?.scope && !String(r.values?.[scopeAttr]?.value ?? '').split(',').map(s => s.trim()).includes(it.group.scope.key)) { node.states[it.key] = 'na'; result.byItem.get(it.key).na++; continue }
       const to = mapping[it.key]?.to
       const raw = to ? r.values[to]?.value ?? null : null
-      // Platzhalter {key} im Wert aufloesen — Vererbung greift dort, wo r.values den Wert traegt (auch geerbt).
-      const v = typeof raw === 'string' && raw.includes('{') ? (resolvePlaceholders(raw, r.values) || null) : raw
+      // Ausdruck im Wert aufloesen: 'f:[...]' Transform-Kette, sonst {key}-Platzhalter, sonst woertlich.
+      const v = typeof raw === 'string' && (raw.startsWith('f:') || raw.includes('{')) ? (resolveWert(raw, r.values) || null) : raw
       let state = !to ? 'unmapped' : v == null || v === '' ? 'empty' : 'ok'
       // angefragt (Beleg method pending, checkedAt = Wiedervorlage): kein rotes Feld, sondern ⏳ — überfällig, wenn das Datum vorbei ist
       const src = to ? r.values[to]?.source : null

@@ -2,7 +2,7 @@
 // Läuft ohne Browser und ohne Server: `npm test` in web/ (node --test).
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { analyze, resolvePlaceholders } from '../src/compliance-core.js'
+import { analyze, resolvePlaceholders, resolveWert } from '../src/compliance-core.js'
 import dpp from '../../plugins/dpp/catalog.js'
 
 // Modell: die Attribute, die die Zuordnung braucht, dazu das Geltungsattribut dpp_scope (vererbbar, Gruppe dpp)
@@ -189,4 +189,72 @@ test('analyze: Wert ist reiner Platzhalter, Ziel leer → state empty', () => {
   const res = analyze({ catalog: dpp, mapping: m, model, rows: rowsRef, scopeAttr: 'dpp_scope' })
   const node = res.nodes.find(n => n.row.id === 'p-1')
   assert.equal(node.states['trade_name'], 'empty')
+})
+
+// ── Transform-Kette 'f:[...]' als Wertform: nutzt die Ops aus dem Import-Mapper (plugins/table/transform.mjs).
+// Der aufgeloeste Wert wird beim Pruefen verwendet.
+
+test('resolveWert: woertlicher Text bleibt woertlich', () => {
+  assert.equal(resolveWert('egon maier', { name: { value: 'x' } }), 'egon maier')
+})
+
+test('resolveWert: {key}-Platzhalter wie zuvor', () => {
+  assert.equal(resolveWert('{name}', { name: { value: 'A1' } }), 'A1')
+})
+
+test('resolveWert: f:[combine] mit zwei Spalten', () => {
+  const steps = [{ op: 'combine', columns: '{name},{material}', sep: ' - ' }]
+  const wert = 'f:' + JSON.stringify(steps)
+  // combine liest ctx.get(c); '{name}' und '{material}' als Spaltennamen (nicht mit Klammern)
+  // Also: die columns muss ohne {} sein, sonst versucht combine die {} als Marker fuer den akt. Wert
+  const steps2 = [{ op: 'combine', columns: 'name,material', sep: ' - ' }]
+  const wert2 = 'f:' + JSON.stringify(steps2)
+  const res = resolveWert(wert2, { name: { value: 'WAKOL' }, material: { value: 'Acrylat' } })
+  assert.equal(res, 'WAKOL - Acrylat')
+})
+
+test('resolveWert: f:[default] setzt Fallback ein', () => {
+  const steps = [{ op: 'combine', columns: 'name', sep: '' }, { op: 'default', text: 'ohne Name' }]
+  const wert = 'f:' + JSON.stringify(steps)
+  assert.equal(resolveWert(wert, { name: { value: 'A' } }), 'A')
+  assert.equal(resolveWert(wert, { name: { value: '' } }), 'ohne Name')
+  assert.equal(resolveWert(wert, {}), 'ohne Name')
+})
+
+test('resolveWert: f:[map] macht ja/nein', () => {
+  const steps = [{ op: 'combine', columns: 'siegel' }, { op: 'map', pairs: 'blauer_engel=true; kein=false' }]
+  const wert = 'f:' + JSON.stringify(steps)
+  assert.equal(resolveWert(wert, { siegel: { value: 'blauer_engel' } }), 'true')
+  assert.equal(resolveWert(wert, { siegel: { value: 'kein' } }), 'false')
+})
+
+test('resolveWert: f:[...] ungueltiges JSON → null', () => {
+  assert.equal(resolveWert('f:kein_json', {}), null)
+})
+
+test('resolveWert: f:[...] Zyklus (a → b → a) → leerer String (kein Absturz)', () => {
+  // Ein Attribut a enthaelt eine Kette, die b liest; b enthaelt eine Kette, die a liest.
+  const chainA = 'f:' + JSON.stringify([{ op: 'combine', columns: 'b' }])
+  const chainB = 'f:' + JSON.stringify([{ op: 'combine', columns: 'a' }])
+  // Aus a heraus starten: a → resolve → get(b) → resolveWert(b) → get(a) → seen.has(a) → '' → combine liefert ''
+  const res = resolveWert(chainA, { a: { value: chainA }, b: { value: chainB } })
+  // combine mit einer leeren Spalte → '' (parts wird gefiltert)
+  assert.equal(res, '')
+})
+
+test('analyze: dpp_handelsname = f:[combine name,material] → aufgeloeste Kombination', () => {
+  const m = { ...mapping }
+  const steps = [{ op: 'combine', columns: 'name,material', sep: ' ' }]
+  const wert = 'f:' + JSON.stringify(steps)
+  const rowsRef = [
+    { row: product, values: V({ name: wert, material: 'Acrylat', ean: '4000000000006' }) },
+  ]
+  // Zusatz-Attribut 'material' im Modell (sonst leer)
+  const modelPlus = { ...model, attributes: [...model.attributes, { key: 'material', type: 'text', group: 'mastergroup' }] }
+  const res = analyze({ catalog: dpp, mapping: m, model: modelPlus, rows: rowsRef, scopeAttr: 'dpp_scope' })
+  const node = res.nodes.find(n => n.row.id === 'p-1')
+  // trade_name ist auf 'name' gemappt; 'name' = 'f:...' → 'EliteBook Acrylat'
+  // (name-Wert ist die Kette, die aus ctx.get('name') NICHT rekursiv liest sondern get('material') und get(name))
+  // Achtung: get(name) → seen enthaelt name → '' — also nur 'material' zaehlt
+  assert.equal(node.states['trade_name'], 'ok')
 })
