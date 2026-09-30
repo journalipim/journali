@@ -19,9 +19,11 @@ Eine Zuordnung mit Ziel und Regeln lässt sich als **Profil** speichern und als 
 
 ⇪ Export → Tabelle liefert einen Teilbaum als Excel oder CSV: Rollen, Sprachen, Attribute, eigene oder auch geerbte Werte. Die Datei ist so gebaut, dass der Tabellenimport sie wieder liest, mit Kennungen und Wurzel. Die Vorlage für einen Knoten gibt es auch per Rechtsklick im Baum.
 
+Bei Excel kann der Schalter **Relationen** ein zweites Blatt mitschreiben: eine Zeile je Relation mit Von, Typ, Nach und den Werten der Relation, dazu die Einheit des Attributs (nur zum Lesen). Der Import liest das Blatt nach den Knoten und legt die Relationen an, auch in einem anderen System; vorhandene werden nicht doppelt angelegt. CSV hat nur ein Blatt.
+
 ## JSON
 
-Der JSON-Export schreibt einen Teilbaum als Rohdaten, wahlweise mit dem Modellteil, so dass er sich in ein anderes System einspielen lässt; oder ausgewertet als Baum oder Liste. Der JSON-Import erkennt beides.
+Der JSON-Export schreibt einen Teilbaum als Rohdaten, wahlweise mit dem Modellteil, so dass er sich in ein anderes System einspielen lässt; oder ausgewertet als Baum oder Liste. Der JSON-Import erkennt beides. Relationen zwischen Knoten gehören dazu: in den Rohdaten am Knoten, von dem sie ausgehen, mit ihren Werten, der Eingabeeinheit und den Relationstypen des Modellteils; ausgewertet an beiden Enden, mit der Bezeichnung der jeweiligen Richtung. Der Import legt sie nach den Knoten an. Liegt das Ziel ausserhalb des Teilbaums und gibt es dort keinen Knoten mit dieser Id, bleibt diese Relation aus und wird als Fehler gemeldet.
 
 ## Vorlagen-Export
 

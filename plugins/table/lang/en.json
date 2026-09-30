@@ -241,5 +241,11 @@
  "Struktur: Baum als Tabelle …": "Structure: tree as a table …",
  "Kein Importer für {0} — Plugin für dieses Format einschalten (⌿ Plugins)": "No importer for {0} — switch on the plugin for this format (⌿ Plugins)",
  "Excel: Teilbaum exportieren …": "Excel: export subtree …",
- "CSV: Teilbaum exportieren …": "CSV: export subtree …"
+ "CSV: Teilbaum exportieren …": "CSV: export subtree …",
+ "Relationen": "Relations",
+ "Zweites Blatt: eine Zeile je Relation mit Von, Typ, Nach und den Werten der Relation": "Second sheet: one row per relation with from, type, to and the values of the relation",
+ "vergleiche Relationen mit dem Bestand …": "comparing relations with the existing data …",
+ "Relationen, Zeile {0}: {1} {2}": "Relations, row {0}: {1} {2}",
+ "Relationen aus dem Blatt Relationen": "Relations from the sheet Relationen",
+ "{0} Relationen neu · {1} geändert · {2} unverändert": "{0} relations new · {1} changed · {2} unchanged"
 }

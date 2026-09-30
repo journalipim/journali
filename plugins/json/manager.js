@@ -30,7 +30,7 @@ export async function mountManager(root, ctx) {
   async function findMissing() {
     st.missing = []
     if (!st.raw) return
-    const used = new Set(); const walk = n => { for (const v of n.values ?? []) used.add(v.attribute); for (const k of Object.keys(n.rows ?? {})) used.add(k); for (const c of n.children ?? []) walk(c) }; walk(st.raw.node)
+    const used = new Set(); const walk = n => { for (const v of n.values ?? []) used.add(v.attribute); for (const k of Object.keys(n.rows ?? {})) used.add(k); for (const rl of n.relations ?? []) for (const v of rl.values ?? []) used.add(v.attribute); for (const c of n.children ?? []) walk(c) }; walk(st.raw.node)
     const need = new Map()   // Zielgruppe → Attribute
     for (const a of used) {
       const to = st.mapA[a]?.to

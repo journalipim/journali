@@ -219,7 +219,7 @@ public static class TreeApi
                 : r.Error is not null ? Bad(r.Error) : Results.NotFound();
         });
         api.MapPost("/nodes/{id}/status", (string id, StatusBody b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.SetStatus(x, id, b.Status, b.From)));
-        api.MapPost("/nodes/{id}/attributes", (string id, AttributeSet b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.SetAttribute(x, id, b.Attribute, b.Locale, b.Channel, b.Value, b.Values, b.Row)));
+        api.MapPost("/nodes/{id}/attributes", (string id, AttributeSet b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.SetAttribute(x, id, b.Attribute, b.Locale, b.Channel, b.Value, b.Values, b.Row, b.Unit)));
         // Ausdrücklich leer: hier gilt nichts, auch wenn oben etwas steht. Zurück zur Vererbung führt ein leerer AttributeSet.
         api.MapPost("/nodes/{id}/attributes/clear", (string id, AttributeCleared b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.ClearAttribute(x, id, b.Attribute, b.Locale, b.Channel, b.Row)));
         // Beleg an einem Wert: Quelle (URL oder Text), Weg, Prüfdatum — leere Quelle nimmt den Beleg weg
@@ -345,18 +345,19 @@ public sealed record NodeRow(string Id, string Role, string? Parent, string Labe
 
 /// <summary>Ein Wert auf seinen Achsen — einfach oder als Liste, bei vermehrbaren Attributen mit Zeile.</summary>
 /// <param name="Number">Eintrag, der den Wert zuletzt setzte — der Client vergleicht damit Mastersprache gegen Übersetzung.</param>
-public sealed record ValueView(string Attribute, string? Locale, string? Channel, string? Value, string[]? Values, string? Row = null, long Number = 0, SourceView? Source = null)
+/// <param name="Unit">Einheit, in der der Wert eingegeben wurde; <c>Value</c> steht immer in der des Attributs (AttributeSet.Unit).</param>
+public sealed record ValueView(string Attribute, string? Locale, string? Channel, string? Value, string[]? Values, string? Row = null, long Number = 0, SourceView? Source = null, string? Unit = null)
 {
     public static IEnumerable<ValueView> Of(Medium m) =>
         m.Values.Select(kv => new ValueView(kv.Key.Attribute, kv.Key.Locale, kv.Key.Channel, kv.Value, null, kv.Key.Row, m.SetAt.GetValueOrDefault(kv.Key)))
             .Concat(m.Lists.Select(kv => new ValueView(kv.Key.Attribute, kv.Key.Locale, kv.Key.Channel, null, kv.Value, kv.Key.Row, m.SetAt.GetValueOrDefault(kv.Key))));
 
     public static IEnumerable<ValueView> Of(Relation r) =>
-        r.Values.Select(kv => new ValueView(kv.Key.Attribute, kv.Key.Locale, kv.Key.Channel, kv.Value, null, kv.Key.Row, r.SetAt.GetValueOrDefault(kv.Key)))
+        r.Values.Select(kv => new ValueView(kv.Key.Attribute, kv.Key.Locale, kv.Key.Channel, kv.Value, null, kv.Key.Row, r.SetAt.GetValueOrDefault(kv.Key), null, r.Units.GetValueOrDefault(kv.Key)))
             .Concat(r.Lists.Select(kv => new ValueView(kv.Key.Attribute, kv.Key.Locale, kv.Key.Channel, null, kv.Value, kv.Key.Row, r.SetAt.GetValueOrDefault(kv.Key))));
 
     public static IEnumerable<ValueView> Of(Node n) =>
-        n.Values.Select(kv => new ValueView(kv.Key.Attribute, kv.Key.Locale, kv.Key.Channel, kv.Value, null, kv.Key.Row, n.SetAt.GetValueOrDefault(kv.Key), SourceView.Of(n, kv.Key)))
+        n.Values.Select(kv => new ValueView(kv.Key.Attribute, kv.Key.Locale, kv.Key.Channel, kv.Value, null, kv.Key.Row, n.SetAt.GetValueOrDefault(kv.Key), SourceView.Of(n, kv.Key), n.Units.GetValueOrDefault(kv.Key)))
             .Concat(n.Lists.Select(kv => new ValueView(kv.Key.Attribute, kv.Key.Locale, kv.Key.Channel, null, kv.Value, kv.Key.Row, n.SetAt.GetValueOrDefault(kv.Key), SourceView.Of(n, kv.Key))));
 }
 
@@ -367,7 +368,7 @@ public sealed record SourceView(string Source, string? Title, string? Note, stri
 }
 
 /// <summary>Ergebnis eines Formel-Attributs an diesem Knoten (null = kein Skript oder ein Wert fehlt).</summary>
-public sealed record ComputedView(string Attribute, string? Value, string? Locale);
+public sealed record ComputedView(string Attribute, string? Value, string? Locale, string? Row = null);   // Row: Ergebnis einer berechneten Spalte in dieser Zeile
 
 /// <summary>Ein Vorfahr mit seinen Werten — der Client rechnet die Vererbung damit wie <see cref="Tree.Resolve"/>.</summary>
 public sealed record AncestorView(string Id, string Role, string Label, List<ValueView> Values);
@@ -404,7 +405,8 @@ public sealed record NodeView(string Id, string Role, string? Parent, Labels Lab
         tree.Ancestors(n).Select(a => new AncestorView(a.Id, a.Role, NodeRow.LabelOf(tree, model, a), ValueView.Of(a).ToList())).ToList(),
         n.Groups, groups, orphans,
         CompletenessRules.ActiveAttributes(tree, model, n).Where(a => a.IsComputed)
-            .SelectMany(a => a.PerLocale ? model.Locales.Keys.Select(l => new ComputedView(a.Key, tree.Compute(model, n, a, l), l)) : [new ComputedView(a.Key, tree.Compute(model, n, a, null), null)]).ToList(),
+            .SelectMany(a => a.PerLocale ? model.Locales.Keys.Select(l => new ComputedView(a.Key, tree.Compute(model, n, a, l), l)) : [new ComputedView(a.Key, tree.Compute(model, n, a, null), null)])
+            .Concat(tree.ComputeRows(model, n, model.Locales.Keys).Select(r => new ComputedView(r.Column, r.Value, r.Locale, r.Row))).ToList(),
         n.Categories.Order().ToList(), n.Releases.ToList(),
         // Freigaben, die über den Fallback-Kanal gelten (Sortiment geerbt) — nur die, die nicht eigen sind
         model.Channels.Keys.SelectMany(ch => new string?[] { null }.Concat(model.Locales.Keys).Select(l => (ch, l, via: tree.ReleasedVia(n, ch, l))))

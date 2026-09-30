@@ -7,6 +7,7 @@ import { mount, flushPromises, win } from './ui.mjs'
 import { routerKey, routeLocationKey } from 'vue-router'
 import { store } from '../src/store.js'
 import { tree } from '../src/tree.js'
+import { dialog } from '../src/dialog.js'
 
 const ModelView = (await import('../src/views/ModelView.vue')).default
 
@@ -45,6 +46,9 @@ test('am Attribut stehen alle seine Gruppen; die Heimatgruppe ist hervorgehoben'
   await flushPromises()
   const zeile = gruppenZeile(w)
   assert.ok(zeile, 'die Zeile ▤ Gruppen steht da')
+  // die Chips stehen in einem div: eine Zelle mit display:flex wächst nicht mit, und die Auswahl überdeckt die nächste Zeile
+  assert.equal(zeile.findAll('td.chips').length, 0, 'die Zelle selbst ist keine Flex-Box')
+  assert.ok(zeile.find('td > div.chips.gruppen'), 'die Chips stehen in einem div in der Zelle')
   assert.deepEqual(zeile.findAll('.chip').map(c => c.text().replace('×', '').trim()), ['Dimmung', 'Zündung'])
   assert.equal(zeile.findAll('.chip.heim').length, 1, 'genau eine Heimatgruppe')
   assert.match(zeile.find('.chip.heim').text(), /Zündung/)
@@ -85,6 +89,30 @@ test('die Gruppe zeigt ihre Mitglieder — auch die, deren Heimatgruppe eine and
   await mitglieder.find('.chip button.raus').trigger('click')
   await flushPromises()
   assert.deepEqual(gesendet.at(-1).body.groups, ['zuendung'])
+})
+
+test('✕ Gruppe mit N Attributen fragt zurück und zieht erst die Attribute, dann die Gruppe zurück', async () => {
+  const { w } = welt({ section: 'groups', key: 'gehaeuse' })
+  const geloescht = []
+  const fetchVorher = globalThis.fetch
+  globalThis.fetch = async (url, opt = {}) => {
+    if (opt.method === 'DELETE') { geloescht.push(String(url)); return { ok: true, status: 200, text: async () => '{}', json: async () => ({}) } }
+    return fetchVorher(url, opt)
+  }
+  const gefragt = []
+  const confirmVorher = dialog.confirm
+  dialog.confirm = async o => { gefragt.push(o); return true }
+  try {
+    await flushPromises()
+    const mitglieder = w.findAll('.section').find(s => /⊞ Attribute/.test(s.find('h2')?.text() ?? ''))
+    const knopf = mitglieder.find('h2 button.x')
+    assert.match(knopf.text(), /Gruppe mit 1 Attributen/)
+    await knopf.trigger('click')
+    await flushPromises()
+    assert.equal(gefragt.length, 1, 'die Rückfrage erscheint')
+    assert.match(gefragt[0].title, /Gehäuse mit 1 Attributen/)
+    assert.deepEqual(geloescht.map(u => u.replace(/^.*\/api/, '/api')), ['/api/model/attributes/breite', '/api/model/groups/gehaeuse'])
+  } finally { dialog.confirm = confirmVorher }
 })
 
 test('zuordnen nimmt auf, statt die alte Gruppe zu ersetzen', async () => {

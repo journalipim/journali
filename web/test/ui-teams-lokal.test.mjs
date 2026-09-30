@@ -53,3 +53,19 @@ test('ohne lokales Modell steht keine Wahl da — nur der eine bezahlte Anbieter
   assert.equal(zeile(w, 'Modell lokal'), undefined)
   await ruhe(); w.unmount()
 })
+
+test('Die Adresse des lokalen Modells lässt sich als Anbieter „lokal“ hinterlegen — als Text, nicht als Kennwort', async () => {
+  const calls = server(); store.auth = { known: true, enabled: true, user: 'u1', role: 'teamadmin', rights: ['read', 'team'] }
+  const w = mount(TeamsSettings); await ruhe()
+  const auswahl = w.findAll('select').find(s => s.findAll('option').some(o => o.text() === 'OpenAI'))
+  assert.deepEqual(auswahl.findAll('option').map(o => o.text()), ['Anthropic', 'OpenAI', 'lokal'])
+  await auswahl.setValue('lokal')
+  const feld = w.find('input[placeholder="Adresse"]')
+  assert.ok(feld.exists(), 'das Feld fragt nach einer Adresse')
+  assert.equal(feld.attributes('type'), 'text')
+  await feld.setValue('http://localhost:11434')
+  await w.findAll('button').find(b => b.text() === '🔒').trigger('click'); await ruhe()
+  const put = calls.find(c => c.method === 'PUT' && c.path === '/api/teams/init/keys')
+  assert.deepEqual(put.body, { keys: { lokal: 'http://localhost:11434' } })
+  await ruhe(); w.unmount()
+})

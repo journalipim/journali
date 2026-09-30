@@ -10,6 +10,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { plan as makePlan, parseDelimited } from '../../web/src/mapper.js'
+import { trenne, bestandLaden, planRelationen } from '../../web/src/relationen-import.js'
 
 /// Ein Baum-Abbild, wie der Mapper es erwartet: rows, byId, ancestors.
 function baum(rows) {
@@ -52,15 +53,22 @@ export async function lauf(format) {
   console.log(`lese ${datei}`)
 
   // Tabelle einlesen — CSV selbst, Excel über SheetJS aus dem Plugin excel
-  let tabelle
+  let tabelle, relBlatt = null   // relBlatt: das Blatt Relationen einer Excel-Datei
   if (format === 'csv') tabelle = parseDelimited(fs.readFileSync(datei, 'utf8'))
   else {
     const X = await import(new URL('../excel/xlsx.mjs', import.meta.url).href)
     const wb = X.read(fs.readFileSync(datei), { type: 'buffer', cellDates: true })
-    const aoa = X.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, defval: '', raw: true })
-    const kopf = (aoa[0] ?? []).map((c, i) => String(c ?? '').trim() || `Spalte ${i + 1}`)
-    tabelle = { columns: kopf, rows: aoa.slice(1).filter(r => r.some(v => v !== '' && v != null))
-      .map(r => kopf.map((_, i) => { const v = r[i]; return v instanceof Date ? v.toISOString().slice(0, 10) : v == null ? '' : v })) }
+    const blatt = name => {
+      const aoa = X.utils.sheet_to_json(wb.Sheets[name], { header: 1, defval: '', raw: true })
+      const kopf = (aoa[0] ?? []).map((c, i) => String(c ?? '').trim() || `Spalte ${i + 1}`)
+      return { name, columns: kopf, rows: aoa.slice(1).filter(r => r.some(v => v !== '' && v != null))
+        .map(r => kopf.map((_, i) => { const v = r[i]; return v instanceof Date ? v.toISOString().slice(0, 10) : v == null ? '' : v })) }
+    }
+    // das erste Blatt, das nicht Relationen ist, wird zugeordnet; das Blatt Relationen folgt dem Plan der Knoten
+    const alle = wb.SheetNames.map(blatt)
+    const { blaetter, relationen } = trenne({ sheets: alle })
+    relBlatt = relationen
+    tabelle = blaetter[0] ?? alle[0]
   }
   console.log(`${tabelle.rows.length} Zeilen, ${tabelle.columns.length} Spalten`)
 
@@ -101,6 +109,14 @@ export async function lauf(format) {
   const s = p.stats
   console.log(`Plan: ${s.create} neu, ${s.update} geändert, ${s.unchanged} unverändert, ${s.values} Werte${s.problems.length ? `, ${s.problems.length} Probleme` : ''}`)
   for (const pr of s.problems.slice(0, 20)) console.log(`  ⚠ ${typeof pr === 'string' ? pr : JSON.stringify(pr)}`)
+  if (relBlatt) {
+    const bestand = await bestandLaden(api, relBlatt, p.ids, tree)
+    const rp = planRelationen({ blatt: relBlatt, model, tree, ids: p.ids, bestand })
+    p.commands.push(...rp.commands)
+    console.log(`Relationen: ${rp.stats.create} neu, ${rp.stats.update} geändert, ${rp.stats.unchanged} unverändert, ${rp.stats.values} Werte${rp.stats.problems.length + rp.stats.invalid.length ? `, ${rp.stats.problems.length + rp.stats.invalid.length} Probleme` : ''}`)
+    for (const pr of rp.stats.problems.slice(0, 20)) console.log(`  ⚠ ${pr}`)
+    for (const x of rp.stats.invalid.slice(0, 20)) console.log(`  ⚠ Relationen, Zeile ${x.row + 2}: ${x.key} ${x.message}`)
+  }
   if (p.newAttributes?.length) console.log(`  neue Attribute: ${p.newAttributes.map(a => a.key ?? a).join(', ')}`)
 
   if (dryRun) { console.log('Trockenlauf — nichts geschrieben'); return }

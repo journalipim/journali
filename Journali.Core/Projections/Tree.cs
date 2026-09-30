@@ -89,6 +89,7 @@ public sealed class Node
     public Dictionary<Axis, string> Values { get; } = new();
     /// <summary>Je Achse die Nummer des Eintrags, der den Wert zuletzt setzte — für „zu überarbeiten“ gegen die Mastersprache.</summary>
     public Dictionary<Axis, long> SetAt { get; } = new();
+    public Dictionary<Axis, string> Units { get; } = new();   // Einheit, in der ein Zahlenwert eingegeben wurde (AttributeSet.Unit); der Wert selbst steht in der des Attributs
     public Dictionary<Axis, ValueSource> Sources { get; } = new();   // Beleg je Wert (ValueSourced)
     public Dictionary<Axis, string[]> Lists { get; } = new();
     /// <summary>Vermehrbare Attribute: Zeilen in Reihenfolge je Attribut.</summary>
@@ -253,20 +254,45 @@ public sealed class Tree : IProjection
     /// der Sprache, Wertelisten mit Label; eine Formel darf eine andere lesen (ohne Kreis, Tiefe 8).
     /// Null, wenn kein Skript da ist oder ein Wert fehlt.
     /// </summary>
-    public string? Compute(ModelCatalog model, Node node, AttributeDefinition def, string? locale, int depth = 0)
+    public string? Compute(ModelCatalog model, Node node, AttributeDefinition def, string? locale, int depth = 0, RowContext? row = null)
     {
         if (!def.IsComputed || depth > 8) return null;
         var script = Resolve(model, node, def.Key, def.PerLocale ? locale : null, null).Value;
-        return def.IsTemplate ? Render(model, node, script, locale, depth) : Evaluate(model, node, script, locale, out _, depth);
+        return def.IsTemplate ? Render(model, node, script, locale, depth, row) : Evaluate(model, node, script, locale, out _, depth, row);
+    }
+
+    /// <summary>
+    /// Eine Zeile eines vermehrbaren Attributs (30.09.2026): die Spalten der Zeile und die Zeile selbst. In einer Formel, die
+    /// für eine Zeile rechnet, meint <c>$spalte</c> den Wert dieser Zeile; jedes andere <c>$schlüssel</c> den Wert am Knoten.
+    /// </summary>
+    public readonly record struct RowContext(IReadOnlySet<string> Columns, string Row);
+
+    /// <summary>
+    /// Die berechneten Spalten der vermehrbaren Attribute eines Knotens, je Zeile und Sprache. Das Skript einer Spalte steht als
+    /// Wert der Spalte am Knoten (wie bei jedem Formel-Attribut) und rechnet für jede Zeile mit deren Werten.
+    /// </summary>
+    public List<(string Column, string Row, string? Locale, string? Value)> ComputeRows(ModelCatalog model, Node node, IEnumerable<string> locales)
+    {
+        var aus = new List<(string, string, string?, string?)>();
+        foreach (var (owner, rows) in node.Rows)
+        {
+            if (!model.Attributes.TryGetValue(owner, out var rd) || rd.Columns is not { Length: > 0 } cols) continue;
+            var rc = cols.ToHashSet();
+            foreach (var col in cols.Select(k => model.Attributes.GetValueOrDefault(k)).Where(a => a is { IsComputed: true }))
+                foreach (var row in rows)
+                    foreach (var l in col!.PerLocale ? locales.Select(x => (string?)x) : [null])
+                        aus.Add((col.Key, row, l, Compute(model, node, col, l, 0, new RowContext(rc, row))));
+        }
+        return aus;
     }
 
     /// <summary>Vorlage im Kontext des Knotens bauen (Template.cs): {key} wie in der Formel aufgelöst, dazu Zahl und Einheit für |2 und |unit.</summary>
-    public string? Render(ModelCatalog model, Node node, string? template, string? locale, int depth = 0)
+    public string? Render(ModelCatalog model, Node node, string? template, string? locale, int depth = 0, RowContext? row = null)
     {
         if (string.IsNullOrWhiteSpace(template)) return null;
         Entries.Template.Slot slot(string key)
         {
-            var v = ValueOf(model, node, key, locale, depth);
+            var v = ValueOf(model, node, key, locale, depth, row);
             if (v.IsNone) return Entries.Template.Slot.None;
             var unit = model.Attributes.TryGetValue(key, out var d) && d.Unit is { Length: > 0 } u ? (model.Units.TryGetValue(u, out var ud) ? ud.Key : u) : null;
             return new Entries.Template.Slot(v.AsText, v.Kind == Entries.Formula.Kind.Number ? v.Number : null, unit);
@@ -275,18 +301,24 @@ public sealed class Tree : IProjection
     }
 
     /// <summary>Ein beliebiges Skript im Kontext des Knotens rechnen — der Editor zeigt so das momentane Ergebnis beim Tippen.</summary>
-    public string? Evaluate(ModelCatalog model, Node node, string? script, string? locale, out string? error, int depth = 0)
+    public string? Evaluate(ModelCatalog model, Node node, string? script, string? locale, out string? error, int depth = 0, RowContext? row = null)
     {
         error = null;
         if (string.IsNullOrWhiteSpace(script)) return null;
-        return Entries.Formula.Run(script, key => ValueOf(model, node, key, locale, depth), locale, out error).AsText;
+        return Entries.Formula.Run(script, key => ValueOf(model, node, key, locale, depth, row), locale, out error).AsText;
     }
 
-    /// <summary>Wert eines Attributs für Formel und Vorlage: geerbt zählt, Zahl als Zahl, Werteliste als Label der Sprache, gerechnete Attribute gerechnet.</summary>
-    private Entries.Formula.Value ValueOf(ModelCatalog model, Node node, string key, string? locale, int depth)
+    /// <summary>
+    /// Wert eines Attributs für Formel und Vorlage: geerbt zählt, Zahl als Zahl, Werteliste als Label der Sprache, gerechnete Attribute gerechnet.
+    /// Mit Zeile: eine Spalte des vermehrbaren Attributs liest den Wert dieser Zeile (Zeilen erben nicht).
+    /// </summary>
+    private Entries.Formula.Value ValueOf(ModelCatalog model, Node node, string key, string? locale, int depth, RowContext? row = null)
     {
         if (!model.Attributes.TryGetValue(key, out var d)) return Entries.Formula.Value.None;
-        var raw = d.IsComputed ? Compute(model, node, d, locale, depth + 1) : Resolve(model, node, key, d.PerLocale ? locale : null, null).Value;
+        var inRow = row is { } rc && rc.Columns.Contains(key);
+        var raw = d.IsComputed ? Compute(model, node, d, locale, depth + 1, inRow ? row : null)
+            : inRow ? node.Own(key, d.PerLocale ? locale : null, null, row!.Value.Row, MasterLocale, MasterChannel, LocaleFallback, ChannelFallback)
+            : Resolve(model, node, key, d.PerLocale ? locale : null, null).Value;
         if (raw is null) return Entries.Formula.Value.None;
         if (d.Type is AttributeTypes.Integer or AttributeTypes.Decimal && decimal.TryParse(raw, System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out var n)) return Entries.Formula.Value.Of(n);
         if (d.Type == AttributeTypes.Enum && model.Lists.TryGetValue(d.List ?? "", out var list) && list.Values.TryGetValue(raw, out var lv) && lv.Label.GetValueOrDefault(locale ?? "de") is { Length: > 0 } label) return Entries.Formula.Value.Of(label);
@@ -589,6 +621,7 @@ public sealed class Tree : IProjection
                 var cx = new Axis(cl.Attribute, cl.Locale, cl.Channel, cl.Row);
                 n.Lists.Remove(cx);
                 n.Values[cx] = "";
+                n.Units.Remove(cx);
                 n.SetAt[cx] = entry.Number;
                 break;
             }
@@ -605,6 +638,7 @@ public sealed class Tree : IProjection
                 else if (string.IsNullOrEmpty(a.Value)) { n.Values.Remove(axis); n.Lists.Remove(axis); }
                 else { n.Values[axis] = a.Value; n.Lists.Remove(axis); }
                 if (n.Values.ContainsKey(axis) || n.Lists.ContainsKey(axis)) n.SetAt[axis] = entry.Number; else n.SetAt.Remove(axis);
+                if (n.Values.ContainsKey(axis) && !string.IsNullOrEmpty(a.Unit)) n.Units[axis] = a.Unit; else n.Units.Remove(axis);
                 // Achsenattribut an einer Variante: der Wert ist ihr Achsenwert, sobald das Produkt die Achse hat
                 if (n.Role == Roles.Variant && a.Locale is null && a.Channel is null && a.Row is null && n.Parent is { } pp && _nodes.TryGetValue(pp, out var prod) && prod.Axes.Contains(a.Attribute))
                 { if (string.IsNullOrEmpty(a.Value)) n.AxisValues.Remove(a.Attribute); else n.AxisValues[a.Attribute] = a.Value; }
@@ -625,7 +659,7 @@ public sealed class Tree : IProjection
             case Types.RowRemoved:
                 var rr = Types.Deserialize<RowRemoved>(entry.Payload);
                 if (n.Rows.TryGetValue(rr.Attribute, out var rl)) rl.Remove(rr.Row);
-                foreach (var k in n.Values.Keys.Where(k => k.Row == rr.Row).ToList()) n.Values.Remove(k);
+                foreach (var k in n.Values.Keys.Where(k => k.Row == rr.Row).ToList()) { n.Values.Remove(k); n.Units.Remove(k); }
                 foreach (var k in n.Lists.Keys.Where(k => k.Row == rr.Row).ToList()) n.Lists.Remove(k);
                 foreach (var k in n.Sources.Keys.Where(k => k.Row == rr.Row).ToList()) n.Sources.Remove(k);
                 break;

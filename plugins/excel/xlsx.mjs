@@ -5643,7 +5643,7 @@ function write_ct(ct, opts, raw)/*:string*/ {
 			v = ct[w][0];
 			o[o.length] = (writextag('Override', null, {
 				'PartName': (v[0] == '/' ? "":"/") + v,
-				'ContentType': CT_LIST[w][opts.bookType] || CT_LIST[w]['excel']
+				'ContentType': CT_LIST[w][opts.bookType] || CT_LIST[w]['xlsx']
 			}));
 		}
 	};
@@ -5653,7 +5653,7 @@ function write_ct(ct, opts, raw)/*:string*/ {
 		(ct[w]||[]).forEach(function(v) {
 			o[o.length] = (writextag('Override', null, {
 				'PartName': (v[0] == '/' ? "":"/") + v,
-				'ContentType': CT_LIST[w][opts.bookType] || CT_LIST[w]['excel']
+				'ContentType': CT_LIST[w][opts.bookType] || CT_LIST[w]['xlsx']
 			}));
 		});
 	};
@@ -15967,7 +15967,7 @@ function parse_ws_xml_sheetpr2(sheetPr/*:string*/, body/*:string*/, s, wb/*:WBWB
 function write_ws_xml_sheetpr(ws, wb, idx, opts, o) {
 	var needed = false;
 	var props = {}, payload = null;
-	if(opts.bookType !== 'excel' && wb.vbaraw) {
+	if(opts.bookType !== 'xlsx' && wb.vbaraw) {
 		var cname = wb.SheetNames[idx];
 		try { if(wb.Workbook) cname = wb.Workbook.Sheets[idx].CodeName || cname; } catch(e) {}
 		needed = true;
@@ -26515,7 +26515,7 @@ fix_opts_func([
 
 	['bookSST', false], /* Generate Shared String Table */
 
-	['bookType', 'excel'], /* Type of workbook (xlsx/m/b) */
+	['bookType', 'xlsx'], /* Type of workbook (xlsx/m/b) */
 
 	['compression', false], /* Use file compression */
 
@@ -26782,7 +26782,7 @@ function parse_zip(zip/*:ZIP*/, opts/*:?ParseOpts*/)/*:Workbook*/ {
 		else if(dir.defaults && dir.defaults.bin === CT_VBA) out.vbaraw = getzipdata(zip, 'xl/vbaProject.bin',true);
 	}
 	// TODO: pass back content types metadata for xlsm/xlsx resolution
-	out.bookType = xlsb ? "xlsb" : "excel";
+	out.bookType = xlsb ? "xlsb" : "xlsx";
 	return out;
 }
 
@@ -27431,7 +27431,7 @@ function writeSync(wb/*:Workbook*/, opts/*:?WriteOpts*/) {
 		case 'biff8':
 		case 'xla':
 		case 'xls': if(!o.biff) o.biff = 8; return write_cfb_type(wb, o);
-		case 'excel':
+		case 'xlsx':
 		case 'xlsm':
 		case 'xlam':
 		case 'xlsb':

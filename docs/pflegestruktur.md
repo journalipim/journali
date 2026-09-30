@@ -417,21 +417,52 @@ als Vertikale: + Zeile, Entf Zeile, Zeilen ziehen, dieselbe
 Zellenbearbeitung. In der Massenpflege (12) erscheint es als
 aufklappbare Unterzeilen je Produkt.
 
+**Berechnete Spalten** (30.09.2026): eine Spalte vom Typ `formula` oder `template` zeigt in
+jeder Zeile ein Ergebnis und ist nicht zu bearbeiten. Das Skript steht — wie bei jedem
+Formel-Attribut — als Wert der Spalte am Knoten (ƒ in der Spaltenüberschrift öffnet es) und
+rechnet für jede Zeile: `$spalte` meint den Wert dieser Zeile, jedes andere `$schlüssel`
+den Wert am Knoten. Eine berechnete Spalte darf eine andere der Zeile lesen. Fehlt ein Wert,
+ist das Ergebnis leer (null rechnet sich durch). Im Journal steht nur das Skript, die
+Ergebnisse werden beim Lesen gerechnet (`Tree.ComputeRows`, `ComputedView.Row`).
+
 Ein einfaches Attribut mit `multiple: true` (Keywords) bleibt der
 Sonderfall „eine Spalte, keine Identität" — die Liste ist ein Wert.
 
 ### 14. Einheiten (`unit:<key>`) — Grundstock da
 Eine Einheit gehört zu einer **Grösse** (mass, length, volume, data, count …)
 und hat einen **Faktor zur Basiseinheit** dieser Grösse (kg = 1, g = 0.001,
-in = 0.0254 m). `UnitDefined{key, label{}, quantity, factor}`; ein Attribut
+in = 0.0254 m), dazu eine **Verschiebung** (`offset`, Vorgabe 0; seit 30.09.2026):
+Basis = Wert × Faktor + Verschiebung. Damit rechnen auch °C, °F und K ineinander
+um (Basis °C; °F: Faktor 5/9, Verschiebung −160/9; K: Faktor 1, Verschiebung
+−273.15). Nichtlineares (dB, pH) ist keine Einheit, sondern ein Formel-Attribut am Knoten.
+`UnitDefined{key, label{}, quantity, factor, offset?}`; ein Attribut
 darf nur eine definierte Einheit tragen; löschen geht nicht, solange ein
 Attribut sie benutzt. Saatgut: kg g m cm mm in l ml GB MB TB pc.
 
 Im Journal steht der Wert **immer in der Einheit des Attributs** — die
 Umrechnung ist Anzeige und Export: Sicht „zeige Gewicht in g" rechnet
 `wert × faktor(attribut) / faktor(sicht)`, ein Kanal (Amazon US) bekommt
-Zoll statt Zentimeter. Noch nicht gebaut: die Umrechnung in der Zelle und
-je Kanal (Feld `unit` an der Kanal- oder Sichtdefinition).
+Zoll statt Zentimeter. Noch nicht gebaut: die Umrechnung je Kanal und je Sicht
+(Feld `unit` an der Kanal- oder Sichtdefinition).
+
+**Einheit in der Zelle** (30.09.2026, `web/src/units.js`): ein Zahlenattribut
+(`integer`, `decimal`) mit Einheit hat neben dem Wert eine Auswahl der Einheiten
+seiner Grösse. Die Einheit am Attribut ist der Standard und die, in der
+gespeichert wird; die Grösse folgt aus ihr. Umschalten rechnet die Anzeige um
+und schreibt nichts. Was in der gewählten Einheit eingegeben wird, geht in die
+Einheit des Attributs zurückgerechnet hinaus; ein `integer` nimmt nur ein
+ganzzahliges Ergebnis. Es gibt dafür keinen eigenen Attributtyp: Typ, Grösse und
+Standardeinheit stehen schon am Attribut.
+
+**Eingabeeinheit** (30.09.2026): der Eintrag `AttributeSet` trägt optional `unit` — die
+Einheit, in der der Wert eingegeben wurde („20 g“). `value` steht weiterhin in der Einheit
+des Attributs (Suche, Formeln, Ausleitung rechnen damit); `unit` ist der Hinweis, in welcher
+Einheit die Pflege ihn wieder zeigt. Sie muss zur Grösse der Einheit des Attributs gehören;
+die Einheit des Attributs selbst braucht keinen Hinweis. Ein neuer Wert ohne `unit` nimmt den
+Hinweis weg, ebenso Leeren und Löschen der Zeile. Die Anzeige gilt je Zelle und je Relation:
+gewählt, sonst die Eingabeeinheit, sonst bei Relationswerten die günstigste Einheit (die
+grösste, in der der Wert mindestens 1 ist und höchstens drei Nachkommastellen hat), sonst die
+Einheit des Attributs. Bei Einheiten mit Verschiebung (°C, °F) gilt ohne Hinweis die des Attributs.
 
 ### 15. Sichten (`view:<key>`) — entschieden
 
@@ -1309,12 +1340,14 @@ Strom** `r-…`, wie ein Knoten.
 
 - `RelationCreated {type, from, to}` — der Typ kommt aus dem Modell
   (`relation:<key>`: Bezeichnung hin und zurück, erlaubte Rollen je Ende,
-  Attributgruppe der Werte). Je Typ nur einmal zwischen denselben Knoten,
+  Attributgruppen der Werte — eine oder mehrere, seit 30.09.2026). Je Typ nur einmal zwischen denselben Knoten,
   nie auf sich selbst.
 - Werte an der Relation sind dieselben `AttributeSet`-Einträge wie am
-  Knoten — erlaubt sind die Attribute der Gruppe des Relationstyps
-  (Saatgut: `component` mit `relation_component` → `quantity`). Eine
-  einfache Relation ist dieselbe Sache ohne Gruppe.
+  Knoten — erlaubt sind die Attribute der Gruppen des Relationstyps, über
+  Heimatgruppe oder Mitgliedschaft (n:m, 36); ein Attribut wird dafür nicht
+  kopiert. Saatgut: `component` mit `relation_component` → `quantity`. Formeln
+  und Vorlagen werden an einer Relation nicht gerechnet (sie ist kein Knoten).
+  Eine einfache Relation ist dieselbe Sache ohne Gruppe.
 - `RelationRetired` nimmt sie aus dem Abbild; `ExternalLinked` trägt die
   Kennung der Quelle (Import: Update statt Neuanlage).
 - Abbild `Relations`: je Knoten ausgehend und eingehend. Ein
@@ -1324,6 +1357,15 @@ Strom** `r-…`, wie ein Knoten.
   als Zellen, ← eingehend mit der umgekehrten Bezeichnung; neue Relation
   über Typ + Suche nach dem Ziel (Name, SKU, Id). Modell → Relationen
   pflegt die Typen.
+
+- **Tabellenexport** (30.09.2026): der Excel-Export nimmt auf Wunsch ein zweites Blatt `Relationen` mit — eine Zeile
+  je Relation, dort geschrieben, wo sie ausgeht: `journali_von`, `journali_von_name`, `journali_typ`, `journali_nach`,
+  `journali_nach_name`, dann je Relationsattribut eine Spalte (mit Sprache `<attribut>_<sprache>`) und, wo das Attribut eine
+  Einheit hat, daneben `<attribut>_einheit` (nur zum Lesen; der Wert steht in der Einheit des Attributs). Werte mit Kanal
+  hat das Blatt nicht, eine Relation, die von ausserhalb des Teilbaums ausgeht, fehlt. CSV hat nur ein Blatt und kennt
+  keine Relationen. Der Tabellenimport liest das Blatt hinter den Knoten: die Kennungen des Blatts `Daten` (auch in einem
+  anderen System) gehen vor Ids im Baum; was es nicht gibt, wird gemeldet und übergangen. Eine vorhandene Relation
+  (Typ, von, nach) wird nicht noch einmal angelegt, nur ein abweichender Wert wird gesetzt; leere Zellen löschen nichts.
 
 Offen: Reihenfolge der Relationen (heute nach Eintrag), Relationen in der
 Suche und Vollständigkeit, Medien (eigene Dinge oder Relationen zu

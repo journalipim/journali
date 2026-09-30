@@ -18,6 +18,7 @@ import Splitter from '../components/Splitter.vue'
 import { paneWidth } from '../panes.js'
 import { t as t_ } from '../i18n.js'
 import { L } from '../i18n.js'
+import { wahl as einheitenWahl, speichern as speichernEinheit, umrechnen } from '../units.js'
 const treeW = paneWidth('tree', 300)
 
 const props = defineProps({ id: String })
@@ -198,12 +199,19 @@ const pickedRows = computed(() => [...picked.value].map(id => tree.byId.get(id))
 const link = ref(null)   // { target, type, dir: 'target-first' | 'set-first', q, vals: { id: { attr: v } }, existing }
 const relTypes = computed(() => (store.model?.relationTypes ?? []).filter(t => !(t.to ?? []).includes('media')))
 const linkType = computed(() => relTypes.value.find(t => t.key === link.value?.type) ?? null)
-const linkAttrs = computed(() => { const g = linkType.value?.group; return g ? (store.model?.attributes ?? []).filter(a => a.group === g && a.type !== 'rows' && a.type !== 'html') : [] })
-async function openLink(target) {
-  if (!pickedRows.value.length) { store.toast(t_('Erst auswählen: Strg+Klick im Baum')); return }
-  link.value = { target, type: relTypes.value[0]?.key ?? '', dir: 'target-first', q: '', vals: {}, existing: null, all: {} }
+// Die Gruppen eines Relationstyps (Menge, sonst die eine älterer Einträge) und die eines Attributs (Zuordnung und Mitgliedschaften)
+const relGruppen = t => t?.groups ?? (t?.group ? [t.group] : [])
+const attrGruppen = a => a?.groups ?? (a?.group ? [a.group] : [])
+const linkAttrs = computed(() => { const gs = relGruppen(linkType.value); return gs.length ? (store.model?.attributes ?? []).filter(a => attrGruppen(a).some(g => gs.includes(g)) && a.type !== 'rows' && a.type !== 'html') : [] })
+/// ids: die gezogenen Knoten (Shift + Ablegen). Sie gelten nur für den Dialog — die Auswahl im Baum bleibt, wie sie war.
+/// Ohne ids (⇄ in der Leiste) gilt die Auswahl.
+async function openLink(target, ids = null) {
+  const quellen = ids ?? [...picked.value]
+  if (!quellen.some(id => tree.byId.has(id))) { store.toast(t_('Erst auswählen: Strg+Klick im Baum')); return }
+  link.value = { target, type: relTypes.value[0]?.key ?? '', dir: 'target-first', q: '', vals: {}, existing: null, all: {}, units: {}, allUnits: {}, ids: quellen }
   await loadExisting()
 }
+const linkQuellen = computed(() => (link.value?.ids ?? []).map(id => tree.byId.get(id)).filter(Boolean))
 async function loadExisting() {
   if (!link.value?.target) return
   try {
@@ -220,7 +228,7 @@ const linkRows = computed(() => {
   // ohne Ziel (⇄ aus der Leiste: Ziel wird erst gesucht) keine Zeilen — sonst l.target.id auf null
   const l = link.value, t = linkType.value; if (!l || !t || !l.target) return []
   const targetFirst = l.dir === 'target-first'   // Ziel → Eintrag (Ziel hat Zubehör: Eintrag)
-  return pickedRows.value.map(r => {
+  return linkQuellen.value.map(r => {
     const from = targetFirst ? l.target : r, to = targetFirst ? r : l.target
     const roleOk = (!t.from || t.from.includes(from.role)) && (!t.to || t.to.includes(to.role))
     const exists = l.existing && (targetFirst ? l.existing.out.has(`${t.key}|${r.id}`) : l.existing.in.has(`${t.key}|${r.id}`))
@@ -229,7 +237,27 @@ const linkRows = computed(() => {
   })
 })
 const linkCount = computed(() => linkRows.value.filter(x => x.ok && !x.exists).length)
-function fillAll(attr, v) { for (const x of linkRows.value) { link.value.vals[x.r.id] ??= {}; link.value.vals[x.r.id][attr] = v } }
+// Einheit je Zelle (units.js): jede Zeile wählt für sich, in welcher Einheit sie eingibt; anfangs gilt die des Attributs.
+// Umstellen rechnet den getippten Wert mit um: 5 mg werden zu 0.000005 kg — es bleibt dieselbe Menge.
+const einheitVon = (rowId, a) => link.value?.units[rowId]?.[a.key] ?? a.unit
+const alleEinheit = a => link.value?.allUnits[a.key] ?? a.unit
+function setzeEinheit(rowId, a, unit) {
+  const vals = (link.value.vals[rowId] ??= {})
+  if (vals[a.key]) vals[a.key] = umrechnen(vals[a.key], einheitVon(rowId, a), unit, store.model.units)
+  ;(link.value.units[rowId] ??= {})[a.key] = unit
+}
+/// „für alle“: der Wert und die Einheit der Kopfzeile gelten für jede Zeile
+function fillAll(a, v) {
+  link.value.all[a.key] = v
+  for (const x of linkRows.value) { (link.value.vals[x.r.id] ??= {})[a.key] = v; (link.value.units[x.r.id] ??= {})[a.key] = alleEinheit(a) }
+}
+/// „für alle“ umstellen: der Wert der Kopfzeile und die Werte aller Zeilen rechnen mit
+function fillEinheit(a, unit) {
+  const alt = alleEinheit(a)
+  if (link.value.all[a.key]) link.value.all[a.key] = umrechnen(link.value.all[a.key], alt, unit, store.model.units)
+  link.value.allUnits[a.key] = unit
+  for (const x of linkRows.value) setzeEinheit(x.r.id, a, unit)
+}
 async function runLink() {
   if (!store.actor) { store.toast(t_('👤 Name fehlt → Einstellungen')); return }
   const l = link.value, t = linkType.value; if (!l || !t) return
@@ -241,8 +269,18 @@ async function runLink() {
     const from = l.dir === 'target-first' ? l.target.id : x.r.id, to = l.dir === 'target-first' ? x.r.id : l.target.id
     cmds.push({ op: 'relation.create', ref, args: { type: t.key, from, to } })
     for (const a of linkAttrs.value) {
-      const v = (l.vals[x.r.id]?.[a.key] ?? '').trim(); if (!v) continue
-      cmds.push({ op: 'relation.attribute.set', args: { relation: '@' + ref, attribute: a.key, locale: null, ...(a.multiple ? { values: v.split(',').map(s => s.trim()).filter(Boolean) } : { value: v }) } })
+      let v = (l.vals[x.r.id]?.[a.key] ?? '').trim(); if (!v) continue
+      // Die Zelle hat eine gewählte Einheit: was getippt wurde, geht in der Einheit des Attributs hinaus (units.js) —
+      // dazu die Einheit der Eingabe, damit der Eintrag sie sich merkt
+      let eingabeEinheit = null
+      if (!a.multiple) {
+        const u = l.units[x.r.id]?.[a.key] ?? a.unit
+        const r = speichernEinheit(store.model, a, v, u)
+        if (r.fehler) { store.toast(t_('{0} {1} sind {2} {3} — das Attribut nimmt nur ganze Zahlen', [r.fehler.eingabe, r.fehler.von, r.fehler.wert, r.fehler.nach])); return }
+        v = r.wert
+        if (u && u !== a.unit) eingabeEinheit = u
+      }
+      cmds.push({ op: 'relation.attribute.set', args: { relation: '@' + ref, attribute: a.key, locale: null, ...(a.multiple ? { values: v.split(',').map(s => s.trim()).filter(Boolean) } : { value: v }), ...(eingabeEinheit ? { unit: eingabeEinheit } : {}) } })
     }
   }
   if (!cmds.length) { store.toast(t_('Nichts zu verknüpfen')); return }
@@ -421,10 +459,7 @@ async function onDrop(e, r) {
   }
   const ids = dragIds()
   dragId.value = null; dropId.value = null; hoverStop()
-  if (e.shiftKey) {   // verknüpfen: die Auswahl (oder die eine Zeile) mit diesem Ziel
-    if (!picked.value.has(ids[0])) picked.value = new Set(ids)
-    await openLink(r); return
-  }
+  if (e.shiftKey) { await openLink(r, ids); return }   // verknüpfen: die gezogenen Knoten mit diesem Ziel; die Auswahl im Baum bleibt unberührt
   let moved = 0, below = 0
   try {
     // Vorher prüfen, ob eigene Werte am neuen Ort verwaisen (orphans.js) — derselbe Dialog wie beim JSON-Import
@@ -701,7 +736,7 @@ function onDialogKey(e) {
     <!-- Verknüpfen: Auswahl → Ziel, dann Typ und Richtung -->
     <div v-if="link" class="overlay" @keydown="onLinkKey">
       <div class="dialog" style="min-width:640px;max-width:92vw">
-        <div class="toolbar"><h1>{{ $t("⇄ {0} Einträge verknüpfen", [pickedRows.length]) }}</h1><span class="grow" /><button class="x" @click="link = null" :title="$t('Esc')">×</button></div>
+        <div class="toolbar"><h1>{{ $t("⇄ {0} Einträge verknüpfen", [linkQuellen.length]) }}</h1><span class="grow" /><button class="x" @click="link = null" :title="$t('Esc')">×</button></div>
         <table class="grid form"><colgroup><col style="width:130px" /><col /></colgroup><tbody>
           <tr><td class="attr">{{ $t("Ziel") }}</td><td>
             <span v-if="link.target" class="chip">{{ icon(link.target.role) }} {{ link.target.label }} <button @click="link.target = null; link.existing = null" :title="$t('anderes Ziel')">×</button></span>
@@ -711,27 +746,33 @@ function onDialogKey(e) {
             </div>
           </td></tr>
           <tr><td class="attr">{{ $t("Relation") }}</td><td>
-            <select v-model="link.type" style="width:260px"><option v-for="t in relTypes" :key="t.key" :value="t.key">{{ t.symmetric ? '⇄' : '→' }} {{ $L(t.label) || t.key }}{{ t.group ? ' · ▤ ' + t.group : '' }}</option></select>
+            <select v-model="link.type" style="width:260px"><option v-for="t in relTypes" :key="t.key" :value="t.key">{{ t.symmetric ? '⇄' : '→' }} {{ $L(t.label) || t.key }}{{ relGruppen(t).length ? ' · ▤ ' + relGruppen(t).join(', ') : '' }}</option></select>
             <span v-if="linkType" class="muted" style="margin-left:8px">{{ linkType.symmetric ? $t('beidseitig — liest sich von beiden Enden gleich') : $t('einseitig — zwei Lesarten') }}</span>
           </td></tr>
           <tr v-if="linkType && link.target"><td class="attr">{{ $t("Richtung") }}</td><td class="dirs">
             <label :class="{ on: link.dir === 'target-first' }"><input type="radio" value="target-first" v-model="link.dir" />
-              <b>{{ link.target.label }}</b> — {{ $L(linkType.label) || linkType.key }} → <b>{{ $t("{0} Einträge", [pickedRows.length]) }}</b>
+              <b>{{ link.target.label }}</b> — {{ $L(linkType.label) || linkType.key }} → <b>{{ $t("{0} Einträge", [linkQuellen.length]) }}</b>
               <div v-if="!linkType.symmetric" class="muted reading">{{ $t("die Einträge sind „{0}“ {1}", [$L(linkType.reverse) || '…', link.target.label]) }}</div></label>
             <label v-if="!linkType.symmetric" :class="{ on: link.dir === 'set-first' }"><input type="radio" value="set-first" v-model="link.dir" />
-              <b>{{ $t("{0} Einträge", [pickedRows.length]) }}</b> — {{ $L(linkType.label) || linkType.key }} → <b>{{ link.target.label }}</b>
+              <b>{{ $t("{0} Einträge", [linkQuellen.length]) }}</b> — {{ $L(linkType.label) || linkType.key }} → <b>{{ link.target.label }}</b>
               <div class="muted reading">{{ $t("{0} ist „{1}“ jedes Eintrags", [link.target.label, $L(linkType.reverse) || '…']) }}</div></label>
           </td></tr>
         </tbody></table>
         <div class="scroll" style="max-height:340px">
           <table class="grid" style="width:auto">
-            <thead><tr><th style="width:320px">{{ $t("Eintrag") }}</th><th v-for="a in linkAttrs" :key="a.key" style="width:140px" :title="a.key">{{ $L(a.label) || a.key }}<span v-if="a.unit" class="muted"> {{ a.unit }}</span></th><th style="width:120px"></th></tr>
-              <tr v-if="linkAttrs.length" class="muted"><td style="font-size:11px;padding:2px 8px">{{ $t("für alle:") }}</td><td v-for="a in linkAttrs" :key="a.key" style="padding:2px 4px"><input type="text" style="width:100%" :placeholder="$L(a.label) || a.key" @change="fillAll(a.key, $event.target.value)" /></td><td></td></tr>
+            <thead><tr><th style="width:320px">{{ $t("Eintrag") }}</th><th v-for="a in linkAttrs" :key="a.key" :style="`width:${einheitenWahl(store.model, a).length ? 200 : 140}px`" :title="a.key">{{ $L(a.label) || a.key }}<span v-if="a.unit" class="muted" style="margin-left:4px">{{ a.unit }}</span></th><th style="width:120px"></th></tr>
+              <tr v-if="linkAttrs.length" class="muted"><td style="font-size:11px;padding:2px 8px">{{ $t("für alle:") }}</td><td v-for="a in linkAttrs" :key="a.key" style="padding:2px 4px"><div class="mit-einheit">
+                <input type="text" :placeholder="$L(a.label) || a.key" :value="link.all[a.key] ?? ''" @change="fillAll(a, $event.target.value)" />
+                <select v-if="einheitenWahl(store.model, a).length" class="unitsel" :value="alleEinheit(a)" @change="fillEinheit(a, $event.target.value)" :title="$t('Einheit für alle Zeilen — jede Zeile lässt sich einzeln ändern')"><option v-for="u in einheitenWahl(store.model, a)" :key="u.key" :value="u.key">{{ u.key }}</option></select>
+              </div></td><td></td></tr>
             </thead>
             <tbody>
               <tr v-for="x in linkRows" :key="x.r.id" :class="{ muted: !x.ok || x.exists }">
                 <td :title="x.r.id">{{ icon(x.r.role) }} {{ x.r.label }}</td>
-                <td v-for="a in linkAttrs" :key="a.key" style="padding:2px 4px"><input v-if="x.ok && !x.exists" type="text" style="width:100%" :value="link.vals[x.r.id]?.[a.key] ?? ''" @input="(link.vals[x.r.id] ??= {})[a.key] = $event.target.value" /></td>
+                <td v-for="a in linkAttrs" :key="a.key" style="padding:2px 4px"><div v-if="x.ok && !x.exists" class="mit-einheit">
+                  <input type="text" :value="link.vals[x.r.id]?.[a.key] ?? ''" @input="(link.vals[x.r.id] ??= {})[a.key] = $event.target.value" />
+                  <select v-if="einheitenWahl(store.model, a).length" class="unitsel" :value="einheitVon(x.r.id, a)" @change="setzeEinheit(x.r.id, a, $event.target.value)" :title="$t('Eingabe in dieser Einheit — gespeichert wird in {0}', [a.unit])"><option v-for="u in einheitenWahl(store.model, a)" :key="u.key" :value="u.key">{{ u.key }}</option></select>
+                </div></td>
                 <td class="muted" style="font-size:11px">{{ x.exists ? $t('gibt es schon') : !x.ok ? $t('Typ erlaubt das nicht') : '' }}</td>
               </tr>
             </tbody>
@@ -804,6 +845,9 @@ function onDialogKey(e) {
 
 <style scoped>
 .create { gap: 4px; }
+.mit-einheit { display: flex; gap: 4px; align-items: center; }
+.mit-einheit input { flex: 1; min-width: 0; }
+select.unitsel { font-size: 11px; padding: 0 2px; height: 20px; width: auto; }
 .sugg { border-bottom: 1px solid var(--line); background: var(--pane); font-size: 12px; max-height: 240px; overflow: auto; }
 .sugg-row { display: flex; justify-content: space-between; gap: 8px; padding: 3px 10px; cursor: pointer; }
 .sugg-row.on { background: var(--accent-soft); }

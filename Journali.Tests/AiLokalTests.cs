@@ -13,6 +13,14 @@ public class AiLokalTests
     private static readonly JsonSerializerOptions Opt = new() { DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull };
 
     [Fact]
+    public async Task Ein_Dienst_der_nicht_antwortet_liefert_keine_Modelle_und_keinen_Fehler()
+    {
+        // Port 1 ist auf einem Rechner ohne Dienst zu: die Verbindung wird abgelehnt (Tunnel zu, Dienst aus)
+        Assert.Empty(await AiApi.LokalModelleAsync("http://127.0.0.1:1", CancellationToken.None));
+        Assert.Empty(await AiApi.LokalModelleAsync(null, CancellationToken.None));
+    }
+
+    [Fact]
     public void Bezahlte_zuerst_dann_lokal()
     {
         Assert.Equal(["anthropic", "openai", "lokal"], AiApi.Anbieter(["openai", "anthropic"], lokal: true));

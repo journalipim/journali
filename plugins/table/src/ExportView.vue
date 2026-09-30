@@ -6,7 +6,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { store, tree, icon, plugins, TreePicker, ProfileBar } from 'journali'
-import { build, toCsv, toXlsx, download } from '../browser.js'
+import { build, toCsv, toXlsx, download, relationenTabelle } from '../browser.js'
 import { t as t_ } from 'journali'
 
 const route = useRoute()
@@ -16,6 +16,7 @@ const roots = ref(route.query.node ? [route.query.node] : (saved.roots ?? []))
 const role = ref(saved.role ?? '')
 const locales = ref(saved.locales ?? [store.model?.masterLocale ?? 'de'])
 const ownOnly = ref(saved.ownOnly ?? false)
+const relations = ref(saved.relations ?? false)   // Excel: zweites Blatt Relationen
 const viewKey = ref(saved.viewKey ?? '')
 // festesFormat: die Kachel nennt das Format (CSV-Export, Excel-Export) — dann gibt es hier nichts zu wählen
 // plugin: das Format-Plugin dieser Kachel (csv, excel) — dort liegt das Profil unter dem Dienst export
@@ -26,19 +27,20 @@ const rootRows = computed(() => roots.value.map(id => tree.byId.get(id)).filter(
 
 // Profil: WAS exportiert wird. Verzeichnis, Dateiname und Zeitplan stehen am Job, nicht hier —
 // dasselbe Profil darf woechentlich in das eine und taeglich in ein anderes Verzeichnis schreiben
-const profileGet = () => ({ roots: roots.value, role: role.value, locales: locales.value, ownOnly: ownOnly.value, viewKey: viewKey.value })
+const profileGet = () => ({ roots: roots.value, role: role.value, locales: locales.value, ownOnly: ownOnly.value, relations: relations.value, viewKey: viewKey.value })
 function profileSet(p) {
   if (!p) return
   roots.value = Array.isArray(p.roots) ? p.roots : (p.roots ? [p.roots] : roots.value)
   role.value = p.role ?? ''
   if (Array.isArray(p.locales) && p.locales.length) locales.value = p.locales
   ownOnly.value = !!p.ownOnly
+  relations.value = !!p.relations
   viewKey.value = p.viewKey ?? ''
   table.value = null
   persist()
 }
 const busy = ref(''); const table = ref(null)
-const persist = () => localStorage.setItem('journali.export.table', JSON.stringify({ roots: roots.value, role: role.value, locales: locales.value, ownOnly: ownOnly.value, viewKey: viewKey.value, format: format.value }))
+const persist = () => localStorage.setItem('journali.export.table', JSON.stringify({ roots: roots.value, role: role.value, locales: locales.value, ownOnly: ownOnly.value, relations: relations.value, viewKey: viewKey.value, format: format.value }))
 onMounted(async () => { if (!tree.loaded) await tree.load(); if (!roots.value.length) roots.value = tree.rows.filter(r => !r.parent).slice(0, 1).map(r => r.id) })
 function toggleLocale(c) { const s = new Set(locales.value); s.has(c) ? s.delete(c) : s.add(c); locales.value = store.model.locales.map(l => l.code).filter(x => s.has(x)); persist() }
 async function run(downloadIt) {
@@ -46,7 +48,7 @@ async function run(downloadIt) {
   try {
     persist()
     // je gewählter Wurzel eine Tabelle, zusammengeführt — gleiche Spalten in derselben Reihenfolge, Zeilen einmal
-    const parts = []; for (const r of roots.value) parts.push(await build({ root: r, role: role.value, locales: locales.value, ownOnly: ownOnly.value, viewKey: viewKey.value, say: m => { busy.value = m } }))
+    const parts = []; for (const r of roots.value) parts.push(await build({ root: r, role: role.value, locales: locales.value, ownOnly: ownOnly.value, viewKey: viewKey.value, relations: relations.value && format.value === 'excel', say: m => { busy.value = m } }))
     const colKeys = [...new Set(parts.flatMap(p => p.columns.map(c => c.key)))]
     const columns = colKeys.map(k => parts.flatMap(p => p.columns).find(c => c.key === k))
     const seen = new Set(); const rows = []
@@ -57,7 +59,7 @@ async function run(downloadIt) {
     const name = `${rootRows.value.map(r => r.label).join('+') || 'export'}-${role.value || 'alle'}-${locales.value.join('-')}`.replace(/[^\w.-]+/g, '_').slice(0, 80)
     let gekuerzt = 0
     if (format.value === 'csv') download(new Blob([toCsv(t)], { type: 'text/csv;charset=utf-8' }), name + '.csv')
-    else { const b = await toXlsx(t); gekuerzt = b.gekuerzt ?? 0; download(b, name + '.xlsx') }
+    else { const b = await toXlsx(t, undefined, relationenTabelle(parts)); gekuerzt = b.gekuerzt ?? 0; download(b, name + '.xlsx') }
     // Excel nimmt nur 32767 Zeichen je Zelle — was länger war, steht gekürzt in der Datei
     if (gekuerzt) store.toast(t_('⇪ {0} Zeilen exportiert, {1} Zellen auf 32767 Zeichen gekürzt', [t.count, gekuerzt]))
     else store.toast(t_('⇪ {0} Zeilen exportiert', [t.count]), 'ok')
@@ -81,7 +83,8 @@ async function run(downloadIt) {
       <tr><td class="attr">{{ $t("Knoten") }}</td><td><select v-model="role" @change="persist" style="width:100%"><option value="">{{ $t("alle Knoten darunter") }}</option><option value="group">{{ $t("▣ nur Gruppen") }}</option><option value="product">{{ $t("▦ nur Produkte") }}</option><option value="variant">{{ $t("◆ nur Varianten") }}</option></select></td></tr>
       <tr><td class="attr">{{ $t("Sprachen") }}</td><td><div class="chips"><span v-for="l in store.model?.locales ?? []" :key="l.code" class="view-chip" :class="{ on: locales.includes(l.code) }" @click="toggleLocale(l.code)">{{ l.code }}</span></div></td></tr>
       <tr><td class="attr">{{ $t("Attribute") }}</td><td><select v-model="viewKey" @change="persist" style="width:100%"><option value="">{{ $t("◫ alle Attribute") }}</option><option v-for="v in store.model?.views ?? []" :key="v.key" :value="v.key">◫ {{ $L(v.label) || v.key }} ({{ v.level }})</option></select></td></tr>
-      <tr><td class="attr">{{ $t("Werte") }}</td><td><label><input type="checkbox" v-model="ownOnly" @change="persist" />{{ ' ' + $t("nur eigene Werte (geerbte leer lassen)") }}</label></td></tr>
+      <tr><td class="attr">{{ $t("Werte") }}</td><td><label><input type="checkbox" v-model="ownOnly" @change="persist" />{{ ' ' + $t("nur eigene Werte (geerbte leer lassen)") }}</label>
+        <label v-if="format === 'excel'" style="margin-left:16px" :title="$t('Zweites Blatt: eine Zeile je Relation mit Von, Typ, Nach und den Werten der Relation')"><input type="checkbox" v-model="relations" @change="persist" />{{ ' ' + $t("Relationen") }}</label></td></tr>
       <tr class="step"><td colspan="2" class="step-band" style="display:table-cell;height:24px">{{ $t("2 · Wie") }}</td></tr>
       <tr v-if="!festesFormat"><td class="attr">{{ $t("Format") }}</td><td><select v-model="format" @change="persist" style="width:100%"><option value="excel">{{ $t("Excel (.xlsx)") }}</option><option value="csv">{{ $t("CSV (; UTF-8, Excel-tauglich)") }}</option></select></td></tr>
       <tr><td class="attr"></td><td><div class="row"><button @click="run(false)">{{ $t("Vorschau") }}</button><button class="primary" @click="run(true)">{{ $t("⇪ herunterladen") }}</button>

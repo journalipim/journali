@@ -68,16 +68,58 @@ public static class RelationApi
                 };
             }) is { } v ? Results.Ok(v) : Results.NotFound());
 
+        // Die Relationen eines Teilbaums, ausgewertet — für den JSON-Export als Baum oder Liste (30.09.2026): je Knoten ausgehend ("out") und eingehend
+        // ("in", mit der Bezeichnung der Gegenrichtung), das andere Ende mit Id und Name, die Werte je Attribut mit der Einheit des Attributs.
+        // Medien-Zuordnungen fehlen (sie gehören zur Bibliothek); ein Ende, das es nicht mehr gibt, auch.
+        api.MapGet("/nodes/{id}/relations/tree", (string id, Catalog c, bool deep = true) => Baum(c, id, deep) is { } v ? Results.Ok(v) : Results.NotFound());
+
         api.MapGet("/relations/{id}", (string id, Catalog c) =>
             c.Lesen((model, tree) => c.Relations.All.TryGetValue(id, out var r) ? RelationView.Of(tree, model, c.Media, r, "out", c.Workflows) : null) is { } v ? Results.Ok(v) : Results.NotFound());
 
         api.MapPost("/relations", (RelationCreated b, HttpRequest req, Catalog c) => TreeApi.Run(req, c, x => Commands.CreateRelation(x, b.Type, b.From, b.To)));
         api.MapDelete("/relations/{id}", (string id, HttpRequest req, Catalog c) => TreeApi.Run(req, c, x => Commands.RetireRelation(x, id)));
         api.MapPost("/relations/{id}/attributes", (string id, AttributeSet b, HttpRequest req, Catalog c) =>
-            TreeApi.Run(req, c, x => Commands.SetRelationAttribute(x, id, b.Attribute, b.Locale, b.Channel, b.Value, b.Values)));
+            TreeApi.Run(req, c, x => Commands.SetRelationAttribute(x, id, b.Attribute, b.Locale, b.Channel, b.Value, b.Values, b.Unit)));
         api.MapPut("/relations/{id}/external/{system}", (string id, string system, ExternalLinked b, HttpRequest req, Catalog c) =>
             TreeApi.Run(req, c, x => Commands.LinkRelationExternal(x, id, system, b.Id)));
     }
+
+    /// <summary>Die Relationen eines Teilbaums, ausgewertet (für den JSON-Export als Baum oder Liste, 30.09.2026): je Knoten ausgehend ("out") und eingehend
+    /// ("in", mit der Bezeichnung der Gegenrichtung), das andere Ende mit Id und Name, die Werte je Attribut mit der Einheit des Attributs.
+    /// Medien-Zuordnungen fehlen (sie gehören zur Bibliothek); ein Ende, das es nicht mehr gibt, auch. Null, wenn es den Knoten nicht gibt.</summary>
+    public static Dictionary<string, List<object>>? Baum(Catalog c, string id, bool deep) =>
+            c.Lesen((model, tree) =>
+            {
+                if (!tree.Nodes.TryGetValue(id, out var root)) return null;
+                var master = model.MasterLocale ?? "de";
+                string Bez(Labels? l, string fallback) => l is null ? fallback : (l.GetValueOrDefault(master) ?? l.Values.FirstOrDefault() ?? fallback);
+                object Werte(Relation r) => r.Values.Select(kv => (kv.Key, Wert: (object?)kv.Value)).Concat(r.Lists.Select(kv => (kv.Key, Wert: (object?)kv.Value)))
+                    .OrderBy(x => x.Key.Attribute).ThenBy(x => x.Key.Locale).GroupBy(x => x.Key.Attribute)
+                    .ToDictionary(g => g.Key, g =>
+                    {
+                        var einheit = model.Attributes.GetValueOrDefault(g.Key)?.Unit;
+                        var liste = g.Select(x => new { locale = x.Key.Locale, channel = x.Key.Channel, value = x.Wert, unit = einheit }).ToList();
+                        // der Normalfall, ein Wert ohne Sprache und Kanal: knapp; sonst eine Liste je Achse
+                        return liste.Count == 1 && liste[0].locale is null && liste[0].channel is null ? (object)new { liste[0].value, liste[0].unit } : liste;
+                    });
+                var nodes = deep ? tree.DescendantsDeepestFirst(root.Id).Append(root).ToList() : [root];
+                var aus = new Dictionary<string, List<object>>();
+                foreach (var n in nodes)
+                {
+                    var list = new List<object>();
+                    foreach (var r in c.Relations.From(n.Id).OrderBy(r => r.Type).ThenBy(r => r.To))
+                        if (tree.Nodes.TryGetValue(r.To, out var o))
+                            list.Add(new { id = r.Id, type = r.Type, direction = "out", label = Bez(model.RelationTypes.GetValueOrDefault(r.Type)?.Label, r.Type), other = new { id = o.Id, label = NodeRow.LabelOf(tree, model, o) }, values = Werte(r) });
+                    foreach (var r in c.Relations.To(n.Id).OrderBy(r => r.Type).ThenBy(r => r.From))
+                        if (tree.Nodes.TryGetValue(r.From, out var o))
+                        {
+                            var t = model.RelationTypes.GetValueOrDefault(r.Type);
+                            list.Add(new { id = r.Id, type = r.Type, direction = "in", label = t is null ? r.Type : Bez(t.Symmetric ? t.Label : t.Reverse ?? t.Label, r.Type), other = new { id = o.Id, label = NodeRow.LabelOf(tree, model, o) }, values = Werte(r) });
+                        }
+                    if (list.Count > 0) aus[n.Id] = list;
+                }
+                return aus;
+            });
 }
 
 /// <summary>Das andere Ende einer Relation: Knoten oder Medium (dann mit Typ und Bild-Flag) — oder verwaist, wenn es weg ist.</summary>

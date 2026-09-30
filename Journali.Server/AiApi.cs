@@ -91,12 +91,19 @@ public static class AiApi
     public static async Task<List<string>> LokalModelleAsync(string? url, CancellationToken ct)
     {
         if (url is null) return [];
-        using var res = await Http.GetAsync(url + "/api/tags", ct);
-        if (!res.IsSuccessStatusCode) return [];
-        using var doc = JsonDocument.Parse(await res.Content.ReadAsStringAsync(ct));
-        return doc.RootElement.TryGetProperty("models", out var ms) && ms.ValueKind == JsonValueKind.Array
-            ? ms.EnumerateArray().Select(m => m.TryGetProperty("name", out var n) ? n.GetString() : null).Where(n => !string.IsNullOrWhiteSpace(n)).Select(n => n!).ToList()
-            : [];
+        // Der Dienst ist nicht erreichbar (Tunnel zu, Dienst aus, falsche Adresse): keine Modelle, kein Fehler — die Wahl am Team bleibt offen
+        using var frist = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        frist.CancelAfter(TimeSpan.FromSeconds(5));
+        try
+        {
+            using var res = await Http.GetAsync(url + "/api/tags", frist.Token);
+            if (!res.IsSuccessStatusCode) return [];
+            using var doc = JsonDocument.Parse(await res.Content.ReadAsStringAsync(frist.Token));
+            return doc.RootElement.TryGetProperty("models", out var ms) && ms.ValueKind == JsonValueKind.Array
+                ? ms.EnumerateArray().Select(m => m.TryGetProperty("name", out var n) ? n.GetString() : null).Where(n => !string.IsNullOrWhiteSpace(n)).Select(n => n!).ToList()
+                : [];
+        }
+        catch (Exception e) when (e is HttpRequestException or JsonException || (e is OperationCanceledException && !ct.IsCancellationRequested)) { return []; }
     }
 
     /// <summary>Was die Anbieter sprechen — dieselben zwei wie im Browser (web/src/ai.js), hier serverseitig.</summary>

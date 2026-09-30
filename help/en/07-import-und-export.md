@@ -19,9 +19,11 @@ A mapping with target and rules can be saved as a **profile** and repeated as a 
 
 ⇪ Export → Table delivers a subtree as Excel or CSV: roles, languages, attributes, own or also inherited values. The file is built so that the table import reads it again, with identifiers and root. The template for a node is also available via right-click in the tree.
 
+For Excel the switch **Relations** can add a second sheet: one row per relation with from, type, to and the values of the relation, plus the unit of the attribute (read only). The import reads the sheet after the nodes and creates the relations, also in another system; existing ones are not created twice. CSV has only one sheet.
+
 ## JSON
 
-The JSON export writes a subtree as raw data, optionally with the model part, so that it can be restored into another system; or evaluated as tree or list. The JSON import recognises both.
+The JSON export writes a subtree as raw data, optionally with the model part, so that it can be restored into another system; or evaluated as tree or list. The JSON import recognises both. Relations between nodes are included: in the raw data at the node they start from, with their values, the unit of entry and the relation types in the model part; evaluated at both ends, with the label of the respective direction. The import creates them after the nodes. If the target lies outside the subtree and no node with that id exists there, that relation is left out and reported as an error.
 
 ## Template export
 

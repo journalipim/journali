@@ -347,8 +347,11 @@ public sealed record ExternalUnlinked(string System);
 /// <paramref name="Values"/> statt <paramref name="Value"/> bei mehrfachen Attributen.
 /// <paramref name="Row"/>: Zeile eines vermehrbaren Attributs (docs/pflegestruktur.md, 13).
 /// Leerer Wert = eigener Wert weg, Fallback gilt wieder.
+/// <paramref name="Unit"/> (30.09.2026): die Einheit, in der der Wert eingegeben wurde („20 g“). <paramref name="Value"/> steht
+/// immer in der Einheit des Attributs; die Eingabeeinheit ist nur der Hinweis, in welcher die Pflege ihn wieder zeigt.
+/// Fehlt sie, gilt die Einheit des Attributs.
 /// </summary>
-public sealed record AttributeSet(string Attribute, string? Locale, string? Channel, string? Value, string[]? Values = null, string? Row = null);
+public sealed record AttributeSet(string Attribute, string? Locale, string? Channel, string? Value, string[]? Values = null, string? Row = null, string? Unit = null);
 
 /// <summary>
 /// Hier gilt ausdrücklich nichts (27.09.2026): ein eigener, leerer Wert auf dieser Achse. Er bricht die Vererbung wie
@@ -571,7 +574,12 @@ public sealed record ViewRetired(string Key);
 /// einen Faktor zur Basiseinheit dieser Grösse (kg = 1, g = 0.001). Damit
 /// rechnet die Anzeige um; im Journal steht der Wert immer in der Einheit des Attributs.
 /// </summary>
-public sealed record UnitDefinition(string Key, Labels Label, string Quantity, decimal Factor = 1);
+public sealed record UnitDefinition(string Key, Labels Label, string Quantity, decimal Factor = 1, decimal Offset = 0)
+{
+    /// <summary>Wert dieser Einheit in der Basiseinheit der Grösse: <c>Wert × Faktor + Verschiebung</c> (°F → °C: × 5/9 − 160/9). Ältere Einträge haben keine Verschiebung.</summary>
+    public decimal ToBase(decimal value) => value * Factor + Offset;
+    public decimal FromBase(decimal value) => (value - Offset) / Factor;
+}
 
 public sealed record UnitRetired(string Key);
 
@@ -675,10 +683,13 @@ public sealed record PlaceNamed(string Node, string? Name);
 /// („verwandt"), es gibt sie je Paar nur einmal; sonst einseitig mit Lesart hin (<paramref name="Label"/>,
 /// „hat Zubehör") und zurück (<paramref name="Reverse"/>, „ist Zubehör von").
 /// </summary>
-public sealed record RelationTypeDefinition(string Key, Labels Label, Labels? Reverse = null, string[]? From = null, string[]? To = null, string? Group = null, bool Symmetric = false)
+public sealed record RelationTypeDefinition(string Key, Labels Label, Labels? Reverse = null, string[]? From = null, string[]? To = null, string? Group = null, bool Symmetric = false, string[]? Groups = null)
 {
     public bool FromAllowed(string role) => From is null || From.Contains(role);
     public bool ToAllowed(string role) => To is null || To.Contains(role);
+
+    /// <summary>Die Attributgruppen des Typs (30.09.2026): die Menge <c>Groups</c>, sonst die eine Gruppe älterer Einträge.</summary>
+    public string[] AllGroups() => Groups is not null ? Groups : Group is { Length: > 0 } g ? [g] : [];
 }
 
 public sealed record RelationTypeRetired(string Key);

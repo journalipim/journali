@@ -6,7 +6,7 @@
 // (store.scope) engt ein: Alle · Editierbare · Nur hier editierbare Attribute. Sicht je Knotentyp ordnet
 // Gruppen und Attribute; flach untereinander oder als Reiter. Jede Änderung ist
 // ein Befehl an den Server = ein Eintrag.
-import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
+import { ref, reactive, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { api, when } from '../api.js'
 import { store } from '../store.js'
@@ -29,6 +29,7 @@ import VersionsPanel from '../components/VersionsPanel.vue'
 import MediaThumb from '../components/MediaThumb.vue'
 import MediaPreview from '../components/MediaPreview.vue'
 import { inGruppe, gruppenVon } from '../gruppen.js'
+import { gewaehlt, wahl as einheitenWahl, angezeigt as zeigeEinheit, zeigen as inEinheit, speichern as ausEinheit, beste } from '../units.js'
 import MediaPicker from '../components/MediaPicker.vue'
 import DocTables from '../components/DocTables.vue'
 import { mediaTypesFor, attachFiles, meldung as medienMeldung, IST_DOKUMENT } from '../media.js'
@@ -323,7 +324,9 @@ const attrColWidth = computed(() => {
 })
 
 // ---- Werte
-const computedValue = (key, locale = null) => (node.value?.computed ?? []).find(c => c.attribute === key && (c.locale ?? null) === locale)?.value ?? null
+const computedValue = (key, locale = null) => (node.value?.computed ?? []).find(c => c.attribute === key && !c.row && (c.locale ?? null) === locale)?.value ?? null
+/// Ergebnis einer berechneten Spalte in einer Zeile eines vermehrbaren Attributs
+const computedRow = (col, row, locale) => (node.value?.computed ?? []).find(c => c.attribute === col.key && c.row === row && (c.locale ?? null) === (col.perLocale ? locale : null))?.value ?? null
 // Formel-Zelle: Klick öffnet den Skript-Editor; Übernehmen schreibt das Skript als Wert (AttributeSet)
 const scriptCell = ref(null)   // { def, col }
 const own = computed(() => valueMap(node.value?.values ?? []))
@@ -501,12 +504,12 @@ const redoStack = computed(() => stacksOf(props.id).redo)
 // Einen Wert setzen. Leer über einem geerbten Wert heisst „hier gilt nichts“ (27.09.2026) und wird als eigener leerer
 // Wert geschrieben — sonst käme der geerbte zurück, und das Löschen sah aus, als würde es nicht gespeichert. Zurück zur
 // Vererbung führt das ↓ an der Attributzeile und „Eigenen Wert löschen“ im Kontextmenü (beide rufen unsetValue).
-const setValue = (def, col, value, row = null) => {
+const setValue = (def, col, value, row = null, unit = null) => {
   const k = key(def.key, col.locale, col.channel, row)
   const before = own.value.get(k) ?? ''
   if ((value === '' || value == null) && gaelteOhneEigenen(def, col)) return clearValue(def, col, row, before)
   history.value.push({ kind: 'value', node: props.id, def, col, row, before, after: value }); redoStack.value.length = 0
-  return writeValue(def, col, value, row)
+  return writeValue(def, col, value, row, props.id, unit)
 }
 /// Stünde hier etwas, wenn der eigene Wert auf genau dieser Achse wegfiele? Der Master- oder Sternwert am Knoten
 /// selbst zählt dazu, und bei vererbbaren Attributen die Vorfahren. Nur dann heisst Leeren „hier gilt nichts“.
@@ -566,10 +569,10 @@ function redo() {
   if (h.kind === 'clear') return writeClear(h.def, h.col, h.row, h.node)
   writeValue(h.def, h.col, h.after, h.row, h.node)
 }
-const writeValue = (def, col, value, row = null, node = props.id) => command(() =>
+const writeValue = (def, col, value, row = null, node = props.id, unit = null) => command(() =>
   api.post(`/api/nodes/${encodeURIComponent(node)}/attributes`, def.multiple
     ? { attribute: def.key, locale: col.locale, channel: col.channel, values: value.split(',').map(s => s.trim()).filter(Boolean), row }
-    : { attribute: def.key, locale: col.locale, channel: col.channel, value, row }))
+    : { attribute: def.key, locale: col.locale, channel: col.channel, value, row, ...(unit ? { unit } : {}) }))
 const writeClear = (def, col, row = null, node = props.id) => command(() =>
   api.post(`/api/nodes/${encodeURIComponent(node)}/attributes/clear`, { attribute: def.key, locale: col.locale, channel: col.channel, row }))
 const addRow = def => command(() => api.post(`${nodeUrl()}/rows`, { attribute: def.key, row: '' }))
@@ -586,7 +589,7 @@ const attach = groups => command(() => api.post(`${nodeUrl()}/groups`, { groups 
 // ---- Relationen (18): je Typ ausgehend (→) und eingehend (←, mit umgekehrter Bezeichnung); Werte an der Relation aus der Gruppe des Typs
 const relTypes = computed(() => model.value?.relationTypes ?? [])
 const relType = key => relTypes.value.find(t => t.key === key)
-const relGroupAttrs = key => { const g = relType(key)?.group; return g ? (model.value?.attributes ?? []).filter(a => inGruppe(a, g) && a.type !== 'rows' && a.type !== 'html') : [] }
+const relGroupAttrs = key => { const t = relType(key); const gs = t?.groups ?? (t?.group ? [t.group] : []); return gs.length ? (model.value?.attributes ?? []).filter(a => gs.some(g => inGruppe(a, g)) && a.type !== 'rows' && a.type !== 'html') : [] }
 const isMediaType = key => (relType(key)?.to ?? []).includes('media')
 const relBlocks = computed(() => {
   const out = new Map()
@@ -599,8 +602,42 @@ const relCount = computed(() => (rels.value.out?.length ?? 0) + (rels.value.in?.
 function backToPub() { const b = store.pubBack; store.pubBack = null; if (b) router.push(b.path) }
 /// Die Sprachen der Sicht — die erste trägt Bezeichnungen und einspaltige Zellen (Zeilen, Relationen)
 const viewLocales = computed(() => store.viewLocales ?? [])
+// Einheit in der Zelle (units.js): angezeigt und eingegeben wird in der gewählten Einheit, gespeichert in der des Attributs.
+// Welche gilt: die hier gewählte, sonst die, in der der Wert eingegeben wurde (der Eintrag merkt sie sich), sonst die des Attributs.
+const zelleEinheit = reactive({})
+const zellenKey = (def, col) => `${def.key}|${col.locale ?? ''}|${col.channel ?? ''}`
+const eigeneEinheit = (def, col) => (node.value?.values ?? []).find(v => v.attribute === def.key && (v.locale ?? null) === (col.locale ?? null) && (v.channel ?? null) === (col.channel ?? null) && !v.row)?.unit ?? null
+const cellUnit = (def, col) => zelleEinheit[zellenKey(def, col)] ?? eigeneEinheit(def, col) ?? def.unit
+const gezeigt = (def, col, gespeichert) => inEinheit(store.model, def, gespeichert, cellUnit(def, col))
+/// Eingabe einer Zelle: in die Einheit des Attributs zurückgerechnet geschrieben, dazu die Einheit, in der sie eingegeben wurde
+function zelleSpeichern(def, col, eingabe) {
+  const u = cellUnit(def, col)
+  const w = inBasis(def, eingabe, u)
+  if (w == null) return
+  zelleEinheit[zellenKey(def, col)] = u
+  setValue(def, col, w, null, u && u !== def.unit ? u : null)
+}
+/// Die Eingabe in die Einheit des Attributs zurückgerechnet; null, wenn sie dort nicht gespeichert werden kann (Meldung ist raus)
+function inBasis(def, eingabe, einheit) {
+  const r = ausEinheit(store.model, def, eingabe, einheit)
+  if (r.fehler) { store.toast(t_('{0} {1} sind {2} {3} — das Attribut nimmt nur ganze Zahlen', [r.fehler.eingabe, r.fehler.von, r.fehler.wert, r.fehler.nach])); return null }
+  return r.wert
+}
 const relValue = (r, def) => { const loc = def.perLocale ? (viewLocales.value[0] ?? locales.value[0]) : null; return r.values.find(v => v.attribute === def.key && (v.locale ?? null) === loc && !v.channel)?.value ?? null }
-const setRelValue = (r, def, v) => command(() => api.post(`/api/relations/${r.id}/attributes`, { attribute: def.key, locale: def.perLocale ? (viewLocales.value[0] ?? locales.value[0]) : null, value: v }))
+const setRelValue = (r, def, v, unit = null) => command(() => api.post(`/api/relations/${r.id}/attributes`, { attribute: def.key, locale: def.perLocale ? (viewLocales.value[0] ?? locales.value[0]) : null, value: v, ...(unit ? { unit } : {}) }))
+const relHinweis = (r, d) => r.values.find(v => v.attribute === d.key && !v.channel)?.unit ?? null
+// Einheit je Relation (nicht je Attribut): jede Zeile hat ihre eigene. Bis eine gewählt oder eingegeben wurde, zeigt die Zeile die
+// günstigste Einheit des Werts (2000 mg = 2 g). Was in einer Einheit eingegeben wurde, bleibt in ihr stehen.
+const relEinheit = reactive({})
+const relUnit = (r, d) => relEinheit[`${r.id}|${d.key}`] ?? relHinweis(r, d) ?? beste(store.model, d, relValue(r, d))
+const relGezeigt = (r, d) => inEinheit(store.model, d, relValue(r, d), relUnit(r, d))
+function relSpeichern(r, d, eingabe) {
+  const u = relUnit(r, d)
+  const w = inBasis(d, eingabe, u)
+  if (w == null) return
+  relEinheit[`${r.id}|${d.key}`] = u
+  setRelValue(r, d, w, u && u !== d.unit ? u : null)
+}
 const retireRel = r => command(() => api.del(`/api/relations/${r.id}`))
 // „Bilder der Subitems durch Vererbung ersetzen“: die eigenen Medien dieses Knotens werden vererbt (inherit=true);
 // an allen Nachfahren werden Zuordnungen zu DEMSELBEN Medium (gleicher Typ) gelöst — aber nur, wenn der Nachfahr danach kein
@@ -1017,6 +1054,7 @@ function cellMenu(e, def, col, block) {
             <td class="attr" :title="def.key + auchTitel(def)"><div class="nm"><span class="lbl">{{ store.label(def) }}</span><span v-if="store.attrNames !== 'label'" class="key muted">{{ def.key }}</span> <span class="muted">{{ $t("≣ Zeilen") }}</span><span v-if="def.required" class="warn" :title="$t('Pflicht: mindestens eine Zeile')">●</span></div></td>
             <td :colspan="columns.length" style="padding:0">
               <RowsBlock v-if="b.active" :def="def" :rows="node.rows?.[def.key] ?? []" :values="own" :locale="viewLocales[0] ?? locales[0]"
+                :computed-of="(col, row) => computedRow(col, row, viewLocales[0] ?? locales[0])" @script="col => scriptCell = { def: col, col: columns[0] }"
                 @set="(col, row, v) => setValue(col, { locale: col.perLocale ? (viewLocales[0] ?? locales[0]) : null, channel: null }, v, row)"
                 @add="addRow(def)" @remove="row => removeRow(def, row)" @order="rows => orderRows(def, rows)" />
               <div v-else class="muted" style="padding:4px 8px">⌀</div>
@@ -1042,9 +1080,15 @@ function cellMenu(e, def, col, block) {
               <DateCell v-else-if="def.type === 'date'" :class="frischCls(def, c)" :value="ownOrAxis(def, c)" :inherited="inherited(def, c).value" :disabled="!enabled(def, c, b)" @save="v => setValue(def, c, v)" @contextmenu="cellMenu($event, def, c, b)" />
               <HtmlCell v-else-if="def.type === 'html'" :class="frischCls(def, c)" :value="ownOrAxis(def, c)" :inherited="inherited(def, c).value" :disabled="!enabled(def, c, b)" :title="`${store.name(def)} · ${c.label}`" :node="id" :locale="c.locale ?? null" :label="store.label(def)"
                 :origin="inherited(def, c).from ? `${icon(inherited(def, c).from.role)} ${inherited(def, c).from.label}` : null" @save="v => setValue(def, c, v)" @contextmenu="cellMenu($event, def, c, b)" />
-              <Cell v-else :class="frischCls(def, c)" :value="ownOrAxis(def, c)" :inherited="inherited(def, c).value" :disabled="!enabled(def, c, b)" :node="id" :locale="c.locale ?? null" :label="store.label(def)"
+              <Cell v-else :class="frischCls(def, c)" :value="gezeigt(def, c, ownOrAxis(def, c))" :inherited="gezeigt(def, c, inherited(def, c).value)" :disabled="!enabled(def, c, b)" :node="id" :locale="c.locale ?? null" :label="store.label(def)"
                 :mark="stale(def, c) ? '⟳' : (inherited(def, c).master && ownValue(def.key, c) == null ? '◌' : null)" :mark-title="stale(def, c) ? $t('zu überarbeiten · {0} später geändert', [master]) : (c.locale ? $t('{0}-Text als Übersetzung übernehmen', [master]) : $t('{0}-Text als Grundtext übernehmen', [master]))" :mark-click="!stale(def, c) && inherited(def, c).master && ownValue(def.key, c) == null ? () => setValue(def, c, inherited(def, c).value) : null"
-                :origin="inherited(def, c).from ? `${icon(inherited(def, c).from.role)} ${inherited(def, c).from.label}` : null" :source="sourceOf(def, c)" @save="v => setValue(def, c, v)" @contextmenu="cellMenu($event, def, c, b)" />
+                :origin="inherited(def, c).from ? `${icon(inherited(def, c).from.role)} ${inherited(def, c).from.label}` : null" :source="sourceOf(def, c)" @save="v => zelleSpeichern(def, c, v)" @contextmenu="cellMenu($event, def, c, b)">
+                <template v-if="einheitenWahl(store.model, def).length" #unit>
+                  <select class="unitsel" :value="cellUnit(def, c)" @click.stop @change="zelleEinheit[zellenKey(def, c)] = $event.target.value" :title="$t('Anzeige und Eingabe in dieser Einheit — gespeichert wird in {0}', [def.unit])">
+                    <option v-for="u in einheitenWahl(store.model, def)" :key="u.key" :value="u.key">{{ u.key }}</option>
+                  </select>
+                </template>
+              </Cell>
             </template>
           </tr>
           </template>
@@ -1108,18 +1152,30 @@ function cellMenu(e, def, col, block) {
         <template v-if="open('relations')">
         <div v-for="b in relBlocks" :key="b.type" class="relblock">
           <table class="grid" style="width:auto">
-            <thead><tr><th style="width:180px">{{ $L(relType(b.type)?.label) || b.type }}</th><th style="width:260px"></th><th v-for="d in relGroupAttrs(b.type)" :key="d.key" style="width:140px" :title="d.key">{{ $L(d.label) || d.key }}<span v-if="d.unit" class="muted"> {{ d.unit }}</span></th><th style="width:28px"></th></tr></thead>
+            <thead><tr><th style="width:180px">{{ $L(relType(b.type)?.label) || b.type }}</th><th style="width:260px"></th><th v-for="d in relGroupAttrs(b.type)" :key="d.key" style="width:140px" :title="d.key">{{ $L(d.label) || d.key }}<span v-if="d.unit" class="muted" style="margin-left:4px">{{ d.unit }}</span></th><th style="width:28px"></th></tr></thead>
             <tbody>
               <tr v-for="r in b.out" :key="r.id" :title="r.id">
                 <td class="muted">→ {{ $L(relType(b.type)?.label) || b.type }}</td>
                 <td><router-link v-if="!r.other.missing" :to="`/tree/${r.other.id}`">{{ icon(r.other.role) }} {{ r.other.label }}</router-link><span v-else class="neg" :title="$t('Knoten zurückgezogen')">✗ {{ r.other.id }}</span></td>
-                <Cell v-for="d in relGroupAttrs(b.type)" :key="d.key" :value="relValue(r, d)" @save="v => setRelValue(r, d, v)" />
+                <Cell v-for="d in relGroupAttrs(b.type)" :key="d.key" :value="relGezeigt(r, d)" @save="v => relSpeichern(r, d, v)">
+                  <template v-if="einheitenWahl(store.model, d).length" #unit>
+                    <select class="unitsel" :value="relUnit(r, d)" @click.stop @change="relEinheit[`${r.id}|${d.key}`] = $event.target.value" :title="$t('Anzeige und Eingabe in dieser Einheit — gespeichert wird in {0}', [d.unit])">
+                      <option v-for="u in einheitenWahl(store.model, d)" :key="u.key" :value="u.key">{{ u.key }}</option>
+                    </select>
+                  </template>
+                </Cell>
                 <td class="num"><button class="x" @click="retireRel(r)" :title="$t('Relation zurückziehen')">×</button></td>
               </tr>
               <tr v-for="r in b.in" :key="r.id" :title="r.id">
                 <td class="muted">{{ relType(b.type)?.symmetric ? '⇄' : '←' }} {{ relType(b.type)?.symmetric ? ($L(relType(b.type)?.label) || b.type) : ($L(relType(b.type)?.reverse) || $L(relType(b.type)?.label) || b.type) }}</td>
                 <td><router-link v-if="!r.other.missing" :to="`/tree/${r.other.id}`">{{ icon(r.other.role) }} {{ r.other.label }}</router-link><span v-else class="neg" :title="$t('Knoten zurückgezogen')">✗ {{ r.other.id }}</span></td>
-                <td v-for="d in relGroupAttrs(b.type)" :key="d.key" class="muted">{{ relValue(r, d) ?? '' }}</td>
+                <Cell v-for="d in relGroupAttrs(b.type)" :key="d.key" :value="relGezeigt(r, d)" @save="v => relSpeichern(r, d, v)">
+                  <template v-if="einheitenWahl(store.model, d).length" #unit>
+                    <select class="unitsel" :value="relUnit(r, d)" @click.stop @change="relEinheit[`${r.id}|${d.key}`] = $event.target.value" :title="$t('Anzeige und Eingabe in dieser Einheit — gespeichert wird in {0}', [d.unit])">
+                      <option v-for="u in einheitenWahl(store.model, d)" :key="u.key" :value="u.key">{{ u.key }}</option>
+                    </select>
+                  </template>
+                </Cell>
                 <td class="num"><button class="x" @click="retireRel(r)" :title="$t('Relation zurückziehen')">×</button></td>
               </tr>
             </tbody>
@@ -1271,6 +1327,8 @@ function cellMenu(e, def, col, block) {
 
 <style scoped>
 .grp { display: inline-flex; align-items: center; gap: 4px; }
+/* Einheit in der Zelle umschalten */
+select.unitsel { font-size: 11px; padding: 0 2px; height: 20px; width: auto; color: var(--muted); }
 /* Filter-Dropdown: leuchtet, wenn ein Filter wirkt */
 select.on { color: var(--accent); border-color: var(--accent); }
 /* Pfad bricht nicht um — wird er zu lang, schrumpft die Schrift (fitPath), notfalls Ellipse an den Gliedern */

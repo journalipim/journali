@@ -5,7 +5,8 @@
 
 // channel: Werte auf der Kanalachse dieses Kanals (Ausleitung); only: nur diese Knoten-Ids (Set), extra: zusätzliche Spalten je Zeile ({ key, of: rowId → Wert })
 // at: Journalnummer — die Tabelle von damals (eingefrorener Publikationsstand)
-export async function build(env, { root, role = '', locales, ownOnly = false, viewKey = '', channel = '', only = null, extra = [], at = null, say }) {
+// relations: true — die Relationen des Teilbaums mitlesen (nur für JSON als Baum oder Liste; eine Tabelle hat dafür keine Spalte)
+export async function build(env, { root, role = '', locales, ownOnly = false, viewKey = '', channel = '', only = null, extra = [], at = null, relations = false, say }) {
   const { api, model } = env
   const byLocale = new Map(); let cols = [], nodes = []
   for (const l of locales) {
@@ -35,17 +36,75 @@ export async function build(env, { root, role = '', locales, ownOnly = false, vi
     if (c.key.startsWith('axis:')) return r.row.axisValues?.[c.key.slice(5)] ?? ''
     return c.sys === 'label' ? r.row.label : c.sys === 'parent' ? r.row.parent ?? '' : c.sys ? r.row[c.sys] ?? '' : r.row[c.key] ?? ''
   }))
-  return { columns, rows, count: nodes.length }
+  // je Knoten-Id die Relationen (ausgehend und eingehend), nur was es gibt
+  let rel = null
+  if (relations) { say?.('lese Relationen …'); try { rel = await api.get(`/api/nodes/${encodeURIComponent(root)}/relations/tree?deep=true`) } catch { rel = null } }
+  return { columns, rows, count: nodes.length, ...(rel ? { relations: rel } : {}) }
+}
+
+/// Das Blatt „Relationen“ (30.09.2026): eine Zeile je Relation — Von, Typ, Nach, dann je Relationsattribut eine Spalte und, wo das Attribut eine
+/// Einheit hat, daneben `<attribut>_einheit` (nur zum Lesen: der Wert steht in der Einheit des Attributs). Ein Wert mit Sprache steht in
+/// `<attribut>_<sprache>`; Werte mit Kanal hat das Blatt nicht. Jede Relation steht einmal, bei dem Knoten, von dem sie ausgeht — eine, die von
+/// ausserhalb des Teilbaums kommt, fehlt. `teile`: Ergebnisse von build() mit relations; mehrere Wurzeln ergeben ein Blatt.
+export const RELATIONEN_SPALTEN = { von: 'journali_von', vonName: 'journali_von_name', typ: 'journali_typ', nach: 'journali_nach', nachName: 'journali_nach_name' }
+export const EINHEIT = '_einheit'
+export function relationenTabelle(teile) {
+  const R = RELATIONEN_SPALTEN
+  const gesehen = new Set(), zeilen = [], attribute = new Map()   // attribut → { einheit: bool, sprachen: Set }
+  const text = v => Array.isArray(v) ? v.join(',') : v == null ? '' : v
+  for (const t of teile) {
+    if (!t.relations) continue
+    const idAt = t.columns.findIndex(c => c.sys === 'id' || c.key === 'id'), nameAt = t.columns.findIndex(c => c.sys === 'label')
+    const name = new Map(t.rows.map(r => [r[idAt], nameAt >= 0 ? r[nameAt] : '']))
+    for (const [von, liste] of Object.entries(t.relations)) {
+      if (!name.has(von)) continue
+      for (const r of liste) {
+        if (r.direction !== 'out') continue
+        const key = `${von}\u0001${r.type}\u0001${r.other.id}`
+        if (gesehen.has(key)) continue
+        gesehen.add(key)
+        const werte = {}
+        for (const [a, w] of Object.entries(r.values ?? {})) {
+          const a_ = attribute.get(a) ?? { einheit: false, sprachen: new Set() }; attribute.set(a, a_)
+          for (const e of Array.isArray(w) ? w : [w]) {
+            if (e.channel) continue
+            const spalte = e.locale ? `${a}_${e.locale}` : a
+            if (e.locale) a_.sprachen.add(e.locale)
+            werte[spalte] = text(e.value)
+            if (e.unit) { a_.einheit = true; werte[a + EINHEIT] = e.unit }
+          }
+        }
+        zeilen.push({ von, vonName: name.get(von) ?? '', typ: r.type, nach: r.other.id, nachName: r.other.label ?? '', werte })
+      }
+    }
+  }
+  if (!zeilen.length) return null
+  const spalten = [R.von, R.vonName, R.typ, R.nach, R.nachName]
+  for (const [a, x] of attribute) {
+    if (x.sprachen.size) spalten.push(...[...x.sprachen].map(l => `${a}_${l}`)); else spalten.push(a)
+    if (x.einheit) spalten.push(a + EINHEIT)
+  }
+  const rows = zeilen.map(z => spalten.map(k => k === R.von ? z.von : k === R.vonName ? z.vonName : k === R.typ ? z.typ : k === R.nach ? z.nach : k === R.nachName ? z.nachName : z.werte[k] ?? ''))
+  return { columns: spalten.map(k => ({ key: k })), rows }
 }
 
 export function toCsv({ columns, rows }) {
   const esc = v => { const s = v == null ? '' : String(v); return /[;"\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s }
   return '﻿' + [columns.map(c => c.key).join(';'), ...rows.map(r => r.map(esc).join(';'))].join('\r\n')
 }
-export function toJson({ columns, rows }) { return JSON.stringify(rows.map(r => Object.fromEntries(columns.map((c, i) => [c.key, r[i] === '' ? null : r[i]]))), null, 1) }
+// Liste: je Knoten ein Objekt mit den Spalten; Relationen (falls gelesen) als eigene Eigenschaft `relations`
+export function toJson({ columns, rows, relations }) {
+  const idAt = columns.findIndex(c => c.sys === 'id' || c.key === 'id')
+  return JSON.stringify(rows.map(r => {
+    const o = Object.fromEntries(columns.map((c, i) => [c.key, r[i] === '' ? null : r[i]]))
+    const rel = relations?.[r[idAt >= 0 ? idAt : 0]]
+    if (rel?.length) o.relations = rel
+    return o
+  }), null, 1)
+}
 // JSON als Baum: der Teilbaum verschachtelt, je Knoten
 // id, role, name, status, axes, attributes (je Sprache verschachtelt: { de, en }; die Schlüssel stehen darin), children
-export function toJsonTree({ columns, rows }) {
+export function toJsonTree({ columns, rows, relations }) {
   const byId = new Map()
   for (const r of rows) {
     const o = { id: r[columns.findIndex(c => c.sys === 'id' || c.key === 'id')] ?? r[0], role: '', parent: null, name: '', status: null, axes: {}, attributes: {}, children: [] }
@@ -59,6 +118,7 @@ export function toJsonTree({ columns, rows }) {
       else o[c.key] = v
     })
     for (const k of Object.keys(o.attributes)) { const a = o.attributes[k]; if (a && typeof a === 'object' && Object.values(a).every(x => x == null)) delete o.attributes[k]; else if (a == null) delete o.attributes[k] }
+    if (relations?.[o.id]?.length) o.relations = relations[o.id]
     byId.set(o.id, o)
   }
   const roots = []
@@ -84,7 +144,7 @@ export function kuerzeZellen(rows) {
 
 /// Excel-Arbeitsmappe (SheetJS X aus dem Plugin xlsx): Blatt „Daten“, wahlweise ein Blatt „Legende“ (Zeilen).
 /// Zu lange Werte werden gekürzt; <c>wb.gekuerzt</c> sagt, wie viele Zellen es betraf.
-export function workbook(X, { columns, rows }, legendRows = null, sheet = 'Daten') {
+export function workbook(X, { columns, rows }, legendRows = null, sheet = 'Daten', relationen = null) {
   const gek = kuerzeZellen(rows)
   rows = gek.rows
   const ws = X.utils.aoa_to_sheet([columns.map(c => c.key), ...rows])
@@ -98,5 +158,11 @@ export function workbook(X, { columns, rows }, legendRows = null, sheet = 'Daten
   const wb = X.utils.book_new(); X.utils.book_append_sheet(wb, ws, sheet)
   wb.gekuerzt = gek.gekuerzt
   if (legendRows) { const lg = X.utils.aoa_to_sheet(legendRows); lg['!cols'] = [{ wch: 8 }, { wch: 24 }, { wch: 28 }, { wch: 10 }, { wch: 8 }, { wch: 8 }, { wch: 60 }]; lg['!autofilter'] = { ref: X.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: Math.max(1, legendRows.length - 1), c: legendRows[0].length - 1 } }) }; X.utils.book_append_sheet(wb, lg, 'Legende') }
+  if (relationen) {
+    const rl = X.utils.aoa_to_sheet([relationen.columns.map(c => c.key), ...relationen.rows])
+    rl['!cols'] = relationen.columns.map(c => ({ wch: Math.min(40, Math.max(10, c.key.length + 2)) }))
+    rl['!autofilter'] = { ref: X.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: Math.max(1, relationen.rows.length), c: relationen.columns.length - 1 } }) }
+    X.utils.book_append_sheet(wb, rl, 'Relationen')
+  }
   return wb
 }

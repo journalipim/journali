@@ -28,6 +28,7 @@ import { icon, tree } from '../tree.js'
 import { ensureUnit } from '../compliance.js'
 import { suggestPairs, convert, validate, splitUnit, norm, similarity, SYNONYMS, DOC_GROUP } from '../mapper.js'
 import { gruppenVon } from '../gruppen.js'
+import { schluessel } from '../modelKey.js'
 import { attachFiles } from '../media.js'
 import { t as t_ } from '../i18n.js'
 import { L } from '../i18n.js'
@@ -135,12 +136,8 @@ const ebene = ref(props.node.id)
 /// Der Pfad von der Wurzel bis hierher — die Ebenen, an die eine Gruppe kommen kann
 const pfad = computed(() => [...(props.node.ancestors ?? []).map(a => ({ id: a.id, role: a.role, label: a.label })), { id: props.node.id, role: props.node.role, label: tree.byId.get(props.node.id)?.label ?? props.node.id }])
 const neueZeilen = computed(() => genommen.value.some(r => r.target === 'new') || genommeneTabellen.value.some(r => r.target === 'new'))
-/// Schlüssel aus einem Namen: klein, Umlaute aufgelöst, alles andere ein Unterstrich
-/// Der Schlüssel eines neuen Attributs: nur a-z, 0-9 und _, und er beginnt mit einem Buchstaben — der Server nimmt
-/// nichts anderes. „2.1 Produktbeschreibung“ wird darum zu „produktbeschreibung“: die Kapitelnummer steht in der
-/// Bezeichnung, nicht im Schlüssel (29.09.2026)
-const schluessel = s => String(s ?? '').toLowerCase().replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss')
-  .replace(/[^a-z0-9]+/g, '_').replace(/^[_0-9]+/, '').replace(/_+$/, '')
+/// Der Schlüssel eines neuen Attributs (modelKey.js): „2.1 Produktbeschreibung“ wird zu „produktbeschreibung“ — die
+/// Kapitelnummer steht in der Bezeichnung, nicht im Schlüssel (29.09.2026)
 const gruppeKey = computed(() => gruppe.value === '+' ? schluessel(gruppeName.value) : gruppe.value)
 /// Wohin ein neues Attribut gehört (29.09.2026): in die gewählte Gruppe — oder, bei „je Überschrift“, in eine Gruppe
 /// mit dem Namen der Überschrift im Dokument. Dann steht am Knoten wieder beieinander, was im Dokument beieinander

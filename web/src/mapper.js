@@ -255,6 +255,7 @@ export function plan({ columns, rows, mapping, model, tree, target, role, existi
   // Zeilennummern in Meldungen sind Excel-Zeilen (Kopfzeile = 1)
   const combos = new Map()   // je Produkt die Achsen-Kombinationen (Bestand + Datei)
   // changes: je Zeile, was passiert — zum Anschauen vor dem Schreiben
+  const ids = new Map()   // Kennung der Datei → Knoten (Id) oder @ref des neu angelegten — das Blatt Relationen verweist darauf
   const commands = []; const stats = { rows: rows.length, create: 0, update: 0, unchanged: 0, values: 0, skipped: 0, problems: [], invalid: [], missingGroup: requiredNew, newListValues: {}, changes: [] }
   // Listenwerte, die es noch nicht gibt: der Plan
   // merkt sie je Liste (Schlüssel = normierter Text, Bezeichnung = der Text), das Schreiben legt sie vor dem Stapel an
@@ -332,6 +333,7 @@ export function plan({ columns, rows, mapping, model, tree, target, role, existi
       targetGroups.add(parent.id)
     }
     const nodeRef = node ? node.id : '@' + ref
+    if (id) ids.set(id, nodeRef)
     const cur = node ? existing?.get(node.id) ?? null : null
     let changed = 0
     const diffs = []
@@ -369,7 +371,7 @@ export function plan({ columns, rows, mapping, model, tree, target, role, existi
   // Die Gruppen der neuen Attribute an die Zielknoten hängen, wo sie nicht schon gelten
   const groupsNeeded = [...new Set([...newAttrs.values()].map(a => a.group).filter(Boolean))]
   const attach = groupsNeeded.length ? [...(target ? [target.id] : []), ...targetGroups].filter((id, i, a) => a.indexOf(id) === i).map(id => ({ node: id, groups: groupsNeeded.filter(g => !(tree.byId.get(id)?.groups ?? '').split(',').includes(g)) })).filter(x => x.groups.length) : []
-  return { commands, stats, newAttributes: [...newAttrs.values()], attach }
+  return { commands, stats, newAttributes: [...newAttrs.values()], attach, ids }
 }
 
 // Tabellen aus Text (Zwischenablage aus Excel = Tab-getrennt; sonst ; oder ,): { columns, rows } — rows als Arrays

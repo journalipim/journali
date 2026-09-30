@@ -24,6 +24,8 @@ import Splitter from '../components/Splitter.vue'
 import { paneWidth } from '../panes.js'
 import { t } from '../i18n.js'
 import { L } from '../i18n.js'
+import { schluessel, istSchluessel } from '../modelKey.js'
+import { zahlOderBruch } from '../units.js'
 const listW = paneWidth('model.list', 340)
 
 const sections = [
@@ -31,7 +33,7 @@ const sections = [
   { key: 'attributes', icon: '⊞', label: t('Attribute'), part: t('Struktur'), one: t('Attribut'), hint: t('Ein Attribut hat Typ, Gruppe, Achsen (sprachabhängig, kanalabhängig) und Pflicht je Kanal und Sprache. Der Schlüssel ist für immer.') },
   { key: 'lists', icon: '☰', label: t('Wertelisten'), part: t('Struktur'), one: t('Werteliste'), hint: t('Ein Attribut vom Typ enum zeigt auf einen Eintrag der Liste, nicht auf ein Wort. Der Eintrag hat Namen je Sprache und eigene Spalten (Farbe: ral).') },
   { key: 'views', icon: '◫', label: t('Attributsichten'), part: t('Struktur'), one: t('Sicht'), hint: t('Je Knotentyp: welche Gruppen in welcher Reihenfolge, darin die Attribute in welcher Reihenfolge. Der Knoten zeigt in einer Sicht nur deren Gruppen.') },
-  { key: 'relationTypes', icon: '⇄', label: t('Relationen'), part: t('Struktur'), one: t('Relationstyp'), hint: t('Ein Relationstyp verbindet Knoten (Zubehör, Bestandteil …): Bezeichnung hin und zurück, erlaubte Knotentypen, und eine Attributgruppe, deren Attribute an der Relation stehen (Menge, Slot).') },
+  { key: 'relationTypes', icon: '⇄', label: t('Relationen'), part: t('Struktur'), one: t('Relationstyp'), hint: t('Ein Relationstyp verbindet Knoten (Zubehör, Bestandteil …): Bezeichnung hin und zurück, erlaubte Knotentypen, und Attributgruppen, deren Attribute an der Relation stehen (Menge, Slot).') },
   { key: 'units', icon: '⚖', label: t('Einheiten'), part: t('Basics'), one: t('Einheit'), hint: t('Je Grösse eine Basis mit Faktor 1; die Anzeige rechnet über den Faktor um.') },
   { key: 'locales', icon: '🗣', label: t('Sprachen'), part: t('Basics'), one: t('Sprache'), hint: t('Die Achse locale der Attribute.') },
   { key: 'channels', icon: '⇶', label: t('Kanäle'), part: t('Basics'), one: t('Kanal'), hint: t('Die Achse channel: kanalabhängige Werte; Pflichtfelder und Freigaben gelten je Kanal.') },
@@ -105,7 +107,7 @@ const rows = computed(() => {
     case 'attributes': return m.attributes.map(a => ({ key: a.key, label: anyLabel(a.label), right: [TYPE_SYM[a.type] ?? a.type, a.unique ? '①' : '', a.releaseWatch === 'always' ? '⚑' : a.releaseWatch === 'never' ? '⚐' : '', a.pattern ? '⌗' : '', a.multiple ? '≣' : '', a.perLocale ? '🗣' : '', a.perChannel ? '⇶' : '', gruppenVon(a).length ? '▤ ' + gruppenVon(a).map(groupLabel).join(', ') : ''], _: a })).sort(byKey)   // Gruppen mit Label; ① eindeutig
     case 'lists': return m.lists.map(l => ({ key: l.key, label: anyLabel(l.label), right: [`☰ ${l.values.length}`], _: l })).sort(byKey)
     case 'views': return (m.views ?? []).map(v => ({ key: v.key, label: anyLabel(v.label), right: [icon(v.level), `▤ ${v.items.length}`], _: v })).sort(byKey)
-    case 'units': return (m.units ?? []).map(u => ({ key: u.key, label: L(u.label), right: [u.quantity, `× ${u.factor}`], _: u })).sort(byKey)
+    case 'units': return (m.units ?? []).map(u => ({ key: u.key, label: L(u.label), right: [u.quantity, `× ${u.factor}` + (u.offset ? ` ${u.offset < 0 ? '−' : '+'} ${Math.abs(u.offset)}` : '')], _: u })).sort(byKey)
     // rechts nur, was eingeschränkt ist — keine Symbolketten: „→ Medium“, „Produkt → Variante“, „⇄ beidseitig“, Gruppe mit Label
     case 'relationTypes': return (m.relationTypes ?? []).map(r => {
       const names = xs => xs.map(x => x === 'media' ? t('Medium') : roleLabel[x] ?? x).join('/')
@@ -215,9 +217,13 @@ function relSet(col, v) {
     const [side, role] = col.split('_'); const all = side === 'to' ? [...roles, 'media'] : roles; const cur = new Set(r[side] ?? all)
     v ? cur.add(role) : cur.delete(role)
     r[side] = cur.size === all.length ? null : all.filter(x => cur.has(x))
-  } else r[col] = v
+  } else if (col === 'groups') { r.groups = v; r.group = v[0] ?? null }
+  else r[col] = v
   put(`/api/model/relations/${r.key}`, r)
 }
+// Gruppen eines Relationstyps (30.09.2026): die Menge in groups, sonst die eine Gruppe älterer Einträge
+const relGruppen = r => r?.groups ?? (r?.group ? [r.group] : [])
+const relAttribute = r => (model.value?.attributes ?? []).filter(a => relGruppen(r).some(g => inGruppe(a, g)))
 const curLocale = computed(() => model.value?.locales.find(l => l.code === cur.value) ?? null)
 const curChannel = computed(() => model.value?.channels.find(c => c.key === cur.value) ?? null)
 const curStatus = computed(() => (model.value?.statuses ?? []).find(s => s.key === cur.value) ?? null)
@@ -343,21 +349,27 @@ async function removeCur() {
 
 // ---- Anlegen je Abschnitt
 function add() {
-  const k = newKey.value.trim(); if (!k) return
-  newKey.value = ''
+  const eingabe = newKey.value.trim(); if (!eingabe) return
   const s = section.value
-  if (s === 'groups') put(`/api/model/groups/${k}`, { key: k, label: {}, activeFrom: null })
-  else if (s === 'attributes') put(`/api/model/attributes/${k}`, { key: k, label: {}, type: 'text' })
-  else if (s === 'lists') put(`/api/model/lists/${k}`, { key: k, label: {} })
-  else if (s === 'views') put(`/api/model/views/${k}`, { key: k, label: {}, level: 'product', items: [] })
+  // Einheit (Symbol) und Sprache (Code) sind der Schlüssel selbst; bei allem anderen darf ein Name stehen: „Zutat“ wird
+  // der Schlüssel zutat mit dem Namen als Bezeichnung (30.09.2026)
+  const eigen = s === 'units' || s === 'locales'
+  const k = eigen || istSchluessel(eingabe) ? eingabe : schluessel(eingabe)
+  if (!k) { store.toast(t('Aus „{0}“ lässt sich kein Schlüssel bilden', [eingabe])); return }
+  newKey.value = ''
+  const label = k === eingabe ? {} : { [model.value?.masterLocale ?? 'de']: eingabe }
+  if (s === 'groups') put(`/api/model/groups/${k}`, { key: k, label, activeFrom: null })
+  else if (s === 'attributes') put(`/api/model/attributes/${k}`, { key: k, label, type: 'text' })
+  else if (s === 'lists') put(`/api/model/lists/${k}`, { key: k, label })
+  else if (s === 'views') put(`/api/model/views/${k}`, { key: k, label, level: 'product', items: [] })
   else if (s === 'units') put(`/api/model/units/${encodeURIComponent(k)}`, { key: k, label: {}, quantity: 'other', factor: 1 })
-  else if (s === 'relationTypes') put(`/api/model/relations/${k}`, { key: k, label: {}, reverse: {} })
+  else if (s === 'relationTypes') put(`/api/model/relations/${k}`, { key: k, label, reverse: {} })
   else if (s === 'locales') put(`/api/model/locales/${k}`, { code: k, label: '' })
-  else if (s === 'channels') put(`/api/model/channels/${k}`, { key: k, label: {} })
-  else if (s === 'statuses') put(`/api/model/statuses/${k}`, { key: k, label: {}, color: 'muted', icon: '●', order: ((model.value.statuses ?? []).reduce((m, s) => Math.max(m, s.order ?? 0), 0) + 10) })
+  else if (s === 'channels') put(`/api/model/channels/${k}`, { key: k, label })
+  else if (s === 'statuses') put(`/api/model/statuses/${k}`, { key: k, label, color: 'muted', icon: '●', order: ((model.value.statuses ?? []).reduce((m, s) => Math.max(m, s.order ?? 0), 0) + 10) })
   cur.value = k; sel.value = new Set([k])
 }
-const addPlaceholder = { relationTypes: t('neuer Relationstyp (key)'), groups: t('neue Gruppe (key)'), attributes: t('neuer key (a-z, 0-9, _)'), lists: t('neue Werteliste (key)'), views: t('neue Sicht (key)'), units: 'z. B. oz', locales: 'code, z. B. fr', channels: 'key, z. B. app', statuses: 'key, z. B. review' }
+const addPlaceholder = { relationTypes: t('neuer Relationstyp (Name)'), groups: t('neue Gruppe (Name)'), attributes: t('neues Attribut (Name)'), lists: t('neue Werteliste (Name)'), views: t('neue Sicht (Name)'), units: 'z. B. oz', locales: 'code, z. B. fr', channels: 'key, z. B. app', statuses: 'key, z. B. review' }
 
 // Pflicht je Kanal × Sprache: required[channel] = ['*'] oder Sprachcodes; * schliesst die Einzelnen ein
 const reqHas = (ch, l) => { const r = curAttr.value?.required?.[ch] ?? []; return l === '*' ? r.includes('*') : r.includes('*') || r.includes(l) }
@@ -456,7 +468,8 @@ function onDrop(target) {
 function unitSet(col, v) {
   const u = { ...curUnit.value, label: { ...(curUnit.value.label || {}) } }
   if (col.startsWith('label_')) u.label[col.slice(6)] = v
-  else if (col === 'factor') u.factor = parseFloat(v.replace(',', '.')) || 1
+  else if (col === 'factor') u.factor = zahlOderBruch(v) || 1
+  else if (col === 'offset') u.offset = zahlOderBruch(v) ?? 0
   else u[col] = v
   put(`/api/model/units/${encodeURIComponent(u.key)}`, u)
 }
@@ -555,7 +568,7 @@ const attrLabel = k => L(model.value.attributes.find(a => a.key === k)?.label) |
           <tr><td class="attr" :title="$t('ab welchem Knotentyp Werte erfasst werden; leer = überall. Darüber sichtbar, aber gesperrt.')">{{ $t("🔒 aktiv ab") }}</td><SelectCell :value="curGroup.activeFrom ?? ''" :options="roles" :label-of="k => roleLabel[k]" @save="v => groupSet('activeFrom', v)" /></tr>
         </tbody></table>
         <div class="section">
-          <h2>{{ $t("⊞ Attribute: {0}", [groupAttrs.length]) + ' ' }}<span class="grow" /><button class="x" :disabled="busy" @click="removeGroupDeep" :title="$t('Gruppe und ihre {0} Attribute zurückziehen — Werte bleiben im Journal, ★-Attribute und das Kennungsattribut bleiben', [groupAttrs.length])">{{ $t("✕ Gruppe mit {0} Attributen", [groupAttrs.length]) }}</button></h2>
+          <h2>{{ $t("⊞ Attribute: {0}", [groupAttrs.length]) + ' ' }}<span class="grow" /><button class="x" :disabled="busy" @click="removeGroupDeep()":title="$t('Gruppe und ihre {0} Attribute zurückziehen — Werte bleiben im Journal, ★-Attribute und das Kennungsattribut bleiben', [groupAttrs.length])">{{ $t("✕ Gruppe mit {0} Attributen", [groupAttrs.length]) }}</button></h2>
           <div class="chips">
             <span v-for="a in groupAttrs" :key="a.key" class="chip" :title="`${a.key} · ${a.type}${a.multiple ? ' ≣' : ''}${a.perLocale ? ' 🗣' : ''}`">
               <a href="#" @click.prevent="goto('attributes', a.key)">{{ $L(a.label) || a.key }}</a>
@@ -597,7 +610,7 @@ const attrLabel = k => L(model.value.attributes.find(a => a.key === k)?.label) |
           <tr><td class="attr">{{ $t("Typ") }}</td><SelectCell :value="curAttr.type" :options="TYPES" :label-of="t => `${TYPE_SYM[t]} ${TYPE_LABEL[t] ?? t}`" required @save="v => attrSet('type', v)" /></tr>
           <!-- Gruppen: eine Auswahl, kein Besitz (n:m) — das Attribut gilt überall, wo eine davon am Pfad hängt -->
           <tr><td class="attr" :title="$t('Gruppen in der Pflege — ohne Gruppe gilt das Attribut an keinem Knoten')">{{ $t("▤ Gruppen") }}</td>
-            <td class="chips gruppen">
+            <td><div class="chips gruppen">
               <span v-for="g in gruppenVon(curAttr)" :key="g" class="chip" :class="{ heim: g === curAttr.group }" :title="g === curAttr.group ? $t('{0} · Heimatgruppe: sie steht, wo nur eine Gruppe Platz hat', [g]) : g">
                 <a href="#" @click.prevent="goto('groups', g)">{{ groupLabel(g) }}</a>
                 <button class="raus" @click="herausnehmen(curAttr, g)" :title="$t('aus dieser Gruppe nehmen')">×</button>
@@ -606,8 +619,8 @@ const attrLabel = k => L(model.value.attributes.find(a => a.key === k)?.label) |
                 <option value="">{{ $t("+ Gruppe …") }}</option>
                 <option v-for="g in model.groups.filter(g => !inGruppe(curAttr, g.key))" :key="g.key" :value="g.key">{{ groupLabel(g.key) }}</option>
               </select>
-            </td></tr>
-          <tr v-if="curAttr.type === 'integer' || curAttr.type === 'decimal'"><td class="attr">{{ $t("⚖ Einheit") }}</td><SelectCell :value="curAttr.unit ?? ''" :options="(model.units ?? []).map(u => u.key)" @save="v => attrSet('unit', v || null)" /></tr>
+            </div></td></tr>
+          <tr v-if="curAttr.type === 'integer' || curAttr.type === 'decimal'"><td class="attr">{{ $t("⚖ Einheit") }}</td><SelectCell :value="curAttr.unit ?? ''" :options="(model.units ?? []).map(u => u.key)" :label-of="k => { const u = (model.units ?? []).find(x => x.key === k); return u ? `${k} · ${u.quantity}` : k }" @save="v => attrSet('unit', v || null)" /></tr>
           <tr v-if="curAttr.type === 'enum'"><td class="attr">{{ $t("☰ Werteliste") }}<span v-if="!curAttr.list" class="warn" :title="$t('ohne Werteliste lässt sich kein Wert setzen')"> ●</span></td><SelectCell :value="curAttr.list ?? ''" :options="model.lists.map(l => l.key)" @save="v => attrSet('list', v || null)" /></tr>
           <tr v-if="curAttr.type === 'rows'"><td class="attr" :title="$t('Spalten, jede ein Attribut, kommagetrennt')">{{ $t("≣ Spalten") }}<span v-if="!(curAttr.columns ?? []).length" class="warn" :title="$t('ohne Spalten hat eine Zeile nichts')"> ●</span></td><Cell :value="(curAttr.columns ?? []).join(', ') || null" @save="v => attrSet('columns', v)" /></tr>
           <!-- nur, was zum Typ passt: Muster bei Text; Einheit bei Zahlen; Werteliste bei enum; Spalten bei rows -->
@@ -697,9 +710,19 @@ const attrLabel = k => L(model.value.attributes.find(a => a.key === k)?.label) |
           <tr v-if="!curRel.symmetric"><td class="attr">{{ $t("← umgekehrt en") }}</td><Cell :value="curRel.reverse?.en ?? null" @save="v => relSet('reverse_en', v)" /></tr>
           <tr v-for="r in roles" :key="'f' + r"><td class="attr" :title="$t('darf von {0} ausgehen', [roleLabel[r]])">{{ $t("von {0}", [roleLabel[r]]) }}</td><ToggleCell :value="b(!curRel.from || curRel.from.includes(r))" @save="v => relSet('from_' + r, v === 'true')" /></tr>
           <tr v-for="r in [...roles, 'media']" :key="'t' + r"><td class="attr" :title="$t('darf zu {0} führen', [roleLabel[r] ?? $t('🖼 Medium')])">{{ $t("zu {0}", [roleLabel[r] ?? $t('🖼 Medium')]) }}</td><ToggleCell :value="b(!curRel.to || curRel.to.includes(r))" @save="v => relSet('to_' + r, v === 'true')" /></tr>
-          <tr><td class="attr" :title="$t('Attributgruppe, deren Attribute an der Relation stehen (Menge, Slot …); ohne Gruppe hat die Relation keine Werte')">{{ $t("▤ Werte aus Gruppe") }}</td><SelectCell :value="curRel.group ?? ''" :options="model.groups.map(g => g.key)" :label-of="groupLabel" @save="v => relSet('group', v || null)" /></tr>
+          <tr><td class="attr" :title="$t('Attributgruppen, deren Attribute an der Relation stehen (Menge, Slot …); ohne Gruppe hat die Relation keine Werte')">{{ $t("▤ Werte aus Gruppen") }}</td>
+            <td><div class="chips gruppen">
+              <span v-for="g in relGruppen(curRel)" :key="g" class="chip" :title="g">
+                <a href="#" @click.prevent="goto('groups', g)">{{ groupLabel(g) }}</a>
+                <button class="raus" @click="relSet('groups', relGruppen(curRel).filter(x => x !== g))" :title="$t('aus dieser Gruppe nehmen')">×</button>
+              </span>
+              <select class="zu" :value="''" @change="e => { const g = e.target.value; e.target.value = ''; if (g) relSet('groups', [...relGruppen(curRel), g]) }" :title="$t('Gruppe hinzufügen — ihre Attribute stehen dann an der Relation')">
+                <option value="">{{ $t("+ Gruppe …") }}</option>
+                <option v-for="g in model.groups.filter(g => !relGruppen(curRel).includes(g.key))" :key="g.key" :value="g.key">{{ groupLabel(g.key) }}</option>
+              </select>
+            </div></td></tr>
         </tbody></table>
-        <div class="section muted" style="font-size:12px" v-if="curRel.group">{{ $t("⊞ an der Relation: {0}", [model.attributes.filter(a => inGruppe(a, curRel.group)).map(a => $L(a.label) || a.key).join(', ') || $t('— die Gruppe hat noch keine Attribute')]) }}</div>
+        <div class="section muted" style="font-size:12px" v-if="relGruppen(curRel).length">{{ $t("⊞ an der Relation: {0}", [relAttribute(curRel).map(a => $L(a.label) || a.key).join(', ') || $t('— die Gruppen haben noch keine Attribute')]) }}</div>
       </div>
     </template>
 
@@ -711,7 +734,8 @@ const attrLabel = k => L(model.value.attributes.find(a => a.key === k)?.label) |
           <tr><td class="attr">{{ $t("Name de") }}</td><Cell :value="curUnit.label?.de ?? null" @save="v => unitSet('label_de', v)" /></tr>
           <tr><td class="attr">{{ $t("Name en") }}</td><Cell :value="curUnit.label?.en ?? null" @save="v => unitSet('label_en', v)" /></tr>
           <tr><td class="attr" :title="$t('mass, length, volume, data, count …')">{{ $t("Grösse") }}</td><Cell :value="curUnit.quantity ?? null" @save="v => unitSet('quantity', v)" /></tr>
-          <tr><td class="attr" :title="$t('Faktor zur Basiseinheit der Grösse (Basis = 1)')">{{ $t("× Basis") }}</td><Cell :value="String(curUnit.factor)" @save="v => unitSet('factor', v)" /></tr>
+          <tr><td class="attr" :title="$t('Faktor zur Basiseinheit der Grösse (Basis = 1); ein Bruch wie 5/9 geht auch')">{{ $t("× Basis") }}</td><Cell :value="String(curUnit.factor)" @save="v => unitSet('factor', v)" /></tr>
+          <tr><td class="attr" :title="$t('Verschiebung zur Basiseinheit: Basis = Wert × Faktor + Verschiebung (°F: Faktor 5/9, Verschiebung −160/9 zu °C); leer = keine')">{{ $t("+ Verschiebung") }}</td><Cell :value="curUnit.offset ? String(curUnit.offset) : null" @save="v => unitSet('offset', v)" /></tr>
         </tbody></table>
       </div>
     </template>

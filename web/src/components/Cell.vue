@@ -112,7 +112,7 @@ function onEditKey(e) {
 </script>
 
 <template>
-  <td class="cell">
+  <td class="cell" :class="{ 'mit-einheit': !!$slots.unit && !disabled }">
     <div v-if="!editing" ref="box" class="cell-box" :class="{ inherited: !disabled && value == null && inherited != null, disabled }"
       :tabindex="disabled ? undefined : 0" @click="clickEdit && open('end')" @dblclick="clickEdit || open('end')" @keydown="onKey" :title="disabled ? $t('Achse gibt es hier nicht') : (value == null && inherited != null ? 'geerbt' + (origin ? ' von ' + origin : '') + ' ' + $t('— Enter überschreibt') : '')">
       <template v-if="disabled"></template>
@@ -124,6 +124,8 @@ function onEditKey(e) {
     </div>
     <!-- Das Eingabefeld ersetzt die Box mit denselben Massen — nicht darin, sonst doppelter Rahmen und unten abgeschnitten. -->
     <input v-else ref="input" v-model="draft" class="cell-input" :data-mode="openMode" @keydown="onEditKey" @input="onInput" @blur="commit" />
+    <!-- Einheit umschalten (units.js): rechts in der Zelle, sichtbar auch beim Bearbeiten -->
+    <span v-if="$slots.unit && !disabled" class="unit-slot" @mousedown.stop><slot name="unit" /></span>
     <Teleport to="body">
       <div v-if="big" class="overlay">
         <div class="big">
@@ -138,6 +140,11 @@ function onEditKey(e) {
 
 <style scoped>
 .cell-box { position: relative; }
+.cell.mit-einheit { position: relative; }
+/* rechts ein freier Streifen für die Auswahl: das Feld endet davor, die Auswahl liegt neben ihm und nicht darüber */
+.cell.mit-einheit .cell-box { margin-right: 58px; }
+.cell.mit-einheit .cell-input { width: calc(100% - 58px); }
+.unit-slot { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); display: flex; }
 .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.4); display: grid; place-items: center; z-index: 20; }
 .big { width: min(720px, 90vw); background: var(--pane); border: 1px solid var(--line); border-radius: 6px; display: flex; flex-direction: column; overflow: hidden; }
 .big textarea { min-height: 260px; resize: vertical; border: 0; background: var(--cell); color: var(--text); font: inherit; padding: 10px; outline: none; }

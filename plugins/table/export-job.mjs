@@ -3,12 +3,16 @@
 // Parameter fuehrte — die Umkehrung des Modells (25.09.2026). Derselbe Aufbau wie die Ansicht (core.mjs).
 //
 // Argumente (wie gehabt auch als JOURNALI_*): <journali> <actor> <root> <dir> <name> <locales> <role> <view>
-// <ownOnly> <keep> <pub>. name ist die Vorlage fuer den Dateinamen, leer = <wurzel>-<id>-<zeit>.
+// <ownOnly> <relations> <keep> <pub>. name ist die Vorlage fuer den Dateinamen, leer = <wurzel>-<id>-<zeit>.
 // pub: Publikationsbaum statt Teilbaum — exportiert wird die Ausleitung (GET /api/pub/{id}/export), je Zeile der
 // Rubrikpfad; was zurueckgehalten wird, steht mit Grund im Protokoll.
 
+import fs from 'node:fs'
+import path from 'node:path'
+import { build, toCsv, workbook, relationenTabelle } from './core.mjs'
+
 export async function lauf(format) {
-  const [,, serverArg, actorArg, rootArg, dirArg, nameArg, locArg, roleArg, viewArg, ownArg, keepArg, pubArg] = process.argv
+  const [,, serverArg, actorArg, rootArg, dirArg, nameArg, locArg, roleArg, viewArg, ownArg, relArg, keepArg, pubArg] = process.argv
   const E = process.env
   const server = (serverArg || E.JOURNALI_JOURNALI || 'http://localhost:5000').replace(/\/+$/, '')
   const actor = actorArg || E.JOURNALI_ACTOR || 'job:' + format
@@ -18,6 +22,7 @@ export async function lauf(format) {
   const role = roleArg || E.JOURNALI_ROLE || ''
   const viewKey = viewArg || E.JOURNALI_VIEW || ''
   const ownOnly = (ownArg || E.JOURNALI_OWNONLY || 'false') === 'true'
+  const relations = format === 'excel' && (relArg || E.JOURNALI_RELATIONS || 'false') === 'true'   // nur Excel hat ein zweites Blatt
   const keep = Math.max(1, parseInt(keepArg || E.JOURNALI_KEEP || '14', 10) || 14)
   const pub = pubArg || E.JOURNALI_PUB || ''
   const nameVorlage = (nameArg || E.JOURNALI_NAME || '').trim()
@@ -56,7 +61,7 @@ export async function lauf(format) {
       if (!roots.length) throw new Error(`kein Knoten ${root || '(Wurzel)'}`)
     }
     for (const r of roots) {
-      const t = await build({ api, model }, { root: r.id, role, locales: locs, ownOnly, viewKey, channel, only, at, extra: pathOf ? [{ key: 'rubric', of: id => (pathOf.get(id) ?? []).join(' | ') }] : [], say: m => console.log(m) })
+      const t = await build({ api, model }, { root: r.id, role, locales: locs, ownOnly, viewKey, channel, only, at, relations, extra: pathOf ? [{ key: 'rubric', of: id => (pathOf.get(id) ?? []).join(' | ') }] : [], say: m => console.log(m) })
       if (only && !t.count) { console.log(`${r.label}: nichts in der Ausleitung`); continue }
       const safe = String(r.file ?? r.label ?? r.id).replace(/[^\w.-]+/g, '_').slice(0, 40)
       const endung = format === 'csv' ? 'csv' : 'xlsx'
@@ -66,7 +71,7 @@ export async function lauf(format) {
         : `${jobKey}${safe}-${r.id}-${stamp}`
       const file = path.join(dir, /\.\w+$/.test(aus) ? aus : `${aus}.${endung}`)
       if (format === 'csv') fs.writeFileSync(file, toCsv(t), 'utf8')
-      else fs.writeFileSync(file, Buffer.from(X.write(workbook(X, t), { type: 'array', bookType: 'xlsx' })))
+      else fs.writeFileSync(file, Buffer.from(X.write(workbook(X, t, null, 'Daten', relationenTabelle([t])), { type: 'array', bookType: 'xlsx' })))
       console.log(`${file}: ${t.count} Zeilen, ${t.columns.length} Spalten, ${(fs.statSync(file).size / 1024).toFixed(0)} KB`)
       const old = fs.readdirSync(dir).filter(f => f.startsWith(jobKey) && f.includes(`-${r.id}-`) && /\.(xlsx|csv)$/.test(f)).sort()
       for (const f of old.slice(0, Math.max(0, old.length - keep))) { fs.unlinkSync(path.join(dir, f)); console.log(`alt entfernt: ${f}`) }

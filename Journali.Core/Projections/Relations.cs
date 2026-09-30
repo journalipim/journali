@@ -17,6 +17,7 @@ public sealed class Relation
     public Dictionary<Axis, string> Values { get; } = new();
     public Dictionary<Axis, string[]> Lists { get; } = new();
     public Dictionary<Axis, long> SetAt { get; } = new();
+    public Dictionary<Axis, string> Units { get; } = new();   // Einheit, in der ein Zahlenwert eingegeben wurde (AttributeSet.Unit)
     public Dictionary<string, string> External { get; } = new();
     public long LastNumber { get; set; }
     public DateTimeOffset LastAt { get; set; }
@@ -88,6 +89,7 @@ public sealed class Relations : IProjection
                     else if (string.IsNullOrEmpty(a.Value)) r.Values.Remove(axis);
                     else r.Values[axis] = a.Value;
                     if (r.Values.ContainsKey(axis) || r.Lists.ContainsKey(axis)) r.SetAt[axis] = entry.Number; else r.SetAt.Remove(axis);
+                    if (r.Values.ContainsKey(axis) && !string.IsNullOrEmpty(a.Unit)) r.Units[axis] = a.Unit; else r.Units.Remove(axis);
                     break;
                 case Types.ExternalLinked:
                     var el = Types.Deserialize<ExternalLinked>(entry.Payload);

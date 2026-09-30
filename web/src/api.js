@@ -106,7 +106,7 @@ export function describe(e) {
     case 'ListDefined': return `${p.key}: ${L(p.label) ?? ''}`
     case 'ListValueDefined': return `+ ${p.value}${L(p.label) ? ' = ' + L(p.label) : ''}`
     case 'ListValueRetired': return `− ${p.value}`
-    case 'UnitDefined': return `⚖ ${p.key} = ${p.factor} ${p.quantity}`
+    case 'UnitDefined': return `⚖ ${p.key} = ${p.factor}${p.offset ? (p.offset < 0 ? ' − ' : ' + ') + Math.abs(p.offset) : ''} ${p.quantity}`
     case 'ViewDefined': return `◫ ${p.key}${p.level ? ' (' + p.level + ')' : ''}: ${(p.items || []).map(it => it.group ? '▤' + it.group : it.key).join(', ')}`
     case 'AttributeGroupDefined': return `▤ ${p.key}: ${(p.order || []).join(', ')}`
     case 'AttributeGroupRetired': return `− ▤ ${p.key}`

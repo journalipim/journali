@@ -374,7 +374,22 @@ public static class Commands
         return Outcome.Ok(c.Write(id, Types.ValueSourced, new ValueSourced(attribute, Blank(locale), Blank(channel), Blank(row), Blank(source), Blank(title), Blank(note), method, Blank(checkedAt))));
     }
 
-    public static Outcome SetAttribute(Ctx c, string id, string? attribute, string? locale, string? channel, string? value, string[]? values, string? row = null)
+    /// <summary>
+    /// Die Eingabeeinheit eines Zahlenwerts prüfen (30.09.2026): sie muss eine Einheit derselben Grösse sein wie die des
+    /// Attributs. <c>einheit</c> ist null, wenn es keine Angabe braucht (keine, oder die des Attributs).
+    /// </summary>
+    private static Outcome? PruefeEinheit(Ctx c, AttributeDefinition def, string? unit, string? value, out string? einheit)
+    {
+        einheit = null; unit = Blank(unit);
+        if (unit is null || string.IsNullOrEmpty(value) || unit == def.Unit) return null;
+        if (def.Type is not (AttributeTypes.Integer or AttributeTypes.Decimal) || def.Unit is null) return Outcome.Bad("Einheit {0}: {1} ist kein Zahlenattribut mit Einheit.", unit, def.Key);
+        if (!c.Model.Units.TryGetValue(unit, out var u) || !c.Model.Units.TryGetValue(def.Unit, out var basis) || u.Quantity != basis.Quantity)
+            return Outcome.Bad("Einheit {0} gehört nicht zur Grösse von {1}.", unit, def.Key);
+        einheit = unit;
+        return null;
+    }
+
+    public static Outcome SetAttribute(Ctx c, string id, string? attribute, string? locale, string? channel, string? value, string[]? values, string? row = null, string? unit = null)
     {
         if (!c.Tree.Nodes.TryGetValue(id, out var n)) return Outcome.Missing;
         if (string.IsNullOrWhiteSpace(attribute)) return Outcome.Bad("attribute fehlt.");
@@ -382,7 +397,7 @@ public static class Commands
         if (def.Type == AttributeTypes.Rows) return Outcome.Bad("{0} ist vermehrbar — Zeilen über RowAdded, Zellen mit row.", def.Key);
         row = Blank(row);
         // Gilt das Attribut hier? Über eine Gruppe am Pfad, die an dieser Rolle aktiv ist (oder als Zelle einer Zeile).
-        if (row is null && !CompletenessRules.ActiveAttributes(c.Tree, c.Model, n).Any(a => a.Key == def.Key))
+        if (row is null && !CompletenessRules.ActiveAttributes(c.Tree, c.Model, n).Any(a => a.Key == def.Key) && !IstFormelSpalte(c, n, def))
             return Outcome.Bad(WhyNotActive(c, n, def));
         if (row is not null)
         {
@@ -408,7 +423,8 @@ public static class Commands
         // Eindeutig (Merkmal unique): kein zweiter Knoten mit demselben eigenen Wert auf dem Stern
         if (def.Unique && value is not null && locale is null && channel is null && row is null && c.Tree.WithOwnValue(def.Key, value).FirstOrDefault(o => o.Id != n.Id) is { } other)
             return Outcome.Bad("{0} {1} gibt es schon: {2} ({3}).", def.Label.GetValueOrDefault("de") ?? def.Key, value, NodeRow.LabelOf(c.Tree, c.Model, other), other.Id);
-        return Outcome.Ok(c.Write(id, Types.AttributeSet, new AttributeSet(def.Key, locale, channel, value, values, row)));
+        if (PruefeEinheit(c, def, unit, value, out var einheit) is { } nein) return nein;
+        return Outcome.Ok(c.Write(id, Types.AttributeSet, new AttributeSet(def.Key, locale, channel, value, values, row, einheit)));
     }
 
     /// <summary>
@@ -422,7 +438,7 @@ public static class Commands
         if (!c.Model.Attributes.TryGetValue(attribute, out var def)) return Outcome.Bad("Unbekanntes Attribut: {0}", attribute);
         if (def.Type == AttributeTypes.Rows) return Outcome.Bad("{0} ist vermehrbar — Zeilen über RowAdded, Zellen mit row.", def.Key);
         row = Blank(row);
-        if (row is null && !CompletenessRules.ActiveAttributes(c.Tree, c.Model, n).Any(a => a.Key == def.Key))
+        if (row is null && !CompletenessRules.ActiveAttributes(c.Tree, c.Model, n).Any(a => a.Key == def.Key) && !IstFormelSpalte(c, n, def))
             return Outcome.Bad(WhyNotActive(c, n, def));
         if (row is not null)
         {
@@ -437,6 +453,13 @@ public static class Commands
         if (channel is not null && !c.Model.Channels.ContainsKey(channel)) return Outcome.Bad("Unbekannter Kanal: {0}", channel);
         return Outcome.Ok(c.Write(id, Types.AttributeCleared, new AttributeCleared(def.Key, locale, channel, row)));
     }
+
+    /// <summary>
+    /// Ist das eine berechnete Spalte eines vermehrbaren Attributs, das hier gilt (30.09.2026)? Ihr Skript steht als Wert der
+    /// Spalte am Knoten und braucht dafür keine Gruppe der Spalte selbst.
+    /// </summary>
+    private static bool IstFormelSpalte(Ctx c, Node n, AttributeDefinition def) =>
+        def.IsComputed && CompletenessRules.ActiveAttributes(c.Tree, c.Model, n).Any(a => a.Type == AttributeTypes.Rows && (a.Columns?.Contains(def.Key) ?? false));
 
     /// <summary>Warum ein Attribut an diesem Knoten nicht erfassbar ist — für die Fehlermeldung.</summary>
     private static string WhyNotActive(Ctx c, Node n, AttributeDefinition def)
@@ -641,20 +664,22 @@ public static class Commands
         c.Relations.All.ContainsKey(id) ? Outcome.Ok(c.Write(id, Types.RelationRetired, new RelationRetired())) : Outcome.Missing;
 
     /// <summary>Wert an der Relation: nur Attribute der Gruppe des Relationstyps; Achsen und Wert wie am Knoten.</summary>
-    public static Outcome SetRelationAttribute(Ctx c, string id, string? attribute, string? locale, string? channel, string? value, string[]? values)
+    public static Outcome SetRelationAttribute(Ctx c, string id, string? attribute, string? locale, string? channel, string? value, string[]? values, string? unit = null)
     {
         if (!c.Relations.All.TryGetValue(id, out var r)) return Outcome.Missing;
         if (!c.Model.Attributes.TryGetValue(attribute ?? "", out var def)) return Outcome.Bad("Unbekanntes Attribut: {0}", attribute);
         var type = c.Model.RelationTypes.GetValueOrDefault(r.Type);
-        if (type?.Group is null) return Outcome.Bad("Relationstyp {0} hat keine Attributgruppe — im Modell zuordnen.", r.Type);
-        if (def.Group != type.Group) return Outcome.Bad("{0} gehört nicht zur Gruppe {1} des Relationstyps.", def.Key, type.Group);
+        var gruppen = type?.AllGroups() ?? [];
+        if (gruppen.Length == 0) return Outcome.Bad("Relationstyp {0} hat keine Attributgruppe — im Modell zuordnen.", r.Type);
+        if (!c.Model.GroupsOf(def.Key).Intersect(gruppen).Any()) return Outcome.Bad("{0} gehört zu keiner Gruppe des Relationstyps ({1}).", def.Key, string.Join(", ", gruppen));
         if (def.Type == AttributeTypes.Rows) return Outcome.Bad("Vermehrbare Attribute gibt es an Relationen nicht.");
         locale = Blank(locale); channel = Blank(channel);
         if ((locale is not null && !def.PerLocale) || (channel is not null && !def.PerChannel)) return Outcome.Bad("{0} hat diese Achse nicht.", def.Key);
         if (locale is not null && !c.Model.Locales.ContainsKey(locale)) return Outcome.Bad("Unbekannte Sprache: {0}", locale);
         if (channel is not null && !c.Model.Channels.ContainsKey(channel)) return Outcome.Bad("Unbekannter Kanal: {0}", channel);
         if (CheckValue(c.Model, def, ref value, ref values) is { } error) return Outcome.Bad(error);
-        return Outcome.Ok(c.Write(id, Types.AttributeSet, new AttributeSet(def.Key, locale, channel, value, values)));
+        if (PruefeEinheit(c, def, unit, value, out var einheit) is { } nein) return nein;
+        return Outcome.Ok(c.Write(id, Types.AttributeSet, new AttributeSet(def.Key, locale, channel, value, values, null, einheit)));
     }
 
     public static Outcome LinkRelationExternal(Ctx c, string id, string? system, string? externalId)

@@ -4,10 +4,11 @@
 // richtet nach, der Plan sagt, was passiert, der Stapel schreibt. Profile (Zuordnung, Ziel, Rolle) im Journal.
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { api, store, tree, icon, plugins, mapper, transform, recentFiles, Splitter, ImportHead, TreePicker, paneWidth } from 'journali'
+import { api, store, tree, icon, plugins, mapper, relationen, transform, recentFiles, Splitter, ImportHead, TreePicker, paneWidth } from 'journali'
 import { t as t_ } from 'journali'
 import { L } from 'journali'
 const { suggest, plan: makePlan, parseDelimited, childAttributes, childRoleOf } = mapper
+const { trenne, bestandLaden, planRelationen } = relationen
 const leftW = paneWidth('import.table', 720)
 // Die Kachel sagt, womit begonnen wird: `nur` sind die Endungen im Dateidialog (CSV-Import, Excel-Import),
 // `paste` heisst Zwischenablage — dann steht das Einfügefeld offen und die Dateizeile bleibt weg.
@@ -112,7 +113,8 @@ function applyProfile() {
   setTimeout(() => window.dispatchEvent(new CustomEvent('journali:profile-applied')), 0)
 }
 function setSource(t) {
-  if (t.sheets && !t.columns) { t.sheet = t.sheets[0]?.name; const s = t.sheets[0]; t.columns = s?.columns ?? []; t.rows = s?.rows ?? [] }
+  // das Blatt Relationen ist kein Blatt zum Zuordnen: es wird mit dem Plan der Knoten gerechnet
+  if (t.sheets && !t.columns) { const { blaetter, relationen: rb } = trenne(t); if (rb && blaetter.length) { t.sheets = blaetter; t.relationenBlatt = rb } t.sheet = t.sheets[0]?.name; const s = t.sheets[0]; t.columns = s?.columns ?? []; t.rows = s?.rows ?? [] }
   source.value = t
   mapping.value = strictify(suggest(t.columns, t.rows, model.value, { external: external.value || null }))
   applyProfile()
@@ -248,6 +250,15 @@ async function analyse() {
       if (pid === '#root') for (const id of ids) { const t2 = await api.get(`/api/nodes/${encodeURIComponent(id)}/table?self=true&attributes=${encodeURIComponent(keys.join(','))}${loc ? '&locale=' + loc : ''}`); for (const r of t2.rows) { if (r.row.id !== id) continue; const cur = existing.get(id) ?? {}; for (const [k, v] of Object.entries(r.values)) if (v.value != null) { cur[`${k}|${loc}`] = v.value; cur[`${k}|${loc}#own`] = v.own }; existing.set(id, cur) } }
     }
     planned.value = makePlan({ columns: source.value.columns, rows: source.value.rows, mapping: mapping.value.map(m => ({ ...m })), model: model.value, tree, target: target.value, role: role.value || null, existing, external: external.value || null })
+    if (source.value.relationenBlatt) {
+      const blatt = source.value.relationenBlatt
+      busy.value = t_('vergleiche Relationen mit dem Bestand …')
+      const bestand = await bestandLaden(api, blatt, planned.value.ids, tree)
+      const rp = planRelationen({ blatt, model: model.value, tree, ids: planned.value.ids, bestand })
+      planned.value.commands = [...planned.value.commands, ...rp.commands]
+      planned.value.stats.relations = { create: rp.stats.create, update: rp.stats.update, unchanged: rp.stats.unchanged }
+      planned.value.stats.problems = [...planned.value.stats.problems, ...rp.stats.problems, ...rp.stats.invalid.map(x => t_('Relationen, Zeile {0}: {1} {2}', [x.row + 2, x.key, x.message]))]
+    }
     const s = planned.value.stats
     const nlv = Object.entries(s.newListValues ?? {}).map(([l, v]) => `${l}: ${Object.values(v).join(', ')}`)
     say(t_('Plan: {0} neu, {1} geändert, {2} unverändert, {3} Werte, {4} neue Attribute{5}{6}', [s.create, s.update, s.unchanged, s.values, planned.value.newAttributes.length, nlv.length ? t_(', neue Listenwerte — {0}', [nlv.join('; ')]) : '', s.problems.length ? t_(', {0} Probleme', [s.problems.length]) : '']))
@@ -277,6 +288,9 @@ async function run() {
     planned.value = null
   } catch (e) { store.toast(e.message); say('✗ ' + e.message) } finally { busy.value = '' }
 }
+
+// für den Prüfstand (ui-import-relationen.test.mjs)
+defineExpose({ source, planned, setSource, pickTarget, analyse, run })
 
 // ---- Profil: Zuordnung (je Spaltenname), Ziel, Rolle, Kennung
 const profileGet = () => ({ target: target.value?.id ?? null, role: role.value, external: external.value, mapping: Object.fromEntries(mapping.value.map(m => [m.column, { target: m.target, attribute: m.attribute, locale: m.locale, newKey: m.newKey, newType: m.newType, newGroup: m.newGroup, steps: m.steps?.length ? m.steps : undefined }])) })
@@ -446,6 +460,7 @@ onMounted(async () => {
     <div class="scroll" style="padding:8px">
       <div v-if="planned" class="stats">
         <span class="muted">{{ $t("{0} Werte · {1} Befehle", [planned.stats.values, planned.commands.length]) }}</span><template v-if="Object.keys(planned.stats.newListValues ?? {}).length"> · <span class="pos" :title="Object.entries(planned.stats.newListValues).map(([l, v]) => l + ': ' + Object.values(v).join(', ')).join(' · ')">{{ $t("+{0} Listenwerte", [Object.values(planned.stats.newListValues).reduce((n, v) => n + Object.keys(v).length, 0)]) }}</span></template>
+        <span v-if="planned.stats.relations" :title="$t('Relationen aus dem Blatt Relationen')"> · {{ $t("{0} Relationen neu · {1} geändert · {2} unverändert", [planned.stats.relations.create, planned.stats.relations.update, planned.stats.relations.unchanged]) }}</span>
         <span v-if="planned.newAttributes.length"> · <span class="warn">{{ $t("{0} neue Attribute:", [planned.newAttributes.length]) }}</span> {{ planned.newAttributes.map(a => a.key + ' (' + a.type + ')').join(', ') }}</span>
         <div v-if="planned.stats.notes?.length" class="muted" style="margin-top:6px;white-space:pre-wrap;font-size:12px">ℹ {{ planned.stats.notes.slice(0, 30).join('\nℹ ') }}</div>
         <div v-if="planned.stats.problems.length" class="neg" style="margin-top:6px;white-space:pre-wrap">{{ planned.stats.problems.slice(0, 30).join('\n') }}<span v-if="planned.stats.problems.length > 30"> … +{{ planned.stats.problems.length - 30 }}</span></div>

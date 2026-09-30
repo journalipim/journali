@@ -1,4 +1,4 @@
-(function(){const s=document.createElement('style');s.textContent="\n/* Zuordnung als Zeilen: feste Mindestbreite, im schmalen Fenster nach rechts scrollen statt Felder quetschen */\n.section[data-v-5f3f3ee1] { overflow-x: auto;\n}\ntable.map[data-v-5f3f3ee1] { min-width: 960px;\n}\n/* Zuordnung als Spalten (wie Excel): erste Spalte klebt, jede Dateispalte 200 px */\n.colsWrap[data-v-5f3f3ee1] { overflow-x: auto;\n}\ntable.cols[data-v-5f3f3ee1] { border-collapse: separate; border-spacing: 0;\n}\ntable.cols th.stick[data-v-5f3f3ee1] { position: sticky; left: 0; background: var(--pane); z-index: 1; width: 70px; min-width: 70px; border-right: 1px solid var(--line); box-shadow: 4px 0 6px -4px rgba(0,0,0,.5); text-align: left; color: var(--muted); font-weight: 600; font-size: 11px; vertical-align: top;\n}\ntable.cols td[data-v-5f3f3ee1] { min-width: 200px; max-width: 200px; vertical-align: top; overflow: hidden; text-overflow: ellipsis;\n}\ntable.cols td.off[data-v-5f3f3ee1] { opacity: .5;\n}\ntable.cols tr.sample td[data-v-5f3f3ee1] { white-space: nowrap; font-size: 12px;\n}\n.layout button[data-v-5f3f3ee1] { border: 1px solid var(--line); background: none; color: var(--muted); padding: 1px 8px; font-size: 11px; font-weight: 400;\n}\n.layout button.on[data-v-5f3f3ee1] { background: var(--accent-soft); color: var(--text); border-color: var(--accent);\n}\n/* Umwandlung je Spalte (ƒ): Kette unter der Zeile */\n.steps-row td[data-v-5f3f3ee1] { background: var(--bg); padding: 4px 8px 6px 30px;\n}\n.tsteps[data-v-5f3f3ee1] { display: flex; flex-direction: column; gap: 3px;\n}\n.tstep[data-v-5f3f3ee1] { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 12px;\n}\n.tstep select[data-v-5f3f3ee1], .tstep input[type=text][data-v-5f3f3ee1] { font-size: 12px;\n}\n.fld[data-v-5f3f3ee1] { display: inline-flex; gap: 4px; align-items: center; font-size: 11px;\n}\n/* Vorschau: Reiter neu / geändert / unverändert; Werte alt → neu */\n/* Reiter, die wie Reiter aussehen */\n.tabs[data-v-5f3f3ee1] { display: inline-flex; gap: 0; margin-left: 8px;\n}\n.tabs button[data-v-5f3f3ee1] { border: 1px solid var(--line); background: var(--bg); padding: 2px 12px; font-size: 12px; font-weight: 600; cursor: pointer; border-radius: 0;\n}\n.tabs button[data-v-5f3f3ee1]:first-child { border-radius: 6px 0 0 6px;\n}\n.tabs button[data-v-5f3f3ee1]:last-child { border-radius: 0 6px 6px 0;\n}\n.tabs button[data-v-5f3f3ee1]:hover { background: var(--hover);\n}\n.tabs button.on[data-v-5f3f3ee1] { background: var(--accent); color: #fff !important; border-color: var(--accent);\n}\ntable.diff td[data-v-5f3f3ee1] { font-size: 12px; white-space: normal;\n}\ntable.diff td.old[data-v-5f3f3ee1] { color: var(--muted); text-decoration: line-through; max-width: 300px;\n}\ntable.diff td.new[data-v-5f3f3ee1] { color: var(--pos); max-width: 300px;\n}      /* neuer Wert (vorher keiner) */\ntable.diff td.chg[data-v-5f3f3ee1] { color: var(--warn); max-width: 300px;\n}      /* geänderter Wert */\n/* ƒ leuchtet, wenn eine Umwandlung hinterlegt ist */\n.x.on[data-v-5f3f3ee1] { background: var(--accent); color: #fff; font-weight: 700; border-radius: 4px; padding: 0 6px;\n}\n.section[data-v-5f3f3ee1] { padding: 8px; border-bottom: 1px solid var(--line);\n}\n.section h2[data-v-5f3f3ee1] { font-size: 12px; margin: 0 0 6px; font-weight: 600;\n}\n.section h2 .muted[data-v-5f3f3ee1] { font-weight: 400;\n}\n.drop.over[data-v-5f3f3ee1] { outline: 2px dashed var(--accent); outline-offset: -2px;\n}\n/* ohne Datei ein grosser Ablagebereich */\n.drop.empty[data-v-5f3f3ee1] { min-height: 84px; border: 2px dashed var(--line); border-radius: 6px; margin: 4px 0; flex-wrap: wrap;\n}\n.recent[data-v-5f3f3ee1] { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; white-space: normal;\n}\n.recent .chip[data-v-5f3f3ee1] { cursor: pointer;\n}\n.recent .chip.dim[data-v-5f3f3ee1] { opacity: .55; cursor: default;\n}\n.btn[data-v-5f3f3ee1] { display: inline-block; padding: 2px 10px; border-radius: 6px; cursor: pointer;\n}\n.map td[data-v-5f3f3ee1] { vertical-align: top; padding: 3px 4px;\n}\n.map tr.off td[data-v-5f3f3ee1] { opacity: .5;\n}\n.samples[data-v-5f3f3ee1] { font-size: 11px; white-space: normal; max-width: 260px;\n}\n.stats[data-v-5f3f3ee1] { font-size: 13px;\n}\n.out[data-v-5f3f3ee1] { font-size: 11px; max-height: 400px; overflow: auto; background: var(--bg); padding: 6px; border-radius: 6px;\n}\n.picker[data-v-5f3f3ee1] { max-height: 240px; overflow: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--pane); margin-top: 4px;\n}\n.pick[data-v-5f3f3ee1] { display: flex; align-items: center; gap: 8px; height: 24px; padding: 0 8px; white-space: nowrap; cursor: pointer;\n}\n.pick[data-v-5f3f3ee1]:hover { background: var(--hover);\n}\n\n.form[data-v-819aa7a3] { width: 100%; border-bottom: 1px solid var(--line);\n}\n.form td[data-v-819aa7a3] { height: 30px; vertical-align: middle; white-space: normal; padding: 2px 4px;\n}\n.form td.attr[data-v-819aa7a3] { color: var(--muted); white-space: nowrap; padding-left: 8px;\n}\n.row[data-v-819aa7a3] { display: flex; gap: 6px; align-items: center;\n}\n.row > input[data-v-819aa7a3] { flex: 1; min-width: 0;\n}\n.tab[data-v-819aa7a3] { padding: 2px 10px; border-radius: 4px; color: var(--muted); text-decoration: none; font-size: 13px;\n}\n.tab.on[data-v-819aa7a3], .tab.router-link-active[data-v-819aa7a3] { background: var(--accent-soft); color: var(--text);\n}\n";document.head.append(s)})();
+(function(){const s=document.createElement('style');s.textContent="\n/* Zuordnung als Zeilen: feste Mindestbreite, im schmalen Fenster nach rechts scrollen statt Felder quetschen */\n.section[data-v-3ccb924d] { overflow-x: auto;\n}\ntable.map[data-v-3ccb924d] { min-width: 960px;\n}\n/* Zuordnung als Spalten (wie Excel): erste Spalte klebt, jede Dateispalte 200 px */\n.colsWrap[data-v-3ccb924d] { overflow-x: auto;\n}\ntable.cols[data-v-3ccb924d] { border-collapse: separate; border-spacing: 0;\n}\ntable.cols th.stick[data-v-3ccb924d] { position: sticky; left: 0; background: var(--pane); z-index: 1; width: 70px; min-width: 70px; border-right: 1px solid var(--line); box-shadow: 4px 0 6px -4px rgba(0,0,0,.5); text-align: left; color: var(--muted); font-weight: 600; font-size: 11px; vertical-align: top;\n}\ntable.cols td[data-v-3ccb924d] { min-width: 200px; max-width: 200px; vertical-align: top; overflow: hidden; text-overflow: ellipsis;\n}\ntable.cols td.off[data-v-3ccb924d] { opacity: .5;\n}\ntable.cols tr.sample td[data-v-3ccb924d] { white-space: nowrap; font-size: 12px;\n}\n.layout button[data-v-3ccb924d] { border: 1px solid var(--line); background: none; color: var(--muted); padding: 1px 8px; font-size: 11px; font-weight: 400;\n}\n.layout button.on[data-v-3ccb924d] { background: var(--accent-soft); color: var(--text); border-color: var(--accent);\n}\n/* Umwandlung je Spalte (ƒ): Kette unter der Zeile */\n.steps-row td[data-v-3ccb924d] { background: var(--bg); padding: 4px 8px 6px 30px;\n}\n.tsteps[data-v-3ccb924d] { display: flex; flex-direction: column; gap: 3px;\n}\n.tstep[data-v-3ccb924d] { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 12px;\n}\n.tstep select[data-v-3ccb924d], .tstep input[type=text][data-v-3ccb924d] { font-size: 12px;\n}\n.fld[data-v-3ccb924d] { display: inline-flex; gap: 4px; align-items: center; font-size: 11px;\n}\n/* Vorschau: Reiter neu / geändert / unverändert; Werte alt → neu */\n/* Reiter, die wie Reiter aussehen */\n.tabs[data-v-3ccb924d] { display: inline-flex; gap: 0; margin-left: 8px;\n}\n.tabs button[data-v-3ccb924d] { border: 1px solid var(--line); background: var(--bg); padding: 2px 12px; font-size: 12px; font-weight: 600; cursor: pointer; border-radius: 0;\n}\n.tabs button[data-v-3ccb924d]:first-child { border-radius: 6px 0 0 6px;\n}\n.tabs button[data-v-3ccb924d]:last-child { border-radius: 0 6px 6px 0;\n}\n.tabs button[data-v-3ccb924d]:hover { background: var(--hover);\n}\n.tabs button.on[data-v-3ccb924d] { background: var(--accent); color: #fff !important; border-color: var(--accent);\n}\ntable.diff td[data-v-3ccb924d] { font-size: 12px; white-space: normal;\n}\ntable.diff td.old[data-v-3ccb924d] { color: var(--muted); text-decoration: line-through; max-width: 300px;\n}\ntable.diff td.new[data-v-3ccb924d] { color: var(--pos); max-width: 300px;\n}      /* neuer Wert (vorher keiner) */\ntable.diff td.chg[data-v-3ccb924d] { color: var(--warn); max-width: 300px;\n}      /* geänderter Wert */\n/* ƒ leuchtet, wenn eine Umwandlung hinterlegt ist */\n.x.on[data-v-3ccb924d] { background: var(--accent); color: #fff; font-weight: 700; border-radius: 4px; padding: 0 6px;\n}\n.section[data-v-3ccb924d] { padding: 8px; border-bottom: 1px solid var(--line);\n}\n.section h2[data-v-3ccb924d] { font-size: 12px; margin: 0 0 6px; font-weight: 600;\n}\n.section h2 .muted[data-v-3ccb924d] { font-weight: 400;\n}\n.drop.over[data-v-3ccb924d] { outline: 2px dashed var(--accent); outline-offset: -2px;\n}\n/* ohne Datei ein grosser Ablagebereich */\n.drop.empty[data-v-3ccb924d] { min-height: 84px; border: 2px dashed var(--line); border-radius: 6px; margin: 4px 0; flex-wrap: wrap;\n}\n.recent[data-v-3ccb924d] { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; white-space: normal;\n}\n.recent .chip[data-v-3ccb924d] { cursor: pointer;\n}\n.recent .chip.dim[data-v-3ccb924d] { opacity: .55; cursor: default;\n}\n.btn[data-v-3ccb924d] { display: inline-block; padding: 2px 10px; border-radius: 6px; cursor: pointer;\n}\n.map td[data-v-3ccb924d] { vertical-align: top; padding: 3px 4px;\n}\n.map tr.off td[data-v-3ccb924d] { opacity: .5;\n}\n.samples[data-v-3ccb924d] { font-size: 11px; white-space: normal; max-width: 260px;\n}\n.stats[data-v-3ccb924d] { font-size: 13px;\n}\n.out[data-v-3ccb924d] { font-size: 11px; max-height: 400px; overflow: auto; background: var(--bg); padding: 6px; border-radius: 6px;\n}\n.picker[data-v-3ccb924d] { max-height: 240px; overflow: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--pane); margin-top: 4px;\n}\n.pick[data-v-3ccb924d] { display: flex; align-items: center; gap: 8px; height: 24px; padding: 0 8px; white-space: nowrap; cursor: pointer;\n}\n.pick[data-v-3ccb924d]:hover { background: var(--hover);\n}\n\n.form[data-v-3902daf0] { width: 100%; border-bottom: 1px solid var(--line);\n}\n.form td[data-v-3902daf0] { height: 30px; vertical-align: middle; white-space: normal; padding: 2px 4px;\n}\n.form td.attr[data-v-3902daf0] { color: var(--muted); white-space: nowrap; padding-left: 8px;\n}\n.row[data-v-3902daf0] { display: flex; gap: 6px; align-items: center;\n}\n.row > input[data-v-3902daf0] { flex: 1; min-width: 0;\n}\n.tab[data-v-3902daf0] { padding: 2px 10px; border-radius: 4px; color: var(--muted); text-decoration: none; font-size: 13px;\n}\n.tab.on[data-v-3902daf0], .tab.router-link-active[data-v-3902daf0] { background: var(--accent-soft); color: var(--text);\n}\n";document.head.append(s)})();
 const m$1 = window.journali.vue;
 const Fragment = m$1.Fragment;
 const computed = m$1.computed;
@@ -35,6 +35,7 @@ const store = h.store;
 const tree = h.tree;
 const icon = h.icon;
 const mapper = h.mapper;
+const relationen = h.relationen;
 const transform = h.transform;
 const recentFiles = h.recentFiles;
 const dialog = h.dialog;
@@ -109,7 +110,7 @@ const _hoisted_35$1 = {
 };
 const _hoisted_36$1 = { key: 6 };
 const _hoisted_37$1 = { class: "attr" };
-const _hoisted_38 = {
+const _hoisted_38$1 = {
   class: "row",
   style: { "margin-bottom": "4px" }
 };
@@ -418,135 +419,137 @@ const _hoisted_214 = {
 };
 const _hoisted_215 = { class: "muted" };
 const _hoisted_216 = ["title"];
-const _hoisted_217 = { key: 1 };
-const _hoisted_218 = { class: "warn" };
-const _hoisted_219 = {
-  key: 2,
+const _hoisted_217 = ["title"];
+const _hoisted_218 = { key: 2 };
+const _hoisted_219 = { class: "warn" };
+const _hoisted_220 = {
+  key: 3,
   class: "muted",
   style: { "margin-top": "6px", "white-space": "pre-wrap", "font-size": "12px" }
 };
-const _hoisted_220 = {
-  key: 3,
+const _hoisted_221 = {
+  key: 4,
   class: "neg",
   style: { "margin-top": "6px", "white-space": "pre-wrap" }
 };
-const _hoisted_221 = { key: 0 };
-const _hoisted_222 = {
-  key: 4,
+const _hoisted_222 = { key: 0 };
+const _hoisted_223 = {
+  key: 5,
   class: "warn",
   style: { "margin-top": "6px" }
 };
-const _hoisted_223 = {
-  key: 5,
-  class: "section",
-  style: { "margin-top": "8px", "padding": "0" }
-};
 const _hoisted_224 = {
-  class: "step-band",
-  style: { "margin": "0 0 4px" }
-};
-const _hoisted_225 = { class: "muted" };
-const _hoisted_226 = {
-  class: "grid",
-  style: { "width": "100%", "table-layout": "fixed" }
-};
-const _hoisted_227 = { style: { "width": "50px" } };
-const _hoisted_228 = { style: { "width": "150px" } };
-const _hoisted_229 = ["title"];
-const _hoisted_230 = { style: { "width": "260px" } };
-const _hoisted_231 = { class: "mono muted" };
-const _hoisted_232 = ["title"];
-const _hoisted_233 = ["title"];
-const _hoisted_234 = { class: "muted" };
-const _hoisted_235 = ["title"];
-const _hoisted_236 = ["value", "title", "onChange"];
-const _hoisted_237 = {
-  key: 1,
-  class: "muted"
-};
-const _hoisted_238 = {
   key: 6,
   class: "section",
   style: { "margin-top": "8px", "padding": "0" }
 };
+const _hoisted_225 = {
+  class: "step-band",
+  style: { "margin": "0 0 4px" }
+};
+const _hoisted_226 = { class: "muted" };
+const _hoisted_227 = {
+  class: "grid",
+  style: { "width": "100%", "table-layout": "fixed" }
+};
+const _hoisted_228 = { style: { "width": "50px" } };
+const _hoisted_229 = { style: { "width": "150px" } };
+const _hoisted_230 = ["title"];
+const _hoisted_231 = { style: { "width": "260px" } };
+const _hoisted_232 = { class: "mono muted" };
+const _hoisted_233 = ["title"];
+const _hoisted_234 = ["title"];
+const _hoisted_235 = { class: "muted" };
+const _hoisted_236 = ["title"];
+const _hoisted_237 = ["value", "title", "onChange"];
+const _hoisted_238 = {
+  key: 1,
+  class: "muted"
+};
 const _hoisted_239 = {
+  key: 7,
+  class: "section",
+  style: { "margin-top": "8px", "padding": "0" }
+};
+const _hoisted_240 = {
   class: "step-band",
   style: { "margin": "0 0 4px", "gap": "4px" }
 };
-const _hoisted_240 = { class: "tabs" };
-const _hoisted_241 = {
+const _hoisted_241 = { class: "tabs" };
+const _hoisted_242 = {
   class: "grid",
   style: { "width": "100%" }
 };
-const _hoisted_242 = ["onClick"];
-const _hoisted_243 = {
+const _hoisted_243 = ["onClick"];
+const _hoisted_244 = {
   style: { "width": "20px" },
   class: "muted"
 };
-const _hoisted_244 = {
+const _hoisted_245 = {
   class: "mono muted",
   style: { "width": "50px" }
 };
-const _hoisted_245 = { key: 0 };
-const _hoisted_246 = ["href", "title"];
-const _hoisted_247 = { key: 1 };
-const _hoisted_248 = {
+const _hoisted_246 = { key: 0 };
+const _hoisted_247 = ["href", "title"];
+const _hoisted_248 = { key: 1 };
+const _hoisted_249 = {
   class: "muted",
   style: { "text-align": "right", "white-space": "nowrap" }
 };
-const _hoisted_249 = { key: 0 };
-const _hoisted_250 = { colspan: "3" };
-const _hoisted_251 = { class: "grid diff" };
-const _hoisted_252 = { class: "attr muted" };
-const _hoisted_253 = {
+const _hoisted_250 = { key: 0 };
+const _hoisted_251 = { colspan: "3" };
+const _hoisted_252 = { class: "grid diff" };
+const _hoisted_253 = { class: "attr muted" };
+const _hoisted_254 = {
   key: 0,
   class: "muted"
 };
-const _hoisted_254 = ["title"];
-const _hoisted_255 = {
+const _hoisted_255 = ["title"];
+const _hoisted_256 = {
   class: "muted",
   style: { "width": "20px" }
 };
-const _hoisted_256 = ["title"];
-const _hoisted_257 = { key: 0 };
-const _hoisted_258 = {
+const _hoisted_257 = ["title"];
+const _hoisted_258 = { key: 0 };
+const _hoisted_259 = {
   colspan: "4",
   class: "muted",
   style: { "padding": "8px" }
 };
-const _hoisted_259 = { style: { "margin-top": "8px" } };
-const _hoisted_260 = { class: "muted" };
-const _hoisted_261 = { class: "out" };
-const _hoisted_262 = {
+const _hoisted_260 = { style: { "margin-top": "8px" } };
+const _hoisted_261 = { class: "muted" };
+const _hoisted_262 = { class: "out" };
+const _hoisted_263 = {
   key: 1,
   class: "muted"
 };
-const _hoisted_263 = {
+const _hoisted_264 = {
   key: 2,
   class: "empty"
 };
-const _hoisted_264 = {
+const _hoisted_265 = {
   class: "muted",
   style: { "font-size": "12px" }
 };
-const _hoisted_265 = {
+const _hoisted_266 = {
   key: 3,
   class: "pos",
   style: { "margin-top": "8px" }
 };
-const _hoisted_266 = {
+const _hoisted_267 = {
   key: 4,
   class: "section"
 };
-const _hoisted_267 = {
+const _hoisted_268 = {
   class: "mono",
   style: { "font-size": "12px", "white-space": "pre-wrap" }
 };
 const _sfc_main$2 = {
   __name: "ImportView",
   props: { nur: { type: Array, default: () => [] }, paste: { type: Boolean, default: false }, plugin: { type: String, default: "table" } },
-  setup(__props) {
+  setup(__props, { expose: __expose }) {
     const { suggest, plan: makePlan, parseDelimited, childAttributes, childRoleOf } = mapper;
+    const { trenne, bestandLaden, planRelationen } = relationen;
     const leftW = paneWidth("import.table", 720);
     const props = __props;
     const plugin = props.plugin;
@@ -685,6 +688,11 @@ const _sfc_main$2 = {
     }
     function setSource(t$1) {
       if (t$1.sheets && !t$1.columns) {
+        const { blaetter, relationen: rb } = trenne(t$1);
+        if (rb && blaetter.length) {
+          t$1.sheets = blaetter;
+          t$1.relationenBlatt = rb;
+        }
         t$1.sheet = t$1.sheets[0]?.name;
         const s = t$1.sheets[0];
         t$1.columns = s?.columns ?? [];
@@ -957,6 +965,15 @@ const _sfc_main$2 = {
           }
         }
         planned.value = makePlan({ columns: source.value.columns, rows: source.value.rows, mapping: mapping.value.map((m2) => ({ ...m2 })), model: model.value, tree, target: target.value, role: role.value || null, existing, external: external.value || null });
+        if (source.value.relationenBlatt) {
+          const blatt = source.value.relationenBlatt;
+          busy.value = t("vergleiche Relationen mit dem Bestand …");
+          const bestand = await bestandLaden(api, blatt, planned.value.ids, tree);
+          const rp = planRelationen({ blatt, model: model.value, tree, ids: planned.value.ids, bestand });
+          planned.value.commands = [...planned.value.commands, ...rp.commands];
+          planned.value.stats.relations = { create: rp.stats.create, update: rp.stats.update, unchanged: rp.stats.unchanged };
+          planned.value.stats.problems = [...planned.value.stats.problems, ...rp.stats.problems, ...rp.stats.invalid.map((x) => t("Relationen, Zeile {0}: {1} {2}", [x.row + 2, x.key, x.message]))];
+        }
         const s = planned.value.stats;
         const nlv = Object.entries(s.newListValues ?? {}).map(([l, v]) => `${l}: ${Object.values(v).join(", ")}`);
         say(t("Plan: {0} neu, {1} geändert, {2} unverändert, {3} Werte, {4} neue Attribute{5}{6}", [s.create, s.update, s.unchanged, s.values, planned.value.newAttributes.length, nlv.length ? t(", neue Listenwerte — {0}", [nlv.join("; ")]) : "", s.problems.length ? t(", {0} Probleme", [s.problems.length]) : ""]));
@@ -1009,6 +1026,7 @@ const _sfc_main$2 = {
         busy.value = "";
       }
     }
+    __expose({ source, planned, setSource, pickTarget, analyse, run });
     const profileGet = () => ({ target: target.value?.id ?? null, role: role.value, external: external.value, mapping: Object.fromEntries(mapping.value.map((m2) => [m2.column, { target: m2.target, attribute: m2.attribute, locale: m2.locale, newKey: m2.newKey, newType: m2.newType, newGroup: m2.newGroup, steps: m2.steps?.length ? m2.steps : void 0 }])) });
     function profileSet(p) {
       if (!p) {
@@ -1343,7 +1361,7 @@ const _sfc_main$2 = {
                       /* TEXT */
                     ),
                     createElementVNode("td", null, [
-                      createElementVNode("div", _hoisted_38, [
+                      createElementVNode("div", _hoisted_38$1, [
                         target.value ? (openBlock(), createElementBlock("span", {
                           key: 0,
                           class: "chip",
@@ -2955,7 +2973,11 @@ const _sfc_main$2 = {
                   64
                   /* STABLE_FRAGMENT */
                 )) : createCommentVNode("v-if", true),
-                planned.value.newAttributes.length ? (openBlock(), createElementBlock("span", _hoisted_217, [
+                planned.value.stats.relations ? (openBlock(), createElementBlock("span", {
+                  key: 1,
+                  title: _ctx.$t("Relationen aus dem Blatt Relationen")
+                }, " · " + toDisplayString(_ctx.$t("{0} Relationen neu · {1} geändert · {2} unverändert", [planned.value.stats.relations.create, planned.value.stats.relations.update, planned.value.stats.relations.unchanged])), 9, _hoisted_217)) : createCommentVNode("v-if", true),
+                planned.value.newAttributes.length ? (openBlock(), createElementBlock("span", _hoisted_218, [
                   _cache[59] || (_cache[59] = createTextVNode(
                     " · ",
                     -1
@@ -2963,7 +2985,7 @@ const _sfc_main$2 = {
                   )),
                   createElementVNode(
                     "span",
-                    _hoisted_218,
+                    _hoisted_219,
                     toDisplayString(_ctx.$t("{0} neue Attribute:", [planned.value.newAttributes.length])),
                     1
                     /* TEXT */
@@ -2976,12 +2998,12 @@ const _sfc_main$2 = {
                 ])) : createCommentVNode("v-if", true),
                 planned.value.stats.notes?.length ? (openBlock(), createElementBlock(
                   "div",
-                  _hoisted_219,
+                  _hoisted_220,
                   "ℹ " + toDisplayString(planned.value.stats.notes.slice(0, 30).join("\nℹ ")),
                   1
                   /* TEXT */
                 )) : createCommentVNode("v-if", true),
-                planned.value.stats.problems.length ? (openBlock(), createElementBlock("div", _hoisted_220, [
+                planned.value.stats.problems.length ? (openBlock(), createElementBlock("div", _hoisted_221, [
                   createTextVNode(
                     toDisplayString(planned.value.stats.problems.slice(0, 30).join("\n")),
                     1
@@ -2989,7 +3011,7 @@ const _sfc_main$2 = {
                   ),
                   planned.value.stats.problems.length > 30 ? (openBlock(), createElementBlock(
                     "span",
-                    _hoisted_221,
+                    _hoisted_222,
                     " … +" + toDisplayString(planned.value.stats.problems.length - 30),
                     1
                     /* TEXT */
@@ -3014,7 +3036,7 @@ const _sfc_main$2 = {
                   128
                   /* KEYED_FRAGMENT */
                 )),
-                planned.value.stale ? (openBlock(), createElementBlock("div", _hoisted_222, [
+                planned.value.stale ? (openBlock(), createElementBlock("div", _hoisted_223, [
                   createTextVNode(
                     toDisplayString(_ctx.$t("✎ Zellen korrigiert —") + " "),
                     1
@@ -3031,8 +3053,8 @@ const _sfc_main$2 = {
                     /* TEXT */
                   )
                 ])) : createCommentVNode("v-if", true),
-                planned.value.stats.invalid.length ? (openBlock(), createElementBlock("div", _hoisted_223, [
-                  createElementVNode("h2", _hoisted_224, [
+                planned.value.stats.invalid.length ? (openBlock(), createElementBlock("div", _hoisted_224, [
+                  createElementVNode("h2", _hoisted_225, [
                     createTextVNode(
                       toDisplayString(_ctx.$t("Werte prüfen") + " "),
                       1
@@ -3040,25 +3062,25 @@ const _sfc_main$2 = {
                     ),
                     createElementVNode(
                       "span",
-                      _hoisted_225,
+                      _hoisted_226,
                       toDisplayString(_ctx.$t("· {0} Zellen{1}", [planned.value.stats.invalid.length, fixed.value ? " " + _ctx.$t("— im Knotenmodus in Excel korrigieren und neu laden") : " " + _ctx.$t("— hier korrigieren, dann erneut analysieren")])),
                       1
                       /* TEXT */
                     )
                   ]),
-                  createElementVNode("table", _hoisted_226, [
+                  createElementVNode("table", _hoisted_227, [
                     createElementVNode("thead", null, [
                       createElementVNode("tr", null, [
                         createElementVNode(
                           "th",
-                          _hoisted_227,
+                          _hoisted_228,
                           toDisplayString(_ctx.$t("Zeile")),
                           1
                           /* TEXT */
                         ),
                         createElementVNode(
                           "th",
-                          _hoisted_228,
+                          _hoisted_229,
                           toDisplayString(_ctx.$t("Spalte")),
                           1
                           /* TEXT */
@@ -3066,7 +3088,7 @@ const _sfc_main$2 = {
                         createElementVNode("th", {
                           style: { "width": "260px" },
                           title: _ctx.$t("warum der Wert abgelehnt wird — und was das Attribut erwartet")
-                        }, toDisplayString(_ctx.$t("Grund")), 9, _hoisted_229),
+                        }, toDisplayString(_ctx.$t("Grund")), 9, _hoisted_230),
                         createElementVNode(
                           "th",
                           null,
@@ -3076,7 +3098,7 @@ const _sfc_main$2 = {
                         ),
                         createElementVNode(
                           "th",
-                          _hoisted_230,
+                          _hoisted_231,
                           toDisplayString(_ctx.$t("Korrektur")),
                           1
                           /* TEXT */
@@ -3093,7 +3115,7 @@ const _sfc_main$2 = {
                           }, [
                             createElementVNode(
                               "td",
-                              _hoisted_231,
+                              _hoisted_232,
                               toDisplayString(inv.row + 2),
                               1
                               /* TEXT */
@@ -3102,7 +3124,7 @@ const _sfc_main$2 = {
                               class: "mono",
                               style: { "overflow": "hidden", "text-overflow": "ellipsis" },
                               title: source.value.columns[inv.column]
-                            }, toDisplayString(source.value.columns[inv.column]), 9, _hoisted_232),
+                            }, toDisplayString(source.value.columns[inv.column]), 9, _hoisted_233),
                             createElementVNode("td", {
                               class: "neg",
                               style: { "white-space": "normal" },
@@ -3115,17 +3137,17 @@ const _sfc_main$2 = {
                               ),
                               createElementVNode(
                                 "span",
-                                _hoisted_234,
+                                _hoisted_235,
                                 " · " + toDisplayString(typeHint(inv)),
                                 1
                                 /* TEXT */
                               )
-                            ], 8, _hoisted_233),
+                            ], 8, _hoisted_234),
                             createElementVNode("td", {
                               class: "muted",
                               style: { "overflow": "hidden", "text-overflow": "ellipsis", "white-space": "nowrap" },
                               title: String(inv.value ?? "")
-                            }, toDisplayString(inv.value), 9, _hoisted_235),
+                            }, toDisplayString(inv.value), 9, _hoisted_236),
                             createElementVNode("td", null, [
                               !fixed.value ? (openBlock(), createElementBlock("input", {
                                 key: 0,
@@ -3134,9 +3156,9 @@ const _sfc_main$2 = {
                                 style: { "width": "100%" },
                                 title: _ctx.$t("korrigierter Wert — Enter, dann erneut analysieren"),
                                 onChange: ($event) => fixCell(inv, $event.target.value)
-                              }, null, 40, _hoisted_236)) : (openBlock(), createElementBlock(
+                              }, null, 40, _hoisted_237)) : (openBlock(), createElementBlock(
                                 "span",
-                                _hoisted_237,
+                                _hoisted_238,
                                 toDisplayString(inv.value),
                                 1
                                 /* TEXT */
@@ -3151,14 +3173,14 @@ const _sfc_main$2 = {
                   ])
                 ])) : createCommentVNode("v-if", true),
                 createCommentVNode(" Was passiert, je Zeile: Reiter neu / geändert / unverändert, je Knoten die Werte alt → neu "),
-                planned.value.stats.changes?.length ? (openBlock(), createElementBlock("div", _hoisted_238, [
-                  createElementVNode("h2", _hoisted_239, [
+                planned.value.stats.changes?.length ? (openBlock(), createElementBlock("div", _hoisted_239, [
+                  createElementVNode("h2", _hoisted_240, [
                     createTextVNode(
                       toDisplayString(_ctx.$t("Vorschau") + " "),
                       1
                       /* TEXT */
                     ),
-                    createElementVNode("span", _hoisted_240, [
+                    createElementVNode("span", _hoisted_241, [
                       createElementVNode(
                         "button",
                         {
@@ -3191,7 +3213,7 @@ const _sfc_main$2 = {
                       )
                     ])
                   ]),
-                  createElementVNode("table", _hoisted_241, [
+                  createElementVNode("table", _hoisted_242, [
                     createElementVNode("tbody", null, [
                       (openBlock(true), createElementBlock(
                         Fragment,
@@ -3210,20 +3232,20 @@ const _sfc_main$2 = {
                               }, [
                                 createElementVNode(
                                   "td",
-                                  _hoisted_243,
+                                  _hoisted_244,
                                   toDisplayString(c.values.length && changeTab.value !== "unchanged" ? openRow.value === c.row ? "▾" : "▸" : ""),
                                   1
                                   /* TEXT */
                                 ),
                                 createElementVNode(
                                   "td",
-                                  _hoisted_244,
+                                  _hoisted_245,
                                   toDisplayString(c.row + 2),
                                   1
                                   /* TEXT */
                                 ),
                                 createElementVNode("td", null, [
-                                  c.node ? (openBlock(), createElementBlock("span", _hoisted_245, [
+                                  c.node ? (openBlock(), createElementBlock("span", _hoisted_246, [
                                     createTextVNode(
                                       toDisplayString(unref(icon)(c.role)) + " " + toDisplayString(c.label) + " ",
                                       1
@@ -3236,10 +3258,10 @@ const _sfc_main$2 = {
                                       title: _ctx.$t("im Baum ansehen — neues Fenster, der Import bleibt"),
                                       onClick: _cache[41] || (_cache[41] = withModifiers(() => {
                                       }, ["stop"]))
-                                    }, "↗", 8, _hoisted_246)
+                                    }, "↗", 8, _hoisted_247)
                                   ])) : (openBlock(), createElementBlock(
                                     "span",
-                                    _hoisted_247,
+                                    _hoisted_248,
                                     "+ " + toDisplayString(c.label),
                                     1
                                     /* TEXT */
@@ -3247,13 +3269,13 @@ const _sfc_main$2 = {
                                 ]),
                                 createElementVNode(
                                   "td",
-                                  _hoisted_248,
+                                  _hoisted_249,
                                   toDisplayString(c.values.length ? c.values.length + " " + _ctx.$t("Werte") : ""),
                                   1
                                   /* TEXT */
                                 )
-                              ], 8, _hoisted_242),
-                              openRow.value === c.row && c.values.length ? (openBlock(), createElementBlock("tr", _hoisted_249, [
+                              ], 8, _hoisted_243),
+                              openRow.value === c.row && c.values.length ? (openBlock(), createElementBlock("tr", _hoisted_250, [
                                 _cache[60] || (_cache[60] = createElementVNode(
                                   "td",
                                   null,
@@ -3261,8 +3283,8 @@ const _sfc_main$2 = {
                                   -1
                                   /* CACHED */
                                 )),
-                                createElementVNode("td", _hoisted_250, [
-                                  createElementVNode("table", _hoisted_251, [
+                                createElementVNode("td", _hoisted_251, [
+                                  createElementVNode("table", _hoisted_252, [
                                     createElementVNode("tbody", null, [
                                       (openBlock(true), createElementBlock(
                                         Fragment,
@@ -3271,7 +3293,7 @@ const _sfc_main$2 = {
                                           return openBlock(), createElementBlock("tr", {
                                             key: d.attribute + "|" + d.locale
                                           }, [
-                                            createElementVNode("td", _hoisted_252, [
+                                            createElementVNode("td", _hoisted_253, [
                                               createTextVNode(
                                                 toDisplayString(attrLabel(d.attribute)),
                                                 1
@@ -3279,7 +3301,7 @@ const _sfc_main$2 = {
                                               ),
                                               d.locale ? (openBlock(), createElementBlock(
                                                 "span",
-                                                _hoisted_253,
+                                                _hoisted_254,
                                                 " · " + toDisplayString(d.locale),
                                                 1
                                                 /* TEXT */
@@ -3288,10 +3310,10 @@ const _sfc_main$2 = {
                                             createElementVNode("td", {
                                               class: "old",
                                               title: d.from ?? ""
-                                            }, toDisplayString(d.from == null ? "" : String(d.from).slice(0, 80)), 9, _hoisted_254),
+                                            }, toDisplayString(d.from == null ? "" : String(d.from).slice(0, 80)), 9, _hoisted_255),
                                             createElementVNode(
                                               "td",
-                                              _hoisted_255,
+                                              _hoisted_256,
                                               toDisplayString(d.from == null ? "+" : "→"),
                                               1
                                               /* TEXT */
@@ -3299,7 +3321,7 @@ const _sfc_main$2 = {
                                             createElementVNode("td", {
                                               class: normalizeClass(d.from == null ? "new" : "chg"),
                                               title: d.to ?? ""
-                                            }, toDisplayString(d.to == null ? "— (leeren)" : String(d.to).slice(0, 80)), 11, _hoisted_256)
+                                            }, toDisplayString(d.to == null ? "— (leeren)" : String(d.to).slice(0, 80)), 11, _hoisted_257)
                                           ]);
                                         }),
                                         128
@@ -3317,10 +3339,10 @@ const _sfc_main$2 = {
                         128
                         /* KEYED_FRAGMENT */
                       )),
-                      !planned.value.stats.changes.some((c) => c.kind === changeTab.value) ? (openBlock(), createElementBlock("tr", _hoisted_257, [
+                      !planned.value.stats.changes.some((c) => c.kind === changeTab.value) ? (openBlock(), createElementBlock("tr", _hoisted_258, [
                         createElementVNode(
                           "td",
-                          _hoisted_258,
+                          _hoisted_259,
                           toDisplayString(_ctx.$t("nichts")),
                           1
                           /* TEXT */
@@ -3329,17 +3351,17 @@ const _sfc_main$2 = {
                     ])
                   ])
                 ])) : createCommentVNode("v-if", true),
-                createElementVNode("details", _hoisted_259, [
+                createElementVNode("details", _hoisted_260, [
                   createElementVNode(
                     "summary",
-                    _hoisted_260,
+                    _hoisted_261,
                     toDisplayString(_ctx.$t("Befehle (erste 200)")),
                     1
                     /* TEXT */
                   ),
                   createElementVNode(
                     "pre",
-                    _hoisted_261,
+                    _hoisted_262,
                     toDisplayString(planned.value.commands.slice(0, 200).map((c) => `${c.op} ${JSON.stringify(c.args)}`).join("\n")),
                     1
                     /* TEXT */
@@ -3347,11 +3369,11 @@ const _sfc_main$2 = {
                 ])
               ])) : source.value ? (openBlock(), createElementBlock(
                 "div",
-                _hoisted_262,
+                _hoisted_263,
                 toDisplayString(_ctx.$t("Zuordnung prüfen, Ziel wählen, dann analysieren. Nichts wird geschrieben, bevor Du „schreiben“ drückst.")),
                 1
                 /* TEXT */
-              )) : (openBlock(), createElementBlock("div", _hoisted_263, [
+              )) : (openBlock(), createElementBlock("div", _hoisted_264, [
                 createTextVNode(
                   toDisplayString(_ctx.$t("Datei ablegen oder aus Excel einfügen.")),
                   1
@@ -3366,13 +3388,13 @@ const _sfc_main$2 = {
                 )),
                 createElementVNode(
                   "span",
-                  _hoisted_264,
+                  _hoisted_265,
                   toDisplayString(_ctx.$t("Der Mapper erkennt Spalten an Schlüssel, Label, Synonymen (Artikelnummer → sku …), Sprache im Namen (name_en) und rät den Typ neuer Attribute aus den Werten.")),
                   1
                   /* TEXT */
                 )
               ])),
-              result.value ? (openBlock(), createElementBlock("div", _hoisted_265, [
+              result.value ? (openBlock(), createElementBlock("div", _hoisted_266, [
                 createTextVNode(
                   toDisplayString(_ctx.$t("✓ {0} Einträge geschrieben · Stapel {1} —", [result.value.written, result.value.batch]) + " "),
                   1
@@ -3392,7 +3414,7 @@ const _sfc_main$2 = {
                   /* STABLE */
                 }, 8, ["to"])
               ])) : createCommentVNode("v-if", true),
-              log.value.length ? (openBlock(), createElementBlock("div", _hoisted_266, [
+              log.value.length ? (openBlock(), createElementBlock("div", _hoisted_267, [
                 createElementVNode(
                   "h2",
                   null,
@@ -3400,7 +3422,7 @@ const _sfc_main$2 = {
                   1
                   /* TEXT */
                 ),
-                createElementVNode("div", _hoisted_267, [
+                createElementVNode("div", _hoisted_268, [
                   (openBlock(true), createElementBlock(
                     Fragment,
                     null,
@@ -3430,8 +3452,8 @@ const _sfc_main$2 = {
     };
   }
 };
-const ImportView = /* @__PURE__ */ _export_sfc(_sfc_main$2, [["__scopeId", "data-v-5f3f3ee1"]]);
-async function build$1(env, { root, role = "", locales, ownOnly = false, viewKey = "", channel = "", only = null, extra = [], at = null, say }) {
+const ImportView = /* @__PURE__ */ _export_sfc(_sfc_main$2, [["__scopeId", "data-v-3ccb924d"]]);
+async function build$1(env, { root, role = "", locales, ownOnly = false, viewKey = "", channel = "", only = null, extra = [], at = null, relations = false, say }) {
   const { api: api2, model } = env;
   const byLocale = /* @__PURE__ */ new Map();
   let cols = [], nodes = [];
@@ -3479,7 +3501,62 @@ async function build$1(env, { root, role = "", locales, ownOnly = false, viewKey
     if (c.key.startsWith("axis:")) return r.row.axisValues?.[c.key.slice(5)] ?? "";
     return c.sys === "label" ? r.row.label : c.sys === "parent" ? r.row.parent ?? "" : c.sys ? r.row[c.sys] ?? "" : r.row[c.key] ?? "";
   }));
-  return { columns, rows, count: nodes.length };
+  let rel = null;
+  if (relations) {
+    say?.("lese Relationen …");
+    try {
+      rel = await api2.get(`/api/nodes/${encodeURIComponent(root)}/relations/tree?deep=true`);
+    } catch {
+      rel = null;
+    }
+  }
+  return { columns, rows, count: nodes.length, ...rel ? { relations: rel } : {} };
+}
+const RELATIONEN_SPALTEN = { von: "journali_von", vonName: "journali_von_name", typ: "journali_typ", nach: "journali_nach", nachName: "journali_nach_name" };
+const EINHEIT = "_einheit";
+function relationenTabelle(teile) {
+  const R = RELATIONEN_SPALTEN;
+  const gesehen = /* @__PURE__ */ new Set(), zeilen = [], attribute = /* @__PURE__ */ new Map();
+  const text = (v) => Array.isArray(v) ? v.join(",") : v == null ? "" : v;
+  for (const t2 of teile) {
+    if (!t2.relations) continue;
+    const idAt = t2.columns.findIndex((c) => c.sys === "id" || c.key === "id"), nameAt = t2.columns.findIndex((c) => c.sys === "label");
+    const name = new Map(t2.rows.map((r) => [r[idAt], nameAt >= 0 ? r[nameAt] : ""]));
+    for (const [von, liste] of Object.entries(t2.relations)) {
+      if (!name.has(von)) continue;
+      for (const r of liste) {
+        if (r.direction !== "out") continue;
+        const key = `${von}${r.type}${r.other.id}`;
+        if (gesehen.has(key)) continue;
+        gesehen.add(key);
+        const werte = {};
+        for (const [a, w] of Object.entries(r.values ?? {})) {
+          const a_ = attribute.get(a) ?? { einheit: false, sprachen: /* @__PURE__ */ new Set() };
+          attribute.set(a, a_);
+          for (const e of Array.isArray(w) ? w : [w]) {
+            if (e.channel) continue;
+            const spalte = e.locale ? `${a}_${e.locale}` : a;
+            if (e.locale) a_.sprachen.add(e.locale);
+            werte[spalte] = text(e.value);
+            if (e.unit) {
+              a_.einheit = true;
+              werte[a + EINHEIT] = e.unit;
+            }
+          }
+        }
+        zeilen.push({ von, vonName: name.get(von) ?? "", typ: r.type, nach: r.other.id, nachName: r.other.label ?? "", werte });
+      }
+    }
+  }
+  if (!zeilen.length) return null;
+  const spalten = [R.von, R.vonName, R.typ, R.nach, R.nachName];
+  for (const [a, x] of attribute) {
+    if (x.sprachen.size) spalten.push(...[...x.sprachen].map((l) => `${a}_${l}`));
+    else spalten.push(a);
+    if (x.einheit) spalten.push(a + EINHEIT);
+  }
+  const rows = zeilen.map((z) => spalten.map((k) => k === R.von ? z.von : k === R.vonName ? z.vonName : k === R.typ ? z.typ : k === R.nach ? z.nach : k === R.nachName ? z.nachName : z.werte[k] ?? ""));
+  return { columns: spalten.map((k) => ({ key: k })), rows };
 }
 function toCsv({ columns, rows }) {
   const esc = (v) => {
@@ -3488,10 +3565,16 @@ function toCsv({ columns, rows }) {
   };
   return "\uFEFF" + [columns.map((c) => c.key).join(";"), ...rows.map((r) => r.map(esc).join(";"))].join("\r\n");
 }
-function toJson({ columns, rows }) {
-  return JSON.stringify(rows.map((r) => Object.fromEntries(columns.map((c, i) => [c.key, r[i] === "" ? null : r[i]]))), null, 1);
+function toJson({ columns, rows, relations }) {
+  const idAt = columns.findIndex((c) => c.sys === "id" || c.key === "id");
+  return JSON.stringify(rows.map((r) => {
+    const o = Object.fromEntries(columns.map((c, i) => [c.key, r[i] === "" ? null : r[i]]));
+    const rel = relations?.[r[idAt >= 0 ? idAt : 0]];
+    if (rel?.length) o.relations = rel;
+    return o;
+  }), null, 1);
 }
-function toJsonTree({ columns, rows }) {
+function toJsonTree({ columns, rows, relations }) {
   const byId = /* @__PURE__ */ new Map();
   for (const r of rows) {
     const o = { id: r[columns.findIndex((c) => c.sys === "id" || c.key === "id")] ?? r[0], role: "", parent: null, name: "", status: null, axes: {}, attributes: {}, children: [] };
@@ -3512,6 +3595,7 @@ function toJsonTree({ columns, rows }) {
       if (a && typeof a === "object" && Object.values(a).every((x) => x == null)) delete o.attributes[k];
       else if (a == null) delete o.attributes[k];
     }
+    if (relations?.[o.id]?.length) o.relations = relations[o.id];
     byId.set(o.id, o);
   }
   const roots = [];
@@ -3539,7 +3623,7 @@ function kuerzeZellen(rows) {
   }));
   return { rows: raus, gekuerzt };
 }
-function workbook(X, { columns, rows }, legendRows = null, sheet = "Daten") {
+function workbook(X, { columns, rows }, legendRows = null, sheet = "Daten", relationen2 = null) {
   const gek = kuerzeZellen(rows);
   rows = gek.rows;
   const ws = X.utils.aoa_to_sheet([columns.map((c) => c.key), ...rows]);
@@ -3563,6 +3647,12 @@ function workbook(X, { columns, rows }, legendRows = null, sheet = "Daten") {
     lg["!autofilter"] = { ref: X.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: Math.max(1, legendRows.length - 1), c: legendRows[0].length - 1 } }) };
     X.utils.book_append_sheet(wb, lg, "Legende");
   }
+  if (relationen2) {
+    const rl = X.utils.aoa_to_sheet([relationen2.columns.map((c) => c.key), ...relationen2.rows]);
+    rl["!cols"] = relationen2.columns.map((c) => ({ wch: Math.min(40, Math.max(10, c.key.length + 2)) }));
+    rl["!autofilter"] = { ref: X.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: Math.max(1, relationen2.rows.length), c: relationen2.columns.length - 1 } }) };
+    X.utils.book_append_sheet(wb, rl, "Relationen");
+  }
   return wb;
 }
 const L = (l) => globalThis.journali?.L ? globalThis.journali.L(l) : l?.de ?? Object.values(l ?? {})[0] ?? "";
@@ -3580,14 +3670,14 @@ const loadXlsx = () => import(
   XLSX_URL
 );
 const POLISH_URL = "/plugins/excel/polish.mjs";
-async function polished(X, wb, columns, rowCount, tableName, legendRows = null) {
+async function polished(X, wb, columns, rowCount, tableName, legendRows = null, relationen2 = null) {
   const raw = X.write(wb, { type: "array", bookType: "xlsx" });
   try {
     const { polish } = await import(
       /* @vite-ignore */
       POLISH_URL
     );
-    return await polish(raw, { columns, rowCount, tableName, legend: legendRows ? { columns: legendRows[0], rowCount: legendRows.length - 1 } : null });
+    return await polish(raw, { columns, rowCount, tableName, legend: legendRows ? { columns: legendRows[0], rowCount: legendRows.length - 1 } : null, relationen: relationen2 ? { columns: relationen2.columns, rowCount: relationen2.rows.length } : null });
   } catch (e) {
     console.warn(t_("Excel ohne Politur:"), e.message);
     return new Blob([raw], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
@@ -3603,10 +3693,10 @@ async function leseDatei(file) {
   const blatt = t2.sheets?.[0] ?? t2;
   return { kopf: blatt.columns ?? [], zeilen: blatt.rows ?? [] };
 }
-async function toXlsx(table, sheet = t_("Daten")) {
+async function toXlsx(table, sheet = t_("Daten"), relationen2 = null) {
   const X = await loadXlsx();
-  const wb = workbook(X, table, null, sheet);
-  const blob = await polished(X, wb, table.columns, table.rows.length, sheet);
+  const wb = workbook(X, table, null, sheet, relationen2);
+  const blob = await polished(X, wb, table.columns, table.rows.length, sheet, null, relationen2);
   blob.gekuerzt = wb.gekuerzt;
   return blob;
 }
@@ -3657,6 +3747,7 @@ const tableExport = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineP
   leseDatei,
   loadXlsx,
   nodeWorkbook,
+  relationenTabelle,
   toCsv,
   toJson,
   toJsonTree,
@@ -3696,34 +3787,35 @@ const _hoisted_18$1 = { class: "attr" };
 const _hoisted_19$1 = { value: "" };
 const _hoisted_20$1 = ["value"];
 const _hoisted_21$1 = { class: "attr" };
-const _hoisted_22$1 = { class: "step" };
-const _hoisted_23$1 = {
+const _hoisted_22$1 = ["title"];
+const _hoisted_23$1 = { class: "step" };
+const _hoisted_24$1 = {
   colspan: "2",
   class: "step-band",
   style: { "display": "table-cell", "height": "24px" }
 };
-const _hoisted_24$1 = { key: 0 };
-const _hoisted_25$1 = { class: "attr" };
-const _hoisted_26 = { value: "excel" };
-const _hoisted_27 = { value: "csv" };
-const _hoisted_28 = { class: "row" };
-const _hoisted_29 = ["onClick", "title"];
+const _hoisted_25$1 = { key: 0 };
+const _hoisted_26 = { class: "attr" };
+const _hoisted_27 = { value: "excel" };
+const _hoisted_28 = { value: "csv" };
+const _hoisted_29 = { class: "row" };
 const _hoisted_30 = ["onClick", "title"];
-const _hoisted_31 = { class: "step-band" };
-const _hoisted_32 = { class: "muted" };
-const _hoisted_33 = { class: "scroll" };
-const _hoisted_34 = {
+const _hoisted_31 = ["onClick", "title"];
+const _hoisted_32 = { class: "step-band" };
+const _hoisted_33 = { class: "muted" };
+const _hoisted_34 = { class: "scroll" };
+const _hoisted_35 = {
   key: 0,
   class: "grid",
   style: { "width": "auto" }
 };
-const _hoisted_35 = ["title"];
-const _hoisted_36 = {
+const _hoisted_36 = ["title"];
+const _hoisted_37 = {
   key: 1,
   class: "muted",
   style: { "padding": "8px" }
 };
-const _hoisted_37 = {
+const _hoisted_38 = {
   key: 2,
   class: "empty"
 };
@@ -3737,25 +3829,27 @@ const _sfc_main$1 = {
     const role = ref(saved.role ?? "");
     const locales = ref(saved.locales ?? [store.model?.masterLocale ?? "de"]);
     const ownOnly = ref(saved.ownOnly ?? false);
+    const relations = ref(saved.relations ?? false);
     const viewKey = ref(saved.viewKey ?? "");
     const props = __props;
     const plugin = props.plugin;
     const format = ref(props.festesFormat || saved.format || "excel");
     const rootRows = computed(() => roots.value.map((id) => tree.byId.get(id)).filter(Boolean));
-    const profileGet = () => ({ roots: roots.value, role: role.value, locales: locales.value, ownOnly: ownOnly.value, viewKey: viewKey.value });
+    const profileGet = () => ({ roots: roots.value, role: role.value, locales: locales.value, ownOnly: ownOnly.value, relations: relations.value, viewKey: viewKey.value });
     function profileSet(p) {
       if (!p) return;
       roots.value = Array.isArray(p.roots) ? p.roots : p.roots ? [p.roots] : roots.value;
       role.value = p.role ?? "";
       if (Array.isArray(p.locales) && p.locales.length) locales.value = p.locales;
       ownOnly.value = !!p.ownOnly;
+      relations.value = !!p.relations;
       viewKey.value = p.viewKey ?? "";
       table.value = null;
       persist();
     }
     const busy = ref("");
     const table = ref(null);
-    const persist = () => localStorage.setItem("journali.export.table", JSON.stringify({ roots: roots.value, role: role.value, locales: locales.value, ownOnly: ownOnly.value, viewKey: viewKey.value, format: format.value }));
+    const persist = () => localStorage.setItem("journali.export.table", JSON.stringify({ roots: roots.value, role: role.value, locales: locales.value, ownOnly: ownOnly.value, relations: relations.value, viewKey: viewKey.value, format: format.value }));
     onMounted(async () => {
       if (!tree.loaded) await tree.load();
       if (!roots.value.length) roots.value = tree.rows.filter((r) => !r.parent).slice(0, 1).map((r) => r.id);
@@ -3778,7 +3872,7 @@ const _sfc_main$1 = {
       try {
         persist();
         const parts = [];
-        for (const r of roots.value) parts.push(await build({ root: r, role: role.value, locales: locales.value, ownOnly: ownOnly.value, viewKey: viewKey.value, say: (m2) => {
+        for (const r of roots.value) parts.push(await build({ root: r, role: role.value, locales: locales.value, ownOnly: ownOnly.value, viewKey: viewKey.value, relations: relations.value && format.value === "excel", say: (m2) => {
           busy.value = m2;
         } }));
         const colKeys = [...new Set(parts.flatMap((p) => p.columns.map((c) => c.key)))];
@@ -3805,7 +3899,7 @@ const _sfc_main$1 = {
         let gekuerzt = 0;
         if (format.value === "csv") download(new Blob([toCsv(t$1)], { type: "text/csv;charset=utf-8" }), name + ".csv");
         else {
-          const b = await toXlsx(t$1);
+          const b = await toXlsx(t$1, void 0, relationenTabelle(parts));
           gekuerzt = b.gekuerzt ?? 0;
           download(b, name + ".xlsx");
         }
@@ -3856,7 +3950,7 @@ const _sfc_main$1 = {
             _: 1
             /* STABLE */
           })) : createCommentVNode("v-if", true),
-          _cache[7] || (_cache[7] = createElementVNode(
+          _cache[8] || (_cache[8] = createElementVNode(
             "span",
             { class: "grow" },
             null,
@@ -3874,7 +3968,7 @@ const _sfc_main$1 = {
           )
         ]),
         createElementVNode("table", _hoisted_3$1, [
-          _cache[9] || (_cache[9] = createElementVNode(
+          _cache[10] || (_cache[10] = createElementVNode(
             "colgroup",
             null,
             [
@@ -4107,22 +4201,46 @@ const _sfc_main$1 = {
                     1
                     /* TEXT */
                   )
-                ])
+                ]),
+                format.value === "excel" ? (openBlock(), createElementBlock("label", {
+                  key: 0,
+                  style: { "margin-left": "16px" },
+                  title: _ctx.$t("Zweites Blatt: eine Zeile je Relation mit Von, Typ, Nach und den Werten der Relation")
+                }, [
+                  withDirectives(createElementVNode(
+                    "input",
+                    {
+                      type: "checkbox",
+                      "onUpdate:modelValue": _cache[4] || (_cache[4] = ($event) => relations.value = $event),
+                      onChange: persist
+                    },
+                    null,
+                    544
+                    /* NEED_HYDRATION, NEED_PATCH */
+                  ), [
+                    [vModelCheckbox, relations.value]
+                  ]),
+                  createTextVNode(
+                    toDisplayString(" " + _ctx.$t("Relationen")),
+                    1
+                    /* TEXT */
+                  )
+                ], 8, _hoisted_22$1)) : createCommentVNode("v-if", true)
               ])
             ]),
-            createElementVNode("tr", _hoisted_22$1, [
+            createElementVNode("tr", _hoisted_23$1, [
               createElementVNode(
                 "td",
-                _hoisted_23$1,
+                _hoisted_24$1,
                 toDisplayString(_ctx.$t("2 · Wie")),
                 1
                 /* TEXT */
               )
             ]),
-            !__props.festesFormat ? (openBlock(), createElementBlock("tr", _hoisted_24$1, [
+            !__props.festesFormat ? (openBlock(), createElementBlock("tr", _hoisted_25$1, [
               createElementVNode(
                 "td",
-                _hoisted_25$1,
+                _hoisted_26,
                 toDisplayString(_ctx.$t("Format")),
                 1
                 /* TEXT */
@@ -4131,21 +4249,21 @@ const _sfc_main$1 = {
                 withDirectives(createElementVNode(
                   "select",
                   {
-                    "onUpdate:modelValue": _cache[4] || (_cache[4] = ($event) => format.value = $event),
+                    "onUpdate:modelValue": _cache[5] || (_cache[5] = ($event) => format.value = $event),
                     onChange: persist,
                     style: { "width": "100%" }
                   },
                   [
                     createElementVNode(
                       "option",
-                      _hoisted_26,
+                      _hoisted_27,
                       toDisplayString(_ctx.$t("Excel (.xlsx)")),
                       1
                       /* TEXT */
                     ),
                     createElementVNode(
                       "option",
-                      _hoisted_27,
+                      _hoisted_28,
                       toDisplayString(_ctx.$t("CSV (; UTF-8, Excel-tauglich)")),
                       1
                       /* TEXT */
@@ -4159,7 +4277,7 @@ const _sfc_main$1 = {
               ])
             ])) : createCommentVNode("v-if", true),
             createElementVNode("tr", null, [
-              _cache[8] || (_cache[8] = createElementVNode(
+              _cache[9] || (_cache[9] = createElementVNode(
                 "td",
                 { class: "attr" },
                 null,
@@ -4167,11 +4285,11 @@ const _sfc_main$1 = {
                 /* CACHED */
               )),
               createElementVNode("td", null, [
-                createElementVNode("div", _hoisted_28, [
+                createElementVNode("div", _hoisted_29, [
                   createElementVNode(
                     "button",
                     {
-                      onClick: _cache[5] || (_cache[5] = ($event) => run(false))
+                      onClick: _cache[6] || (_cache[6] = ($event) => run(false))
                     },
                     toDisplayString(_ctx.$t("Vorschau")),
                     1
@@ -4181,7 +4299,7 @@ const _sfc_main$1 = {
                     "button",
                     {
                       class: "primary",
-                      onClick: _cache[6] || (_cache[6] = ($event) => run(true))
+                      onClick: _cache[7] || (_cache[7] = ($event) => run(true))
                     },
                     toDisplayString(_ctx.$t("⇪ herunterladen")),
                     1
@@ -4196,7 +4314,7 @@ const _sfc_main$1 = {
                       createElementVNode("button", {
                         onClick: navigate,
                         title: _ctx.$t("denselben Export regelmäßig in ein Verzeichnis — Dienst „export“ des Format-Plugins")
-                      }, toDisplayString(_ctx.$t("⏱ als Job")), 9, _hoisted_29)
+                      }, toDisplayString(_ctx.$t("⏱ als Job")), 9, _hoisted_30)
                     ]),
                     _: 1
                     /* STABLE */
@@ -4210,7 +4328,7 @@ const _sfc_main$1 = {
                       createElementVNode("button", {
                         onClick: navigate,
                         title: _ctx.$t("die Jobs unter ⏱ Jobs — Zeitplan, Läufe, Logs")
-                      }, toDisplayString(_ctx.$t("⏱ Jobs verwalten")), 9, _hoisted_30)
+                      }, toDisplayString(_ctx.$t("⏱ Jobs verwalten")), 9, _hoisted_31)
                     ]),
                     _: 1
                     /* STABLE */
@@ -4220,7 +4338,7 @@ const _sfc_main$1 = {
             ])
           ])
         ]),
-        createElementVNode("div", _hoisted_31, [
+        createElementVNode("div", _hoisted_32, [
           createTextVNode(
             toDisplayString(_ctx.$t("3 · Vorschau") + " "),
             1
@@ -4228,14 +4346,14 @@ const _sfc_main$1 = {
           ),
           createElementVNode(
             "span",
-            _hoisted_32,
+            _hoisted_33,
             toDisplayString(_ctx.$t("· erste 200 Zeilen")),
             1
             /* TEXT */
           )
         ]),
-        createElementVNode("div", _hoisted_33, [
-          table.value ? (openBlock(), createElementBlock("table", _hoisted_34, [
+        createElementVNode("div", _hoisted_34, [
+          table.value ? (openBlock(), createElementBlock("table", _hoisted_35, [
             createElementVNode("thead", null, [
               createElementVNode("tr", null, [
                 (openBlock(true), createElementBlock(
@@ -4245,7 +4363,7 @@ const _sfc_main$1 = {
                     return openBlock(), createElementBlock("th", {
                       key: c.key,
                       title: c.attr ? `${c.attr} · ${c.locale}` : c.key
-                    }, toDisplayString(c.key), 9, _hoisted_35);
+                    }, toDisplayString(c.key), 9, _hoisted_36);
                   }),
                   128
                   /* KEYED_FRAGMENT */
@@ -4286,14 +4404,14 @@ const _sfc_main$1 = {
           ])) : createCommentVNode("v-if", true),
           table.value && table.value.rows.length > 200 ? (openBlock(), createElementBlock(
             "div",
-            _hoisted_36,
+            _hoisted_37,
             toDisplayString(_ctx.$t("… {0} weitere Zeilen in der Datei", [table.value.rows.length - 200])),
             1
             /* TEXT */
           )) : createCommentVNode("v-if", true),
           !table.value ? (openBlock(), createElementBlock(
             "div",
-            _hoisted_37,
+            _hoisted_38,
             toDisplayString(_ctx.$t("Teilbaum wählen, dann Vorschau oder herunterladen.")),
             1
             /* TEXT */
@@ -4303,7 +4421,7 @@ const _sfc_main$1 = {
     };
   }
 };
-const ExportView = /* @__PURE__ */ _export_sfc(_sfc_main$1, [["__scopeId", "data-v-819aa7a3"]]);
+const ExportView = /* @__PURE__ */ _export_sfc(_sfc_main$1, [["__scopeId", "data-v-3902daf0"]]);
 const IdSpalte = "journali_id";
 const ebeneSpalte = (n) => `Ebene ${n}`;
 function pfadVon(byId, id, wurzel) {

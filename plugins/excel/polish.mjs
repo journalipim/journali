@@ -36,11 +36,14 @@ function zip(files) {
 // ---- Die Politur. columns: [{ key, def?, note? }] wie core.workbook; kind je Spalte: required | axis | info | plain
 const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 const colRef = i => { let s = ''; i++; while (i > 0) { const m = (i - 1) % 26; s = String.fromCharCode(65 + m) + s; i = Math.floor((i - 1) / 26) } return s }
-export async function polish(buf, { columns, rowCount = 0, sheet = 'xl/worksheets/sheet1.xml', tableName = 'Daten', legend = null }) {
+export async function polish(buf, { columns, rowCount = 0, sheet = 'xl/worksheets/sheet1.xml', tableName = 'Daten', legend = null, relationen = null }) {
   const files = await unzip(buf)
   await polishSheet(files, { columns, rowCount, sheet, tableName, tableId: 1 })
   // die Legende (Blatt 2) ebenfalls als Tabelle — Pflicht/Eindeutig ganz links zum Filtern
   if (legend && files.has('xl/worksheets/sheet2.xml')) await polishSheet(files, { columns: legend.columns.map(k => ({ key: k })), rowCount: legend.rowCount, sheet: 'xl/worksheets/sheet2.xml', tableName: 'Legende', tableId: 2 })
+  // das Blatt Relationen folgt auf die Legende, sonst auf die Daten
+  const nr = legend ? 3 : 2
+  if (relationen && files.has(`xl/worksheets/sheet${nr}.xml`)) await polishSheet(files, { columns: relationen.columns, rowCount: relationen.rowCount, sheet: `xl/worksheets/sheet${nr}.xml`, tableName: 'Relationen', tableId: 3 })
   return zip(files)
 }
 // Stile einmal je Datei: eigene Schrift (fett) und Füllungen an das von SheetJS geschriebene styles.xml anhängen — dessen Formate bleiben gültig

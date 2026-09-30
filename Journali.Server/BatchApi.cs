@@ -60,7 +60,7 @@ public static class BatchApi
                             "node.retire" => Commands.Retire(ctx, a.Node()),
                             "node.order" => Commands.Order(ctx, a.Node(), a.Id("parent"), a.Id("before")),   // Tabellenbearbeitung: Zeilen verschieben
                             "status.set" => Commands.SetStatus(ctx, a.Node(), a.Str("status"), a.Str("from")),
-                            "attribute.set" => Commands.SetAttribute(ctx, a.Node(), a.Str("attribute"), a.Str("locale"), a.Str("channel"), a.Str("value"), a.Strings("values"), a.Id("row")),
+                            "attribute.set" => Commands.SetAttribute(ctx, a.Node(), a.Str("attribute"), a.Str("locale"), a.Str("channel"), a.Str("value"), a.Strings("values"), a.Id("row"), a.Str("unit")),
                             "value.source" => Commands.SourceValue(ctx, a.Node(), a.Str("attribute"), a.Str("locale"), a.Str("channel"), a.Id("row"), a.Str("source"), a.Str("title"), a.Str("note"), a.Str("method"), a.Str("checkedAt")),
                             "row.add" => Commands.AddRow(ctx, a.Node(), a.Str("attribute")),
                             "row.remove" => Commands.RemoveRow(ctx, a.Node(), a.Str("attribute"), a.Str("row")),
@@ -73,7 +73,7 @@ public static class BatchApi
                             "external.unlink" => Commands.UnlinkExternal(ctx, a.Node(), a.Str("system") ?? ""),
                             "relation.create" => Commands.CreateRelation(ctx, a.Str("type"), a.Id("from"), a.Id("to")),
                             "relation.retire" => Commands.RetireRelation(ctx, a.Id("relation") ?? ""),
-                            "relation.attribute.set" => Commands.SetRelationAttribute(ctx, a.Id("relation") ?? "", a.Str("attribute"), a.Str("locale"), a.Str("channel"), a.Str("value"), a.Strings("values")),
+                            "relation.attribute.set" => Commands.SetRelationAttribute(ctx, a.Id("relation") ?? "", a.Str("attribute"), a.Str("locale"), a.Str("channel"), a.Str("value"), a.Strings("values"), a.Str("unit")),
                             "media.attribute.set" => Commands.SetMediumAttribute(ctx, a.Id("media") ?? "", a.Str("attribute"), a.Str("locale"), a.Str("channel"), a.Str("value"), a.Strings("values")),
                             "media.external.link" => Commands.LinkMediumExternal(ctx, a.Id("media") ?? "", a.Str("system"), a.Str("id")),
                             "media.retire" => Commands.RetireMedium(ctx, a.Id("media") ?? ""),

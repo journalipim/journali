@@ -17,7 +17,7 @@ const mitglieder = ref([])
 const keyIn = ref({ anbieter: 'anthropic', wert: '' })
 // das lokale Modell (29.09.2026): gibt es eines am Server, steht es jedem Team zur Wahl — ohne Schlüssel, ohne Kosten
 const lokal = ref({ ready: false, models: [] })
-const anbieterListe = computed(() => [...(team.value?.keys ?? []), ...(lokal.value.ready ? ['lokal'] : [])])
+const anbieterListe = computed(() => [...new Set([...(team.value?.keys ?? []), ...(lokal.value.ready ? ['lokal'] : [])])])
 const anbieterGewaehlt = computed(() => { const w = team.value?.models?.['*']; return anbieterListe.value.includes(w) ? w : anbieterListe.value[0] ?? '' })
 const frei = ref([])           // wer in keinem Team ist — nur die lassen sich eintragen
 const dazu = ref('')
@@ -31,7 +31,8 @@ const kb = b => {
   const z = (x, e) => (x / e).toLocaleString('de-DE', { maximumFractionDigits: 1 })
   return !b ? '0kb' : b >= 1073741824 ? z(b, 1073741824) + 'gb' : b >= 1048576 ? z(b, 1048576) + 'mb' : Math.max(1, Math.round(b / 1024)) + 'kb'
 }
-const ANBIETER = [['anthropic', t_('Anthropic')], ['openai', t_('OpenAI')]]
+// lokal: statt eines Schlüssels steht die Adresse des Dienstes mit der Ollama-Schnittstelle (der Server prüft http:// oder https://)
+const ANBIETER = [['anthropic', t_('Anthropic')], ['openai', t_('OpenAI')], ['lokal', t_('lokal')]]
 
 const team = computed(() => teams.value.find(t => t.key === gewaehlt.value) ?? null)
 /// Das Team führen: Schlüssel, Modell, Mitglieder ein und aus. Der Administrator darf es überall.
@@ -95,7 +96,7 @@ watch(() => store.head, () => {
 })
 
 async function schluessel() {
-  if (!keyIn.value.wert) { store.toast(t_('Schlüssel fehlt')); return }
+  if (!keyIn.value.wert) { store.toast(keyIn.value.anbieter === 'lokal' ? t_('Adresse fehlt') : t_('Schlüssel fehlt')); return }
   const anbieter = keyIn.value.anbieter
   try {
     await api.post(`/api/teams/${encodeURIComponent(gewaehlt.value)}/keys`, { keys: { [anbieter]: keyIn.value.wert } }, 'PUT')
@@ -223,8 +224,8 @@ async function austragen(m) {
           </td>
           <td v-if="fuehrt" class="row" style="gap:4px">
             <select v-model="keyIn.anbieter" style="width:110px"><option v-for="[k, l] in ANBIETER" :key="k" :value="k">{{ l }}</option></select>
-            <input v-model="keyIn.wert" type="password" :placeholder="$t('Schlüssel')" style="width:150px" @keydown.enter="schluessel" />
-            <button class="x" :title="$t('Schlüssel hinterlegen — er bleibt beim Server, nie im Journal, nie im Browser')" @click="schluessel">🔒</button>
+            <input v-model="keyIn.wert" :type="keyIn.anbieter === 'lokal' ? 'text' : 'password'" :placeholder="keyIn.anbieter === 'lokal' ? $t('Adresse') : $t('Schlüssel')" style="width:150px" @keydown.enter="schluessel" />
+            <button class="x" :title="keyIn.anbieter === 'lokal' ? $t('Adresse des lokalen Modells hinterlegen — sie bleibt beim Server, nie im Journal, nie im Browser') : $t('Schlüssel hinterlegen — er bleibt beim Server, nie im Journal, nie im Browser')" @click="schluessel">🔒</button>
           </td><td v-else></td>
         </tr>
         <tr v-if="anbieterListe.length > 1">

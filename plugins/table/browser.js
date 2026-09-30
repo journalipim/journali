@@ -1,20 +1,20 @@
 // Tabellen-Export im Browser (Basis-Plugin table): der Kern liegt in core.mjs (auch für den Job im Plugin export),
 // hier das Browser-Drumherum — Herunterladen, SheetJS laden, Excel am Knoten (Vorlage / Export mit Legende).
 import { api, store, tree, mapper, plugins } from 'journali'
-import { build as coreBuild, toCsv, toJson, toJsonTree, workbook } from './core.mjs'
+import { build as coreBuild, toCsv, toJson, toJsonTree, workbook, relationenTabelle } from './core.mjs'
 const L = l => globalThis.journali?.L ? globalThis.journali.L(l) : (l?.de ?? Object.values(l ?? {})[0] ?? '')   // Bezeichnung in der Oberflächensprache
 const t_ = (k, p) => globalThis.journali?.t ? globalThis.journali.t(k, p) : String(k).replace(/\{(\w+)\}/g, (m, i) => p?.[i] ?? m)   // Oberflächensprache: spät gebunden, im Test ohne Fenster ladbar
 
-export { toCsv, toJson, toJsonTree }
+export { toCsv, toJson, toJsonTree, relationenTabelle }
 export const download = (blob, name) => { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000) }
 // SheetJS kommt zur Laufzeit aus dem Plugin xlsx (nicht gebündelt) — der Pfad als Variable, damit Vite ihn nicht auflöst
 const XLSX_URL = '/plugins/excel/xlsx.mjs'
 export const loadXlsx = () => import(/* @vite-ignore */ XLSX_URL)
 const POLISH_URL = '/plugins/excel/polish.mjs'
 // Komfort-Excel: Kopf fett, Pflicht rot, Achsen blau, echte Tabelle mit Filter und Streifen, erste Zeile fest — nachträglich in die Datei
-async function polished(X, wb, columns, rowCount, tableName, legendRows = null) {
+async function polished(X, wb, columns, rowCount, tableName, legendRows = null, relationen = null) {
   const raw = X.write(wb, { type: 'array', bookType: 'xlsx' })
-  try { const { polish } = await import(/* @vite-ignore */ POLISH_URL); return await polish(raw, { columns, rowCount, tableName, legend: legendRows ? { columns: legendRows[0], rowCount: legendRows.length - 1 } : null }) }
+  try { const { polish } = await import(/* @vite-ignore */ POLISH_URL); return await polish(raw, { columns, rowCount, tableName, legend: legendRows ? { columns: legendRows[0], rowCount: legendRows.length - 1 } : null, relationen: relationen ? { columns: relationen.columns, rowCount: relationen.rows.length } : null }) }
   catch (e) { console.warn(t_('Excel ohne Politur:'), e.message); return new Blob([raw], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }) }
 }
 export const build = opts => coreBuild({ api, model: store.model }, opts)
@@ -30,10 +30,10 @@ export async function leseDatei(file) {
   const blatt = t.sheets?.[0] ?? t
   return { kopf: blatt.columns ?? [], zeilen: blatt.rows ?? [] }
 }
-export async function toXlsx(table, sheet = t_('Daten')) {
+export async function toXlsx(table, sheet = t_('Daten'), relationen = null) {
   const X = await loadXlsx()
-  const wb = workbook(X, table, null, sheet)
-  const blob = await polished(X, wb, table.columns, table.rows.length, sheet)
+  const wb = workbook(X, table, null, sheet, relationen)
+  const blob = await polished(X, wb, table.columns, table.rows.length, sheet, null, relationen)
   // Der Aufrufer sagt dem Anwender, wenn Excel etwas nicht aufnehmen konnte
   blob.gekuerzt = wb.gekuerzt
   return blob

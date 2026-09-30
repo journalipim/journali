@@ -1,8 +1,8 @@
 {
  "key": "excel",
  "version": "1.0.1",
- "hash": "c8c2956029f0aec6b397ee7fada01808de3e31990263bb3ea9d369aea18080e8",
- "issued": "2026-09-28",
+ "hash": "feccc5634e8f54160b5b22605cdccba7c093b086a54870c170d640320289ce37",
+ "issued": "2026-09-30",
  "issuer": "journali",
- "sig": "OFzA3Eaxqh2fO7H1/oNe5MWSFXFH36oQ5MDjSW0KHSc+ah6kOWR/lGRzGVAb8jSbsDBWwdBeOYX7yqcamwje8Q=="
+ "sig": "P3HtrcwE5qeQeARUt+jsPStEoG+VJ9jRgMdFoNS02HkjtbLjDiAUGDBNhz6/gcfYHvoVfbQ/mBaLCk3iKjhiTQ=="
 }

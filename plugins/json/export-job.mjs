@@ -36,7 +36,7 @@ const countNodes = n => { let c = 1; for (const k of n.children ?? []) c += coun
   for (const r of roots) {
     let text, count
     if (format === 'raw') { const raw = await api.get(`/api/nodes/${encodeURIComponent(r.id)}/export?deep=true`); count = countNodes(raw.node); text = JSON.stringify(raw, null, 1) }
-    else { const t = await build({ api, model }, { root: r.id, role: '', locales: locs, ownOnly, viewKey: '', say: m => console.log(m) }); count = t.count; text = format === 'tree' ? toJsonTree(t, r.id) : toJson(t) }
+    else { const t = await build({ api, model }, { root: r.id, role: '', locales: locs, ownOnly, viewKey: '', relations: true, say: m => console.log(m) }); count = t.count; text = format === 'tree' ? toJsonTree(t, r.id) : toJson(t) }
     const safe = String(r.label ?? r.id).replace(/[^\w.-]+/g, '_').slice(0, 40)
     const file = path.join(dir, `${jobKey}${safe}-${r.id}-${format}-${stamp}.json${gz ? '.gz' : ''}`)
     fs.writeFileSync(file, gz ? zlib.gzipSync(text, { level: 9 }) : text)

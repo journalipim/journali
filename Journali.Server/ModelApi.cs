@@ -63,9 +63,10 @@ public static partial class ModelApi
                 var from = Clean(body.From); var to = Clean(body.To);
                 if (from?.Except(Roles.All).Any() ?? false) return Bad("from: nur group, product, variant.");
                 if (to?.Except(Roles.All).Except([Roles.Media]).Any() ?? false) return Bad("to: nur group, product, variant, media.");
-                var group = Blank(body.Group);
-                if (group is not null && !model.Groups.ContainsKey(group) && !model.Attributes.Values.Any(a => a.Group == group)) return Bad("Unbekannte Gruppe: {0}", group);
-                return write(Model.RelationStream + key, Types.RelationTypeDefined, body with { Key = key, Label = body.Label ?? new(), From = from, To = to, Group = group });
+                // Die Menge der Gruppen gilt; ohne sie zählt die eine Gruppe. group bleibt die erste daraus, damit ein Leser, der nur group kennt, weiter eine sieht.
+                var gruppen = (body.Groups ?? (Blank(body.Group) is { } eine ? [eine] : [])).Select(g => g?.Trim() ?? "").Where(g => g.Length > 0).Distinct().ToArray();
+                if (gruppen.FirstOrDefault(g => !model.Groups.ContainsKey(g) && !model.AllGroupKeys.Contains(g)) is { } unbekannt) return Bad("Unbekannte Gruppe: {0}", unbekannt);
+                return write(Model.RelationStream + key, Types.RelationTypeDefined, body with { Key = key, Label = body.Label ?? new(), From = from, To = to, Group = gruppen.FirstOrDefault(), Groups = gruppen.Length == 0 ? null : gruppen });
             }));
 
         m.MapDelete("/relations/{key}", (string key, HttpRequest req, Catalog c) =>

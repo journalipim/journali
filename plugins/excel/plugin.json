@@ -76,6 +76,7 @@
         "{role}",
         "{view}",
         "{ownOnly}",
+        "{relations}",
         "{keep}",
         "{pub}"
       ],
@@ -146,6 +147,13 @@
         {
           "key": "ownOnly",
           "label": "nur eigene Werte (geerbte leer lassen)",
+          "type": "boolean",
+          "default": "false",
+          "perJob": false
+        },
+        {
+          "key": "relations",
+          "label": "Relationen als zweites Blatt",
           "type": "boolean",
           "default": "false",
           "perJob": false

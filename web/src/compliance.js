@@ -121,14 +121,25 @@ export async function applySuggestions(list, mapping, locale) {
 }
 
 // Fehlende Attribute anlegen (Gruppe des Katalogs; die Gruppe wird angelegt, wenn es sie nicht gibt) und die Zuordnung setzen
-// Einheit sicherstellen: Symbol wie „kg“, „%“, „kWh“ → vorhandener Schlüssel oder neu (u_…, Grösse = Symbol)
-const UNIT_NAMES = { '%': t_('Prozent'), 'kg': t_('Masse'), 'g': t_('Masse'), 'mm': t_('Länge'), 'cm': t_('Länge'), 'm': t_('Länge'), 'kWh': t_('Energie'), 'Wh': t_('Energie'), 'W': t_('Leistung'), 'V': t_('Spannung'), 'A': t_('Strom'), 'l': t_('Volumen'), 'ml': t_('Volumen'), 'mg/kg': t_('Konzentration'), 'ppm': t_('Konzentration'), 'kg CO₂e': t_('Treibhausgas'), 'h': t_('Zeit'), 'a': t_('Zeit'), 'Jahre': t_('Zeit') }
+// Einheit sicherstellen: Symbol wie „kg“, „%“, „kWh“ → vorhandener Schlüssel oder neu.
+// Bekannte Symbole: Grösse (wie im Saatgut: mass, length, volume …) und Faktor zur Basiseinheit der Grösse (Basis = 1).
+// Die Einheit in der Zelle rechnet damit um (units.js); ein Faktor 1 für alles hiesse, dass 1 kWh als 1 Wh erscheint.
+// Dritter Wert: Verschiebung (Basis = Wert × Faktor + Verschiebung), nur bei Temperatur; Basis ist °C.
+// Ein Symbol, das hier fehlt, ist seine eigene Grösse: dann gibt es nichts umzurechnen.
+const BEKANNT = {
+  '°C': ['temperature', 1, 0], '°F': ['temperature', 5 / 9, -160 / 9], 'K': ['temperature', 1, -273.15],
+  '%': ['percent', 1], 'kg': ['mass', 1], 'g': ['mass', 0.001], 'mg': ['mass', 0.000001], 't': ['mass', 1000],
+  'mm': ['length', 0.001], 'cm': ['length', 0.01], 'm': ['length', 1], 'l': ['volume', 1], 'ml': ['volume', 0.001],
+  'kWh': ['energy', 1], 'Wh': ['energy', 0.001], 'W': ['power', 1], 'V': ['voltage', 1], 'A': ['current', 1],
+  'mg/kg': ['concentration', 1], 'ppm': ['concentration', 1], 'kg CO₂e': ['ghg', 1],
+  'h': ['time', 1], 'a': ['time', 8766], 'Jahre': ['time', 8766],
+}
 export async function ensureUnit(sym) {
   const units = store.model.units ?? []
   const hit = units.find(u => u.key === sym || u.key === sym.toLowerCase() || Object.values(u.label ?? {}).some(l => l === sym)); if (hit) return hit.key
   // Einheitenschlüssel ist das Symbol selbst (wie kg, cm, %): höchstens 8 Zeichen, ohne Leerraum — „kg CO₂e“ → „kgCO2e“
   const key = sym.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '').slice(0, 8) || 'x'
-  if (!units.some(u => u.key === key)) { await api.post(`/api/model/units/${key}`, { key, label: { de: sym, en: sym }, quantity: UNIT_NAMES[sym] ?? sym, factor: 1 }, 'PUT'); await store.poll(true) }
+  if (!units.some(u => u.key === key)) { const [quantity, factor, offset = 0] = BEKANNT[sym] ?? [sym, 1]; await api.post(`/api/model/units/${encodeURIComponent(key)}`, { key, label: { de: sym, en: sym }, quantity, factor, offset }, 'PUT'); await store.poll(true) }
   return key
 }
 
