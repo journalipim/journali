@@ -38,9 +38,11 @@ async function check(ctx, rootId, rules, say) {
   const master = model.masterLocale ?? model.locales[0]?.code ?? 'de'
   const locales = model.locales.map(l => l.code)
   const byLocale = new Map(); let columns = [], all = []
-  for (const l of locales) {
-    say(`lese ${l} …`)
-    const t = await api.get(`/api/nodes/${encodeURIComponent(rootId)}/table?deep=true&locale=${l}`)
+  say(t_('lese {0} Sprachen …', [locales.length]))
+  // Sprachen parallel: der Server rechnet je Anfrage nur einen Teilbaum, das Netz wartet nicht auf sich selbst.
+  const tables = await Promise.all(locales.map(l => api.get(`/api/nodes/${encodeURIComponent(rootId)}/table?deep=true&locale=${l}`)))
+  for (let i = 0; i < locales.length; i++) {
+    const l = locales[i]; const t = tables[i]
     columns = t.columns; all = t.rows
     byLocale.set(l, new Map(t.rows.map(r => [r.row.id, r.values])))
   }

@@ -44,9 +44,11 @@ async function mount(root, ctx) {
     if (!st.root) return
     const model = store.model; const locales = model.locales.map(l => l.code)
     const findings = []; let nodes = 0
-    for (const l of locales) {
-      say(`lese ${l} …`)
-      const t = await api.get(`/api/nodes/${encodeURIComponent(st.root)}/table?deep=true&locale=${l}`)
+    say(t_('lese {0} Sprachen …', [locales.length]))
+    // Sprachen parallel holen: der Server rechnet je Anfrage nur einen Teilbaum, das Netz wartet nicht auf sich selbst.
+    const tables = await Promise.all(locales.map(l => api.get(`/api/nodes/${encodeURIComponent(st.root)}/table?deep=true&locale=${l}`)))
+    for (let i = 0; i < locales.length; i++) {
+      const l = locales[i]; const t = tables[i]
       nodes = t.rows.length
       for (const r of t.rows) for (const c of checks) for (const f of c.run({ values: r.values, columns: t.columns.filter(x => !(r.inactive ?? []).includes(x.key)) })) findings.push({ ...f, rule: c.key, severity: c.severity, locale: l, node: r.row })
     }
