@@ -1,29 +1,47 @@
 # enrich — Anreicherung
 
-Stand 20.09.2026. Braucht `da`. Ansicht: ✓ Datenanalyse → ⌕ Anreicherung; Knoten-Menü „Anreichern“.
+Stand 30.09.2026. Braucht `da`. Ansicht: ✓ Datenanalyse → ⌕ Anreicherung; Knoten-Menü „Anreichern".
 
-„Im Gegensatz zu DPP und PPWR geht es um Produktdaten von Produkten, die nicht
-meine Produkte sind, die ich aber handle“ — die Daten liegen beim Hersteller (Webseite,
-Datenblatt, Katalog), nicht im eigenen Bestand. Werkzeuge wie onedot füllen solche Lücken per
-KI und Internetrecherche; hier macht das die KI des Nutzers mit dessen Schlüssel (Einstellungen → KI: welche Anbieter eingerichtet sind, steht dort),
-journali bietet keine KI an.
+Fehlende Attributwerte finden und ergänzen — für Handelsware, deren Daten beim
+Hersteller liegen: Vorschläge von der KI aus den vorhandenen Werten, mit Recherche
+im Internet (Hersteller, Typ, EAN → Datenblatt, Katalog), oder manuell mit Suchlinks.
 
 ## Ablauf
 
-1. **Attribute wählen** (oben, nach Gruppen; gemerkt als `attributes` in den Plugin-Daten) —
-   das ist der Katalog: jedes gewählte Attribut ein Pflicht-Datenpunkt, Zuordnung auf sich selbst.
-2. **Teilbaum prüfen** — die Prüfmaschine der Oberfläche (`web/src/compliance.js`, dieselbe wie
-   DPP/PPWR/ETIM) zeigt je Knoten erfüllt/leer/fraglich und die Trefferquote.
-3. **Vorschläge** — ⚙ aus Regeln (Ableitungen), ✦ von der KI aus den vorhandenen Werten des Knotens,
-   ⌕ **Recherche im Internet**: die KI bekommt Name, SKU, Hersteller, Typ, EAN und die externen
-   Kennungen des Knotens, sucht mit dem Suchwerkzeug ihres Anbieters (bis 6 Suchen je Knoten) und
-   nennt je Wert Sicherheit und Quelle (`↗ Quelle`). Ohne Haken: die ersten 5 Knoten mit Lücken.
-4. **Übernehmen** — nur angehakte Werte (ab 70 % vorangehakt, jeder Wert änderbar), ein Stapel ins
-   Journal (`/api/batch`, `attribute.set`); Listenwerte werden über die Bezeichnung aufgelöst.
+1. **Teilbaum laden** — der Anwender wählt einen Knoten; das Plugin lädt ihn mit
+   allen Unterknoten und ihren Attributwerten (`/api/nodes/{id}/table?deep=true&self=true`).
+2. **Leere Attribute erkennen** — das Plugin sammelt je Attribut, welche Knoten keinen
+   Wert haben. Das Ergebnis ist eine Mischliste (gruppiert nach Attributgruppe), jedes
+   Attribut mit der Zahl der leeren Knoten.
+3. **Anwender wählt** — Häkchen an den Attributen, die gesucht werden sollen. Nicht
+   gewählte werden übersprungen.
+4. **Zuordnen** — die gewählten Attribute werden den konkreten Knoten zugeordnet: nur
+   dort, wo der Wert wirklich fehlt. Knoten, deren leere Attribute nicht in der Auswahl
+   stehen, fallen weg.
+5. **Recherchieren** — drei Modi:
+   - **KI + Websuche**: die KI sucht im Internet (Hersteller, Typ, EAN → Datenblatt)
+     und nennt je Wert Sicherheit und Quelle. Kostet KI-Token und Websuch-Gebühren.
+   - **Nur KI**: die KI schlägt aus ihrem Wissen vor (keine Websuche). Günstiger, für
+     spezifische Produkte weniger treffsicher.
+   - **Manuell**: das Plugin baut Suchbegriffe aus den vorhandenen Werten und zeigt
+     Google-Links. Der Anwender sucht selbst und trägt den Wert in die Ergebnistabelle
+     ein. Keine KI-Kosten.
+6. **Ergebnis** — Tabelle: Knoten × Attribut × Vorschlag (absteigend nach Konfidenz),
+   je Wert mit Quelle. Der Anwender hakt an und ändert, was nötig ist.
+7. **Übernehmen** — angehakte Werte als ein Stapel ins Journal (`/api/batch`,
+   `attribute.set` und `value.source` mit Quelle, Weg und Prüfdatum).
+
+## Kontext je Knoten
+
+Für jeden Knoten, dem ein gesuchtes Attribut fehlt, werden alle vorhandenen Werte als
+Kontext an die KI geschickt — Name, Rolle, Artikelnummer, EAN, Beschreibung und jedes
+andere Attribut, das einen Wert hat. Je mehr vorhanden ist, desto besser die Treffer.
 
 ## Kosten und Grenzen
 
-Jede Suche kostet beim Anbieter extra (Websuche wird je Aufruf berechnet); der Schlüssel bleibt im
-Browser. Die KI erfindet nichts, was sie nicht findet — findet sie nichts, bleibt der Wert leer.
-Was übernommen wird, entscheidet der Mensch; die Quelle steht am Vorschlag, nicht am Wert
-(ein Beleg am Wert wäre ein eigener Eintragstyp — offen).
+- KI + Web: bis 6 Suchen je Knoten beim Anbieter; die Kosten wachsen mit der Zahl der
+  Knoten × Attribute.
+- Nur KI: ein Aufruf je Knoten, günstiger, aber begrenzt auf das Wissen des Modells.
+- Manuell: keine KI-Kosten; der Anwender recherchiert selbst.
+
+Eigener KI-Schlüssel (Einstellungen → KI); journali bietet keine KI an.

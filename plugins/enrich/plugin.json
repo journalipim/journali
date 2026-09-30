@@ -1,13 +1,13 @@
 {
   "key": "enrich",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "label": {
-    "de": "Anreicherung (KI)",
-    "en": "Enrichment (AI)"
+    "de": "Anreicherung",
+    "en": "Enrichment"
   },
   "description": {
-    "de": "Fehlende Werte gewählter Attribute finden und ergänzen — für Handelsware, deren Daten beim Hersteller liegen: Vorschläge aus Regeln, von der KI aus den vorhandenen Werten, oder mit Recherche im Internet (Hersteller, Typ, EAN → Datenblatt, Katalog), jeder Wert mit Quelle und Sicherheit. Nichts wird ohne Haken geschrieben; übernommen wird als ein Stapel ins Journal. Eigener KI-Schlüssel (Einstellungen → KI), journali bietet keine KI an.",
-    "en": "Find and fill missing values of chosen attributes — rule-based, from the AI using existing values, or with web research (manufacturer, type, EAN → data sheet), each value with its source. Nothing is written without a tick."
+    "de": "Fehlende Attributwerte finden und ergänzen: Knoten mit Unterknoten laden, leere Attribute erkennen, mit KI und Websuche oder manuell recherchieren, Ergebnisse prüfen und übernehmen.",
+    "en": "Find and fill missing attribute values: load a node with its descendants, detect empty attributes, research via AI and web search or manually, review and apply results."
   },
   "kind": "quality",
   "runs": "browser",

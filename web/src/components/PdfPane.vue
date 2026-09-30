@@ -3,6 +3,7 @@
 // springt zur Seite und markiert die Fundstelle. Rendern und Textlagen kommen von pdf.js im Browser — die echten
 // Glyph-Positionen, dieselben Koordinaten wie beim Lesen (Plugin docs). WELCHE Stücke der Kasten umfasst, sagt
 // pdf-locate (rein, geprüft). pdf.js wird verzögert geladen; im Test ist die Komponente gestubbt, es lädt also nie.
+// Zoom (30.09.2026): CSS-Transform auf dem Inhalt, nicht neu rendern — schnell, der Zoomlevel bleibt beim Attributwechsel.
 import { ref, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { t as t_ } from '../i18n.js'
 import { findeSpanne, kastenAus } from '../pdf-locate.js'
@@ -20,10 +21,12 @@ const marke = ref(null)         // { page, left, top, width, height }
 const laden = ref(false)
 const fehler = ref('')
 const behaelter = ref(null)
+const zoom = ref(1)             // 1 = an die Spaltenbreite angepasst; > 1 vergrössert
 const tech = new Map()          // num -> { page, viewport, scale, pdfjs, items } — nicht reaktiv (keine pdf.js-Objekte proxen)
 const canvasRefs = {}
 let pdfDoc = null
 let laufId = 0
+let basisBreite = 400           // die Breite, auf die das PDF bei zoom=1 passt
 
 function setCanvas(num, el) { if (el) canvasRefs[num] = el }
 
@@ -48,12 +51,12 @@ async function ladeDoc(id) {
     if (meins !== laufId) return
     pdfDoc = await pdfjs.getDocument({ data }).promise
     if (meins !== laufId) return
-    const breite = Math.max(180, (behaelter.value?.clientWidth || 400) - 20)
+    basisBreite = Math.max(180, (behaelter.value?.clientWidth || 400) - 20)
     const masse = []
     for (let n = 1; n <= pdfDoc.numPages; n++) {
       const page = await pdfDoc.getPage(n)
       const eins = page.getViewport({ scale: 1 })
-      const scale = Math.max(0.2, Math.min(2, breite / eins.width))
+      const scale = Math.max(0.2, Math.min(2, basisBreite / eins.width))
       const viewport = page.getViewport({ scale })
       tech.set(n, { page, viewport, scale, pdfjs, items: [] })
       masse.push({ num: n, width: Math.round(viewport.width), height: Math.round(viewport.height) })
@@ -84,17 +87,37 @@ async function zeichne(num) {
   })
 }
 
-/// Zur Seite springen und die Fundstelle markieren. scrollIntoView scrollt nachweislich nur die PDF-Spalte selbst
-/// (Browsertest: die Tabelle bleibt unberührt) und erreicht zuverlässig jede Seite; das Netz onErrorCaptured im Dialog
-/// fängt einen Fehler ab, hier zusätzlich try/catch.
+/// Zur Fundstelle springen: die Markierung soll vollständig im sichtbaren Bereich liegen. Ist sie bei der aktuellen
+/// Zoomstufe grösser als der sichtbare Bereich, wird der Zoom so weit verkleinert, dass sie hineinpasst (30.09.2026).
 function springen() {
   try {
     if (!seiten.value.length) return
-    const ziel = Number(props.page)   // die Seitenzahl kann als Text kommen — sonst schlägt der Vergleich fehl und es bliebe Seite 1
+    const ziel = Number(props.page)
     const num = seiten.value.some(s => s.num === ziel) ? ziel : seiten.value[0].num
     markiere(num)
-    const seiteEl = canvasRefs[num]?.parentElement
-    if (seiteEl?.scrollIntoView) seiteEl.scrollIntoView({ block: 'start', behavior: 'auto' })
+    nextTick(() => {
+      const box = behaelter.value
+      if (!box) return
+      const m = marke.value
+      if (!m) {
+        const seiteEl = canvasRefs[num]?.parentElement
+        if (seiteEl) seiteEl.scrollIntoView({ block: 'start', behavior: 'auto' })
+        return
+      }
+      // Passt die Markierung bei der aktuellen Zoomstufe nicht in den sichtbaren Bereich?
+      const rand = 24
+      const sichtH = box.clientHeight, sichtW = box.clientWidth
+      if (m.height * zoom.value > sichtH - rand * 2 || m.width * zoom.value > sichtW - rand * 2) {
+        const noetig = Math.min((sichtH - rand * 2) / m.height, (sichtW - rand * 2) / m.width)
+        zoom.value = Math.round(Math.max(0.5, noetig) * 10) / 10
+      }
+      // scrollIntoView auf dem .marke-Element — der Browser rechnet CSS-Transforms korrekt ein
+      requestAnimationFrame(() => {
+        const markeEl = box.querySelector('.marke')
+        if (markeEl) markeEl.scrollIntoView({ block: 'center', inline: 'center', behavior: 'auto' })
+        else { const seiteEl = canvasRefs[num]?.parentElement; seiteEl?.scrollIntoView({ block: 'start', behavior: 'auto' }) }
+      })
+    })
   } catch { /* die Ansicht darf nie den Dialog stören */ }
 }
 
@@ -107,7 +130,31 @@ function markiere(num) {
   if (k) marke.value = { page: num, ...k }
 }
 
-watch(() => props.doc, id => ladeDoc(id))
+/// Zoom: Strg+Rad oder die Knöpfe — der Zoomlevel bleibt beim Attributwechsel erhalten (30.09.2026).
+/// Beim Zoomen bleibt die Mitte des sichtbaren Bereichs an derselben Stelle im Dokument.
+/// requestAnimationFrame statt nextTick, weil der Browser die Scroll-Fläche erst nach dem Layout-Pass aktualisiert.
+function zoomen(delta) {
+  const box = behaelter.value
+  const alt = zoom.value
+  const neu = Math.round(Math.max(0.5, Math.min(4, alt + delta)) * 10) / 10
+  if (neu === alt) return
+  if (box) {
+    const mitteY = box.scrollTop + box.clientHeight / 2
+    const mitteX = box.scrollLeft + box.clientWidth / 2
+    const docY = mitteY / alt
+    const docX = mitteX / alt
+    zoom.value = neu
+    requestAnimationFrame(() => {
+      box.scrollTop = docY * neu - box.clientHeight / 2
+      box.scrollLeft = docX * neu - box.clientWidth / 2
+    })
+  } else {
+    zoom.value = neu
+  }
+}
+function onWheel(e) { if (e.ctrlKey) { e.preventDefault(); zoomen(e.deltaY < 0 ? 0.2 : -0.2) } }
+
+watch(() => props.doc, id => { zoom.value = 1; ladeDoc(id) })
 watch(() => [props.page, props.quote, props.value], () => springen())
 onMounted(() => ladeDoc(props.doc))
 onBeforeUnmount(() => { laufId++; if (pdfDoc) { try { pdfDoc.destroy() } catch { /* egal */ } } })
@@ -117,13 +164,21 @@ onBeforeUnmount(() => { laufId++; if (pdfDoc) { try { pdfDoc.destroy() } catch {
   <!-- Aussen das Flex-Item (Breite/Spalte), innen der Scroll-Container: nur so scrollt scrollIntoView die PDF-Spalte
        selbst und nicht den Dialog (bewiesen), und der Dialog kollabiert nicht. -->
   <div class="pdf-pane">
-    <div class="pdf" ref="behaelter">
+    <div class="pdf-zoom-bar">
+      <button class="x" @click="zoomen(-0.2)" :disabled="zoom <= 0.5" title="−">−</button>
+      <span class="muted" :title="$t('Strg+Mausrad zum Zoomen')">{{ Math.round(zoom * 100) }}%</span>
+      <button class="x" @click="zoomen(0.2)" :disabled="zoom >= 4" title="+">+</button>
+      <button v-if="zoom !== 1" class="x muted" @click="zoom = 1" title="1:1">⌂</button>
+    </div>
+    <div class="pdf" ref="behaelter" @wheel="onWheel">
       <div v-if="laden" class="hinweis muted">{{ $t("◌ PDF wird geladen …") }}</div>
       <div v-else-if="fehler" class="hinweis neg">{{ fehler }} · <a :href="`/api/media/${doc}/file`" target="_blank" rel="noopener">{{ $t("öffnen") }}</a></div>
       <div v-else-if="!doc" class="hinweis muted">{{ $t("Kein Dokument") }}</div>
-      <div v-for="s in seiten" :key="s.num" class="seite" :style="{ width: s.width + 'px', height: s.height + 'px' }">
-        <canvas :ref="el => setCanvas(s.num, el)" />
-        <div v-if="marke && marke.page === s.num" class="marke" :style="{ left: marke.left + 'px', top: marke.top + 'px', width: marke.width + 'px', height: marke.height + 'px' }" />
+      <div class="pdf-content" :style="{ transform: `scale(${zoom})`, transformOrigin: 'top center', width: zoom !== 1 ? basisBreite + 'px' : undefined }">
+        <div v-for="s in seiten" :key="s.num" class="seite" :style="{ width: s.width + 'px', height: s.height + 'px' }">
+          <canvas :ref="el => setCanvas(s.num, el)" />
+          <div v-if="marke && marke.page === s.num" class="marke" :style="{ left: marke.left + 'px', top: marke.top + 'px', width: marke.width + 'px', height: marke.height + 'px' }" />
+        </div>
       </div>
     </div>
   </div>
@@ -131,7 +186,10 @@ onBeforeUnmount(() => { laufId++; if (pdfDoc) { try { pdfDoc.destroy() } catch {
 
 <style scoped>
 .pdf-pane { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.pdf-zoom-bar { display: flex; align-items: center; gap: 4px; padding: 2px 8px; border-bottom: 1px solid var(--line); font-size: 12px; flex: none; }
+.pdf-zoom-bar button { min-width: 22px; }
 .pdf { flex: 1; min-height: 0; overflow: auto; position: relative; background: var(--panel-2, #14161a); padding: 8px; }
+.pdf-content { /* kein transition — der Zoom greift sofort, damit die Scroll-Korrektur stimmt */ }
 .hinweis { padding: 12px; font-size: 12px; }
 .seite { position: relative; margin: 0 auto 10px; box-shadow: 0 1px 5px rgba(0,0,0,.45); }
 .seite canvas { display: block; width: 100%; height: 100%; }
