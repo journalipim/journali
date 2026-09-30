@@ -24,6 +24,9 @@ const bricks = ref([])
 const settings = ref({})
 // Was gerade gelesen wurde und noch nicht übernommen ist
 const gelesen = ref(null)
+const gespeichert = ref({})       // die Datensätze, wie sie im Journal stehen — zum Vergleichen
+const vorhaben = ref(null)        // { alle, neu }: was die gelesene Datei ergibt und davon, was im Journal anders ist
+const dateiOffen = ref(false)     // mit übernommenen Daten braucht es die Datei nur für eine weitere Fassung oder Sprache
 
 const byAttr = computed(() => classesByAttribute(bricks.value))
 const hatDaten = computed(() => bricks.value.length > 0)
@@ -32,6 +35,7 @@ async function laden() {
   busy.value = t_('lese …')
   try {
     const all = await api.get('/api/plugins/gpc/data?values=true')
+    gespeichert.value = all
     release.value = all.release ?? null
     settings.value = all.settings ?? {}
     dict.value = all.dict ?? { attributes: {}, values: {}, hierarchy: {} }
@@ -47,17 +51,25 @@ async function datei(file) {
     let buf = new Uint8Array(await file.arrayBuffer())
     if (isZip(buf)) buf = await inflateInBrowser(jsonInZip(buf))
     gelesen.value = parseGpc(new TextDecoder().decode(buf))
+    vorhaben.value = vergleichen(gelesen.value)
   } catch (e) { fehler.value = e.message } finally { busy.value = '' }
 }
 function gewaehlt(e) { const f = e.target.files?.[0]; if (f) datei(f); e.target.value = '' }
 function abgelegt(e) { dragOver.value = false; const f = e.dataTransfer?.files?.[0]; if (f) datei(f) }
 
-/// In Häppchen übernehmen: ein Segment ist bis zu 2 MB, mehr als ein paar Stück gehen nicht in einen Aufruf
-async function uebernehmen() {
-  if (!gelesen.value) return
+/// Was die gelesene Datei ergibt und was davon im Journal anders ist. Das Journal wächst nur: was schon genau so dasteht,
+/// wird nicht noch einmal geschrieben — dieselbe Datei ein zweites Mal ergibt nichts.
+function vergleichen(rel) {
   const have = { bricks: new Map(), dict: dict.value, release: release.value }
   for (const b of bricks.value) { const s = b.path[0]; if (!have.bricks.has(s)) have.bricks.set(s, []); have.bricks.get(s).push(b) }
-  const items = Object.entries(toRecords(gelesen.value, have))
+  const alle = Object.entries(toRecords(rel, have))
+  return { alle: alle.length, neu: alle.filter(([name, value]) => JSON.stringify(value) !== JSON.stringify(gespeichert.value[name])) }
+}
+
+/// In Häppchen übernehmen, aber nur das Neue: ein Segment ist bis zu 2 MB, mehr als ein paar Stück gehen nicht in einen Aufruf
+async function uebernehmen() {
+  if (!gelesen.value || !vorhaben.value?.neu.length) return
+  const items = vorhaben.value.neu
   busy.value = t_('übernehme …')
   try {
     let chunk = {}, size = 0, done = 0
@@ -68,7 +80,7 @@ async function uebernehmen() {
       chunk[name] = value; size += n; busy.value = t_('übernehme … {0}/{1}', [++done, items.length])
     }
     await flush()
-    gelesen.value = null
+    gelesen.value = null; vorhaben.value = null; dateiOffen.value = false
     await laden()
     store.toast(t_('✓ {0} Bricks übernommen', [bricks.value.length]), 'ok')
   } catch (e) { fehler.value = e.message; busy.value = '' }
@@ -138,7 +150,7 @@ async function zuweisen() {
 }
 
 onMounted(async () => { if (!tree.loaded) await tree.load?.(); await laden(); await zielLesen() })
-defineExpose({ release, bricks, dict, gelesen, suche, treffer, gewaehlterBrick, ziel, aktuell, datei, uebernehmen, zuweisen, laden, zielWahl })
+defineExpose({ release, bricks, dict, gelesen, vorhaben, dateiOffen, suche, treffer, gewaehlterBrick, ziel, aktuell, datei, uebernehmen, zuweisen, laden, zielWahl })
 </script>
 
 <template>
@@ -151,13 +163,18 @@ defineExpose({ release, bricks, dict, gelesen, suche, treffer, gewaehlterBrick, 
         <span v-if="release" :title="$t('Sprachen: {0}', [(release.languages ?? []).join(', ')])">{{ release.version }} · {{ release.date }} · {{ $t("{0} Bricks", [bricks.length]) }}</span>
         <span v-else class="muted">{{ $t("nichts übernommen") }}</span>
       </td></tr>
-      <tr><td class="attr">{{ $t("Datei") }}</td><td>
+      <tr v-if="release && !dateiOffen && !gelesen"><td class="attr"></td><td>
+        <button :title="$t('Die Veröffentlichung ist übernommen; eine Datei braucht es nur für eine weitere Fassung oder Sprache')" @click="dateiOffen = true">{{ $t("Weitere Fassung oder Sprache …") }}</button>
+      </td></tr>
+      <tr v-else><td class="attr">{{ $t("Datei") }}</td><td>
         <label class="drop" :class="{ over: dragOver }" @dragover.prevent="dragOver = true" @dragleave="dragOver = false" @drop.prevent="abgelegt"
           :title="$t('GPC-Paket (.zip) oder die .json darin; holen unter gpc-browser.gs1.org')">
           <input type="file" accept=".zip,.json" style="display:none" @change="gewaehlt" />{{ $t("Datei wählen oder hierher ziehen") }}
         </label>
         <span v-if="gelesen" style="margin-left:8px">{{ gelesen.meta.version }} · {{ gelesen.meta.language.toUpperCase() }} · {{ $t("{0} Bricks", [gelesen.meta.counts.bricks]) }}
-          <button class="primary" :disabled="!!busy" @click="uebernehmen">{{ $t("übernehmen") }}</button></span>
+          <span v-if="vorhaben?.neu.length" :title="$t('Nur Datensätze, die im Journal fehlen oder anders sind, werden geschrieben')">· {{ $t("{0} von {1} Datensätzen neu oder geändert", [vorhaben.neu.length, vorhaben.alle]) }}</span>
+          <span v-else class="pos">· {{ $t("schon im Journal") }}</span>
+          <button class="primary" :disabled="!!busy || !vorhaben?.neu.length" @click="uebernehmen">{{ $t("übernehmen") }}</button></span>
       </td></tr>
       <tr class="step"><td colspan="2" class="step-band" style="display:table-cell;height:24px">{{ $t("2 · Klasse zuweisen") }}</td></tr>
       <tr><td class="attr">{{ $t("Suche") }}</td><td>

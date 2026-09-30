@@ -151,3 +151,34 @@ test('der Menüpunkt am Knoten führt in die Ansicht mit diesem Knoten', async (
   assert.deepEqual(plugin.nodeActions[0].roles, ['group', 'product'])
   assert.equal(plugin.views[0].path, 'gpc'); assert.equal(plugin.views[0].topic, 'classification')
 })
+
+test('dieselbe Datei ein zweites Mal: nichts Neues, nichts wird geschrieben', async () => {
+  const { w, calls } = await mitDaten()
+  const puts = () => calls.filter(c => c.method === 'PUT' && c.path === '/api/plugins/gpc/data').length
+  assert.equal(puts(), 1)
+  assert.equal(w.find('.drop').exists(), false, 'mit übernommenen Daten lädt die Ansicht nicht zum Ablegen ein')
+  await w.findAll('button').find(b => b.text().startsWith('Weitere Fassung')).trigger('click')
+  assert.equal(w.find('.drop').exists(), true)
+  await w.vm.datei(new File([probe], 'GPC.json')); await ruhe()
+  assert.match(w.text(), /schon im Journal/)
+  assert.equal(w.vm.vorhaben.neu.length, 0)
+  const knopf = w.findAll('button').find(b => b.text() === 'übernehmen')
+  assert.equal(knopf.attributes('disabled') !== undefined, true)
+  await w.vm.uebernehmen(); await ruhe()
+  assert.equal(puts(), 1, 'kein zweiter Schreibvorgang')
+})
+
+test('eine weitere Sprache schreibt nur, was sich ändert: die Bricks und das Wörterbuch tragen neue Titel, der Kopf die Sprache', async () => {
+  const { w, calls } = await mitDaten()
+  await w.findAll('button').find(b => b.text().startsWith('Weitere Fassung')).trigger('click')
+  await w.vm.datei(new File([probe.replace('"LanguageCode": "EN"', '"LanguageCode": "DE"').replaceAll('Sample', 'Muster')], 'GPC-DE.json')); await ruhe()
+  assert.match(w.text(), /3 von 3 Datensätzen neu oder geändert/)
+  await w.vm.uebernehmen(); await ruhe()
+  const puts = calls.filter(c => c.method === 'PUT' && c.path === '/api/plugins/gpc/data')
+  assert.equal(puts.length, 2)
+  assert.deepEqual(puts[1].body.release.languages, ['en', 'de'])
+  // und danach ist auch diese Datei nichts Neues mehr
+  await w.findAll('button').find(b => b.text().startsWith('Weitere Fassung')).trigger('click')
+  await w.vm.datei(new File([probe.replace('"LanguageCode": "EN"', '"LanguageCode": "DE"').replaceAll('Sample', 'Muster')], 'GPC-DE.json')); await ruhe()
+  assert.equal(w.vm.vorhaben.neu.length, 0)
+})

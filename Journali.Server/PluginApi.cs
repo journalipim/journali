@@ -91,6 +91,12 @@ public static class PluginApi
         return n;
     }
 
+    /// <summary>Steht dieser Datensatz des Plugins schon genau so im Journal? Ein leerer Wert meint „weg“ und ist gleich, wenn es ihn nicht gibt.</summary>
+    public static bool Unveraendert(Catalog c, string key, string name, string? value) =>
+        c.Lesen((_, _) => c.Plugins.All.TryGetValue(key, out var p) && p.Data.TryGetValue(name, out var have)
+            ? string.IsNullOrEmpty(value) ? false : have == value
+            : string.IsNullOrEmpty(value));
+
     public static void Map(RouteGroupBuilder api, string dir)
     {
         PluginCatalogApi.Map(api, dir);   // vor /plugins/{key}: „catalog" ist kein Plugin
@@ -171,7 +177,10 @@ public static class PluginApi
             using var reader = new StreamReader(req.Body); var value = await reader.ReadToEndAsync(ct);
             if (value.Length > 4_000_000) return Bad("Höchstens 4 MB je Datensatz.");
             if (value.Length > 0) { try { JsonDocument.Parse(value).Dispose(); } catch (JsonException e) { return Bad("Kein JSON: {0}", e.Message); } }
-            return c.With((_, _, write) => Results.Ok(EntryView.Of(write(actor, Plugins.Stream + key, Types.PluginDataSet, new PluginDataSet(name, value.Length == 0 ? null : value), null))));
+            // Was schon genau so im Journal steht, wird nicht noch einmal geschrieben: das Journal wächst nur, und ein Plugin, das
+            // seine Daten bei jedem Einlesen neu schickt, füllte es mit Gleichem
+            return c.With((_, _, write) => Unveraendert(c, key, name, value.Length == 0 ? null : value) ? Results.Ok(new { unchanged = true })
+                : Results.Ok(EntryView.Of(write(actor, Plugins.Stream + key, Types.PluginDataSet, new PluginDataSet(name, value.Length == 0 ? null : value), null))));
         });
         // Sammel-PUT: { name: wert, … } — alle in einem Stapel (etim: eine ganze Freigabe, tausende Klassen)
         api.MapPut("/plugins/{key}/data", async (string key, HttpRequest req, Catalog c, CancellationToken ct) =>
@@ -185,8 +194,10 @@ public static class PluginApi
             if (items is null || items.Count == 0) return Bad("Leer.");
             if (items.Keys.Any(n => n.Length is 0 or > 120 || n.Any(ch => ch is '/' or '\\'))) return Bad("Name ungültig.");
             var batch = Guid.NewGuid().ToString("N")[..12];
-            var entries = c.WriteMany(actor, items.Select(kv => (Plugins.Stream + key, Types.PluginDataSet, (object)new PluginDataSet(kv.Key, kv.Value.GetRawText()))).ToList(), batch);
-            return Results.Ok(new { count = entries.Count, batch, last = EntryView.Of(entries[^1]) });
+            var neu = items.Where(kv => !Unveraendert(c, key, kv.Key, kv.Value.GetRawText())).ToList();
+            if (neu.Count == 0) return Results.Ok(new { count = 0, unchanged = items.Count });
+            var entries = c.WriteMany(actor, neu.Select(kv => (Plugins.Stream + key, Types.PluginDataSet, (object)new PluginDataSet(kv.Key, kv.Value.GetRawText()))).ToList(), batch);
+            return Results.Ok(new { count = entries.Count, unchanged = items.Count - neu.Count, batch, last = EntryView.Of(entries[^1]) });
         });
         api.MapDelete("/plugins/{key}/data/{name}", (string key, string name, HttpRequest req, Catalog c) =>
         {
