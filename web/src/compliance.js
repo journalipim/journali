@@ -12,7 +12,7 @@ import { tree } from './tree.js'
 import { dialog } from './dialog.js'
 import { ai } from './ai.js'
 import { norm, similarity } from './mapper.js'
-import { analyze, findeZyklus, einrichtungsBedarf } from './compliance-core.js'
+import { analyze, findeZyklus, einrichtungsBedarf, umwandlungsZiele, umwandlungsPlan } from './compliance-core.js'
 import { gruppenVon } from './gruppen.js'
 import * as transform from './transform.js'
 import { treePicker } from './treePicker.js'
@@ -440,28 +440,36 @@ export async function mount(root, ctx, catalog) {
       mk.textContent = t_('+ anlegen in {0}', [catalog.groupKey])
       return el('span', { style: 'display:inline-flex;gap:4px;align-items:center' }, sel, mk)
     }
-    // Umwandlungs-Zelle (ƒ): fuer zugeordnete Datenpunkte — Kette am Wurzelknoten setzen, vererbt sich nach unten.
-    // Beginnt der aktuelle Wert mit 'f:', wird die Kette in den Editor geladen; sonst wird eine neue angelegt.
+    // Umwandlungs-Zelle (ƒ): nur für Text-Attribute. Die Kette steht als Wert an jedem verkäuflichen Knoten (Blatt), an dem der
+    // Datenpunkt gilt — ein Wert je Knoten, nichts hängt an der Vererbung.
     const fCell = (it, to) => {
-      const rootNode = r.nodes.find(n => n.row.id === st.root)
-      const cur = rootNode?.raw?.[to]
-      const isChain = typeof cur === 'string' && cur.startsWith('f:')
-      let stepsBeschreibung = ''
-      if (isChain) { try { stepsBeschreibung = transform.describe(JSON.parse(cur.slice(2)) || []) || t_('Kette') } catch { stepsBeschreibung = t_('Kette (ungültig)') } }
-      const label = isChain ? 'ƒ ' + stepsBeschreibung.slice(0, 40) : 'ƒ'
-      return el('button', { class: 'x' + (isChain ? ' on' : ''), title: isChain
-        ? t_('Umwandlung: {0} — Klick zum Bearbeiten', [stepsBeschreibung])
-        : t_('Umwandlung an „{0}“ setzen (vererbt sich): Attribute verbinden, Ja/Nein, Vorgabe …', [tree.byId.get(st.root)?.label ?? '']),
+      const def = model.attributes.find(a => a.key === to)
+      if (def?.type !== 'text') return ''
+      const ziele = umwandlungsZiele(r, it.key)
+      if (!ziele.length) return ''
+      const ketten = ziele.map(n => n.raw?.[to]).filter(v => typeof v === 'string' && v.startsWith('f:'))
+      const vorlage = ketten[0] ?? null
+      let beschreibung = ''
+      if (vorlage) { try { beschreibung = transform.describe(JSON.parse(vorlage.slice(2)) || []) || t_('Kette') } catch { beschreibung = t_('Kette (ungültig)') } }
+      const label = vorlage ? 'ƒ ' + beschreibung.slice(0, 30) + (ketten.length < ziele.length ? ` (${ketten.length}/${ziele.length})` : '') + (ketten.every(k => k === vorlage) ? '' : ' ≠') : 'ƒ'
+      return el('button', { class: 'x' + (vorlage ? ' on' : ''), title: vorlage
+        ? t_('Umwandlung: {0} — Klick zum Bearbeiten', [beschreibung])
+        : t_('Umwandlung an {0} Knoten setzen: Attribute verbinden, Ja/Nein, Vorgabe …', [ziele.length]),
         onclick: async () => {
           let initial = []
-          if (isChain) { try { initial = JSON.parse(cur.slice(2)) || [] } catch { initial = [] } }
+          if (vorlage) { try { initial = JSON.parse(vorlage.slice(2)) || [] } catch { initial = [] } }
           const attrsList = (model.attributes ?? []).filter(a => a.key !== to && !['rows', 'formula', 'template'].includes(a.type)).map(a => ({ key: a.key, label: L(a.label) }))
-          const next = await dialog.steps({ title: t_('Umwandlung für {0} an „{1}“', [it.label, tree.byId.get(st.root)?.label ?? '']), text: t_('Die Vorschau rechnet mit den Werten der Wurzel; die Kette wird als Attributwert gespeichert und vererbt sich nach unten.'), value: initial, attributes: attrsList, values: rootNode?.raw ?? {}, ok: t_('Übernehmen') })
+          const next = await dialog.steps({ title: t_('Umwandlung für {0} an {1} Knoten', [it.label, ziele.length]), text: t_('Die Vorschau rechnet mit den Werten des ersten Knotens; die Kette wird an jedem dieser Knoten als Wert gespeichert.'), value: initial, attributes: attrsList, values: ziele[0].raw ?? {}, ok: t_('Übernehmen') })
           if (next == null) return
-          const newVal = next.length ? 'f:' + JSON.stringify(next) : null
-          const werte = Object.fromEntries(Object.entries(rootNode?.raw ?? {}).map(([k, v]) => [k, { value: v }]))
-          if (newVal && findeZyklus(newVal, to, werte)) { store.toast(t_('Die Umwandlung liest {0} selbst — ein Kreis, nicht gespeichert.', [to])); return }
-          try { await api.post(`/api/nodes/${encodeURIComponent(st.root)}/attributes`, { attribute: to, locale: null, channel: null, value: newVal, row: null }); await store.poll(true); await run() } catch (e) { store.toast(e.message); say('✗ ' + e.message) }
+          const wert = next.length ? 'f:' + JSON.stringify(next) : null
+          const locale = def.perLocale ? r.locale : null
+          if (wert && ziele.some(n => findeZyklus(wert, to, Object.fromEntries(Object.entries(n.raw ?? {}).map(([k, v]) => [k, { value: v }]))))) { store.toast(t_('Die Umwandlung liest {0} selbst — ein Kreis, nicht gespeichert.', [to])); return }
+          const plan = umwandlungsPlan(ziele, to, wert)
+          try {
+            if (plan.schreiben.length) await api.post('/api/batch', { commands: plan.schreiben.map(n => ({ op: 'attribute.set', args: { node: n.row.id, attribute: to, locale, value: wert } })), batch: 'umwandlung-' + Date.now().toString(36) })
+            for (const n of plan.loeschen) await api.post(`/api/nodes/${encodeURIComponent(n.row.id)}/attributes/clear`, { attribute: to, locale, channel: null, row: null })
+            await store.poll(true); await run()
+          } catch (e) { store.toast(e.message); say('✗ ' + e.message) }
         }
       }, label)
     }
