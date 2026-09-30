@@ -2,7 +2,7 @@
 // Läuft ohne Browser und ohne Server: `npm test` in web/ (node --test).
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { analyze } from '../src/compliance-core.js'
+import { analyze, resolvePlaceholders } from '../src/compliance-core.js'
 import dpp from '../../plugins/dpp/catalog.js'
 
 // Modell: die Attribute, die die Zuordnung braucht, dazu das Geltungsattribut dpp_scope (vererbbar, Gruppe dpp)
@@ -115,4 +115,78 @@ test('Pflicht-Quote: nur Pflicht-Datenpunkte zählen; na zählt nicht mit', () =
   const p = res.nodes.find(n => n.row.id === 'p-1')
   assert.ok(p.must > 0 && p.mustOk <= p.must)
   assert.equal(p.score, Math.round(p.mustOk / p.must * 100))
+})
+
+// ── Platzhalter im Wert: {key} wird durch den Wert des Ziel-Attributs am selben Knoten ersetzt
+// (mit Vererbung, so wie r.values das Attribut fuehrt). Rekursiv, mit Zyklus-Schutz.
+
+test('resolvePlaceholders: kein Platzhalter → der Text unveraendert', () => {
+  assert.equal(resolvePlaceholders('WAKOL Sealing', { name: { value: 'X' } }), 'WAKOL Sealing')
+  assert.equal(resolvePlaceholders('', {}), '')
+  assert.equal(resolvePlaceholders(null, {}), null)
+})
+
+test('resolvePlaceholders: ein Platzhalter → der Wert am Knoten', () => {
+  assert.equal(resolvePlaceholders('{name}', { name: { value: 'EliteBook' } }), 'EliteBook')
+})
+
+test('resolvePlaceholders: mehrere Platzhalter mit Literalen dazwischen', () => {
+  const v = { name: { value: 'EliteBook' }, sku: { value: 'A1' } }
+  assert.equal(resolvePlaceholders('{name} · {sku}', v), 'EliteBook · A1')
+})
+
+test('resolvePlaceholders: leeres Ziel → der Platzhalter wird nichts, der Rest bleibt', () => {
+  const v = { name: { value: 'EliteBook' }, sku: { value: '' } }
+  assert.equal(resolvePlaceholders('{name} · {sku}', v), 'EliteBook · ')
+})
+
+test('resolvePlaceholders: verschachtelter Platzhalter (Ziel enthaelt selbst {key})', () => {
+  const v = { a: { value: '{b}' }, b: { value: 'X' } }
+  assert.equal(resolvePlaceholders('{a}', v), 'X')
+})
+
+test('resolvePlaceholders: Zyklus (a → b → a) → null', () => {
+  const v = { a: { value: '{b}' }, b: { value: '{a}' } }
+  assert.equal(resolvePlaceholders('{a}', v), null)
+})
+
+test('resolvePlaceholders: Selbst-Referenz (a → a) → null', () => {
+  const v = { a: { value: '{a}' } }
+  assert.equal(resolvePlaceholders('{a}', v), null)
+})
+
+test('resolvePlaceholders: nicht existierendes Ziel → nichts (wie ein leeres Ziel)', () => {
+  assert.equal(resolvePlaceholders('vor {fehlt} nach', {}), 'vor  nach')
+})
+
+test('resolvePlaceholders: leere Klammern {} bleiben unangetastet', () => {
+  assert.equal(resolvePlaceholders('a{}b', {}), 'a{}b')
+})
+
+test('analyze: dpp_handelsname = {name} → aufgeloest zum Namen des Knotens (state ok)', () => {
+  const m = { ...mapping }
+  const rowsMitTpl = [
+    { row: product, values: V({ name: 'EliteBook', ean: '4000000000006', sku: 'A1' }) },
+    { row: variant, values: V({ name: 'EliteBook 16', dpp_batch: 'L1' }) },
+  ]
+  // Der 'name'-Wert im Modell existiert; das Mapping trade_name → name gilt.
+  // Wir setzen jetzt einen Wert auf 'name' der ein Platzhalter ist: das Attribut, das den Wert traegt, ist name selbst.
+  // Ein direktes Beispiel: das Attribut 'name' hat den Wert '{sku}' → aufgeloest = 'A1'.
+  const rowsRef = [
+    { row: product, values: V({ name: '{sku}', sku: 'A1', ean: '4000000000006' }) },
+  ]
+  const res = analyze({ catalog: dpp, mapping: m, model, rows: rowsRef, scopeAttr: 'dpp_scope' })
+  const node = res.nodes.find(n => n.row.id === 'p-1')
+  // trade_name ist auf 'name' gemappt; 'name' = '{sku}' → 'A1' → also ok
+  assert.equal(node.states['trade_name'], 'ok')
+})
+
+test('analyze: Wert ist reiner Platzhalter, Ziel leer → state empty', () => {
+  const m = { ...mapping }
+  const rowsRef = [
+    { row: product, values: V({ name: '{sku}', sku: '', ean: '4000000000006' }) },
+  ]
+  const res = analyze({ catalog: dpp, mapping: m, model, rows: rowsRef, scopeAttr: 'dpp_scope' })
+  const node = res.nodes.find(n => n.row.id === 'p-1')
+  assert.equal(node.states['trade_name'], 'empty')
 })

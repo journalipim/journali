@@ -5,6 +5,40 @@
 // ok · empty · bad · unmapped · na (gilt nicht: Rolle, Geltung) · below (alle Blätter darunter haben es) · inactive (Gruppe fehlt) · pending (angefragt).
 import { convert, validate } from './mapper.js'
 
+// {key} im Wert aufloesen: der Wert des Ziel-Attributs am selben Knoten (mit Vererbung, so wie er in values steht)
+// wird eingesetzt. Rekursiv, mit Zyklus-Schutz. Ist ein Ziel leer, wird nichts eingesetzt (der Rest bleibt).
+// Zyklus → null (der Aufrufer behandelt das als leer). Kein Platzhalter im Text → der Text unveraendert.
+export function resolvePlaceholders(text, values, seen = new Set()) {
+  if (text == null || typeof text !== 'string' || !text.includes('{')) return text
+  let out = ''
+  let i = 0
+  while (i < text.length) {
+    const ch = text[i]
+    if (ch === '{') {
+      const end = text.indexOf('}', i + 1)
+      if (end < 0) { out += text.slice(i); break }
+      const key = text.slice(i + 1, end).trim()
+      if (!key) { out += text.slice(i, end + 1); i = end + 1; continue }   // '{}' bleibt stehen
+      if (seen.has(key)) return null
+      const sub = values?.[key]?.value
+      if (sub != null && sub !== '') {
+        if (typeof sub === 'string' && sub.includes('{')) {
+          const inner = resolvePlaceholders(sub, values, new Set([...seen, key]))
+          if (inner == null) return null
+          out += inner
+        } else {
+          out += String(sub)
+        }
+      }
+      i = end + 1
+    } else {
+      out += ch
+      i++
+    }
+  }
+  return out
+}
+
 export function analyze({ catalog, mapping, model, rows, locale = 'de', scopeAttr = null, onPath = () => true, today = new Date().toISOString().slice(0, 10) }) {
   const items = catalog.groups.flatMap(g => g.items.map(it => ({ ...it, group: g })))
   const defs = new Map(model.attributes.map(a => [a.key, a]))
@@ -27,7 +61,9 @@ export function analyze({ catalog, mapping, model, rows, locale = 'de', scopeAtt
       if (it.appliesIf && !it.appliesIf(r, mapping)) { node.states[it.key] = 'na'; result.byItem.get(it.key).na++; continue }
       if (it.group?.scope && !String(r.values?.[scopeAttr]?.value ?? '').split(',').map(s => s.trim()).includes(it.group.scope.key)) { node.states[it.key] = 'na'; result.byItem.get(it.key).na++; continue }
       const to = mapping[it.key]?.to
-      const v = to ? r.values[to]?.value ?? null : null
+      const raw = to ? r.values[to]?.value ?? null : null
+      // Platzhalter {key} im Wert aufloesen — Vererbung greift dort, wo r.values den Wert traegt (auch geerbt).
+      const v = typeof raw === 'string' && raw.includes('{') ? (resolvePlaceholders(raw, r.values) || null) : raw
       let state = !to ? 'unmapped' : v == null || v === '' ? 'empty' : 'ok'
       // angefragt (Beleg method pending, checkedAt = Wiedervorlage): kein rotes Feld, sondern ⏳ — überfällig, wenn das Datum vorbei ist
       const src = to ? r.values[to]?.source : null
