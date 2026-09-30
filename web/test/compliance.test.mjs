@@ -2,7 +2,7 @@
 // Läuft ohne Browser und ohne Server: `npm test` in web/ (node --test).
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { analyze, resolvePlaceholders, resolveWert, gelesenAus, findeZyklus } from '../src/compliance-core.js'
+import { analyze, resolvePlaceholders, resolveWert, gelesenAus, findeZyklus, einrichtungsBedarf } from '../src/compliance-core.js'
 import dpp from '../../plugins/dpp/catalog.js'
 
 // Modell: die Attribute, die die Zuordnung braucht, dazu das Geltungsattribut dpp_scope (vererbbar, Gruppe dpp)
@@ -282,4 +282,27 @@ test('findeZyklus: gleiche Quelle zweimal ist kein Kreis; wortlicher Text auch n
 
 test('findeZyklus: ein Kreis, der ziel nicht enthaelt (b liest c, c liest b), haengt nicht', () => {
   assert.equal(findeZyklus('{b}', 'a', { b: { value: '{c}' }, c: { value: '{b}' } }), false)
+})
+
+// ── Einrichtungsassistent: was fehlt am Ast? (Ebenen nachziehen)
+const katalog = { groupKey: 'k', prefix: 'k_', groups: [{ items: [{ key: 'charge', roles: ['variant'] }, { key: 'hersteller' }, { key: 'neu', roles: ['variant'] }] }] }
+const bedarf = attribute => einrichtungsBedarf(katalog, { groups: [{ key: 'k' }], attributes: attribute }, { groups: 'k' })
+
+test('Bedarf: vorhandenes Attribut ohne Ebenen, Katalog nennt Rollen → nachziehen', () => {
+  const b = bedarf([{ key: 'k_charge', group: 'k' }, { key: 'k_hersteller', group: 'k' }, { key: 'k_neu', group: 'k' }])
+  assert.deepEqual(b.nachziehen.map(x => x.item.key), ['charge', 'neu'])
+  assert.equal(b.allesOk, false)
+})
+
+test('Bedarf: schon beschränkt (auch anders, bewusst gesetzt) → nicht anfassen; ohne Rollen im Katalog → nichts', () => {
+  const b = bedarf([{ key: 'k_charge', group: 'k', levels: ['variant'] }, { key: 'k_hersteller', group: 'k' }, { key: 'k_neu', group: 'k', levels: ['product'] }])
+  assert.deepEqual(b.nachziehen, [])
+  assert.equal(b.allesOk, true)
+})
+
+test('Bedarf: fehlendes Attribut kommt in fehlendeItems (es wird mit Ebenen angelegt), nicht in nachziehen; Zuordnen getrennt', () => {
+  const b = bedarf([{ key: 'k_charge', group: 'andere', levels: ['variant'] }, { key: 'k_hersteller', group: 'k' }])
+  assert.deepEqual(b.fehlendeItems.map(i => i.key), ['neu'])
+  assert.deepEqual(b.zuOrdnende.map(x => x.item.key), ['charge'])
+  assert.deepEqual(b.nachziehen, [])
 })

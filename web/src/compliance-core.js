@@ -88,6 +88,28 @@ export function findeZyklus(text, ziel, values, seen = new Set()) {
   return false
 }
 
+// Was fehlt, damit ein Katalog am Ast greift? Reine Analyse (der Assistent in compliance.js schreibt danach).
+//   fehlendeItems: das Attribut fehlt im Modell (wird mit Gruppe und Ebenen angelegt)
+//   zuOrdnende:    das Attribut gibt es, es gehoert aber nicht zur Katalog-Gruppe
+//   nachziehen:    das Attribut gibt es ohne Ebenen-Beschraenkung, der Katalog nennt Rollen (item.roles).
+//                  Eine andere, bewusst gesetzte Beschraenkung bleibt unberuehrt.
+//   haengtNicht:   die Katalog-Gruppe haengt nicht am obersten Knoten des Astes (wurzel)
+export const gruppenVon = a => a?.groups ?? (a?.group ? [a.group] : [])
+export function einrichtungsBedarf(catalog, model, wurzel) {
+  const gruppeFehlt = !(model.groups ?? []).some(g => g.key === catalog.groupKey)
+  const attrByKey = new Map((model.attributes ?? []).map(a => [a.key, a]))
+  const fehlendeItems = [], zuOrdnende = [], nachziehen = []
+  for (const item of catalog.groups.flatMap(g => g.items)) {
+    const attr = attrByKey.get((catalog.prefix ?? '') + item.key)
+    if (!attr) { fehlendeItems.push(item); continue }
+    if (!gruppenVon(attr).includes(catalog.groupKey)) zuOrdnende.push({ item, attr })
+    if (item.roles?.length && !attr.levels?.length) nachziehen.push({ item, attr })
+  }
+  const haengtNicht = !(wurzel?.groups ?? '').split(',').map(s => s.trim()).filter(Boolean).includes(catalog.groupKey)
+  const allesOk = !gruppeFehlt && !fehlendeItems.length && !zuOrdnende.length && !nachziehen.length && !haengtNicht
+  return { gruppeFehlt, fehlendeItems, zuOrdnende, nachziehen, haengtNicht, allesOk }
+}
+
 export function analyze({ catalog, mapping, model, rows, locale = 'de', scopeAttr = null, onPath = () => true, today = new Date().toISOString().slice(0, 10) }) {
   const items = catalog.groups.flatMap(g => g.items.map(it => ({ ...it, group: g })))
   const defs = new Map(model.attributes.map(a => [a.key, a]))
