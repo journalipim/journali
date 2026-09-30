@@ -2,7 +2,7 @@
 // Läuft ohne Browser und ohne Server: `npm test` in web/ (node --test).
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { analyze, resolvePlaceholders, resolveWert } from '../src/compliance-core.js'
+import { analyze, resolvePlaceholders, resolveWert, gelesenAus, findeZyklus } from '../src/compliance-core.js'
 import dpp from '../../plugins/dpp/catalog.js'
 
 // Modell: die Attribute, die die Zuordnung braucht, dazu das Geltungsattribut dpp_scope (vererbbar, Gruppe dpp)
@@ -257,4 +257,29 @@ test('analyze: dpp_handelsname = f:[combine name,material] → aufgeloeste Kombi
   // (name-Wert ist die Kette, die aus ctx.get('name') NICHT rekursiv liest sondern get('material') und get(name))
   // Achtung: get(name) → seen enthaelt name → '' — also nur 'material' zaehlt
   assert.equal(node.states['trade_name'], 'ok')
+})
+
+// ── Zyklus-Schutz beim Speichern: ein Ausdruck darf sein Ziel nicht (auch nicht ueber andere Attribute) lesen
+
+test('gelesenAus: Platzhalter im Text, combine-Spalten in der Kette ({} zaehlt nicht)', () => {
+  assert.deepEqual(gelesenAus('{name} {sku}'), ['name', 'sku'])
+  assert.deepEqual(gelesenAus('wortlich'), [])
+  assert.deepEqual(gelesenAus('f:' + JSON.stringify([{ op: 'combine', columns: '{},name, material', sep: ' ' }, { op: 'upper' }])), ['name', 'material'])
+  assert.deepEqual(gelesenAus('f:kein_json'), [])
+})
+
+test('findeZyklus: direkt (a liest a) und indirekt (a liest b, b liest a)', () => {
+  assert.equal(findeZyklus('{a}', 'a', {}), true)
+  assert.equal(findeZyklus('{b}', 'a', { b: { value: '{a}' } }), true)
+  assert.equal(findeZyklus('f:' + JSON.stringify([{ op: 'combine', columns: 'b' }]), 'a', { b: { value: 'f:' + JSON.stringify([{ op: 'combine', columns: 'c' }]) }, c: { value: '{a}' } }), true)
+})
+
+test('findeZyklus: gleiche Quelle zweimal ist kein Kreis; wortlicher Text auch nicht', () => {
+  assert.equal(findeZyklus('{b} {b}', 'a', { b: { value: 'x' } }), false)
+  assert.equal(findeZyklus('egon', 'a', {}), false)
+  assert.equal(findeZyklus('{b} {c}', 'a', { b: { value: '{c}' }, c: { value: 'x' } }), false)
+})
+
+test('findeZyklus: ein Kreis, der ziel nicht enthaelt (b liest c, c liest b), haengt nicht', () => {
+  assert.equal(findeZyklus('{b}', 'a', { b: { value: '{c}' }, c: { value: '{b}' } }), false)
 })

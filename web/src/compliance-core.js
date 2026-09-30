@@ -64,6 +64,30 @@ export function resolveWert(text, values, seen = new Set()) {
   return resolvePlaceholders(text, values, seen)
 }
 
+// Welche Attribute liest ein Ausdruck? {key} im Text, bei 'f:[...]' die Spalten der combine-Schritte ({} = Ausgangswert zaehlt nicht).
+export function gelesenAus(text) {
+  if (typeof text !== 'string') return []
+  if (text.startsWith('f:')) {
+    let steps
+    try { steps = JSON.parse(text.slice(2)) } catch { return [] }
+    if (!Array.isArray(steps)) return []
+    return [...new Set(steps.filter(s => s?.op === 'combine').flatMap(s => String(s.columns ?? '').split(',').map(c => c.trim()).filter(c => c && c !== '{}')))]
+  }
+  return [...new Set([...text.matchAll(/\{([^{}]+)\}/g)].map(m => m[1].trim()).filter(Boolean))]
+}
+
+// Wuerde der Ausdruck 'text', als Wert von Attribut 'ziel' gespeichert, im Kreis laufen? Er tut es, wenn er ziel selbst liest
+// oder ein Attribut, dessen Wert (rekursiv) ziel liest. values: { key: { value } } am Knoten, an dem gespeichert wird.
+export function findeZyklus(text, ziel, values, seen = new Set()) {
+  for (const k of gelesenAus(text)) {
+    if (k === ziel) return true
+    if (seen.has(k)) continue
+    const sub = values?.[k]?.value
+    if (sub != null && findeZyklus(String(sub), ziel, values, new Set([...seen, k]))) return true
+  }
+  return false
+}
+
 export function analyze({ catalog, mapping, model, rows, locale = 'de', scopeAttr = null, onPath = () => true, today = new Date().toISOString().slice(0, 10) }) {
   const items = catalog.groups.flatMap(g => g.items.map(it => ({ ...it, group: g })))
   const defs = new Map(model.attributes.map(a => [a.key, a]))

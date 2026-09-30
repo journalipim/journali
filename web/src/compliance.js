@@ -12,7 +12,7 @@ import { tree } from './tree.js'
 import { dialog } from './dialog.js'
 import { ai } from './ai.js'
 import { norm, similarity } from './mapper.js'
-import { analyze } from './compliance-core.js'
+import { analyze, findeZyklus } from './compliance-core.js'
 import * as transform from './transform.js'
 import { treePicker } from './treePicker.js'
 import { t as t_ } from './i18n.js'
@@ -458,6 +458,8 @@ export async function mount(root, ctx, catalog) {
           const next = await dialog.steps({ title: t_('Umwandlung fuer {0} an "{1}"', [it.label, tree.byId.get(st.root)?.label ?? '']), text: t_('Die Kette lief mit den Werten der Wurzel als Vorschau; sie wird als Attributwert gespeichert und vererbt sich nach unten.'), value: initial, attributes: attrsList, values: rootNode?.raw ?? {}, ok: t_('Uebernehmen') })
           if (next == null) return
           const newVal = next.length ? 'f:' + JSON.stringify(next) : null
+          const werte = Object.fromEntries(Object.entries(rootNode?.raw ?? {}).map(([k, v]) => [k, { value: v }]))
+          if (newVal && findeZyklus(newVal, to, werte)) { store.toast(t_('Die Umwandlung liest {0} selbst \u2014 ein Kreis, nicht gespeichert.', [to])); return }
           try { await api.post(`/api/nodes/${encodeURIComponent(st.root)}/attributes`, { attribute: to, locale: null, channel: null, value: newVal, row: null }); await store.poll(true); await run() } catch (e) { store.toast(e.message); say('✗ ' + e.message) }
         }
       }, label)
