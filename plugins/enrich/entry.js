@@ -99,15 +99,16 @@ async function mount(root, ctx) {
     const liste = el('div', { style: 'margin-bottom:12px' })
     for (const [g, attrs] of gruppen) {
       const alle = attrs.every(a => st.gewaehlt.has(a.key))
-      liste.append(el('div', { class: 'chips', style: 'margin:4px 0' },
-        el('span', { class: 'muted', style: 'font-size:12px;width:160px;cursor:pointer', title: alle ? t('Gruppe abwählen') : t('ganze Gruppe wählen'), onclick: () => {
+      liste.append(el('div', { style: 'display:flex;margin:4px 0;gap:4px;align-items:baseline' },
+        el('span', { class: 'muted', style: 'font-size:12px;min-width:140px;width:140px;flex-shrink:0;cursor:pointer', title: alle ? t('Gruppe abwählen') : t('ganze Gruppe wählen'), onclick: () => {
           if (alle) attrs.forEach(a => st.gewaehlt.delete(a.key)); else attrs.forEach(a => st.gewaehlt.add(a.key)); drawAuswahl()
         } }, `▤ ${glbl(g)}`),
+        el('div', { class: 'chips', style: 'flex:1;min-width:0' },
         ...attrs.map(a => el('span', {
           class: 'view-chip' + (st.gewaehlt.has(a.key) ? ' on' : ''),
           title: `${a.key} · ${a.type} · ${t('{0} Knoten leer', [st.leere.get(a.key).length])}`,
           onclick: () => { st.gewaehlt.has(a.key) ? st.gewaehlt.delete(a.key) : st.gewaehlt.add(a.key); drawAuswahl() }
-        }, lbl(a), el('span', { class: 'muted', style: 'margin-left:4px;font-size:10px' }, `${st.leere.get(a.key).length}`)))))
+        }, lbl(a), el('span', { class: 'muted', style: 'margin-left:4px;font-size:10px' }, `${st.leere.get(a.key).length}`))))))
     }
     // Moduswahl
     const modi = el('div', { class: 'chips', style: 'margin:8px 0' },
