@@ -2482,6 +2482,8 @@
  "Umwandeln": "Convert",
  "{0}: {1} Attribute in Vorlagen und Formeln umwandeln": "{0}: convert {1} attributes to templates and formulas",
  "{0} vorhandene Attribute in Vorlagen und Formeln umwandeln (vorhandene Werte bleiben erhalten): {1}": "Convert {0} existing attributes to templates and formulas (existing values are kept): {1}",
+ "Im Editor schreiben — er zeigt die Attribute des Knotens und das Ergebnis": "Write in the editor — it shows the attributes of the node and the result",
+ "Editor öffnen …": "Open editor …",
  "kein Schlüssel": "not a key",
  "◆ Test · {0}": "◆ Trial · {0}",
  "Test einer neuen Instanz, ab dem ersten Eintrag im Journal": "Trial of a new instance, from the first journal entry",

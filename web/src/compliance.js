@@ -15,7 +15,9 @@ import { norm, similarity } from './mapper.js'
 import { analyze, einrichtungsBedarf, berechneterTyp } from './compliance-core.js'
 import { gruppenVon } from './gruppen.js'
 import { treePicker } from './treePicker.js'
-import { t as t_ } from './i18n.js'
+import { t as t_, i18n } from './i18n.js'
+import { createApp, h } from 'vue'
+import ScriptEditor from './components/ScriptEditor.vue'
 import { L } from './i18n.js'
 
 export function el(tag, attrs = {}, ...kids) { const e = document.createElement(tag); for (const [k, v] of Object.entries(attrs)) { if (k === 'style') e.style.cssText = v; else if (k.startsWith('on')) e.addEventListener(k.slice(2), v); else if (k === 'html') e.innerHTML = v; else e.setAttribute(k, v) } for (const k of kids) if (k != null) e.append(k); return e }
@@ -220,6 +222,15 @@ function pickNode(preset, title) {
   })
 }
 
+// Der vorhandene Editor für Vorlage und Formel (ScriptEditor) aus dem DOM-Code dieser Ansicht heraus: er hängt sich selbst an den body.
+// props wie am Knoten (title, draftKey, type, node, locale, attributes); onSave bekommt den geprüften Text, onClose kommt immer.
+export function editorOeffnen({ onSave, onClose, ...props }) {
+  const wirt = document.createElement('div'); document.body.append(wirt)
+  const zu = () => { app.unmount(); wirt.remove(); onClose?.() }
+  const app = createApp({ render: () => h(ScriptEditor, { ...props, onSave: v => { onSave?.(v); zu() }, onClose: zu }) })
+  app.use(i18n); app.mount(wirt)
+}
+
 // ---- Die Ansicht — dieselbe für jeden Katalog (das Plugin ruft mount(root, ctx, catalog))
 export async function mount(root, ctx, catalog) {
   if (!tree.loaded) await tree.load()
@@ -374,6 +385,20 @@ export async function mount(root, ctx, catalog) {
       const pend = n.pendingInfo?.[it.key]
       let inp
       if (listVals) inp = el('select', { style: 'width:220px' }, el('option', { value: '' }, '—'), ...listVals.map(v => el('option', { value: v.value }, L(v.label) || v.label?.en || v.value)))
+      else if (def?.type === 'template' || def?.type === 'formula') {
+        // Vorlage und Formel schreibt man im Editor, der die Attribute des Knotens zeigt; der Knopf zeigt danach den Text
+        const zeichen = def.type === 'template' ? '{} ' : 'ƒ '
+        inp = el('button', { class: 'x', style: 'width:220px;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap', title: t_('Im Editor schreiben — er zeigt die Attribute des Knotens und das Ergebnis'), onclick: () => {
+          const vorher = overlay.style.zIndex; overlay.style.zIndex = '10'   // der Editor liegt bei 20 und muss über dieser Liste stehen
+          editorOeffnen({ title: `${it.label} · ${n.row.label}`, draftKey: `${n.row.id}.${to}.pruefung`, type: def.type, node: n.row.id, locale: def.perLocale ? st.res.locale : undefined,
+            attributes: (store.model.attributes ?? []).filter(a => a.key !== to && a.type !== 'rows' && a.type !== 'html'),
+            onSave: async v => {
+              try { await api.post(`/api/nodes/${encodeURIComponent(n.row.id)}/attributes`, { attribute: to, locale: def.perLocale ? st.res.locale : null, channel: null, value: v, row: null }); written = true; inp.textContent = zeichen + v; state.textContent = '✓'; state.className = 'pos'; state.title = '' }
+              catch (e) { state.textContent = '✗ ' + e.message; state.className = 'fehler'; state.title = e.message }
+            },
+            onClose: () => { overlay.style.zIndex = vorher } })
+        } }, zeichen + t_('Editor öffnen …'))
+      }
       else if (def?.type === 'boolean') inp = el('select', { style: 'width:220px' }, el('option', { value: '' }, '—'), el('option', { value: 'true' }, 'ja'), el('option', { value: 'false' }, 'nein'))
       else inp = el('input', { style: 'width:220px', placeholder: it.unit ? t_('Wert in {0}', [it.unit]) : t_('Wert') })
       const write = async () => { const v = inp.value.trim(); if (!v) return; try { await api.post(`/api/nodes/${encodeURIComponent(n.row.id)}/attributes`, { attribute: to, locale: null, channel: null, value: v, row: null }); written = true; state.textContent = '✓'; state.className = 'pos'; state.title = '' } catch (e) { state.textContent = '✗ ' + e.message; state.className = 'fehler'; state.title = e.message } }
