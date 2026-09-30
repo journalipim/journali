@@ -1,0 +1,168 @@
+{
+ "LanguageCode": "EN",
+ "DateUtc": "1/1/2026",
+ "Schema": [
+  {
+   "Level": 1,
+   "Code": 99000000,
+   "Title": "Sample Segment",
+   "Definition": "Sample Segment (erfunden).",
+   "DefinitionExcludes": null,
+   "Active": true,
+   "Childs": [
+    {
+     "Level": 2,
+     "Code": 99010000,
+     "Title": "Sample Electrical",
+     "Definition": "Sample Electrical (erfunden).",
+     "DefinitionExcludes": null,
+     "Active": true,
+     "Childs": [
+      {
+       "Level": 3,
+       "Code": 99010100,
+       "Title": "Sample Lighting",
+       "Definition": "Sample Lighting (erfunden).",
+       "DefinitionExcludes": null,
+       "Active": true,
+       "Childs": [
+        {
+         "Level": 4,
+         "Code": 19900001,
+         "Title": "Sample Lamps",
+         "Definition": "Sample lamps of any kind.",
+         "DefinitionExcludes": "Excludes sample cables.",
+         "Active": true,
+         "Childs": [
+          {
+           "Level": 5,
+           "Code": 29900001,
+           "Title": "Sample Colour",
+           "Definition": "Sample Colour (erfunden).",
+           "DefinitionExcludes": null,
+           "Active": true,
+           "Childs": [
+            {
+             "Level": 6,
+             "Code": 39900001,
+             "Title": "RED",
+             "Definition": "RED (erfunden).",
+             "DefinitionExcludes": null,
+             "Active": true,
+             "Childs": []
+            },
+            {
+             "Level": 6,
+             "Code": 39900002,
+             "Title": "BLUE",
+             "Definition": "BLUE (erfunden).",
+             "DefinitionExcludes": null,
+             "Active": true,
+             "Childs": []
+            },
+            {
+             "Level": 6,
+             "Code": 39900003,
+             "Title": "GREEN",
+             "Definition": "GREEN (erfunden).",
+             "DefinitionExcludes": null,
+             "Active": true,
+             "Childs": []
+            }
+           ]
+          },
+          {
+           "Level": 5,
+           "Code": 29900002,
+           "Title": "Sample Size",
+           "Definition": "Sample Size (erfunden).",
+           "DefinitionExcludes": null,
+           "Active": true,
+           "Childs": [
+            {
+             "Level": 6,
+             "Code": 39900004,
+             "Title": "SMALL",
+             "Definition": "SMALL (erfunden).",
+             "DefinitionExcludes": null,
+             "Active": true,
+             "Childs": []
+            },
+            {
+             "Level": 6,
+             "Code": 39900005,
+             "Title": "LARGE",
+             "Definition": "LARGE (erfunden).",
+             "DefinitionExcludes": null,
+             "Active": true,
+             "Childs": []
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "Level": 3,
+       "Code": 99010200,
+       "Title": "Sample Wiring",
+       "Definition": "Sample Wiring (erfunden).",
+       "DefinitionExcludes": null,
+       "Active": true,
+       "Childs": [
+        {
+         "Level": 4,
+         "Code": 19900002,
+         "Title": "Sample Cables",
+         "Definition": "Sample cables of any kind.",
+         "DefinitionExcludes": null,
+         "Active": true,
+         "Childs": [
+          {
+           "Level": 5,
+           "Code": 29900001,
+           "Title": "Sample Colour",
+           "Definition": "Sample Colour (erfunden).",
+           "DefinitionExcludes": null,
+           "Active": true,
+           "Childs": [
+            {
+             "Level": 6,
+             "Code": 39900001,
+             "Title": "RED",
+             "Definition": "RED (erfunden).",
+             "DefinitionExcludes": null,
+             "Active": true,
+             "Childs": []
+            },
+            {
+             "Level": 6,
+             "Code": 39900006,
+             "Title": "YELLOW",
+             "Definition": "YELLOW (erfunden).",
+             "DefinitionExcludes": null,
+             "Active": true,
+             "Childs": []
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "Level": 4,
+         "Code": 19900003,
+         "Title": "Sample Boxes",
+         "Definition": "Sample boxes without attributes.",
+         "DefinitionExcludes": null,
+         "Active": true,
+         "Childs": []
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

@@ -847,6 +847,14 @@ Export-Konfiguration im Klassifikations-Plugin („welche Klassen, ab welcher St
   (Gruppe an den Pfad, Klasse an den Knoten) und die Bereitschaft (`POST /api/classification/ensure|assign|readiness`)
   macht der Server aus einer neutralen Beschreibung; er kennt kein System. Nicht übernommen: die Nachreparatur älterer
   ETIM-Attribute ohne Bedingung in der Gruppe — sie wird beim nächsten Zuweisen der Klasse nachgezogen.
+- **GPC** (Plugin `gpc`, 30.09.2026): die GS1-Produktklassifikation als zweites System — Segment, Family, Class, Brick; der Brick
+  ist die Klasse. Die Nutzung ist laut GS1 kostenfrei; die Datei (JSON, oder das Zip der Veröffentlichung) holt der Anwender
+  selbst, im Repo liegen keine GPC-Daten (`sample.json` ist erfunden). Attribute und Werte haben in allen Bricks dieselben
+  Codes; nur die Auswahl der Werte je Brick ist verschieden — sie stehen einmal im Wörterbuch, am Brick nur die Codes
+  (die ganze Veröffentlichung sind rund 5,5 MB im Journal, ein Datensatz je Segment). Jedes GPC-Attribut wird ein Listenattribut
+  `gpc<code>` mit der Vereinigung seiner Werte; die Bedingung hält es an Knoten zurück, deren Brick es nicht führt. Die Werte
+  eines Bricks erzwingt die Liste nicht — sie ist die Vereinigung über alle Bricks. eCl@ss folgt nur, wenn ein Kunde es verlangt
+  und die Datei liefert: der Einbau in eine Software ist laut ECLASS kostenpflichtig.
 - **Bedient wird beim Gegenstand, nicht im Plugin**. Neuer Beitragspunkt **`nodeBands`**: ein Plugin zeichnet je Knoten ein Band in
   der Knotenansicht (`mount({ head, body }, nodeId, ctx)`, wie das Workflow-Band). Das Band
   ⌗ ETIM zeigt in einer Zeile Klasse (eigen/geerbt, ≠ abweichende darunter) · Attribute n/m

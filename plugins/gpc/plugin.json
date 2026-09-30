@@ -1,0 +1,16 @@
+{
+  "key": "gpc",
+  "version": "1.0.0",
+  "label": {
+    "de": "GPC",
+    "en": "GPC"
+  },
+  "description": {
+    "de": "GS1-Produktklassifikation (Segment, Family, Class, Brick): die Veröffentlichung als JSON oder Zip einlesen, einen Brick suchen und einem Knoten zuweisen. Je Brick entstehen seine Attribute als Listenattribute mit der Bedingung, dass die Klasse sie führt. Die Daten holt der Anwender bei GS1.",
+    "en": "GS1 Global Product Classification (segment, family, class, brick): read the publication as JSON or zip, search a brick and assign it to a node. Each brick's attributes become list attributes that apply where the class has them. The data is fetched from GS1 by the user."
+  },
+  "kind": "classification",
+  "runs": "browser",
+  "entry": "entry.js",
+  "autoInstall": true
+}

@@ -26,12 +26,16 @@ export const GRENZEN = { bytes: 5_000_000, zeilen: 20_000, zelle: 4_000, text: 2
 /// Was der Lauf meldet: eine Zeile, die mit der Marke beginnt — die letzte gilt.
 export const melde = (wert, schreib = s => process.stdout.write(s)) => schreib(MARKE + JSON.stringify(wert) + '\n')
 
-/// Den Prozess sicher beenden: erst stdout/stderr leeren, dann exit. Sonst kappt process.exit() eine noch nicht
-/// geleerte Pipe und die Ergebniszeile geht verloren (der Lauf zeigt „nichts gemeldet“ bei Exit 0).
+/// Den Prozess sicher beenden: erst stdout/stderr leeren, dann den Ausgang setzen und den Prozess von selbst enden lassen.
+/// Sonst kappt process.exit() eine noch nicht geleerte Pipe und die Ergebniszeile geht verloren (der Lauf zeigt „nichts
+/// gemeldet“ bei Exit 0). process.exit() gleich nach Abrufen des Servers bricht unter Node 24 auf Windows mit
+/// „Assertion failed: !(handle->flags & UV_HANDLE_CLOSING)“ ab — der Lauf gilt dann als gescheitert, obwohl das Skript fertig ist.
+/// Der Zeitgeber beendet erst, wenn etwas den Prozess über Gebühr am Leben hält (eine hängende Verbindung).
 export const raus = async (code) => {
   try { await new Promise(r => process.stdout.write('', () => r())) } catch { /* egal */ }
   try { await new Promise(r => process.stderr.write('', () => r())) } catch { /* egal */ }
-  process.exit(code)
+  process.exitCode = code
+  setTimeout(() => process.exit(code), 5000).unref()
 }
 
 /// Die Werte der Parameter: die Vorgaben aus dem Kopf, darüber JOURNALI_ARGS, darüber einzelne JOURNALI_ARG_<KEY>.

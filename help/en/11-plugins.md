@@ -25,7 +25,7 @@ A **base plugin** brings the basic function of a group of the rail and is the co
 
 ## What the tier allows
 
-Which plugins can be installed and enabled depends on the tier of the instance: Free includes Table, Excel add-in, OnlyOffice, previews and export; Pro adds data sheet, translation, template export, ETIM, data analysis and backup as a job; from Pro+ all. The highest tier any team of the instance has counts.
+Which plugins can be installed and enabled depends on the tier of the instance: Free includes Table, Excel add-in, OnlyOffice, previews and export; Pro adds data sheet, translation, template export, ETIM, GPC, data analysis and backup as a job; from Pro+ all. The highest tier any team of the instance has counts.
 
 ## journali Core plugins
 

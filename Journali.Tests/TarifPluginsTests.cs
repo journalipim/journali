@@ -38,9 +38,9 @@ public class TarifPluginsTests
     public void Kostenlos_enthaelt_die_Tabelle_und_den_Tasker()
     {
         foreach (var p in new[] { "table", "csv", "excel", "json", "tasker", "driver" }) Assert.True(Tarife.Free.Erlaubt(p), p);
-        foreach (var p in new[] { "datasheet", "xliff", "etim", "backup" }) Assert.False(Tarife.Free.Erlaubt(p), p);
+        foreach (var p in new[] { "datasheet", "xliff", "etim", "gpc", "backup" }) Assert.False(Tarife.Free.Erlaubt(p), p);
         // Pro bringt die dazu — und bleibt ohne Skripte
-        foreach (var p in new[] { "datasheet", "xliff", "etim", "backup" }) Assert.True(Tarife.Pro.Erlaubt(p), p);
+        foreach (var p in new[] { "datasheet", "xliff", "etim", "gpc", "backup" }) Assert.True(Tarife.Pro.Erlaubt(p), p);
     }
 
     private const string ScriptumApiPlugin = "scriptum";

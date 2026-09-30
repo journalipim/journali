@@ -73,6 +73,21 @@ public class ClassificationTests
     }
 
     [Fact]
+    public void Eine_weitere_Klasse_ergänzt_die_Werte_einer_vorhandenen_Liste()
+    {
+        var c = Welt();
+        FeatureSpec Farbe(string klasse, params string[] codes) => new("kf3", N("Farbe", "Colour"), "enum", null, null, null, [.. codes.Select(v => new ValueSpec(v, N(v, v)))], [klasse]);
+        Mit(c, x => Ensure(x, new EnsureBody(Sys, Klassen, [Farbe("K1", "V1", "V2")]), true));
+        var r = Mit(c, x => Ensure(x, new EnsureBody(Sys, Klassen, [Farbe("K2", "V2", "V3")]), true));
+        Assert.Null(r.Error);
+        c.ReadModel(m => { Assert.Equal(["V1", "V2", "V3"], m.Lists["kf3"].Ordered.Select(v => v.Value)); Assert.Equal(["K1", "K2"], m.Attributes["kf3"].When!.Values); return 0; });
+        // und ein dritter Durchlauf mit denselben Werten schreibt nichts mehr
+        var n = 0;
+        Mit(c, x => Ensure(x, new EnsureBody(Sys, Klassen, [Farbe("K2", "V2", "V3")]), true), () => n++);
+        Assert.Equal(0, n);
+    }
+
+    [Fact]
     public void Ein_zweiter_Durchlauf_schreibt_nichts()
     {
         var c = Welt();

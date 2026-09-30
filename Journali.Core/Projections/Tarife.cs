@@ -81,7 +81,7 @@ public sealed class Tarifliste
 /// (Vorschaubilder) und Export, ein Publikationsbaum; Jobs nur von Hand, ein Zeitplan gehört zu Pro. Ableitungen und Export
 /// laufen als Job — der Tasker ist darum dabei, startet aber nur Jobs erlaubter Plugins; gesichert wird von Hand
 /// (Einstellungen → B&amp;R), die Sicherung als Job gehört zu Pro.</item>
-/// <item><b>Pro</b> — 50 000 / 250 000, dazu Datenblatt, Übersetzung (XLIFF), BMEcat (Export nach Vorlage), ETIM,
+/// <item><b>Pro</b> — 50 000 / 250 000, dazu Datenblatt, Übersetzung (XLIFF), BMEcat (Export nach Vorlage), ETIM, GPC,
 /// Tasker; fünf Publikationsbäume. ETIM braucht Datenanalyse und Export nach Vorlage, der Tasker bringt die Sicherung
 /// als Job mit — die kommen mit.</item>
 /// <item><b>Pro+</b> — Pro mit allen Plugins; damit auch <c>scriptum</c> (29.09.2026): ein Skript läuft als Prozess
@@ -116,7 +116,7 @@ public static class Tarife
 
     public static readonly Tarif Free = new("free", "Kostenlos", 0, 10_000, 50_000, 1, new HashSet<string>(Basis));
     public static readonly Tarif Pro = new("pro", "Pro", 1, 50_000, 250_000, 5,
-        new HashSet<string>([.. Basis, "datasheet", "xliff", "xport", "etim", "da", "backup"]));
+        new HashSet<string>([.. Basis, "datasheet", "xliff", "xport", "etim", "gpc", "da", "backup"]));
     public static readonly Tarif ProPlus = new("proplus", "Pro+", 2, 50_000, 250_000, 5, null);
     public static readonly Tarif Enterprise = new("enterprise", "Enterprise", 3, 200_000, 1_000_000, Ohne, null);
     public static readonly Tarif Unlimited = new("unlimited", "Unlimited", 4, Ohne, Ohne, Ohne, null);

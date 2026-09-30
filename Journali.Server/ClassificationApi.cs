@@ -211,6 +211,13 @@ public static class ClassificationApi
             var when = WhenOf(f, model.Attributes.GetValueOrDefault(key)?.When, plan.ClassAttr);
             if (model.Attributes.TryGetValue(key, out var a))
             {
+                // Werte, die eine weitere Klasse dem Merkmal zufügt: sie gehören in die Liste (die Liste ist die Vereinigung aller Klassen)
+                if (f.Type == AttributeTypes.Enum && a.List is { } listKey && model.Lists.TryGetValue(listKey, out var vl))
+                {
+                    var next = vl.Values.Count == 0 ? 0 : vl.Values.Values.Max(v => v.Order) + 1;
+                    foreach (var v in (f.Values ?? []).Where(v => !string.IsNullOrWhiteSpace(v.Code) && !vl.Values.ContainsKey(v.Code)))
+                        plan.Writes.Add((Model.ListStream + listKey, Types.ListValueDefined, new ListValueDefinition(v.Code, LabelsOf(model, v.Name), null, next++)));
+                }
                 var lv = a.Levels is null || Same(a.Levels.Order().ToArray(), OldLevels.Order().ToArray()) ? FeatureLevels : a.Levels;
                 if (a.Group == plan.Group && (!Same(a.When?.Values, when.Values) || !a.Inheritable || !Same(a.Levels, lv)))
                     plan.Writes.Add((Model.AttributeStream + key, Types.AttributeDefined, a with { When = when, Inheritable = true, Levels = lv }));
