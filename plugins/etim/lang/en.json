@@ -105,8 +105,6 @@
  "⚠ Gruppe {0} fehlt im Modell": "⚠ Group {0} is missing in the model",
  "die Attributgruppe {0} hängt an keinem Knoten des Pfads — deshalb gilt kein ETIM-Attribut an diesem Knoten; „Gruppe anhängen“ behebt es": "the attribute group {0} hangs on no node of the path — so no ETIM attribute applies at this node; “Attach group” fixes it",
  "Zuordnung der ETIM-Attribute dieser Klasse: vorhandenes Attribut, ƒ Umwandlung, oder eigenes anlegen (⌗ ETIM)": "Mapping of this class's ETIM attributes: existing attribute, ƒ transformation, or create an own one (⌗ ETIM)",
- "Attributsicht „⌗ {0}“ an diesem Knoten wählen — ein Reiter mit genau den Attributen dieser Klasse (entsteht beim Öffnen, steht nicht im Modell)": "Choose the attribute view “⌗ {0}” at this node — a tab with exactly the attributes of this class (created on opening, not in the model)",
- "◫ Sicht": "◫ View",
  "{0} fehlende ETIM-Attribute als eigene Attribute ef… anlegen (Gruppe {1}, nur an Produkt und Variante)": "Create {0} missing ETIM attributes as own attributes ef… (group {1}, only at product and variant)",
  "✓ {0} Attribute angelegt": "✓ {0} attributes created",
  "Subitems-Tabelle im eigenen Fenster — nur die Spalten dieser Klasse; Bedienung wie Excel": "Subitems table in its own window — only the columns of this class; works like Excel",
@@ -259,7 +257,6 @@
  "Quelle, Klassen, Attribute, Zuordnung — bedient wird am Knoten (Band ⌗ ETIM)": "Source, classes, attributes, mapping — operated at the node (band ⌗ ETIM)",
  "Anfangszustand zum Testen: Zuweisungen, Modell (Gruppe, Attribute, Sichten), Zuordnung — auf Wunsch auch die geladenen Freigaben": "Initial state for testing: assignments, model (group, attributes, views), mapping — on request also the loaded releases",
  "⟲ zurücksetzen …": "⟲ reset …",
- "⌗ ETIM-Klasse": "⌗ ETIM class",
  "ETIM: Quelle und Versionen, Klassen in Gebrauch, Attribute, Zuordnung ETIM-Attribut ← Attribut mit ƒ — bedient wird am Knoten (Band ⌗ ETIM)": "ETIM: source and versions, classes in use, attributes, mapping ETIM attribute ← attribute with ƒ — operated at the node (band ⌗ ETIM)",
  "Datenanalyse wie DPP/PPWR: welche ETIM-Attribute der ETIM-Klassen fehlen — Attribute anlegen, Vorschläge aus Regeln, KI oder Recherche im Internet, übernehmen": "Data analysis like DPP/PPWR: which ETIM attributes of the ETIM classes are missing — create attributes, suggestions from rules, AI or internet research, apply",
  "Klasse hier · ETIM-Attribute pflegen": "Class here · maintain ETIM attributes",
@@ -269,5 +266,8 @@
  "Klasse wählen — Vorschlag, Umfeld, Suche": "Choose a class — suggestion, surroundings, search",
  "⚠ Gruppe {0} gehört schon anderen Attributen — ETIM benutzt {1}": "⚠ Group {0} already belongs to other attributes — ETIM uses {1}",
  "Gruppe {0} angehängt …": "Group {0} attached …",
- "lege {0} Attribute an …": "creating {0} attributes …"
+ "lege {0} Attribute an …": "creating {0} attributes …",
+ "Die {0} Attribute kommen in die Gruppen ihrer Klassen, die Bedingung entfällt, und jeder Knoten mit einer Klasse bekommt deren Gruppe": "The {0} attributes move into the groups of their classes, the condition goes away, and each node with a class gets its group",
+ "✓ {0} Gruppen, {1} Attribute, {2} Knoten umgestellt": "✓ {0} groups, {1} attributes, {2} nodes converted",
+ "⌗ auf Klassengruppen umstellen": "⌗ convert to class groups"
 }

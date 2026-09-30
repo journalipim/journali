@@ -15,15 +15,20 @@ Im Repo liegen keine GPC-Daten; `sample.json` ist erfunden und hat dieselbe Form
 2. **Übernehmen** — ein Datensatz je Segment (`bricks:<segment>`), dazu `dict` und `release` als Plugin-Daten im Journal.
    Eine weitere Sprache (eine andere Datei derselben Fassung) ergänzt die Titel, die Struktur bleibt.
 3. **Suchen** — nach Code, Titel, Weg und Definition; alle Wörter müssen passen.
-4. **Zuweisen** — der Server legt an, was fehlt (`/api/classification/assign`): die Gruppe `gpc`, das Klassenattribut
-   `gpc_class` mit der Liste der Bricks, je GPC-Attribut ein Listenattribut `gpc<code>` mit Bedingung, die Gruppe am Pfad des
-   Knotens und die Klasse am Knoten. Hat ein Attribut an einem anderen Brick weitere Werte, ergänzt der Server die Liste.
+4. **Zuweisen** — der Server legt an, was fehlt (`/api/classification/assign`): die Gruppe `gpc` (sie trägt das Klassenattribut
+   `gpc_class` mit der Liste der Bricks), die Gruppe des Bricks `gpc_<brick>` (Bezeichnung: Code und Name) mit ihren Attributen — je
+   GPC-Attribut ein Listenattribut `gpc<code>`, das, wo es schon besteht, nur der Gruppe zugeordnet wird — und hängt die Gruppe des
+   Bricks an den Knoten. Hat ein Attribut an einem anderen Brick weitere Werte, ergänzt der Server die Liste.
+5. **Am Knoten** — das Band ⌗ GPC zeigt die Klasse (eigen oder geerbt) und die Zahl ihrer Attribute; Knöpfe: Klasse wählen (Dialog mit
+   Version, zuletzt gewählten Dateien, Umfeld, KI-Vorschlag, Suche und Durchsehen von Segment bis Brick), Klasse entfernen (samt ihrer
+   Gruppe), die Gruppen anhängen, wo sie nicht gelten. Die Attribute der Klasse stehen als eigener Reiter.
 
 ## Grenzen
 
 - Die Liste eines Attributs ist die Vereinigung seiner Werte über alle Bricks; welche davon an einem Brick gelten, erzwingt sie
   nicht.
 - Kein Export: GPC hängt an GDSN, nicht an BMEcat.
+- Hat ein Knoten unter einem mit Klasse eine eigene, gelten an ihm beide Gruppen.
 
 ## Daten im Journal (Plugin-Daten)
 

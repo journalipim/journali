@@ -17,6 +17,11 @@ const SEV = { error: '✗', warn: '⚠', info: 'ℹ', ok: '✓' }
 const TYPE = { Alphanumeric: t_('Liste'), Numeric: t_('Zahl'), Range: t_('Bereich'), Logical: 'Ja/Nein' }
 const DEFAULTS = { classAttr: 'etim_class', unknownAs: 'UN', requireClass: false, group: 'etim' }
 const groupKey = () => cache.settings.group || 'etim'
+/// Die Gruppe einer Klasse: die Gruppe des Systems, ein Unterstrich, der Code in Kleinschrift — so legt der Server sie an (ClassificationApi.ClassGroupKey).
+/// Jede Klasse hat ihre Attributgruppe mit ihren Attributen; die Gruppe des Systems trägt nur das Klassenattribut.
+const classGroupKey = code => `${groupKey()}_${String(code ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '')}`
+/// Gehört ein Attribut dem System? Die Attribute der Klassengruppen und das Klassenattribut.
+const ofSystem = a => a.group === groupKey() || String(a.group ?? '').startsWith(groupKey() + '_') || a.key === cache.settings.classAttr
 
 // Klassen und Einstellungen im Speicher — die Prüfregeln laufen synchron (Datenqualität) und brauchen sie ohne Nachschlagen
 // Klassen je Version: class:<version>:<EC>; release:<version> die Freigabe dazu;
@@ -135,23 +140,24 @@ function modelOps(ctx) {
     if (changed) await ctx.data.set('settings', cache.settings)
     return r
   }
-  async function ensure({ groupOnly = false, features = [] } = {}) {
-    return adopt(await api.post('/api/classification/ensure', { system: system(), groupOnly, classes: groupOnly ? [] : classesToSend(), features: features.map(featureSpec) }))
+  /// Die Klassen, deren Gruppen ein Aufruf anlegt: die ausdrücklich genannten, sonst die in Gebrauch, die eines der Merkmale führen
+  function groupClasses(list, explicit = null) {
+    if (explicit) return explicit.map(classSpec)
+    const codes = new Set()
+    for (const f of list) for (const c of cache.classes.values()) if (cache.used.has(c.code) && c.features.some(x => x.code === f.code)) codes.add(c.code)
+    return [...codes].map(code => classSpec(cache.classes.get(code)))
+  }
+  async function ensure({ groupOnly = false, features = [], classes = null } = {}) {
+    return adopt(await api.post('/api/classification/ensure', { system: system(), groupOnly, classes: groupOnly ? [] : classesToSend(), features: features.map(featureSpec), classGroups: groupOnly ? [] : groupClasses(features, classes) }))
   }
   const ensureGroup = async () => (await ensure({ groupOnly: true })).group
   const ensureClassAttr = async () => (await ensure()).classAttr
-  /// Merkmale anlegen (oder die Bedingung nachziehen) — ein Aufruf für alle
-  async function createFeatures(list) {
-    const r = await ensure({ features: list })
-    for (const f of list) { const key = f.code.toLowerCase(); if (cache.map[f.code] && cache.map[f.code] !== key) delete cache.map[f.code] }
-    return r
-  }
-  const createFeature = async f => { await createFeatures([f]); return f.code.toLowerCase() }
+  /// Merkmale anlegen und den Gruppen ihrer Klassen zuordnen — ein Aufruf für alle. `classes`: die Klassen, deren Gruppen gemeint sind (sonst die in Gebrauch)
+  async function createFeatures(list, classes = null) { return ensure({ features: list, classes }) }
+  const createFeature = async (f, classes = null) => { await createFeatures([f], classes); return f.code.toLowerCase() }
   /// Klasse zuweisen: Modell, Gruppe an den Pfad des Knotens, Klasse an den Knoten — und ob sie danach pflegbar ist
   async function assign(nodeId, cls, { withFeatures = true } = {}) {
-    const r = await adopt(await api.post('/api/classification/assign', { node: nodeId, class: cls.code, system: system(), classes: classesToSend(cls), features: withFeatures ? cls.features.map(featureSpec) : [] }))
-    if (withFeatures) for (const f of cls.features) { const key = f.code.toLowerCase(); if (cache.map[f.code] && cache.map[f.code] !== key) delete cache.map[f.code] }
-    return r
+    return adopt(await api.post('/api/classification/assign', { node: nodeId, class: cls.code, system: system(), classes: classesToSend(cls), features: withFeatures ? cls.features.map(featureSpec) : [] }))
   }
   // Attributsicht je Klasse: ein Reiter am Knoten mit genau den
   // Attributen dieser Klasse, in der Reihenfolge der Klasse — je Rolle eine Sicht (eine Sicht gilt für einen Knotentyp).
@@ -172,7 +178,7 @@ function modelOps(ctx) {
     for (const v of mine) await api.del(`/api/model/views/${encodeURIComponent(v.key)}`).catch(() => {})
     return mine.length
   }
-  return { ensureGroup, ensureClassAttr, createFeature, createFeatures, assign, hasAttr, viewItems, dropOldViews, viewKeyOf }
+  return { system, ensureGroup, ensureClassAttr, createFeature, createFeatures, assign, hasAttr, viewItems, dropOldViews, viewKeyOf }
 }
 /// Alle ETIM-Attribute der übernommenen Klassen, je Code einmal (Werte vereinigt), mit den Klassen, in denen es vorkommt
 function allFeatures() {
@@ -293,8 +299,8 @@ async function classDialog(nodeId, ctx, onDone = null) {
         at.role === 'group'
           ? t_('Die Klasse wird an dieser Gruppe gesetzt und vererbt sich nach unten: die {0} ETIM-Attribute gelten dann an {1} Produkten und Varianten darunter.', [c.features.length, under.length])
           : t_('Die Klasse wird an diesem Knoten gesetzt: die {0} ETIM-Attribute gelten dann hier{1}.', [c.features.length, under.length ? ' ' + t_('und an {0} Varianten darunter', [under.length]) : '']),
-        missing.length ? ' ' + t_('{0} davon werden als Attribute angelegt (Gruppe {1}).', [missing.length, groupKey()]) : ' ' + t_('Alle haben schon ein Attribut im Modell.')),
-      others ? el('div', { class: 'warn', style: 'font-size:12px;margin-bottom:8px' }, t_('{0} Knoten darunter haben eine eigene Klasse — die behalten sie.', [others])) : null,
+        missing.length ? ' ' + t_('{0} davon werden als Attribute angelegt (Gruppe {1}).', [missing.length, classGroupKey(code)]) : ' ' + t_('Alle haben schon ein Attribut im Modell.')),
+      others ? el('div', { class: 'warn', style: 'font-size:12px;margin-bottom:8px' }, t_('{0} Knoten darunter haben eine eigene Klasse — die behalten sie.', [others])) : '',
       el('div', { class: 'scroll', style: 'max-height:40vh;border:1px solid var(--line);border-radius:4px;padding:4px 8px;font-size:12px' },
         ...c.features.map(f => el('div', {}, el('span', { class: 'mono muted' }, f.code), ' ', featureText(f, locale), el('span', { class: 'muted' }, ` · ${TYPE[f.type] ?? f.type}${ops.hasAttr(attrKeyOf(f.code)) ? '' : ' · neu'}`)))),
       el('div', { class: 'chips', style: 'margin-top:10px' },
@@ -316,7 +322,7 @@ async function classDialog(nodeId, ctx, onDone = null) {
       say('')
       store.toast(rd.ready
         ? `✓ ${code} an ${at.label} · ${c.features.length} Attribute${r.attributes ? ` · ${r.attributes} neu` : ''}`
-        : `⚠ ${code} an ${at.label} · ${!rd.groupExists ? `Gruppe ${r.group} fehlt` : !rd.groupOn ? `Gruppe ${r.group} gilt hier nicht` : `${rd.missing.length} ohne Attribut`}`, rd.ready ? 'ok' : 'error')
+        : `⚠ ${code} an ${at.label} · ${!rd.groupExists ? `Gruppe ${r.classGroup} fehlt` : !rd.groupOn ? `Gruppe ${r.classGroup} gilt hier nicht` : `${rd.missing.length} ohne Attribut`}`, rd.ready ? 'ok' : 'error')
       checkStep(code)
     })
   }
@@ -454,10 +460,13 @@ async function stageData(ctx, nodeId, locale = 'de') {
   const { api, tree } = ctx; const ops = modelOps(ctx); const hasAttr = ops.hasAttr
   const key = cache.settings.classAttr; const row = tree.byId.get(nodeId); if (!row) return null
   const at = hasAttr(key) ? await classAt(api, key, nodeId) : { ownCode: '', inherited: null, current: null, node: null }
-  const groupOn = (at.node?.groups ?? []).some(g => g.key === groupKey() && g.active !== false)   // gilt die Gruppe hier?
-  const groupExists = (ctx.store.model?.groups ?? []).some(g => g.key === groupKey())   // gibt es die Gruppe überhaupt noch im Modell?
+  // Zwei Gruppen müssen hier gelten: die des Systems (sie trägt das Klassenattribut) und die der Klasse (ihre Attribute)
+  const on = k => (at.node?.groups ?? []).some(g => g.key === k && g.active !== false)
+  const exists = k => (ctx.store.model?.groups ?? []).some(g => g.key === k)
+  const todo = [groupKey(), ...(at.current ? [classGroupKey(at.current)] : [])].filter(k => !on(k))   // was hier noch nicht gilt
+  const groupOn = todo.length === 0, groupExists = todo.every(exists), fehlt = todo.filter(k => !exists(k))
   const cls = at.current ? cache.classes.get(at.current) ?? null : null
-  const stage = { row, ...at, groupOn, groupExists, cls, feats: [], products: [], other: 0, filled: 0, cells: 0, bad: 0, empty: 0, keys: [], tbl: null, byClass: [] }
+  const stage = { row, ...at, groupOn, groupExists, todo, fehlt, cls, feats: [], products: [], other: 0, filled: 0, cells: 0, bad: 0, empty: 0, keys: [], tbl: null, byClass: [] }
   if (!cls) return stage
   // Merkmale der Klasse am Knoten und aller Klassen im Teilbaum
   const featsOf = c => c.features.map(f => { const k = attrKeyOf(f.code); return { f, key: k, has: hasAttr(k), own: k === f.code.toLowerCase(), steps: stepsOf(f.code) } })
@@ -498,7 +507,7 @@ async function bandMount({ head, body: bodyEl }, nodeId, ctx) {
     head.textContent = '· …'
     let S; try { S = await stageData(ctx, nodeId, locale) } catch (e) { head.textContent = '· ✗ ' + e.message; return }
     if (gone || !S) return
-    // Klassensichten früherer Fassungen einmal wegräumen: die Sicht ist jetzt flüchtig (nodeViews), im Modell hat sie nichts verloren
+    // Klassensichten früherer Fassungen einmal wegräumen: die Sicht ist jetzt flüchtig (früher nodeViews), im Modell hat sie nichts verloren
     if (!viewsDone.has('cleanup') && store.can?.('model') !== false && (store.model?.views ?? []).some(v => /^etim_ec\d{6}_/.test(v.key))) {
       viewsDone.add('cleanup')
       try { const n = await ops.dropOldViews(); if (n) { await store.poll(true); store.toast(t_('{0} feste ETIM-Sichten aufgeräumt — die Klassensicht entsteht jetzt beim Öffnen', [n]), 'ok') } } catch { /* ohne Modellrecht bleiben sie stehen */ }
@@ -511,22 +520,39 @@ async function bandMount({ head, body: bodyEl }, nodeId, ctx) {
     const clearBtn = S.ownCode ? el('button', { class: 'x', title: t_('Klasse an diesem Knoten entfernen — danach gilt die geerbte Klasse, sonst keine'), onclick: async () => {
       const ok = await (ctx.dialog?.confirm?.({ title: t_('ETIM-Klasse {0} entfernen?', [S.ownCode]), text: S.inherited ? t_('Danach gilt wieder {0} von {1}.', [S.inherited.code, S.inherited.from]) : t_('Danach hat dieser Knoten keine Klasse.'), ok: 'entfernen', danger: true }) ?? Promise.resolve(true))
       if (!ok) return
-      try { await api.post(`/api/nodes/${encodeURIComponent(nodeId)}/attributes`, { attribute: cache.settings.classAttr, locale: null, channel: null, value: '', row: null }); await store.poll(true); loadUsed(); store.toast(t_('✓ Klasse entfernt'), 'ok'); again() } catch (e) { store.toast(e.message) }
+      try { await api.post('/api/classification/clear', { node: nodeId, system: ops.system() }); await store.poll(true); await tree.load?.(true); loadUsed(); store.toast(t_('✓ Klasse entfernt'), 'ok'); again() } catch (e) { store.toast(e.message) }
     } }, t_('✕ Klasse')) : null
     // Gruppe anhängen, wenn sie hier nicht gilt — sonst ist kein ETIM-Attribut verfügbar und man kommt nicht weiter
     const attachBtnEl = !S.groupOn ? el('button', { class: 'primary', title: S.groupExists ? t_('die Attributgruppe {0} an diesem Knoten anhängen — erst dann gelten die ETIM-Attribute hier und darunter', [groupKey()]) : t_('die Attributgruppe {0} gibt es im Modell nicht mehr — sie wird neu angelegt und hier angehängt; die ETIM-Attribute gehören ihr weiterhin an', [groupKey()]), onclick: async () => {
       try {
-        if (!S.groupExists) { await ops.ensureGroup(); await store.poll(true) }   // ganz gelöscht — neu anlegen
+        const cg = S.current ? classGroupKey(S.current) : null
+        if (!S.groupExists) {
+          // gelöscht: die Gruppe des Systems legt der Server allein an; die einer Klasse entsteht mit ihrer Zuweisung — an dem Knoten, der die Klasse trägt
+          if (S.todo.includes(groupKey()) && !(ctx.store.model?.groups ?? []).some(g => g.key === groupKey())) { await ops.ensureGroup(); await store.poll(true) }
+          if (cg && S.todo.includes(cg) && !(ctx.store.model?.groups ?? []).some(g => g.key === cg) && S.cls) { await ops.assign(S.ownCode ? nodeId : S.inherited.id, S.cls); await store.poll(true); await tree.load?.(true); loadUsed(); again(); return }
+        }
         // an DIESEN Knoten — und im selben Zug unter ihm abnehmen, wo sie schon hing: sie gilt ab hier ohnehin nach unten
-        const have = (S.row.groups ?? '').split(',').filter(Boolean)
-        await api.post(`/api/nodes/${encodeURIComponent(nodeId)}/groups`, { groups: [...new Set([...have, groupKey()])] }, 'PUT')
-        const below = []; const walk = id => { for (const k of tree.kids(id)) { if ((k.groups ?? '').split(',').includes(groupKey())) below.push(k); walk(k.id) } }; walk(nodeId)
-        for (const k of below) await api.post(`/api/nodes/${encodeURIComponent(k.id)}/groups`, { groups: (k.groups ?? '').split(',').filter(x => x && x !== groupKey()) }, 'PUT')
+        let have = (S.row.groups ?? '').split(',').filter(Boolean)
+        for (const gk of S.todo) {
+          have = [...new Set([...have, gk])]
+          await api.post(`/api/nodes/${encodeURIComponent(nodeId)}/groups`, { groups: have }, 'PUT')
+          const below = []; const walk = id => { for (const k of tree.kids(id)) { if ((k.groups ?? '').split(',').includes(gk)) below.push(k); walk(k.id) } }; walk(nodeId)
+          for (const k of below) await api.post(`/api/nodes/${encodeURIComponent(k.id)}/groups`, { groups: (k.groups ?? '').split(',').filter(x => x && x !== gk) }, 'PUT')
+        }
         await store.poll(true); await tree.load?.()
-        store.toast(`✓ ${groupKey()} ab ${S.row.label}${below.length ? ` · ${below.length} Subitems bereinigt` : ''}`, 'ok'); again()
+        store.toast(`✓ ${S.todo.join(', ')} ab ${S.row.label}`, 'ok'); again()
       } catch (e) { store.toast(e.message) }
-    } }, S.groupExists ? t_('⌗ Gruppe {0} anhängen', [groupKey()]) : t_('⌗ Gruppe {0} anlegen und anhängen', [groupKey()])) : null
-    if (!S.cls) { head.textContent = '· ' + (S.current ? t_('{0} nicht in ETIM {1}', [S.current, cache.version ?? '?']) : t_('keine Klasse')); line.append(...[S.current ? el('span', { class: 'muted' }, t_('{0} nicht in ETIM {1}', [S.current, cache.version ?? '?'])) : null, assignBtn, clearBtn, attachBtnEl].filter(Boolean)); return }   // der Text steht schon in der Überschrift
+    } }, S.groupExists ? t_('⌗ Gruppe {0} anhängen', [S.todo.join(', ')]) : t_('⌗ Gruppe {0} anlegen und anhängen', [S.todo.join(', ')])) : null
+    // Bestand der früheren Bauart (eine Sammelgruppe, Attribute mit Bedingung): der Server stellt ihn auf Klassengruppen um
+    const altAttr = (ctx.store.model?.attributes ?? []).filter(a => a.when?.attribute === cache.settings.classAttr).length
+    const umstellBtn = altAttr ? el('button', { class: 'primary', title: t_('Die {0} Attribute kommen in die Gruppen ihrer Klassen, die Bedingung entfällt, und jeder Knoten mit einer Klasse bekommt deren Gruppe', [altAttr]), onclick: async () => {
+      try {
+        const r = await api.post('/api/classification/migrate', { system: ops.system(), dryRun: false })
+        await store.poll(true); await tree.load?.(true); loadUsed()
+        store.toast(t_('✓ {0} Gruppen, {1} Attribute, {2} Knoten umgestellt', [r.groups, r.attributes, r.nodes]), 'ok'); again()
+      } catch (e) { store.toast(e.message) }
+    } }, t_('⌗ auf Klassengruppen umstellen')) : null
+    if (!S.cls) { head.textContent = '· ' + (S.current ? t_('{0} nicht in ETIM {1}', [S.current, cache.version ?? '?']) : t_('keine Klasse')); line.append(...[S.current ? el('span', { class: 'muted' }, t_('{0} nicht in ETIM {1}', [S.current, cache.version ?? '?'])) : null, assignBtn, clearBtn, attachBtnEl, umstellBtn].filter(Boolean)); return }   // der Text steht schon in der Überschrift
     const code = S.current
     line.append(chip(`${code} ${nameOf(S.cls.name, locale)}`, '', S.ownCode ? t_('Klasse am Knoten selbst') : t_('Klasse geerbt von {0}', [S.inherited.from])), el('span', { class: 'muted' }, S.ownCode ? 'hier' : `von ${S.inherited.from}`))
     if (S.other) line.append(chip(`≠ ${S.other}`, 'warn', t_('{0} darunter mit anderer Klasse', [S.other])))
@@ -536,13 +562,10 @@ async function bandMount({ head, body: bodyEl }, nodeId, ctx) {
     head.textContent = `· ${code} ${nameOf(S.cls.name, locale)}${S.ownCode ? '' : ' (geerbt)'} · zugeordnet ${has.length}/${S.feats.length} · Daten ${S.products.length ? pct + ' %' : '—'}${S.ownCode && S.byClass.length > 1 ? ` · Teilbaum ${String(S.sum.pct).replace('.', ',')} %` : ''}${S.other ? ` · ≠ ${S.other}` : ''}`
     line.append(el('span', { class: 'muted' }, '·'), chip(S.products.length ? t_('Daten {0} %', [pct]) : t_('Daten —'), S.bad ? 'neg' : pct >= 80 ? 'pos' : '', t_('{0} Produkte/Varianten × {1} ETIM-Attribute: {2} gefüllt · {3} leer{4}', [S.products.length, has.length, S.filled, S.empty, S.bad ? ' ' + t_('· {0} passen nicht', [S.bad]) : ''])))
     // Knöpfe direkt hinter den Chips, nicht rechtsbündig
-    if (!S.groupOn) line.append(chip(S.groupExists ? t_('⚠ Gruppe {0} gilt hier nicht', [groupKey()]) : t_('⚠ Gruppe {0} fehlt im Modell', [groupKey()]), 'warn', t_('die Attributgruppe {0} hängt an keinem Knoten des Pfads — deshalb gilt kein ETIM-Attribut an diesem Knoten; „Gruppe anhängen“ behebt es', [groupKey()])))
-    line.append(...[el('span', { class: 'muted' }, '·'), assignBtn, clearBtn, attachBtnEl,
+    if (!S.groupOn) line.append(chip(S.groupExists ? t_('⚠ Gruppe {0} gilt hier nicht', [S.todo.join(', ')]) : t_('⚠ Gruppe {0} fehlt im Modell', [S.fehlt.join(', ')]), 'warn', t_('die Attributgruppe {0} hängt an keinem Knoten des Pfads — deshalb gilt kein ETIM-Attribut an diesem Knoten; „Gruppe anhängen“ behebt es', [S.todo.join(', ')])))
+    line.append(...[el('span', { class: 'muted' }, '·'), assignBtn, clearBtn, attachBtnEl, umstellBtn,
       el('button', { class: miss.length ? 'primary' : 'x', title: t_('Zuordnung der ETIM-Attribute dieser Klasse: vorhandenes Attribut, ƒ Umwandlung, oder eigenes anlegen (⌗ ETIM)'), onclick: () => ctx.go?.(`/p/etim/etim?class=${code}&node=${encodeURIComponent(nodeId)}`) }, '⇄ zuordnen …'),
-      el('button', { class: 'x', title: t_('Attributsicht „⌗ {0}“ an diesem Knoten wählen — ein Reiter mit genau den Attributen dieser Klasse (entsteht beim Öffnen, steht nicht im Modell)', [code]), onclick: async () => {
-        try { const k = '~etim:class'; store.viewKey = { ...store.viewKey, [S.row.role]: k }; store.save?.(); store.toast(`◫ ⌗ ${code}`, 'ok'); ctx.go?.(`/tree/${encodeURIComponent(nodeId)}`) } catch (e) { store.toast(e.message) }
-      } }, t_('◫ Sicht')),
-      miss.length ? el('button', { class: 'x', title: t_('{0} fehlende ETIM-Attribute als eigene Attribute ef… anlegen (Gruppe {1}, nur an Produkt und Variante)', [miss.length, groupKey()]), onclick: async () => { try { await ops.ensureClassAttr(); for (const x of miss) await ops.createFeature(x.f); await store.poll(true); store.toast(t_('✓ {0} Attribute angelegt', [miss.length]), 'ok'); again() } catch (e) { store.toast(e.message) } } }, `＋ ${miss.length} anlegen`) : null,
+      miss.length ? el('button', { class: 'x', title: t_('{0} fehlende ETIM-Attribute als eigene Attribute ef… anlegen (Gruppe {1}, nur an Produkt und Variante)', [miss.length, classGroupKey(code)]), onclick: async () => { try { await ops.createFeatures(miss.map(x => x.f), [S.cls]); await store.poll(true); store.toast(t_('✓ {0} Attribute angelegt', [miss.length]), 'ok'); again() } catch (e) { store.toast(e.message) } } }, `＋ ${miss.length} anlegen`) : null,
       S.products.length ? el('button', { class: 'x', title: t_('Subitems-Tabelle im eigenen Fenster — nur die Spalten dieser Klasse; Bedienung wie Excel'), onclick: () => openTable(tree, nodeId, S.keys, S.products.some(r => r.row.role === 'product') ? 'product' : 'variant') }, t_('⊞ Tabelle')) : null,
     ].filter(Boolean))
     // Befunde je Knoten — immer sichtbar, mit Sprungziel in der letzten Spalte
@@ -795,7 +818,7 @@ async function mount(root, ctx) {
   // Zuordnung und Einstellungen — und auf Wunsch die geladenen Freigaben. Werte bleiben im Journal (append-only), nur das Modell wird leer.
   async function resetDialog() {
     const key = cache.settings.classAttr
-    const attrs = () => (model().attributes ?? []).filter(a => a.group === groupKey() || a.key === key)
+    const attrs = () => (model().attributes ?? []).filter(ofSystem)
     const views = () => (model().views ?? []).filter(v => v.key.startsWith('etim_'))
     const names = await ctx.data.list().catch(() => [])
     const lib = names.filter(n => n.startsWith('class:') || n === 'release' || n.startsWith('release:'))
@@ -918,7 +941,7 @@ async function mount(root, ctx) {
       el('option', { value: 'etim' }, `etim${(model().groups ?? []).some(g => g.key === 'etim') ? '' : ' (anlegen)'}`),
       ...(model().groups ?? []).filter(g => g.key !== 'etim').map(g => el('option', { value: g.key }, `${g.label?.[locale] || L(g.label) || g.key} (${g.key})`)))
     groupSel.value = groupKey()
-    const inGroup = () => attrs().filter(a => a.group === groupKey())
+    const inGroup = () => attrs().filter(a => a.key !== key)
     const guessInGroup = () => {   // ETIM-Attribut → Attribut der gewählten Gruppe nach Namen (alle Sprachen, Code)
       const { norm, similarity } = ctx.mapper; let n = 0
       for (const f of allFeatures().values()) {
@@ -992,56 +1015,6 @@ async function install(ctx) {
 /// Die Klasse, die an einer Zeile gilt (eigen oder geerbt) — aus dem Cache, den das Plugin ohnehin führt
 function classOfRow(row) { const v = cache.classOf?.get(row?.id); return v ? cache.classes.get(v.code) ?? null : null }
 /// Alle Nachfahren — falls der Baum kein below() mitbringt
-function kidsDeep(id, tree) {
-  const out = []; const walk = x => { for (const k of tree?.kids?.(x) ?? []) { out.push(k); walk(k.id) } }; walk(id); return out
-}
-/// Die Klassen, die an diesem Knoten und darunter gelten — eigene und geerbte, jede einmal, in Codereihenfolge
-function classesBelow(row, tree) {
-  const out = new Map()
-  const add = id => { const v = cache.classOf?.get(id); const c = v ? cache.classes.get(v.code) : null; if (c) out.set(c.code, c) }
-  add(row.id)
-  for (const r of kidsDeep(row.id, tree)) add(r.id)   // tree.below() ist eine Zusammenfassung, keine Liste
-  return [...out.values()].sort((a, b) => a.code.localeCompare(b.code))
-}
-/// Abschnitte nach Klassenzugehörigkeit: je Merkmal die Menge der Klassen, in denen es vorkommt —
-/// gleiche Menge, ein Abschnitt. Oben steht, was für alle gilt (dort lohnt das Pflegen am meisten), unten das Einzelne.
-/// Bei genau einer Klasse ist es ein Abschnitt mit ihrem Namen — die frühere Klassensicht.
-function classBlocks(row, ctx) {
-  const classes = classesBelow(row, ctx?.tree)
-  if (!classes.length) return null
-  const defs = new Map((ctx?.model?.attributes ?? []).map(a => [a.key, a]))
-  const locale = ctx?.model?.masterLocale ?? 'de'
-  const byKeyClasses = new Map()   // Attributschlüssel → Klassencodes
-  for (const c of classes) for (const f of c.features) {
-    const key = mapEntry(cache.map, f.code).key
-    if (!defs.has(key)) continue
-    if (!byKeyClasses.has(key)) byKeyClasses.set(key, new Set())
-    byKeyClasses.get(key).add(c.code)
-  }
-  const groups = new Map()   // Klassenmenge (als Text) → Attributschlüssel
-  for (const [key, set] of byKeyClasses) {
-    const id = [...set].sort().join(',')
-    if (!groups.has(id)) groups.set(id, [])
-    groups.get(id).push(key)
-  }
-  const name = code => { const c = classes.find(x => x.code === code); return `${code} ${nameOf(c?.name, locale) || ''}`.trim() }
-  const out = [...groups].map(([id, keys]) => ({ id, codes: id.split(','), keys }))
-    .sort((a, b) => b.codes.length - a.codes.length || a.id.localeCompare(b.id))
-    .map(g => ({ key: `~etim:${g.id}`, title: `⌗ ${g.codes.map(name).join(' · ')}`, keys: g.keys }))
-  // das Klassenattribut selbst nach oben — dort steht, worum es überhaupt geht
-  const classAttr = cache.settings.classAttr
-  if (defs.has(classAttr)) out.unshift({ key: '~etim:class-attr', title: t_('⌗ ETIM-Klasse'), keys: [classAttr] })
-  return out
-}
-/// Gruppen und Attribute einer Klasse in Klassenreihenfolge — die Form einer Attributsicht, nur im Arbeitsspeicher
-function classViewItems(cls, model) {
-  const defs = new Map((model?.attributes ?? []).map(a => [a.key, a]))
-  const keys = cls.features.map(f => mapEntry(cache.map, f.code).key).filter(k => defs.has(k))
-  const byGroup = new Map()
-  for (const k of [cache.settings.classAttr, ...keys]) { const g = defs.get(k)?.group; if (!g) continue; if (!byGroup.has(g)) byGroup.set(g, []); if (!byGroup.get(g).includes(k)) byGroup.get(g).push(k) }
-  return [...byGroup].map(([group, order]) => ({ group, order }))
-}
-
 export default {
   install,
   views: [
@@ -1050,16 +1023,6 @@ export default {
   ],
   nodeBands: [
     { key: 'etim', label: 'ETIM', icon: '⌗', roles: ['group', 'product', 'variant'], mount: bandMount },   // Klasse · Attribute · Daten am Knoten
-  ],
-  // Flüchtige Attributsicht: am Knoten steht „⌗ EC003205 Universal contact adhesive“ in der Auswahl —
-  // gebaut aus der Klasse, die dort gilt, in Klassenreihenfolge. Nichts davon geht ins Journal.
-  nodeViews: [
-    {
-      key: 'class', roles: ['group', 'product', 'variant'],
-      // ersetzt die Attributgruppe: der ETIM-Abschnitt ist nach Klassen gegliedert, ohne dass jemand eine Sicht wählt
-      replaces: cache.settings.group ?? 'etim',
-      blocks: classBlocks,
-    },
   ],
   nodeActions: [
     // die zugewiesene Klasse (auch geerbt) als eigener Punkt: Klick → Knotenansicht, direkt in der Attributgruppe (Reiter oder Liste)

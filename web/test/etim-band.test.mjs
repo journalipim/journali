@@ -53,7 +53,7 @@ const VALUES = {   // eigene Werte je Knoten
   'v-3': {},                                                                                // leer
 }
 const INACTIVE = { 'p-1': ['tastatur_name'] }
-const NODE_GROUPS = [{ key: 'etim', active: true, attributes: ['etim_class', 'ef008851', 'ef000008', 'ef000007'] }]   // was am Knoten gilt   // am Produkt gilt das zugeordnete Attribut nicht
+const NODE_GROUPS = [{ key: 'etim', active: true }, { key: 'etim_ec004718', active: true }]   // was am Knoten gilt   // am Produkt gilt das zugeordnete Attribut nicht
 const own = (id, key) => VALUES[id]?.[key]
 const resolved = (id, key) => own(id, key) ?? (key === 'etim_class' ? (TREE.find(r => r.id === id)?.parent ? resolved(TREE.find(r => r.id === id).parent, key) : undefined) : undefined)
 const rowOf = id => { const r = TREE.find(x => x.id === id); const values = {}; for (const k of ['etim_class', 'ef008851', 'ef000008', 'ef000007', 'tastatur_name']) { const v = resolved(id, k); if (v != null) values[k] = { value: v, own: own(id, k) != null } } return { row: { id, label: r.label, role: r.role, parent: r.parent }, values, inactive: INACTIVE[id] ?? [] } }
@@ -93,7 +93,7 @@ function apiTable(u) {
   const ids = q.get('self') === 'true' ? [id] : deep(id).map(r => r.id)
   return { node: { id }, columns: keys.map(k => ({ key: k, type: k === 'etim_class' ? 'enum' : 'text' })), rows: ids.map(rowOf) }
 }
-const MODEL = { masterLocale: 'de', locales: [{ code: 'de' }], groups: [{ key: 'etim', label: { de: 'ETIM' }, attributes: ['etim_class', 'ef008851', 'ef000008', 'ef000007'] }, { key: 'tech', label: { de: 'Technik' }, attributes: ['tastatur_name'] }],
+const MODEL = { masterLocale: 'de', locales: [{ code: 'de' }], groups: [{ key: 'etim', label: { de: 'ETIM' }, attributes: ['etim_class'] }, { key: 'etim_ec004718', label: { de: 'EC004718 Laptop' }, attributes: ['ef008851', 'ef000008', 'ef000007', 'tastatur_name'] }, { key: 'tech', label: { de: 'Technik' }, attributes: ['tastatur_name'] }],
   attributes: [{ key: 'etim_class', type: 'enum', group: 'etim', label: { de: 'ETIM-Klasse' } }, { key: 'ef008851', type: 'boolean', group: 'etim', label: { de: 'Wi-Fi' } }, { key: 'ef000008', type: 'decimal', group: 'etim', label: { de: 'Breite' } }, { key: 'ef000007', type: 'enum', group: 'etim', list: 'ef000007', label: { de: 'Farbe' } }, { key: 'tastatur_name', type: 'text', group: 'tech', label: { de: 'Tastatur' } }], lists: [] }
 const ctx = {
   api: { get: async p => /^\/api\/nodes\/[^/?]+$/.test(p) ? apiNode(decodeURIComponent(p.slice('/api/nodes/'.length))) : apiTable(p), post: async () => ({}), del: async () => ({}) },
@@ -135,10 +135,10 @@ test('Gruppe entfernt (Sackgasse): eine Zeile statt 35, Warnung und der Weg zur�
   const b = textOf(body), l = textOf(body).length
   assert.match(b, /4 von 4 ETIM-Attributen sind hier nicht verfügbar/)
   assert.ok((b.match(/nicht verfügbar/g) ?? []).length <= 4, 'je Knoten eine Zeile, nicht je Attribut')
-  assert.match(textOf(head) + b, /Gruppe etim gilt hier nicht/)
-  assert.match(b, /Gruppe etim anhängen/)
+  assert.match(textOf(head) + b, /Gruppe etim, etim_ec004718 gilt hier nicht/)
+  assert.match(b, /Gruppe etim, etim_ec004718 anhängen/)
   assert.match(b, /✕ Klasse/)                                   // Klasse lässt sich entfernen
-  Object.assign(INACTIVE, JSON.parse(before)); NODE_GROUPS.push({ key: 'etim', active: true, attributes: ['etim_class', 'ef008851', 'ef000008', 'ef000007'] })
+  Object.assign(INACTIVE, JSON.parse(before)); NODE_GROUPS.push({ key: 'etim', active: true }, { key: 'etim_ec004718', active: true })
 })
 
 test('Gruppe ganz gelöscht: der Knopf legt sie neu an', async () => {
@@ -151,11 +151,11 @@ test('Gruppe ganz gelöscht: der Knopf legt sie neu an', async () => {
   await new Promise(r => setTimeout(r, 30))
   const b = textOf(body)
   assert.match(b, /Gruppe etim fehlt im Modell/)
-  assert.match(b, /Gruppe etim anlegen und anhängen/)
-  MODEL.groups = groups; NODE_GROUPS.push({ key: 'etim', active: true, attributes: ['etim_class', 'ef008851', 'ef000008', 'ef000007'] })
+  assert.match(b, /Gruppe etim, etim_ec004718 anlegen und anhängen/)
+  MODEL.groups = groups; NODE_GROUPS.push({ key: 'etim', active: true }, { key: 'etim_ec004718', active: true })
 })
 
-test('Klassengliederung statt fester Sicht: Abschnitte nach Klassenzugehörigkeit, nichts im Modell', async () => {
+test('keine Sammelgruppe mit Abschnitten: die Gruppe einer Klasse ist ein eigener Reiter, im Journal steht keine Sicht', async () => {
   const mod = await import('../../plugins/etim/entry.js')
   const put = []
   const ctx2 = { ...ctx, api: { ...ctx.api, post: async (p, b, m) => { put.push([p, b, m]); return {} } } }
@@ -163,31 +163,8 @@ test('Klassengliederung statt fester Sicht: Abschnitte nach Klassenzugehörigkei
   await mod.default.nodeBands[0].mount({ head, body }, 'p-1', ctx2)
   await new Promise(r => setTimeout(r, 30))
   assert.deepEqual(put.filter(([p]) => p.startsWith('/api/model/views/')), [], 'keine Sicht im Journal')
-
-  const nv = mod.default.nodeViews?.[0]
-  assert.ok(nv?.blocks, 'nodeViews mit blocks fehlt')
-  const pctx = { model: ctx.store.model, tree: ctx.tree }
-
-  // der Abschnitt tritt an die Stelle der Attributgruppe — keine Sicht zum Wählen
-  assert.equal(nv.replaces, 'etim')
-  assert.equal(nv.label, undefined, 'keine eigene Sicht in der Auswahl')
-  const one = nv.blocks({ id: 'p-1', role: 'product' }, pctx)
-  assert.equal(one[0].title, '⌗ ETIM-Klasse')
-  assert.deepEqual(one[0].keys, ['etim_class'])
-  assert.match(one[1].title, /⌗ EC004718 Laptop/)
-  assert.ok(one[1].keys.includes('ef008851') && one[1].keys.includes('tastatur_name'))
-
-  // zwei Klassen unterhalb: gemeinsame Merkmale zuerst, dann die der einzelnen (die Skizze)
-  const zwei = nv.blocks({ id: 'g-1', role: 'group' }, pctx)
-  const titel = zwei.map(b => b.title)
-  assert.equal(titel[0], '⌗ ETIM-Klasse')
-  assert.match(titel[1], /EC000529.*EC004718|EC004718.*EC000529/, 'oben, was für beide gilt: ' + JSON.stringify(titel))
-  assert.ok(zwei[1].keys.includes('ef008851'), 'Wi-Fi haben beide Klassen')
-  assert.ok(zwei.slice(2).some(b => b.keys.includes('tastatur_name')), 'nur eine Klasse führt es')
-  assert.ok(zwei.slice(2).every(b => b.title.split('·').length === 1 || b.title.split(' · ').length < titel[1].split(' · ').length))
-
-  // ohne Klasse keine Abschnitte
-  assert.equal(nv.blocks({ id: 'gibtsnicht', role: 'product' }, pctx), null)
+  assert.equal(mod.default.nodeViews, undefined, 'die Gliederung nach Klassenmengen entfällt: jede Klasse hat ihre Gruppe')
+  assert.doesNotMatch(textOf(body), /◫ Sicht/)
 })
 
 test('jeder Knopf im Band lässt sich drücken, ohne dass etwas fehlt', async () => {
@@ -204,7 +181,58 @@ test('jeder Knopf im Band lässt sich drücken, ohne dass etwas fehlt', async ()
   for (const b of buttons) { try { await b.onclick({ preventDefault() {}, stopPropagation() {} }) } catch (e) { errors.push(`${(b.kids ?? []).join('')}: ${e.message}`) } }
   assert.deepEqual(errors, [], 'kein Knopf darf scheitern')
   assert.ok(calls.some(([p, m]) => /\/groups$/.test(p) && m === 'PUT'), 'Gruppe anhängen schreibt')
-  NODE_GROUPS.push({ key: 'etim', active: true, attributes: ['etim_class', 'ef008851', 'ef000008', 'ef000007'] })
+  NODE_GROUPS.push({ key: 'etim', active: true }, { key: 'etim_ec004718', active: true })
+})
+
+// ---- Eine Klasse, eine Attributgruppe: das Band hängt die Gruppen an und nimmt die Klasse samt ihrer Gruppe wieder weg
+async function bandKnoepfe(ctx2, nodeId = 'p-1') {
+  const mod = await import('../../plugins/etim/entry.js')
+  const head = mkEl('h2'), body = mkEl('div')
+  await mod.default.nodeBands[0].mount({ head, body }, nodeId, ctx2)
+  await new Promise(r => setTimeout(r, 30))
+  const buttons = []; const walk = e => { if (typeof e === 'string') return; if (e.tag === 'button' && e.onclick) buttons.push(e); for (const k of e.kids ?? []) walk(k) }
+  walk(body)
+  return buttons.map(b => ({ text: textOf(b).trim(), click: () => b.onclick({ preventDefault() {}, stopPropagation() {} }) }))
+}
+
+test('die Klasse entfernen ruft den Server, der auch ihre Gruppe abnimmt', async () => {
+  const calls = []
+  const ctx2 = { ...ctx, api: { ...ctx.api, post: async (p, b, m) => { calls.push([p, b, m ?? 'POST']); return {} } }, dialog: { confirm: async () => true } }
+  const knoepfe = await bandKnoepfe(ctx2)
+  await knoepfe.find(k => k.text === '✕ Klasse').click()
+  const c = calls.find(([p]) => p === '/api/classification/clear')
+  assert.equal(c[1].node, 'p-1'); assert.equal(c[1].system.group, 'etim'); assert.equal(c[1].system.classAttr, 'etim_class')
+})
+
+test('gelten die Gruppen hier nicht, hängt der Knopf beide an: die des Systems und die der Klasse', async () => {
+  const calls = []
+  const ctx2 = { ...ctx, api: { ...ctx.api, post: async (p, b, m) => { calls.push([p, b, m ?? 'POST']); return {} } } }
+  NODE_GROUPS.length = 0
+  const knoepfe = await bandKnoepfe(ctx2)
+  await knoepfe.find(k => /Gruppe etim, etim_ec004718 anhängen/.test(k.text)).click()
+  const puts = calls.filter(([p, , m]) => p === '/api/nodes/p-1/groups' && m === 'PUT').map(([, b]) => b.groups)
+  assert.deepEqual(puts, [['etim'], ['etim', 'etim_ec004718']])
+  NODE_GROUPS.push({ key: 'etim', active: true }, { key: 'etim_ec004718', active: true })
+})
+
+test('gilt nur die Gruppe der Klasse nicht, nennt das Band nur sie', async () => {
+  NODE_GROUPS.length = 0; NODE_GROUPS.push({ key: 'etim', active: true })
+  const knoepfe = await bandKnoepfe({ ...ctx })
+  assert.ok(knoepfe.some(k => k.text === '⌗ Gruppe etim_ec004718 anhängen'), knoepfe.map(k => k.text).join(' | '))
+  NODE_GROUPS.length = 0; NODE_GROUPS.push({ key: 'etim', active: true }, { key: 'etim_ec004718', active: true })
+})
+
+test('Bestand der früheren Bauart: das Band bietet die Umstellung an und ruft den Server', async () => {
+  const attrs = MODEL.attributes
+  MODEL.attributes = attrs.map(a => a.key === 'ef008851' ? { ...a, when: { attribute: 'etim_class', values: ['EC004718'] } } : a)
+  const calls = []
+  const ctx2 = { ...ctx, api: { ...ctx.api, post: async (p, b, m) => { calls.push([p, b, m ?? 'POST']); return { groups: 1, attributes: 1, nodes: 1 } } } }
+  const knoepfe = await bandKnoepfe(ctx2)
+  await knoepfe.find(k => k.text === '⌗ auf Klassengruppen umstellen').click()
+  const c = calls.find(([p]) => p === '/api/classification/migrate')
+  assert.equal(c[1].dryRun, false); assert.equal(c[1].system.group, 'etim')
+  MODEL.attributes = attrs
+  assert.ok(!(await bandKnoepfe({ ...ctx })).some(k => /umstellen/.test(k.text)), 'ohne Bestand der früheren Bauart keine Umstellung')
 })
 
 test('install beim Einschalten: Gruppe etim anlegen und an die Wurzel hängen', async () => {

@@ -20,11 +20,12 @@ erlaubten Werten, alles mit Übersetzungen (`de-DE`, `EN`, …).
    Name) und Werten (EV-Code, Namen). Alles aufgelöst — Job, Prüfung und Export brauchen die
    Freigabe nicht mehr. „aus dem Baum“ übernimmt alle Klassen, die im Klassenattribut stehen.
 3. **Attribute anlegen** — Klassenattribut `etim_class` (Werteliste der übernommenen Klassen,
-   vererbbar, Gruppe ETIM) und je ETIM-Attribut ein Attribut `ef…` in der Gruppe ETIM:
+   vererbbar, Gruppe ETIM) und je Klasse eine Attributgruppe `etim_<klasse>` („EC002712 Name“) mit ihren Attributen: ein
+   Attribut `ef…` entsteht, wo es noch keins gibt, sonst wird das vorhandene nur dieser Gruppe zugeordnet.
    Numeric → `decimal` mit Einheit (vorhandene Einheit nach Abkürzung, sonst `u_<abk>`),
    Logical → `boolean`, Alphanumeric → `enum` mit Werteliste `ef…` (Wert = EV-Code, Bezeichnung
-   = Name), Range → `text` mit Muster „von - bis“. Die Gruppe ETIM gilt erst, wenn sie an
-   einem Knoten des Pfads hängt: „⌗ Gruppe an Teilbaum“.
+   = Name), Range → `text` mit Muster „von - bis“. Die Gruppe der Klasse gilt erst, wenn sie an
+   einem Knoten des Pfads hängt; die Zuweisung hängt sie an den Knoten, dem die Klasse zugewiesen wird.
 4. **Zuordnung** — ETIM-Attribut → vorhandenes Attribut statt eigenem `ef…` (`map` im Journal).
 5. **Prüfung** — Klasse unbekannt/nicht übernommen (⚠), Wert passt nicht zum ETIM-Attribut (⚠:
    Zahl, Ja/Nein, Bereich, Wert nicht in der Liste), ETIM-Attribute ohne Attribut und Belegung (ℹ).
@@ -33,8 +34,8 @@ erlaubten Werten, alles mit Übersetzungen (`de-DE`, `EN`, …).
 ## Was der Server macht
 
 Was im Modell anzulegen ist, macht der Server (`/api/classification`, `Journali.Server/ClassificationApi.cs`), nicht das
-Plugin: die Gruppe des Systems, das Klassenattribut mit seiner Werteliste, je ETIM-Attribut ein Attribut mit Bedingung,
-Einheit und Liste, die Gruppe an den Pfad des Knotens und die Klasse an den Knoten. Das Plugin schickt dazu eine
+Plugin: die Gruppe des Systems (sie trägt das Klassenattribut), das Klassenattribut mit seiner Werteliste, die Gruppe der Klasse
+mit ihren Attributen (Einheit und Liste), die Gruppen am Knoten und die Klasse als Wert. Das Plugin schickt dazu eine
 neutrale Beschreibung (Klasse, Merkmale mit Typ `decimal`, `boolean`, `text` oder `enum`); was ein ETIM-Attribut ist und
 wie es auf diese Typen abgebildet wird, steht im Plugin. Bei einer Namenskollision weicht der Server aus und nennt den
 gewählten Schlüssel; das Plugin merkt ihn sich. Wo sich das Modell ändern müsste, verlangt der Server das Modell-Recht.
@@ -72,8 +73,9 @@ Namenskollision: gibt es `etim` schon mit fremden Attributen, weicht ETIM auf `e
 Einstellungen wählbar); dasselbe gilt für das Klassenattribut (`etim_klasse`) und für Sichten, die jemand anderem gehören.
 
 Jede Zuweisung stellt sicher, dass die Klasse danach pflegbar ist: Gruppe `etim` anlegen (falls gelöscht) und an den
-Pfad des Knotens hängen, Klassenattribut anlegen, je ETIM-Attribut ein Attribut im Modell — danach wird geprüft und
-gemeldet, was noch fehlt (`readiness` im Kern). Fehlt etwas später wieder, hat das Band den Knopf dafür.
+Pfad des Knotens hängen, Klassenattribut anlegen, die Gruppe der Klasse mit ihren Attributen anlegen und an den Knoten hängen —
+danach wird geprüft und gemeldet, was noch fehlt. Fehlt etwas später wieder, hat das Band den Knopf dafür. „✕ Klasse“ nimmt die
+Klasse samt ihrer Gruppe vom Knoten.
 
 1. **Klasse** — eigen oder geerbt (Regelfall: an der Produktgruppe, erbt auf alles darunter;
    Ausnahme am Produkt), ≠ abweichende Klassen darunter. „Klasse zuweisen …“ öffnet den Dialog
@@ -81,10 +83,8 @@ gemeldet, was noch fehlt (`readiness` im Kern). Fehlt etwas später wieder, hat 
 2. **Attribute** — die ETIM-Attribute der Klasse: n von m als Attribut, zugeordnet, mit ƒ, fehlend.
    „zuordnen …“ filtert die Zuordnung auf die Klasse; Standard ist ein **vorhandenes Attribut**
    mit **ƒ** (Einheit, ja/x → Ja/Nein, Text → EV-Code nach Tabelle, von/bis) — ein eigenes
-   `ef…` ist der Ausweg („＋ n anlegen“, Gruppe `etim`, nur an Produkt und Variante).
-2a. **Sicht** — „◫ Sicht“ baut je Rolle eine Attributsicht `etim_<klasse>_<rolle>` („⌗ EC004718 Laptop“) mit genau
-   den Attributen dieser Klasse (das Klassenattribut vorn, zugeordnete Attribute in ihrer eigenen Gruppe) und wählt sie
-   am Knoten — der Reiter zeigt dann nur diese Attribute. Jede Zuweisung schreibt die Sicht neu.
+   `ef…` ist der Ausweg („＋ n anlegen“, in der Gruppe der Klasse). Ein zugeordnetes Attribut kommt in die Gruppe der Klasse.
+   Die Attribute einer Klasse stehen in der Knotenansicht als eigener Reiter, der so heisst wie die Klasse.
 
 3. **Daten** — Produkte darunter × ETIM-Attribute: % gefüllt, leer, passen nicht. „⊞ Tabelle“ öffnet
    die Subitems-Tabelle mit genau den Spalten der Klasse (Excel-Bedienung); „✓ prüfen“ dieselbe

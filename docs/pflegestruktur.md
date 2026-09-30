@@ -828,10 +828,15 @@ Freigabe, Markt und Stand gelten wie bei jeder Publikation. Damit entfällt jede
 Export-Konfiguration im Klassifikations-Plugin („welche Klassen, ab welcher Stufe“).
 
 **Klassifikation (Gruppe ⌗ in der Leiste; ETIM heute, ECLASS/UNSPSC mit demselben Aufbau):**
-- Je System eine Attributgruppe, ein Klassenattribut, Merkmalsattribute. Innerhalb eines Systems
-  **keine Gruppe je Klasse**: Merkmale sind global (`EF000008 Breite` in hunderten Klassen), ein
-  Merkmal ist ein Attribut, die Klasse ist seine Bedingung (`when`). Genau eine Klasse je Produkt
-  (ETIM-Grundsatz); mehrere Klassifikationen zugleich sind mehrere Systeme.
+- **Eine Klasse, eine Attributgruppe** (30.09.2026, ersetzt die frühere Bauart mit einer Sammelgruppe je System und einer
+  Bedingung `when` an jedem Merkmal — die stammte aus der Zeit, als ein Attribut nur in einer Gruppe stehen konnte): je System
+  eine Gruppe, die nur das Klassenattribut trägt (`etim`, `gpc`), und je zugewiesener Klasse eine Gruppe, die so heisst wie die Klasse
+  (`etim_ec002712`, Bezeichnung „EC002712 Name“). Ihre Attribute werden angelegt, wo es sie noch nicht gibt, und sonst nur dieser Gruppe
+  zugeordnet (n:m, 36): `EF000008 Breite` gibt es einmal und gilt in den Gruppen aller Klassen, die es führen. Die Gruppe hängt an dem
+  Knoten, dem die Klasse zugewiesen wird, und gilt von dort abwärts — dasselbe Vorgehen wie bei DPP und PPWR: eine Gruppe mit ihren
+  Attributen, die man zuordnet oder füllt. Genau eine Klasse je Produkt (ETIM-Grundsatz); mehrere Klassifikationen zugleich sind
+  mehrere Systeme. Hat ein Knoten unter einem mit Klasse eine eigene, gelten an ihm beide Gruppen — die Klasse gehört an die Ebene,
+  unter der alle dieselbe haben. Ein früherer Bestand wird mit `POST /api/classification/migrate` umgestellt.
 - **Klasse an der Produktgruppe, erbt** (Regelfall), Ausnahme am Produkt; an der Variante nicht.
   Die Gruppe des Systems gilt überall (die Klasse muss an der Gruppe stehen dürfen), die
   Merkmale nur an Produkt und Variante (`levels`) — normale Vererbung reicht.
@@ -843,16 +848,16 @@ Export-Konfiguration im Klassifikations-Plugin („welche Klassen, ab welcher St
   **kein Profil im Klassifikations-Plugin**; eine aktive Release, Wechsel = Abgleich.
 - **Gemeinsames liegt im Server, nicht in einem dritten Plugin** (30.09.2026, `ClassificationApi.cs`): je System ein eigenes
   Plugin (`etim`, später `eclass`), das seine Dateien liest und sagt, was ein Merkmal in seinem System ist. Anlegen im
-  Modell (Gruppe, Klassenattribut mit Werteliste, Merkmalsattribute mit Bedingung, Einheit und Liste), Klasse zuweisen
-  (Gruppe an den Pfad, Klasse an den Knoten) und die Bereitschaft (`POST /api/classification/ensure|assign|readiness`)
-  macht der Server aus einer neutralen Beschreibung; er kennt kein System. Nicht übernommen: die Nachreparatur älterer
-  ETIM-Attribute ohne Bedingung in der Gruppe — sie wird beim nächsten Zuweisen der Klasse nachgezogen.
+  Modell (Gruppe des Systems, Klassenattribut mit Werteliste, Gruppe der Klasse, Merkmalsattribute mit Einheit und Liste), Klasse
+  zuweisen (Gruppe des Systems an den Pfad, Gruppe der Klasse und Klasse an den Knoten), entfernen, umstellen und die Bereitschaft
+  (`POST /api/classification/ensure|assign|clear|migrate|readiness`) macht der Server aus einer neutralen Beschreibung; er kennt kein
+  System. Ein zugeordnetes Merkmal (`target`) kommt als vorhandenes Attribut in die Gruppe, ein eigenes entsteht dann nicht.
 - **GPC** (Plugin `gpc`, 30.09.2026): die GS1-Produktklassifikation als zweites System — Segment, Family, Class, Brick; der Brick
   ist die Klasse. Die Nutzung ist laut GS1 kostenfrei; die Datei (JSON, oder das Zip der Veröffentlichung) holt der Anwender
   selbst, im Repo liegen keine GPC-Daten (`sample.json` ist erfunden). Attribute und Werte haben in allen Bricks dieselben
   Codes; nur die Auswahl der Werte je Brick ist verschieden — sie stehen einmal im Wörterbuch, am Brick nur die Codes
   (die ganze Veröffentlichung sind rund 5,5 MB im Journal, ein Datensatz je Segment). Jedes GPC-Attribut wird ein Listenattribut
-  `gpc<code>` mit der Vereinigung seiner Werte; die Bedingung hält es an Knoten zurück, deren Brick es nicht führt. Die Werte
+  `gpc<code>` mit der Vereinigung seiner Werte, das in den Gruppen aller Bricks steht, die es führen (`gpc_<brick>`). Die Werte
   eines Bricks erzwingt die Liste nicht — sie ist die Vereinigung über alle Bricks. eCl@ss folgt nur, wenn ein Kunde es verlangt
   und die Datei liefert: der Einbau in eine Software ist laut ECLASS kostenpflichtig.
 - **Bedient wird beim Gegenstand, nicht im Plugin**. Neuer Beitragspunkt **`nodeBands`**: ein Plugin zeichnet je Knoten ein Band in
