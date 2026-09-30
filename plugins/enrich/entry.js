@@ -2,7 +2,7 @@
 // Ablauf: Knoten+Unterknoten laden → leere Attribute erkennen → Anwender wählt aus → Recherche (KI+Web, nur KI, manuell) → Ergebnis → Übernahme
 const L = l => globalThis.journali?.L ? globalThis.journali.L(l) : (l?.de ?? Object.values(l ?? {})[0] ?? '')
 const t = (k, p) => globalThis.journali?.t ? globalThis.journali.t(k, p) : String(k).replace(/\{(\w+)\}/g, (m, i) => p?.[i] ?? m)
-function el(tag, attrs = {}, ...kids) { const e = document.createElement(tag); for (const [k, v] of Object.entries(attrs)) { if (k === 'style') e.style.cssText = v; else if (k.startsWith('on')) e.addEventListener(k.slice(2), v); else if (k === 'class') e.className = v; else e.setAttribute(k, v) } for (const c of kids.flat()) if (c != null) e.append(c.nodeType ? c : String(c)); return e }
+function el(tag, attrs = {}, ...kids) { const e = document.createElement(tag); for (const [k, v] of Object.entries(attrs)) { if (v == null) continue; if (k === 'style') e.style.cssText = v; else if (k.startsWith('on')) e.addEventListener(k.slice(2), v); else if (k === 'class') e.className = v; else e.setAttribute(k, v) } for (const c of kids.flat()) if (c != null) e.append(c.nodeType ? c : String(c)); return e }
 
 async function mount(root, ctx) {
   const { api, store, tree, ai, dialog } = ctx
@@ -15,7 +15,8 @@ async function mount(root, ctx) {
   root.style.cssText = 'display:flex;flex-direction:column;height:100%;padding:0'
   const toolbar = el('div', { class: 'toolbar', style: 'flex:none' })
   const body = el('div', { class: 'scroll', style: 'flex:1;min-height:0;padding:8px' })
-  root.append(toolbar, body)
+  const pickBox = el('div', { style: 'display:none;padding:4px 8px;border-bottom:1px solid var(--border)' })
+  root.append(toolbar, pickBox, body)
 
   // Zustand
   const st = {
@@ -36,9 +37,12 @@ async function mount(root, ctx) {
     toolbar.append(
       el('h1', {}, t('⌕ Anreicherung')),
       el('span', { class: 'muted', style: 'margin-left:8px;font-size:12px' }, knoten ? knoten.label : t('kein Knoten')),
-      el('button', { class: 'x', style: 'margin-left:8px', title: t('Knoten wählen'), onclick: async () => {
-        const id = await ctx.treePicker?.({ title: t('Knoten mit Unterknoten'), roles: ['group', 'product'] })
-        if (id) { st.rootId = id; localStorage.setItem('journali.cmp.enrich.root', id); await ladeTeilbaum() }
+      el('button', { class: 'x', style: 'margin-left:8px', title: t('Knoten wählen'), onclick: () => {
+        if (pickBox.style.display !== 'none') { pickBox.style.display = 'none'; return }
+        pickBox.innerHTML = ''; pickBox.style.display = 'block'
+        ctx.treePicker(pickBox, { value: st.rootId, roles: ['group', 'product'], height: 300, onPick: r => {
+          pickBox.style.display = 'none'; st.rootId = r.id; localStorage.setItem('journali.cmp.enrich.root', r.id); ladeTeilbaum()
+        } })
       } }, '▤'),
       el('span', { style: 'flex:1' }),
       el('span', { class: 'muted', style: 'font-size:12px' }, st.rows.length ? t('{0} Knoten', [st.rows.length]) : '')
