@@ -46,10 +46,12 @@ async function bibliothek() {
   await flushPromises(); return { w, rufe }
 }
 const kachel = (w, name) => w.findAll('.tile').find(t => t.find('.name')?.text() === name)
+const reiter = async (w, sym) => { const t = w.findAll('.tab').find(t => t.text() === sym); if (t) await t.trigger('click') }
 
 test('rechts steht der Zustand mit den Schritten, die ich gehen darf', async () => {
   const { w } = await bibliothek()
   await kachel(w, 'vorne.jpg').trigger('click'); await flushPromises()
+  await reiter(w, '⇄')
   const wf = w.find('.wf'); assert.ok(wf.exists(), 'der Abschnitt fehlt')
   assert.match(wf.find('.chip').text(), /Entwurf/)
   const knoepfe = wf.findAll('button').map(b => b.text())
@@ -60,6 +62,7 @@ test('rechts steht der Zustand mit den Schritten, die ich gehen darf', async () 
 test('ein Schritt ohne Notizpflicht geht sofort', async () => {
   const { w, rufe } = await bibliothek()
   await kachel(w, 'vorne.jpg').trigger('click'); await flushPromises()
+  await reiter(w, '⇄')
   await w.find('.wf').findAll('button')[0].trigger('click'); await flushPromises()
   const schritt = rufe.find(r => /\/api\/media\/m1\/workflow\/bild\/release$/.test(r.pfad) && r.methode === 'POST')
   assert.ok(schritt, 'der Schritt wurde nicht geschrieben'); assert.deepEqual(schritt.rumpf, { note: null })
@@ -69,6 +72,7 @@ test('ein Schritt mit Notizpflicht fragt und schreibt die Notiz', async () => {
   const { w, rufe } = await bibliothek()
   dialog.prompt = async () => 'Logo fehlt'
   await kachel(w, 'vorne.jpg').trigger('click'); await flushPromises()
+  await reiter(w, '⇄')
   await w.find('.wf').findAll('button')[1].trigger('click'); await flushPromises()
   const schritt = rufe.find(r => /\/workflow\/bild\/back$/.test(r.pfad))
   assert.ok(schritt); assert.deepEqual(schritt.rumpf, { note: 'Logo fehlt' })

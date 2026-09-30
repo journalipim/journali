@@ -53,6 +53,7 @@ async function bibliothek(medien) {
 const kachel = (w, name) => w.findAll('.tile').find(t => t.find('.name')?.text() === name)
 const eintrag = label => menu.items.find(i => i.label && new RegExp(label).test(i.label))
 const datei = new File([new Uint8Array([1, 2, 3])], 'v2.jpg', { type: 'image/jpeg' })
+const reiter = async (w, sym) => { const t = w.findAll('.tab').find(t => t.text() === sym); if (t) await t.trigger('click') }
 
 test('das Menü bietet die neue Fassung — nur für eine einzelne Kachel', async () => {
   const { w } = await bibliothek([medium('m1', 'v1.jpg'), medium('m2', 'x.jpg')])
@@ -95,6 +96,7 @@ test('ein abgelöstes Medium ist als solches zu sehen und führt zur aktuellen F
 
   await kachel(w, 'v1.jpg').trigger('click')
   await flushPromises()
+  await reiter(w, '≡')
   const sprung = w.find('button.ersetzt')
   assert.match(sprung.text(), /m2/)
 })
@@ -103,6 +105,7 @@ test('der Nachfolger nennt, wen er abgelöst hat', async () => {
   const { w } = await bibliothek([medium('m2', 'v2.jpg', { supersedes: 'm1' })])
   await kachel(w, 'v2.jpg').trigger('click')
   await flushPromises()
+  await reiter(w, '≡')
   const zeile = w.findAll('.form tr').find(tr => tr.find('td')?.text() === 'ersetzt')
   assert.ok(zeile, 'die Zeile „ersetzt“ fehlt')
   assert.match(zeile.text(), /m1/)

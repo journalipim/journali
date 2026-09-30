@@ -356,6 +356,15 @@ const springe = r => router.push(`/tree/${r.other.id}`)
 // ---- Ansehen und Öffnen
 /// Ein PDF zeigt der Browser selbst — dafür braucht es kein Plugin, nur den Rahmen um die Datei.
 const istPdf = m => (m?.mime ?? '') === 'application/pdf'
+const mediaTab = ref('vorschau')
+const hatVorschau = computed(() => {
+  const m = current.value
+  if (!m) return false
+  if (istPdf(m) && store.can('download')) return true
+  if (m.isImage && store.can('download')) return true
+  return !!m.hasThumb
+})
+watch(hatVorschau, v => { if (!v && mediaTab.value === 'vorschau') mediaTab.value = 'werte' })
 /// Megapixel aus der Pixelzahl, mit Komma wie im Deutschen
 const mp = n => (n / 1_000_000).toFixed(1).replace('.', ',')
 /// Die Datei in einem neuen Fenster — was damit geschieht, entscheidet der Rechner des Anwenders.
@@ -438,31 +447,38 @@ const oeffnen = m => { if (store.can('download')) window.open(dateiLink(m), '_bl
     <div class="toolbar meta muted"><span>{{ current.mime }}</span><span>· {{ kb(current.bytes) }}</span><span>{{ $t("· ⇄ {0} Knoten", [current.used]) }}</span>
       <span :title="current.folder ? $t('Ordner — zum Verschieben die Kachel auf einen Ordner links ziehen') : $t('in keinem Ordner — Kachel auf einen Ordner links ziehen')">· 📁 {{ current.folder ? pathOf(current.folder).map(f => f.name).join(' › ') : '—' }}</span>
       <span class="grow" /><span>≡ {{ current.entries }} · #{{ current.lastNumber }} · {{ when(current.lastAt) }} · {{ current.lastActor }}</span></div>
-    <div class="scroll">
-      <div class="preview pdf-box" v-if="istPdf(current) && store.can('download')"><PdfPane :doc="current.id" /></div>
-      <div class="preview" v-else-if="current.isImage && store.can('download')"><img :src="`/api/media/${current.id}/file`" alt="" /></div>
-      <!-- kein Bild und kein PDF, aber eine gerechnete Vorschau: die erste Seite zeigen, das Original hängt am Namen -->
-      <div class="preview" v-else-if="current.hasThumb"><img :src="`/api/media/${current.id}/thumb`" alt="" /></div>
+    <div class="toolbar tab-bar">
+      <span v-if="hatVorschau" class="tab" :class="{ on: mediaTab === 'vorschau' }" @click="mediaTab = 'vorschau'" :title="$t('Vorschau')">◫</span>
+      <span class="tab" :class="{ on: mediaTab === 'werte' }" @click="mediaTab = 'werte'" :title="$t('Werte und Abmessungen')">≡</span>
+      <span class="tab" :class="{ on: mediaTab === 'verwendung' }" @click="mediaTab = 'verwendung'" :title="$t('Verwendung und Workflow')">⇄</span>
+    </div>
+    <!-- Vorschau: füllt den Platz -->
+    <div class="media-tab-fill" v-if="mediaTab === 'vorschau' && hatVorschau">
+      <PdfPane v-if="istPdf(current) && store.can('download')" :doc="current.id" />
+      <div v-else class="preview-full">
+        <img v-if="current.isImage && store.can('download')" :src="`/api/media/${current.id}/file`" alt="" />
+        <img v-else-if="current.hasThumb" :src="`/api/media/${current.id}/thumb`" alt="" />
+      </div>
+    </div>
+    <!-- Werte: pflegbare Attribute, gemessene Daten, Herkunft -->
+    <div class="scroll" v-else-if="mediaTab === 'werte'">
       <table class="grid form"><colgroup><col style="width:150px" /><col style="width:320px" /></colgroup><tbody>
         <template v-for="d in mediaAttrs" :key="d.key">
           <tr><td class="attr" :title="d.key">{{ $L(d.label) || d.key }}<span v-if="d.perLocale" class="muted"> {{ master }}</span></td>
             <ListCell v-if="d.multiple" :value="value(current, d)" :options="d.type === 'enum' ? listOptions(d) : null" :label-of="d.type === 'enum' ? listLabel(d) : null" :list="d.list" @save="v => setValue(current, d, v)" />
             <SelectCell v-else-if="d.type === 'enum'" :value="value(current, d)" :options="listOptions(d)" :label-of="listLabel(d)" :list="d.list" @save="v => setValue(current, d, v)" />
             <Cell v-else :value="value(current, d)" @save="v => setValue(current, d, v)" /></tr>
-          <!-- Vorschläge stehen unter dem Feld, das sie füllen: ein Klick nimmt an, und erst das ist Pflege -->
           <tr v-if="d.key === 'keywords' && suggestions.length"><td></td><td class="sug">
             <span v-for="v in suggestions" :key="v.key" class="chip" @click="annehmen(v)"
               :title="$t('vorgeschlagen · {0} — Klick nimmt an', [v.why])">{{ '+ ' + ($L(v.label) || v.key) }}</span>
           </td></tr>
         </template>
-        <!-- Gemessen, nicht gepflegt: was der Server aus dem Kopf der Datei liest (MediaProbed) -->
         <tr><td class="attr muted" :title="$t('Abmessungen des fertigen Bildes — eine EXIF-Drehung ist eingerechnet.')">{{ $t("▭ Abmessungen") }}</td>
           <td v-if="current.probe?.width" class="mono">{{ current.probe.width }} × {{ current.probe.height }} px<span class="muted">{{ ' · ' + mp(current.pixels) + ' MP' }}</span></td>
           <td v-else class="muted" :title="current.probe ? $t('Kein Format, das der Server aus dem Kopf liest.') : $t('Der Job probe liest die Abmessungen nach.')">—</td></tr>
         <tr v-if="current.probe?.dpi"><td class="attr muted">{{ $t("Auflösung") }}</td><td class="mono">{{ current.probe.dpi }} dpi</td></tr>
         <tr v-if="current.probe?.space"><td class="attr muted">{{ $t("Farbraum") }}</td><td class="mono">{{ current.probe.space }}</td></tr>
         <tr v-if="current.probe && current.probe.alpha !== null"><td class="attr muted">{{ $t("Transparenz") }}</td><td>{{ current.probe.alpha ? '✓' : '–' }}</td></tr>
-        <!-- Woher es kam (MediaSourced); ohne Herkunft wurde es von Hand hochgeladen -->
         <tr><td class="attr muted" :title="$t('Die Schnittstelle und das Profil, aus denen das Asset kam.')">{{ $t("↓ Herkunft") }}</td>
           <td v-if="current.source?.plugin || current.source?.profile">{{ current.source.plugin ?? '—' }}<span v-if="current.source.profile" class="muted">{{ ' · ' + current.source.profile }}</span></td>
           <td v-else class="muted">{{ $t("von Hand") }}</td></tr>
@@ -471,7 +487,6 @@ const oeffnen = m => { if (store.can('download')) window.open(dateiLink(m), '_bl
         <tr v-if="current.source?.from"><td class="attr muted">{{ $t("Abstammung") }}</td>
           <td><button class="x mono" @click="cur = current.source.from" :title="$t('zu dem Medium, aus dem dieses entstand')">{{ '▨ ' + current.source.from }}</button></td></tr>
         <tr><td class="attr muted">{{ $t("Angelegt") }}</td><td class="muted">{{ when(current.createdAt) + ' · ' + current.createdBy }}</td></tr>
-        <!-- Fassungen: der Vorgänger sagt, wer ihn ablöste; der Nachfolger, wen er ablöste. Beides ein Sprung. -->
         <tr v-if="current.supersededBy"><td class="attr muted">{{ $t("ersetzt durch") }}</td>
           <td><button class="x mono ersetzt" @click="superseded = true; cur = current.supersededBy; load()" :title="$t('zur aktuellen Fassung')">{{ '▨ ' + current.supersededBy }}</button></td></tr>
         <tr v-if="current.supersedes"><td class="attr muted">{{ $t("ersetzt") }}</td>
@@ -479,8 +494,9 @@ const oeffnen = m => { if (store.can('download')) window.open(dateiLink(m), '_bl
         <tr><td class="attr muted">{{ $t("SHA-256") }}</td><td class="mono muted" style="font-size:11px">{{ current.sha256 }}</td></tr>
         <tr v-for="(v, k) in current.external" :key="k"><td class="attr muted">⇩ {{ k }}</td><td class="mono muted">{{ v }}</td></tr>
       </tbody></table>
-
-      <!-- Der Workflow am Asset: Zustand, die Schritte, die meine Rolle gehen darf — wie am Knoten -->
+    </div>
+    <!-- Verwendung und Workflow -->
+    <div class="scroll" v-else-if="mediaTab === 'verwendung'">
       <template v-if="wfs.length">
         <h2 class="use-h">{{ $t("⚑ Workflow") + ' ' }}<span class="muted">{{ '· ' + wfs.length }}</span></h2>
         <div v-for="w in wfs" :key="w.workflow" class="wf">
@@ -493,9 +509,6 @@ const oeffnen = m => { if (store.can('download')) window.open(dateiLink(m), '_bl
           <span v-if="w.note" class="muted wf-note" :title="w.note">✎ {{ w.note }}</span>
         </div>
       </template>
-
-      <!-- Wo das Asset hängt. Ein Klick springt zum Knoten; ein Stopp steht mit dabei, denn er erklärt, warum es
-           dort trotz Vererbung nicht gilt. -->
       <h2 class="use-h">{{ $t("⇄ Verwendung") + ' ' }}<span class="muted">{{ '· ' + usage.length }}</span></h2>
       <div v-if="!usage.length" class="empty" style="padding:8px">{{ $t("An keinem Knoten") }}</div>
       <div v-else class="uses">
@@ -549,9 +562,12 @@ const oeffnen = m => { if (store.can('download')) window.open(dateiLink(m), '_bl
 .tile img, .tile .doc { width: 110px; height: 90px; object-fit: contain; display: grid; place-items: center; background: var(--bg); border-radius: 4px; color: var(--muted); font-size: 12px; }
 .tile .name { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 4px; }
 .tile .meta { font-size: 11px; }
-.preview { padding: 8px; }
-.preview img { max-width: 100%; max-height: 360px; border-radius: 4px; background: var(--bg); }
-.preview.pdf-box { height: 480px; }
+.tab-bar { gap: 2px; }
+.tab { padding: 2px 10px; border-radius: 4px; color: var(--muted); cursor: pointer; font-size: 13px; }
+.tab.on { background: var(--accent-soft); color: var(--text); }
+.media-tab-fill { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.preview-full { flex: 1; min-height: 0; display: grid; place-items: center; padding: 8px; overflow: auto; }
+.preview-full img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 4px; background: var(--bg); }
 .form { width: auto; }
 .use-h { font-size: 13px; padding: 12px 8px 4px; margin: 0; border-top: var(--line); }
 .uses { padding: 0 8px 8px; }

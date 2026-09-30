@@ -49,11 +49,13 @@ async function bibliothek(medien, verwendung) {
 /// Die Zeile des Formulars rechts, deren erste Spalte diesen Text enthält
 const feld = (w, label) => w.findAll('.form tr').find(tr => tr.find('td')?.text().includes(label))
 const kachel = (w, name) => w.findAll('.tile').find(t => t.find('.name')?.text() === name)
+const reiter = async (w, sym) => { const t = w.findAll('.tab').find(t => t.text() === sym); if (t) await t.trigger('click') }
 
 test('die Abmessungen des Originals stehen rechts, mit Megapixeln', async () => {
   const { w } = await bibliothek([BILD])
   await kachel(w, 'vorne.jpg').trigger('click')
   await flushPromises()
+  await reiter(w, '≡')
 
   assert.match(feld(w, 'Abmessungen').text(), /4000 × 3000 px/)
   assert.match(feld(w, 'Abmessungen').text(), /12,0 MP/)
@@ -66,6 +68,7 @@ test('die Herkunft nennt Schnittstelle, Profil, Job und Bezug', async () => {
   const { w } = await bibliothek([BILD])
   await kachel(w, 'vorne.jpg').trigger('click')
   await flushPromises()
+  await reiter(w, '≡')
 
   assert.match(feld(w, 'Herkunft').text(), /ixp/)
   assert.match(feld(w, 'Herkunft').text(), /import:lieferant/)
@@ -73,10 +76,11 @@ test('die Herkunft nennt Schnittstelle, Profil, Job und Bezug', async () => {
   assert.match(feld(w, 'Angelegt').text(), /job:ixp/)
 })
 
-test('ohne Herkunft steht dort „von Hand“', async () => {
+test('ohne Herkunft steht dort „von Hand”', async () => {
   const { w } = await bibliothek([OHNE])
   await kachel(w, 'neu.tif').trigger('click')
   await flushPromises()
+  await reiter(w, '≡')
 
   assert.match(feld(w, 'Herkunft').text(), /von Hand/)
   assert.equal(feld(w, 'Bezug'), undefined, 'ohne Bezug soll die Zeile fehlen')
@@ -87,12 +91,14 @@ test('noch nicht gelesen und kein bekanntes Format sind zweierlei', async () => 
   const { w } = await bibliothek([OHNE, PDF])
   await kachel(w, 'neu.tif').trigger('click')
   await flushPromises()
+  await reiter(w, '≡')
   const offen = feld(w, 'Abmessungen').findAll('td')[1]
   assert.equal(offen.text(), '—')
   assert.match(offen.attributes('title') ?? '', /liest die Abmessungen nach/)
 
   await kachel(w, 'datenblatt.pdf').trigger('click')
   await flushPromises()
+  await reiter(w, '≡')
   const unbekannt = feld(w, 'Abmessungen').findAll('td')[1]
   assert.equal(unbekannt.text(), '—')
   assert.match(unbekannt.attributes('title') ?? '', /Kein Format/)
@@ -106,7 +112,7 @@ test('ein PDF wird ganz gezeigt, nicht nur seine erste Seite', async () => {
   const pdf = w.findComponent({ name: 'PdfPane' })
   assert.ok(pdf.exists(), 'für ein PDF fehlt die Anzeige')
   assert.equal(pdf.props('doc'), 'm2')
-  assert.equal(w.find('.preview img').exists(), false, 'neben dem PDF steht noch ein Bild')
+  assert.equal(w.find('.preview-full img').exists(), false, 'neben dem PDF steht noch ein Bild')
 })
 
 test('ein Bild bleibt ein Bild — kein Rahmen für ein PDF', async () => {
@@ -115,7 +121,7 @@ test('ein Bild bleibt ein Bild — kein Rahmen für ein PDF', async () => {
   await flushPromises()
 
   assert.equal(w.findComponent({ name: 'PdfPane' }).exists(), false)
-  assert.match(w.find('.preview img').attributes('src'), /\/api\/media\/m1\/file/)
+  assert.match(w.find('.preview-full img').attributes('src'), /\/api\/media\/m1\/file/)
 })
 
 test('Doppelklick auf eine Kachel öffnet die Datei', async () => {
@@ -144,6 +150,7 @@ test('die Verwendung nennt die Knoten, an denen das Asset hängt', async () => {
   const { w } = await bibliothek([BILD], { m1: VERWENDUNG })
   await kachel(w, 'vorne.jpg').trigger('click')
   await flushPromises()
+  await reiter(w, '⇄')
 
   const zeilen = w.findAll('.use')
   assert.equal(zeilen.length, 2)
@@ -155,6 +162,7 @@ test('ein Klick springt zum Knoten', async () => {
   const { w, router } = await bibliothek([BILD], { m1: VERWENDUNG })
   await kachel(w, 'vorne.jpg').trigger('click')
   await flushPromises()
+  await reiter(w, '⇄')
   await w.findAll('.use')[0].trigger('click')
 
   assert.equal(router.path, '/tree/p1')
@@ -165,6 +173,7 @@ test('ein Stopp ist erkennbar', async () => {
   const { w } = await bibliothek([BILD], { m1: VERWENDUNG })
   await kachel(w, 'vorne.jpg').trigger('click')
   await flushPromises()
+  await reiter(w, '⇄')
 
   const zeilen = w.findAll('.use')
   assert.equal(zeilen[0].classes('stopp'), false)
@@ -176,6 +185,7 @@ test('ohne Verwendung steht dort, dass es an keinem Knoten hängt', async () => 
   const { w } = await bibliothek([BILD], { m1: [] })
   await kachel(w, 'vorne.jpg').trigger('click')
   await flushPromises()
+  await reiter(w, '⇄')
 
   assert.equal(w.findAll('.use').length, 0)
   assert.ok(w.findAll('.empty').some(e => /An keinem Knoten/.test(e.text())), 'der Abschnitt sagt nicht, dass es an keinem Knoten haengt')

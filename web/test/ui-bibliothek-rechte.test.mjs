@@ -53,8 +53,8 @@ test('ohne download: kein Link zur Datei, kein PDF-Rahmen, kein Zuschnitt, kein 
   assert.equal(w.findComponent({ name: 'PdfPane' }).exists(), false, 'die PDF-Anzeige lädt die Datei')
 
   await kachel(w, 'vorne.jpg').trigger('click'); await flushPromises()
-  assert.equal(w.find('.preview img[src$="/file"]').exists(), false, 'die Vorschau lädt das Original')
-  assert.ok(w.find('.preview img[src*="/thumb"]').exists(), 'die Kachel darf, wer liest')
+  assert.equal(w.find('.preview-full img[src$="/file"]').exists(), false, 'die Vorschau lädt das Original')
+  assert.ok(w.find('.preview-full img[src*="/thumb"]').exists(), 'die Kachel darf, wer liest')
   assert.equal(w.findAll('button').some(b => b.text() === '✂'), false, 'der Zuschnitt steht da')
   await kachel(w, 'vorne.jpg').trigger('contextmenu')
   assert.equal(eintrag('Zuschneiden'), undefined)

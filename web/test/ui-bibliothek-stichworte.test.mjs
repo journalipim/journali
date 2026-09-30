@@ -65,6 +65,7 @@ async function bibliothek() {
 }
 
 const kachel = (w, name) => w.findAll('.tile').find(t => t.find('.name')?.text() === name)
+const reiter = async (w, sym) => { const t = w.findAll('.tab').find(t => t.text() === sym); if (t) await t.trigger('click') }
 const facette = (w, text) => w.findAll('.facets .chip').find(c => c.text().includes(text))
 const letzteListe = rufe => rufe.filter(r => /\/api\/media\?/.test(r.pfad)).at(-1).pfad
 
@@ -109,6 +110,7 @@ test('die Stichwörter stehen als vermehrbare Zelle am Asset', async () => {
   const { w } = await bibliothek()
   await kachel(w, 'bohrer_vorne.jpg').trigger('click')
   await flushPromises()
+  await reiter(w, '≡')
 
   const zeile = w.findAll('.form tr').find(tr => tr.find('td')?.text().includes('Stichwörter'))
   assert.ok(zeile, 'die Zeile der Stichwörter fehlt')
@@ -119,6 +121,7 @@ test('ein Vorschlag wird erst durch Annehmen ein Wert', async () => {
   const { w, rufe } = await bibliothek()
   await kachel(w, 'bohrer_vorne.jpg').trigger('click')
   await flushPromises()
+  await reiter(w, '≡')
 
   const chips = w.findAll('.sug .chip')
   assert.equal(chips.length, 2)
