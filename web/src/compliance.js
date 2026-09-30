@@ -593,8 +593,56 @@ export async function mount(root, ctx, catalog) {
   drawMapping(); drawRun(); drawResult()
   // Der Zweck der Ansicht ist die Antwort auf „was fehlt zur Konformität?" — die Prüfung läuft darum
   // beim Öffnen automatisch, ohne Extra-Klick. Setup (Gruppe an Knoten, Attribute anlegen bei autoCreate) macht run() gleich mit.
-  run()
-  // aus dem Knoten-Menü (?run=1): die URL aufraeumen — run() lief schon oben
+  const _einger = await einrichten()
+  if (_einger) run()
+  else { body.innerHTML = ''; body.append(el('div', { class: 'empty', style: 'padding:24px' }, t_('Einrichtung abgebrochen — die Prüfung braucht die Attributgruppe {0} am obersten Knoten des Astes.', [catalog.groupKey]))) }
+  // aus dem Knoten-Menue (?run=1): die URL aufraeumen
   if (new URLSearchParams(location.search).get('run') === '1') history.replaceState(null, '', location.pathname)
   return () => {}
+
+  // Analyse (kein Schreiben): was fehlt, damit der Katalog am aktuellen Ast greift.
+  function analyseEinrichtung() {
+    let wurzel = tree.byId.get(st.root)
+    while (wurzel?.parent) wurzel = tree.byId.get(wurzel.parent) ?? wurzel
+    if (!wurzel) return { status: 'ok' }
+    const gruppeDa = (model.groups ?? []).some(g => g.key === catalog.groupKey)
+    const alleItems = catalog.groups.flatMap(g => g.items)
+    const modellKeys = new Set((model.attributes ?? []).map(a => a.key))
+    const fehlendeItems = alleItems.filter(it => !modellKeys.has((catalog.prefix ?? '') + it.key))
+    const wurzelGroups = (wurzel.groups ?? '').split(',').map(s => s.trim()).filter(Boolean)
+    const haengtAnWurzel = wurzelGroups.includes(catalog.groupKey)
+    if (!gruppeDa) return { status: 'gruppe', wurzel, fehlendeItems, haengtNicht: true }
+    if (!haengtAnWurzel && fehlendeItems.length) return { status: 'ergaenzen_und_anhaengen', wurzel, fehlendeItems, haengtNicht: true }
+    if (!haengtAnWurzel) return { status: 'anhaengen', wurzel, fehlendeItems: [], haengtNicht: true }
+    if (fehlendeItems.length) return { status: 'ergaenzen', wurzel, fehlendeItems, haengtNicht: false }
+    return { status: 'ok', wurzel, fehlendeItems: [], haengtNicht: false }
+  }
+
+  async function einrichten() {
+    const a = analyseEinrichtung()
+    if (a.status === 'ok') return true
+    const titel = {
+      gruppe: t_('{0} einrichten fuer "{1}"', [catalog.label, a.wurzel.label]),
+      anhaengen: t_('{0}: Gruppe an "{1}" anhaengen', [catalog.label, a.wurzel.label]),
+      ergaenzen: t_('{0}: {1} neue Datenpunkte laut Katalog', [catalog.label, a.fehlendeItems.length]),
+      ergaenzen_und_anhaengen: t_('{0}: Gruppe an "{1}" anhaengen und {2} Datenpunkte ergaenzen', [catalog.label, a.wurzel.label, a.fehlendeItems.length]),
+    }[a.status]
+    const zeilen = []
+    if (a.status === 'gruppe') zeilen.push(t_('Attributgruppe {0} anlegen', [catalog.groupKey]))
+    if (a.fehlendeItems.length) zeilen.push(t_('{0} Attribute anlegen: {1}', [a.fehlendeItems.length, a.fehlendeItems.slice(0, 6).map(x => x.label).join(', ') + (a.fehlendeItems.length > 6 ? ', ...' : '')]))
+    if (a.haengtNicht) zeilen.push(t_('Gruppe {0} an "{1}" anhaengen', [catalog.groupKey, a.wurzel.label]))
+    const knopf = a.status === 'anhaengen' ? t_('Anhaengen') : a.status === 'ergaenzen' ? t_('Ergaenzen') : t_('Einrichten')
+    const ok = await dialog.confirm({ title: titel, warn: t_('Modellpflege — Auswirkung auf das Modell und den Baum'), list: zeilen, ok: knopf })
+    if (!ok) return false
+    try {
+      if (a.fehlendeItems.length) { say(t_('lege {0} Attribute an ...', [a.fehlendeItems.length])); await createAttributes(catalog, a.fehlendeItems, st.mapping); await remember() }
+      if (a.haengtNicht) {
+        const have = (a.wurzel.groups ?? '').split(',').map(s => s.trim()).filter(Boolean)
+        if (!have.includes(catalog.groupKey)) { await api.post(`/api/nodes/${encodeURIComponent(a.wurzel.id)}/groups`, { groups: [...have, catalog.groupKey] }, 'PUT') }
+      }
+      await store.poll(true); await tree.load()
+      say(t_('Eingerichtet.'))
+      return true
+    } catch (e) { store.toast(e.message); say('✗ ' + e.message); return false }
+  }
 }
