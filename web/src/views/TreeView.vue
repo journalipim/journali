@@ -409,7 +409,7 @@ async function onDrop(e, r) {
       // Tabelle (Excel, CSV, …): in den Tabellen-Import mit diesem Ziel, Analyse läuft sofort
       if (plugins.importerFor(f.name) || /\.(csv|txt|tsv)$/i.test(f.name)) {
         if (r.role === 'variant') { store.toast(t_('Ziel muss eine Gruppe oder ein Produkt sein')); return }
-        if (!plugins.enabled('table')) { store.toast(t_('Tabellen-Import ist aus (⌁ Plugins → table)')); return }
+        if (!plugins.enabled('table')) { store.toast(t_('Tabellen-Import ist aus (⬡ Plugins → table)')); return }
         store.pendingImport = { file: f, parent: r.id, analyse: true }; router.push('/p/table/import'); return
       }
     }

@@ -53,7 +53,7 @@ public static class JobApi
                 c.Plugins.All.TryGetValue(plugin, out var st) && st.Enabled, model.MasterLocale ?? "de"));
             if (job is null)
             {
-                if (!on) return Bad("Plugin {0} ist nicht installiert oder aus (⌁ Plugins).", plugin);
+                if (!on) return Bad("Plugin {0} ist nicht installiert oder aus (⬡ Plugins).", plugin);
                 var label = plugin;
                 if (m.Raw.TryGetProperty("label", out var l) && l.ValueKind == JsonValueKind.Object)
                     label = (l.TryGetProperty(locale, out var ll) ? ll.GetString() : null) ?? (l.TryGetProperty("de", out var ld) ? ld.GetString() : null) ?? plugin;

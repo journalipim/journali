@@ -260,7 +260,7 @@ baut es aus dem Checkout unter demselben Namen. Neuer Stand: `docker compose pul
 betreibt, verliert nichts als die Suche nach Sinn — `GET /api/docs/embed` sagt es. Plugins kommen per Bind-Mount `./plugins:/app/plugins` vom Host:
 eine Datei dort tauschen aktualisiert das Plugin ohne neues Image (der
 Server liest Manifeste und Module bei jedem Zugriff, `no-cache`; eine neue
-Fassung erscheint unter ⌁ Plugins als ↑ Update). Prozess-Plugins brauchen
+Fassung erscheint unter ⬡ Plugins als ↑ Update). Prozess-Plugins brauchen
 `node` im Laufzeit-Image — das Dockerfile kopiert die Binärdatei aus
 `node:22`. Basis-Plugins (table, da, tasker) liegen ebenfalls unter `plugins/`
 — auch ihre Ansichten lassen sich so austauschen; gebaute Plugins (`src/` →

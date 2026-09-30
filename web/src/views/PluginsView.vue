@@ -1,5 +1,5 @@
 <script setup>
-// ⌁ Plugins (docs/pflegestruktur.md, 19): links alles, was unter plugins/ liegt oder das Journal kennt,
+// ⬡ Plugins (docs/pflegestruktur.md, 19): links alles, was unter plugins/ liegt oder das Journal kennt,
 // mit Stand und Fassung; rechts das gewählte — installieren, ein/aus, aktualisieren, entfernen,
 // und bei Prozess-Plugins der Start mit Parametern und der Ausgabe.
 import { ref, computed, onMounted, watch } from 'vue'
@@ -132,7 +132,7 @@ function pick(k) { cur.value = k }
 
 <template>
   <div class="pane" :style="{ width: listW + 'px', flex: 'none', ...cols.vars() }">
-    <div class="toolbar"><h1>{{ $t("⌁ Plugins") }}</h1><span class="muted">{{ shown.length === plugins.list.length ? plugins.list.length : shown.length + ' von ' + plugins.list.length }}</span><span class="grow" /><span v-if="busy" class="muted">{{ busy }}</span></div>
+    <div class="toolbar"><h1>{{ $t("⬡ Plugins") }}</h1><span class="muted">{{ shown.length === plugins.list.length ? plugins.list.length : shown.length + ' von ' + plugins.list.length }}</span><span class="grow" /><span v-if="busy" class="muted">{{ busy }}</span></div>
     <div class="toolbar" style="gap:4px;flex-wrap:wrap;font-size:12px">
       <input v-model="q" type="search" :placeholder="$t('🔍 Key, Name, Beschreibung')" style="flex:1;min-width:120px" @keydown.esc="q = ''" />
       <span v-for="k in kinds" :key="k" class="view-chip" :class="{ on: kindFilter === k }" @click="kindFilter = kindFilter === k ? '' : k" :title="'Art: ' + k">{{ KIND[k] ?? k }}</span>
@@ -184,7 +184,7 @@ function pick(k) { cur.value = k }
 
   <div class="pane" style="flex:1" v-if="current">
     <div class="toolbar">
-      <h1>⌁ {{ label(manifest) || current.key }}</h1><span class="mono muted">{{ current.key }}</span>
+      <h1>⬡ {{ label(manifest) || current.key }}</h1><span class="mono muted">{{ current.key }}</span>
       <span class="muted">· {{ KIND[manifest.kind] ?? manifest.kind }} · {{ manifest.runs === 'process' ? $t('⚙ Prozess') : manifest.runs === 'office' ? (current.key === 'ooaddin' ? '▤ OnlyOffice' : '▤ Excel-Add-in') : $t('▭ Browser') }}{{ services.length ? ' + ⚙ ' + (services.length > 1 ? services.length + ' ' + $t('Dienste') : $t('Prozess')) : '' }}</span>
       <span class="grow" />
       <template v-if="current.onDisk && !current.installed"><button class="primary" :disabled="current.allowed === false" :title="current.allowed === false ? $t('Tarif {0}', [tarifOf(current)]) : ''" @click="act(`/api/plugins/${current.key}/install`)">{{ $t("⇩ installieren {0}", [current.diskVersion]) }}</button></template>

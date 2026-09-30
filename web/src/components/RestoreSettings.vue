@@ -122,7 +122,7 @@ onMounted(lies)
     <div class="row mit" style="gap:12px;align-items:center;margin-top:6px">
       <label :title="$t('Assets aus der Datenbank; S3 und Verzeichnisse sichert der Betrieb')"><input v-model="mit.media" type="checkbox" />{{ ' ' + $t("▨ Assets") }}</label>
       <label :title="$t('Anmeldungen, Token, Speicher- und Mail-Einstellungen')"><input v-model="mit.config" type="checkbox" />{{ ' ' + $t("⚿ Zugänge") }}</label>
-      <label :title="$t('Plugin-Verzeichnisse ohne node_modules')"><input v-model="mit.plugins" type="checkbox" />{{ ' ' + $t("⌁ Plugins") }}</label>
+      <label :title="$t('Plugin-Verzeichnisse ohne node_modules')"><input v-model="mit.plugins" type="checkbox" />{{ ' ' + $t("⬡ Plugins") }}</label>
     </div>
 
     <div class="row" style="gap:8px;align-items:center;margin-top:8px">

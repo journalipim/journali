@@ -98,7 +98,7 @@ async function takeFile(file, keepSheet = false) {
     if (imp) t = await imp.parse(file, plugins.ctx(imp.key))
     else if (/\.(csv|txt|tsv)$/i.test(file.name)) t = parseDelimited(await file.text())
     else if (/\.json$/i.test(file.name)) { const { fromObjects } = mapper; const j = JSON.parse(await file.text()); t = fromObjects(Array.isArray(j) ? j : (j.rows ?? j.items ?? j.data ?? [])) }
-    else throw new Error(t_('Kein Importer für {0} — Plugin für dieses Format einschalten (⌁ Plugins)', [file.name]))
+    else throw new Error(t_('Kein Importer für {0} — Plugin für dieses Format einschalten (⬡ Plugins)', [file.name]))
     setSource({ ...t, name: file.name, importer: imp?.key ?? null })
     if (sheet && source.value?.sheets?.some(s => s.name === sheet)) pickSheet(sheet)
   } catch (e) { store.toast(e.message) } finally { busy.value = '' }

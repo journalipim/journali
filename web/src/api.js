@@ -120,10 +120,10 @@ export function describe(e) {
     case 'GroupCreated': return `▣ ${p.name ?? L(p.label) ?? ''}${p.parent ? ' unter ' + p.parent : ' (Wurzel)'}`
     case 'GroupRenamed': return `▣ ${L(p.label) ?? ''}`
     case 'ProductAxesSet': return t('◆ variiert nach {0}', [(p.axes || []).join(', ') || 'nichts'])
-    case 'PluginInstalled': return `⌁ ${p.version}`
-    case 'PluginEnabled': return '⌁ ● an'
-    case 'PluginDisabled': return '⌁ ○ aus'
-    case 'PluginRemoved': return '− ⌁'
+    case 'PluginInstalled': return `⬡ ${p.version}`
+    case 'PluginEnabled': return '⬡ ● an'
+    case 'PluginDisabled': return '⬡ ○ aus'
+    case 'PluginRemoved': return '− ⬡'
     case 'MediaCreated': return `🖼 ${p.name} · ${p.mime} · ${p.bytes} B`
     case 'MediaRetired': return t('− 🖼 Medium')
     case 'RelationCreated': return `⇄ ${p.type}: ${p.from} → ${p.to}`

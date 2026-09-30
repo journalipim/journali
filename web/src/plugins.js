@@ -107,7 +107,7 @@ export const plugins = reactive({
     this.loaded = true   // erst jetzt: vorher sähe die Übersicht eines Themas nur den ersten Eintrag und leitete dorthin
   },
   enabled(key) { return this.active(key) },
-  /// Was unter ⌁ Plugins ansteht — eine Zeile je Update: auf der Platte liegt eine neuere Fassung, als installiert ist.
+  /// Was unter ⬡ Plugins ansteht — eine Zeile je Update: auf der Platte liegt eine neuere Fassung, als installiert ist.
   /// Ein Plugin, das nur daliegt und nie installiert wurde, steht nicht an; dafür leuchtet kein Lämpchen (26.09.2026).
   news() { return this.list.filter(p => p.update).map(p => `↑ ${p.key}: ${p.version} → ${p.diskVersion}`) },
   // Kann ein Plugin arbeiten? Wer Voraussetzungen hat, die niemand in journali setzt (eine Erweiterung der Datenbank,

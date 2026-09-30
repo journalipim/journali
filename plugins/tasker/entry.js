@@ -389,7 +389,7 @@ async function mount(root, ctx) {
     const box = el('div', { class: 'overlay', style: 'position:fixed;inset:0;background:rgba(0,0,0,.45);display:grid;place-items:center;z-index:40' })
     const dlg = el('div', { style: 'width:560px;background:var(--pane);border:1px solid var(--line);border-radius:8px;padding:14px 16px;font-size:13px' })
     let preset = null
-    if (j?._new) { preset = j.plugin + '|' + (j.service ?? ''); j = null }   // aus ⌁ Plugins: neuer Job mit diesem Plugin (und Dienst)
+    if (j?._new) { preset = j.plugin + '|' + (j.service ?? ''); j = null }   // aus ⬡ Plugins: neuer Job mit diesem Plugin (und Dienst)
     const isNew = !j
     const keyIn = el('input', { type: 'text', value: j?.key ?? '', placeholder: 'key (a-z, 0-9, _)', style: 'width:100%' }); if (!isNew) keyIn.disabled = true
     const labelIn = el('input', { type: 'text', value: j?.label ?? '', placeholder: t('Bezeichnung'), style: 'width:100%' })
@@ -673,7 +673,7 @@ async function mount(root, ctx) {
 
   drawList(); say(t('⋯'))   // sofort etwas zeigen: das Holen dauert, und ein leeres Fenster sieht aus wie „nichts da“
   await load()
-  // aus ⌁ Plugins „Als Job einrichten“: ?new=<plugin> öffnet den Dialog mit diesem Plugin
+  // aus ⬡ Plugins „Als Job einrichten”: ?new=<plugin> öffnet den Dialog mit diesem Plugin
   const q = new URLSearchParams(location.search); const wanted = q.get('new')
   if (wanted && st.plugins.some(p => p.key === wanted)) { history.replaceState(null, '', location.pathname); openEdit({ plugin: wanted, service: q.get('service') ?? '', _new: true }) }
   else if (st.plugin) history.replaceState(null, '', location.pathname)

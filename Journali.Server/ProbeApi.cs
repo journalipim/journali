@@ -121,7 +121,7 @@ public static class ProbeApi
             c.Plugins.All.TryGetValue(PluginKey, out var p) && p.Enabled));
         if (job is null)
         {
-            if (!pluginOn) return (null, "Plugin probe ist nicht installiert oder aus (⌁ Plugins).");
+            if (!pluginOn) return (null, "Plugin probe ist nicht installiert oder aus (⬡ Plugins).");
             c.With((_, _, write) => write(actor, Jobs.Stream + PluginKey, Types.JobDefined,
                 new JobDefined("Bildabmessungen lesen", PluginKey, new() { ["limit"] = "200" }, null, true, 120, null), null));
             job = PluginKey;

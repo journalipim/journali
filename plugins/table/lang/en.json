@@ -51,7 +51,7 @@
  "Grund": "Reason",
  "Gruppe oder Produkt — wohin neue Zeilen kommen": "Group or product — where new rows go",
  "Gruppen": "Groups",
- "Kein Importer für {0} — Plugin für dieses Format einschalten (⌁ Plugins)": "No importer for {0} — enable the plugin for this format (⌁ Plugins)",
+ "Kein Importer für {0} — Plugin für dieses Format einschalten (⬡ Plugins)": "No importer for {0} — enable the plugin for this format (⬡ Plugins)",
  "Kennung": "Identifier",
  "Kette zwischen Quelle und Ziel": "Chain between source and target",
  "Kette zwischen Quelle und Ziel — die Prüfung des Attributs läuft danach; steht im Profil": "Chain between source and target — the attribute check runs afterwards; kept in the profile",

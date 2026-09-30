@@ -1368,7 +1368,7 @@ Gebaut: `plugins/<key>/plugin.json` (`key`, `version`, `label{}`,
 `description{}`, `kind`, `runs`, `entry` für Browser-Module, `process`
 {command, args mit `{param}` und `{flag?--opt}`, params} für Prozesse,
 `builtin` für die eingebauten Ansichten, `autoInstall`); Abbild `Plugins`
-(`PluginInstalled/Enabled/Disabled/Removed`); ⌁ Plugins in der Leiste:
+(`PluginInstalled/Enabled/Disabled/Removed`); ⬡ Plugins in der Leiste:
 Liste mit Stand und Fassung (↑ wenn die Platte neuer ist), installieren,
 ein/aus, aktualisieren, entfernen, Prozess starten mit Parametern und
 Ausgabe. Browser-Plugins: `default export { views: [{path, label, icon,

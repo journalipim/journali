@@ -21,7 +21,7 @@ const text = e => e.plugin ? (L(meta(e.plugin)?.manifest?.description) || meta(e
   <div class="pane" style="flex:1">
     <div class="toolbar"><h1>{{ t?.icon }} {{ t?.label }}</h1><span class="grow" /><span class="muted">{{ list.length }}</span></div>
     <div class="scroll" style="padding:12px">
-      <div v-if="!list.length" class="empty">{{ $t("Kein Plugin für {0} eingeschaltet —", [t?.label]) + ' ' }}<router-link to="/plugins">{{ $t("⌁ Plugins") }}</router-link></div>
+      <div v-if="!list.length" class="empty">{{ $t("Kein Plugin für {0} eingeschaltet —", [t?.label]) + ' ' }}<router-link to="/plugins">{{ $t("⬡ Plugins") }}</router-link></div>
       <div class="tiles">
         <router-link v-for="e in list" :key="e.to" :to="e.to" class="tile">
           <div class="head"><span class="icon">{{ e.icon }}</span><span class="name">{{ e.label }}</span></div>

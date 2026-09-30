@@ -107,7 +107,7 @@ und Betriebsrechner. Eine Beispieladresse ist `localhost` oder ein Platzhalter, 
 - `plugins/<key>/` — ein Plugin je Verzeichnis mit `plugin.json` (key, version,
   label, kind, runs: browser | process, entry oder process.command/args/params,
   builtin, autoInstall); Stand (installiert, Fassung, an/aus) im Journal
-  `plugin:<key>`, Verwaltung unter ⌁ Plugins (`PluginApi.cs`, `plugins.js`).
+  `plugin:<key>`, Verwaltung unter ⬡ Plugins (`PluginApi.cs`, `plugins.js`).
   Laufen nie im Serverprozess: Browser-Plugins als ES-Modul in der Oberfläche,
   Prozess-Plugins als Kindprozess des Servers, beide nur über `/api`. Eine Ausnahme: `embed/serve.mjs` hält der
   Server als Kindprozess vor und fragt ihn über stdin/stdout (`Embedder.cs`) — eine Suchfrage muss in denselben

@@ -10,7 +10,7 @@
 | Alt+4 | ⇩ Import |
 | Alt+5 | ▨ Media |
 | Alt+6 | ⚙ Settings |
-| Alt+7 | ⌁ Plugins |
+| Alt+7 | ⬡ Plugins |
 | Alt+8 | ⇶ Publication |
 | Alt+9 | ⚑ Tasks |
 

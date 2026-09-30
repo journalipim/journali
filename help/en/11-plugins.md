@@ -21,7 +21,7 @@ A **base plugin** brings the basic function of a group of the rail and is the co
 
 ## Management
 
-⌁ Plugins shows all plugins with version and state: installed, on, off, base missing, not installed. Installing takes a plugin into the journal, enabling makes it effective, updating adopts a new version from disk. When enabled, a plugin creates what it needs, such as an attribute group. Every plugin can be shown or hidden in your own rail.
+⬡ Plugins shows all plugins with version and state: installed, on, off, base missing, not installed. Installing takes a plugin into the journal, enabling makes it effective, updating adopts a new version from disk. When enabled, a plugin creates what it needs, such as an attribute group. Every plugin can be shown or hidden in your own rail.
 
 ## What the tier allows
 
@@ -30,7 +30,7 @@ Which plugins can be installed and enabled depends on the tier of the instance: 
 ## journali Core plugins
 
 A **journali Core plugin** comes from journali and is unchanged. Next to its manifest it carries a signature over
-key, version and all files. ⌁ Plugins shows it as ❖ with the date; if a file is changed, ⚠ appears with the reason. A
+key, version and all files. ⬡ Plugins shows it as ❖ with the date; if a file is changed, ⚠ appears with the reason. A
 plugin without a signature runs just the same and carries no mark — the mark says where it comes from, not whether it
 is good.
 

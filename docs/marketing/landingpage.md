@@ -44,7 +44,7 @@ journali ist ein PIM-System, in dem jede Änderung ein Eintrag im Journal ist �
 **Hero-Zeile darunter (3 Fakten, Symbole statt Wörter):**
 - ≡ Journal statt Datenbank-Update — die Wahrheit ist der Eintrag
 - ⎘ Versionen mit eingefrorenen Belegen — was nach draußen ging, bleibt beweisbar
-- ⌁ Plugins austauschen, ohne neu zu deployen
+- ⬡ Plugins austauschen, ohne neu zu deployen
 
 ---
 

@@ -21,7 +21,7 @@ Ein **Basis-Plugin** bringt die Grundfunktion einer Gruppe der Leiste mit und is
 
 ## Verwaltung
 
-⌁ Plugins zeigt alle Plugins mit Fassung und Zustand: installiert, an, aus, Basis fehlt, nicht installiert. Installieren nimmt ein Plugin ins Journal auf, einschalten macht es wirksam, aktualisieren übernimmt eine neue Fassung von der Platte. Beim Einschalten legt ein Plugin an, was es braucht, etwa eine Attributgruppe. Jedes Plugin lässt sich für die eigene Leiste ein- und ausblenden.
+⬡ Plugins zeigt alle Plugins mit Fassung und Zustand: installiert, an, aus, Basis fehlt, nicht installiert. Installieren nimmt ein Plugin ins Journal auf, einschalten macht es wirksam, aktualisieren übernimmt eine neue Fassung von der Platte. Beim Einschalten legt ein Plugin an, was es braucht, etwa eine Attributgruppe. Jedes Plugin lässt sich für die eigene Leiste ein- und ausblenden.
 
 ## Was der Tarif erlaubt
 
@@ -30,7 +30,7 @@ Welche Plugins sich installieren und einschalten lassen, hängt am Tarif der Ins
 ## journali Core Plugins
 
 Ein **journali Core Plugin** stammt von journali und ist unverändert. Es trägt neben dem Manifest eine Signatur
-über Schlüssel, Fassung und alle Dateien. ⌁ Plugins zeigt es als ❖ mit dem Datum; wird eine Datei verändert, steht ⚠ mit
+über Schlüssel, Fassung und alle Dateien. ⬡ Plugins zeigt es als ❖ mit dem Datum; wird eine Datei verändert, steht ⚠ mit
 dem Grund. Ein Plugin ohne Signatur läuft genauso und trägt kein Zeichen — das Zeichen sagt, woher es kommt, nicht, ob
 es gut ist.
 

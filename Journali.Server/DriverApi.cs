@@ -6,7 +6,7 @@ namespace Journali.Server;
 
 /// <summary>
 /// Zugänge (Treiber). Ein Plugin fragt nicht mehr selbst nach Adresse und Passwort, sondern nach einem <b>Zugang</b>
-/// seiner Art: „gib mir die Zugänge vom Typ mysql“. Eingerichtet werden sie einmal unter ⌁ Plugins → Zugänge.
+/// seiner Art: „gib mir die Zugänge vom Typ mysql“. Eingerichtet werden sie einmal unter ⬡ Plugins → Zugänge.
 /// <para><b>Zwei Sorten.</b> Ein Zugang, der <i>Dateien liefert</i> (<c>file</c>, später ftp, webdav), kann auflisten
 /// und bekommt einen Browser — dafür sind <see cref="Files"/> und die Verzeichnisbefehle. Ein Zugang, der nur
 /// <i>Anmeldung</i> ist (mysql, solr, ixp), hat keine Verzeichnisse: der Treiber hält seine Felder bereit und reicht

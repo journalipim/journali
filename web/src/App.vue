@@ -51,7 +51,7 @@ const nav = [
 ]
 // unten in der Leiste: Journal und Einstellungen
 const navBottom = [
-  { to: '/plugins', icon: '⌁', label: t_('Plugins'), key: '7' },
+  { to: '/plugins', icon: '⬡', label: t_('Plugins'), key: '7' },
   { to: '/journal', icon: '≡', label: t_('Journal'), key: '2' },
   { to: '/settings', icon: '⚙', label: t_('Einstellungen'), key: '6' },
 ]
@@ -63,7 +63,7 @@ const railTitle = n => t_('{0}{1} — ziehen sortiert um', [n.label, n.key ? '  
 const railItems = computed(() => {
   // ▣ Baum führt zum zuletzt gewählten Knoten zurück; Kennung des Eintrags bleibt '/tree' (Reihenfolge, aktiv)
   const treeTo = store.lastNode ? `/tree/${store.lastNode}` : '/tree'
-  // Ein Plugin, das der Nutzer aus der Leiste genommen hat (⌁ Plugins → „nicht in der Leiste“), zählt in seinem Thema nicht
+  // Ein Plugin, das der Nutzer aus der Leiste genommen hat (⬡ Plugins → „nicht in der Leiste”), zählt in seinem Thema nicht
   // — kein eigenes Symbol, kein Thema nur seinetwegen
   const left = topic => (entries.value[topic] ?? []).filter(e => !e.plugin || !store.railOff.includes(e.plugin))
   // Ein Thema mit genau einem Eintrag: das Symbol führt direkt hin, die Übersicht wäre nur ein Klick mehr

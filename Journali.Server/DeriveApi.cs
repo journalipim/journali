@@ -157,7 +157,7 @@ public static class DeriveApi
         var (job, pluginOn) = c.Lesen((_, _) => (c.Jobs.All.Values.FirstOrDefault(j => j.Plugin == PluginKey && j.Enabled)?.Key, c.Plugins.All.TryGetValue(PluginKey, out var p) && p.Enabled));
         if (job is null)
         {
-            if (!pluginOn) return (null, "Plugin derive ist nicht installiert oder aus (⌁ Plugins).");
+            if (!pluginOn) return (null, "Plugin derive ist nicht installiert oder aus (⬡ Plugins).");
             c.With((_, _, write) => write(actor, Jobs.Stream + PluginKey, Types.JobDefined, new JobDefined("Vorschauen rechnen", PluginKey, new() { ["limit"] = "200" }, null, true, 120, null), null));
             job = PluginKey;
         }
