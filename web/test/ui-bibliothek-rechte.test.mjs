@@ -50,7 +50,7 @@ test('ohne download: kein Link zur Datei, kein PDF-Rahmen, kein Zuschnitt, kein 
   const { w } = await bibliothek(['read'])
   await kachel(w, 'blatt.pdf').trigger('click'); await flushPromises()
   assert.equal(w.find('a[href*="/file?name="]').exists(), false, 'der Datei-Link steht da')
-  assert.equal(w.find('.preview iframe.pdf').exists(), false, 'der PDF-Rahmen lädt die Datei')
+  assert.equal(w.findComponent({ name: 'PdfPane' }).exists(), false, 'die PDF-Anzeige lädt die Datei')
 
   await kachel(w, 'vorne.jpg').trigger('click'); await flushPromises()
   assert.equal(w.find('.preview img[src$="/file"]').exists(), false, 'die Vorschau lädt das Original')
@@ -68,7 +68,7 @@ test('mit download ist der Weg da', async () => {
   const { w } = await bibliothek(['read', 'download'])
   await kachel(w, 'blatt.pdf').trigger('click'); await flushPromises()
   assert.ok(w.find('a[href*="/file?name="]').exists())
-  assert.ok(w.find('.preview iframe.pdf').exists())
+  assert.ok(w.findComponent({ name: 'PdfPane' }).exists())
   await kachel(w, 'vorne.jpg').trigger('contextmenu')
   assert.ok(eintrag('Zuschneiden'))
 })

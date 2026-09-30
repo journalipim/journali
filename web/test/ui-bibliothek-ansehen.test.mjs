@@ -103,9 +103,9 @@ test('ein PDF wird ganz gezeigt, nicht nur seine erste Seite', async () => {
   await kachel(w, 'datenblatt.pdf').trigger('click')
   await flushPromises()
 
-  const rahmen = w.find('.preview iframe.pdf')
-  assert.ok(rahmen.exists(), 'für ein PDF fehlt die Anzeige')
-  assert.match(rahmen.attributes('src'), /\/api\/media\/m2\/file/)
+  const pdf = w.findComponent({ name: 'PdfPane' })
+  assert.ok(pdf.exists(), 'für ein PDF fehlt die Anzeige')
+  assert.equal(pdf.props('doc'), 'm2')
   assert.equal(w.find('.preview img').exists(), false, 'neben dem PDF steht noch ein Bild')
 })
 
@@ -114,7 +114,7 @@ test('ein Bild bleibt ein Bild — kein Rahmen für ein PDF', async () => {
   await kachel(w, 'vorne.jpg').trigger('click')
   await flushPromises()
 
-  assert.equal(w.find('.preview iframe.pdf').exists(), false)
+  assert.equal(w.findComponent({ name: 'PdfPane' }).exists(), false)
   assert.match(w.find('.preview img').attributes('src'), /\/api\/media\/m1\/file/)
 })
 

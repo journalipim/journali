@@ -17,6 +17,7 @@ import ListCell from '../components/ListCell.vue'
 import SelectCell from '../components/SelectCell.vue'
 import Splitter from '../components/Splitter.vue'
 import MediaThumb from '../components/MediaThumb.vue'
+import PdfPane from '../components/PdfPane.vue'
 import { paneWidth } from '../panes.js'
 import { t as t_, L } from '../i18n.js'
 
@@ -438,9 +439,7 @@ const oeffnen = m => { if (store.can('download')) window.open(dateiLink(m), '_bl
       <span :title="current.folder ? $t('Ordner — zum Verschieben die Kachel auf einen Ordner links ziehen') : $t('in keinem Ordner — Kachel auf einen Ordner links ziehen')">· 📁 {{ current.folder ? pathOf(current.folder).map(f => f.name).join(' › ') : '—' }}</span>
       <span class="grow" /><span>≡ {{ current.entries }} · #{{ current.lastNumber }} · {{ when(current.lastAt) }} · {{ current.lastActor }}</span></div>
     <div class="scroll">
-      <!-- Ein PDF ganz: der Browser bringt seine Anzeige mit, es braucht kein Plugin dafür. Die gerechnete
-           erste Seite bleibt die Kachel in der Liste. -->
-      <div class="preview" v-if="istPdf(current) && store.can('download')"><iframe class="pdf" :src="`/api/media/${current.id}/file#view=FitH`" :title="current.name"></iframe></div>
+      <div class="preview pdf-box" v-if="istPdf(current) && store.can('download')"><PdfPane :doc="current.id" /></div>
       <div class="preview" v-else-if="current.isImage && store.can('download')"><img :src="`/api/media/${current.id}/file`" alt="" /></div>
       <!-- kein Bild und kein PDF, aber eine gerechnete Vorschau: die erste Seite zeigen, das Original hängt am Namen -->
       <div class="preview" v-else-if="current.hasThumb"><img :src="`/api/media/${current.id}/thumb`" alt="" /></div>
@@ -552,7 +551,7 @@ const oeffnen = m => { if (store.can('download')) window.open(dateiLink(m), '_bl
 .tile .meta { font-size: 11px; }
 .preview { padding: 8px; }
 .preview img { max-width: 100%; max-height: 360px; border-radius: 4px; background: var(--bg); }
-.preview iframe.pdf { width: 100%; height: 480px; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); }
+.preview.pdf-box { height: 480px; }
 .form { width: auto; }
 .use-h { font-size: 13px; padding: 12px 8px 4px; margin: 0; border-top: var(--line); }
 .uses { padding: 0 8px 8px; }
