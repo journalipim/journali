@@ -317,16 +317,26 @@ export async function mount(root, ctx, catalog) {
     if (!st.root) return
     try {
       st.res = await check(catalog, st.mapping, st.root, say)
+      let again = false
+      // Immer: eine zugeordnete/angelegte Gruppe muss am Pfad hängen, sonst 'gilt hier nicht' —
+      // ein Regelaufsatz ohne diesen Schritt ist eine leere Zeremonie.
+      const rootRow = tree.byId.get(st.root)
+      if (rootRow && st.res.inactiveGroups?.size) {
+        const have = (rootRow.groups ?? '').split(',').filter(Boolean)
+        const neu = [...st.res.inactiveGroups].filter(g => !have.includes(g))
+        if (neu.length) {
+          await api.post(`/api/nodes/${encodeURIComponent(rootRow.id)}/groups`, { groups: [...have, ...neu] }, 'PUT')
+          await tree.load()
+          say(t_('Gruppe {0} an „{1}“ angehängt', [neu.join(', '), rootRow.label]))
+          again = true
+        }
+      }
       if (catalog.autoCreate) {
-        // Modellpflege automatisch:
-        // fehlende Attribute, die an mindestens einem geprüften Knoten gelten, anlegen; die Gruppe des Katalogs an die Wurzel des Teilbaums
-        let again = false
+        // Fehlende Attribute anlegen — nur, wenn der Katalog es will (PPWR, DPP).
         const need = st.res.items.filter(it => !st.mapping[it.key]?.to && st.res.byItem.get(it.key).na < st.res.nodes.length)
         if (need.length) { say(t_('lege {0} Attribute an …', [need.length])); await createAttributes(catalog, need, st.mapping); await remember(); again = true }
-        const rootRow = tree.byId.get(st.root)
-        if (rootRow && st.res.inactiveGroups?.size) { const have = (rootRow.groups ?? '').split(',').filter(Boolean); await api.post(`/api/nodes/${encodeURIComponent(rootRow.id)}/groups`, { groups: [...new Set([...have, ...st.res.inactiveGroups])] }, 'PUT'); await tree.load(); again = true }
-        if (again) { await store.poll(true); st.res = await check(catalog, st.mapping, st.root, say) }
       }
+      if (again) { await store.poll(true); st.res = await check(catalog, st.mapping, st.root, say) }
       st.sugg = deriveSuggestions(catalog, st.mapping, st.res); st.dirty = false; say(t_('{0} Knoten geprüft', [st.res.nodes.length])); drawResult(); drawMapping()
     }
     catch (e) { say('✗ ' + e.message); store.toast(e.message) }
@@ -398,6 +408,16 @@ export async function mount(root, ctx, catalog) {
   const infoBtn = it => el('button', { class: 'x', style: 'padding:0 5px;font-size:11px', title: t_('Was ist das? Wo steht es? Woher bekomme ich es?'), onclick: () => explain(it) }, 'ⓘ')
   const SYM = { ok: '✓', empty: '·', bad: '✗', unmapped: '—', na: '', below: '↓', inactive: '⊘', pending: '⏳' }
   const CLS = { ok: 'pos', empty: 'muted', bad: 'neg', unmapped: 'muted', na: 'muted', below: 'pos', inactive: 'warn', pending: 'warn' }
+  // Beim Klick nicht auf den (moeglicherweise veralteten) reactive-Zustand vertrauen — frisch nachladen,
+  // dann entscheiden. So bleibt der Knopf klickbar, auch wenn ai.server beim Zeichnen noch null war.
+  async function kiPruefen() {
+    if (ai.available()) return true
+    try { await ai.loadState() } catch { /* egal */ }
+    if (ai.available()) return true
+    store.toast(t_('KI nicht bereit — Einstellungen → Team → KI'))
+    return false
+  }
+
   function drawResult() {
     s3.innerHTML = ''
     const r = st.res; if (!r) return
@@ -533,19 +553,21 @@ export async function mount(root, ctx, catalog) {
     const box = el('div', { style: 'margin-top:10px' })
     const bar = el('div', { class: 'chips' },
       el('button', { onclick: () => { st.sugg = deriveSuggestions(catalog, st.mapping, r); drawSugg() }, title: t_('aus vorhandenen Werten ableiten (Regeln des Katalogs)') }, t_('⚙ Vorschläge (regelbasiert)')),
-      el('button', { class: ai.available() ? 'primary ai' : 'ai', disabled: ai.available() ? null : 'disabled', title: ai.available() ? t_('KI ({0}) schlägt Werte für die angehakten Knoten vor', [ai.label()]) : t_('KI nicht eingerichtet — Einstellungen → Team → KI'), onclick: async () => {
+      el('button', { class: 'primary ai', title: t_('KI ({0}) schlägt Werte für die angehakten Knoten vor', [ai.label()]), onclick: async () => {
+        if (!(await kiPruefen())) return
         const ids = st.picked.size ? [...st.picked] : r.nodes.filter(n => n.leaf && n.score != null && n.score < 100).slice(0, 10).map(n => n.row.id)
         if (!ids.length) { store.toast(t_('keine Knoten mit Lücken')); return }
         if (ids.length > 25 && !(await dialog.confirm({ title: t_('{0} Knoten an die KI schicken?', [ids.length]), warn: t_('{0} Anfragen an {1}', [ids.length, ai.label()]), ok: t_('✦ Schicken') }))) return
         const s = await aiSuggestions(catalog, st.mapping, r, ids, say); st.sugg = [...st.sugg.filter(x => x.source !== 'ai'), ...s]; say(t_('{0} KI-Vorschläge', [s.filter(x => !x.error).length])); drawSugg()
-      } }, t_('✦ Vorschläge mit KI{0}', [ai.available() ? '' : ' ' + t_('(nicht eingerichtet)')])),
+      } }, t_('✦ Vorschläge mit KI')),
       // Fremde Produkte (Handelsware): die Daten stehen beim Hersteller — die KI sucht im Internet, jeder Wert mit Quelle
-      el('button', { class: ai.available() ? 'primary ai' : 'ai', disabled: ai.available() ? null : 'disabled', title: ai.available() ? t_('KI ({0}) sucht im Internet nach Hersteller, Typ, EAN — Datenblätter, Kataloge; je Wert die Quelle. Kostet je Suche extra beim Anbieter', [ai.label()]) : t_('KI nicht eingerichtet — Einstellungen → Team → KI'), onclick: async () => {
+      el('button', { class: 'primary ai', title: t_('KI ({0}) sucht im Internet nach Hersteller, Typ, EAN — Datenblätter, Kataloge; je Wert die Quelle. Kostet je Suche extra beim Anbieter', [ai.label()]), onclick: async () => {
+        if (!(await kiPruefen())) return
         const ids = st.picked.size ? [...st.picked] : r.nodes.filter(n => n.leaf && n.score != null && n.score < 100).slice(0, 5).map(n => n.row.id)
         if (!ids.length) { store.toast(t_('keine Knoten mit Lücken')); return }
         if (ids.length > 10 && !(await dialog.confirm({ title: t_('{0} Knoten recherchieren?', [ids.length]), warn: t_('{0} Anfragen mit bis zu 6 Suchen an {1}', [ids.length, ai.label()]), ok: t_('✦ Recherchieren') }))) return
         const s = await aiSuggestions(catalog, st.mapping, r, ids, say, { web: true }); st.sugg = [...st.sugg.filter(x => x.source !== 'web'), ...s]; say(t_('{0} Vorschläge aus der Recherche', [s.filter(x => !x.error).length])); drawSugg()
-      } }, t_('⌕ Recherche im Internet{0}', [ai.available() ? '' : ' ' + t_('(nicht eingerichtet)')])),
+      } }, t_('⌕ Recherche im Internet')),
       el('span', { class: 'muted', style: 'font-size:12px' }, st.picked.size ? t_('{0} Knoten angehakt', [st.picked.size]) : t_('ohne Haken: die ersten 10 mit Lücken')))
     box.append(bar); const list = el('div'); box.append(list); s3.append(box)
     function drawSugg() {
@@ -569,7 +591,10 @@ export async function mount(root, ctx, catalog) {
     drawSugg()
   }
   drawMapping(); drawRun(); drawResult()
-  // aus dem Knoten-Menü (?run=1): nicht erst „prüfen“ drücken müssen — der Teilbaum steht schon fest
-  if (new URLSearchParams(location.search).get('run') === '1') { history.replaceState(null, '', location.pathname); run() }
+  // Der Zweck der Ansicht ist die Antwort auf „was fehlt zur Konformität?" — die Prüfung läuft darum
+  // beim Öffnen automatisch, ohne Extra-Klick. Setup (Gruppe an Knoten, Attribute anlegen bei autoCreate) macht run() gleich mit.
+  run()
+  // aus dem Knoten-Menü (?run=1): die URL aufraeumen — run() lief schon oben
+  if (new URLSearchParams(location.search).get('run') === '1') history.replaceState(null, '', location.pathname)
   return () => {}
 }

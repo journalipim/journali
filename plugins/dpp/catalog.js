@@ -11,7 +11,7 @@ const isGtin = v => { const s = String(v).replace(/\s/g, ''); if (!/^\d{8}$|^\d{
 const isUrl = v => /^https?:\/\/\S+$/.test(String(v).trim()) ? null : 'URL (https://…) erwartet'
 
 export default {
-  key: 'dpp', label: 'Digitaler Produktpass (ESPR)', icon: '◈',
+  key: 'dpp', label: 'Digitaler Produktpass (ESPR)', icon: '◈', autoCreate: true,
   // Geltung aus der ETIM-Klasse (Code, Name, Synonyme, Gruppe): Batteriepass nur für Batterien/Akkus als Produkt — nicht für Geräte mit Akku
   scopeRules: [{ scope: 'battery', match: [/\bbatter(y|ies|ie)\b/i, /\bakku(mulator)?\b/i, /\baccumulator/i, /\bpower ?bank/i], why: 'ETIM-Gruppe/-Klasse Batterie' }],
   source: 'https://eur-lex.europa.eu/eli/reg/2024/1781/oj', sourceLabel: 'EUR-Lex 2024/1781 ↗',
