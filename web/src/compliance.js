@@ -139,7 +139,7 @@ export async function createAttributes(catalog, items, mapping) {
     const key = (catalog.prefix ?? '') + it.key.replace(/[^a-z0-9_]/g, '_')
     // Einheit: vorhandene nehmen (Schlüssel oder Bezeichnung), sonst anlegen — „Unbekannte Einheit: %“ war der Abbruch
     const unit = it.unit ? await ensureUnit(it.unit) : null
-    const body = { key, label: { de: it.label, en: it.labelEn ?? it.label }, type: it.type === 'enum' && !it.values ? 'text' : (it.type ?? 'text'), group: gkey, unit, axes: it.perLocale ? ['locale'] : [], inheritable: !!it.inheritable, required: it.level === 'must' && it.requiredChannels ? it.requiredChannels : null }
+    const body = { key, label: { de: it.label, en: it.labelEn ?? it.label }, type: it.type === 'enum' && !it.values ? 'text' : (it.type ?? 'text'), group: gkey, levels: it.roles?.length ? it.roles : null, unit, axes: it.perLocale ? ['locale'] : [], inheritable: !!it.inheritable, required: it.level === 'must' && it.requiredChannels ? it.requiredChannels : null }
     await api.post(`/api/model/attributes/${key}`, body, 'PUT')
     mapping[it.key] = { to: key, why: 'angelegt', sure: true }
   }
