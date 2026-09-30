@@ -5,6 +5,7 @@
 // ok · empty · bad · unmapped · na (gilt nicht: Rolle, Geltung) · below (alle Blätter darunter haben es) · inactive (Gruppe fehlt) · pending (angefragt).
 import { convert, validate } from './mapper.js'
 import { apply } from './transform.js'
+import { gruppenVon } from './gruppen.js'
 
 // {key} im Wert aufloesen: der Wert des Ziel-Attributs am selben Knoten (mit Vererbung, so wie er in values steht)
 // wird eingesetzt. Rekursiv, mit Zyklus-Schutz. Ist ein Ziel leer, wird nichts eingesetzt (der Rest bleibt).
@@ -94,7 +95,6 @@ export function findeZyklus(text, ziel, values, seen = new Set()) {
 //   nachziehen:    das Attribut gibt es ohne Ebenen-Beschraenkung, der Katalog nennt Rollen (item.roles).
 //                  Eine andere, bewusst gesetzte Beschraenkung bleibt unberuehrt.
 //   haengtNicht:   die Katalog-Gruppe haengt nicht am obersten Knoten des Astes (wurzel)
-export const gruppenVon = a => a?.groups ?? (a?.group ? [a.group] : [])
 export function einrichtungsBedarf(catalog, model, wurzel) {
   const gruppeFehlt = !(model.groups ?? []).some(g => g.key === catalog.groupKey)
   const attrByKey = new Map((model.attributes ?? []).map(a => [a.key, a]))
