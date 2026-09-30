@@ -14,6 +14,7 @@ const props = defineProps({
 const emit = defineEmits(['update:modelValue'])
 
 const steps = computed(() => props.modelValue ?? [])
+const TEXTFELDER = ['text', 'with', 'then', 'else', 'other']   // hier lässt sich ein Attributwert einsetzen: {attribut}
 
 function set(newSteps) { emit('update:modelValue', newSteps) }
 function addStep(op) {
@@ -24,12 +25,13 @@ function addStep(op) {
 function delStep(i) { const n = [...steps.value]; n.splice(i, 1); set(n) }
 function moveStep(i, d) { const j = i + d; if (j < 0 || j >= steps.value.length) return; const n = [...steps.value]; [n[i], n[j]] = [n[j], n[i]]; set(n) }
 function updateField(i, f, v) { const n = [...steps.value]; n[i] = { ...n[i], [f]: v }; set(n) }
+function einsetzen(i, f, key) { if (key) updateField(i, f, (steps.value[i]?.[f] ?? '') + '{' + key + '}') }
 function addColumn(i, col) { if (!col) return; const cur = steps.value[i]?.columns ?? ''; updateField(i, 'columns', cur ? cur + ',' + col : col) }
 
 const vorschau = computed(() => {
   if (!steps.value.length) return ''
   try {
-    const r = apply(steps.value, '', { get: k => String(props.values?.[k] ?? '') })
+    const r = apply(steps.value, '', { get: k => String(props.values?.[k] ?? ''), platzhalter: true })
     return String(r).slice(0, 80)
   } catch { return '' }
 })
@@ -71,6 +73,11 @@ const vorschau = computed(() => {
             :placeholder="FIELD_HINT[f] ?? f"
             :title="(FIELD_HINT[f] ?? f) + ' — ' + opHint(s.op)" style="width:200px" />
         </span>
+        <select v-if="TEXTFELDER.includes(f) && attributes.length" :value="''" :title="$t('Attributwert einsetzen (steht als Platzhalter im Feld)')"
+          @change="einsetzen(si, f, $event.target.value); $event.target.value = ''">
+          <option value="">{{ $t("+ Attribut …") }}</option>
+          <option v-for="a in attributes" :key="a.key" :value="a.key">{{ a.label || a.key }} ({{ a.key }})</option>
+        </select>
         <select v-if="f === 'columns'" :value="''" :title="$t('Attribut anklicken statt tippen — wird mit Komma angehängt')"
           @change="addColumn(si, $event.target.value); $event.target.value = ''">
           <option value="">{{ $t("+ Attribut …") }}</option>

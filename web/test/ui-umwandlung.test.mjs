@@ -67,3 +67,13 @@ test('dialog.steps: der Dialog ändert die übergebene Kette nicht, bis übernom
   assert.equal(vorgabe[0].text, 'A', 'die Vorgabe bleibt unverändert')
   w.unmount()
 })
+
+test('ƒ-Editor: neben Textfeldern setzt eine Auswahl {attribut} ein, die Vorschau rechnet damit', async () => {
+  const w = editor([{ op: 'prefix', text: 'Marke: ' }], { name: 'WAKOL' })
+  const einsetzen = w.findAll('select').find(s => s.attributes('title')?.includes('Attributwert einsetzen'))
+  assert.ok(einsetzen, 'Auswahl neben dem Textfeld')
+  await einsetzen.setValue('name')
+  assert.equal(letzte(w)[0].text, 'Marke: {name}')
+  const w2 = editor([{ op: 'static', text: 'Marke: {name}' }], { name: 'WAKOL' })
+  assert.match(w2.text(), /Vorschau: Marke: WAKOL/)
+})

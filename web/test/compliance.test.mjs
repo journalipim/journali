@@ -306,3 +306,10 @@ test('Bedarf: fehlendes Attribut kommt in fehlendeItems (es wird mit Ebenen ange
   assert.deepEqual(b.zuOrdnende.map(x => x.item.key), ['charge'])
   assert.deepEqual(b.nachziehen, [])
 })
+
+test('Kreis-Schutz liest auch {attribut} in den Textfeldern der Kette', () => {
+  const kette = 'f:' + JSON.stringify([{ op: 'prefix', text: '{b} ' }, { op: 'when', test: 'empty', then: '{c}', else: '{}' }])
+  assert.deepEqual(gelesenAus(kette).sort(), ['b', 'c'])
+  assert.equal(findeZyklus(kette, 'c', {}), true)
+  assert.equal(findeZyklus(kette, 'a', { b: { value: 'x' } }), false)
+})

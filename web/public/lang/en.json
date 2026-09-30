@@ -2508,6 +2508,7 @@
  "{0} vererbbar machen?": "Make {0} inheritable?",
  "Ohne Vererbung gilt die Kette nur an „{0}“ selbst.": "Without inheritance the chain applies only to “{0}” itself.",
  "Vererbbar machen": "Make inheritable",
+ "Attributwert einsetzen (steht als Platzhalter im Feld)": "Insert an attribute value (stands as a placeholder in the field)",
  "kein Schlüssel": "not a key",
  "◆ Test · {0}": "◆ Trial · {0}",
  "Test einer neuen Instanz, ab dem ersten Eintrag im Journal": "Trial of a new instance, from the first journal entry",

@@ -60,7 +60,7 @@ export function resolveWert(text, values, seen = new Set()) {
       const sub = resolveWert(String(v), values, new Set([...seen, k]))
       return sub == null ? '' : String(sub)
     } }
-    try { return apply(steps, '', ctx) } catch { return null }
+    try { return apply(steps, '', { ...ctx, platzhalter: true }) } catch { return null }
   }
   return resolvePlaceholders(text, values, seen)
 }
@@ -72,7 +72,9 @@ export function gelesenAus(text) {
     let steps
     try { steps = JSON.parse(text.slice(2)) } catch { return [] }
     if (!Array.isArray(steps)) return []
-    return [...new Set(steps.filter(s => s?.op === 'combine').flatMap(s => String(s.columns ?? '').split(',').map(c => c.trim()).filter(c => c && c !== '{}')))]
+    const spalten = steps.filter(s => s?.op === 'combine').flatMap(s => String(s.columns ?? '').split(',').map(c => c.trim()).filter(c => c && c !== '{}'))
+    const inText = steps.flatMap(s => ['text', 'with', 'then', 'else', 'other'].flatMap(f => [...String(s?.[f] ?? '').matchAll(/\{([^{}]+)\}/g)].map(m => m[1].trim())))
+    return [...new Set([...spalten, ...inText].filter(Boolean))]
   }
   return [...new Set([...text.matchAll(/\{([^{}]+)\}/g)].map(m => m[1].trim()).filter(Boolean))]
 }
