@@ -2888,5 +2888,17 @@
  "Den Knoten gibt es nicht mehr": "The node no longer exists",
  "Im Kontextmenü eines Knotens: Lesezeichen setzen": "In a node's context menu: set bookmark",
  "⚐ {0}": "⚐ {0}",
- "Lesezeichen anzeigen (Knoten wiederfinden)": "Show bookmarks (find nodes again)"
+ "Lesezeichen anzeigen (Knoten wiederfinden)": "Show bookmarks (find nodes again)",
+ "{ } Schnittstelle": "{ } Interface",
+ "Pfad, Methode, Recht …": "Path, method, right …",
+ "Die Beschreibung als OpenAPI 3.0 (JSON)": "The description as OpenAPI 3.0 (JSON)",
+ "lade …": "loading …",
+ "Das Recht, das der Aufruf braucht": "The right the call needs",
+ "Parameter": "Parameter",
+ "in": "in",
+ "Pfad": "Path",
+ "Abfrage": "Query",
+ "Körper": "Body",
+ "keine Treffer": "no matches",
+ "{ } Schnittstelle (API)": "{ } Interface (API)"
 }

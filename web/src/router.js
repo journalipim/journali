@@ -6,6 +6,7 @@ import ModelView from './views/ModelView.vue'
 import HubView from './views/HubView.vue'
 import TasksView from './views/TasksView.vue'
 import LoginView from './views/LoginView.vue'
+import ApiDokuView from './views/ApiDokuView.vue'
 import DbSetupView from './views/DbSetupView.vue'
 import { store } from './store.js'
 import TableEditView from './views/TableEditView.vue'
@@ -44,6 +45,7 @@ export const router = createRouter({
     { path: '/plugins', component: PluginsView },
     { path: '/p/:key/:path', component: PluginHost },
     { path: '/settings', component: SettingsView },
+    { path: '/schnittstelle', component: ApiDokuView },   // die Beschreibung der Schnittstelle (GET /api/openapi.json), lesbar
     // Hilfe ist ein Fenster, keine Ansicht (25.09.2026) — diese Adressen von früher öffnen es über dem Baum
     { path: '/help/:chapter?', redirect: to => { openHelp(String(to.params.chapter ?? '')); return '/tree' } },
     { path: '/login', component: LoginView },

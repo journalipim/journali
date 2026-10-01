@@ -25,7 +25,7 @@ const CHAPTERS = [
   ['/p/table', 'import-und-export'], ['/p/json', 'import-und-export'], ['/p/ixp', 'import-und-export'], ['/p/solr', 'import-und-export'],
   ['/p/xport', 'import-und-export'], ['/media', 'medien'], ['/tasks', 'workflows'], ['/jobs', 'jobs'], ['/p/tasker', 'jobs'],
   ['/plugins', 'plugins'], ['/datasheet', 'plugins'], ['/analysis', 'plugins'], ['/translate', 'plugins'], ['/classification', 'plugins'],
-  ['/tools', 'plugins'], ['/p/', 'plugins'], ['/settings', 'anwender-rollen-und-teams'], ['/login', 'erste-schritte'], ['/help', 'was-journali-ist'],
+  ['/tools', 'plugins'], ['/p/', 'plugins'], ['/settings', 'anwender-rollen-und-teams'], ['/login', 'erste-schritte'], ['/help', 'was-journali-ist'], ['/schnittstelle', 'schnittstelle'],
 ]
 export function chapterFor(path) {
   const hit = CHAPTERS.filter(([p]) => (path ?? '').startsWith(p)).sort((a, b) => b[0].length - a[0].length)[0]
@@ -38,6 +38,7 @@ export function helpItems(open = url => window.open(url, '_blank', 'noopener'), 
   return [
     { label: t('? Hilfe zu dieser Ansicht'), icon: '?', action: () => zeig(chapterFor(path)) },
     { label: t('Alle Kapitel'), icon: '≡', action: () => zeig('') },
+    { label: t('{ } Schnittstelle (API)'), icon: '{}', action: () => open('/schnittstelle') },   // die Beschreibung der Schnittstelle, lesbar
     { sep: true },
     ...HELP_LINKS.map(l => ({ label: l.label, icon: l.icon, title: l.hint, action: () => open(l.url) })),
   ]

@@ -21,7 +21,7 @@ test('Klick öffnet das Menü: erst die Hilfe in der Instanz, dann die Links', a
   assert.equal(menu.visible, true)
   assert.match(menu.items[0].label, /Hilfe/)
   assert.ok(menu.items.some(i => i.label === 'journali.de'))
-  assert.equal(menu.items.filter(i => !i.sep).length, HELP_LINKS.length + 2)
+  assert.equal(menu.items.filter(i => !i.sep).length, HELP_LINKS.length + 3)
   menu.close()
 })
 
