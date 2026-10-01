@@ -64,6 +64,15 @@ nicht gepusht. Eine Änderung am gemeinsamen Format entsteht hier, das Submodul 
 Genauso wenig gehören **eigene Adressen** in ein öffentliches Repo: Hostname, IP und Domain der Entwicklungs-
 und Betriebsrechner. Eine Beispieladresse ist `localhost` oder ein Platzhalter, nicht der eigene Server.
 
+## Regel 6: Gitea immer
+
+Die Gitea (`origin`) ist die Ablage, die zählt: Sie baut die Images, aus denen der Betrieb aktualisiert wird, und sie
+sichert die Arbeit. Ein abgeschlossenes Stück Arbeit (Build ohne Fehler, beide Testläufe grün) wird **sofort**
+committet und nach `origin` gepusht — ohne Nachfrage und ohne zu warten, bis mehrere Themen zusammenkommen. Ein Commit
+je Thema. GitHub (`github`) folgt danach; scheitert dieser Push, bleibt der nach Gitea bestehen. Ungepushte Arbeit ist
+weder gesichert noch im Betrieb. Jede Antwort, die Arbeit abschliesst, nennt den Commit, bis zu dem `origin` steht.
+Liegt `origin` mehr als ein Stück Arbeit hinter dem Rechner, ist das ein Fehler.
+
 ## Arbeitsweise
 
 - **Keine Pausen bei Mehrfachaufträgen.** Alles durcharbeiten, erst am Ende
