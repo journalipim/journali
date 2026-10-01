@@ -5,7 +5,7 @@ using System.Text.Json.Serialization;
 
 namespace Journali.Core.Licensing;
 
-// Was journali und der Lizenzserver miteinander austauschen (Taloan, 24.09.2026: „jetzt bauen wir den Lizenzserver“).
+// Was journali und der Lizenzserver miteinander austauschen.
 // Beide Seiten prüfen und schreiben mit demselben Code — darum liegt er im Kern, nicht im Server. Nichts davon ist geheim:
 // gesichert wird mit den Schlüsseln (Instanz, Aussteller), nicht mit dem Code.
 //
@@ -267,12 +267,11 @@ public sealed record LicenceKey(
 }
 
 /// <summary>
-/// Der Stand eines Abos, wie ihn der Lizenzserver bestätigt (Taloan, 24.09.2026) — Antwort auf eine signierte Anfrage der
+/// Der Stand eines Abos, wie ihn der Lizenzserver bestätigt — Antwort auf eine signierte Anfrage der
 /// Instanz, signiert mit dem Lizenzschlüssel. Die Instanz legt ihn ab und fragt täglich neu.
 /// <list type="bullet">
 /// <item><see cref="PaidUntil"/>: bezahlt bis (Lemon Squeezy: renews_at, nach einer Kündigung ends_at).</item>
-/// <item><see cref="ValidUntil"/>: so lange gilt dieser Stand ohne neue Abfrage — ausgestellt + 7 Tage (Taloan: „ohne
-/// Verbindung gilt der letzte Stand 7 Tage“). Wirksam ist der frühere von beiden.</item>
+/// <item><see cref="ValidUntil"/>: so lange gilt dieser Stand ohne neue Abfrage — ausgestellt + 7 Tage. Wirksam ist der frühere von beiden.</item>
 /// <item><see cref="Request"/>: Fingerabdruck der Anfrage — ein Stand gehört zu genau einer Anfrage, ein alter lässt
 /// sich nicht als neuer einspielen.</item>
 /// </list>

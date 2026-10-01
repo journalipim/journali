@@ -107,7 +107,7 @@ public static class LicenceKeys
             return anforderungen.Loesche(id) ? Results.Ok(new { removed = id }) : Results.NotFound();
         });
 
-        // alle: das Paket enthält alle Plugins (Pro+, Enterprise, Unlimited) — steht in der Auswahl (Taloan, 24.09.2026)
+        // alle: das Paket enthält alle Plugins (Pro+, Enterprise, Unlimited) — steht in der Auswahl
         api.MapGet("/licence/packages", (Catalog c) => { var liste = c.Tarife; return Results.Ok(liste.Pakete.Select(p => new { p.Key, p.Label, week = p.Week, month = p.Month, days = p.Days, alle = liste.Von(p.Key)?.Plugins is null })); });
 
         api.MapGet("/licence/keys", (Catalog c) => c.Lesen((_, _) => Results.Ok(c.Teams.Einloesungen.Select(r => new

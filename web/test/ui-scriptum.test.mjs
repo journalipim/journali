@@ -131,13 +131,13 @@ test('speichern schreibt den Kopf als Parameter mit', async () => {
 
 test('ein Parameter vom Typ driver ist eine Auswahl eingerichteter Zugänge', async () => {
   const skript = { ...SKRIPT, params: [{ key: 'sys', label: 'System', type: 'driver', default: '' }] }
-  const { w } = welt({ skript, drivers: [{ key: 'sap', label: 'SAP Prod' }, { key: 'frontify', label: 'Frontify' }] })
+  const { w } = welt({ skript, drivers: [{ key: 'sap', label: 'ERP Prod' }, { key: 'frontify', label: 'Frontify' }] })
   await warte(w)
   const sel = w.find('select.param')
   assert.ok(sel.exists(), 'der driver-Parameter ist eine Auswahl, kein Textfeld')
   assert.equal(sel.attributes('data-key'), 'sys')
   const opts = sel.findAll('option').map(o => o.text())
-  assert.ok(opts.includes('SAP Prod') && opts.includes('Frontify'), 'die eingerichteten Zugänge stehen zur Wahl')
+  assert.ok(opts.includes('ERP Prod') && opts.includes('Frontify'), 'die eingerichteten Zugänge stehen zur Wahl')
 })
 
 test('der Editor bietet die Beispiele als Vorlagen (＋ Beispiel gehört in den Editor)', async () => {

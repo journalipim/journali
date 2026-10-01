@@ -92,10 +92,10 @@ export default async (ctx) => {
   },
   {
     key: 'sap-odata',
-    title: 'SAP OData lesen',
-    description: 'Ein SAP-Gateway-OData-Service (v2 oder v4) über einen Zugang lesen: $format=json, Blättern mit $skip/$top, das Ergebnis als Tabelle.',
+    title: 'ERP OData lesen',
+    description: 'Ein ERP-Gateway-OData-Service (v2 oder v4) über einen Zugang lesen: $format=json, Blättern mit $skip/$top, das Ergebnis als Tabelle.',
     source: `export const meta = {
-  label: 'SAP OData lesen',
+  label: 'ERP OData lesen',
   params: [
     { key: 'system', label: 'Zugang (HTTP/REST)', type: 'driver', default: '' },
     { key: 'service', label: 'OData-Service und Entität', type: 'text', default: '/sap/opu/odata/sap/ZMY_SRV/ProductSet' },
@@ -104,8 +104,8 @@ export default async (ctx) => {
   ],
 }
 
-// SAP Gateway über einen Zugang lesen. Die Anmeldung (Basic oder Bearer) hängt der Server an — hier steht nur der Pfad
-// hinter der Adresse. $format=json, weil SAP sonst XML liefert; geblättert wird mit $skip/$top. Die Antwort ist bei
+// ERP Gateway über einen Zugang lesen. Die Anmeldung (Basic oder Bearer) hängt der Server an — hier steht nur der Pfad
+// hinter der Adresse. $format=json, weil ERP sonst XML liefert; geblättert wird mit $skip/$top. Die Antwort ist bei
 // OData v2 { d: { results: [...] } }, bei v4 { value: [...] }. __metadata gehört nicht in die Tabelle.
 export default async (ctx) => {
   const zugang = ctx.zugang(ctx.params.system)
@@ -134,17 +134,17 @@ export default async (ctx) => {
   },
   {
     key: 'sap-odata-schreiben',
-    title: 'SAP OData schreiben (CSRF)',
-    description: 'Einen Datensatz nach SAP Gateway (OData v2) anlegen — mit dem CSRF-Token-Ablauf: erst Token und Sitzungskeks holen, dann schreiben.',
+    title: 'ERP OData schreiben (CSRF)',
+    description: 'Einen Datensatz nach ERP Gateway (OData v2) anlegen — mit dem CSRF-Token-Ablauf: erst Token und Sitzungskeks holen, dann schreiben.',
     source: `export const meta = {
-  label: 'SAP OData schreiben (CSRF)',
+  label: 'ERP OData schreiben (CSRF)',
   params: [
     { key: 'system', label: 'Zugang (HTTP/REST)', type: 'driver', default: '' },
     { key: 'service', label: 'OData-Service und Entität', type: 'text', default: '/sap/opu/odata/sap/ZMY_SRV/ProductSet' },
   ],
 }
 
-// Schreiben nach SAP Gateway (OData v2) braucht einen CSRF-Token, gebunden an die Sitzung:
+// Schreiben nach ERP Gateway (OData v2) braucht einen CSRF-Token, gebunden an die Sitzung:
 // 1. GET mit X-CSRF-Token: Fetch — der Token steht in der Antwort-Kopfzeile, der Sitzungskeks in Set-Cookie.
 // 2. POST mit demselben Token und demselben Keks. Beides reicht der Server durch; das Geheimnis des Zugangs bleibt bei ihm.
 // roh() gibt die ganze Antwort (Status, Kopfzeilen, Rumpf); der Keks geht als x-relay-cookie zurueck.
@@ -167,10 +167,10 @@ export default async (ctx) => {
   },
   {
     key: 'sap-sync',
-    title: 'SAP-Sync über OData',
-    description: 'Die heutige Fassung der SAP-Synchronisierung: Material oder Preise per OData holen, je SAP-Nummer den Knoten finden und Attribute im Stapel setzen. Als Zeitplan-Job.',
+    title: 'ERP-Sync über OData',
+    description: 'Die heutige Fassung der ERP-Synchronisierung: Material oder Preise per OData holen, je ERP-Nummer den Knoten finden und Attribute im Stapel setzen. Als Zeitplan-Job.',
     source: `export const meta = {
-  label: 'SAP-Sync über OData',
+  label: 'ERP-Sync über OData',
   params: [
     { key: 'system', label: 'Zugang (HTTP/REST)', type: 'driver', default: '' },
     { key: 'service', label: 'OData-Service und Entität', type: 'text', default: '/sap/opu/odata/sap/ZMATERIAL_SRV/MaterialSet' },
@@ -180,10 +180,10 @@ export default async (ctx) => {
   ],
 }
 
-// SAP-Sync über OData — die heutige Fassung der alten DB-Tabellen-Synchronisierung: kein Bus, kein Polling einer DB.
-// Ein Zeitplan-Job holt periodisch, dieses Skript bildet ab. SAP reichert bestehende Artikel an; die Neuanlage bleibt
-// manuell. ANPASSEN: die Zuordnung SAP-Feld -> journali-Attribut (MAP_MATERIAL) und der Preis-Attributname. Der
-// Schlüssel, über den ein SAP-Datensatz seinen Knoten findet, ist hier die Fremd-Verknüpfung "sap" (external.link).
+// ERP-Sync über OData — die heutige Fassung der alten DB-Tabellen-Synchronisierung: kein Bus, kein Polling einer DB.
+// Ein Zeitplan-Job holt periodisch, dieses Skript bildet ab. ERP reichert bestehende Artikel an; die Neuanlage bleibt
+// manuell. ANPASSEN: die Zuordnung ERP-Feld -> journali-Attribut (MAP_MATERIAL) und der Preis-Attributname. Der
+// Schlüssel, über den ein ERP-Datensatz seinen Knoten findet, ist hier die Fremd-Verknüpfung "sap" (external.link).
 const MAP_MATERIAL = {
   Ean: 'ean',
   BaseUnit: 'basismengeneinheit',
@@ -200,7 +200,7 @@ export default async (ctx) => {
   const land = ctx.params.land || ''
   const grenze = Number(ctx.params.grenze) || 500
   const seite = 100
-  // 1. SAP lesen, mit Blättern
+  // 1. ERP lesen, mit Blättern
   const rows = []
   for (let skip = 0; skip < grenze; skip += seite) {
     const top = Math.min(seite, grenze - skip)
@@ -212,7 +212,7 @@ export default async (ctx) => {
     for (const e of teil) rows.push(e)
     if (teil.length < top) break
   }
-  // 2. je SAP-Datensatz den Knoten finden (Fremd-Verknüpfung sap) und Befehle sammeln
+  // 2. je ERP-Datensatz den Knoten finden (Fremd-Verknüpfung sap) und Befehle sammeln
   const befehle = []
   let getroffen = 0, fehlend = 0
   for (const r of rows) {
@@ -239,7 +239,7 @@ export default async (ctx) => {
     uebersprungen = (antwort.skipped || []).length
   }
   return ctx.out.table(['Kennzahl', 'Wert'], [
-    ['SAP-Datensätze', rows.length], ['Knoten getroffen', getroffen], ['nicht gefunden', fehlend],
+    ['ERP-Datensätze', rows.length], ['Knoten getroffen', getroffen], ['nicht gefunden', fehlend],
     ['Attribute geschrieben', geschrieben], ['übersprungen', uebersprungen],
   ])
 }

@@ -34,7 +34,7 @@ public sealed class TeamState
     public long? ResetNumber { get; set; }
     /// <summary>Die eingelösten Limit-Schlüssel dieses Teams, in der Reihenfolge des Einlösens.</summary>
     public List<LimitWindow> Windows { get; } = new();
-    /// <summary>Der letzte Stand seines Abos vom Lizenzserver (Taloan, 24.09.2026) — null ohne Abo.</summary>
+    /// <summary>Der letzte Stand seines Abos vom Lizenzserver — null ohne Abo.</summary>
     public EntitlementReceived? Abo { get; set; }
     /// <summary>Nummer des Eintrags, der das Team zuerst angelegt hat — daran hängt, wer „Team 1“ ist.</summary>
     public long CreatedNumber { get; set; }
@@ -150,7 +150,7 @@ public sealed class Teams : IProjection
         if (_all.GetValueOrDefault(team) is not { } t) return (0, 0);
         var w = t.Windows.Where(x => x.Gilt(d)).OrderByDescending(x => x.Number).FirstOrDefault();
         var (woche, monat) = w is null ? (t.EntriesWeek, t.EntriesMonth) : (Math.Max(t.EntriesWeek, w.Week), Math.Max(t.EntriesMonth, w.Month));
-        // ein Abo hebt an, solange es gilt — senkt nie (Taloan, 24.09.2026)
+        // ein Abo hebt an, solange es gilt — senkt nie
         return AboAt(team, d) is { } a ? (Math.Max(woche, a.EntriesWeek), Math.Max(monat, a.EntriesMonth)) : (woche, monat);
     }
 

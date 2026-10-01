@@ -10,7 +10,7 @@ using Journali.Server;
 
 namespace Journali.Tests;
 
-// Das Abo eines Teams über den Lizenzserver (Taloan, 24.09.2026): Lizenzschlüssel aus dem Shop ins eine Feld, signierte
+// Das Abo eines Teams über den Lizenzserver: Lizenzschlüssel aus dem Shop ins eine Feld, signierte
 // Anfrage, signierter Stand ins Journal, täglich auffrischen, ohne Verbindung gilt der letzte Stand 7 Tage.
 public class AboTests
 {

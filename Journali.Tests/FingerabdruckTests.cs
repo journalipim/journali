@@ -2,8 +2,7 @@ using Journali.Core.Projections;
 
 namespace Journali.Tests;
 
-// Der Stempel des Schnappschusses (Taloan, 24.09.2026: „ich will verhindern, dass ein Serverstart nach zwei Jahren Nutzung
-// zu einem halben Tag Betriebsausfall führt“). Bis dahin war es die ModuleVersionId des Kerns — mit dem Git-Commit darin
+// Der Stempel des Schnappschusses. Bis dahin war es die ModuleVersionId des Kerns — mit dem Git-Commit darin
 // fiel der Schnappschuss bei jedem Commit. Gemessen beim Bau (vier Bauten des Kerns): anderer Commit → gleicher Stempel,
 // nur ein Kommentar → gleicher Stempel, eine Konstante geändert → anderer Stempel.
 public class FingerabdruckTests

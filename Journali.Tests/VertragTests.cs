@@ -4,7 +4,7 @@ using Journali.Core.Licensing;
 
 namespace Journali.Tests;
 
-// Was journali und der Lizenzserver austauschen (Taloan, 24.09.2026) — beide Seiten nutzen denselben Kern.
+// Was journali und der Lizenzserver austauschen — beide Seiten nutzen denselben Kern.
 public class VertragTests
 {
     private static readonly DateTimeOffset Jetzt = new(2026, 9, 24, 12, 0, 0, TimeSpan.Zero);

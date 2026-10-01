@@ -146,7 +146,7 @@ public static class Types
     public const string AiUsed = "AiUsed";
     /// <summary>Ein Lizenzschlüssel wurde für ein Team eingelöst (Strom <c>team:&lt;key&gt;</c>) — einmal je Schlüssel.</summary>
     public const string KeyRedeemed = "KeyRedeemed";
-    /// <summary>Der Stand eines Abos, vom Lizenzserver signiert bestätigt (Taloan, 24.09.2026) — Strom team:&lt;key&gt;.</summary>
+    /// <summary>Der Stand eines Abos, vom Lizenzserver signiert bestätigt — Strom team:&lt;key&gt;.</summary>
     public const string EntitlementReceived = "EntitlementReceived";
     /// <summary>Ein Tarifblatt des Lizenzservers, signiert (25.09.2026) — Strom <c>tarife</c>. Die höchste echte Fassung gilt.</summary>
     public const string TarifeReceived = "TarifeReceived";
@@ -776,7 +776,7 @@ public sealed record TeamRetired();
 public sealed record KeyRedeemed(string Id, string Kind, DateOnly From, DateOnly? Until = null, int EntriesWeek = 0, int EntriesMonth = 0, int Days = 0, int Carried = 0, string? Plan = null);
 
 /// <summary>
-/// Der Stand eines Abos, wie ihn der Lizenzserver signiert bestätigt hat (Taloan, 24.09.2026): Tarif, Grenzen, Status,
+/// Der Stand eines Abos, wie ihn der Lizenzserver signiert bestätigt hat: Tarif, Grenzen, Status,
 /// bezahlt bis, gilt ohne neue Abfrage bis (+7 Tage), Fingerabdruck der Anfrage, Signatur. Die Instanz fragt täglich;
 /// jede Antwort ist ein Eintrag — so lassen sich Grenzen und Tarif jederzeit aus dem Journal neu aufbauen.
 /// </summary>

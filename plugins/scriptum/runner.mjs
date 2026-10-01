@@ -134,7 +134,7 @@ export function kontext({ server, token, actor, params, outDir, log = console.lo
   /// bleibt bei ihm, das Skript sieht es nie. Der Pfad ist relativ zur Adresse des Zugangs; die Antwort ist geparstes
   /// JSON, sonst Text. Der Name kommt aus einem Parameter (Typ driver) oder steht im Skript. Jede Methode nimmt
   /// optional { headers } mit; roh(method, pfad, { body, headers }) gibt die ganze Antwort { status, headers, body }
-  /// zurueck — fuer Ablaeufe, die eine Kopfzeile brauchen (SAP: X-CSRF-Token holen, dann mit Sitzungskeks schreiben).
+  /// zurueck — fuer Ablaeufe, die eine Kopfzeile brauchen (ERP: X-CSRF-Token holen, dann mit Sitzungskeks schreiben).
   const zugang = name => {
     if (!name) throw new Error('kein Zugang genannt')
     const ziel = pfad => `/api/drivers/${encodeURIComponent(name)}/relay?path=${encodeURIComponent(pfad || '/')}`

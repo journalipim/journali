@@ -205,7 +205,7 @@ test('Ohne Recht zur Anwenderverwaltung weder Feld noch Schlüssel', async () =>
   w.unmount()
 })
 
-// Abo über den Lizenzserver (Taloan, 24.09.2026): der Lizenzschlüssel aus dem Shop kommt in dasselbe Feld
+// Abo über den Lizenzserver: der Lizenzschlüssel aus dem Shop kommt in dasselbe Feld
 const ABO_KEY = '495C1AF0-1CFB-4C24-824E-A46A6242841D'
 
 test('Ein Lizenzschlüssel aus dem Shop verbindet das Abo des oben gewählten Teams', async () => {

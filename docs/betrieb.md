@@ -492,7 +492,7 @@ Einträgen: Start prüfen 207 ms (vorher ~2,2 s), 50 000 nachholen 127 ms (vorhe
 im Datenverzeichnis, der Stand aller Abbilder bei #n (`Snapshot.cs` im Kern: System.Text.Json über die Abbild-Klassen samt
 privater Felder). Beim Start werden die Abbilder daraus geladen und nur der Rest ab #n angewandt; geschrieben wird er im
 Hintergrund nach dem Start, stündlich (wenn Neues dazukam) und beim Beenden. Auch er ist ein Cache: er trägt den
-Fingerabdruck der Kern-Logik (`Fingerabdruck.cs`: Typen, Felder, Code der Methoden, Verweise als Namen — Taloan, 24.09.2026)
+Fingerabdruck der Kern-Logik (`Fingerabdruck.cs`: Typen, Felder, Code der Methoden, Verweise als Namen)
 und fällt, wenn die Abbilder anders rechnen könnten; nicht bei einem neuen Commit, nicht bei Kommentaren, nicht bei
 Änderungen an Server oder Oberfläche. Bis dahin war es die ModuleVersionId des Kerns, und in ihr steckte der Git-Commit —
 jeder Commit liess ihn fallen. Der Eintrag #n wird gegen das Journal geprüft; bei Abweichung wird die Datei gelöscht.
@@ -707,7 +707,7 @@ nicht, wenn ihre Signatur nicht passt; eingespielt wird keine mehr. Im Debug-Bau
 Test, Kennung (`instance`, Tabelle `instanz`) und Anforderungen gehen **nicht** in die Vollsicherung — eine
 wiederhergestellte Instanz ist eine neue.
 
-### Abo über den Lizenzserver (Taloan, 24.09.2026)
+### Abo über den Lizenzserver
 
 Ein Team mit Abo aus dem Shop (Lemon Squeezy) fügt den **Lizenzschlüssel aus dem Shop** in dasselbe Feld ein
 (⚙ Einstellungen → Team → Lizenz); der Knopf heisst dann „⚿ Abo verbinden · Team“. Der Server schickt eine mit dem

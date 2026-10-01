@@ -37,7 +37,7 @@ public static class LicenceApi
                 kauf = liste.Kauf,
                 rabatte = liste.RabatteAm(DateOnly.FromDateTime(DateTime.Now)).Select(r => new { r.Code, r.Text, r.Bis }).ToList(),
                 pubTrees = baeume,
-                // die Abos der Teams (Taloan, 24.09.2026): letzter Stand vom Lizenzserver, und ob er heute gilt
+                // die Abos der Teams: letzter Stand vom Lizenzserver, und ob er heute gilt
                 lizenzserver = abos.Eingestellt, registriert = c.Registriert,
                 // Der Weg von Hand steht nur da, wenn der Lizenzserver ihn dieser Instanz freigegeben hat (26.09.2026)
                 vonHand = abos.VonHand,
@@ -50,7 +50,7 @@ public static class LicenceApi
             });
         });
 
-        // Abo verbinden: Lizenzschlüssel aus dem Shop für ein Team (Taloan, 24.09.2026) — Recht users, wie das Einspielen
+        // Abo verbinden: Lizenzschlüssel aus dem Shop für ein Team — Recht users, wie das Einspielen
         api.MapPost("/licence/abo", async (AboBody body, HttpRequest req, Catalog c, CancellationToken ct) =>
         {
             if (Actor(req) is not { } actor) return ActorMissing();

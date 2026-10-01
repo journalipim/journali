@@ -49,7 +49,7 @@ public static class DriverApi
 
     /// <summary>
     /// Kopfzeilen, die die Weiterleitung vom Aufrufer an die Quelle durchreicht — nie sein Authorization (das ist
-    /// journalis eigenes). Für Abläufe wie SAP-CSRF: den Token (<c>X-CSRF-Token</c>), die Vorbedingung (<c>If-Match</c>,
+    /// journalis eigenes). Für Abläufe wie ERP-CSRF: den Token (<c>X-CSRF-Token</c>), die Vorbedingung (<c>If-Match</c>,
     /// ETag) und den Sitzungskeks als <c>X-Relay-Cookie</c> → <c>Cookie</c> — so, weil eine Node-fetch keine eigene
     /// Cookie-Kopfzeile setzen darf.
     /// </summary>
@@ -177,7 +177,7 @@ public static class DriverApi
         // Die Weiterleitung: der Server liest die Quelle (IXP, Solr, HTTP) und beschickt sie, hängt die Anmeldung an —
         // das Geheimnis verlässt ihn nie. GET liest, POST/PUT/DELETE schreiben mit Rumpf; nur unterhalb der Adresse des
         // Zugangs (path relativ, ohne ..). Mit ?raw=1 kommt statt des Rumpfs ein Umschlag { status, headers, body }
-        // zurück — für Abläufe, die eine Kopfzeile brauchen (SAP: X-CSRF-Token holen, dann mit Sitzungskeks schreiben).
+        // zurück — für Abläufe, die eine Kopfzeile brauchen (ERP: X-CSRF-Token holen, dann mit Sitzungskeks schreiben).
         // Durchgereicht werden nur die Kopfzeilen aus RelayKopfDurch, nie das Authorization des Aufrufers
         api.MapMethods("/drivers/{zugang}/relay", ["GET", "POST", "PUT", "DELETE"], async (string zugang, string? path, bool raw, HttpContext http, Catalog c, CancellationToken ct) =>
         {

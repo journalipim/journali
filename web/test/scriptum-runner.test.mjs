@@ -103,7 +103,7 @@ test('ctx.zugang spricht ein Fremdsystem über die Weiterleitung — mit dem Pfa
   } finally { globalThis.fetch = alt }
 })
 
-test('ctx.zugang.roh gibt Status und Kopfzeilen zurück und reicht eigene Kopfzeilen durch — der SAP-CSRF-Weg', async () => {
+test('ctx.zugang.roh gibt Status und Kopfzeilen zurück und reicht eigene Kopfzeilen durch — der ERP-CSRF-Weg', async () => {
   const rufe = []
   const alt = globalThis.fetch
   globalThis.fetch = async (url, opt = {}) => {

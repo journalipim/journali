@@ -9,8 +9,7 @@ using Journali.Core.Projections;
 namespace Journali.Server;
 
 /// <summary>
-/// Das Abo eines Teams über den Lizenzserver (Taloan, 24.09.2026: „jetzt bauen wir den Lizenzserver“ — Abo je Team, ohne
-/// Verbindung gilt der letzte Stand 7 Tage). Der Lizenzschlüssel aus dem Shop kommt ins eine Feld; die Instanz schickt
+/// Das Abo eines Teams über den Lizenzserver. Der Lizenzschlüssel aus dem Shop kommt ins eine Feld; die Instanz schickt
 /// eine signierte Anfrage an den eingebauten Lizenzserver (<see cref="Aussteller.Adresse"/>) und bekommt einen
 /// signierten Stand zurück, der als
 /// <see cref="Types.EntitlementReceived"/> ins Journal des Teams geht. Täglich wird aufgefrischt.

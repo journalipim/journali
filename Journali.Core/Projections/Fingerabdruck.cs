@@ -6,8 +6,7 @@ using System.Text;
 namespace Journali.Core.Projections;
 
 /// <summary>
-/// Der Fingerabdruck der Kern-Logik — der Stempel des Schnappschusses (Taloan, 24.09.2026: „ich will verhindern, dass ein
-/// Serverstart nach zwei Jahren Nutzung zu einem halben Tag Betriebsausfall führt“). Bis dahin war der Stempel die
+/// Der Fingerabdruck der Kern-Logik — der Stempel des Schnappschusses. Bis dahin war der Stempel die
 /// ModuleVersionId des Kerns; in ihr steckt der Git-Commit (das SDK schreibt ihn in die InformationalVersion,
 /// <c>1.0.0+508ad1a…</c>) — jeder Commit liess den Schnappschuss fallen, auch wenn der Kern gleich war, und jeder Start
 /// danach spielte das ganze Journal ab.

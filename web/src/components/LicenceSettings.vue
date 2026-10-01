@@ -79,7 +79,7 @@ const inhalt = computed(() => {
   if (a < 0 || b <= a) return null
   try { const o = JSON.parse(t.slice(a, b + 1)); return o && typeof o === 'object' && !Array.isArray(o) ? { text: t.slice(a, b + 1), o } : null } catch { return null }
 })
-// Ein Lizenzschlüssel aus dem Shop (Abo, Taloan 24.09.2026) ist kein JSON, sondern eine Kennung wie 495C1AF0-1CFB-…
+// Ein Lizenzschlüssel aus dem Shop (Abo) ist kein JSON, sondern eine Kennung wie 495C1AF0-1CFB-…
 const ABO = /\b[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}\b/i
 const aboKey = computed(() => inhalt.value ? null : eingabe.value.match(ABO)?.[0] ?? null)
 // Eine Lizenz für die ganze Instanz gibt es nicht (25.09.2026): jede gehört einem Team — Abo oder Schlüssel zum Kopieren
