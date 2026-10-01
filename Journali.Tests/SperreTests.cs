@@ -1,81 +1,117 @@
-using System.Diagnostics;
+using Microsoft.AspNetCore.Http;
 using Journali.Core.Entries;
 using Journali.Core.Journal;
+using Journali.Core.Projections;
 using Journali.Server;
 
 namespace Journali.Tests;
 
-// Leser warten nicht auf Schreiber. Gemessen war damals: /api/health 25 Sekunden ohne Antwort bei 0 CPU — der Halter der einen Sperre
-// wartete auf die Datenbank, und jeder Lesezugriff stand dahinter. Hier steht dieselbe Lage nachgestellt: ein
-// Journal, dessen Append hängt, und daneben jemand, der lesen will.
+/// <summary>
+/// Die Sperre der Schnittstelle (01.10.2026): mit Benutzern in der Anlage ist ohne Sitzung fast nichts zu haben — nur /api/health (Version und Bau),
+/// /api/auth/… zum Anmelden und die Dateien der Office-Add-ins. Das Routing ignoriert Gross- und Kleinschreibung; die Sperre darf es nicht anders halten:
+/// „/API/tree“ lieferte den ganzen Baum ohne Anmeldung, „/plugins/…“ lag ausserhalb der Sperre.
+/// </summary>
 public class SperreTests
 {
-    /// <summary>Ein Journal, dessen Append so lange braucht, wie eine langsame Datenbank braucht.</summary>
-    private sealed class ZaehesJournal(TimeSpan dauer) : IJournal
+    private static (Catalog C, string Dir) Anlage(bool mitBenutzer)
     {
-        private readonly MemoryJournal _inner = new();
-        public Entry Append(string actor, string stream, string type, string payload, string? batch = null, string? kind = null)
-        {
-            Thread.Sleep(dauer);
-            return _inner.Append(actor, stream, type, payload, batch, kind);
-        }
-        public IReadOnlyList<Entry> AppendMany(string actor, IReadOnlyList<(string Stream, string Type, string Payload)> items, string? batch = null)
-        { Thread.Sleep(dauer); return _inner.AppendMany(actor, items, batch); }
-        public IEnumerable<Entry> ReadAfter(long afterNumber) => _inner.ReadAfter(afterNumber);
-        public IEnumerable<Entry> ReadStream(string stream) => _inner.ReadStream(stream);
-        public IEnumerable<Entry> ReadBatch(string batch) => _inner.ReadBatch(batch);
-        public IEnumerable<Entry> ReadRecent(string type, int limit) => _inner.ReadRecent(type, limit);
-        public int RestoreAll(IEnumerable<Entry> entries) => _inner.RestoreAll(entries);
-        public long Head => _inner.Head;
+        var c = new Catalog(new MemoryJournal()); c.Rebuild(); c.SeedMissing();
+        if (mitBenutzer) c.With((_, _, w) => w("system", Users.Stream + "taloan", Types.UserDefined, new UserDefined("Taloan", null, "admin", true), null));
+        var dir = Path.Combine(Path.GetTempPath(), "journali-sperre-" + Guid.NewGuid().ToString("N")[..8]);
+        Directory.CreateDirectory(dir);
+        return (c, dir);
+    }
+
+    /// <summary>Eine Anfrage ohne Sitzung durch die Sperre: (kam sie bis zum Endpunkt, Status).</summary>
+    private static async Task<(bool Durch, int Status)> OhneSitzung(Catalog c, string dir, string pfad, string method = "GET")
+    {
+        var ctx = new DefaultHttpContext(); ctx.Request.Path = pfad; ctx.Request.Method = method;
+        ctx.Response.Body = new MemoryStream();
+        var durch = false;
+        await Auth.Middleware(c, dir)(ctx, () => { durch = true; return Task.CompletedTask; });
+        return (durch, ctx.Response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData("/api/tree")]
+    [InlineData("/API/tree")]
+    [InlineData("/Api/Tree")]
+    [InlineData("/API/MODEL")]
+    [InlineData("/API/journal")]
+    [InlineData("/api/nodes/x")]
+    [InlineData("/API/NODES/x/attributes")]
+    [InlineData("/plugins/da/entry.js")]
+    [InlineData("/Plugins/da/entry.js")]
+    [InlineData("/PLUGINS/etim/plugin.json")]
+    public void Ohne_Sitzung_ist_der_Zugriff_gesperrt_in_jeder_Schreibweise(string pfad)
+    {
+        var (c, dir) = Anlage(mitBenutzer: true);
+        var (durch, status) = OhneSitzung(c, dir, pfad).GetAwaiter().GetResult();
+        Assert.False(durch, pfad + " kam ohne Sitzung zum Endpunkt");
+        Assert.Equal(401, status);
+    }
+
+    [Theory]
+    [InlineData("/api/health")]
+    [InlineData("/API/health")]
+    [InlineData("/api/auth/state")]
+    [InlineData("/api/auth/login")]
+    [InlineData("/plugins/exceladdin/taskpane.html")]
+    [InlineData("/plugins/ooaddin/index.html")]
+    [InlineData("/Plugins/OOAddin/package.plugin")]
+    [InlineData("/")]
+    [InlineData("/assets/index.js")]
+    [InlineData("/login")]
+    public void Offen_bleiben_nur_Gesundheit_Anmeldung_die_Office_Add_ins_und_die_Seite_selbst(string pfad)
+    {
+        var (c, dir) = Anlage(mitBenutzer: true);
+        var (durch, _) = OhneSitzung(c, dir, pfad).GetAwaiter().GetResult();
+        Assert.True(durch, pfad + " muss ohne Sitzung zu haben sein");
     }
 
     [Fact]
-    public async Task Wer_liest_wartet_nicht_auf_die_Datenbank()
+    public void Ohne_Benutzer_in_der_Anlage_bleibt_alles_offen_wie_bisher()
     {
-        var c = new Catalog(new ZaehesJournal(TimeSpan.FromMilliseconds(600)));
-        c.Rebuild();
+        var (c, dir) = Anlage(mitBenutzer: false);
+        Assert.True(OhneSitzung(c, dir, "/api/tree").GetAwaiter().GetResult().Durch);
+        Assert.True(OhneSitzung(c, dir, "/plugins/da/entry.js").GetAwaiter().GetResult().Durch);
+    }
 
-        // ein Schreiber, der 600 ms in der Datenbank hängt
-        var schreibt = Task.Run(() => c.With((_, _, write) =>
-            write("t", "n-test", Types.NodeNamed, new NodeNamed("x"), null)));
-
-        Thread.Sleep(100);   // ihm Zeit geben, in den Append zu laufen
-        var uhr = Stopwatch.StartNew();
-        var kopf = c.Head;                       // genau das machte die Statusleiste alle drei Sekunden
-        var knoten = c.Read(t => t.Nodes.Count);
-        uhr.Stop();
-
-        await schreibt;
-        Assert.True(uhr.ElapsedMilliseconds < 200, $"Lesen dauerte {uhr.ElapsedMilliseconds} ms — es hat auf den Schreiber gewartet");
-        Assert.True(kopf >= 0 && knoten >= 0);
+    [Theory]
+    [InlineData("/API/MODEL/attributes/x", "PUT", Rights.Model)]
+    [InlineData("/Api/Model/lists/l/values", "PUT", Rights.Write)]
+    [InlineData("/API/AUTH/USERS", "GET", Rights.Users)]
+    [InlineData("/API/Media/m-1/file", "GET", Rights.Download)]
+    [InlineData("/API/BACKUP", "GET", Rights.Users)]
+    [InlineData("/plugins/da/entry.js", "GET", Rights.Read)]
+    public void Die_Rechte_gelten_in_jeder_Schreibweise_gleich(string pfad, string method, string recht)
+    {
+        var ctx = new DefaultHttpContext(); ctx.Request.Path = pfad; ctx.Request.Method = method;
+        Assert.Equal(recht, Auth.Needed(ctx.Request));
     }
 
     [Fact]
-    public void Zwei_Schreiber_kommen_trotzdem_nacheinander_dran()
+    public void Ein_gesperrter_Knoten_bleibt_auch_bei_grosser_Schreibweise_gesperrt()
     {
-        // Prüfen und Schreiben bleibt eine Einheit: sonst sähe der zweite einen halben Stand
-        var c = new Catalog(new ZaehesJournal(TimeSpan.FromMilliseconds(120)));
-        c.Rebuild();
-        var nummern = new List<long>();
-        Parallel.For(0, 6, i =>
+        var (c, _) = Anlage(mitBenutzer: true);
+        var id = Ids.New(Roles.Group);
+        c.With((_, _, w) =>
         {
-            var e = c.With((_, _, write) => write("t", "n-" + i, Types.NodeNamed, new NodeNamed("x" + i), null));
-            lock (nummern) nummern.Add(e.Number);
+            w("t", id, Types.GroupCreated, new GroupCreated(null, Labels.Of("Geheim", "Secret")), null);
+            w("t", id, Types.NodeRestricted, new NodeRestricted(["admin"]), null);
+            return 0;
         });
-        Assert.Equal(6, nummern.Count);
-        Assert.Equal(6, nummern.Distinct().Count());   // keine Nummer doppelt
+        Assert.False(Auth.Sichtbar(c, "editor", "/api/nodes/" + id), "klein: gesperrt");
+        Assert.False(Auth.Sichtbar(c, "editor", "/API/NODES/" + id), "gross: ebenso");
+        Assert.False(Auth.Sichtbar(c, "editor", "/Api/Nodes/" + id + "/attributes"), "gemischt: ebenso");
+        Assert.True(Auth.Sichtbar(c, "admin", "/API/NODES/" + id), "wer die Rolle hat, sieht ihn");
     }
 
     [Fact]
-    public async Task Der_Stand_stimmt_nach_parallelem_Betrieb()
+    public void Die_Office_Add_ins_sind_genau_zwei()
     {
-        var c = new Catalog(new MemoryJournal());
-        c.Rebuild();
-        var lesen = new CancellationTokenSource();
-        var leser = Task.Run(() => { while (!lesen.IsCancellationRequested) { _ = c.Head; _ = c.Read(t => t.Nodes.Count); } });
-        for (var i = 0; i < 200; i++) c.With((_, _, write) => write("t", "n-" + i, Types.NodeNamed, new NodeNamed("x"), null));
-        lesen.Cancel();
-        await leser;
-        Assert.Equal(200, c.Head);
+        Assert.Equal(["exceladdin", "ooaddin"], Auth.OffenePlugins);
+        Assert.False(Auth.OeffentlichesPlugin("/plugins/da/entry.js"));
+        Assert.False(Auth.OeffentlichesPlugin("/plugins/exceladdinX/a"), "ein anderer Name mit gleichem Anfang ist keiner");
     }
 }

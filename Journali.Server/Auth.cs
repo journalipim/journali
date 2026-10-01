@@ -179,7 +179,8 @@ public static class Auth
     /// <summary>Welches Recht braucht diese Anfrage? Null = eigenes Konto, immer erlaubt. Die Rollen sagen dann, wer es hat.</summary>
     public static string? Needed(HttpRequest req)
     {
-        var path = req.Path.Value ?? ""; var method = req.Method;
+        // Das Routing ignoriert Gross- und Kleinschreibung („/API/MODEL/…“ erreicht /api/model) — die Rechte müssen es auch (01.10.2026)
+        var path = (req.Path.Value ?? "").ToLowerInvariant(); var method = req.Method;
         var read = method is "GET" or "HEAD" or "OPTIONS";
         if (path.StartsWith("/api/auth/me") || path.StartsWith("/api/auth/logout") || path.StartsWith("/api/auth/password") || path.StartsWith("/api/auth/tokens")) return null;   // eigenes Konto
         if (path.StartsWith("/api/auth/rights") || path.StartsWith("/api/auth/people")) return path.StartsWith("/api/auth/people") ? Rights.Read : null;   // Personen (Key, Name, Rolle) für Zuweisungen darf jeder Leser sehen                                                                         // das Vokabular darf jeder lesen
@@ -229,6 +230,7 @@ public static class Auth
     /// </summary>
     public static bool IstDatei(string path)
     {
+        path = path.ToLowerInvariant();
         if (!path.StartsWith("/api/media/")) return false;
         var teile = path["/api/media/".Length..].Split('/', StringSplitOptions.RemoveEmptyEntries);
         if (teile.Length == 2 && teile[0] == "blob") return true;
@@ -269,11 +271,23 @@ public static class Auth
             && (monat <= 0 || usage.Sum(leute, Usage.Ab(Usage.MonthStart(heute), ab), heute, cut) < monat));
     });
 
+    /// <summary>Die Office-Add-ins (Excel, OnlyOffice) lädt das Office-Programm ohne Sitzung von diesem Server: ihre Dateien bleiben offen.</summary>
+    public static readonly string[] OffenePlugins = ["exceladdin", "ooaddin"];
+    public static bool OeffentlichesPlugin(string path)
+    {
+        var teile = path.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        return teile.Length >= 2 && teile[0].Equals("plugins", StringComparison.OrdinalIgnoreCase) && OffenePlugins.Contains(teile[1], StringComparer.OrdinalIgnoreCase);
+    }
+
     /// <summary>Die Sperre: vor allem unter /api. Ohne Benutzer offen (X-Actor wie bisher); sonst Sitzung/Token nötig, X-Actor wird gesetzt.</summary>
     public static Func<HttpContext, Func<Task>, Task> Middleware(Catalog c, string dir) => async (ctx, next) =>
     {
         var path = ctx.Request.Path.Value ?? "";
-        if (!path.StartsWith("/api") || path.StartsWith("/api/health") || path.StartsWith("/api/auth/login") || path.StartsWith("/api/auth/setup") || path.StartsWith("/api/auth/claim") || path.StartsWith("/api/auth/state")) { await next(); return; }
+        // Das Routing ignoriert Gross- und Kleinschreibung — „/API/tree“ erreichte den Baum ohne Anmeldung, weil hier nur „/api“ galt (01.10.2026).
+        // Dazu die Dateien der Plugins (/plugins/…): sie liegen ausserhalb von /api und waren offen; ohne Sitzung gibt es nur noch die der Office-Add-ins.
+        bool Beginnt(string vorn) => path.StartsWith(vorn, StringComparison.OrdinalIgnoreCase);
+        var plugin = Beginnt("/plugins/");
+        if ((!Beginnt("/api") && !plugin) || (plugin && OeffentlichesPlugin(path)) || Beginnt("/api/health") || Beginnt("/api/auth/login") || Beginnt("/api/auth/setup") || Beginnt("/api/auth/claim") || Beginnt("/api/auth/state")) { await next(); return; }
         if (!Enabled(c)) { await next(); return; }   // noch kein Benutzer: offen
         var who = Resolve(ctx, c, dir);
         if (who is null) { ctx.Response.StatusCode = 401; await ctx.Response.WriteAsJsonAsync(new { error = "Anmeldung nötig.", template = "Anmeldung nötig.", login = true }); return; }
@@ -298,10 +312,11 @@ public static class Auth
     {
         var teile = path.Split('/', StringSplitOptions.RemoveEmptyEntries);   // api, nodes|media, id, …
         if (teile.Length < 3) return true;
-        return teile[1] switch
+        // die Namen der Pfadstücke ohne Gross-/Kleinschreibung (das Routing hat sie auch so gelesen), die Kennungen wie sie kommen
+        return teile[1].ToLowerInvariant() switch
         {
             "nodes" => c.Lesen((_, tree) => !tree.Nodes.TryGetValue(teile[2], out var n) || tree.Visible(n, role)),
-            "media" when teile[2] == "folders" && teile.Length > 3 => c.Lesen((_, _) => c.Media.FolderVisible(teile[3], role)),
+            "media" when teile[2].Equals("folders", StringComparison.OrdinalIgnoreCase) && teile.Length > 3 => c.Lesen((_, _) => c.Media.FolderVisible(teile[3], role)),
             "media" => c.Lesen((_, _) => !c.Media.All.TryGetValue(teile[2], out var m) || c.Media.Visible(m, role)),
             _ => true,
         };
