@@ -90,7 +90,29 @@ public sealed class ModelCatalog : IProjection
     /// <summary>Attribute einer Gruppe, nach Schlüssel; die Reihenfolge fürs Auge kommt aus der Sicht.
     /// Dazu gehört ein Attribut über seine Zuordnung (<c>group</c>) und über jede Mitgliedschaft (n:m, 29.09.2026) — jedes einmal.</summary>
     public IEnumerable<AttributeDefinition> AttributesOf(string group) =>
-        Attributes.Values.Where(a => (a.Group ?? "") == group || (AttributeGroups.TryGetValue(a.Key, out var gs) && gs.Contains(group))).OrderBy(a => a.Key);
+        (_nachGruppe ?? BaueGruppenIndex()).TryGetValue(group, out var liste) ? liste : [];
+
+    // Gruppe → ihre Attribute, einmal gebaut und bei jeder Änderung des Modells (Apply) verworfen. Ohne ihn ging jede Frage nach einer Gruppe durch alle Attribute und
+    // sortierte sie; die Tabelle des Baums fragte das je Knoten und Gruppe (1 500 Attribute × 2 200 Knoten: 2,3 s). Gelesen wird gleichzeitig, verändert nur unter der
+    // Schreibsperre des Servers — der Index gehört nicht in den Schnappschuss.
+    [System.Text.Json.Serialization.JsonIgnore] private Dictionary<string, AttributeDefinition[]>? _nachGruppe;
+    private static readonly object IndexSperre = new();
+
+    private Dictionary<string, AttributeDefinition[]> BaueGruppenIndex()
+    {
+        lock (IndexSperre)
+        {
+            if (_nachGruppe is { } fertig) return fertig;
+            var d = new Dictionary<string, List<AttributeDefinition>>();
+            void Zu(string g, AttributeDefinition a) { if (!d.TryGetValue(g, out var l)) d[g] = l = []; if (l.Count == 0 || !ReferenceEquals(l[^1], a)) l.Add(a); }
+            foreach (var a in Attributes.Values.OrderBy(a => a.Key))
+            {
+                Zu(a.Group ?? "", a);
+                if (AttributeGroups.TryGetValue(a.Key, out var gs)) foreach (var g in gs) if (g != (a.Group ?? "")) Zu(g, a);
+            }
+            return _nachGruppe = d.ToDictionary(k => k.Key, k => k.Value.ToArray());
+        }
+    }
 
     /// <summary>Die Gruppen eines Attributs: Zuordnung und Mitgliedschaften zusammen, jede einmal, nach Schlüssel.</summary>
     public IEnumerable<string> GroupsOf(string attribute)
@@ -114,6 +136,7 @@ public sealed class ModelCatalog : IProjection
 
     public void Apply(Entry entry)
     {
+        _nachGruppe = null;
         LastApplied = entry.Number;
         switch (entry.Type)
         {

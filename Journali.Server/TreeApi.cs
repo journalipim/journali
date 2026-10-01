@@ -42,12 +42,15 @@ public static class TreeApi
                 var cols = wanted is { Length: > 0 }
                     ? wanted.Distinct().Select(k => model.Attributes.GetValueOrDefault(k)).Where(a => a is not null).Select(a => a!).ToList()
                     : nodes.SelectMany(n => CompletenessRules.ActiveAttributes(tree, model, n)).DistinctBy(a => a.Key).ToList();
-                var rows = nodes.Select(n => new
+                var rows = nodes.Select(n =>
+                {
+                var aktiv = CompletenessRules.ActiveAttributes(tree, model, n).Select(x => x.Key).ToHashSet();   // einmal je Knoten, nicht je Spalte
+                return new
                 {
                     row = NodeRow.Of(tree, model, n),
                     // Spalten, die an diesem Knoten nicht gelten (Gruppe erst ab tieferer Rolle, Attribut nicht erlaubt) —
                     // bei deep ist die Spaltenliste die Vereinigung über alle Knoten (Datenqualität)
-                    inactive = cols.Where(a => !CompletenessRules.ActiveAttributes(tree, model, n).Any(x => x.Key == a.Key)).Select(a => a.Key).ToList(),
+                    inactive = cols.Where(a => !aktiv.Contains(a.Key)).Select(a => a.Key).ToList(),
                     values = cols.ToDictionary(a => a.Key, a =>
                     {
                         var (v, from) = tree.Resolve(model, n, a.Key, a.PerLocale ? locale : null, a.PerChannel ? channel : null);
@@ -56,6 +59,7 @@ public static class TreeApi
                         // Beleg am Wert (auch ohne Wert: „angefragt bei … bis …“)
                         return new { value = v, own = from is not null && from.Id == n.Id, from = from is not null && from.Id != n.Id ? from.Id : null, source = SourceView.Of(n, new Axis(a.Key, a.PerLocale ? locale : null, a.PerChannel ? channel : null)) };
                     }),
+                };
                 }).ToList();
                 return Results.Ok(new { node = NodeRow.Of(tree, model, root), columns = cols.Select(a => new { a.Key, a.Type, a.Label, a.Unit, a.PerLocale, a.Required, a.List, a.Inheritable, a.Multiple, a.Pattern, computed = a.IsComputed }).ToList(), rows });
             }));

@@ -112,6 +112,13 @@ public static class SemanticApi
             return new { id = n.Id, role = n.Role, label = NodeRow.LabelOf(tree, model, n), path = tree.Ancestors(n).Reverse().Select(a => NodeRow.LabelOf(tree, model, a)).ToList(), score = Math.Round(1 - h.Distance, 4) };
         }).ToList());
 
+    // Der Stand der Einbettungen für die Anzeige, je Modell 20 Sekunden gemerkt
+    private static readonly Dictionary<string, (DateTime Wann, object Stand)> _stand = new();
+    private static readonly TimeSpan StandDauer = TimeSpan.FromSeconds(20);
+    public static object? StandAlt(string modell) { lock (_stand) return _stand.TryGetValue(modell, out var e) && DateTime.UtcNow - e.Wann < StandDauer ? e.Stand : null; }
+    public static void StandMerken(string modell, object stand) { lock (_stand) _stand[modell] = (DateTime.UtcNow, stand); }
+    public static void StandVerwerfen() { lock (_stand) _stand.Clear(); }
+
     public static void Map(RouteGroupBuilder api, string jobsDir)
     {
         // Stand: wie viele Abschnitte und Knoten einen Vektor haben, was offen ist — die Zahlen des Systemjobs embed
@@ -119,12 +126,18 @@ public static class SemanticApi
         {
             var m = Blank(model) ?? embedder.Model;
             if (!vectors.Ready) return Results.Ok(new { ready = false, reason = vectors.Reason, model = m, plugin = embedder.Available, pluginReason = embedder.Reason, chunks = 0L, embedded = 0L, nodes = 0L, nodesTotal = 0, offen = 0L, gelesen = 0L, total = 0L });
+            // Der Stand dient der Anzeige (Kachel des Systemjobs, Nachziehen, Bereitschaft) und wird alle paar Sekunden gefragt: die Abfragen an die Datenbank kosten
+            // gut 0,3 s, und nach jedem Schreiben ins Journal rechnete der Aufruf die Texte aller Knoten neu — unter der Lesesperre, hinter der alles andere wartet.
+            // Darum gilt der Stand 20 Sekunden; das Ablegen von Vektoren (PUT) verwirft ihn. Die Postenliste des Jobs (pending) rechnet immer frisch.
+            if (StandAlt(m) is { } alt) return Results.Ok(alt);
             var (chunks, embedded, nodesDone) = await vectors.StatsAsync(m, ct);
             var known = await vectors.NodeHashesAsync(m, ct);
             var texte = KnotenTexte(c);
             var offeneKnoten = PendingNodes(texte, known).Count;
-            return Results.Ok(new { ready = true, reason = (string?)null, model = m, plugin = embedder.Available, pluginReason = embedder.Reason, indexError = vectors.IndexError,
-                chunks, embedded, nodes = nodesDone, nodesTotal = texte.Count, offen = (chunks - embedded) + offeneKnoten, gelesen = embedded + nodesDone, total = chunks + texte.Count });
+            var stand = new { ready = true, reason = (string?)null, model = m, plugin = embedder.Available, pluginReason = embedder.Reason, indexError = vectors.IndexError,
+                chunks, embedded, nodes = nodesDone, nodesTotal = texte.Count, offen = (chunks - embedded) + offeneKnoten, gelesen = embedded + nodesDone, total = chunks + texte.Count };
+            StandMerken(m, stand);
+            return Results.Ok(stand);
         });
 
         // Die offene Postenliste: Abschnitte und Knoten ohne Vektor zu diesem Modell — der Job holt sie in Runden
@@ -148,6 +161,7 @@ public static class SemanticApi
             var m = Blank(body.Model) ?? embedder.Model;
             var chunks = await vectors.PutChunksAsync(m, (body.Chunks ?? []).Select(x => new Vectors.ChunkVector(x.Media, x.Sha256, x.Seq, x.Vector)).ToList(), ct);
             var nodes = await vectors.PutNodesAsync(m, (body.Nodes ?? []).Select(x => new Vectors.NodeVector(x.Node, x.Locale, x.Hash, x.Vector)).ToList(), body.Gone, ct);
+            StandVerwerfen();
             return Results.Ok(new { model = m, chunks, nodes });
         });
 

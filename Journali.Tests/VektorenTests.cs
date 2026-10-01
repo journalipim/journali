@@ -100,6 +100,19 @@ public class VektorenTests
     }
 
     [Fact]
+    public void Der_Stand_der_Einbettungen_gilt_je_Modell_eine_Weile_und_wird_beim_Ablegen_verworfen()
+    {
+        SemanticApi.StandVerwerfen();
+        Assert.Null(SemanticApi.StandAlt("m1"));
+        var stand = new { offen = 3 };
+        SemanticApi.StandMerken("m1", stand);
+        Assert.Same(stand, SemanticApi.StandAlt("m1"));
+        Assert.Null(SemanticApi.StandAlt("m2"));          // ein anderes Modell hat seinen eigenen Stand
+        SemanticApi.StandVerwerfen();                      // der PUT der Vektoren verwirft ihn
+        Assert.Null(SemanticApi.StandAlt("m1"));
+    }
+
+    [Fact]
     public void Je_Sprache_des_Modells_ein_Text_je_Knoten()
     {
         var c = new Catalog(new MemoryJournal()); c.Rebuild(); c.SeedMissing();

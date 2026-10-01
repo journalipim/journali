@@ -32,6 +32,35 @@ public class AttributeGroupsTests
     private static void Mitglied(MemoryJournal j, string key, params string[] groups) =>
         j.Append("t", Model.AttributeStream + key, Types.AttributeGroupsSet, Types.Serialize(new AttributeGroupsSet(key, groups)));
 
+    /// <summary>Der Index Gruppe → Attribute (Geschwindigkeit der Tabelle im Baum) gibt dieselbe Liste wie die Suche über alle Attribute und folgt jeder Änderung des Modells.</summary>
+    [Fact]
+    public void Der_Index_der_Gruppen_folgt_dem_Modell_und_ordnet_nach_Schluessel()
+    {
+        var (journal, model, _) = Build(j =>
+        {
+            Gruppe(j, "a"); Gruppe(j, "b");
+            Attribut(j, new AttributeDefinition("zeta", Labels.Of("Z", "Z"), AttributeTypes.Text, Group: "a"));
+            Attribut(j, new AttributeDefinition("alpha", Labels.Of("A", "A"), AttributeTypes.Text, Group: "a"));
+            Attribut(j, new AttributeDefinition("mitte", Labels.Of("M", "M"), AttributeTypes.Text));
+            Mitglied(j, "mitte", "a", "b");
+            Mitglied(j, "alpha", "a", "b");   // Heimatgruppe a und Mitglied von a: einmal
+        });
+        string[] Keys(string g) => model.AttributesOf(g).Select(x => x.Key).ToArray();
+        Assert.Equal(["alpha", "mitte", "zeta"], Keys("a"));
+        Assert.Equal(["alpha", "mitte"], Keys("b"));
+        Assert.Empty(model.AttributesOf("gibtsnicht"));
+        // eine Änderung des Modells wird beim nächsten Zugriff gesehen — kein veralteter Index
+        Attribut(journal, new AttributeDefinition("beta", Labels.Of("B", "B"), AttributeTypes.Text, Group: "b"));
+        Projector.CatchUp(journal, model);
+        Assert.Equal(["alpha", "beta", "mitte"], Keys("b"));
+        journal.Append("t", Model.AttributeStream + "alpha", Types.AttributeRetired, Types.Serialize(new AttributeRetired("alpha")));
+        Projector.CatchUp(journal, model);
+        Assert.Equal(["beta", "mitte"], Keys("b"));
+        Assert.Equal(["mitte", "zeta"], Keys("a"));
+        // die Menge ohne Gruppe: Attribute ohne Heimat stehen unter ""
+        Assert.Contains("mitte", model.AttributesOf("").Select(x => x.Key));
+    }
+
     /// <summary>Zwei Äste, ein Attribut: die Spannungsversorgung gilt an beiden, ohne zweites Attribut.</summary>
     [Fact]
     public void Ein_Attribut_in_zwei_Gruppen_gilt_an_beiden_Aesten()
