@@ -99,10 +99,12 @@ function railDrop(target) {
       <div class="bar" :style="`width:${Math.round(store.progress.done / Math.max(1, store.progress.total) * 100)}%`" />
       <span class="txt">{{ $t("{0} … {1} / {2} — Fenster offen lassen", [store.progress.text, store.progress.done, store.progress.total]) }}</span>
     </div>
-    <nav class="rail" v-if="!route.query.popup && route.path !== '/setup' && !abgemeldet">
+    <nav class="rail" v-if="!route.query.popup && route.path !== '/setup'">
       <!-- Logo: web/public/logo.png — Vite legt public/ neben die Seite -->
       <router-link to="/tree" class="rail-logo" :title="$t('journali PIM')"><img :src="'/logo-128.png'" :alt="$t('journali PIM')" onerror="this.style.display='none'" /></router-link>
-      <template v-for="n in railItems" :key="n.to">
+      <!-- Abgemeldet bleiben das Logo und der Punkt: er sagt, ob Server und Datenbank da sind -->
+      <div v-if="abgemeldet" class="rail-spacer" />
+      <template v-for="n in (abgemeldet ? [] : railItems)" :key="n.to">
         <div v-if="n.to === 'spacer'" class="rail-spacer" :class="{ over: dragKey }" @dragover.prevent @drop="railDrop('spacer')" />
         <router-link v-else :to="n.href ?? n.to" class="rail-item" :class="{ active: n.topic ? topicOfPath(route.path) === n.topic : route.path.startsWith(n.to), dragging: dragKey === n.to }"
           :title="railTitle(n)" draggable="true"

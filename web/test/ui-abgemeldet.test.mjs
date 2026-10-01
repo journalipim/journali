@@ -26,7 +26,9 @@ test('App.vue blendet Leiste, Kennzahlen, Lesezeichen und Namen aus, wenn man ab
   const App = (await import('../src/App.vue')).default
   assert.ok(App, 'App.vue übersetzt')
   const q = readFileSync(new URL('../src/App.vue', import.meta.url), 'utf8').replace(/\r\n/g, '\n')
-  assert.match(q, /<nav class="rail" v-if="[^"]*!abgemeldet"/, 'die Leiste links')
+  const nav = q.slice(q.indexOf('<nav class="rail"'), q.indexOf('</nav>'))
+  assert.match(nav, /v-for="n in \(abgemeldet \? \[\] : railItems\)"/, 'die Einträge der Leiste erscheinen nur angemeldet')
+  assert.ok(nav.includes('rail-logo') && nav.includes('rail-status') && !/rail-status[^>]*v-if/.test(nav), 'Logo und Punkt (Server und Datenbank erreichbar) bleiben auch abgemeldet')
   const kopf = q.slice(q.indexOf('<header class="status"'), q.indexOf('</header>'))
   const geschuetzt = ['#{{ store.head }}', '▣ {{ store.nodes }}', '<UsageMini', 'lesezeichen-knopf', 'store.auth.name || store.auth.user', '✧ KI {0}']
   // alles, was zu einer angemeldeten Person gehört, steht in einem Block v-if="!abgemeldet"

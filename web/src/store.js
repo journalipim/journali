@@ -155,6 +155,14 @@ export const store = reactive({
     try {
       const h = await api.get('/api/health' + (this.ort ? `?ort=${encodeURIComponent(this.ort)}` : ''))
       this.online = true
+      // Ohne Sitzung kommt nur Version und Bau (abgemeldet: true, kein Journalstand): nichts von einer früheren Anmeldung bleibt stehen, und das Modell wird nicht geholt (401)
+      if (h.abgemeldet === true) {
+        this.head = null; this.nodes = null; this.usage = null; this.presence = []; this.tarif = null; this.registriert = null; this.model = null
+        this.version = h.version ?? ''
+        if (h.built) { const d = new Date(h.built); const zz = n => String(n).padStart(2, '0'); this.build = `${zz(d.getDate())}${zz(d.getMonth() + 1)}.${zz(d.getHours())}${zz(d.getMinutes())}`; this.builtAt = d.toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) }
+        this.error = ''
+        return
+      }
       const changed = h.head !== this.head
       this.head = h.head
       this.nodes = h.nodes

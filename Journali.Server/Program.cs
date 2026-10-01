@@ -246,6 +246,7 @@ app.Use(async (ctx, next) =>
 
 // Was hier wirklich läuft: beides einmal beim Start lesen. Der Zeitstempel der Datei ändert sich
 // beim nächsten Bau — wer ihn bei jedem Aufruf liest, meldet einen Stand, den er gar nicht geladen hat.
+long dbGeprueft = -10_000;   // wann die Datenbank zuletzt geantwortet hat (TickCount64)
 var gebautAm = System.IO.File.GetLastWriteTimeUtc(typeof(Program).Assembly.Location);
 var laufendeVersion = typeof(Program).Assembly.GetName().Version?.ToString(3);
 
@@ -259,7 +260,15 @@ else Console.WriteLine($"journali: {(anmeldung == Auth.Anmeldung.Einrichten ? "n
 
 // ---- Stand und Modell ----------------------------------------------------
 
-api.MapGet("/health", (HttpRequest req, Catalog c) => new
+// Ohne Sitzung (es gibt Benutzer, der Fragende hat keine) sagt /health nur, dass der Server und seine Datenbank da sind, dazu Version und Bau —
+// Journalstand, Knotenzahl, Nutzung und Tarif gehören zur angemeldeten Person (01.10.2026).
+api.MapGet("/health", (HttpRequest req, Catalog c) =>
+{
+    DatenbankPruefen();   // wirft bei unerreichbarer Datenbank; die Wache oben macht daraus 503
+    var wer = req.HttpContext.Items["user"] as string;
+    if (string.IsNullOrEmpty(wer) && Auth.Enabled(c)) wer = Auth.Resolve(req.HttpContext, c, dataDir)?.User;
+    if (Auth.Enabled(c) && string.IsNullOrEmpty(wer)) return Results.Ok(new { ok = true, abgemeldet = true, built = gebautAm, version = laufendeVersion });
+    return Results.Ok(new
 {
     head = c.Head,
     nodes = c.Read(t => t.Nodes.Count),
@@ -277,6 +286,17 @@ api.MapGet("/health", (HttpRequest req, Catalog c) => new
     // Registrierung beim Lizenzserver: null = noch nicht gefragt. Die Oberfläche fragt dann einmal (Recht users).
     registriert = c.Registriert,
 });
+});
+
+/// <summary>Fragt die Datenbank, höchstens alle 5 Sekunden: der Punkt unten links in der Oberfläche soll sagen, ob die eingestellte Datenbank da ist.
+/// Der Journalstand im Speicher sagt das nicht. Fällt die Anfrage aus, wirft sie, und der nächste Aufruf versucht es sofort wieder.</summary>
+void DatenbankPruefen()
+{
+    var jetzt = Environment.TickCount64;
+    if (jetzt - Interlocked.Read(ref dbGeprueft) < 5000) return;
+    _ = journal.Head;
+    Interlocked.Exchange(ref dbGeprueft, jetzt);
+}
 
 /// <summary>Der Puls der Präsenz: „ich bin hier“ und wer sonst noch — mit Namen, wie die Oberfläche sie zeigt.</summary>
 object[] Dort(HttpRequest req, Catalog c)
