@@ -201,6 +201,35 @@ function classesByAttribute(bricks) {
   }
   return m2;
 }
+async function einschalten(ctx, t2) {
+  const { api: api2, store: store2, tree: tree2 } = ctx;
+  if (!tree2.loaded) await tree2.load();
+  const settings = await api2.get("/api/plugins/gpc/data/settings").catch(() => null) ?? {};
+  const m2 = store2.model;
+  let veraltet = false;
+  if (settings.group && !(m2?.groups ?? []).some((g) => g.key === settings.group)) {
+    delete settings.group;
+    veraltet = true;
+  }
+  if (settings.classAttr && !(m2?.attributes ?? []).some((a) => a.key === settings.classAttr)) {
+    delete settings.classAttr;
+    veraltet = true;
+  }
+  if (veraltet) await api2.post("/api/plugins/gpc/data/settings", settings, "PUT");
+  const sys = systemSpec(settings);
+  const fehlt = !(store2.model?.groups ?? []).some((g) => g.key === sys.group) || !(store2.model?.attributes ?? []).some((a) => a.key === sys.classAttr);
+  if (fehlt && !(await ctx.system?.ankuendigen?.({ label: "GPC", text: t2("Das Plugin legt die Attributgruppe {0} mit dem Attribut {1} an und hängt die Gruppe an die Wurzeln. Ohne sie arbeitet es nicht, und solange es an ist, lassen sie sich nicht zurückziehen.", [sys.group, sys.classAttr]) }) ?? true)) return false;
+  const r = await api2.post("/api/classification/ensure", { system: sys });
+  const group = r?.group ?? systemSpec(settings).group;
+  if (r?.groupRenamed) await api2.post("/api/plugins/gpc/data/settings", { ...settings, group }, "PUT");
+  await store2.poll?.(true);
+  for (const root of tree2.rows.filter((row) => !row.parent && row.role !== "rubric")) {
+    const have = (root.groups ?? "").split(",").filter(Boolean);
+    if (!have.includes(group)) await api2.post(`/api/nodes/${encodeURIComponent(root.id)}/groups`, { groups: [...have, group] }, "PUT");
+  }
+  await store2.poll?.(true);
+  await tree2.load?.(true);
+}
 const schluessel = (settings) => {
   const s = systemSpec(settings ?? {});
   return { group: s.group, classAttr: s.classAttr };
@@ -1573,33 +1602,7 @@ async function loadSettings() {
 }
 cache.loaded = loadSettings();
 async function install(ctx) {
-  const { api: api2, store: store2, tree: tree2 } = ctx;
-  if (!tree2.loaded) await tree2.load();
-  const settings = await api2.get("/api/plugins/gpc/data/settings").catch(() => null) ?? {};
-  const m2 = store2.model;
-  let veraltet = false;
-  if (settings.group && !(m2?.groups ?? []).some((g) => g.key === settings.group)) {
-    delete settings.group;
-    veraltet = true;
-  }
-  if (settings.classAttr && !(m2?.attributes ?? []).some((a) => a.key === settings.classAttr)) {
-    delete settings.classAttr;
-    veraltet = true;
-  }
-  if (veraltet) await api2.post("/api/plugins/gpc/data/settings", settings, "PUT");
-  const sys = systemSpec(settings);
-  const fehlt = !(store2.model?.groups ?? []).some((g) => g.key === sys.group) || !(store2.model?.attributes ?? []).some((a) => a.key === sys.classAttr);
-  if (fehlt && !(await ctx.system?.ankuendigen?.({ label: "GPC", text: t("Das Plugin legt die Attributgruppe {0} mit dem Attribut {1} an und hängt die Gruppe an die Wurzeln. Ohne sie arbeitet es nicht, und solange es an ist, lassen sie sich nicht zurückziehen.", [sys.group, sys.classAttr]) }) ?? true)) return false;
-  const r = await api2.post("/api/classification/ensure", { system: sys });
-  const group = r?.group ?? systemSpec(settings).group;
-  if (r?.groupRenamed) await api2.post("/api/plugins/gpc/data/settings", { ...settings, group }, "PUT");
-  await store2.poll?.(true);
-  for (const root of tree2.rows.filter((row) => !row.parent && row.role !== "rubric")) {
-    const have = (root.groups ?? "").split(",").filter(Boolean);
-    if (!have.includes(group)) await api2.post(`/api/nodes/${encodeURIComponent(root.id)}/groups`, { groups: [...have, group] }, "PUT");
-  }
-  await store2.poll?.(true);
-  await tree2.load?.(true);
+  return einschalten(ctx, t);
 }
 let angemeldet = false;
 async function bandMount({ head, body }, nodeId, ctx) {

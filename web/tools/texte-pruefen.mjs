@@ -38,10 +38,10 @@ export function quellSchluessel() {
   return set
 }
 
-/// Browserdateien eines Plugins: src/** (gebaut), sonst entry.js; dazu browser.js — Prozess-Skripte bleiben draussen
+/// Browserdateien eines Plugins: src/** (gebaut) und core.mjs daneben, sonst entry.js; dazu browser.js — Prozess-Skripte bleiben draussen
 export function pluginDateien(key) {
   const d = path.join(PLUGINS, key); const out = []
-  if (fs.existsSync(path.join(d, 'src'))) out.push(...walk(path.join(d, 'src')))
+  if (fs.existsSync(path.join(d, 'src'))) { out.push(...walk(path.join(d, 'src'))); if (fs.existsSync(path.join(d, 'core.mjs'))) out.push(path.join(d, 'core.mjs')) }   // core.mjs: Logik, die Ansicht und Test teilen
   else if (fs.existsSync(path.join(d, 'entry.js'))) out.push(path.join(d, 'entry.js'))
   if (fs.existsSync(path.join(d, 'browser.js'))) out.push(path.join(d, 'browser.js'))
   return out

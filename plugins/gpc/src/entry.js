@@ -7,7 +7,7 @@ import { t } from 'journali'
 import View from './View.vue'
 import Band from './Band.vue'
 import { oeffneKlasse } from './modal.js'
-import { systemSpec } from '../core.mjs'
+import { systemSpec, einschalten } from '../core.mjs'
 
 // Die Einstellungen (gemerkte Schlüssel nach einer Namenskollision) braucht das Band, bevor es zeichnet
 const cache = { settings: {}, loaded: null }
@@ -19,29 +19,7 @@ cache.loaded = loadSettings()
 /// Einmal beim Einschalten: die Systemobjekte entstehen — die Gruppe GPC mit dem Klassenattribut — und hängen an jeder Wurzel des Pflegebaums.
 /// Der Server meldet sie an; solange das Plugin an ist, lassen sie sich nicht zurückziehen. Die Gruppe einer Klasse und ihre Attribute entstehen
 /// erst mit dem ersten Brick, den jemand zuweist.
-async function install(ctx) {
-  const { api, store, tree } = ctx
-  if (!tree.loaded) await tree.load()
-  const settings = (await api.get('/api/plugins/gpc/data/settings').catch(() => null)) ?? {}
-  // Einstellungen aus früheren Versionen nennen eine Gruppe oder ein Klassenattribut, die es nicht (mehr) gibt: es gelten wieder die Namen des Systems
-  const m = store.model
-  let veraltet = false
-  if (settings.group && !(m?.groups ?? []).some(g => g.key === settings.group)) { delete settings.group; veraltet = true }
-  if (settings.classAttr && !(m?.attributes ?? []).some(a => a.key === settings.classAttr)) { delete settings.classAttr; veraltet = true }
-  if (veraltet) await api.post('/api/plugins/gpc/data/settings', settings, 'PUT')
-  const sys = systemSpec(settings)
-  const fehlt = !(store.model?.groups ?? []).some(g => g.key === sys.group) || !(store.model?.attributes ?? []).some(a => a.key === sys.classAttr)
-  if (fehlt && !(await ctx.system?.ankuendigen?.({ label: 'GPC', text: t('Das Plugin legt die Attributgruppe {0} mit dem Attribut {1} an und hängt die Gruppe an die Wurzeln. Ohne sie arbeitet es nicht, und solange es an ist, lassen sie sich nicht zurückziehen.', [sys.group, sys.classAttr]) }) ?? true)) return false   // abgelehnt: das Plugin ist wieder aus
-  const r = await api.post('/api/classification/ensure', { system: sys })
-  const group = r?.group ?? systemSpec(settings).group
-  if (r?.groupRenamed) await api.post('/api/plugins/gpc/data/settings', { ...settings, group }, 'PUT')
-  await store.poll?.(true)
-  for (const root of tree.rows.filter(row => !row.parent && row.role !== 'rubric')) {
-    const have = (root.groups ?? '').split(',').filter(Boolean)
-    if (!have.includes(group)) await api.post(`/api/nodes/${encodeURIComponent(root.id)}/groups`, { groups: [...have, group] }, 'PUT')
-  }
-  await store.poll?.(true); await tree.load?.(true)
-}
+async function install(ctx) { return einschalten(ctx, t) }
 
 /// Das Band am Knoten: ein Vue-Baustein im Körper, der Kopf bekommt die kurze Zusammenfassung
 let angemeldet = false   // einmal je Sitzung: Bestand von früher meldet sich beim ersten Band an

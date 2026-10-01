@@ -172,3 +172,27 @@ export function classesByAttribute(bricks) {
   for (const b of bricks) for (const [ac] of b.a) { if (!m.has(ac)) m.set(ac, []); m.get(ac).push(b.code) }
   return m
 }
+
+export async function einschalten(ctx, t) {
+  const { api, store, tree } = ctx
+  if (!tree.loaded) await tree.load()
+  const settings = (await api.get('/api/plugins/gpc/data/settings').catch(() => null)) ?? {}
+  // Einstellungen aus früheren Versionen nennen eine Gruppe oder ein Klassenattribut, die es nicht (mehr) gibt: es gelten wieder die Namen des Systems
+  const m = store.model
+  let veraltet = false
+  if (settings.group && !(m?.groups ?? []).some(g => g.key === settings.group)) { delete settings.group; veraltet = true }
+  if (settings.classAttr && !(m?.attributes ?? []).some(a => a.key === settings.classAttr)) { delete settings.classAttr; veraltet = true }
+  if (veraltet) await api.post('/api/plugins/gpc/data/settings', settings, 'PUT')
+  const sys = systemSpec(settings)
+  const fehlt = !(store.model?.groups ?? []).some(g => g.key === sys.group) || !(store.model?.attributes ?? []).some(a => a.key === sys.classAttr)
+  if (fehlt && !(await ctx.system?.ankuendigen?.({ label: 'GPC', text: t('Das Plugin legt die Attributgruppe {0} mit dem Attribut {1} an und hängt die Gruppe an die Wurzeln. Ohne sie arbeitet es nicht, und solange es an ist, lassen sie sich nicht zurückziehen.', [sys.group, sys.classAttr]) }) ?? true)) return false   // abgelehnt: das Plugin ist wieder aus
+  const r = await api.post('/api/classification/ensure', { system: sys })
+  const group = r?.group ?? systemSpec(settings).group
+  if (r?.groupRenamed) await api.post('/api/plugins/gpc/data/settings', { ...settings, group }, 'PUT')
+  await store.poll?.(true)
+  for (const root of tree.rows.filter(row => !row.parent && row.role !== 'rubric')) {
+    const have = (root.groups ?? '').split(',').filter(Boolean)
+    if (!have.includes(group)) await api.post(`/api/nodes/${encodeURIComponent(root.id)}/groups`, { groups: [...have, group] }, 'PUT')
+  }
+  await store.poll?.(true); await tree.load?.(true)
+}
