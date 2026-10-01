@@ -436,9 +436,13 @@ public static class Auth
             var key = Key(body.User); var pw = body.Password ?? "";
             // Erst die Bremse, dann (und nur dann) die Prüfung des Passworts: sie kostet 210 000 Runden PBKDF2. Gesperrt wird je Name und je Absender.
             var absender = "ip:" + (ctx.Connection.RemoteIpAddress?.ToString() ?? "?"); var name = "u:" + (key ?? "?");
-            if ((Bremse.Gesperrt(absender) ?? Bremse.Gesperrt(name)) is { } rest)
+            var gesperrtAbsender = Bremse.Gesperrt(absender) is not null; var gesperrtName = Bremse.Gesperrt(name) is not null;
+            if (gesperrtAbsender || gesperrtName)
             {
-                var sek = (int)Math.Ceiling(rest.TotalSeconds);
+                // Jeder weitere Versuch in der Sperre setzt sie wieder auf die volle Minute — geprüft wird er nicht (er zählt als falscher Versuch)
+                if (gesperrtAbsender) Bremse.Verlaengern(absender);
+                if (gesperrtName) Bremse.Verlaengern(name);
+                var sek = (int)Math.Ceiling(LoginBremse.Sperre.TotalSeconds);
                 ctx.Response.Headers.RetryAfter = sek.ToString();
                 return Results.Json(Err("Zu viele Anmeldeversuche — gesperrt für {0} Sekunden.", sek), statusCode: 429);
             }

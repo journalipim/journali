@@ -30,6 +30,23 @@ public class SchutzTests
     }
 
     [Fact]
+    public void Ein_Versuch_waehrend_der_Sperre_setzt_sie_wieder_auf_die_volle_Minute()
+    {
+        var uhr = new Uhr(); var b = new LoginBremse(() => uhr.Jetzt);
+        for (var i = 0; i < LoginBremse.FehlversuchePerName; i++) b.Fehler("u:taloan", LoginBremse.FehlversuchePerName);
+        uhr.Jetzt += TimeSpan.FromSeconds(38);
+        Assert.Equal(TimeSpan.FromSeconds(22), b.Gesperrt("u:taloan"));
+        b.Verlaengern("u:taloan");
+        Assert.Equal(LoginBremse.Sperre, b.Gesperrt("u:taloan"));            // wieder 60 Sekunden
+        uhr.Jetzt += TimeSpan.FromSeconds(30); b.Verlaengern("u:taloan");
+        Assert.Equal(LoginBremse.Sperre, b.Gesperrt("u:taloan"));            // und jedes Mal von vorn
+        uhr.Jetzt += LoginBremse.Sperre + TimeSpan.FromSeconds(1);
+        Assert.Null(b.Gesperrt("u:taloan"));                                 // wer wartet, kommt durch
+        b.Verlaengern("u:taloan"); Assert.Null(b.Gesperrt("u:taloan"));        // ohne Sperre verlängert nichts
+        b.Verlaengern("u:niemand"); Assert.Null(b.Gesperrt("u:niemand"));
+    }
+
+    [Fact]
     public void Eine_richtige_Anmeldung_setzt_den_Zaehler_zurueck_und_alte_Fehler_verfallen()
     {
         var uhr = new Uhr(); var b = new LoginBremse(() => uhr.Jetzt);
@@ -72,7 +89,7 @@ public class SchutzTests
     [Theory]
     [InlineData("127.0.0.1", "127.0.0.1")]
     [InlineData("::1", "::1")]
-    [InlineData("192.168.1.5", "192.168.1.5")]      // ein Prozess des Servers ruft ihn unter seiner eigenen Adresse
+    [InlineData("198.51.100.5", "198.51.100.5")]      // ein Prozess des Servers ruft ihn unter seiner eigenen Adresse
     public void Was_vom_Rechner_des_Servers_kommt_wird_nicht_begrenzt(string remote, string lokal)
     {
         var p = Begrenzung.Partition(Von(remote, lokal));

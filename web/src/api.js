@@ -27,7 +27,11 @@ async function request(method, path, body) {
   // Datenbank weg: oben anzeigen, bis wieder eine Anfrage durchgeht
   if (res.status === 503 && data?.db === false) store.dbDown = true
   else if (res.ok) store.dbDown = false
-  if (!res.ok) throw new Error(serverText(data) || `${res.status} ${res.statusText}`)
+  if (!res.ok) {
+    const e = new Error(serverText(data) || `${res.status} ${res.statusText}`)
+    e.status = res.status; e.retryAfter = Number(res.headers?.get?.('Retry-After')) || null   // 429 bei der Anmeldung: wie lange gesperrt (Sekunden)
+    throw e
+  }
   return data
 }
 

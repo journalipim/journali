@@ -24,6 +24,16 @@ public sealed class LoginBremse
         lock (_z) return _z.TryGetValue(schluessel, out var e) && e.Bis > _jetzt() ? e.Bis - _jetzt() : null;
     }
 
+    /// <summary>Ein Versuch während der Sperre setzt sie wieder auf die volle Minute (wer weiter probiert, wartet von vorn). Wirkt nur auf einen gesperrten Schlüssel.</summary>
+    public void Verlaengern(string schluessel)
+    {
+        lock (_z)
+        {
+            var jetzt = _jetzt();
+            if (_z.TryGetValue(schluessel, out var e) && e.Bis > jetzt) _z[schluessel] = (e.Fehler, e.Fenster, jetzt + Sperre);
+        }
+    }
+
     public void Fehler(string schluessel, int schwelle)
     {
         lock (_z)
