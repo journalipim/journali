@@ -774,3 +774,30 @@ Der Weg eines Schlüssels:
 Die Anforderungen liegen in der Tabelle `anforderung` (nicht im Journal: sie sind Sache dieser Instanz, nicht der Daten).
 Was die Signaturen nicht leisten: wer Datenbank und Programm besitzt, kann beides kopieren oder die Prüfung entfernen —
 sie machen Vervielfältigung zu einer bewussten Handlung statt zu einem Nebeneffekt.
+
+## Absicherung (01.10.2026)
+
+**Ohne Sitzung** ist nur zu haben: `GET /api/health` (Version und Bau), die Aufrufe zum Anmelden (`/api/auth/login`, `state`, `setup`, `claim`), die Dateien
+der Office-Add-ins (`/plugins/exceladdin`, `/plugins/ooaddin`) und die Seite der Oberfläche selbst. Die Sperre ignoriert Gross- und Kleinschreibung wie das
+Routing. Die Beschreibung der Schnittstelle (`GET /api/openapi.json`) nennt je Aufruf das Recht, das er braucht (`x-recht`; `offen` bei den eben genannten).
+
+**Anmeldung.** Nach 8 Fehlversuchen mit einem Namen oder 30 von einer Adresse gilt eine Sperre von einer Minute (`429`, Kopf `Retry-After`); in dieser Zeit prüft
+der Server das Passwort nicht, ein Versuch kostet ihn sonst 210 000 Runden PBKDF2. Eine richtige Anmeldung setzt den Zähler des Namens zurück. Der Körper eines Aufrufs
+ohne Sitzung darf höchstens 16 KB haben.
+
+**Anfragen je Absender.** Ein Absender im Netz hat einen Eimer von 600 Anfragen, der sich mit 30 je Sekunde füllt; darüber antwortet der Server `429`. Was vom Rechner
+des Servers selbst kommt (Jobs und Prozesse der Plugins rufen ihn unter seiner eigenen Adresse), ist nicht begrenzt. Läuft journali hinter einem Reverse-Proxy, sehen
+alle Anwender dieselbe Adresse des Proxys und teilen sich einen Eimer.
+
+**Grosse Dateien.** Ein Medium (`POST /api/media`) und ein Blob (`PUT /api/media/blob/…`) dürfen bis `JOURNALI_UPLOAD_MB` gross sein (Vorgabe 2048, also 2 GB), nur
+für Angemeldete. Alle anderen Aufrufe bleiben bei der Grenze von Kestrel (30 MB). Ein Reverse-Proxy hat oft eine eigene, kleinere Grenze (nginx: `client_max_body_size`,
+Vorgabe 1 MB) — sie muss mindestens so gross sein wie `JOURNALI_UPLOAD_MB`.
+
+**Verschlüsselung zum Browser.** journali spricht selbst nur HTTP. Über ein Netz gehört TLS davor (ein Reverse-Proxy); das Cookie der Sitzung trägt `Secure`, sobald die
+Verbindung HTTPS ist.
+
+**Verschlüsselung zur Datenbank.** Npgsql steht auf `SSL Mode=Prefer`: es verschlüsselt, wenn Postgres es anbietet. Das Image `pgvector/pgvector` bietet es in der
+Vorgabe nicht an (`ssl = off`), die Verbindung läuft dann **im Klartext** — gemessen am 01.10.2026 mit `pg_stat_ssl`. Im eigenen Docker-Netz oder im Heimnetz ist das
+ein geringes Risiko; über ein fremdes Netz nicht. Verschlüsseln heisst: Postgres mit Zertifikat starten (`-c ssl=on -c ssl_cert_file=… -c ssl_key_file=…`, der Schlüssel
+gehört dem Postgres-Benutzer und hat die Rechte 0600) und in der Verbindung `SSL Mode=VerifyFull` (oder `Require`) angeben. Die Zusätze der Verbindung bleiben beim
+Ändern von Adresse und Anmeldedaten im Einrichtungsdialog erhalten.
