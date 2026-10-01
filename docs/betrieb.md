@@ -798,6 +798,19 @@ Verbindung HTTPS ist.
 
 **Verschlüsselung zur Datenbank.** Npgsql steht auf `SSL Mode=Prefer`: es verschlüsselt, wenn Postgres es anbietet. Das Image `pgvector/pgvector` bietet es in der
 Vorgabe nicht an (`ssl = off`), die Verbindung läuft dann **im Klartext** — gemessen am 01.10.2026 mit `pg_stat_ssl`. Im eigenen Docker-Netz oder im Heimnetz ist das
-ein geringes Risiko; über ein fremdes Netz nicht. Verschlüsseln heisst: Postgres mit Zertifikat starten (`-c ssl=on -c ssl_cert_file=… -c ssl_key_file=…`, der Schlüssel
-gehört dem Postgres-Benutzer und hat die Rechte 0600) und in der Verbindung `SSL Mode=VerifyFull` (oder `Require`) angeben. Die Zusätze der Verbindung bleiben beim
-Ändern von Adresse und Anmeldedaten im Einrichtungsdialog erhalten.
+ein geringes Risiko; über ein fremdes Netz nicht. Ob die Verbindung verschlüsselt wird, entscheidet der Betreiber der Datenbank, nicht journali: ein Betreiber in einer Cloud wird es verlangen, ein Heimnetz nicht.
+journali kann beides: es verschlüsselt, wenn Postgres es anbietet, und mit `SSL Mode=Require` oder `VerifyFull` in der Verbindung verlangt es die Verschlüsselung.
+
+**Verschlüsselung der Datenbank einschalten, ohne Neustart** (Postgres-Dokumentation „Secure TCP/IP Connections with SSL“): `ssl = on` ändert sich mit
+`pg_reload_conf()`. Zertifikat und Schlüssel liegen standardmässig im Datenverzeichnis (`server.crt`, `server.key`; der Schlüssel mit den Rechten 0600, ohne Passwort,
+sonst ist ein Neustart nötig). Neue Verbindungen verschlüsseln dann, bestehende bleiben, wie sie sind; journali hält Verbindungen in einem Pool, es braucht also einen
+Neustart des Servers oder Zeit, bis sie erneuert sind. Der Ablauf im Container der Datenbank:
+
+1. Zertifikat erzeugen (selbstsigniert, hier 10 Jahre): `docker exec -u postgres journali-db sh -c 'openssl req -new -x509 -days 3650 -nodes -subj "/CN=journali-db" -keyout "$PGDATA/server.key" -out "$PGDATA/server.crt"'`
+   — fehlt `openssl` im Image, wird das Zertifikat ausserhalb erzeugt und mit `docker cp` in das Datenverzeichnis gelegt.
+2. Einschalten: `docker exec -u postgres journali-db psql -c "ALTER SYSTEM SET ssl = on" -c "SELECT pg_reload_conf()"`
+3. Prüfen, mit einer Verbindung von journali: `select ssl, version from pg_stat_ssl where pid = pg_backend_pid()` muss `true` liefern.
+4. Erzwingen (erst, wenn 3 stimmt): in `pg_hba.conf` die Zeilen `host` durch `hostssl` ersetzen und `SELECT pg_reload_conf()` — Verbindungen ohne SSL werden dann abgewiesen.
+
+Ein selbstsigniertes Zertifikat verschlüsselt, beweist dem Client aber nicht, mit wem er spricht (`Prefer`, `Require`). Das prüft erst `VerifyFull` mit dem Zertifikat der
+ausstellenden Stelle (`Root Certificate=<Datei>` in der Verbindung) und dem Namen des Servers im Zertifikat.
