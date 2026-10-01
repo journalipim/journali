@@ -271,6 +271,11 @@ public static class Auth
             && (monat <= 0 || usage.Sum(leute, Usage.Ab(Usage.MonthStart(heute), ab), heute, cut) < monat));
     });
 
+    /// <summary>Die Aufrufe unter /api, die ohne Sitzung zu haben sind: die Gesundheit (Version und Bau) und alles zum Anmelden. Die Sperre und die Beschreibung der
+    /// Schnittstelle lesen dieselbe Liste.</summary>
+    public static bool ApiOhneSitzung(string path) => new[] { "/api/health", "/api/auth/login", "/api/auth/setup", "/api/auth/claim", "/api/auth/state" }
+        .Any(vorn => path.StartsWith(vorn, StringComparison.OrdinalIgnoreCase));
+
     /// <summary>Die Office-Add-ins (Excel, OnlyOffice) lädt das Office-Programm ohne Sitzung von diesem Server: ihre Dateien bleiben offen.</summary>
     public static readonly string[] OffenePlugins = ["exceladdin", "ooaddin"];
     public static bool OeffentlichesPlugin(string path)
@@ -287,7 +292,7 @@ public static class Auth
         // Dazu die Dateien der Plugins (/plugins/…): sie liegen ausserhalb von /api und waren offen; ohne Sitzung gibt es nur noch die der Office-Add-ins.
         bool Beginnt(string vorn) => path.StartsWith(vorn, StringComparison.OrdinalIgnoreCase);
         var plugin = Beginnt("/plugins/");
-        if ((!Beginnt("/api") && !plugin) || (plugin && OeffentlichesPlugin(path)) || Beginnt("/api/health") || Beginnt("/api/auth/login") || Beginnt("/api/auth/setup") || Beginnt("/api/auth/claim") || Beginnt("/api/auth/state")) { await next(); return; }
+        if ((!Beginnt("/api") && !plugin) || (plugin && OeffentlichesPlugin(path)) || ApiOhneSitzung(path)) { await next(); return; }
         if (!Enabled(c)) { await next(); return; }   // noch kein Benutzer: offen
         var who = Resolve(ctx, c, dir);
         if (who is null) { ctx.Response.StatusCode = 401; await ctx.Response.WriteAsJsonAsync(new { error = "Anmeldung nötig.", template = "Anmeldung nötig.", login = true }); return; }

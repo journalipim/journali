@@ -17,6 +17,8 @@ const SPEC = {
       delete: { tags: ['model'], operationId: 'delete_api_model_attributes_key', 'x-recht': 'model', parameters: [{ name: 'key', in: 'path', required: true, schema: { type: 'string' } }] },
     },
     '/api/tree': { get: { tags: ['tree'], operationId: 'get_api_tree', 'x-recht': 'read', parameters: [{ name: 'deep', in: 'query', required: false, schema: { type: 'boolean' } }] } },
+    '/api/auth/login': { post: { tags: ['auth'], operationId: 'post_api_auth_login', 'x-recht': 'offen', security: [], parameters: [],
+      requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', properties: { user: { type: 'string' }, password: { type: 'string' } } } } } } } },
     '/api/journal': { get: { tags: ['journal'], operationId: 'get_api_journal', 'x-recht': 'read', parameters: [] } },
   },
 }
@@ -32,15 +34,15 @@ const bereiche = w => w.findAll('.bereich')
 
 test('die Aufrufe stehen nach Bereichen gruppiert, zugeklappt, mit Zahl', async () => {
   const w = ansicht(); await flushPromises()
-  assert.deepEqual(bereiche(w).map(b => b.find('h2').text().replace(/\s+/g, ' ')), ['▸ journal · 1', '▸ model · 2', '▸ tree · 1'])
+  assert.deepEqual(bereiche(w).map(b => b.find('h2').text().replace(/\s+/g, ' ')), ['▸ auth · 1', '▸ journal · 1', '▸ model · 2', '▸ tree · 1'])
   assert.equal(w.findAll('.aufruf').length, 0, 'zugeklappt')
-  assert.match(w.find('.toolbar').text(), /4/, 'die Zahl der Aufrufe')
+  assert.match(w.find('.toolbar').text(), /5/, 'die Zahl der Aufrufe')
   w.unmount()
 })
 
 test('ein Bereich klappt auf: Methode, Pfad und das Recht stehen in jeder Zeile', async () => {
   const w = ansicht(); await flushPromises()
-  await bereiche(w)[1].find('h2').trigger('click')
+  await bereiche(w)[2].find('h2').trigger('click')
   const zeilen = w.findAll('.aufruf')
   assert.equal(zeilen.length, 2)
   assert.equal(zeilen[0].find('.methode').text(), 'PUT'); assert.equal(zeilen[0].find('.mono:not(.methode)').text(), '/api/model/attributes/{key}')
@@ -50,12 +52,22 @@ test('ein Bereich klappt auf: Methode, Pfad und das Recht stehen in jeder Zeile'
 
 test('ein Aufruf klappt auf: Parameter, Körper und ein Beispiel mit Platzhaltern', async () => {
   const w = ansicht(); await flushPromises()
-  await bereiche(w)[1].find('h2').trigger('click')
+  await bereiche(w)[2].find('h2').trigger('click')
   await w.findAll('.aufruf')[0].find('.kopf').trigger('click')
   const d = w.find('.einzelheiten')
   assert.match(d.find('table').text(), /key\s*Pfad\s*string/)
   assert.match(d.find('.schema').text(), /"multiple"/)
   assert.match(d.find('.beispiel').text(), /curl -X PUT .*Bearer \$TOKEN.*-d '\{"key":"","type":"","multiple":false,"levels":\[""\]\}' "https:\/\/<server>\/api\/model\/attributes\/<key>"/)
+  w.unmount()
+})
+
+test('ein offener Aufruf (Anmeldung) trägt kein Recht und das Beispiel kein Token', async () => {
+  const w = ansicht(); await flushPromises()
+  await bereiche(w)[0].find('h2').trigger('click')
+  assert.equal(w.find('.aufruf .recht').text(), 'offen')
+  await w.find('.aufruf .kopf').trigger('click')
+  const b = w.find('.beispiel').text()
+  assert.doesNotMatch(b, /Authorization|TOKEN/, 'ohne Token'); assert.match(b, /curl -X POST -H "Content-Type: application\/json" -d '\{"user":"","password":""\}' "https:\/\/<server>\/api\/auth\/login"/)
   w.unmount()
 })
 

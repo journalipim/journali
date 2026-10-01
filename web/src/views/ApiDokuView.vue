@@ -43,7 +43,8 @@ function beispiel(a) {
   const pfad = a.pfad.replace(/\{([^}]+)\}/g, '<$1>')
   const k = koerper(a)
   const platz = s => s?.type === 'object' ? Object.fromEntries(Object.entries(s.properties ?? {}).map(([n, v]) => [n, platz(v)])) : s?.type === 'array' ? [platz(s.items)] : s?.type === 'integer' || s?.type === 'number' ? 0 : s?.type === 'boolean' ? false : ''
-  return `curl -X ${a.methode.toUpperCase()} -H "Authorization: Bearer $TOKEN"${k ? ` -H "Content-Type: application/json" -d '${JSON.stringify(platz(k))}'` : ''} "https://<server>${pfad}"`
+  const offen = Array.isArray(a.op.security) && a.op.security.length === 0   // in OpenAPI: kein Token nötig
+  return `curl -X ${a.methode.toUpperCase()}${offen ? '' : ' -H "Authorization: Bearer $TOKEN"'}${k ? ` -H "Content-Type: application/json" -d '${JSON.stringify(platz(k))}'` : ''} "https://<server>${pfad}"`
 }
 </script>
 

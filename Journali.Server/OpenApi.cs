@@ -73,15 +73,19 @@ public static class OpenApiDoc
         foreach (var n in routeNamen) parameter.TryAdd(n, new { name = n, @in = "path", required = true, schema = new { type = "string" } });   // ein Pfadteil, den der Endpunkt nicht als Parameter nimmt
         var koerper = e.Metadata.GetMetadata<IAcceptsMetadata>();
         var ctx = new DefaultHttpContext(); ctx.Request.Method = methode; ctx.Request.Path = "/" + string.Join('/', pfad.Split('/', StringSplitOptions.RemoveEmptyEntries).Select(s => s.StartsWith('{') ? "x" : s));
-        var recht = Auth.Needed(ctx.Request);
+        var offen = Auth.ApiOhneSitzung(ctx.Request.Path.Value ?? "");
+        var recht = offen ? "offen" : Auth.Needed(ctx.Request);
         var op = new Dictionary<string, object?>
         {
             ["tags"] = new[] { teile.Length > 1 ? teile[1] : "api" },
             ["operationId"] = (methode.ToLowerInvariant() + "_" + string.Join('_', teile.Select(s => s.Trim('{', '}')))).Replace('-', '_'),
             ["parameters"] = parameter.Values.ToList(),
             ["x-recht"] = recht ?? "eigenes Konto",
-            ["responses"] = new Dictionary<string, object> { ["200"] = new { description = "Erfolg; die Antwort ist nicht beschrieben." }, ["401"] = new { description = "Anmeldung nötig." }, ["403"] = new { description = "Die Rolle darf das nicht." } },
+            ["responses"] = offen
+                ? new Dictionary<string, object> { ["200"] = new { description = "Erfolg; die Antwort ist nicht beschrieben." } }
+                : new Dictionary<string, object> { ["200"] = new { description = "Erfolg; die Antwort ist nicht beschrieben." }, ["401"] = new { description = "Anmeldung nötig." }, ["403"] = new { description = "Die Rolle darf das nicht." } },
         };
+        if (offen) op["security"] = Array.Empty<object>();   // leer heisst in OpenAPI: kein Token nötig
         if (koerper?.RequestType is { } t && t != typeof(void))
             op["requestBody"] = new { required = !koerper.IsOptional, content = new Dictionary<string, object> { ["application/json"] = new { schema = Schema(t, 0) } } };
         return op;

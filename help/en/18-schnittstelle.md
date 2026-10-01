@@ -10,7 +10,8 @@ journali is headless: the user interface calls the same HTTP interface that any 
 
 - **Session:** `POST /api/auth/login` with `{ "user": …, "password": … }` sets a cookie. This is how the interface works.
 - **Token:** Under ⚙ Settings → ◐ My account an API token is created; it is visible only when created. Send it in the header of every request: `Authorization: Bearer <token>`.
-- **Without a session** only `GET /api/health` (version and build), the calls under `/api/auth/` for signing in and the files of the Office add-ins are available. Everything else answers `401`.
+- **Encryption:** journali itself speaks only HTTP. Over a network, TLS belongs in front of it (a reverse proxy); otherwise the sign-in password travels unencrypted. The session cookie carries the `Secure` flag as soon as the connection is HTTPS.
+- **Without a session** only `GET /api/health` (version and build), the calls for signing in (`/api/auth/login`, `state`, `setup`, `claim`) and the files of the Office add-ins are available. Everything else answers `401`.
 - **Without users** in the installation everything is open; the author of an entry then comes from the header `X-Actor`. With users it comes from the session or the token.
 
 ## Rights

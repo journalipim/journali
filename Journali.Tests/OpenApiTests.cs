@@ -94,6 +94,26 @@ public class OpenApiTests
         Assert.True(antworten.TryGetProperty("401", out _)); Assert.True(antworten.TryGetProperty("403", out _));
     }
 
+    [Theory]
+    [InlineData("/api/auth/login", "POST")]
+    [InlineData("/api/health", "GET")]
+    [InlineData("/api/auth/state", "GET")]
+    public void Aufrufe_ohne_Sitzung_tragen_kein_Recht_und_brauchen_kein_Token(string pfad, string methode)
+    {
+        var d = Dok(Endpunkt(pfad, methode));
+        var op = d.GetProperty("paths").GetProperty(pfad).GetProperty(methode.ToLowerInvariant());
+        Assert.Equal("offen", op.GetProperty("x-recht").GetString());
+        Assert.Equal(0, op.GetProperty("security").GetArrayLength());   // leer: in OpenAPI kein Token nötig
+        Assert.False(op.GetProperty("responses").TryGetProperty("401", out _), "ein offener Aufruf antwortet nicht mit 401");
+    }
+
+    [Fact]
+    public void Die_Sperre_und_die_Beschreibung_lesen_dieselbe_Liste()
+    {
+        foreach (var offen in new[] { "/api/health", "/API/Health", "/api/auth/login", "/api/auth/state", "/api/auth/setup", "/api/auth/claim" }) Assert.True(Auth.ApiOhneSitzung(offen), offen);
+        foreach (var zu in new[] { "/api/tree", "/api/auth/me", "/api/auth/users", "/api/openapi.json" }) Assert.False(Auth.ApiOhneSitzung(zu), zu);
+    }
+
     [Fact]
     public void Das_Schema_kennt_die_einfachen_Typen_Listen_und_Aufzaehlungen()
     {
