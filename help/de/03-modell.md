@@ -8,7 +8,7 @@ Ein Attribut hat:
 
 - einen **Schlüssel**, klein geschrieben, für immer;
 - eine **Bezeichnung** je Sprache, die die Oberfläche in ihrer Sprache zeigt;
-- einen **Typ**: Text, HTML, ganze Zahl, Zahl mit Einheit, Ja/Nein, Datum, Listenwert, Tabelle aus Zeilen;
+- einen **Typ**: Text, HTML, ganze Zahl, Dezimalzahl, Ja/Nein, Datum, Liste, Tabelle, Formel, Vorlage (siehe Attribut-Typen);
 - eine **Gruppe**, über die es an Knoten des Baums gilt;
 - **Achsen**: sprachabhängig, kanalabhängig oder beides;
 - **Pflicht** je Kanal und Sprache: ohne Wert keine Freigabe in diesem Kanal;
@@ -17,6 +17,104 @@ Ein Attribut hat:
 - **Ebenen**: an welchen Knotentypen es gesetzt werden darf.
 
 Ein Attribut lässt sich zurückziehen, solange kein Knoten es als Namensattribut trägt. Werte im Journal bleiben dabei erhalten.
+
+## Attribut-Typen
+
+Der Typ legt fest, was ein Wert ist, wie die Zelle ihn erfasst und wie journali ihn prüft. Er wird in der Modellansicht unter **Typ** gewählt. Ändert man den Typ eines Attributs mit Werten, prüft journali die vorhandenen Werte gegen die neue Definition und meldet, wie viele nicht passen.
+
+| Typ | Ein Wert ist | Geeignet für |
+|---|---|---|
+| Text (Aa) | ein Text ohne Format | Namen, Kennungen, Kurztexte |
+| HTML (‹›) | ein Text mit Formatierung | Beschreibungen, längere Texte |
+| ganze Zahl (12) | eine ganze Zahl | Stückzahlen, Anzahlen |
+| Dezimalzahl (1.5) | eine Zahl mit Nachkommastellen, auf Wunsch mit Einheit | Maße, Gewichte, Preise |
+| Ja/Nein (☑) | wahr oder falsch | Eigenschaften, die ein Produkt hat oder nicht hat |
+| Datum (📅) | ein Kalendertag | Fristen, Termine |
+| Liste (☰) | ein Eintrag einer Werteliste | feste Auswahl wie Farbe oder Material |
+| Tabelle (⊞) | n Zeilen aus Spalten | zusammengehörige Angaben, die sich wiederholen |
+| Formel (ƒ) | das Ergebnis eines Skripts | gerechnete Werte |
+| Vorlage ({}) | das Ergebnis einer Textvorlage | aus Attributen zusammengesetzte Texte |
+
+### Text
+
+Ein Text ohne Format. Nur bei diesem Typ gibt es ein **Muster**, einen regulären Ausdruck, dem jeder Wert genügen muss, samt einem **Hinweis**, der in der Fehlermeldung steht. Ein Text kann **eindeutig** sein (Kennungen wie SKU oder EAN), **vermehrbar** (mehrere Werte je Zelle) und **sprachabhängig**.
+
+### HTML
+
+Ein Text mit Formatierung. Die Zelle zeigt den Anfang des Textes; Enter oder Doppelklick öffnet den Editor mit einem einfachen Schreibmodus (fett, kursiv, Listen, Überschrift, Link) und einem Umschalter auf den Quelltext. Strg+Enter speichert, Esc verwirft. HTML ist nicht vermehrbar, nicht eindeutig und hat kein Muster.
+
+### Ganze Zahl und Dezimalzahl
+
+Beide prüfen, dass der Wert eine Zahl ist: „keine ganze Zahl“ bzw. „keine Zahl“ ist die Meldung. Bei der Dezimalzahl werden Eingaben wie 1.234,56 (deutsch), 1,234.56 oder 1234.56 erkannt und als Zahl mit Punkt gespeichert; bei der ganzen Zahl fallen Leerzeichen, Punkt und Hochkomma als Tausendertrenner weg. Beide Typen können eine **Einheit** nennen, die aus den Einheiten des Modells gewählt wird, und **eindeutig** sein, wenn sie einwertig sind.
+
+### Ja/Nein
+
+Gespeichert wird wahr oder falsch; die Zelle zeigt ✓ oder ✗. Beim Import und bei Vorschlägen werden ja, j, yes, y, true, wahr, x, 1, on und an als wahr gelesen, nein, n, no, false, falsch, 0, off, aus, ein Strich und ein leeres Feld als falsch. Ein anderer Wert wird als nicht ja/nein gemeldet.
+
+### Datum
+
+Gespeichert wird JJJJ-MM-TT. Eine Eingabe als TT.MM.JJJJ wird umgerechnet. Alles andere meldet die Prüfung als „kein Datum“.
+
+### Liste
+
+Der Wert ist ein Eintrag einer Werteliste, nicht ein freies Wort. Die Werteliste wird am Attribut unter **Werteliste** gewählt; ohne sie lässt sich kein Wert setzen. Jeder Eintrag hat einen Schlüssel und eine Bezeichnung je Sprache. Ein Wert, der nicht in der Liste steht, wird als „nicht in Liste“ gemeldet. Eine Liste kann **vermehrbar** sein: dann hat eine Zelle mehrere Einträge.
+
+### Tabelle
+
+Eine Tabelle hat n Zeilen, jede aus den **Spalten** des Attributs. Jede Spalte ist selbst ein Attribut und bringt ihren Typ und ihre Prüfung mit; die Spalten werden kommagetrennt eingetragen. Ohne Spalten hat eine Zeile keinen Inhalt. Eine Spalte darf keine Tabelle sein. Zeilen lassen sich hinzufügen, entfernen und umordnen. Eine Tabelle ist nicht vermehrbar, nicht sprachabhängig und nicht kanalabhängig.
+
+### Formel
+
+Der Wert am Knoten ist ein kleines Skript, das beim Lesen läuft; sein Ergebnis ist der Wert. Das Skript steht wie jeder Wert am Knoten, wird vererbt, wenn das Attribut vererbbar ist, und gilt je Sprache, wenn das Attribut sprachabhängig ist. Das Ergebnis erscheint in der Knotenansicht, in der Tabelle, im Export und in der Suche; ein leeres Ergebnis heißt: kein Wert.
+
+```
+h = $height
+if (h >= 100) {
+  return `${format(h / 100, 2)} m`
+}
+return `${h} cm`
+```
+
+- `$schlüssel` ist der Wert eines Attributs am Knoten; ein geerbter Wert zählt.
+- Werte sind Zahlen, Texte, Textvorlagen mit `${…}`, true, false und null. Fehlt ein Wert, ist das Ergebnis null, und `??`, `isblank` und `coalesce` fangen das ab.
+- Es gelten die Operatoren wie in JavaScript, dazu `if`, `else` und `return`.
+- Funktionen: round, trunc, floor, ceil, abs, min, max, sqrt, len, upper, lower, trim, left, right, contains, replace, split, pad, number, str, format, isblank, coalesce.
+- Einheiten rechnet die Formel nicht um; wer cm³ in Liter will, teilt durch 1000.
+
+Die Zelle des Attributs, markiert mit ƒ, öffnet den Editor. Er prüft die Syntax beim Tippen über den Server, und „Übernehmen“ geht nur, wenn die Prüfung stimmt. Wer unterbrochen wird, behält den Entwurf im Browser. Strg+Enter übernimmt, Esc schließt.
+
+### Vorlage
+
+Der Wert am Knoten ist ein Textbaustein mit Platzhaltern; der Server baut daraus den Text beim Lesen. Vorlagen sind für Texte gedacht, nicht für Rechnen.
+
+```
+{name} mit {cpu}[, {ram} GB RAM][ · {weight|1|unit}]
+```
+
+- `{schlüssel}` ist der Wert eines Attributs; ein geerbter Wert zählt, eine Liste zeigt ihre Bezeichnung in der Sprache der Spalte.
+- Zusätze mit `|`, beliebig verkettet: `|unit` hängt die Einheit an, `|0`, `|1`, `|2` setzen die Nachkommastellen, `|upper`, `|lower` und `|capitalize` ändern die Schreibung, `|plain` nimmt HTML-Tags weg.
+- `[ … ]` ist ein optionaler Abschnitt: Ist darin ein Platzhalter leer, entfällt der ganze Abschnitt, und es bleibt kein „, GB RAM“ stehen. Abschnitte dürfen ineinander liegen.
+- `\{`, `\[` und `\\` stehen für die Zeichen selbst. Zeilenumbrüche bleiben, doppelte Leerzeichen werden zu einem. Ein leeres Ergebnis heißt: kein Wert.
+
+Im Editor zeigt `{` die Attribute, `|` die Zusätze, und die Vorschau am Knoten erscheint beim Tippen.
+
+### Formel oder Vorlage
+
+Einen Text aus mehreren Attributen zusammenzusetzen ist Sache der Vorlage. Zu rechnen oder je nach Wert Verschiedenes zu liefern ist Sache der Formel. Beide haben keinen eigenen Wert im Sinn einer Eingabe: Was am Knoten steht, ist die Vorlage oder das Skript, und ein fester Text ist eine Vorlage ohne Platzhalter.
+
+### Einstellungen je Typ
+
+| Einstellung | gilt für |
+|---|---|
+| Muster, Hinweis | Text |
+| Einheit | ganze Zahl, Dezimalzahl |
+| Werteliste | Liste |
+| Spalten | Tabelle |
+| eindeutig | Text, ganze Zahl, Dezimalzahl, jeweils einwertig |
+| vermehrbar | Text, ganze Zahl, Dezimalzahl, Datum, Liste (nicht HTML, Ja/Nein, Tabelle, Formel, Vorlage) |
+| kanalabhängig | alle außer Tabelle, Formel, Vorlage |
+| sprachabhängig | alle außer Tabelle |
+| vererbbar, Pflicht, Ebenen | alle |
 
 ## Attributgruppen
 

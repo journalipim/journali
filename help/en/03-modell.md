@@ -8,7 +8,7 @@ An attribute has:
 
 - a **key**, lower case, forever;
 - a **label** per language, shown by the interface in its language;
-- a **type**: text, HTML, integer, number with unit, yes/no, date, list value, table of rows;
+- a **type**: text, HTML, integer, decimal, yes/no, date, list, table, formula, template (see Attribute types);
 - a **group** through which it applies at nodes of the tree;
 - **axes**: language-dependent, channel-dependent or both;
 - **required** per channel and language: without a value no release in this channel;
@@ -17,6 +17,104 @@ An attribute has:
 - **levels**: at which node types it may be set.
 
 An attribute can be retired as long as no node carries it as its name attribute. Values in the journal are preserved.
+
+## Attribute types
+
+The type determines what a value is, how the cell captures it and how journali checks it. It is chosen in the model view under **Type**. If you change the type of an attribute that has values, journali checks the existing values against the new definition and reports how many do not fit.
+
+| Type | A value is | Suited for |
+|---|---|---|
+| Text (Aa) | a text without format | names, identifiers, short texts |
+| HTML (‹›) | a text with formatting | descriptions, longer texts |
+| integer (12) | a whole number | quantities, counts |
+| decimal (1.5) | a number with decimals, optionally with a unit | dimensions, weights, prices |
+| yes/no (☑) | true or false | properties a product has or does not have |
+| date (📅) | a calendar day | deadlines, dates |
+| list (☰) | an entry of a value list | a fixed choice such as colour or material |
+| table (⊞) | n rows made of columns | related details that repeat |
+| formula (ƒ) | the result of a script | calculated values |
+| template ({}) | the result of a text template | texts assembled from attributes |
+
+### Text
+
+A text without format. Only this type has a **pattern**, a regular expression every value must match, together with a **hint** that appears in the error message. A text can be **unique** (identifiers such as SKU or EAN), **multi-value** (several values per cell) and **language-dependent**.
+
+### HTML
+
+A text with formatting. The cell shows the beginning of the text; Enter or double-click opens the editor with a simple writing mode (bold, italic, lists, heading, link) and a switch to the source. Ctrl+Enter saves, Esc discards. HTML is not multi-value, not unique and has no pattern.
+
+### Integer and decimal
+
+Both check that the value is a number: the message is "not a whole number" or "not a number". For the decimal, inputs such as 1.234,56 (German), 1,234.56 or 1234.56 are recognised and stored as a number with a point; for the integer, spaces, points and apostrophes are dropped as thousands separators. Both types can name a **unit**, chosen from the units of the model, and can be **unique** if they are single-value.
+
+### Yes/no
+
+True or false is stored; the cell shows ✓ or ✗. On import and in suggestions, ja, j, yes, y, true, wahr, x, 1, on and an are read as true, and nein, n, no, false, falsch, 0, off, aus, a dash and an empty field as false. Any other value is reported as not yes/no.
+
+### Date
+
+YYYY-MM-DD is stored. An input as DD.MM.YYYY is converted. Anything else is reported by the check as "not a date".
+
+### List
+
+The value is an entry of a value list, not a free word. The value list is chosen on the attribute under **Value list**; without it no value can be set. Every entry has a key and a label per language. A value that is not in the list is reported as "not in list". A list can be **multi-value**: then a cell has several entries.
+
+### Table
+
+A table has n rows, each made of the **columns** of the attribute. Every column is an attribute itself and brings its type and its check; columns are entered separated by commas. Without columns a row has no content. A column must not be a table. Rows can be added, removed and reordered. A table is not multi-value, not language-dependent and not channel-dependent.
+
+### Formula
+
+The value at the node is a small script that runs when the value is read; its result is the value. The script is kept like any value at the node, is inherited if the attribute is inheritable, and applies per language if the attribute is language-dependent. The result appears in the node view, in the table, in the export and in the search; an empty result means: no value.
+
+```
+h = $height
+if (h >= 100) {
+  return `${format(h / 100, 2)} m`
+}
+return `${h} cm`
+```
+
+- `$key` is the value of an attribute at the node; an inherited value counts.
+- Values are numbers, texts, templates with `${…}`, true, false and null. If a value is missing the result is null, and `??`, `isblank` and `coalesce` catch that.
+- Operators work as in JavaScript, plus `if`, `else` and `return`.
+- Functions: round, trunc, floor, ceil, abs, min, max, sqrt, len, upper, lower, trim, left, right, contains, replace, split, pad, number, str, format, isblank, coalesce.
+- The formula does not convert units; to get litres from cm³, divide by 1000.
+
+The cell of the attribute, marked with ƒ, opens the editor. It checks the syntax while you type, through the server, and "Apply" works only if the check passes. If you are interrupted, the draft stays in the browser. Ctrl+Enter applies, Esc closes.
+
+### Template
+
+The value at the node is a text block with placeholders; the server builds the text from it when the value is read. Templates are for texts, not for calculating.
+
+```
+{name} with {cpu}[, {ram} GB RAM][ · {weight|1|unit}]
+```
+
+- `{key}` is the value of an attribute; an inherited value counts, and a list shows its label in the language of the column.
+- Modifiers with `|`, chained as you like: `|unit` appends the unit, `|0`, `|1`, `|2` set the decimals, `|upper`, `|lower` and `|capitalize` change the case, `|plain` removes HTML tags.
+- `[ … ]` is an optional section: if a placeholder inside is empty, the whole section is dropped, so no stray ", GB RAM" remains. Sections may be nested.
+- `\{`, `\[` and `\\` stand for the characters themselves. Line breaks are kept, double spaces become one. An empty result means: no value.
+
+In the editor `{` shows the attributes, `|` the modifiers, and the preview at the node appears while you type.
+
+### Formula or template
+
+Assembling a text from several attributes is a job for the template. Calculating, or delivering different things depending on a value, is a job for the formula. Neither has a value of its own in the sense of an input: what is at the node is the template or the script, and a fixed text is a template without placeholders.
+
+### Settings per type
+
+| Setting | applies to |
+|---|---|
+| pattern, hint | text |
+| unit | integer, decimal |
+| value list | list |
+| columns | table |
+| unique | text, integer, decimal, in each case single-value |
+| multi-value | text, integer, decimal, date, list (not HTML, yes/no, table, formula, template) |
+| channel-dependent | all except table, formula, template |
+| language-dependent | all except table |
+| inheritable, required, levels | all |
 
 ## Attribute groups
 
