@@ -14,15 +14,18 @@ import { t as t_ } from '../i18n.js'
 const teams = ref([])
 const gewaehlt = ref(null)     // gezeigtes Team; mit „users“ lässt sich wechseln
 const mitglieder = ref([])
-const keyIn = ref({ anbieter: 'anthropic', wert: '' })
+const eingabe = ref({ anthropic: '', openai: '', lokal: '' })   // je Anbieter das Feld für Schlüssel oder Adresse
 // das lokale Modell (29.09.2026): gibt es eines am Server, steht es jedem Team zur Wahl — ohne Schlüssel, ohne Kosten
 const lokal = ref({ ready: false, models: [] })
-const anbieterListe = computed(() => [...new Set([...(team.value?.keys ?? []), ...(lokal.value.ready ? ['lokal'] : [])])])
+/// Wer gefragt werden kann, in der Reihenfolge des Servers: die Anbieter mit Schlüssel, danach das lokale Modell
+const hat = k => (team.value?.keys ?? []).includes(k)
+const nutzbar = k => k === 'lokal' ? hat('lokal') || lokal.value.ready : hat(k)
+const anbieterListe = computed(() => [...(team.value?.keys ?? []).filter(k => k !== 'lokal'), ...(nutzbar('lokal') ? ['lokal'] : [])])
 const anbieterGewaehlt = computed(() => { const w = team.value?.models?.['*']; return anbieterListe.value.includes(w) ? w : anbieterListe.value[0] ?? '' })
 const frei = ref([])           // wer in keinem Team ist — nur die lassen sich eintragen
 const dazu = ref('')
 const MODELLE = {
-  anthropic: ['claude-sonnet-5', 'claude-opus-5', 'claude-fable-5-1', 'claude-haiku-4-5'],
+  anthropic: ['claude-sonnet-5-5', 'claude-opus-5-5', 'claude-sonnet-5', 'claude-opus-5', 'claude-fable-5-1', 'claude-haiku-4-5'],
   openai: ['gpt-5', 'gpt-5-mini', 'gpt-4.1'],
 }
 const jt = ref(null)   // journali-Token dieses Teams: Limits und Verbrauch
@@ -35,6 +38,7 @@ const kb = b => {
 const ANBIETER = [['anthropic', t_('Anthropic')], ['openai', t_('OpenAI')], ['lokal', t_('lokal')]]
 
 const team = computed(() => teams.value.find(t => t.key === gewaehlt.value) ?? null)
+const meinTeam = computed(() => teams.value.find(t => t.key === store.auth?.team) ?? null)
 /// Das Team führen: Schlüssel, Modell, Mitglieder ein und aus. Der Administrator darf es überall.
 const fuehrt = computed(() => store.can('users') || (store.can('team') && (team.value?.managers ?? []).includes(store.auth.user)))
 /// Wessen Schlüssel das Team benutzt — eigener oder der eines anderen Teams
@@ -69,14 +73,20 @@ const freiTon = zeitraum => {
   return anteil <= 10 ? 'neg' : anteil <= 30 ? 'warn' : 'pos'
 }
 
+/// Das lokale Modell des gezeigten Teams: an seiner Adresse, sonst an der des Servers
+async function lokalLaden() {
+  try { const l = await api.get(`/api/ai/lokal/models${gewaehlt.value ? '?team=' + encodeURIComponent(gewaehlt.value) : ''}`); lokal.value = { ready: !!l?.ready, models: l?.models ?? [] } } catch { lokal.value = { ready: false, models: [] } }
+}
 async function load() {
   try {
-    try { const l = await api.get('/api/ai/lokal/models'); lokal.value = { ready: !!l?.ready, models: l?.models ?? [] } } catch { lokal.value = { ready: false, models: [] } }
     teams.value = await api.get('/api/teams')
-    if (!teams.value.some(t => t.key === gewaehlt.value)) gewaehlt.value = teams.value[0]?.key ?? null
+    // Die Seite beginnt beim eigenen Team: gefragt wird über das Team der Mitgliedschaft, und nur dessen Wahl (aktiv, Modell) zählt für die eigenen Fragen
+    if (!teams.value.some(t => t.key === gewaehlt.value)) gewaehlt.value = teams.value.find(t => t.key === store.auth?.team)?.key ?? teams.value[0]?.key ?? null
+    await lokalLaden()
     await details()
   } catch (e) { store.toast(e.message) }
 }
+async function wechsel() { await lokalLaden(); await details() }
 async function details() {
   const k = gewaehlt.value; if (!k) return
   const p = encodeURIComponent(k)
@@ -95,18 +105,24 @@ watch(() => store.head, () => {
   load()
 })
 
-async function schluessel() {
-  if (!keyIn.value.wert) { store.toast(keyIn.value.anbieter === 'lokal' ? t_('Adresse fehlt') : t_('Schlüssel fehlt')); return }
-  const anbieter = keyIn.value.anbieter
+async function schluessel(anbieter) {
+  const wert = (eingabe.value[anbieter] ?? '').trim()
+  if (!wert) { store.toast(anbieter === 'lokal' ? t_('Adresse fehlt') : t_('Schlüssel fehlt')); return }
   try {
-    await api.post(`/api/teams/${encodeURIComponent(gewaehlt.value)}/keys`, { keys: { [anbieter]: keyIn.value.wert } }, 'PUT')
-    keyIn.value = { anbieter, wert: '' }
-    await load(); store.toast(t_('Schlüssel für {0} liegt beim Server', [anbieter]), 'ok')
+    await api.post(`/api/teams/${encodeURIComponent(gewaehlt.value)}/keys`, { keys: { [anbieter]: wert } }, 'PUT')
+    eingabe.value[anbieter] = ''
+    await load(); store.toast(anbieter === 'lokal' ? t_('Adresse für das lokale Modell liegt beim Server') : t_('Schlüssel für {0} liegt beim Server', [anbieter]), 'ok')
   } catch (e) { store.toast(e.message) }
 }
 async function schluesselWeg(anbieter) {
   if (!await dialog.confirm({ title: t_('Schlüssel {0} entfernen?', [anbieter]), text: t_('Ohne ihn arbeitet „{0}“ nicht mehr über diesen Anbieter.', [team.value.label]), ok: t_('✕ Entfernen') })) return
   try { await api.post(`/api/teams/${encodeURIComponent(gewaehlt.value)}/keys`, { keys: { [anbieter]: '' } }, 'PUT'); await load() } catch (e) { store.toast(e.message) }
+}
+/// Die Modelle zur Wahl: die Liste des Anbieters, und der gesetzte Wert, auch wenn die Liste ihn nicht (mehr) führt
+const modelle = k => {
+  const liste = k === 'lokal' ? lokal.value.models : (MODELLE[k] ?? [])
+  const jetzt = team.value?.models?.[k]
+  return jetzt && !liste.includes(jetzt) ? [jetzt, ...liste] : liste
 }
 async function modell(anbieter, wert) {
   try { await api.post(`/api/teams/${encodeURIComponent(gewaehlt.value)}`, { models: { [anbieter]: wert } }, 'PUT'); await load(); ai.loadState() } catch (e) { store.toast(e.message) }
@@ -147,7 +163,7 @@ async function austragen(m) {
     <div class="section">
       <h2>◍ {{ team.label }}
         <span class="muted">· {{ mitglieder.length }}<span v-if="team.primary" class="accent" :title="$t('Init Team: bleibt, trägt die Limits der Lizenz')"> ①</span></span>
-        <select v-if="teams.length > 1" v-model="gewaehlt" style="margin-left:8px" @change="details">
+        <select v-if="teams.length > 1" v-model="gewaehlt" style="margin-left:8px" @change="wechsel">
           <option v-for="t in teams" :key="t.key" :value="t.key">{{ t.label }}</option>
         </select>
       </h2>
@@ -212,57 +228,49 @@ async function austragen(m) {
 
     <div class="section">
       <h2 :title="$t('Schlüssel und Modell dieses Teams; der Schlüssel bleibt beim Server.')">{{ $t("✧ KI API Keys") }}</h2>
-      <table class="grid form" style="width:auto"><colgroup><col style="width:150px" /><col style="width:320px" /><col /></colgroup><tbody>
-        <tr>
-          <td class="muted">{{ $t("Schlüssel") }}</td>
+      <table class="grid form ki-anbieter" style="width:auto"><thead><tr class="muted">
+        <th style="width:90px" :title="$t('welchen Anbieter die Plugins fragen')">{{ $t("Wird gefragt") }}</th>
+        <th style="width:90px">{{ $t("Anbieter") }}</th>
+        <th style="width:330px" :title="$t('Schlüssel oder Adresse; sie bleiben beim Server, nie im Journal, nie im Browser')">{{ $t("Zugang") }}</th>
+        <th style="width:240px" :title="$t('welches Modell der Anbieter fragt — es bestimmt Kosten und Güte')">{{ $t("Modell") }}</th>
+      </tr></thead><tbody>
+        <tr v-for="[k, name] in ANBIETER" :key="k" :class="k">
           <td>
-            <span v-for="k in team.keys" :key="k" class="chip" style="margin-right:4px">{{ k }}
-              <button v-if="fuehrt" class="x" :title="$t('Schlüssel entfernen')" @click="schluesselWeg(k)">×</button>
-            </span>
-            <span v-if="!team.keys.length && team.keysFrom" class="muted" :title="$t('zahlt über {0}', [team.keysFrom])">↑ {{ team.keysFrom }}</span>
-            <span v-else-if="!team.keys.length" class="neg" :title="$t('ohne Schlüssel keine KI über den Server')">—</span>
+            <button class="x schalter" :class="{ primary: anbieterGewaehlt === k && nutzbar(k) }" :disabled="!fuehrt || !nutzbar(k)" :title="$t('{0} fragen (die Plugins nehmen diesen Anbieter)', [name])" @click="modell('*', k)">{{ anbieterGewaehlt === k && nutzbar(k) ? $t("● aktiv") : $t("○ inaktiv") }}</button>
           </td>
-          <td v-if="fuehrt" class="row" style="gap:4px">
-            <select v-model="keyIn.anbieter" style="width:110px"><option v-for="[k, l] in ANBIETER" :key="k" :value="k">{{ l }}</option></select>
-            <input v-model="keyIn.wert" :type="keyIn.anbieter === 'lokal' ? 'text' : 'password'" :placeholder="keyIn.anbieter === 'lokal' ? $t('Adresse') : $t('Schlüssel')" style="width:150px" @keydown.enter="schluessel" />
-            <button class="x" :title="keyIn.anbieter === 'lokal' ? $t('Adresse des lokalen Modells hinterlegen — sie bleibt beim Server, nie im Journal, nie im Browser') : $t('Schlüssel hinterlegen — er bleibt beim Server, nie im Journal, nie im Browser')" @click="schluessel">🔒</button>
-          </td><td v-else></td>
-        </tr>
-        <tr v-if="anbieterListe.length > 1">
-          <td class="muted" :title="$t('welchen Anbieter die Plugins fragen — ein bezahlter mit Schlüssel oder das lokale Modell')">{{ $t("Anbieter") }}</td>
+          <td>{{ name }}</td>
+          <td class="row" style="gap:4px">
+            <template v-if="hat(k)">
+              <span class="pos" :title="k === 'lokal' ? $t('Adresse hinterlegt') : $t('Schlüssel hinterlegt')">{{ $t("✓ hinterlegt") }}</span>
+              <button v-if="fuehrt" class="x" :title="k === 'lokal' ? $t('Adresse entfernen') : $t('Schlüssel entfernen')" @click="schluesselWeg(k)">×</button>
+            </template>
+            <template v-else-if="fuehrt">
+              <input v-model="eingabe[k]" :type="k === 'lokal' ? 'text' : 'password'" :placeholder="k === 'lokal' ? 'http://localhost:11434' : $t('Schlüssel')" style="width:190px" @keydown.enter="schluessel(k)" />
+              <button class="x" :disabled="!eingabe[k]" :title="k === 'lokal' ? $t('Adresse hinterlegen (sie bleibt beim Server, nie im Journal, nie im Browser)') : $t('Schlüssel hinterlegen (er bleibt beim Server, nie im Journal, nie im Browser)')" @click="schluessel(k)">⚿</button>
+            </template>
+            <span v-else class="muted">—</span>
+            <span v-if="k === 'lokal' && !hat('lokal') && lokal.ready" class="muted" :title="$t('Adresse aus der Umgebung des Servers')">{{ $t("Server") }}</span>
+            <span v-if="k === 'lokal' && nutzbar('lokal')" :class="lokal.models.length ? 'muted' : 'fehler'" :title="lokal.models.length ? $t('Modelle des Dienstes') : $t('Dienst antwortet nicht')">{{ lokal.models.length ? $t("{0} Modelle", [lokal.models.length]) : $t("✗ nicht erreichbar") }}</span>
+          </td>
           <td>
-            <select :value="anbieterGewaehlt" :disabled="!fuehrt" style="width:220px" @change="modell('*', $event.target.value)">
-              <option v-for="a in anbieterListe" :key="a" :value="a">{{ a }}</option>
-            </select>
-          </td><td></td>
-        </tr>
-        <tr v-if="lokal.ready" key="mlokal">
-          <td class="muted" :title="$t('welches Modell der lokale Dienst nimmt — die Liste kommt vom Dienst')">{{ $t("Modell {0}", ['lokal']) }}</td>
-          <td>
-            <select :value="team.models?.lokal ?? ''" :disabled="!fuehrt" style="width:220px" @change="modell('lokal', $event.target.value)">
+            <select v-if="nutzbar(k)" :value="team.models?.[k] ?? ''" :disabled="!fuehrt" style="width:220px" @change="modell(k, $event.target.value)">
               <option value="">{{ $t("— Vorgabe —") }}</option>
-              <option v-for="m in lokal.models" :key="m" :value="m">{{ m }}</option>
+              <option v-for="m in modelle(k)" :key="m" :value="m">{{ m }}</option>
             </select>
-          </td><td></td>
+            <span v-else class="muted">—</span>
+          </td>
         </tr>
-        <tr v-for="k in team.keys" :key="'m' + k">
-          <td class="muted" :title="$t('welches Modell {0} fragt — es bestimmt Kosten und Güte', [k])">{{ $t("Modell {0}", [k]) }}</td>
-          <td>
-            <select :value="team.models?.[k] ?? ''" :disabled="!fuehrt" style="width:220px" @change="modell(k, $event.target.value)">
-              <option value="">{{ $t("— Vorgabe —") }}</option>
-              <option v-for="m in (MODELLE[k] ?? [])" :key="m" :value="m">{{ m }}</option>
-            </select>
-          </td><td></td>
+        <tr v-if="meinTeam && meinTeam.key !== team.key">
+          <td class="muted" colspan="2" :title="$t('Gefragt wird über das Team deiner Mitgliedschaft; die Wahl hier gilt für dessen Mitglieder')">{{ $t("Dein Team") }}</td>
+          <td colspan="2" class="warn">{{ meinTeam.label }}</td>
         </tr>
-      </tbody></table>
-      <table class="grid form" style="width:auto"><colgroup><col style="width:150px" /><col style="width:320px" /><col /></colgroup><tbody>
         <tr>
-          <td class="muted" :title="$t('Wessen Schlüssel dieses Team benutzt')">{{ $t("Schlüssel von") }}</td>
-          <td>
+          <td class="muted" colspan="2" :title="$t('Wessen Schlüssel dieses Team benutzt')">{{ $t("Schlüssel von") }}</td>
+          <td colspan="2">
             <span v-if="team.keys.length" class="pos">{{ $t("diesem Team") }}</span>
             <span v-else-if="team.keysFrom" class="muted">{{ $t("Team {0}", [team.keysFrom]) }}</span>
             <span v-else class="neg">{{ $t("keiner hinterlegt") }}</span>
-          </td><td></td>
+          </td>
         </tr>
       </tbody></table>
     </div>

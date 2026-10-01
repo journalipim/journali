@@ -45,7 +45,7 @@ test('die Teamseite zeigt, wer dazugehört und womit gearbeitet wird — über K
   assert.match(t, /Init Team/)
   assert.match(t, /U1/, 'die Mitglieder stehen da')
   assert.match(t, /Gast/, 'auch wer kein eigenes Team trägt')
-  assert.match(t, /anthropic/, 'die eingerichteten Anbieter')
+  assert.match(t, /Anthropic✓ hinterlegt/, 'die eingerichteten Anbieter')
   assert.ok(!/Excel Laptop/.test(t), 'API-Token gehören zur Person, nicht zum Team')
   assert.match(t, /journali Limits/, 'die Limits haben ihren eigenen Abschnitt')
   assert.ok(!/Token diesen Monat/.test(t), 'journali sagt nichts über verbrauchte KI-Token')
@@ -96,11 +96,11 @@ test('die Abschnitte stehen in der vereinbarten Folge', async () => {
 test('der Team-Admin hinterlegt den Schlüssel; er kommt nie zurück', async () => {
   const calls = server(); store.auth = { known: true, enabled: true, user: 'u1', role: 'teamadmin', rights: ['read', 'team'] }
   const w = mount(TeamsSettings); await ruhe()
-  await w.find('input[type=password]').setValue('sk-ant-geheim')
-  await w.findAll('button').find(b => b.text() === '🔒').trigger('click'); await ruhe()
+  await w.find('input[type=password]').setValue('sk-geheim')
+  await w.findAll('button').find(b => b.text() === '⚿').trigger('click'); await ruhe()
   const put = calls.find(c => c.path.includes('/keys') && c.method === 'PUT')
   assert.ok(put, 'der Schlüssel ging nicht hinaus')
-  assert.equal(put.body.keys.anthropic, 'sk-ant-geheim')
+  assert.equal(put.body.keys.openai, 'sk-geheim')   // Anthropic hat im Beispielteam schon einen: das Feld steht bei OpenAI
   assert.equal(w.find('input[type=password]').element.value, '', 'das Feld ist danach leer — der Schlüssel liegt beim Server')
   await ruhe(); w.unmount()
 })

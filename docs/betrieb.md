@@ -330,9 +330,10 @@ journali bietet keine KI an und hat keinen eigenen Schlüssel; kein Anbieter ist
 
 **Ein lokales Modell** (29.09.2026): `JOURNALI_KI_LOKAL` am Server nennt die Adresse eines Dienstes mit der
 Ollama-Schnittstelle (`http://localhost:11434`); `JOURNALI_KI_LOKAL_MODELL` das Modell, sonst das erste, das der
-Dienst kennt — wählbar am Team. Dann steht der Anbieter `lokal` jedem Team zur Verfügung, ohne Schlüssel. Die
-bezahlten Anbieter mit Schlüssel gehen vor; welchen die Plugins fragen, wählt das Team (◍ Team → Anbieter; im
-Journal `models["*"]`). Das lokale Modell sucht nicht im Internet. Gezählt wird es wie die anderen — Volumen ist
+Dienst kennt — wählbar am Team. Dann steht der Anbieter `lokal` jedem Team zur Verfügung, ohne Schlüssel. Ohne die
+Umgebungsvariable trägt ein Team die Adresse selbst ein (◍ Team → KI API Keys, Zeile lokal; sie liegt wie ein Schlüssel
+beim Server). Die Zeilen des Abschnitts sind Anbieter: Zugang, Modell und der Schalter „aktiv“ — welchen die Plugins fragen,
+wählt das Team (im Journal `models["*"]`); die bezahlten Anbieter mit Schlüssel gehen vor, solange keiner gewählt ist. Das lokale Modell sucht nicht im Internet. Gezählt wird es wie die anderen — Volumen ist
 Volumen —, aber es kostet nichts: die Oberfläche zeigt es darum nicht magenta, und es darf von selbst laufen.
 Die Adresse bleibt beim Server; die Oberfläche sieht nur, dass es ein lokales Modell gibt und welche Modelle.
 

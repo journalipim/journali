@@ -18,16 +18,18 @@ const saved = (() => { try { return JSON.parse(localStorage.getItem(KEY) || '{}'
 export const PROVIDERS = [
   {
     key: 'anthropic', label: t_('Anthropic'), placeholder: 'sk-ant-…', endpoint: 'api.anthropic.com',
-    // Stand 22.09.2026: Claude 5 (Fable 5.1, Opus 5, Sonnet 5) und Haiku 4.5 — Kurzbezeichnungen ohne Datum
-    models: ['claude-sonnet-5', 'claude-opus-5', 'claude-fable-5-1', 'claude-haiku-4-5', 'claude-haiku-4-5-20251001'],
+    // Stand 01.10.2026: Sonnet 5.5, Opus 5.5, Fable 5.1 und Haiku 4.5; Sonnet 5 und Opus 5 bleiben wählbar. Das erste ist die Voreinstellung
+    models: ['claude-sonnet-5-5', 'claude-opus-5-5', 'claude-sonnet-5', 'claude-opus-5', 'claude-fable-5-1', 'claude-haiku-4-5', 'claude-haiku-4-5-20251001'],
     modelLabels: {
+      'claude-sonnet-5-5': t_('Sonnet 5.5 — schnell, günstig (Vorschläge, Zuordnung)'),
+      'claude-opus-5-5': t_('Opus 5.5 — gründlich (schwierige Fälle, Recherche)'),
       'claude-sonnet-5': t_('Sonnet 5 — schnell, günstig (Vorschläge, Zuordnung)'),
       'claude-opus-5': t_('Opus 5 — gründlich (schwierige Fälle, Recherche)'),
       'claude-fable-5-1': t_('Fable 5.1 — stärkstes Modell, teuer'),
       'claude-haiku-4-5': t_('Haiku 4.5 — am günstigsten, kurze Aufgaben'),
       'claude-haiku-4-5-20251001': t_('Haiku 4.5 (alte Kennung)'),
     },
-    hint: t_('Sonnet 5 für Vorschläge, Opus 5 für schwierige Fälle, Haiku 4.5 für Masse, Fable 5.1 für das Schwerste'),
+    hint: t_('Sonnet 5.5 für Vorschläge, Opus 5.5 für schwierige Fälle, Haiku 4.5 für Masse, Fable 5.1 für das Schwerste'),
     async call({ key, model, system, user, maxTokens, temperature, web, maxSearches }) {
       const res = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',

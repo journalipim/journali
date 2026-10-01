@@ -232,12 +232,13 @@ public static class AiApi
 
         // Die Modelle des lokalen Dienstes — an der Adresse des zahlenden Teams, sonst der der Umgebung. Für die Wahl
         // am Team; die Adresse selbst bleibt beim Server
-        api.MapGet("/ai/lokal/models", async (HttpRequest req, Catalog c, CancellationToken ct) =>
+        api.MapGet("/ai/lokal/models", async (HttpRequest req, Catalog c, CancellationToken ct, string? team = null) =>
         {
             var url = c.Lesen((_, _) =>
             {
-                var team = TeamApi.TeamOf(c, req.HttpContext.Items["user"] as string);
-                return team is null ? LokalUrl : LokalUrlFuer(Secrets.Get(jobsDir, TeamApi.SecretKey(c.Teams.Payer(team))));
+                // team: das Team, dessen Seite gezeigt wird; ohne Angabe das eigene
+                var gezeigt = team is { Length: > 0 } && c.Teams.Get(team) is not null ? team : TeamApi.TeamOf(c, req.HttpContext.Items["user"] as string);
+                return gezeigt is null ? LokalUrl : LokalUrlFuer(Secrets.Get(jobsDir, TeamApi.SecretKey(c.Teams.Payer(gezeigt))));
             });
             return Results.Ok(new { ready = url is not null, models = url is null ? [] : await LokalModelleAsync(url, ct) });
         });
@@ -278,7 +279,7 @@ public static class AiApi
         if (web && provider == Lokal) return (Bad("Das lokale Modell sucht nicht im Internet."), "", [], "", "", "", "");
 
         var amTeam = c.Lesen((_, _) => c.Teams.Get(zahler)?.Models.GetValueOrDefault(provider));
-        var model = Blank(amTeam) ?? Blank(wantModel) ?? (provider == "anthropic" ? "claude-sonnet-5" : provider == Lokal ? (LokalModell ?? (await LokalModelleAsync(lokalUrl, ct)).FirstOrDefault() ?? "") : "gpt-5");
+        var model = Blank(amTeam) ?? Blank(wantModel) ?? (provider == "anthropic" ? "claude-sonnet-5-5" : provider == Lokal ? (LokalModell ?? (await LokalModelleAsync(lokalUrl, ct)).FirstOrDefault() ?? "") : "gpt-5");
         if (provider == Lokal && model == "") return (Bad("Das lokale Modell hat kein Modell geladen."), "", [], "", "", "", "");
         try
         {
