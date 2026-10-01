@@ -10,6 +10,7 @@ import { TOPICS, entries, baseTopics, topicOfPath } from './topics.js'
 import { ai } from './ai.js'
 import { menu } from './menu.js'
 import { lesezeichenMenue } from './lesezeichen.js'
+import { istAbgemeldet } from './abgemeldet.js'
 import UsageMini from './components/UsageMini.vue'
 import HelpButton from './components/HelpButton.vue'
 import HelpPanel from './components/HelpPanel.vue'
@@ -23,6 +24,7 @@ const kb = b => {
 const tok = n => n >= 1e6 ? (n / 1e6).toFixed(1).replace('.', ',') + 'M' : n >= 1000 ? Math.round(n / 1000) + 'k' : String(n)
 const route = useRoute()
 const router = useRouter()
+const abgemeldet = computed(() => istAbgemeldet(route.path, store.auth))   // auf der Anmeldeseite sieht man nichts von der Anlage
 /// Lesezeichen (01.10.2026): das Menü neben der Person; es hängt an keinem Plugin
 async function lesezeichen(e) { menu.open(e, await lesezeichenMenue(router)) }
 // Auffangrahmen: ein Fehler beim Zeichnen einer
@@ -97,7 +99,7 @@ function railDrop(target) {
       <div class="bar" :style="`width:${Math.round(store.progress.done / Math.max(1, store.progress.total) * 100)}%`" />
       <span class="txt">{{ $t("{0} … {1} / {2} — Fenster offen lassen", [store.progress.text, store.progress.done, store.progress.total]) }}</span>
     </div>
-    <nav class="rail" v-if="!route.query.popup && route.path !== '/setup'">
+    <nav class="rail" v-if="!route.query.popup && route.path !== '/setup' && !abgemeldet">
       <!-- Logo: web/public/logo.png — Vite legt public/ neben die Seite -->
       <router-link to="/tree" class="rail-logo" :title="$t('journali PIM')"><img :src="'/logo-128.png'" :alt="$t('journali PIM')" onerror="this.style.display='none'" /></router-link>
       <template v-for="n in railItems" :key="n.to">
@@ -130,6 +132,7 @@ function railDrop(target) {
       <!-- Version und Bau statt eines zweiten Lämpchens — das in der Leiste links sagt dasselbe -->
       <span v-if="store.online" class="mono muted" :title="`journali ${store.version ?? ''} · gebaut ${store.builtAt}`">{{ store.version }}<span v-if="store.build"> ·{{ store.build }}</span></span>
       <span v-else class="dot" :class="{ offline: store.online === false }">●</span>
+      <template v-if="!abgemeldet">
       <span class="mono">#{{ store.head }}</span>
       <span class="sep">·</span>
       <span>▣ {{ store.nodes }}</span>
@@ -140,12 +143,15 @@ function railDrop(target) {
       <template v-if="ai.server?.ready"><span class="sep">·</span><router-link to="/settings#teams" class="ai"
         :title="$t('KI Austauschvolumen (mengenbasiert) — Diese Kennzahl gibt an, welche Datenmenge mit KIs über deren APIs ausgetauscht wurden (Senden+Empfangen). Wird zum Monatsbeginn zurückgesetzt.')"
         >{{ $t("✧ KI {0}", [kb(ai.server.volume?.month)]) }}</router-link></template>
+      </template>
       <span class="grow" />
       <button v-if="store.stale" class="primary" style="padding:0 8px;height:20px;font-size:12px" @click="reload" :title="$t('Neue Version der Oberfläche laden')">{{ $t("↻ Neue Version") }}</button>
+      <template v-if="!abgemeldet">
       <button v-if="(store.auth.enabled && store.auth.user) || store.actor" class="x lesezeichen-knopf" :title="$t('Lesezeichen anzeigen (Knoten wiederfinden)')" @click="lesezeichen">{{ $t("⚐ {0}", [store.bookmarks.length]) }}</button>
       <template v-if="store.auth.enabled && store.auth.user"><span class="actor" :title="$t('Rolle') + ' ' + store.auth.role + ' · ' + (store.auth.rights ?? []).join(', ')">👤 {{ store.auth.name || store.auth.user }} <span class="muted">· {{ store.auth.role }}</span></span><button class="x" style="height:20px;padding:0 6px;font-size:12px" @click="logout" :title="$t('abmelden')">⏻</button></template>
       <span v-else-if="store.actor" class="actor">👤 {{ store.actor }}</span>
       <router-link v-else to="/settings" class="warn">{{ $t("👤 Name fehlt → Einstellungen") }}</router-link>
+      </template>
       <!-- Hilfe: ein ? ganz rechts, dahinter die Links — Website, später Forum und Fehlermeldungen auf Git -->
       <HelpButton />
     </header>
