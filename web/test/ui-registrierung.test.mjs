@@ -120,3 +120,17 @@ test('Ohne Recht zur Anwenderverwaltung steht die Zeile nicht da', async () => {
   assert.equal(w.find('tr.registrierung').exists(), false)
   w.unmount()
 })
+
+// 01.10.2026: auf der Anmeldeseite stand die Frage, bevor sich jemand angemeldet hatte (abgemeldet gilt store.can() als „darf alles“)
+test('Auf der Anmeldeseite fragt niemand — weder abgemeldet noch bevor der Zustand der Anmeldung bekannt ist', async () => {
+  server(); _wiederFragen(); store.registriert = null
+  const gefragt = antwortet(true)
+  store.auth = { known: true, enabled: true, setup: true, user: null, role: null }
+  assert.equal(await frageNachRegistrierung(), false, 'abgemeldet')
+  store.auth = { known: false, enabled: false }
+  assert.equal(await frageNachRegistrierung(), false, 'Zustand noch unbekannt')
+  assert.equal(gefragt.length, 0)
+  // angemeldet als Verwalter: jetzt wird gefragt
+  anwender(['users'])
+  assert.equal(await frageNachRegistrierung(), true)
+})

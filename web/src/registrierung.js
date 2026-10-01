@@ -12,6 +12,9 @@ let gefragt = false
 /// Einmal fragen, wenn noch niemand geantwortet hat. Liefert true, wenn gefragt wurde. Solange der Server noch nichts
 /// gesagt hat (undefined), wird nicht gefragt — sonst stünde die Frage bei jedem Laden da.
 export async function frageNachRegistrierung() {
+  // Nie vor der Anmeldung: store.can() sagt abgemeldet „ja“ (so ist es für Anlagen ohne Anwender gedacht), und die Anmeldeseite ist kein Ort für diese Frage;
+  // solange der Zustand der Anmeldung nicht bekannt ist, ebenso nicht (01.10.2026)
+  if (!store.auth.known || (store.auth.enabled && !store.auth.user)) return false
   if (gefragt || store.registriert !== null || !store.can('users')) return false
   gefragt = true
   const ja = await dialog.confirm({
