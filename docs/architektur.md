@@ -186,9 +186,9 @@ Rauschen, `ReleaseGranted` bleibt). Zwei Fallen:
   2. ~~**Ein Schnappschuss, der Updates überlebt**~~ gebaut 24.09.2026 (`Fingerabdruck.cs`, 122 ms je Start): der
      Stempel ist der Fingerabdruck der Kern-Logik statt der ModuleVersionId — in der steckte der Git-Commit, jeder Commit
      liess den Schnappschuss fallen. Gemessen an vier Bauten: anderer Commit und nur ein Kommentar → gleicher Stempel,
-     eine Konstante geändert → anderer. Dazu stündlich geschrieben. Ursprünglicher Plan: stabiles Format mit eigener
+     eine Konstante geändert → anderer. Geschrieben wird er nach 10 000 neuen Einträgen oder nach einem Tag (01.10.2026; stündlich wird nachgesehen). Ursprünglicher Plan: stabiles Format mit eigener
      Formatnummer statt Build-Stempel; er
-     fällt nur, wenn sich ein Abbild wirklich ändert. Geschrieben regelmässig (etwa stündlich) und beim Beenden. Ein
+     fällt nur, wenn sich ein Abbild wirklich ändert. Geschrieben, wenn sich das lohnt (10 000 neue Einträge oder ein Tag, siehe oben) — beim Schreiben hält nur das Serialisieren die Lesesperre. Ein
      Start = Stand laden + Einträge seit dem letzten Schnappschuss; die Dauer hängt am heutigen Datenbestand, nicht an
      der Geschichte.
   3. **Das Akkordeon** — die Obergrenze für den schlimmsten

@@ -29,5 +29,6 @@
     ],
     "description": "ETIM-Freigaben holen: Liste der Downloads (list) oder eine Freigabe laden und alle Klassen ins Journal (load <url>)",
     "params": []
-  }
+  },
+  "health": "/api/plugins/etim/system/health"
 }

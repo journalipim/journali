@@ -36,6 +36,20 @@ public class ReleaseWatchTests
     }
 
     [Fact]
+    public void Die_vorab_gerechnete_Menge_der_Gruppen_mit_Pflichtfeld_gibt_dieselben_Antworten()
+    {
+        var c = World();
+        c.With((m, _, write) => write("t", Model.GroupStream + "preise", Types.AttributeGroupDefined, m.Groups["preise"] with { ReleaseWatch = ReleaseWatch.Always }, null));
+        c.With((m, _, _) =>
+        {
+            var pflicht = m.GroupsWithRequired();
+            Assert.Contains("texte", pflicht); Assert.DoesNotContain("preise", pflicht);
+            foreach (var a in m.Attributes.Keys.Append("gibtsnicht")) Assert.Equal(m.Watched(a), m.Watched(a, pflicht));
+            return 0;
+        });
+    }
+
+    [Fact]
     public void Gruppe_immer_und_nie_schlagen_die_Automatik()
     {
         var c = World();

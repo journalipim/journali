@@ -143,14 +143,14 @@ export function searchBricks(bricks, hierarchy, query, locale = 'en', limit = 60
 
 // ---- Für den Server (ClassificationApi): die neutrale Beschreibung
 export const classAttr = () => 'gpc_class'
-export const GROUP = 'gpc'
+export const GROUP = 'class_gpc'   // die Gruppe des Systems; die einer Klasse heisst class_gpc_<brick>
 /// Der Schlüssel des Attributs zu einem GPC-Attribut
 export const attrKey = code => `gpc${code}`
 
 export function systemSpec(settings = {}) {
   return {
     group: settings.group || GROUP, groupLabel: { de: 'GPC', en: 'GPC' }, classAttr: settings.classAttr || classAttr(),
-    classLabel: { de: 'GPC-Klasse', en: 'GPC class' }, classAttrAlternatives: ['gpc_klasse', 'gpc_class_std'], ownPattern: '^gpc\\d+$',
+    classLabel: { de: 'GPC-Klasse', en: 'GPC class' }, classAttrAlternatives: ['gpc_klasse', 'gpc_class_std'], ownPattern: '^gpc\\d+$', plugin: 'gpc',
   }
 }
 export function classSpec(brick, hierarchy, locale = 'en') {

@@ -15,8 +15,12 @@ function el(tag, attrs = {}, ...kids) { const e = document.createElement(tag); f
 const ICON = { group: '▣', product: '▦', variant: '◆' }
 const SEV = { error: '✗', warn: '⚠', info: 'ℹ', ok: '✓' }
 const TYPE = { Alphanumeric: t_('Liste'), Numeric: t_('Zahl'), Range: t_('Bereich'), Logical: 'Ja/Nein' }
-const DEFAULTS = { classAttr: 'etim_class', unknownAs: 'UN', requireClass: false, group: 'etim' }
-const groupKey = () => cache.settings.group || 'etim'
+const DEFAULTS = { classAttr: 'etim_class', unknownAs: 'UN', requireClass: false }
+/// Die Gruppe des Systems heisst class_etim (sie trägt das Klassenattribut; die Gruppe einer Klasse class_etim_<klasse>). Ein Bestand von früher mit
+/// der Gruppe etim behält sie, bis er umgestellt oder zurückgenommen ist — sonst bliebe seine Gruppe ohne Plugin zurück.
+const SYSTEMGRUPPE = 'class_etim', FRUEHER = 'etim'
+const hatGruppe = k => (globalThis.journali?.store?.model?.groups ?? []).some(g => g.key === k)
+const groupKey = () => cache.settings.group || (hatGruppe(FRUEHER) && !hatGruppe(SYSTEMGRUPPE) ? FRUEHER : SYSTEMGRUPPE)
 /// Die Gruppe einer Klasse: die Gruppe des Systems, ein Unterstrich, der Code in Kleinschrift — so legt der Server sie an (ClassificationApi.ClassGroupKey).
 /// Jede Klasse hat ihre Attributgruppe mit ihren Attributen; die Gruppe des Systems trägt nur das Klassenattribut.
 const classGroupKey = code => `${groupKey()}_${String(code ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '')}`
@@ -109,7 +113,7 @@ function modelOps(ctx) {
   // ein Attribut je Merkmal mit Bedingung, Einheit und Liste; bei einer Namenskollision weicht er aus und sagt es. Hier steht nur,
   // was ETIM ausmacht: wie ein ETIM-Attribut auf die neutralen Typen abgebildet wird.
   const system = () => ({ group: groupKey(), groupLabel: { de: 'ETIM', en: 'ETIM' }, classAttr: cache.settings.classAttr, classLabel: { de: 'ETIM-Klasse', en: t_('ETIM class') },
-    classAttrAlternatives: ['etim_klasse', 'etim_class_std'], ownPattern: '^ef\\d+$' })
+    classAttrAlternatives: ['etim_klasse', 'etim_class_std'], ownPattern: '^ef\\d+$', plugin: 'etim' })
   const classSpec = c => ({ code: c.code, name: c.name, section: c.group ? (nameOf(c.group.name, locale) || c.group.code) : null })
   const TYPES = { Numeric: 'decimal', Logical: 'boolean', Range: 'text', Alphanumeric: 'enum' }
   const RANGE = '^\\s*-?[\\d.,]+(\\s*(-|\\.\\.|…)\\s*-?[\\d.,]+)?\\s*$'
@@ -211,7 +215,7 @@ function buildCatalog(ctx) {
     key: 'etim', label: 'ETIM-Attribute', icon: '⌗', source: 'https://etim.de/daten/downloads/', sourceLabel: 'etim.de ↗',
     autoCreate: true,   // Attribute der ETIM-Attribute und die Gruppe entstehen beim Prüfen von selbst — der Anwender wählt die Klasse und füllt
     description: n ? t_('{0} Klasse{1} übernommen (⇪ Export → ⌗ ETIM) mit {2} ETIM-Attributen. Ein ETIM-Attribut zählt an einem Knoten nur, wenn seine Klasse es hat; Knoten ohne Klasse bleiben aussen vor. Fehlende Attribute legt der Katalog als ef… mit Werteliste und Einheit an.', [n, n === 1 ? '' : 'n', feats.length]) : t_('Noch keine Klasse übernommen — erst unter ⇪ Export → ⌗ ETIM eine Freigabe lesen und Klassen übernehmen.'),
-    groupKey: groupKey(), groupLabel: groupKey() === 'etim' ? 'ETIM' : groupKey(), prefix: '',
+    groupKey: groupKey(), groupLabel: 'ETIM', prefix: '',
     groups: [
       { key: 'class', label: t_('Klasse'), items: [{ key: classKey, label: 'ETIM-Klasse', level: 'must', type: 'enum', to: ops.hasAttr(classKey) ? classKey : '', synonyms: ['etim', 'etim_class', t_('etim klasse'), t_('etim class')], values: [...cache.classes.values()].map(c => `${c.code} ${nameOf(c.name, locale)}`), hint: t_('EC-Code der Klasse — ohne Klasse gilt kein ETIM-Attribut; die KI schlägt eine der übernommenen Klassen vor'), rule: v => cache.classes.has(String(v).trim().toUpperCase()) ? null : t_('Klasse {0} nicht übernommen', [v]) }] },
       { key: 'features', label: 'ETIM-Attribute', items },
@@ -490,6 +494,7 @@ async function stageData(ctx, nodeId, locale = 'de') {
   stage.keys = keys; stage.tbl = tbl
   return stage
 }
+let angemeldet = false   // einmal je Sitzung: Bestand von früher meldet sich beim ersten Band an
 async function bandMount({ head, body: bodyEl }, nodeId, ctx) {
   // head: kurzer Text in der Überschrift (wie „Redaktion: Freigegeben“); line: die Zeile mit Chips und Knöpfen im Körper; darunter die Befunde
   const line = el('div', { class: 'row' }); const table = el('div'); const found = el('div'); bodyEl.append(line, table, found)
@@ -497,6 +502,7 @@ async function bandMount({ head, body: bodyEl }, nodeId, ctx) {
   await cache.loaded; if (!tree.loaded) await tree.load()
   ctx.touch?.()   // die Klassen stehen — die Abschnitte der Knotenansicht neu rechnen
   const locale = store.model?.masterLocale ?? 'de'; const ops = modelOps(ctx)
+  if (!angemeldet) { angemeldet = true; api.post('/api/classification/register', { system: ops.system() }).catch(() => {}) }
   let gone = false
   const chip = (text, cls = '', title = '') => el('span', { class: 'chip ' + cls, title }, text)
   const viewsDone = new Set()   // je Klasse einmal prüfen, nicht bei jedem Zeichnen
@@ -938,8 +944,8 @@ async function mount(root, ctx) {
     // Attribute
     // Gruppe der ETIM-Daten: „etim“ legen wir an (Attribute direkt zugewiesen); eine vorhandene Gruppe heißt: hier zuordnen (Best Guess über die Namen)
     const groupSel = el('select', { title: t_('Attributgruppe der ETIM-Daten — gibt es sie nicht, wird sie angelegt'), onchange: e => { cache.settings.group = e.target.value; saveSettings(); draw() } },
-      el('option', { value: 'etim' }, `etim${(model().groups ?? []).some(g => g.key === 'etim') ? '' : ' (anlegen)'}`),
-      ...(model().groups ?? []).filter(g => g.key !== 'etim').map(g => el('option', { value: g.key }, `${g.label?.[locale] || L(g.label) || g.key} (${g.key})`)))
+      el('option', { value: SYSTEMGRUPPE }, `${SYSTEMGRUPPE}${(model().groups ?? []).some(g => g.key === SYSTEMGRUPPE) ? '' : ' (anlegen)'}`),
+      ...(model().groups ?? []).filter(g => g.key !== SYSTEMGRUPPE).map(g => el('option', { value: g.key }, `${g.label?.[locale] || L(g.label) || g.key} (${g.key})`)))
     groupSel.value = groupKey()
     const inGroup = () => attrs().filter(a => a.key !== key)
     const guessInGroup = () => {   // ETIM-Attribut → Attribut der gewählten Gruppe nach Namen (alle Sprachen, Code)
@@ -1002,7 +1008,12 @@ async function mount(root, ctx) {
 async function install(ctx) {
   const { api, store, tree } = ctx; const ops = modelOps(ctx)
   await cache.loaded; if (!tree.loaded) await tree.load()
-  await ops.ensureGroup(); await store.poll(true)
+  // Die Systemobjekte des Plugins, ohne die es nicht arbeiten kann: die Gruppe ETIM und das Klassenattribut. Der Server meldet sie an — solange
+  // das Plugin an ist, lassen sie sich nicht zurückziehen.
+  const sys = ops.system()
+  const fehlt = !(store.model?.groups ?? []).some(g => g.key === sys.group) || !(store.model?.attributes ?? []).some(a => a.key === sys.classAttr)
+  if (fehlt && !(await ctx.system?.ankuendigen?.({ label: 'ETIM', text: t_('Das Plugin legt die Attributgruppe {0} mit dem Attribut {1} an und hängt die Gruppe an die Wurzeln. Ohne sie arbeitet es nicht, und solange es an ist, lassen sie sich nicht zurückziehen.', [sys.group, sys.classAttr]) }) ?? true)) return false   // abgelehnt: das Plugin ist wieder aus
+  await ops.ensureClassAttr(); await store.poll(true)
   const roots = tree.rows.filter(r => !r.parent && r.role !== 'rubric')
   for (const root of roots) {
     const have = (root.groups ?? '').split(',').filter(Boolean)

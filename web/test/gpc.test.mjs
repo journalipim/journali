@@ -106,8 +106,8 @@ test('die Beschreibung für den Server: Klasse, Merkmale als Listen, Bedingung �
 
 test('das System: Schlüssel, Bezeichnungen, Ausweichnamen und das Muster der eigenen Attribute', () => {
   const s = systemSpec()
-  assert.deepEqual([s.group, s.classAttr, s.ownPattern], ['gpc', 'gpc_class', '^gpc\\d+$'])
+  assert.deepEqual([s.group, s.classAttr, s.ownPattern, s.plugin], ['class_gpc', 'gpc_class', '^gpc\\d+$', 'gpc'])
   assert.ok(new RegExp(s.ownPattern).test('gpc29900001') && !new RegExp(s.ownPattern).test('gpc_class'))
-  assert.deepEqual(systemSpec({ group: 'gpc_std', classAttr: 'gpc_klasse' }).group, 'gpc_std', 'ausgewichen: der gemerkte Schlüssel gilt')
+  assert.deepEqual(systemSpec({ group: 'class_gpc_std', classAttr: 'gpc_klasse' }).group, 'class_gpc_std', 'ausgewichen: der gemerkte Schlüssel gilt')
   assert.deepEqual(mergeDict(null, { attributes: { 1: { en: 'a' } } }).attributes, { 1: { en: 'a' } })
 })

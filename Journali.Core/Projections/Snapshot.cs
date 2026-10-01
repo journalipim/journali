@@ -22,7 +22,7 @@ public static class Snapshot
 {
     /// <summary>
     /// Stempel: der Fingerabdruck der Kern-Logik (<see cref="Fingerabdruck"/>) — ändert sich, wenn die Abbilder anders
-    /// rechnen könnten, nicht bei jedem Commit (Taloan, 24.09.2026). Einmal je Prozess gerechnet.
+    /// rechnen könnten, nicht bei jedem Commit. Einmal je Prozess gerechnet.
     /// </summary>
     public static string Stamp => _stamp ??= Fingerabdruck.Von(typeof(Snapshot).Assembly);
     private static string? _stamp;
@@ -40,19 +40,38 @@ public static class Snapshot
     private sealed record File(string Stamp, Head Check, Dictionary<string, JsonElement> Parts);
 
     /// <summary>Alle Abbilder bei ihrem gemeinsamen Stand schreiben (erst in eine Nebendatei, dann umbenennen). Liefert #n.</summary>
-    public static long Save(string path, IJournal journal, IReadOnlyList<(string Name, IProjection Projection)> parts)
+    public static long Save(string path, IJournal journal, IReadOnlyList<(string Name, IProjection Projection)> parts) =>
+        Prepare(journal, parts) is { } prepared ? Write(path, prepared) : 0;
+
+    /// <summary>Der Stand, bereit zum Schreiben: die Abbilder als UTF-8-Bytes, noch ohne Datei.</summary>
+    public sealed record Prepared(long Number, string Stream, string Type, DateTimeOffset At, Dictionary<string, byte[]> Parts);
+
+    /// <summary>
+    /// Der erste Teil von <see cref="Save"/>: die Abbilder in Bytes verwandeln. Nur das braucht einen ganzen, ruhigen Stand — der
+    /// Aufrufer hält dafür die Lesesperre; das Schreiben der Datei (<see cref="Write"/>) geschieht danach ohne sie. Bei 340 MB dauerte
+    /// beides zusammen fast 9 Sekunden, und solange hielt jeder wartende Schreiber alle weiteren Leser auf (01.10.2026).
+    /// </summary>
+    public static Prepared? Prepare(IJournal journal, IReadOnlyList<(string Name, IProjection Projection)> parts)
     {
         var number = parts.Min(p => p.Projection.LastApplied);
-        if (number == 0) return 0;
+        if (number == 0) return null;
         var check = journal.ReadAfter(number - 1).FirstOrDefault();
-        if (check is null || check.Number != number) return 0;
-        var file = new File(Stamp, new Head(check.Number, check.Stream, check.Type, check.At),
-            parts.ToDictionary(p => p.Name, p => JsonSerializer.SerializeToElement(p.Projection, p.Projection.GetType(), Options)));
+        if (check is null || check.Number != number) return null;
+        return new Prepared(check.Number, check.Stream, check.Type, check.At,
+            parts.ToDictionary(p => p.Name, p => JsonSerializer.SerializeToUtf8Bytes(p.Projection, p.Projection.GetType(), Options)));
+    }
+
+    /// <summary>Der zweite Teil: die Datei schreiben (erst in eine Nebendatei, dann umbenennen). Liefert #n.</summary>
+    public static long Write(string path, Prepared p)
+    {
+        var parts = new Dictionary<string, JsonElement>();
+        foreach (var (name, bytes) in p.Parts) { using var doc = JsonDocument.Parse(bytes); parts[name] = doc.RootElement.Clone(); }
+        var file = new File(Stamp, new Head(p.Number, p.Stream, p.Type, p.At), parts);
         var tmp = path + ".tmp";
         using (var fs = new FileStream(tmp, FileMode.Create, FileAccess.Write, FileShare.None, 1 << 16))
             JsonSerializer.Serialize(fs, file, Options);
         System.IO.File.Move(tmp, path, overwrite: true);
-        return number;
+        return p.Number;
     }
 
     /// <summary>

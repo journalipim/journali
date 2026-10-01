@@ -159,6 +159,33 @@ export async function createAttributes(catalog, items, mapping) {
   await store.poll(true)
 }
 
+/// Beim Einschalten des Plugins (install): die Attributgruppe des Katalogs und die Attribute, die es noch nicht gibt, entstehen — nach einem Hinweis.
+/// Was der Katalog schon einem vorhandenen Attribut zuordnen kann, bleibt dort. Danach meldet das Plugin die Gruppe und ihre Attribute an:
+/// solange es an ist, braucht es sie, und der Server lässt sie nicht einzeln zurückziehen. Lehnt der Anwender den Hinweis ab, ist das Plugin wieder aus.
+export async function setup(ctx, catalog) {
+  if (!tree.loaded) await tree.load()
+  const model = store.model
+  const savedGroup = await ctx.data.get('group').catch(() => null); if (typeof savedGroup === 'string' && savedGroup) catalog.groupKey = savedGroup
+  const mapping = guessMapping(catalog, model)
+  const saved = await ctx.data.get('mapping')
+  if (saved) for (const [k, v] of Object.entries(saved)) if (v?.to && model.attributes.some(a => a.key === v.to) && !mapping[k]?.fixed) mapping[k] = { ...v, why: 'gemerkt', sure: true }
+  const items = catalog.groups.flatMap(g => g.items)
+  const fehlen = items.filter(it => !mapping[it.key]?.to)
+  const ohneGruppe = !model.groups.some(g => g.key === catalog.groupKey)
+  if (fehlen.length || ohneGruppe) {
+    const ok = await ctx.system?.ankuendigen?.({
+      label: catalog.label,
+      text: t_('Das Plugin legt die Attributgruppe {0} mit {1} Attributen an. Ohne sie arbeitet es nicht, und solange es an ist, lassen sie sich nicht zurückziehen.', [catalog.groupKey, fehlen.length]),
+    }) ?? true
+    if (!ok) return false
+    await createAttributes(catalog, fehlen, mapping)
+    await ctx.data.set('mapping', mapping).catch(() => {})
+  }
+  const gruppe = (store.model.groups ?? []).find(g => g.key === catalog.groupKey)
+  await ctx.system?.melden?.([catalog.groupKey], gruppe?.attributes ?? [])
+  return true
+}
+
 // Geltungen vorschlagen: (1) Regeln des Katalogs gegen die wirksame ETIM-Klasse des Knotens (Code, Name, Gruppe), (2) die KI mit
 // Produkt, Pfad, Klasse und den Geltungen samt Hinweis — Antwort je Geltung ja/nein mit Begründung. Null, wenn beides fehlt.
 async function suggestScopes(catalog, rootRow, scopes, have) {

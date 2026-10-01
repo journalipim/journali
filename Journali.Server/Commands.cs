@@ -29,6 +29,8 @@ public sealed class Ctx
     public Workflows? Workflows { get; init; }
     /// <summary>Marken und Aufträge der Übersetzung (30) — für die Wirkung <c>translate:&lt;sprache&gt;</c>.</summary>
     public Translations? Translations { get; init; }
+    /// <summary>Die Plugins, wie das Journal sie kennt — ihre Daten, darunter die Systemobjekte, die sie angemeldet haben.</summary>
+    public Plugins? Plugins { get; init; }
     /// <summary>Rolle des Anfragenden (null = offen, ohne Benutzer) — für Übergänge mit Rollen.</summary>
     public string? Role { get; init; }
     public required Func<string, string, object, Entry> Write { get; init; }   // stream, type, payload

@@ -16,13 +16,17 @@ async function loadSettings() {
 }
 cache.loaded = loadSettings()
 
-/// Einmal beim Einschalten: die Gruppe des Systems entsteht und hängt an jeder Wurzel des Pflegebaums. Sie trägt das Klassenattribut.
-/// Die Gruppe einer Klasse und ihre Attribute entstehen erst mit dem ersten Brick, den jemand zuweist.
+/// Einmal beim Einschalten: die Systemobjekte entstehen — die Gruppe GPC mit dem Klassenattribut — und hängen an jeder Wurzel des Pflegebaums.
+/// Der Server meldet sie an; solange das Plugin an ist, lassen sie sich nicht zurückziehen. Die Gruppe einer Klasse und ihre Attribute entstehen
+/// erst mit dem ersten Brick, den jemand zuweist.
 async function install(ctx) {
   const { api, store, tree } = ctx
   if (!tree.loaded) await tree.load()
   const settings = (await api.get('/api/plugins/gpc/data/settings').catch(() => null)) ?? {}
-  const r = await api.post('/api/classification/ensure', { system: systemSpec(settings), groupOnly: true })
+  const sys = systemSpec(settings)
+  const fehlt = !(store.model?.groups ?? []).some(g => g.key === sys.group) || !(store.model?.attributes ?? []).some(a => a.key === sys.classAttr)
+  if (fehlt && !(await ctx.system?.ankuendigen?.({ label: 'GPC', text: t('Das Plugin legt die Attributgruppe {0} mit dem Attribut {1} an und hängt die Gruppe an die Wurzeln. Ohne sie arbeitet es nicht, und solange es an ist, lassen sie sich nicht zurückziehen.', [sys.group, sys.classAttr]) }) ?? true)) return false   // abgelehnt: das Plugin ist wieder aus
+  const r = await api.post('/api/classification/ensure', { system: sys })
   const group = r?.group ?? systemSpec(settings).group
   if (r?.groupRenamed) await api.post('/api/plugins/gpc/data/settings', { ...settings, group }, 'PUT')
   await store.poll?.(true)
@@ -34,8 +38,10 @@ async function install(ctx) {
 }
 
 /// Das Band am Knoten: ein Vue-Baustein im Körper, der Kopf bekommt die kurze Zusammenfassung
-async function bandMount({ head, body }, nodeId) {
+let angemeldet = false   // einmal je Sitzung: Bestand von früher meldet sich beim ersten Band an
+async function bandMount({ head, body }, nodeId, ctx) {
   await cache.loaded
+  if (!angemeldet) { angemeldet = true; ctx?.api?.post?.('/api/classification/register', { system: systemSpec(cache.settings) })?.catch?.(() => {}) }
   const app = createApp({ render: () => h(Band, { nodeId, settings: cache.settings, onKopf: text => { head.textContent = text } }) })
   app.config.globalProperties.$t = t
   app.mount(body)

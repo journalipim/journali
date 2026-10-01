@@ -41,7 +41,19 @@ public sealed class ModelCatalog : IProjection
     public string? MasterChannel { get; private set; }
     /// <summary>Freigabesteuerung: zählt eine Änderung dieses Attributs als Eingriff in Prüfung und Freigabe?
     /// Attribut schlägt Gruppe; „auto“ an der Gruppe heisst: ja, wenn die Gruppe ein Pflichtfeld hat.</summary>
-    public bool Watched(string attribute)
+    public bool Watched(string attribute) => Watched(attribute, null);
+
+    /// <summary>Die Gruppen, in denen mindestens ein Attribut Pflichtwerte hat — in einem Durchgang. Wer für viele Attribute <see cref="Watched(string, HashSet{string})"/>
+    /// fragt, übergibt diese Menge, statt dass jede Frage alle Attribute der Gruppe durchgeht (die Modellansicht brauchte dafür 0,9 s).</summary>
+    public HashSet<string> GroupsWithRequired()
+    {
+        var r = new HashSet<string>();
+        foreach (var a in Attributes.Values)
+            if (a.Required is { Count: > 0 }) foreach (var g in GroupsOf(a.Key)) r.Add(g);
+        return r;
+    }
+
+    public bool Watched(string attribute, HashSet<string>? mitPflicht)
     {
         if (!Attributes.TryGetValue(attribute, out var a)) return false;
         if (a.ReleaseWatch == Entries.ReleaseWatch.Always) return true;
@@ -50,7 +62,7 @@ public sealed class ModelCatalog : IProjection
         if (g is null) return false;                                   // ohne Gruppe gilt das Attribut nirgends
         if (g.ReleaseWatch == Entries.ReleaseWatch.Always) return true;
         if (g.ReleaseWatch == Entries.ReleaseWatch.Never) return false;
-        return AttributesOf(g.Key).Any(x => x.Required is { Count: > 0 });   // auto: die Gruppe trägt Pflichtwerte
+        return mitPflicht is not null ? mitPflicht.Contains(g.Key) : AttributesOf(g.Key).Any(x => x.Required is { Count: > 0 });   // auto: die Gruppe trägt Pflichtwerte
     }
 
     /// <summary>Die Schlüsselattribute (unique), nach Schlüssel geordnet — beliebig viele, jedes für sich eindeutig.</summary>

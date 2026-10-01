@@ -5,6 +5,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { api, store, tree, dialog, t as t_ } from 'journali'
 import { klasseAm, gruppeGilt, schluessel, klassenGruppe } from './klasse.js'
+import { systemSpec } from '../core.mjs'
 import { oeffneKlasse } from './modal.js'
 
 const props = defineProps({ nodeId: String, settings: Object })
@@ -72,7 +73,7 @@ async function anhaengen(gruppe) {
 }
 /// Die Gruppe des Systems gibt es nicht (gelöscht): der Server legt sie an
 async function systemAnlegen() {
-  await api.post('/api/classification/ensure', { system: { group: schl.value.group, classAttr: schl.value.classAttr, groupLabel: { de: 'GPC', en: 'GPC' } }, groupOnly: true })
+  await api.post('/api/classification/ensure', { system: systemSpec(props.settings) })
   await store.poll?.(true)
   await anhaengen(schl.value.group)
 }

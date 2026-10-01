@@ -36,6 +36,8 @@ public class RechteTests
         Assert.Equal(Rights.Write, Braucht("/api/classification/ensure", "POST"));
         Assert.Equal(Rights.Write, Braucht("/api/classification/assign", "POST"));
         Assert.Equal(Rights.Read, Braucht("/api/classification/readiness", "POST"));
+        Assert.Equal(Rights.Read, Braucht("/api/classification/systems"));
+        Assert.Equal(Rights.Plugins, Braucht("/api/classification/retire", "POST"));   // wer das Plugin verwaltet, räumt auch seine Objekte weg
     }
 
     [Fact]

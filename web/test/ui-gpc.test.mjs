@@ -27,7 +27,7 @@ function server({ assign = {}, migrate = null, node = { values: [], ancestors: [
     if (path === '/api/plugins/gpc/data' && method === 'GET') out = daten
     else if (path === '/api/plugins/gpc/data' && method === 'PUT') Object.assign(daten, body)
     else if (path.startsWith('/api/plugins/gpc/data/') && method === 'PUT') daten[decodeURIComponent(path.split('/').pop())] = body
-    else if (path === '/api/classification/assign') out = { group: 'gpc', classAttr: 'gpc_class', attributes: 2, groupAttached: true, readiness: { ready: true, groupExists: true, groupOn: true, missing: [] }, ...assign }
+    else if (path === '/api/classification/assign') out = { group: 'class_gpc', classAttr: 'gpc_class', attributes: 2, groupAttached: true, readiness: { ready: true, groupExists: true, groupOn: true, missing: [] }, ...assign }
     else if (path === '/api/classification/migrate') out = body.dryRun ? (migrate ?? { groups: 0, attributes: 0, nodes: 0 }) : { groups: 2, attributes: 5, nodes: 3 }
     else if (path.endsWith('/table')) out = tabelle
     else if (path.startsWith('/api/nodes/')) out = node
@@ -99,7 +99,7 @@ test('suchen, einen Brick wählen, zuweisen: der Server bekommt Klasse, System u
   await knopf(w, '✓ zuweisen').trigger('click'); await ruhe()
   const a = calls.find(c => c.path === '/api/classification/assign')
   assert.equal(a.body.node, 'p1'); assert.equal(a.body.class, '19900001')
-  assert.deepEqual([a.body.system.group, a.body.system.classAttr, a.body.system.ownPattern], ['gpc', 'gpc_class', '^gpc\\d+$'])
+  assert.deepEqual([a.body.system.group, a.body.system.classAttr, a.body.system.ownPattern], ['class_gpc', 'gpc_class', '^gpc\\d+$'])
   assert.deepEqual(a.body.features.map(f => [f.key, f.type, f.values.length, f.classes]), [['gpc29900001', 'enum', 3, ['19900001', '19900002']], ['gpc29900002', 'enum', 2, ['19900001']]])
   assert.deepEqual(a.body.classes.map(c => c.code).sort(), ['19900001', '19900002', '19900003'], 'die Liste der Klassen gibt es noch nicht: alle gehen mit')
 })
@@ -174,11 +174,11 @@ test('die zuletzt gewählten Dateien stehen in einer Liste und öffnen sich wied
 })
 
 test('weicht der Server wegen einer Namenskollision aus, merkt sich der Dialog den Schlüssel', async () => {
-  const { w, calls, daten } = await mitDaten('g1', { assign: { group: 'gpc_std', classAttr: 'gpc_klasse', groupRenamed: { from: 'gpc', to: 'gpc_std' } } })
+  const { w, calls, daten } = await mitDaten('g1', { assign: { group: 'class_gpc_std', classAttr: 'gpc_klasse', groupRenamed: { from: 'class_gpc', to: 'class_gpc_std' } } })
   await w.find('input.suche').setValue('cables'); await ruhe()
   await w.find('.liste .pick').trigger('click')
   await knopf(w, '✓ zuweisen').trigger('click'); await ruhe()
-  assert.deepEqual(daten.settings, { group: 'gpc_std', classAttr: 'gpc_klasse' })
+  assert.deepEqual(daten.settings, { group: 'class_gpc_std', classAttr: 'gpc_klasse' })
   assert.ok(calls.some(c => c.method === 'PUT' && c.path === '/api/plugins/gpc/data/settings'))
 })
 

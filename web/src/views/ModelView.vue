@@ -86,6 +86,46 @@ const put = (path, body) => send(async () => {
 })
 const del = path => send(() => api.del(path))
 
+// ---- Systemobjekte (30.09.2026): die Gruppe einer Klassifikation und ihr Klassenattribut lassen sich nicht einzeln zurückziehen — sie tragen
+// die ganze Klassifikation. Solange das Plugin an ist, braucht es sie; ist es aus, wird sie als Ganzes zurückgezogen, nach einem Warndialog,
+// und nur von dem, der Plugins verwalten darf.
+const systeme = ref([])   // [{ group, classAttr, classGroups }]
+const geschuetzt = ref([])   // [{ plugin, groups, attributes }] — was eingeschaltete Plugins brauchen
+async function systemeLaden() {
+  try { systeme.value = await api.get('/api/classification/systems') } catch { systeme.value = [] }
+  try { geschuetzt.value = await api.get('/api/classification/protected') } catch { geschuetzt.value = [] }
+}
+/// Das eingeschaltete Plugin, das dieses Objekt braucht — vor jeder Rückfrage gefragt: wer zurückziehen will, soll nicht erst bestätigen und dann erfahren, dass es nicht geht
+const schutzVon = (art, key) => geschuetzt.value.find(x => (art === 'group' ? x.groups : x.attributes).includes(key))?.plugin ?? null
+/// Meldet das erste geschützte Objekt unter den Genannten ([art, key]) und sagt, ob es eines gab
+function geschuetztMelden(objekte) {
+  for (const [art, key] of objekte) { const p = schutzVon(art, key); if (p) { store.toast(t('{0} wird vom eingeschalteten Plugin {1} gebraucht.', [key, p])); return true } }
+  return false
+}
+/// Die Gruppe der Klassifikation, zu der dieses Objekt (group oder attribute) als Systemobjekt gehört
+const systemVon = (art, key) => systeme.value.find(x => art === 'group' ? x.group === key : x.classAttr === key)?.group ?? null
+async function klassifikationZuruecknehmen(group) {
+  const sys = systeme.value.find(x => x.group === group)
+  // solange das Plugin an ist, braucht es seine Objekte; ausschalten darf, wer Plugins verwaltet — und nur der räumt sie auch weg
+  if (sys?.enabled) { store.toast(t('{0} wird vom eingeschalteten Plugin {1} gebraucht.', [group, sys.plugin])); return }
+  if (!store.can?.('plugins')) { store.toast(t('Systemobjekte zurückzuziehen verlangt das Recht, Plugins zu verwalten.')); return }
+  busy.value = true
+  try {
+    const z = await api.post('/api/classification/retire', { group, dryRun: true })
+    const ok = await dialog.confirm({
+      title: t('Klassifikation {0} zurücknehmen?', [group]),
+      warn: t('In allen Bäumen geht die ganze Klassifikation weg: {0} Knoten mit Klasse, {1} Werte, {2} Gruppen und {3} Attribute.', [z.nodes, z.values, z.groups, z.attributes]),
+      text: t('Die Werte bleiben im Journal; die Klassifikation lässt sich neu aufbauen.'),
+      ok: t('✕ Klassifikation zurücknehmen'), danger: true,
+    })
+    if (!ok) return
+    await api.post('/api/classification/retire', { group, dryRun: false })
+    await store.poll(true); await systemeLaden()
+    cur.value = null; sel.value = new Set()
+    store.toast(t('✓ Klassifikation {0} zurückgenommen', [group]), 'ok')
+  } catch (e) { store.toast(e.message) } finally { busy.value = false }
+}
+
 function switchTo(k) { section.value = k; sel.value = new Set(); cur.value = null; filter.value = ''; resetFlt() }
 // Sprung aus dem Knoten: /model?section=groups&key=<gruppe> öffnet den Abschnitt mit dem Ding rechts.
 const route = useRoute()
@@ -95,7 +135,7 @@ function fromQuery(q) {
   switchTo(q.section)
   if (q.key) { cur.value = q.key; sel.value = new Set([q.key]) }
 }
-onMounted(() => fromQuery(route.query))
+onMounted(() => { fromQuery(route.query); systemeLaden() })
 watch(() => route.query, fromQuery)
 
 // ---- Die Liste in der Mitte: je Abschnitt Zeilen { key, label, right[] }
@@ -161,7 +201,7 @@ function blockFor(k) {
   const m = model.value; if (!m || !k) return ''
   const used = (pred) => m.attributes.filter(pred).map(a => a.key)
   switch (section.value) {
-    case 'groups': return used(a => inGruppe(a, k)).length ? t('hat noch Attribute') : ''
+    case 'groups': return systemVon('group', k) ? '' : used(a => inGruppe(a, k)).length ? t('hat noch Attribute') : ''
     case 'lists': { const u = used(a => a.list === k); return u.length ? t('benutzt von {0}{1}', [u.slice(0, 3).join(', '), u.length > 3 ? ' …' : '']) : '' }
     case 'units': { const u = used(a => a.unit === k); return u.length ? t('benutzt von {0}{1}', [u.slice(0, 3).join(', '), u.length > 3 ? ' …' : '']) : '' }
     case 'channels': { if (m.masterChannel === k) return t('Masterkanal'); const u = used(a => (a.channels ?? []).includes(k) || (a.required && k in a.required)); return u.length ? t('benutzt von {0}{1}', [u.slice(0, 3).join(', '), u.length > 3 ? ' …' : '']) : '' }
@@ -321,6 +361,10 @@ const removePath = {
 }
 async function bulkRemove() {
   const p = removePath[section.value]; if (!p) return
+  const art = section.value === 'groups' ? 'group' : section.value === 'attributes' ? 'attribute' : null
+  const system = art ? [...sel.value].filter(k => systemVon(art, k)) : []
+  if (system.length) { store.toast(t('{0} trägt eine Klassifikation — Systemobjekte werden einzeln zurückgezogen.', [system[0]])); return }
+  if (art && geschuetztMelden([...sel.value].map(k => [art, k]))) return
   if (!await dialog.confirm({ title: t('{0} {1} zurückziehen?', [sel.value.size, sec.value.label]), ok: t('✕ Zurückziehen'), danger: true })) return
   for (const k of [...sel.value]) await del(p(k))
   sel.value = new Set(); cur.value = null
@@ -329,7 +373,9 @@ const busy = ref(false)
 // Gruppe mit allem, was darin hängt: erst die Attribute zurückziehen, dann die Gruppe. Was gesperrt ist (★-Attribut, Kennung), bleibt stehen und wird genannt.
 async function removeGroupDeep(key = null) {
   const g = key ? (model.value?.groups ?? []).find(x => x.key === key) : curGroup.value; if (!g) return
+  if (systemVon('group', g.key)) return klassifikationZuruecknehmen(g.key)
   const attrs = (model.value?.attributes ?? []).filter(a => inGruppe(a, g.key))
+  if (geschuetztMelden([['group', g.key], ...attrs.map(a => ['attribute', a.key])])) return
   if (!await dialog.confirm({ title: t('Gruppe {0} mit {1} Attributen zurückziehen?', [L(g.label) || g.key, attrs.length]), text: attrs.length ? t('Zurückgezogen werden: {0}{1}.', [attrs.slice(0, 8).map(a => L(a.label) || a.key).join(', '), attrs.length > 8 ? ` … +${attrs.length - 8}` : '']) : '', warn: t('Werte bleiben im Journal — die Attribute sind danach nicht mehr im Modell.'), ok: t('✕ Zurückziehen'), danger: true })) return
   const kept = []
   busy.value = true
@@ -343,6 +389,10 @@ async function removeGroupDeep(key = null) {
 }
 async function removeCur() {
   const p = removePath[section.value]; if (!p || !cur.value) return
+  const sg = section.value === 'groups' ? systemVon('group', cur.value) : section.value === 'attributes' ? systemVon('attribute', cur.value) : null
+  if (sg) return klassifikationZuruecknehmen(sg)
+  const art = section.value === 'groups' ? 'group' : section.value === 'attributes' ? 'attribute' : null
+  if (art && geschuetztMelden([[art, cur.value]])) return
   if (!await dialog.confirm({ title: t('{0} {1} zurückziehen?', [sec.value.one, cur.value]), ok: t('✕ Zurückziehen'), danger: true })) return
   await del(p(cur.value)); cur.value = null; sel.value = new Set()
 }

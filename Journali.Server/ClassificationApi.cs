@@ -20,7 +20,15 @@ namespace Journali.Server;
 /// <item><c>POST /api/classification/clear</c> — die eigene Klasse vom Knoten nehmen, samt ihrer Gruppe.</item>
 /// <item><c>POST /api/classification/migrate</c> — Bestand der früheren Bauart (eine Sammelgruppe, Attribute mit Bedingung) auf Klassengruppen umstellen.</item>
 /// <item><c>POST /api/classification/readiness</c> — fehlt der Klasse am Knoten noch etwas?</item>
+/// <item><c>GET /api/classification/systems</c> und <c>POST /api/classification/retire</c> — die Klassifikationen im Modell und das Zurücknehmen einer ganzen.</item>
 /// </list>
+/// <para><b>Systemobjekte</b> (30.09.2026): das Plugin eines Systems sagt, wie die Gruppe und das Klassenattribut heissen, die es zum Betrieb
+/// braucht (<c>plugin</c> in der Beschreibung des Systems); der Server legt sie beim Einschalten an und meldet sie im Journal an
+/// (Plugin-Daten <c>system</c> des Plugins). Solange das Plugin eingeschaltet ist, braucht es sie, und das Zurückziehen fragt die Plugins: was
+/// eines braucht, lässt sich nicht löschen — ohne diese Objekte kann das Plugin nicht arbeiten, es gilt alles oder nichts. Ist das Plugin aus
+/// (das Ausschalten verlangt das Recht auf Plugins), nimmt man die Klassifikation als Ganzes zurück (<c>retire</c>): in allen Bäumen gehen die
+/// Klassen und ihre Werte weg, mit den Gruppen der Klassen und ihren Attributen, und die Anmeldung fällt. Danach ist das Plugin „nicht bereit“
+/// (<c>health</c>), bis es seine Objekte wieder anlegt.</para>
 /// Wo das Modell sich ändern müsste, verlangt der Server das Modell-Recht; ist schon alles da, genügt das Schreib-Recht.
 /// </summary>
 public static class ClassificationApi
@@ -28,7 +36,7 @@ public static class ClassificationApi
     /// <summary>Das System: Schlüssel der Attributgruppe und des Klassenattributs, deren Bezeichnungen, Ausweichnamen bei einer
     /// Namenskollision und das Muster der Attributschlüssel, die dem System gehören (nur an ihnen erkennt der Server „unsere“ Gruppe).</summary>
     public sealed record SystemSpec(string Group, Dictionary<string, string>? GroupLabel, string ClassAttr, Dictionary<string, string>? ClassLabel,
-        string[]? ClassAttrAlternatives = null, string? OwnPattern = null);
+        string[]? ClassAttrAlternatives = null, string? OwnPattern = null, string? Plugin = null);
     /// <summary>Eine Klasse: Code, Namen je Sprache und der Text der Oberklasse (Spalte „group“ der Werteliste).</summary>
     public sealed record ClassSpec(string Code, Dictionary<string, string>? Name, string? Section = null);
     public sealed record UnitSpec(string Code, Dictionary<string, string>? Abbr, Dictionary<string, string>? Name);
@@ -52,6 +60,16 @@ public static class ClassificationApi
     public sealed record Assigned(string Group, string ClassAttr, string ClassGroup, int Attributes, Renamed? GroupRenamed, Renamed? ClassAttrRenamed, bool GroupAttached, Readiness Readiness);
     public sealed record Cleared(string? Class, string? ClassGroup);
     public sealed record Migrated(int Groups, int Attributes, int Nodes);
+    public sealed record RetireBody(string Group, bool DryRun = false);
+    /// <summary>Was das Zurücknehmen kostet (oder gekostet hat): Gruppen, Attribute, Knoten mit einer Klasse und die Werte, die dabei weggehen.</summary>
+    public sealed record Retired(int Groups, int Attributes, int Nodes, int Values);
+    /// <summary>Eine Klassifikation im Modell: die Gruppe des Systems und ihr Klassenattribut, dazu was an ihr hängt.</summary>
+    public sealed record SystemInfo(string Plugin, bool Enabled, string Group, string ClassAttr, int ClassGroups);
+    public sealed record RegisterBody(SystemSpec System);
+    public sealed record Health(bool Ready, string? Reason);
+    /// <summary>Die Systemobjekte eines Plugins: die Gruppen und Attribute, die es zum Betrieb braucht.</summary>
+    public sealed record SystemBody(string[]? Groups, string[]? Attributes);
+    public sealed record RegisterResult(bool Registered);
 
     /// <summary>Auf jeder Ebene pflegbar, erbt nach unten.</summary>
     private static readonly string[] FeatureLevels = [Roles.Group, Roles.Product, Roles.Variant];
@@ -64,6 +82,14 @@ public static class ClassificationApi
         api.MapPost("/classification/assign", (AssignBody b, HttpRequest req, Catalog c) => Run(req, c, (x, mayModel) => Assign(x, b, mayModel)));
         api.MapPost("/classification/clear", (ClearBody b, HttpRequest req, Catalog c) => Run(req, c, (x, mayModel) => Clear(x, b, mayModel)));
         api.MapPost("/classification/migrate", (MigrateBody b, HttpRequest req, Catalog c) => Run(req, c, (x, mayModel) => Migrate(x, b, mayModel)));
+        api.MapPost("/classification/retire", (RetireBody b, HttpRequest req, Catalog c) => Run(req, c, (x, mayModel) => Retire(x, b, mayModel || Auth.Has(req, c, Rights.Plugins))));   // wer das Plugin verwaltet, räumt auch seine Objekte weg
+        api.MapPost("/classification/register", (RegisterBody b, HttpRequest req, Catalog c) => Run(req, c, (x, mayModel) => Register(x, b)));
+        api.MapGet("/classification/systems", (Catalog c) => c.ReadModel(m => Results.Ok(Systems(m, c.Plugins).Select(s => new SystemInfo(s.Plugin, c.Plugins.All.TryGetValue(s.Plugin, out var ps) && ps.Enabled, s.Group, s.ClassAttr, ClassGroupsOf(m, s).Count)).ToList())));
+        // Allgemein für jedes Plugin mit Systemobjekten (Klassifikation, Datenanalyse): anmelden und fragen, ob es arbeiten kann
+        api.MapPut("/plugins/{key}/system", (string key, SystemBody b, HttpRequest req, Catalog c) => Run(req, c, (x, _) => RegisterObjects(x, key, b)));
+        api.MapGet("/plugins/{key}/system/health", (string key, Catalog c) => c.ReadModel(m => Results.Ok(HealthOf(m, c.Plugins, key))));
+        // Was eingeschaltete Plugins brauchen: die Oberfläche fragt vor der Rückfrage, ob sich etwas zurückziehen lässt, statt es erst zu versuchen
+        api.MapGet("/classification/protected", (Catalog c) => Results.Ok(Registered(c.Plugins).Where(r => r.Enabled).Select(r => new { plugin = r.Plugin, groups = r.Groups, attributes = r.Attributes }).ToList()));
         api.MapPost("/classification/readiness", (ReadinessBody b, Catalog c) =>
             c.Lesen((model, tree) => tree.Nodes.TryGetValue(b.Node ?? "", out var n) ? Results.Ok(ReadinessOf(model, tree, n, b.Group, b.Attributes ?? [])) : Results.NotFound()));
     }
@@ -83,7 +109,7 @@ public static class ClassificationApi
         var a = c.With((model, tree, write) => f(new Ctx
         {
             Model = model, Tree = tree, Relations = c.Relations, Media = c.Media, Workflows = c.Workflows, Translations = c.Translations,
-            Role = req.HttpContext.Items["role"] as string,
+            Role = req.HttpContext.Items["role"] as string, Plugins = c.Plugins,
             Write = (stream, type, payload) => write(actor, stream, type, payload, null),
         }, mayModel));
         return a.Error is { } e ? Bad(e, a.Args ?? []) : Results.Ok(a.Ok);
@@ -98,6 +124,8 @@ public static class ClassificationApi
         public string Group = "", ClassAttr = "";
         public Renamed? GroupRenamed, ClassAttrRenamed;
         public int Attributes;
+        /// <summary>Die Anmeldung der Systemobjekte beim Plugin (Plugin, JSON) — Plugin-Daten, kein Modell: dafür genügt das Schreib-Recht</summary>
+        public (string Plugin, string Json)? Registration;
         /// <summary>Gruppen, die dieser Plan anlegt (für Merkmale in derselben Anfrage)</summary>
         public readonly HashSet<string> NewGroups = [];
     }
@@ -159,6 +187,7 @@ public static class ClassificationApi
         var r = Resolve(model, s);
         plan.Group = r.Group; plan.GroupRenamed = r.GroupRenamed; plan.ClassAttr = r.ClassAttr; plan.ClassAttrRenamed = r.ClassAttrRenamed;
         var g = r.Group;
+        plan.Registration = RegistrationOf(s, r.Group, r.ClassAttr);
         var label = s.GroupLabel is { Count: > 0 } gl ? new Labels(gl) : new Labels { ["de"] = g, ["en"] = g };
         if (g != s.Group && s.GroupLabel is { Count: > 0 }) label = new Labels(label.ToDictionary(kv => kv.Key, kv => $"{kv.Value} ({g})"));
         if (!model.Groups.TryGetValue(g, out var have)) plan.Writes.Add((Model.GroupStream + g, Types.AttributeGroupDefined, new AttributeGroupDefinition(g, label)));
@@ -330,7 +359,90 @@ public static class ClassificationApi
     {
         if (plan.Writes.Count > 0 && !mayModel) return Answer.Bad("Das Modell ändert sich ({0} Änderungen) — das verlangt das Modell-Recht.", plan.Writes.Count);
         foreach (var (stream, type, payload) in plan.Writes) c.Write(stream, type, payload);
+        WriteRegistration(c, plan.Registration);
         return null;
+    }
+
+    // ---- Die Anmeldung der Systemobjekte: Plugin-Daten „system“ des Plugins, im Journal
+    private static (string Plugin, string Json)? RegistrationOf(SystemSpec s, string group, string classAttr) =>
+        string.IsNullOrWhiteSpace(s.Plugin) ? null
+            : (s.Plugin, System.Text.Json.JsonSerializer.Serialize(new { groups = new[] { group }, attributes = new[] { classAttr }, classification = new { group, classAttr } }));
+
+    /// <summary>Schreibt die Anmeldung, wenn sie fehlt oder anders ist.</summary>
+    private static void WriteRegistration(Ctx c, (string Plugin, string Json)? r)
+    {
+        if (r is not { } reg) return;
+        if (c.Plugins?.All.TryGetValue(reg.Plugin, out var p) == true && p.Data.TryGetValue("system", out var have) && have == reg.Json) return;
+        c.Write(Plugins.Stream + reg.Plugin, Types.PluginDataSet, new PluginDataSet("system", reg.Json));
+    }
+
+    /// <summary>Was die Plugins angemeldet haben: Plugin → ob es eingeschaltet ist, die Gruppen und Attribute, die es zum Betrieb braucht, und seine Klassifikation.</summary>
+    public static List<(string Plugin, bool Enabled, string[] Groups, string[] Attributes, string? Group, string? ClassAttr)> Registered(Plugins? plugins)
+    {
+        var list = new List<(string, bool, string[], string[], string?, string?)>();
+        foreach (var p in plugins?.All.Values ?? [])
+        {
+            if (!p.Data.TryGetValue("system", out var json)) continue;
+            try
+            {
+                using var d = System.Text.Json.JsonDocument.Parse(json);
+                string[] Strings(string name) => d.RootElement.TryGetProperty(name, out var a) && a.ValueKind == System.Text.Json.JsonValueKind.Array ? a.EnumerateArray().Select(x => x.GetString() ?? "").Where(x => x.Length > 0).ToArray() : [];
+                string? group = null, attr = null;
+                if (d.RootElement.TryGetProperty("classification", out var cl)) { group = cl.TryGetProperty("group", out var g) ? g.GetString() : null; attr = cl.TryGetProperty("classAttr", out var a) ? a.GetString() : null; }
+                list.Add((p.Key, p.Enabled, Strings("groups"), Strings("attributes"), group, attr));
+            }
+            catch (System.Text.Json.JsonException) { /* eine unlesbare Anmeldung schützt nichts */ }
+        }
+        return list;
+    }
+
+    /// <summary>Das eingeschaltete Plugin, das dieses Objekt (<c>group</c> oder <c>attribute</c>) zum Arbeiten braucht; null, wenn keines es braucht.</summary>
+    public static string? ProtectedBy(Plugins? plugins, string kind, string key) =>
+        Registered(plugins).Where(r => r.Enabled && (kind == "group" ? r.Groups : r.Attributes).Contains(key)).Select(r => r.Plugin).FirstOrDefault();
+
+    /// <summary>Anmelden, was es schon gibt (Bestand von früher): die Gruppe und das Klassenattribut müssen im Modell stehen.</summary>
+    public static Answer Register(Ctx c, RegisterBody b)
+    {
+        if (Check(b.System) is { } bad) return bad;
+        if (string.IsNullOrWhiteSpace(b.System.Plugin)) return Answer.Bad("Plugin fehlt.");
+        var r = Resolve(c.Model, b.System);
+        if (!c.Model.Groups.ContainsKey(r.Group) || !c.Model.Attributes.ContainsKey(r.ClassAttr)) return new Answer(new RegisterResult(false));
+        WriteRegistration(c, RegistrationOf(b.System, r.Group, r.ClassAttr));
+        return new Answer(new RegisterResult(true));
+    }
+
+    /// <summary>
+    /// Ein Plugin meldet die Gruppen und Attribute an, die es zum Betrieb braucht (DPP, PPWR; die Klassifikationen melden sich selbst an). Sie müssen
+    /// im Modell stehen. Eine vorhandene Angabe zur Klassifikation bleibt.
+    /// </summary>
+    public static Answer RegisterObjects(Ctx c, string plugin, SystemBody b)
+    {
+        if (!ModelApi.ValidKey(plugin)) return Answer.Bad("Schlüssel „{0}“: nur a-z, 0-9 und _, beginnt mit Buchstabe.", plugin);
+        var groups = (b.Groups ?? []).Distinct().Order(StringComparer.Ordinal).ToArray();
+        var attributes = (b.Attributes ?? []).Distinct().Order(StringComparer.Ordinal).ToArray();
+        if (groups.FirstOrDefault(g => !c.Model.Groups.ContainsKey(g)) is { } g0) return Answer.Bad("Gruppe {0} gibt es im Modell nicht.", g0);
+        if (attributes.FirstOrDefault(a => !c.Model.Attributes.ContainsKey(a)) is { } a0) return Answer.Bad("Attribut {0} gibt es im Modell nicht.", a0);
+        var klass = Registered(c.Plugins).FirstOrDefault(r => r.Plugin == plugin);
+        var json = new Dictionary<string, object?>
+        {
+            ["groups"] = klass.Plugin is not null ? groups.Union(klass.Groups).Order(StringComparer.Ordinal).ToArray() : groups,
+            ["attributes"] = klass.Plugin is not null ? attributes.Union(klass.Attributes).Order(StringComparer.Ordinal).ToArray() : attributes,
+        };
+        if (klass.Plugin is not null && klass.Group is not null) json["classification"] = new { group = klass.Group, classAttr = klass.ClassAttr };
+        var text = System.Text.Json.JsonSerializer.Serialize(json);
+        WriteRegistration(c, (plugin, text));
+        return new Answer(new RegisterResult(true));
+    }
+
+    /// <summary>Kann das Plugin arbeiten? Seine angemeldeten Objekte müssen im Modell stehen — fehlen sie, gilt alles oder nichts.</summary>
+    public static Health HealthOf(ModelCatalog m, Plugins? plugins, string plugin)
+    {
+        var r = Registered(plugins).FirstOrDefault(x => x.Plugin == plugin);
+        if (r.Plugin is null) return new Health(false, "Die Systemobjekte sind nicht angemeldet.");
+        var group = r.Groups.FirstOrDefault(g => !m.Groups.ContainsKey(g));
+        if (group is not null) return new Health(false, $"Die Gruppe {group} fehlt im Modell.");
+        var attr = r.Attributes.FirstOrDefault(a => !m.Attributes.ContainsKey(a));
+        return attr is not null ? new Health(false, $"Das Attribut {attr} fehlt im Modell.") : new Health(true, null);
     }
 
     public static Answer Ensure(Ctx c, EnsureBody b, bool mayModel)
@@ -392,6 +504,13 @@ public static class ClassificationApi
         var old = OwnClass(node, r.ClassAttr);
         if (old is null) return new Answer(new Cleared(null, null));
         var classGroup = ClassGroupKey(r.Group, old);
+        // Gibt es das Klassenattribut im Modell nicht mehr (Modell geleert, Attribut gelöscht), steht der Wert verwaist am Knoten und lässt
+        // sich nicht nehmen: erst entsteht das Klassenattribut wieder, dann geht der Wert
+        if (!c.Model.Attributes.ContainsKey(r.ClassAttr))
+        {
+            var plan = PlanAll(c.Model, b.System, [], []);
+            if (Apply(c, plan, mayModel) is { } e) return e;
+        }
         var set = Commands.SetAttribute(c, node.Id, r.ClassAttr, null, null, "", null);
         if (set.Entry is null) return Answer.Of(set, "Klasse entfernen schlug fehl.");
         if (node.Groups.Contains(classGroup))
@@ -432,6 +551,65 @@ public static class ClassificationApi
             if (r.Entry is not null) n2++;
         }
         return new Answer(new Migrated(groups.Count, alt.Count, n2));
+    }
+
+    /// <summary>Die Klassifikationen, die Plugins angemeldet haben und die im Modell stehen.</summary>
+    public static List<(string Plugin, string Group, string ClassAttr)> Systems(ModelCatalog m, Plugins? plugins) =>
+        Registered(plugins).Where(r => r.Group is not null && r.ClassAttr is not null && m.Groups.ContainsKey(r.Group) && m.Attributes.ContainsKey(r.ClassAttr))
+            .Select(r => (r.Plugin, r.Group!, r.ClassAttr!)).ToList();
+
+    /// <summary>Die Gruppen der Klassen eines Systems: für jede Klasse der Liste die Gruppe, die es im Modell gibt.</summary>
+    public static HashSet<string> ClassGroupsOf(ModelCatalog m, (string Plugin, string Group, string ClassAttr) s) =>
+        m.Lists.TryGetValue(s.ClassAttr, out var l) ? l.Values.Keys.Select(code => ClassGroupKey(s.Group, code)).Where(m.Groups.ContainsKey).ToHashSet() : [];
+
+    /// <summary>
+    /// Eine Klassifikation als Ganzes zurücknehmen: in allen Bäumen gehen die Klassen weg und die Werte ihrer Attribute, die Gruppen der Klassen
+    /// werden abgenommen und zurückgezogen, ebenso ihre eigenen Attribute (mit den Listen), das Klassenattribut und die Gruppe des Systems.
+    /// Ein Attribut, das auch anderswo steht (ein zugeordnetes des Kunden), verliert nur die Gruppen des Systems und behält seine Werte.
+    /// <c>DryRun</c> zählt nur. Das Journal behält alles, was geschrieben war; zurückgenommen wird im Modell und an den Knoten.
+    /// </summary>
+    public static Answer Retire(Ctx c, RetireBody b, bool mayModel)
+    {
+        var m = c.Model;
+        var found = Systems(m, c.Plugins).Where(x => x.Group == b.Group).Select(x => ((string Plugin, string Group, string ClassAttr)?)x).FirstOrDefault();
+        if (found is not { } sys) return Answer.Bad("Keine Klassifikation mit der Gruppe {0}.", b.Group);
+        var classGroups = ClassGroupsOf(m, sys);
+        var all = classGroups.Append(sys.Group).ToHashSet();
+        // eigene Attribute: ihre Heimat ist eine Gruppe des Systems und sie stehen in keiner anderen; die übrigen verlieren nur die Gruppen des Systems
+        bool NurSystem(AttributeDefinition a) => all.Contains(a.Group ?? "") && m.GroupsOf(a.Key).All(all.Contains);
+        var eigene = m.Attributes.Values.Where(a => a.Key != sys.ClassAttr && NurSystem(a)).Select(a => a.Key).ToHashSet();
+        var geteilt = m.Attributes.Values.Where(a => a.Key != sys.ClassAttr && !eigene.Contains(a.Key) && m.GroupsOf(a.Key).Any(all.Contains)).ToList();
+        var weg = eigene.Append(sys.ClassAttr).ToHashSet();
+        var knoten = c.Tree.Nodes.Values.ToList();
+        var werte = knoten.SelectMany(n => n.Values.Keys.Concat(n.Lists.Keys).Where(ax => weg.Contains(ax.Attribute)).Select(ax => (n, ax))).ToList();
+        var mitKlasse = knoten.Count(n => n.Values.ContainsKey(new Axis(sys.ClassAttr, null, null)));
+        var zaehlt = new Retired(classGroups.Count + 1, weg.Count, mitKlasse, werte.Count);
+        if (c.Plugins?.All.TryGetValue(sys.Plugin, out var besitzer) == true && besitzer.Enabled) return Answer.Bad("{0} wird vom eingeschalteten Plugin {1} gebraucht.", sys.Group, sys.Plugin);
+        if (b.DryRun) return new Answer(zaehlt);
+        if (!mayModel) return Answer.Bad("Das Modell ändert sich ({0} Änderungen) — das verlangt das Modell-Recht.", zaehlt.Groups + zaehlt.Attributes + geteilt.Count);
+
+        // 1. die Werte weg — solange es die Attribute noch gibt; direkt geschrieben, denn eine Gruppe, die nirgends mehr hängt, lässt kein Setzen mehr zu
+        foreach (var (n, ax) in werte) c.Write(n.Id, Types.AttributeSet, new AttributeSet(ax.Attribute, ax.Locale, ax.Channel, "", null, ax.Row));
+        // 2. die Gruppen von den Knoten
+        foreach (var n in knoten.Where(n => n.Groups.Any(all.Contains)).ToList()) c.Write(n.Id, Types.GroupsAttached, new GroupsAttached(n.Groups.Where(g => !all.Contains(g)).ToArray()));
+        // 3. das Modell: geteilte Attribute ohne die Gruppen des Systems, die eigenen und das Klassenattribut samt Listen, dann die Gruppen
+        foreach (var a in geteilt)
+        {
+            var rest = m.GroupsOf(a.Key).Where(g => !all.Contains(g)).Order(StringComparer.Ordinal).ToArray();
+            var heimat = all.Contains(a.Group ?? "") ? rest.FirstOrDefault() : a.Group;
+            if (heimat != a.Group) c.Write(Model.AttributeStream + a.Key, Types.AttributeDefined, a with { Group = heimat });
+            c.Write(Model.AttributeStream + a.Key, Types.AttributeGroupsSet, new AttributeGroupsSet(a.Key, rest.Where(g => g != heimat).ToArray()));
+        }
+        foreach (var key in weg)
+        {
+            var list = m.Attributes[key].List;
+            c.Write(Model.AttributeStream + key, Types.AttributeRetired, new AttributeRetired(key));
+            if (list is not null && m.Lists.ContainsKey(list) && !m.Attributes.Values.Any(x => x.List == list && !weg.Contains(x.Key))) c.Write(Model.ListStream + list, Types.ListRetired, new ListRetired(list));
+        }
+        foreach (var g in all) c.Write(Model.GroupStream + g, Types.AttributeGroupRetired, new AttributeGroupRetired(g));
+        // 4. die Anmeldung fällt: das Plugin hat seine Objekte nicht mehr und ist nicht bereit, bis es sie wieder anlegt
+        c.Write(Plugins.Stream + sys.Plugin, Types.PluginDataSet, new PluginDataSet("system", null));
+        return new Answer(zaehlt);
     }
 
     /// <summary>Ist die Klasse am Knoten pflegbar? Die Gruppe der Klasse gibt es, sie gilt hier, und jedes Merkmal hat sein Attribut in ihr.</summary>

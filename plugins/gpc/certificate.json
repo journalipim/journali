@@ -1,8 +1,8 @@
 {
  "key": "gpc",
  "version": "1.0.0",
- "hash": "325e12bf8444f62787e7b8bcd972cb7a6dda794a5c1864f99e0d88eb54816ef1",
- "issued": "2026-09-30",
+ "hash": "270c5e32c8407874ba2d7b4fe54ead82b8781f80457fa2ad16daf57300d8dd1e",
+ "issued": "2026-10-01",
  "issuer": "journali",
- "sig": "iBtK6AE6wzyS2Edj5NOH1NfhtCGBmfSqBYyTihAk7qr/kObZCzd/F50k96swXQbpzHcVPoiHtEsbPrpwCUI9Ww=="
+ "sig": "s6/BeppVIlussf229KTsbk5t4Og/Yu2ObHyN21BP3dQAsFZq/OC2xrS6KoBxUgRLA4ga4WVxCPyl8toVtzweNA=="
 }

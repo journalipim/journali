@@ -157,8 +157,9 @@ public sealed class Catalog
         });
     }
 
-    /// <summary>Schnappschuss schreiben — lesend: er braucht einen ganzen Stand, hält aber keinen Leser auf.</summary>
-    public long SaveSnapshot(string path) => Lesend(() => Snapshot.Save(path, _journal, Parts));
+    /// <summary>Schnappschuss schreiben — lesend: er braucht einen ganzen Stand, hält aber keinen Leser auf. Gehalten wird die Sperre nur, solange
+    /// die Abbilder in Bytes verwandelt werden; die Datei schreibt <see cref="Snapshot.Write"/> danach ohne sie.</summary>
+    public long SaveSnapshot(string path) => Lesend(() => Snapshot.Prepare(_journal, Parts)) is { } stand ? Snapshot.Write(path, stand) : 0;
 
     /// <summary>Abbilder aus dem Journal bauen. Liefert, wie viele Einträge es waren.</summary>
     public int Rebuild() => Rebuild(out _);

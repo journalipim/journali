@@ -87,7 +87,7 @@ function sortByCol(col) { if (sortBy.value === col) sortDesc.value = !sortDesc.v
 const TARIF = { free: t('Kostenlos'), pro: 'Pro', proplus: 'Pro+', enterprise: t('Enterprise'), unlimited: t('Unlimited') }
 const tarifOf = p => TARIF[p.tarif] ?? p.tarif ?? ''
 const stateOf = p => p.allowed === false ? `◇ ${tarifOf(p)}` : !p.installed ? t('— nicht installiert') : !p.enabled ? '○ aus'
-  : !plugins.active(p.key) ? t('◐ an, Basis aus') : plugins.bereit(p.key)?.ready === false ? t('◑ an, nicht bereit') : '● an'
+  : plugins.ausstehend.includes(p.key) ? t('◐ wartet auf Bestätigung') : !plugins.active(p.key) ? t('◐ an, Basis aus') : plugins.bereit(p.key)?.ready === false ? t('◑ an, nicht bereit') : '● an'
 /// Warum ein eingeschaltetes Plugin nicht arbeiten kann — der Satz kommt vom Plugin selbst (Manifest `health`)
 const notReady = p => plugins.bereit(p.key)?.ready === false ? (plugins.bereit(p.key).reason || t('nicht bereit')) : ''
 const missing = key => plugins.requires(key).filter(r => !plugins.active(r))   // was fehlt, damit es wirkt
@@ -123,6 +123,7 @@ watch(shown, liste => { if (cur.value && !liste.some(p => p.key === cur.value)) 
 async function act(path, method = 'POST') {
   if (!store.actor) { store.toast(t('👤 Name fehlt → Einstellungen')); return }
   busy.value = '…'
+  if (method === 'DELETE') plugins.forgetInstalled(path.split('/').pop())   // ein erneutes Installieren richtet wieder ein (install): Objekte, die es schon gibt, bleiben, nur die Anmeldung kommt wieder
   try { method === 'DELETE' ? await api.del(path) : await api.post(path, {}); await store.poll(true); await plugins.load(); await plugins.pruefeZustand() }
   catch (e) { store.toast(e.message) }
   finally { busy.value = '' }
@@ -193,7 +194,7 @@ function pick(k) { cur.value = k }
         <button v-if="current.enabled && railToggle(current.key)" :class="{ primary: !store.railOff.includes(current.key) }" @click="toggleRail(current.key)" :title="store.railOff.includes(current.key) ? $t('In die Leiste links aufnehmen (unter sein Thema)') : $t('Aus der Leiste links nehmen (nur für dich, in den Einstellungen)')">{{ store.railOff.includes(current.key) ? $t('▯ nicht in der Leiste') : $t('▮ in der Leiste') }}</button>
         <!-- Zustandsschalter wie „in der Leiste“: leuchtet, wenn es wirkt; Klick kippt. Ein Plugin, das der Tarif nicht
              enthält, wirkt nicht — auch wenn es im Journal aktiviert ist; dann steht der Tarif da, der es enthält -->
-        <button :class="{ primary: plugins.active(current.key) }" :disabled="current.allowed === false && !current.enabled" @click="toggle(current)" :title="current.allowed === false ? (current.enabled ? $t('Aktiviert, aber ohne Wirkung — {0} gehört zum Tarif {1}', [current.key, tarifOf(current)]) : $t('Tarif {0}', [tarifOf(current)])) : current.enabled ? (plugins.active(current.key) ? $t('Deaktivieren (jetzt aktiviert)') : $t('aktiviert, aber ohne Wirkung:') + ' ' + missing(current.key).join(', ') + ' ' + $t('ist aus')) : missing(current.key).length ? 'braucht ' + missing(current.key).join(', ') : $t('Aktivieren (jetzt deaktiviert)')">{{ current.allowed === false ? `◇ ${tarifOf(current)}` : current.enabled ? (plugins.active(current.key) ? '● aktiviert' : '◐ aktiviert') : '○ deaktiviert' }}</button>
+        <button :class="{ primary: plugins.active(current.key) }" :disabled="current.allowed === false && !current.enabled" @click="toggle(current)" :title="current.allowed === false ? (current.enabled ? $t('Aktiviert, aber ohne Wirkung — {0} gehört zum Tarif {1}', [current.key, tarifOf(current)]) : $t('Tarif {0}', [tarifOf(current)])) : current.enabled ? (plugins.active(current.key) ? $t('Deaktivieren (jetzt aktiviert)') : $t('aktiviert, aber ohne Wirkung:') + ' ' + missing(current.key).join(', ') + ' ' + $t('ist aus')) : missing(current.key).length ? 'braucht ' + missing(current.key).join(', ') : $t('Aktivieren (jetzt deaktiviert)')">{{ current.allowed === false ? `◇ ${tarifOf(current)}` : current.enabled ? (plugins.ausstehend.includes(current.key) ? $t('◐ wartet auf Bestätigung') : plugins.active(current.key) ? '● aktiviert' : '◐ aktiviert') : '○ deaktiviert' }}</button>
         <button v-if="!fest(current)" class="x" @click="act(`/api/plugins/${current.key}`, 'DELETE')" :title="$t('aus dem Journal entfernen — die Dateien bleiben')">🗑</button>
       </template>
     </div>

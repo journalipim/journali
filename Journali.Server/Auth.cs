@@ -208,7 +208,8 @@ public static class Auth
         if (path.StartsWith("/api/licence") && !read) return Rights.Users;   // einspielen, Schlüssel einlösen
         if (path.StartsWith("/api/licence/requests")) return Rights.Users;     // Anforderungen, auch lesend
         if (read && IstDatei(path)) return Rights.Download;   // die Datei selbst, ein Preset, ein Blob — sehen ist nicht haben
-        if (path == "/api/classification/readiness") return Rights.Read;   // fragt nur, schreibt nichts
+        if (path == "/api/classification/readiness" || path == "/api/classification/systems" || path == "/api/classification/protected") return Rights.Read;   // fragt nur, schreibt nichts
+        if (path == "/api/classification/retire") return Rights.Plugins;   // die Objekte eines Plugins zurückziehen darf, wer es ausschalten darf — und das Plugin muss dafür aus sein
         if (read) return Rights.Read;
         if (path.StartsWith("/api/model/lists/") && (path.Contains("/values/") || path.EndsWith("/values")) && method == "PUT") return Rights.Write;   // Listenwert(e) zufügen ist Pflege
         if (path.StartsWith("/api/model")) return Rights.Model;

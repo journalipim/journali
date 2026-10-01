@@ -2849,5 +2849,21 @@
  "Adresse des lokalen Modells hinterlegen — sie bleibt beim Server, nie im Journal, nie im Browser": "Store the address of the local model — it stays on the server, never in the journal, never in the browser",
  "System: Gruppe und Klassenattribut fehlen.": "System: group and class attribute are missing.",
  "Klasse fehlt.": "Class is missing.",
- "Das Modell ändert sich ({0} Änderungen) — das verlangt das Modell-Recht.": "The model changes ({0} changes) — this requires the model right."
+ "Das Modell ändert sich ({0} Änderungen) — das verlangt das Modell-Recht.": "The model changes ({0} changes) — this requires the model right.",
+ "Klassifikation {0} zurücknehmen?": "Withdraw classification {0}?",
+ "In allen Bäumen geht die ganze Klassifikation weg: {0} Knoten mit Klasse, {1} Werte, {2} Gruppen und {3} Attribute.": "The whole classification goes away in all trees: {0} nodes with a class, {1} values, {2} groups and {3} attributes.",
+ "Die Werte bleiben im Journal; die Klassifikation lässt sich neu aufbauen.": "The values stay in the journal; the classification can be built again.",
+ "✕ Klassifikation zurücknehmen": "✕ Withdraw classification",
+ "✓ Klassifikation {0} zurückgenommen": "✓ Classification {0} withdrawn",
+ "{0} trägt eine Klassifikation — Systemobjekte werden einzeln zurückgezogen.": "{0} carries a classification — system objects are withdrawn one at a time.",
+ "Keine Klassifikation mit der Gruppe {0}.": "No classification with group {0}.",
+ "Systemobjekte zurückzuziehen verlangt das Recht, Plugins zu verwalten.": "Withdrawing system objects requires the right to manage plugins.",
+ "{0} wird vom eingeschalteten Plugin {1} gebraucht.": "{0} is needed by the enabled plugin {1}.",
+ "Gruppe {0} gibt es im Modell nicht.": "Group {0} does not exist in the model.",
+ "Attribut {0} gibt es im Modell nicht.": "Attribute {0} does not exist in the model.",
+ "Plugin {0} einschalten": "Enable plugin {0}",
+ "Plugin ausschalten": "Disable plugin",
+ "Plugin {0} ist aus": "Plugin {0} is off",
+ "Das Plugin legt die Attributgruppe {0} mit {1} Attributen an. Ohne sie arbeitet es nicht, und solange es an ist, lassen sie sich nicht zurückziehen.": "The plugin creates attribute group {0} with {1} attributes. It does not work without them, and while it is on they cannot be withdrawn.",
+ "◐ wartet auf Bestätigung": "◐ waiting for confirmation"
 }

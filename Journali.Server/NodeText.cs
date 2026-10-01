@@ -27,7 +27,12 @@ public static partial class NodeText
         sb.Append('\n');
         foreach (var (k, v) in n.AxisValues.OrderBy(kv => kv.Key, StringComparer.Ordinal))
             sb.Append(Label(model, k, locale)).Append(": ").Append(Wert(model, k, v, locale)).Append('\n');
-        foreach (var d in model.Attributes.Values.OrderBy(a => a.Key, StringComparer.Ordinal))
+        // Nur die Attribute, zu denen der Knoten einen Wert hat: bei 2 400 Attributen im Modell und 4 500 Texten (Knoten × Sprache) kostete das Durchgehen
+        // aller Attribute je Text über 10 Sekunden. Ohne Wert käme ohnehin nichts heraus; die Reihenfolge (nach Schlüssel) bleibt.
+        var belegt = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var a in n.Values.Keys) belegt.Add(a.Attribute);
+        foreach (var a in n.Lists.Keys) belegt.Add(a.Attribute);
+        foreach (var d in belegt.Order(StringComparer.Ordinal).Select(k => model.Attributes.GetValueOrDefault(k)).OfType<AttributeDefinition>())
         {
             if (d.Type is AttributeTypes.Rows or AttributeTypes.Formula or AttributeTypes.Template) continue;
             var v = n.Own(d.Key, d.PerLocale ? locale : null, null, null, model.MasterLocale);

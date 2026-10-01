@@ -65,10 +65,23 @@ void Progress(int n, long number, bool final)
 }
 var rebuilt = catalog.Rebuild(out var timing, (n, number) => Progress(n, number, false));
 if (lastTick > 0) Progress(rebuilt, journal.Head, true);   // der Allerletzte bei 100 %
+// Wann sich ein Schnappschuss lohnt (01.10.2026): erst nach 10 000 neuen Einträgen oder nach einem Tag, wenn überhaupt etwas Neues da ist.
+// Er kostet Sekunden (340 MB); ihn zu verpassen kostet beim nächsten Start nur, den Rest aus dem Journal anzuwenden (~18 µs je Eintrag).
+const int SchnappschussAb = 10_000;
+var SchnappschussAlter = TimeSpan.FromDays(1);
+// Gab es beim Start keinen brauchbaren Schnappschuss (neue Fassung des Kerns, erster Start), zählt der Start als Ausgangspunkt: gemessen dauerte der Start
+// ohne Schnappschuss 3 bis 8 s, das Schreiben eines neuen 10 s unter der Lesesperre — bei jeder Änderung am Kern.
+var schnappschussStand = snapshotAt > 0 ? snapshotAt : catalog.Head;
+var schnappschussZeit = snapshotAt > 0 && snapshotPath is not null && File.Exists(snapshotPath) ? File.GetLastWriteTimeUtc(snapshotPath) : DateTime.UtcNow;
+bool SchnappschussFaellig(long kopf) => kopf - schnappschussStand >= SchnappschussAb || (kopf > schnappschussStand && DateTime.UtcNow - schnappschussZeit >= SchnappschussAlter);
 void WriteSnapshot(string why)
 {
     if (snapshotPath is null) return;
-    try { var sw = System.Diagnostics.Stopwatch.StartNew(); var n = catalog.SaveSnapshot(snapshotPath); if (n > 0) Console.WriteLine($"journali: Schnappschuss bis #{n} geschrieben ({sw.ElapsedMilliseconds} ms, {why})"); }
+    try
+    {
+        var sw = System.Diagnostics.Stopwatch.StartNew(); var n = catalog.SaveSnapshot(snapshotPath);
+        if (n > 0) { schnappschussStand = n; schnappschussZeit = DateTime.UtcNow; Console.WriteLine($"journali: Schnappschuss bis #{n} geschrieben ({sw.ElapsedMilliseconds} ms, {why})"); }
+    }
     catch (Exception e) { Console.WriteLine($"journali: Schnappschuss nicht geschrieben — {e.Message}"); }
 }
 Console.WriteLine($"journali: {rebuilt} Einträge in {sw0.ElapsedMilliseconds} ms — {timing}");   // wo die Zeit hingeht
@@ -167,6 +180,14 @@ builder.Services.AddCors(o => o.AddDefaultPolicy(p => p.AllowAnyOrigin().AllowAn
 
 var app = builder.Build();
 app.Logger.LogInformation("Abbilder aus {Count} Einträgen gebaut, Stand #{Head}, Saatgut {Seeded}, Medien: {Media}, Plugins unter {Plugins} ({Auto} neu installiert)", rebuilt, catalog.Head, seeded, mediaStore.Kind, pluginDir, autoInstalled);
+
+// Langsame Anfragen stehen in der Konsole: Pfad und Dauer. Wer eine Wartezeit meldet, sieht dort, welche Anfrage sie verursacht hat.
+app.Use(async (ctx, next) =>
+{
+    var uhr = System.Diagnostics.Stopwatch.StartNew();
+    try { await next(); }
+    finally { if (uhr.ElapsedMilliseconds >= 300 && ctx.Request.Path.StartsWithSegments("/api")) app.Logger.LogWarning("langsam: {Methode} {Pfad} {Ms} ms ({Status})", ctx.Request.Method, ctx.Request.Path + ctx.Request.QueryString, uhr.ElapsedMilliseconds, ctx.Response.StatusCode); }
+});
 
 app.UseCors();   // auch im Betrieb: das OnlyOffice-Plugin ruft /api aus dem Editor-Origin; noch keine Anmeldung, daher offen
 
@@ -442,17 +463,15 @@ app.MapFallbackToFile("index.html", staticOptions);
 
 if (snapshotPath is not null)
 {
-    if (rebuilt > 0) _ = Task.Run(() => WriteSnapshot("nach dem Start"));   // im Hintergrund — der Start wartet nicht
-    app.Lifetime.ApplicationStopping.Register(() => WriteSnapshot("beim Beenden"));
-    // Stündlich, wenn Neues dazukam (Taloan, 24.09.2026): nach einem Absturz ist höchstens eine Stunde nachzuspielen,
-    // nicht alles seit dem letzten Start
+    if (SchnappschussFaellig(catalog.Head)) _ = Task.Run(() => WriteSnapshot("nach dem Start"));   // im Hintergrund — der Start wartet nicht
+    app.Lifetime.ApplicationStopping.Register(() => { if (SchnappschussFaellig(catalog.Head)) WriteSnapshot("beim Beenden"); });
+    // Stündlich nachsehen, ob sich einer lohnt: nach einem Absturz sind höchstens 10 000 Einträge oder die eines Tages nachzuspielen
     _ = Task.Run(async () =>
     {
-        var zuletzt = catalog.Head;
         while (true)
         {
             await Task.Delay(TimeSpan.FromHours(1));
-            try { var kopf = catalog.Head; if (kopf > zuletzt) { WriteSnapshot("stündlich"); zuletzt = kopf; } } catch { }
+            try { if (SchnappschussFaellig(catalog.Head)) WriteSnapshot("fällig"); } catch { }
         }
     });
 }

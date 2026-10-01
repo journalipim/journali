@@ -230,6 +230,7 @@ public static partial class ModelApi
             if (Actor(req) is not { } actor) return ActorMissing();
             return c.With((model, tree, write) =>
                 !model.Attributes.ContainsKey(key) ? Results.NotFound()
+                : ClassificationApi.ProtectedBy(c.Plugins, "attribute", key) is { } owner ? Bad("{0} wird vom eingeschalteten Plugin {1} gebraucht.", key, owner)
                 // Sperre: solange das Attribut irgendwo das Sternchen trägt, verlöre der Baum dort seine Namen.
                 : tree.WithLabelAttribute(key).FirstOrDefault() is { } n
                     ? Bad("{0} ist ★ Name im Baum ab {1} ({2}).", key, NodeRow.LabelOf(tree, model, n), n.Id)
@@ -289,6 +290,7 @@ public static partial class ModelApi
         m.MapDelete("/groups/{key}", (string key, HttpRequest req, Catalog c) =>
             Command(req, c, key, ValidKey, (model, write) =>
                 !model.Groups.ContainsKey(key) ? Results.NotFound()
+                : ClassificationApi.ProtectedBy(c.Plugins, "group", key) is { } owner ? Bad("{0} wird vom eingeschalteten Plugin {1} gebraucht.", key, owner)
                 : model.Attributes.Values.Any(a => a.Group == key) ? Bad("{0} hat noch Attribute.", key)
                 : write(Model.GroupStream + key, Types.AttributeGroupRetired, new AttributeGroupRetired(key))));
 
@@ -336,7 +338,10 @@ public static partial class ModelApi
     }
 
     /// <summary>Das Modell, wie die Oberfläche es braucht.</summary>
-    public static object View(ModelCatalog model) => new
+    public static object View(ModelCatalog model)
+    {
+        var pflicht = model.GroupsWithRequired();   // einmal gerechnet: je Attribut danach zu fragen kostete bei 1 500 Attributen fast eine Sekunde
+        return new
     {
         locales = model.Locales.Values.OrderBy(l => l.Code).ToList(),
         masterLocale = model.MasterLocale,
@@ -350,9 +355,10 @@ public static partial class ModelApi
         relationTypes = model.RelationTypes.Values.OrderBy(r => r.Key).ToList(),
         // Gruppen: definierte plus die, die nur an Attributen vorkommen (z. B. „import“ aus dem Werkzeug) oder nur Mitglieder haben — mit Attributen in Reihenfolge
         groups = model.AllGroupKeys
-            .Select(g => new { key = g, label = model.Groups.GetValueOrDefault(g)?.Label ?? new Labels(), activeFrom = model.Groups.GetValueOrDefault(g)?.ActiveFrom, releaseWatch = model.Groups.GetValueOrDefault(g)?.ReleaseWatch, attributes = model.AttributesOf(g).Select(a => a.Key).ToList(), defined = model.Groups.ContainsKey(g), watched = model.AttributesOf(g).Any(a => model.Watched(a.Key)) }).ToList(),
+            .Select(g => new { key = g, label = model.Groups.GetValueOrDefault(g)?.Label ?? new Labels(), activeFrom = model.Groups.GetValueOrDefault(g)?.ActiveFrom, releaseWatch = model.Groups.GetValueOrDefault(g)?.ReleaseWatch, attributes = model.AttributesOf(g).Select(a => a.Key).ToList(), defined = model.Groups.ContainsKey(g), watched = model.AttributesOf(g).Any(a => model.Watched(a.Key, pflicht)) }).ToList(),
         types = AttributeTypes.All,
     };
+    }
 
     private static readonly JsonSerializerOptions Web = new(JsonSerializerDefaults.Web);
 

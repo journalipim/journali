@@ -165,7 +165,7 @@ function searchBricks(bricks, hierarchy, query, locale = "en", limit = 60) {
   return out.sort((a, b) => b.score - a.score || a.brick.code.localeCompare(b.brick.code)).slice(0, limit).map((x) => x.brick);
 }
 const classAttr = () => "gpc_class";
-const GROUP = "gpc";
+const GROUP = "class_gpc";
 const attrKey = (code) => `gpc${code}`;
 function systemSpec(settings = {}) {
   return {
@@ -174,7 +174,8 @@ function systemSpec(settings = {}) {
     classAttr: settings.classAttr || classAttr(),
     classLabel: { de: "GPC-Klasse", en: "GPC class" },
     classAttrAlternatives: ["gpc_klasse", "gpc_class_std"],
-    ownPattern: "^gpc\\d+$"
+    ownPattern: "^gpc\\d+$",
+    plugin: "gpc"
   };
 }
 function classSpec(brick, hierarchy, locale = "en") {
@@ -1499,7 +1500,7 @@ const _sfc_main = {
       }
     }
     async function systemAnlegen() {
-      await api.post("/api/classification/ensure", { system: { group: schl.value.group, classAttr: schl.value.classAttr, groupLabel: { de: "GPC", en: "GPC" } }, groupOnly: true });
+      await api.post("/api/classification/ensure", { system: systemSpec(props.settings) });
       await store.poll?.(true);
       await anhaengen(schl.value.group);
     }
@@ -1575,7 +1576,10 @@ async function install(ctx) {
   const { api: api2, store: store2, tree: tree2 } = ctx;
   if (!tree2.loaded) await tree2.load();
   const settings = await api2.get("/api/plugins/gpc/data/settings").catch(() => null) ?? {};
-  const r = await api2.post("/api/classification/ensure", { system: systemSpec(settings), groupOnly: true });
+  const sys = systemSpec(settings);
+  const fehlt = !(store2.model?.groups ?? []).some((g) => g.key === sys.group) || !(store2.model?.attributes ?? []).some((a) => a.key === sys.classAttr);
+  if (fehlt && !(await ctx.system?.ankuendigen?.({ label: "GPC", text: t("Das Plugin legt die Attributgruppe {0} mit dem Attribut {1} an und hängt die Gruppe an die Wurzeln. Ohne sie arbeitet es nicht, und solange es an ist, lassen sie sich nicht zurückziehen.", [sys.group, sys.classAttr]) }) ?? true)) return false;
+  const r = await api2.post("/api/classification/ensure", { system: sys });
   const group = r?.group ?? systemSpec(settings).group;
   if (r?.groupRenamed) await api2.post("/api/plugins/gpc/data/settings", { ...settings, group }, "PUT");
   await store2.poll?.(true);
@@ -1586,8 +1590,14 @@ async function install(ctx) {
   await store2.poll?.(true);
   await tree2.load?.(true);
 }
-async function bandMount({ head, body }, nodeId) {
+let angemeldet = false;
+async function bandMount({ head, body }, nodeId, ctx) {
   await cache.loaded;
+  if (!angemeldet) {
+    angemeldet = true;
+    ctx?.api?.post?.("/api/classification/register", { system: systemSpec(cache.settings) })?.catch?.(() => {
+    });
+  }
   const app = createApp({ render: () => h$1(_sfc_main, { nodeId, settings: cache.settings, onKopf: (text) => {
     head.textContent = text;
   } }) });

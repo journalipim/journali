@@ -83,6 +83,23 @@ public class VektorenTests
     }
 
     [Fact]
+    public void Der_Text_nennt_die_Werte_nach_Schluessel_geordnet_und_nur_die_des_Knotens()
+    {
+        var j = new MemoryJournal();
+        foreach (var s in Model.Seeds()) j.Append("system", s.Stream, s.Type, s.Payload);
+        foreach (var s in Model.TreeSeeds()) j.Append("system", s.Stream, s.Type, s.Payload);
+        // das Modell kennt viele Attribute, der Knoten hat zu zweien einen Wert — gesetzt in umgekehrter Reihenfolge der Schlüssel
+        j.Append("t", Model.RootNode, Types.AttributeSet, Types.Serialize(new AttributeSet("weight", null, null, "1.2")));
+        j.Append("t", Model.RootNode, Types.AttributeSet, Types.Serialize(new AttributeSet("color", null, null, "blue")));
+        var model = new ModelCatalog(); var tree = new Tree();
+        Projector.CatchUpAll(j, model, tree);
+        Assert.True(model.Attributes.Count > 2);
+        var zeilen = NodeText.Of(model, tree, tree.Nodes[Model.RootNode], "de").Split('\n');
+        var werte = zeilen.Skip(2).ToList();
+        Assert.Equal(["Farbe: Blau", "Gewicht: 1.2 kg"], werte);   // color vor weight, sonst nichts
+    }
+
+    [Fact]
     public void Je_Sprache_des_Modells_ein_Text_je_Knoten()
     {
         var c = new Catalog(new MemoryJournal()); c.Rebuild(); c.SeedMissing();

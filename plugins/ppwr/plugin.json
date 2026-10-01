@@ -15,5 +15,6 @@
   "requires": [
     "da"
   ],
-  "autoInstall": true
+  "autoInstall": true,
+  "health": "/api/plugins/ppwr/system/health"
 }

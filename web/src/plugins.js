@@ -64,10 +64,11 @@ export const plugins = reactive({
   nodeViews: [],          // { key (Plugin), view (view.key), label, roles, items(row, ctx) } — flüchtig, nie im Journal
   rev: 0,                 // Zähler: ein Plugin meldet mit ctx.touch(), dass seine Daten stehen — Ansichten rechnen dann neu
 
+  ausstehend: [],         // Plugins, die eingeschaltet sind und deren Hinweis (system.ankuendigen) noch auf eine Antwort wartet
+  neuLaden: false,        // ein Plugin wurde während des Ladens wieder ausgeschaltet: die Beiträge werden danach neu gesammelt
   loading: null,          // laufender load() — wer gleichzeitig ruft, wartet darauf (sonst doppelte Einträge in der Leiste)
   load() { return this.loading ??= this._load().finally(() => { this.loading = null }) },
-  /// Die Liste neu holen, sobald sich ändert, wer angemeldet ist, oder der Server einen neuen Stand meldet (Taloan, 24.09.2026:
-  /// „die Plugin-Leiste wird manchmal erst vollständig angezeigt, wenn man unten auf Plugins klickt“). Geholt wurde sie nur
+  /// Die Liste neu holen, sobald sich ändert, wer angemeldet ist, oder der Server einen neuen Stand meldet. Geholt wurde sie nur
   /// einmal beim Einhängen der Oberfläche — kam dieser Abruf vor der Anmeldung (401), blieb die Liste leer, und mit ihr
   /// fehlten in der Leiste Import, Export und Jobs. App.vue ruft das einmal auf.
   beobachte(store) {
@@ -104,6 +105,7 @@ export const plugins = reactive({
     }
     // install() der frisch eingeschalteten Plugins
     await this.installNew()
+    if (this.neuLaden) { this.neuLaden = false; return this._load() }
     this.loaded = true   // erst jetzt: vorher sähe die Übersicht eines Themas nur den ersten Eintrag und leitete dorthin
   },
   enabled(key) { return this.active(key) },
@@ -157,7 +159,11 @@ export const plugins = reactive({
       if (!this.active(p.key) || done.has(p.key)) continue
       const mod = this.modules.get(p.key)
       if (!mod?.install) { done.add(p.key); continue }
-      try { await mod.install(this.ctx(p.key)); done.add(p.key); store.toast(`✓ ${L(p.manifest?.label) || p.key} eingerichtet`, 'ok') }
+      try {
+        // false: der Anwender hat den Hinweis abgelehnt, das Plugin ist wieder aus — nichts ist eingerichtet
+        if (await mod.install(this.ctx(p.key)) === false) continue
+        done.add(p.key); store.toast(`✓ ${L(p.manifest?.label) || p.key} eingerichtet`, 'ok')
+      }
       catch (e) { store.toast(`${p.key}: ${e.message}`) }
     }
     try { localStorage.setItem(this.installedKey(), JSON.stringify([...done])) } catch {}
@@ -181,6 +187,24 @@ export const plugins = reactive({
         del: name => api.del(base + encodeURIComponent(name)),
       },
       batch: (commands, batch = null) => api.post('/api/batch', { commands, batch }),
+      // Systemobjekte (30.09.2026): die Gruppen und Attribute, die ein Plugin zum Arbeiten braucht, entstehen beim Einschalten — nach einem Hinweis.
+      // Wer ihn ablehnt, schaltet das Plugin wieder aus. Solange es an ist, lassen sie sich nicht zurückziehen; ohne sie arbeitet es nicht.
+      system: {
+        ankuendigen: async ({ label, text }) => {
+          // Der Hinweis erscheint aus load() heraus (installNew): ein erneutes load() würde auf sich selbst warten, darum wird die Liste hier geholt.
+          this.ausstehend.push(key)
+          try {
+            const ok = await dialog.confirm({ title: t('Plugin {0} einschalten', [label]), text, ok: t('anlegen'), cancel: t('Plugin ausschalten') })
+            if (!ok) {
+              await api.post(`/api/plugins/${key}/disable`, {}); this.forgetInstalled(key)
+              this.list = await api.get('/api/plugins'); this.neuLaden = true
+              await store.poll(true); store.toast(t('Plugin {0} ist aus', [label]))
+            }
+            return ok
+          } finally { this.ausstehend = this.ausstehend.filter(k => k !== key) }
+        },
+        melden: (groups, attributes) => api.post(`/api/plugins/${key}/system`, { groups, attributes }, 'PUT'),
+      },
       checks: this.checks,                                                      // Prüfregeln aller Plugins (für da)
       go: async path => (await import('./router.js')).router.push(path),        // Navigation in der Oberfläche
       // JSON-Datei zum Import übergeben und den JSON-Import öffnen (Baum-Drop, Menü, Tabellenimport)

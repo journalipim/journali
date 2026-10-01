@@ -244,10 +244,10 @@ test('install beim Einschalten: Gruppe etim anlegen und an die Wurzel hängen', 
   const ctx2 = { ...ctx, api: { ...ctx.api, post: async (p, b, m) => { calls.push([p, b, m ?? 'POST']); return p === '/api/classification/ensure' ? { group: b.system.group, classAttr: b.system.classAttr } : {} } },
     tree: { ...ctx.tree, rows: TREE, byId: new Map(TREE.map(r => [r.id, r])), load: async () => {} }, store: { ...ctx.store, poll: async () => {} } }
   await mod.default.install(ctx2)
-  // das Anlegen im Modell macht der Server; beim Einschalten nur die Gruppe, nicht das Klassenattribut
+  // das Anlegen im Modell macht der Server; beim Einschalten entstehen die Systemobjekte: die Gruppe und das Klassenattribut
   const ensure = calls.find(([p]) => p === '/api/classification/ensure')
   assert.ok(ensure, 'Gruppe angefordert: ' + JSON.stringify(calls.map(c => c[0])))
-  assert.equal(ensure[1].groupOnly, true); assert.equal(ensure[1].system.group, 'etim'); assert.deepEqual(ensure[1].classes, [])
+  assert.equal(ensure[1].groupOnly, false, 'die Systemobjekte entstehen ganz: Gruppe und Klassenattribut'); assert.equal(ensure[1].system.group, 'etim'); assert.equal(ensure[1].system.plugin, 'etim')
   const attach = calls.find(([p, , m]) => p === '/api/nodes/g-root/groups' && m === 'PUT')
   assert.ok(attach, 'an die Wurzel gehängt'); assert.deepEqual(attach[1].groups, ['etim'])
   MODEL.groups = groups; g1.parent = null; TREE.splice(TREE.indexOf(rootRow), 1)

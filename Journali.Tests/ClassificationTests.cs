@@ -16,11 +16,11 @@ public class ClassificationTests
     private static Catalog Welt() { var c = new Catalog(new MemoryJournal()); c.Rebuild(); c.SeedMissing(); return c; }
 
     private static T Mit<T>(Catalog c, Func<Ctx, T> f, Action? eintrag = null) =>
-        c.With((model, tree, write) => f(new Ctx { Model = model, Tree = tree, Relations = c.Relations, Media = c.Media, Write = (stream, type, payload) => { eintrag?.Invoke(); return write("t", stream, type, payload, null); } }));
+        c.With((model, tree, write) => f(new Ctx { Model = model, Tree = tree, Relations = c.Relations, Media = c.Media, Write = (stream, type, payload) => { eintrag?.Invoke(); return write("t", stream, type, payload, null); }, Plugins = c.Plugins }));
 
     private static Dictionary<string, string> N(string de, string en) => new() { ["de"] = de, ["en"] = en };
 
-    private static readonly SystemSpec Sys = new("klass", N("Klass", "Klass"), "klass_class", N("Klasse", "Class"), ["klass_klasse"], @"^kf\d+$");
+    private static readonly SystemSpec Sys = new("klass", N("Klass", "Klass"), "klass_class", N("Klasse", "Class"), ["klass_klasse"], @"^kf\d+$", "klassplug");
 
     private static FeatureSpec[] Merkmale(params string[] klassen) => MerkmaleMit("xq", klassen);
     private static FeatureSpec[] MerkmaleMit(string einheit, params string[] klassen) =>
@@ -272,6 +272,209 @@ public class ClassificationTests
         var n = 0;
         var nochmal = (Cleared)Mit(c, x => ClassificationApi.Clear(x, new ClearBody(g, Sys), true), () => n++).Ok!;
         Assert.Null(nochmal.Class); Assert.Equal(0, n);
+    }
+
+    [Fact]
+    public void Clear_nimmt_auch_einen_verwaisten_Wert_wenn_das_Klassenattribut_im_Modell_fehlt()
+    {
+        var (c, g, _, _) = Baum();
+        Mit(c, x => ClassificationApi.Assign(x, new AssignBody(g, "K1", Sys, Klassen, Merkmale("K1")), true));
+        // das Modell wird geleert: Klassenattribut und Gruppe des Systems sind weg, der Wert steht noch am Knoten
+        Mit(c, x => { x.Write(Model.AttributeStream + "klass_class", Types.AttributeRetired, new AttributeRetired("klass_class")); return 0; });
+        Assert.False(c.ReadModel(m => m.Attributes.ContainsKey("klass_class")));
+        var ohne = Mit(c, x => ClassificationApi.Clear(x, new ClearBody(g, Sys), false));
+        Assert.NotNull(ohne.Error);   // das Klassenattribut anzulegen ist Modell
+        var r = (Cleared)Mit(c, x => ClassificationApi.Clear(x, new ClearBody(g, Sys), true)).Ok!;
+        Assert.Equal("K1", r.Class);
+        c.Read(t => { Assert.DoesNotContain(t.Nodes[g].Values.Keys, k => k.Attribute == "klass_class"); Assert.DoesNotContain("klass_k1", t.Nodes[g].Groups); return 0; });
+        Assert.True(c.ReadModel(m => m.Attributes.ContainsKey("klass_class")));
+    }
+
+    // ---- Systemobjekte: das Plugin meldet die Gruppe des Systems und das Klassenattribut an; solange es an ist, braucht es sie
+    private static void Plugin(Catalog c, bool an)
+    {
+        c.With((_, _, write) =>
+        {
+            if (!c.Plugins.All.ContainsKey("klassplug") || c.Plugins.All["klassplug"].Version == "") write("t", Plugins.Stream + "klassplug", Types.PluginInstalled, new PluginInstalled("1", "{}"), null);
+            return write("t", Plugins.Stream + "klassplug", an ? Types.PluginEnabled : Types.PluginDisabled, an ? new PluginEnabled() : new PluginDisabled(), null);
+        });
+    }
+
+    private static Catalog MitZweiKlassen(out string g, out string p)
+    {
+        var (c, gr, pr, _) = Baum();
+        Mit(c, x => { x.Write(Model.AttributeStream + "breite", Types.AttributeDefined, new AttributeDefinition("breite", N("Breite", "Width").ToLabels(), AttributeTypes.Decimal, Group: "master")); return 0; });
+        var f = Merkmale("K1", "K2").Select(m => m.Key == "kf1" ? m with { Target = "breite" } : m).ToArray();
+        Mit(c, x => ClassificationApi.Assign(x, new AssignBody(gr, "K1", Sys, Klassen, f), true));
+        Mit(c, x => ClassificationApi.Assign(x, new AssignBody(pr, "K2", Sys, Klassen, f), true));
+        Mit(c, x => { Commands.SetAttribute(x, gr, "kf2", null, null, "true", null); Commands.SetAttribute(x, gr, "breite", null, null, "42", null); return 0; });
+        g = gr; p = pr; return c;
+    }
+
+    [Fact]
+    public void Das_Plugin_meldet_Gruppe_und_Klassenattribut_an_und_geschuetzt_sind_sie_solange_es_an_ist()
+    {
+        var c = MitZweiKlassen(out _, out _);
+        var r = Registered(c.Plugins).Single();
+        Assert.Equal(("klassplug", "klass", "klass_class"), (r.Plugin, r.Group, r.ClassAttr));
+        Assert.Equal(["klass"], r.Groups); Assert.Equal(["klass_class"], r.Attributes);
+        // aus: nichts ist geschützt
+        Assert.Null(ProtectedBy(c.Plugins, "group", "klass")); Assert.Null(ProtectedBy(c.Plugins, "attribute", "klass_class"));
+        Plugin(c, true);
+        Assert.Equal("klassplug", ProtectedBy(c.Plugins, "group", "klass")); Assert.Equal("klassplug", ProtectedBy(c.Plugins, "attribute", "klass_class"));
+        // was das Plugin nicht angemeldet hat, gehört ihm nicht: die Gruppen der Klassen, seine übrigen Attribute, fremde Gruppen
+        Assert.Null(ProtectedBy(c.Plugins, "group", "klass_k1")); Assert.Null(ProtectedBy(c.Plugins, "attribute", "kf2")); Assert.Null(ProtectedBy(c.Plugins, "group", "master"));
+        Plugin(c, false);
+        Assert.Null(ProtectedBy(c.Plugins, "group", "klass"));
+        c.ReadModel(m =>
+        {
+            Assert.Equal([("klassplug", "klass", "klass_class")], Systems(m, c.Plugins));
+            Assert.Equal(["klass_k1", "klass_k2"], ClassGroupsOf(m, ("klassplug", "klass", "klass_class")).Order());
+            return 0;
+        });
+    }
+
+    [Fact]
+    public void Ohne_Plugin_im_Spiel_ist_nichts_angemeldet_und_nichts_geschuetzt()
+    {
+        var c = Welt();
+        Assert.Empty(Registered(c.Plugins));
+        Sicher(c, Merkmale("K1"), K1);
+        Assert.Single(Registered(c.Plugins));
+        var ohne = new SystemSpec("anders", N("A", "A"), "anders_class", N("A", "A"));   // ohne Plugin keine Anmeldung
+        Mit(c, x => Ensure(x, new EnsureBody(ohne), true));
+        Assert.Single(Registered(c.Plugins));
+    }
+
+    [Fact]
+    public void Die_Anmeldung_schreibt_nichts_mehr_wenn_sie_schon_so_dasteht()
+    {
+        var c = MitZweiKlassen(out _, out _);
+        var n = 0;
+        Mit(c, x => Ensure(x, new EnsureBody(Sys, Klassen), false), () => n++);
+        Assert.Equal(0, n);
+    }
+
+    [Fact]
+    public void Register_meldet_Bestand_von_frueher_an_wenn_die_Objekte_im_Modell_stehen()
+    {
+        var c = Welt();
+        Assert.False(((RegisterResult)Mit(c, x => Register(x, new RegisterBody(Sys))).Ok!).Registered, "es gibt noch nichts anzumelden");
+        Mit(c, x => { Ensure(x, new EnsureBody(Sys, Klassen), true); return 0; });
+        c.With((_, _, write) => write("t", Plugins.Stream + "klassplug", Types.PluginDataSet, new PluginDataSet("system", null), null));   // Bestand ohne Anmeldung
+        Assert.Empty(Registered(c.Plugins));
+        Assert.True(((RegisterResult)Mit(c, x => Register(x, new RegisterBody(Sys))).Ok!).Registered);
+        Assert.Single(Registered(c.Plugins));
+    }
+
+    [Fact]
+    public void Health_sagt_ob_das_Plugin_seine_Objekte_hat()
+    {
+        var c = Welt();
+        Assert.False(c.ReadModel(m => HealthOf(m, c.Plugins, "klassplug")).Ready);
+        Mit(c, x => { Ensure(x, new EnsureBody(Sys, Klassen), true); return 0; });
+        Assert.True(c.ReadModel(m => HealthOf(m, c.Plugins, "klassplug")).Ready);
+        // das Klassenattribut fehlt im Modell (ohne dass jemand die Anmeldung nahm): nicht bereit, mit dem Grund
+        Mit(c, x => { x.Write(Model.AttributeStream + "klass_class", Types.AttributeRetired, new AttributeRetired("klass_class")); return 0; });
+        var h = c.ReadModel(m => HealthOf(m, c.Plugins, "klassplug"));
+        Assert.False(h.Ready); Assert.Equal("Das Attribut klass_class fehlt im Modell.", h.Reason);
+    }
+
+    [Fact]
+    public void Ein_Plugin_ohne_Klassifikation_meldet_seine_Gruppe_und_Attribute_an_wie_DPP_und_PPWR()
+    {
+        var c = Welt();
+        Mit(c, x =>
+        {
+            x.Write(Model.GroupStream + "dppx", Types.AttributeGroupDefined, new AttributeGroupDefinition("dppx", N("DPP", "DPP").ToLabels()));
+            x.Write(Model.AttributeStream + "dppx_a", Types.AttributeDefined, new AttributeDefinition("dppx_a", N("A", "A").ToLabels(), AttributeTypes.Text, Group: "dppx"));
+            x.Write(Model.AttributeStream + "dppx_b", Types.AttributeDefined, new AttributeDefinition("dppx_b", N("B", "B").ToLabels(), AttributeTypes.Text, Group: "dppx"));
+            return 0;
+        });
+        Assert.False(c.ReadModel(m => HealthOf(m, c.Plugins, "dppx")).Ready, "noch nicht angemeldet");
+        var fehl = Mit(c, x => RegisterObjects(x, "dppx", new SystemBody(["dppx"], ["dppx_a", "gibtsnicht"])));
+        Assert.Equal("Attribut {0} gibt es im Modell nicht.", fehl.Error); Assert.Empty(Registered(c.Plugins));
+        Assert.Null(Mit(c, x => RegisterObjects(x, "dppx", new SystemBody(["dppx"], ["dppx_b", "dppx_a"]))).Error);
+        var r = Registered(c.Plugins).Single();
+        Assert.Equal("dppx", r.Plugin); Assert.Equal(["dppx"], r.Groups); Assert.Equal(["dppx_a", "dppx_b"], r.Attributes); Assert.Null(r.Group);
+        // geschützt erst, wenn das Plugin an ist
+        Assert.Null(ProtectedBy(c.Plugins, "attribute", "dppx_a"));
+        c.With((_, _, write) => { write("t", Plugins.Stream + "dppx", Types.PluginInstalled, new PluginInstalled("1", "{}"), null); return write("t", Plugins.Stream + "dppx", Types.PluginEnabled, new PluginEnabled(), null); });
+        Assert.Equal("dppx", ProtectedBy(c.Plugins, "group", "dppx")); Assert.Equal("dppx", ProtectedBy(c.Plugins, "attribute", "dppx_b"));
+        Assert.True(c.ReadModel(m => HealthOf(m, c.Plugins, "dppx")).Ready);
+        // noch einmal dasselbe: nichts wird geschrieben
+        var n = 0;
+        Mit(c, x => RegisterObjects(x, "dppx", new SystemBody(["dppx"], ["dppx_a", "dppx_b"])), () => n++);
+        Assert.Equal(0, n);
+        // fehlt ihm ein Attribut, ist es nicht bereit — und sagt welches
+        Mit(c, x => { x.Write(Model.AttributeStream + "dppx_a", Types.AttributeRetired, new AttributeRetired("dppx_a")); return 0; });
+        var h = c.ReadModel(m => HealthOf(m, c.Plugins, "dppx"));
+        Assert.False(h.Ready); Assert.Equal("Das Attribut dppx_a fehlt im Modell.", h.Reason);
+    }
+
+    [Fact]
+    public void Eine_Klassifikation_behaelt_ihre_Angabe_wenn_das_Plugin_weitere_Objekte_anmeldet()
+    {
+        var c = MitZweiKlassen(out _, out _);
+        Mit(c, x => RegisterObjects(x, "klassplug", new SystemBody(["klass"], ["klass_class"])));
+        var r = Registered(c.Plugins).Single();
+        Assert.Equal(("klass", "klass_class"), (r.Group, r.ClassAttr));
+    }
+
+    [Fact]
+    public void Retire_zaehlt_ohne_zu_schreiben()
+    {
+        var c = MitZweiKlassen(out _, out _);
+        var n = 0;
+        var r = (Retired)Mit(c, x => Retire(x, new RetireBody("klass", DryRun: true), false), () => n++).Ok!;
+        Assert.Equal(0, n);
+        Assert.Equal((3, 4, 2), (r.Groups, r.Attributes, r.Nodes));   // klass, klass_k1, klass_k2 · kf2, kf3, kf4 und das Klassenattribut · zwei Knoten mit Klasse
+        Assert.Equal(3, r.Values);                                   // die Klasse an beiden Knoten und kf2 an der Gruppe; breite gehört dem Kunden und zählt nicht
+    }
+
+    [Fact]
+    public void Retire_nimmt_die_ganze_Klassifikation_zurueck_Klassen_Werte_Gruppen_und_eigene_Attribute()
+    {
+        var c = MitZweiKlassen(out var g, out var p);
+        var r = (Retired)Mit(c, x => Retire(x, new RetireBody("klass"), true)).Ok!;
+        Assert.Equal(3, r.Groups);
+        c.ReadModel(m =>
+        {
+            Assert.Empty(Systems(m, c.Plugins));
+            foreach (var k in new[] { "klass", "klass_k1", "klass_k2" }) Assert.False(m.Groups.ContainsKey(k), k);
+            foreach (var k in new[] { "klass_class", "kf2", "kf3", "kf4" }) Assert.False(m.Attributes.ContainsKey(k), k);
+            Assert.False(m.Lists.ContainsKey("klass_class")); Assert.False(m.Lists.ContainsKey("kf3"));
+            // das zugeordnete Attribut des Kunden bleibt, steht wieder nur in seiner Gruppe und behält seinen Wert
+            Assert.Equal(["master"], m.GroupsOf("breite")); Assert.Equal("master", m.Attributes["breite"].Group);
+            return 0;
+        });
+        c.Read(t =>
+        {
+            foreach (var id in new[] { g, p }) { Assert.DoesNotContain(t.Nodes[id].Groups, x => x.StartsWith("klass")); Assert.DoesNotContain(t.Nodes[id].Values.Keys, k => k.Attribute is "klass_class" or "kf2"); }
+            Assert.Equal("42", t.Nodes[g].Values.Single(v => v.Key.Attribute == "breite").Value);
+            return 0;
+        });
+        // die Anmeldung fällt: das Plugin ist nicht bereit, bis es seine Objekte wieder anlegt — und das tut es
+        Assert.Empty(Registered(c.Plugins));
+        Assert.False(c.ReadModel(m => HealthOf(m, c.Plugins, "klassplug")).Ready);
+        Assert.Null(Mit(c, x => ClassificationApi.Assign(x, new AssignBody(g, "K1", Sys, Klassen, Merkmale("K1")), true)).Error);
+        Assert.True(c.ReadModel(m => HealthOf(m, c.Plugins, "klassplug")).Ready);
+    }
+
+    [Fact]
+    public void Retire_geht_nur_wenn_das_Plugin_aus_ist_und_ohne_Modell_Recht_nur_mit_dem_Recht_auf_Plugins()
+    {
+        var c = MitZweiKlassen(out _, out _);
+        Plugin(c, true);
+        var n = 0;
+        var an = Mit(c, x => Retire(x, new RetireBody("klass"), true), () => n++);
+        Assert.Equal("{0} wird vom eingeschalteten Plugin {1} gebraucht.", an.Error); Assert.Equal(0, n);
+        Assert.NotNull(Mit(c, x => Retire(x, new RetireBody("klass", DryRun: true), true)).Error);   // auch das Zählen: es gibt nichts zurückzunehmen, solange das Plugin braucht
+        Plugin(c, false);
+        var ohne = Mit(c, x => Retire(x, new RetireBody("klass"), false), () => n++);
+        Assert.NotNull(ohne.Error); Assert.Equal(0, n);
+        Assert.NotNull(Mit(c, x => Retire(x, new RetireBody("master"), true)).Error);
+        Assert.NotNull(Mit(c, x => Retire(x, new RetireBody("klass_k1"), true)).Error);
     }
 
     [Fact]
