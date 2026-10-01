@@ -16,6 +16,16 @@ public class EinrichtungTests
         .AddInMemoryCollection(new Dictionary<string, string?> { ["JOURNALI_DB"] = db, ["JOURNALI_DB_PASSWORD"] = pw }).Build();
 
     [Fact]
+    public void Die_Verbindung_handelt_kein_Kerberos_aus()
+    {
+        // das Laufzeit-Image hat libgssapi_krb5 nicht; Npgsql würde beim Verbindungsaufbau GSS versuchen und mit „Cannot load library“ scheitern
+        var z = new DbZiel("Host=db;Port=7432;Database=j;Username=postgres", "geheim", DbZiel.AusUmgebung);
+        var b = new Npgsql.NpgsqlConnectionStringBuilder(z.ConnectionString());
+        Assert.Equal(Npgsql.GssEncryptionMode.Disable, b.GssEncryptionMode);
+        Assert.Equal(Npgsql.GssEncryptionMode.Disable, new Npgsql.NpgsqlConnectionStringBuilder(z.ConnectionString(5)).GssEncryptionMode);
+    }
+
+    [Fact]
     public void Das_Passwort_steht_nie_in_der_Verbindungszeichenfolge()
     {
         var z = new DbZiel("Host=db;Port=7432;Database=j;Username=postgres;Password=aus-der-zeichenfolge", null, DbZiel.AusUmgebung);

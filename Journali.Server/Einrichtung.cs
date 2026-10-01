@@ -42,6 +42,9 @@ public sealed record DbZiel
     public string ConnectionString(int? timeout = null)
     {
         var b = new NpgsqlConnectionStringBuilder(Verbindung) { Password = Password };
+        // Kerberos braucht journali nicht. Npgsql versucht sonst, beim Verbindungsaufbau GSS auszuhandeln, und das Laufzeit-Image hat die Bibliothek nicht
+        // (libgssapi_krb5.so.2: „Cannot load library“, 01.10.2026).
+        b.GssEncryptionMode = GssEncryptionMode.Disable;
         if (timeout is { } t) b.Timeout = t;
         return b.ConnectionString;
     }
