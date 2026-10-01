@@ -159,13 +159,22 @@ export async function createAttributes(catalog, items, mapping) {
   await store.poll(true)
 }
 
+/// Die vom Anwender gewählte Gruppe (Plugin-Daten „group“) gilt nur, wenn es sie im Modell gibt; sonst gilt die Gruppe des Katalogs,
+/// und der veraltete Eintrag fällt weg (eine frühere Version nannte die Gruppen dpp und ppwr).
+export async function gewaehlteGruppe(ctx, catalog) {
+  const gespeichert = await ctx.data.get('group').catch(() => null)
+  if (typeof gespeichert !== 'string' || !gespeichert) return
+  if ((store.model?.groups ?? []).some(g => g.key === gespeichert)) catalog.groupKey = gespeichert
+  else await ctx.data.del?.('group').catch?.(() => {})
+}
+
 /// Beim Einschalten des Plugins (install): die Attributgruppe des Katalogs und die Attribute, die es noch nicht gibt, entstehen — nach einem Hinweis.
 /// Was der Katalog schon einem vorhandenen Attribut zuordnen kann, bleibt dort. Danach meldet das Plugin die Gruppe und ihre Attribute an:
 /// solange es an ist, braucht es sie, und der Server lässt sie nicht einzeln zurückziehen. Lehnt der Anwender den Hinweis ab, ist das Plugin wieder aus.
 export async function setup(ctx, catalog) {
   if (!tree.loaded) await tree.load()
   const model = store.model
-  const savedGroup = await ctx.data.get('group').catch(() => null); if (typeof savedGroup === 'string' && savedGroup) catalog.groupKey = savedGroup
+  await gewaehlteGruppe(ctx, catalog)
   const mapping = guessMapping(catalog, model)
   const saved = await ctx.data.get('mapping')
   if (saved) for (const [k, v] of Object.entries(saved)) if (v?.to && model.attributes.some(a => a.key === v.to) && !mapping[k]?.fixed) mapping[k] = { ...v, why: 'gemerkt', sure: true }
@@ -278,7 +287,7 @@ export async function mount(root, ctx, catalog) {
   const model = store.model
   const st = { root: localStorage.getItem(`journali.cmp.${catalog.key}.root`) || tree.rows.find(r => !r.parent)?.id, mapping: null, res: null, sugg: [], filter: 'all', picked: new Set(), levels: new Set(['must', 'should', 'may']), only: 'all' }
   const saved = await ctx.data.get('mapping')
-  const savedGroup = await ctx.data.get('group').catch(() => null); if (typeof savedGroup === 'string' && savedGroup) catalog.groupKey = savedGroup
+  await gewaehlteGruppe(ctx, catalog)
   // Abgelehnte Vorschläge zur Geltung („nein“ zu „Vorschlag ja“) je Knoten — gemerkt, damit die Frage nicht wiederkommt
   st.declined = (await ctx.data.get('scopes_declined').catch(() => null)) ?? {}
   const decline = async (nodeId, key, on) => { const l = new Set(st.declined[nodeId] ?? []); on ? l.add(key) : l.delete(key); st.declined[nodeId] = [...l]; await ctx.data.set('scopes_declined', st.declined).catch(() => {}) }

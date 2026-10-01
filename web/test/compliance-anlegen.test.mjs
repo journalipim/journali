@@ -5,7 +5,7 @@ import assert from 'node:assert/strict'
 import './ui.mjs'
 import { api } from '../src/api.js'
 import { store } from '../src/store.js'
-import { createAttributes, ensureUnit } from '../src/compliance.js'
+import { createAttributes, ensureUnit, gewaehlteGruppe } from '../src/compliance.js'
 import dpp from '../../plugins/dpp/catalog.js'
 import ppwr from '../../plugins/ppwr/catalog.js'
 
@@ -78,4 +78,29 @@ test('Handelsname und Modell sind vererbbar: eine Vorlage am oberen Knoten gilt 
   assert.equal(name.body.inheritable, true)
   assert.equal(modell.body.inheritable, true)
   assert.equal(gtin.body.inheritable, false, 'eine GTIN erbt nicht')
+})
+
+test('die Attributgruppen der Verordnungen heißen regulation_dpp und regulation_ppwr, ihre Attribute behalten die Vorsilbe', () => {
+  assert.equal(dpp.groupKey, 'regulation_dpp'); assert.equal(dpp.prefix, 'dpp_')
+  assert.equal(ppwr.groupKey, 'regulation_ppwr'); assert.equal(ppwr.prefix, 'pack_')
+})
+
+async function gruppe(gespeichert, modellGruppen) {
+  const store0 = store.model, entfernt = []
+  store.model = { groups: modellGruppen.map(key => ({ key })), attributes: [] }
+  const katalog = { groupKey: 'regulation_dpp' }
+  try { await gewaehlteGruppe({ data: { get: async () => gespeichert, del: async k => { entfernt.push(k) } } }, katalog) } finally { store.model = store0 }
+  return { gruppe: katalog.groupKey, entfernt }
+}
+
+test('eine gespeicherte Gruppe gilt, wenn es sie im Modell gibt', async () => {
+  assert.deepEqual(await gruppe('eigene', ['eigene']), { gruppe: 'eigene', entfernt: [] })
+})
+
+test('eine gespeicherte Gruppe, die es nicht mehr gibt (frühere Version: dpp), gilt nicht; die Gruppe des Katalogs bleibt und der Eintrag fällt weg', async () => {
+  assert.deepEqual(await gruppe('dpp', []), { gruppe: 'regulation_dpp', entfernt: ['group'] })
+})
+
+test('ist nichts gespeichert, gilt die Gruppe des Katalogs', async () => {
+  assert.deepEqual(await gruppe(null, []), { gruppe: 'regulation_dpp', entfernt: [] })
 })

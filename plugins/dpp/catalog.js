@@ -16,7 +16,7 @@ export default {
   scopeRules: [{ scope: 'battery', match: [/\bbatter(y|ies|ie)\b/i, /\bakku(mulator)?\b/i, /\baccumulator/i, /\bpower ?bank/i], why: 'ETIM-Gruppe/-Klasse Batterie' }],
   source: 'https://eur-lex.europa.eu/eli/reg/2024/1781/oj', sourceLabel: 'EUR-Lex 2024/1781 ↗',
   description: 'Datenpunkte des Produktpasses nach ESPR Art. 7/9 und Anhang III. Je Datenpunkt das Attribut im Modell wählen (Best Guess vorbelegt) — oder die fehlenden anlegen; dann einen Teilbaum prüfen. Die Vorschrift gilt je Produktgruppe erst mit ihrem delegierten Rechtsakt; die Tabelle zeigt, wie weit die Daten heute tragen.',
-  groupKey: 'dpp', groupLabel: 'DPP (ESPR)', prefix: 'dpp_',
+  groupKey: 'regulation_dpp', groupLabel: 'DPP (ESPR)', prefix: 'dpp_',
   groups: [
     { key: 'id', label: 'Identifikation', items: [
       { key: 'gtin', label: 'Eindeutige Produktkennung (GTIN)', labelEn: 'Unique product identifier (GTIN)', level: 'must', type: 'text', synonyms: ['gtin', 'ean', 'ean13', 'barcode', 'upc', 'artikelnummer_ean'], hint: 'ISO/IEC 15459 bzw. GS1; Träger ist QR/Data-Matrix am Produkt', rule: isGtin, roles: ['product', 'variant'], what: 'Eindeutige Kennung des Produktmodells, mit der der Produktpass gefunden wird (GTIN/EAN, sonst Herstellernummer).', law: 'ESPR Art. 9, Anhang III(a); Datenträger nach ISO/IEC 15459', from: 'mit dem ersten delegierten Rechtsakt je Produktgruppe (ab 2027/2028)', ifMissing: 'ohne Kennung kein Produktpass — das Produkt darf in der Produktgruppe nicht in Verkehr gebracht werden', source: 'GS1-Stammdaten, Artikelstamm im ERP' },

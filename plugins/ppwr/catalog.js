@@ -22,7 +22,7 @@ export default {
   ],
   source: 'https://eur-lex.europa.eu/eli/reg/2025/40/oj', sourceLabel: 'EUR-Lex 2025/40 ↗',
   description: 'Verpackungsdaten nach PPWR — je Produkt: Materialien und Gewichte der Verpackungsbestandteile, Rezyklatanteil, Recyclingfähigkeitsklasse, Wiederverwendbarkeit, Leerraum, Stoffgrenzen, Kennzeichnung, Register. Attribute wählen oder anlegen, dann einen Teilbaum prüfen.',
-  groupKey: 'ppwr', groupLabel: 'Verpackung (PPWR)', prefix: 'pack_',
+  groupKey: 'regulation_ppwr', groupLabel: 'Verpackung (PPWR)', prefix: 'pack_',
   groups: [
     { key: 'unit', label: 'Verpackungseinheit', items: [
       { key: 'pack_id', label: 'Kennung der Verpackung (Typ/Charge/Serie)', labelEn: 'Packaging identifier (type/batch/serial)', level: 'must', type: 'text', synonyms: ['verpackungskennung', 'packaging_id', 'pack_id', 'verpackung_typ', 'packaging_type_number'], hint: 'Art. 12: Typ-, Chargen- oder Seriennummer an der Verpackung', roles: ['product', 'variant'], what: 'Kennung der Verpackung — Typ, gegebenenfalls Charge oder Serie — damit Konformität und Register sich auf sie beziehen.', law: 'PPWR Art. 39 (Konformitätserklärung je Verpackungstyp), Anhang VIII', from: 'seit 12.08.2026', ifMissing: 'Konformitätserklärung nicht zuordenbar', source: 'Verpackungsspezifikation, Lieferant' },
