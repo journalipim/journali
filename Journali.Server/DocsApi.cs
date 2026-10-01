@@ -30,7 +30,7 @@ public static class DocsApi
     /// keine Textebene, ein Bild von Text. Sie stehen im Index mit diesem Zustand, damit der Leser sie nicht in jeder
     /// Runde erneut versucht; hier holt sie der Erkenner. Auch diese Liste ist kein eigener Bestand, sondern eine Frage
     /// an den Index — ein abgebrochener Lauf lässt sie offen, der nächste findet dieselben. Liefert der Erkenner Text
-    /// (<c>PUT /api/docs/{id}</c> mit <c>state: text</c>), ist der Posten erledigt; ein neuer Hash (neue Fassung) macht
+    /// (<c>PUT /api/docs/{id}</c> mit <c>state: text</c>), ist der Posten erledigt; ein neuer Hash (neue Version) macht
     /// das Medium wieder zum Fall des Lesers, nicht des Erkenners.
     /// </summary>
     public static List<Scan> Scans(IReadOnlyDictionary<string, (string Sha, string State)> known, IEnumerable<Journali.Core.Projections.Medium> media, int limit) =>
@@ -106,7 +106,7 @@ public static class DocsApi
         });
 
         // Die Tabellen eines Dokuments (34 L): für den Dialog am Knoten. state null = noch nicht gelesen (oder eine
-        // neue Fassung seit dem Lesen) — der Dialog stösst den Job an und fragt nach.
+        // neue Version seit dem Lesen) — der Dialog stösst den Job an und fragt nach.
         api.MapGet("/docs/{id}/tables", async (string id, Catalog c, DocText docs, CancellationToken ct) =>
         {
             if (!docs.Ready) return Results.Ok(new { ready = false, state = (string?)null, tables = Array.Empty<DocText.Table>() });

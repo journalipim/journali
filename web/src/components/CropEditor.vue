@@ -1,12 +1,12 @@
 <script setup>
 // ✂ Zuschneiden und Ausrichten — im Browser auf einer Leinwand, so wie dieser Browser schon die Kacheln rechnet.
 // Ein Medium ist unveränderlich: das Ergebnis ist ein NEUES Medium mit Abstammung (MediaSourced.from = das
-// Original). Wahlweise ersetzt es das Original gleich als neue Fassung (Block F) — dann wandern die Zuordnungen.
+// Original). Wahlweise ersetzt es das Original gleich als neue Version (Block F) — dann wandern die Zuordnungen.
 //
 // Zwei Drehungen, weil sie zwei Dinge sind: ⟲ ⟳ in Vierteln (ein quer stehendes Foto), und ein feiner Winkel
 // zum Ausrichten (ein schiefer Scan, ±15°). Der Ausschnitt gilt im GEDREHTEN Bild, in Pixeln des Originals —
 // gerechnet wird in voller Auflösung, die Vorschau ist nur verkleinert.
-// props: medium = { id, name, mime, supersededBy? }; emits done({ neu, fassung }) und close
+// props: medium = { id, name, mime, supersededBy? }; emits done({ neu, version }) und close
 import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { api } from '../api.js'
 import { store } from '../store.js'
@@ -87,7 +87,7 @@ const format = computed(() => /^image\/(jpeg|png|webp)$/.test(props.medium.mime)
 const name = computed(() => (props.medium.name || 'bild').replace(/\.[^.]+$/, '') + '-zuschnitt.' + format.value.split('/')[1].replace('jpeg', 'jpg'))
 
 /// Rechnen, hochladen — und wahlweise das Original ersetzen
-async function uebernehmen(alsFassung) {
+async function uebernehmen(alsVersion) {
   if (!store.actor) { store.toast(t_('👤 Name fehlt → Einstellungen')); return }
   busy.value = t_('rechne …')
   try {
@@ -100,8 +100,8 @@ async function uebernehmen(alsFassung) {
     if (!blob) throw new Error(t_('Der Browser konnte das Bild nicht schreiben.'))
     busy.value = t_('lade hoch …')
     const neu = await api.upload('/api/media', new File([blob], name.value, { type: format.value }), { from: props.medium.id })
-    if (alsFassung && neu.id !== props.medium.id) await api.post(`/api/media/${props.medium.id}/supersede`, { by: neu.id })
-    emit('done', { neu, fassung: alsFassung })
+    if (alsVersion && neu.id !== props.medium.id) await api.post(`/api/media/${props.medium.id}/supersede`, { by: neu.id })
+    emit('done', { neu, version: alsVersion })
   } catch (e) { store.toast(e.message) }
   finally { busy.value = '' }
 }
@@ -144,7 +144,7 @@ defineExpose({ crop, rahmen, begrenzen, ganz })
           <span class="muted" style="font-size:12px" :title="$t('Ein Medium ist unveränderlich — das Ergebnis ist ein neues Medium mit Abstammung zum Original.')">{{ name }}</span>
           <span class="grow" />
           <button @click="uebernehmen(false)" :disabled="!img || !!busy" :title="$t('als weiteres Asset anlegen — das Original bleibt, wie es ist')">{{ $t("✓ Neues Asset") }}</button>
-          <button class="primary" v-if="!medium.supersededBy" @click="uebernehmen(true)" :disabled="!img || !!busy" :title="$t('anlegen und das Original damit ersetzen — die Zuordnungen wandern mit')">{{ $t("✓ Neue Fassung") }}</button>
+          <button class="primary" v-if="!medium.supersededBy" @click="uebernehmen(true)" :disabled="!img || !!busy" :title="$t('anlegen und das Original damit ersetzen — die Zuordnungen wandern mit')">{{ $t("✓ Neue Version") }}</button>
         </div>
       </template>
     </div>

@@ -157,7 +157,7 @@ public sealed class DocText
     }
 
     /// <summary>Alle Dokumente, die beim Lesen scheiterten, wieder freigeben — der Job nimmt sie in der nächsten Runde
-    /// erneut. Ohne das bliebe ein Fehler für immer stehen, auch wenn die Ursache längst behoben ist. Ein erkannter Scan bleibt draussen, der wartet auf OCR und nicht auf eine neue Serverfassung.</summary>
+    /// erneut. Ohne das bliebe ein Fehler für immer stehen, auch wenn die Ursache längst behoben ist. Ein erkannter Scan bleibt draussen, der wartet auf OCR und nicht auf eine neue Serverversion.</summary>
     public async Task<int> RetryFailedAsync(CancellationToken ct = default)
     {
         if (_db is null) return 0;

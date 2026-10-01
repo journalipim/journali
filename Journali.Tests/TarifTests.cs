@@ -223,7 +223,7 @@ public class TarifTests
     }
 
     /// <summary>
-    /// Die Tarife kommen aus dem Tarifblatt im Journal (25.09.2026): eine neuere, echte Fassung gilt — für Grenzen,
+    /// Die Tarife kommen aus dem Tarifblatt im Journal (25.09.2026): eine neuere, echte Version gilt — für Grenzen,
     /// Plugins, Publikationsbäume und das Init Team. Ein Eintrag mit fremder Signatur ändert nichts, auch nicht beim
     /// Neuaufbau aus dem Journal: das Abbild prüft selbst.
     /// </summary>
@@ -239,7 +239,7 @@ public class TarifTests
         Assert.Equal(7_000, c.Tarife.Free.Week);
         Assert.Equal(7_000, c.With((_, _, _) => c.Teams.Get(Model.InitTeam)!.EntriesWeek));   // das Init Team trägt die Lizenz (Kostenlos) nach der neuen Liste
         Assert.Null(PluginApi.NichtImTarif(c, "etim"));
-        Assert.False(c.NimmTarifblatt(PruefAussteller.Blatt(2, z => z with { Week = 1 }), "t"));   // dieselbe Fassung: nichts
+        Assert.False(c.NimmTarifblatt(PruefAussteller.Blatt(2, z => z with { Week = 1 }), "t"));   // dieselbe Version: nichts
 
         // ein Eintrag mit fremder Signatur — geschrieben an allem vorbei — bleibt wirkungslos
         using var fremd = System.Security.Cryptography.ECDsa.Create(System.Security.Cryptography.ECCurve.NamedCurves.nistP256);

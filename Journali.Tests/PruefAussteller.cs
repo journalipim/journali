@@ -28,10 +28,10 @@ internal static class PruefAussteller
         return new Tarifblatt(text, Signaturen.Signiere(mit ?? Schluessel, text));
     }
 
-    /// <summary>Das Saatgut als Tarifblatt der Fassung <paramref name="fassung"/>, verändert durch <paramref name="aendern"/>.</summary>
-    public static Tarifblatt Blatt(long fassung, Func<TarifZeile, TarifZeile>? aendern = null, int testMonate = 3, ECDsa? mit = null)
+    /// <summary>Das Saatgut als Tarifblatt der Version <paramref name="nummer"/>, verändert durch <paramref name="aendern"/>.</summary>
+    public static Tarifblatt Blatt(long nummer, Func<TarifZeile, TarifZeile>? aendern = null, int testMonate = 3, ECDsa? mit = null)
     {
-        var b = Tarife.Saat.AlsBlatt(fassung, DateTimeOffset.UtcNow);
+        var b = Tarife.Saat.AlsBlatt(nummer, DateTimeOffset.UtcNow);
         return Blatt(b with { TestMonate = testMonate, Tarife = [.. b.Tarife.Select(aendern ?? (z => z))] }, mit);
     }
 }

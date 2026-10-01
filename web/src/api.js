@@ -17,7 +17,7 @@ async function request(method, path, body) {
   }
   if (res.status === 204) return null
   const text = await res.text()
-  // HTML statt JSON = der Server kennt diesen Pfad nicht und liefert die Oberfläche aus — fast immer eine alte Serverfassung.
+  // HTML statt JSON = der Server kennt diesen Pfad nicht und liefert die Oberfläche aus — fast immer eine alte Serverversion.
   if (text.trimStart().startsWith('<')) throw new Error(t('Server kennt {0} {1} nicht', [method, path.split('?')[0]]))
   // kein JSON (Ausnahme oder 400 als Text vom Server): die erste Zeile als Meldung, nicht „Unexpected token“
   let data = null

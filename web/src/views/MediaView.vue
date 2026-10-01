@@ -230,7 +230,7 @@ const kb = b => b < 1024 ? `${b} B` : b < 1048576 ? `${(b / 1024).toFixed(0)} kB
 const facets = ref(null)
 const keyword = ref('')          // '' = alle, '-' = ohne Stichwort, sonst Komma-Liste
 const plugin = ref('')           // '' = alle, '-' = von Hand
-const superseded = ref(false)    // abgelöste Fassungen mit zeigen
+const superseded = ref(false)    // abgelöste Versionen mit zeigen
 const valid = ref('')            // '' = alle, 'expired' = nur abgelaufene
 async function loadFacets() {
   try { facets.value = await api.get(`/api/media/facets?${filterQuery()}`) } catch (e) { store.toast(e.message) }
@@ -259,7 +259,7 @@ function contextMenu(e, m) {
   const n = betroffene(m).length
   menu.open(e, [
     { label: n > 1 ? t_('{0} Assets zuordnen …', [n]) : t_('Zuordnen …'), icon: '⇄', action: () => zuordnenOeffnen(m) },
-    n === 1 && !m.supersededBy ? { label: t_('Neue Fassung hochladen …'), icon: '⇪', action: () => neueFassung(m) } : null,
+    n === 1 && !m.supersededBy ? { label: t_('Neue Version hochladen …'), icon: '⇪', action: () => neueVersion(m) } : null,
     n === 1 && m.isImage && store.can('download') ? { label: t_('Zuschneiden und ausrichten …'), icon: '✂', action: () => zuschneiden(m) } : null,
     { sep: true },
     { label: n > 1 ? t_('{0} Assets zurückziehen', [n]) : t_('Zurückziehen'), icon: '🗑', danger: true, action: () => retire(m) },
@@ -269,27 +269,27 @@ function contextMenu(e, m) {
 // ---- Zuschneiden und Ausrichten (CropEditor): nur Bilder; das Ergebnis ist ein neues Medium mit Abstammung
 const cropFuer = ref(null)
 function zuschneiden(m) { if (m?.isImage) cropFuer.value = m }
-async function zugeschnitten({ neu, fassung }) {
+async function zugeschnitten({ neu, version }) {
   cropFuer.value = null
-  store.toast(fassung ? t_('{0} ersetzt durch {1}', [current.value?.name ?? '', neu.name]) : t_('{0} angelegt', [1]), 'ok')
+  store.toast(version ? t_('{0} ersetzt durch {1}', [current.value?.name ?? '', neu.name]) : t_('{0} angelegt', [1]), 'ok')
   cur.value = neu.id
   await store.poll(true); await loadFolders(); await load()
 }
 
-// ---- Neue Fassung: die Datei wird ein neues Medium (ein Medium ist unveränderlich), dann ersetzt es das alte —
+// ---- Neue Version: die Datei wird ein neues Medium (ein Medium ist unveränderlich), dann ersetzt es das alte —
 // die Zuordnungen wandern, der Vorgänger bleibt für Belege und Versionen auflösbar, die Liste zeigt ihn nicht mehr.
-const fassungFuer = ref(null)     // das Medium, das ersetzt wird — solange der Dateidialog offen ist
-const fassungInput = ref(null)
-function neueFassung(m) { fassungFuer.value = m; fassungInput.value?.click() }
-async function fassungGewaehlt(files) {
-  const alt = fassungFuer.value; fassungFuer.value = null
+const versionFuer = ref(null)     // das Medium, das ersetzt wird — solange der Dateidialog offen ist
+const versionInput = ref(null)
+function neueVersion(m) { versionFuer.value = m; versionInput.value?.click() }
+async function versionGewaehlt(files) {
+  const alt = versionFuer.value; versionFuer.value = null
   const f = files[0]
   if (!alt || !f) return
   if (!store.actor) { store.toast(t_('👤 Name fehlt → Einstellungen')); return }
-  busy.value = t_('neue Fassung …')
+  busy.value = t_('neue Version …')
   try {
     const neu = await api.upload('/api/media', f)
-    if (neu.id === alt.id) { store.toast(t_('Dieselbe Datei — keine neue Fassung')); return }
+    if (neu.id === alt.id) { store.toast(t_('Dieselbe Datei — keine neue Version')); return }
     await api.post(`/api/media/${alt.id}/supersede`, { by: neu.id })
     store.toast(t_('{0} ersetzt durch {1}', [alt.name, neu.name]), 'ok')
     cur.value = neu.id
@@ -403,12 +403,12 @@ const oeffnen = m => { if (store.can('download')) window.open(dateiLink(m), '_bl
       <select v-model="group" :title="$t('Gruppierung — nur die Anzeige; der Ordnerfilter ist die Liste links')"><option v-for="[k, l] in GROUPS" :key="k" :value="k">{{ l }}</option></select>
       <button class="primary" @click="fileInput.click()" :title="folder === 'all' || folder === '-' ? $t('Dateien hochladen — oder hierher ziehen') : $t('hochladen in „{0}“ — oder hierher ziehen', [folderTitle])">{{ $t("⇧ Hochladen") }}</button>
       <input ref="fileInput" type="file" multiple style="display:none" @change="upload([...$event.target.files]); $event.target.value = ''" />
-      <input ref="fassungInput" type="file" style="display:none" @change="fassungGewaehlt([...$event.target.files]); $event.target.value = ''" />
+      <input ref="versionInput" type="file" style="display:none" @change="versionGewaehlt([...$event.target.files]); $event.target.value = ''" />
     </div>
     <!-- Facetten: anklicken schränkt ein, nochmal klicken hebt auf; mehrere Stichwörter gelten zusammen -->
     <div v-if="facets" class="toolbar facets">
       <span class="chip" :class="{ on: superseded }" @click="superseded = !superseded; load()"
-        :title="$t('Abgelöste Fassungen mit zeigen — sie bleiben für Belege und Versionen auflösbar')">{{ $t("abgelöste") }}</span>
+        :title="$t('Abgelöste Versionen mit zeigen — sie bleiben für Belege und Versionen auflösbar')">{{ $t("abgelöste") }}</span>
       <span v-for="h in facets.herkunft" :key="'h' + h.key" class="chip" :class="{ on: plugin === h.key }" @click="togglePlugin(h.key)"
         :title="h.key === '-' ? $t('von Hand hochgeladen') : $t('über die Schnittstelle {0} gekommen', [h.key])">{{ (h.key === '-' ? $t('von Hand') : h.key) + ' ' }}<span class="muted">{{ h.n }}</span></span>
       <span v-for="z in facets.zustaende ?? []" :key="'z' + z.key" class="chip" :class="{ on: state === z.key }" :style="`border-color:${wfColor(z.color)}`" @click="toggleState(z.key)"
@@ -488,9 +488,9 @@ const oeffnen = m => { if (store.can('download')) window.open(dateiLink(m), '_bl
           <td><button class="x mono" @click="cur = current.source.from" :title="$t('zu dem Medium, aus dem dieses entstand')">{{ '▨ ' + current.source.from }}</button></td></tr>
         <tr><td class="attr muted">{{ $t("Angelegt") }}</td><td class="muted">{{ when(current.createdAt) + ' · ' + current.createdBy }}</td></tr>
         <tr v-if="current.supersededBy"><td class="attr muted">{{ $t("ersetzt durch") }}</td>
-          <td><button class="x mono ersetzt" @click="superseded = true; cur = current.supersededBy; load()" :title="$t('zur aktuellen Fassung')">{{ '▨ ' + current.supersededBy }}</button></td></tr>
+          <td><button class="x mono ersetzt" @click="superseded = true; cur = current.supersededBy; load()" :title="$t('zur aktuellen Version')">{{ '▨ ' + current.supersededBy }}</button></td></tr>
         <tr v-if="current.supersedes"><td class="attr muted">{{ $t("ersetzt") }}</td>
-          <td><button class="x mono" @click="superseded = true; cur = current.supersedes; load()" :title="$t('zur abgelösten Fassung — sie bleibt für Belege und Versionen auflösbar')">{{ '▨ ' + current.supersedes }}</button></td></tr>
+          <td><button class="x mono" @click="superseded = true; cur = current.supersedes; load()" :title="$t('zur abgelösten Version — sie bleibt für Belege und Versionen auflösbar')">{{ '▨ ' + current.supersedes }}</button></td></tr>
         <tr><td class="attr muted">{{ $t("SHA-256") }}</td><td class="mono muted" style="font-size:11px">{{ current.sha256 }}</td></tr>
         <tr v-for="(v, k) in current.external" :key="k"><td class="attr muted">⇩ {{ k }}</td><td class="mono muted">{{ v }}</td></tr>
       </tbody></table>

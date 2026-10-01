@@ -93,7 +93,7 @@ export function verifyPlugin(key, pub = publicKey()) {
   try { c = JSON.parse(readFileSync(cp, 'utf8')) } catch (e) { return { ok: false, reason: 'Zertifikat nicht lesbar: ' + e.message } }
   if (c.key !== key) return { ok: false, reason: `Zertifikat für ${c.key}`, cert: c }
   const manifest = JSON.parse(readFileSync(join(dir, 'plugin.json'), 'utf8'))
-  if (String(manifest.version ?? '0') !== c.version) return { ok: false, reason: `Zertifikat für Fassung ${c.version}, Manifest ${manifest.version}`, cert: c }
+  if (String(manifest.version ?? '0') !== c.version) return { ok: false, reason: `Zertifikat für Version ${c.version}, Manifest ${manifest.version}`, cert: c }
   if (!verify('sha256', Buffer.from(body(c), 'utf8'), { key: pub, dsaEncoding: 'ieee-p1363' }, Buffer.from(c.sig ?? '', 'base64'))) return { ok: false, reason: 'Signatur passt nicht', cert: c }
   if (hashOf(dir, c.ignore ?? []) !== c.hash) return { ok: false, reason: 'Dateien verändert', cert: c }
   return { ok: true, cert: c }

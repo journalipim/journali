@@ -2,7 +2,7 @@ namespace Journali.Core.Journal;
 
 /// <summary>
 /// Journal im Arbeitsspeicher — für Sandbox und Tests. Die dauerhafte
-/// Fassung (Datenbank, append-only Tabelle) kommt als eigene Klasse
+/// Version (Datenbank, append-only Tabelle) kommt als eigene Klasse
 /// hinter demselben <see cref="IJournal"/>.
 /// </summary>
 public sealed class MemoryJournal : IJournal

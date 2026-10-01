@@ -512,7 +512,7 @@ async function bandMount({ head, body: bodyEl }, nodeId, ctx) {
     head.textContent = '· …'
     let S; try { S = await stageData(ctx, nodeId, locale) } catch (e) { head.textContent = '· ✗ ' + e.message; return }
     if (gone || !S) return
-    // Klassensichten früherer Fassungen einmal wegräumen: die Sicht ist jetzt flüchtig (früher nodeViews), im Modell hat sie nichts verloren
+    // Klassensichten früherer Versionen einmal wegräumen: die Sicht ist jetzt flüchtig (früher nodeViews), im Modell hat sie nichts verloren
     if (!viewsDone.has('cleanup') && store.can?.('model') !== false && (store.model?.views ?? []).some(v => /^etim_ec\d{6}_/.test(v.key))) {
       viewsDone.add('cleanup')
       try { const n = await ops.dropOldViews(); if (n) { await store.poll(true); store.toast(t_('{0} feste ETIM-Sichten aufgeräumt — die Klassensicht entsteht jetzt beim Öffnen', [n]), 'ok') } } catch { /* ohne Modellrecht bleiben sie stehen */ }
@@ -1002,7 +1002,7 @@ async function mount(root, ctx) {
   return () => {}
 }
 
-/// Einstellungen aus früheren Fassungen nennen eine Gruppe oder ein Klassenattribut, die es im Modell nicht (mehr) gibt: es gelten wieder die Namen des Systems
+/// Einstellungen aus früheren Versionen nennen eine Gruppe oder ein Klassenattribut, die es im Modell nicht (mehr) gibt: es gelten wieder die Namen des Systems
 async function veralteteEinstellungen(ctx) {
   const m = ctx.store.model; let geaendert = false
   if (cache.settings.group && !(m?.groups ?? []).some(g => g.key === cache.settings.group)) { delete cache.settings.group; geaendert = true }

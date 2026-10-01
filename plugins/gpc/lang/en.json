@@ -27,7 +27,7 @@
  "Gruppe, Klassenattribut und Attribute anlegen, Klasse am Knoten setzen": "Create group, class attribute and attributes, set the class at the node",
  "GPC-Klasse (+)": "GPC class (+)",
  "Brick wählen und diesem Knoten zuweisen": "Choose a brick and assign it to this node",
- "Die Veröffentlichung ist übernommen; eine Datei braucht es nur für eine weitere Fassung oder Sprache": "The publication is imported; a file is only needed for another version or language",
+ "Die Veröffentlichung ist übernommen; eine Datei braucht es nur für eine weitere Version oder Sprache": "The publication is imported; a file is only needed for another version or language",
  "{0} von {1} Datensätzen neu oder geändert": "{0} of {1} records new or changed",
  "Nur Datensätze, die im Journal fehlen oder anders sind, werden geschrieben": "Only records that are missing or different in the journal are written",
  "schon im Journal": "already in the journal",

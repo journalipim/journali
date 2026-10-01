@@ -153,7 +153,7 @@ export function workbook(X, { columns, rows }, legendRows = null, sheet = 'Daten
   // keine Farben, aber Kommentare — rotes Dreieck in Excel, Text beim Zeigen; die Legende sagt es ausserdem
   columns.forEach((c, i) => { const req = c.def?.required; const note = c.note ?? (req && typeof req === 'object' && Object.keys(req).length ? 'Pflicht: ' + Object.entries(req).map(([ch, l]) => `${ch} ${l.join(',')}`).join(' · ') : req ? 'Pflicht' : null); if (!note) return; const ref = X.utils.encode_cell({ r: 0, c: i }); ws[ref] ??= { t: 's', v: c.key }; ws[ref].c = [{ a: 'journali', t: note }]; ws[ref].c.hidden = true })
   // Komfort: Autofilter über Kopf und Daten — Sortieren und Filtern in Excel sofort da; eine echte „Tabelle“ (ListObject)
-  // schreibt die freie SheetJS-Fassung nicht, Excel: Einfügen → Tabelle auf dem Bereich
+  // schreibt die freie SheetJS-Version nicht, Excel: Einfügen → Tabelle auf dem Bereich
   if (columns.length) ws['!autofilter'] = { ref: X.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: Math.max(1, rows.length), c: columns.length - 1 } }) }
   const wb = X.utils.book_new(); X.utils.book_append_sheet(wb, ws, sheet)
   wb.gekuerzt = gek.gekuerzt

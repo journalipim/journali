@@ -61,13 +61,13 @@ export const store = reactive({
   presence: [],
   nodes: 0,
   usage: null,
-  version: '',      // Fassung des Servers — steht oben in der Leiste
+  version: '',      // Version des Servers — steht oben in der Leiste
   build: '',        // Bau kurz: TTMM.hhmm
   builtAt: '',      // dasselbe lang, für den Tooltip
   model: null,           // { locales, channels, attributes } vom Server
   toasts: [],
   error: '',
-  etag: null,           // ETag der index.html beim Laden — ändert er sich, liegt eine neue Fassung
+  etag: null,           // ETag der index.html beim Laden — ändert er sich, liegt eine neue Version
   stale: false,
 
   // Name eines Attributs/einer Gruppe/einer Liste in der Anzeige: Bezeichnung in der Oberflächensprache, technischer Key, oder beides — je attrNames
@@ -148,7 +148,7 @@ export const store = reactive({
       this.presence = h.presence ?? []   // wer sonst noch dort ist, wo dieser Anwender steht
       this.tarif = h.tarif ?? null   // Tarif der Instanz: was die Oberfläche überhaupt anbietet
       this.registriert = h.registriert ?? null   // beim Lizenzserver: null = noch nicht gefragt
-      // Fassung und Bau: kurz oben, lang im Tooltip
+      // Version und Bau: kurz oben, lang im Tooltip
       this.version = h.version ?? ''
       if (h.built) {
         const d = new Date(h.built)
@@ -179,7 +179,7 @@ export const store = reactive({
     setInterval(() => this.checkVersion(), 30000)
   },
 
-  // Neue Fassung der Oberfläche? index.html ohne Cache holen und den ETag vergleichen.
+  // Neue Version der Oberfläche? index.html ohne Cache holen und den ETag vergleichen.
   async checkVersion() {
     try {
       const res = await fetch('/index.html', { method: 'HEAD', cache: 'no-store' })

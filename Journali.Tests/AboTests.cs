@@ -162,7 +162,7 @@ public class AboTests
     }
 
     /// <summary>
-    /// Das Tarifblatt kommt mit dem Stand (25.09.2026): eine neuere Fassung geht ins Journal und gilt sofort — für die
+    /// Das Tarifblatt kommt mit dem Stand (25.09.2026): eine neuere Version geht ins Journal und gilt sofort — für die
     /// Pakete, die Plugins, das Init Team. Eine ältere oder eine mit fremder Signatur ändert nichts.
     /// </summary>
     [Fact]
@@ -176,7 +176,7 @@ public class AboTests
         Assert.True(w.C.Tarife.Free.Erlaubt("etim"));
         Assert.Equal(12_000, w.C.With((_, _, _) => w.C.Teams.Get(Model.InitTeam)!.EntriesWeek));   // das Init Team trägt die Lizenz nach der neuen Liste
 
-        // eine ältere Fassung und eine mit fremder Signatur bleiben draussen
+        // eine ältere Version und eine mit fremder Signatur bleiben draussen
         w.Server.Blatt = Blatt(w.Server.Aussteller, 1, z => z with { Week = 1 });
         await w.Abos.VerbindenAsync(w.C, "de", Key, "taloan");
         using var fremd = ECDsa.Create(ECCurve.NamedCurves.nistP256);
@@ -186,12 +186,12 @@ public class AboTests
         Assert.Equal(12_000, w.C.Tarife.Free.Week);
     }
 
-    private static Tarifblatt Blatt(ECDsa mit, long fassung, Func<TarifZeile, TarifZeile> aendern) => Tarifblaetter(mit, fassung, aendern);
+    private static Tarifblatt Blatt(ECDsa mit, long nummer, Func<TarifZeile, TarifZeile> aendern) => Tarifblaetter(mit, nummer, aendern);
 
     /// <summary>Ein signiertes Blatt aus dem Saatgut — mit geänderten Zeilen und, wenn genannt, Aktionen des Shops.</summary>
-    private static Tarifblatt Tarifblaetter(ECDsa mit, long fassung, Func<TarifZeile, TarifZeile> aendern, RabattZeile[]? rabatte = null)
+    private static Tarifblatt Tarifblaetter(ECDsa mit, long nummer, Func<TarifZeile, TarifZeile> aendern, RabattZeile[]? rabatte = null)
     {
-        var b = Tarife.Saat.AlsBlatt(fassung, Jetzt);
+        var b = Tarife.Saat.AlsBlatt(nummer, Jetzt);
         var text = JsonSerializer.Serialize(b with { Tarife = [.. b.Tarife.Select(aendern)], Rabatte = rabatte }, TarifblattInhalt.Json);
         return new Tarifblatt(text, Signaturen.Signiere(mit, text));
     }

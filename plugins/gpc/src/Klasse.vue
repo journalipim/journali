@@ -29,7 +29,7 @@ const gespeichert = ref({})        // die Datensätze, wie sie im Journal stehen
 // Was gerade gelesen wurde und noch nicht übernommen ist
 const gelesen = ref(null)
 const vorhaben = ref(null)         // { alle, neu }: was die gelesene Datei ergibt und davon, was im Journal anders ist
-const quelleOffen = ref(false)     // mit übernommenen Daten braucht es die Datei nur für eine weitere Fassung oder Sprache
+const quelleOffen = ref(false)     // mit übernommenen Daten braucht es die Datei nur für eine weitere Version oder Sprache
 const recent = ref([])
 
 const byAttr = computed(() => classesByAttribute(bricks.value))
@@ -280,7 +280,7 @@ defineExpose({ umstellung, umstellen, release, bricks, dict, gelesen, vorhaben, 
         <select v-if="release" :title="$t('Sprachen: {0}', [(release.languages ?? []).join(', ')])">
           <option>{{ release.version }} · {{ release.date }} · {{ $t("{0} Bricks", [bricks.length]) }}</option></select>
         <span v-else class="muted">{{ $t("nichts übernommen") }}</span>
-        <button :class="{ on: quelleOffen }" :title="$t('Die Veröffentlichung ist übernommen; eine Datei braucht es nur für eine weitere Fassung oder Sprache')" @click="quelleOffen = !quelleOffen">⌗ GPC …</button>
+        <button :class="{ on: quelleOffen }" :title="$t('Die Veröffentlichung ist übernommen; eine Datei braucht es nur für eine weitere Version oder Sprache')" @click="quelleOffen = !quelleOffen">⌗ GPC …</button>
       </div>
       <div v-if="umstellung" class="zeile"><span class="attr" /><span class="warn" :title="$t('Die Attribute kommen in die Gruppen ihrer Klassen, die Bedingung entfällt, und jeder Knoten mit einer Klasse bekommt deren Gruppe')">⚠ {{ $t("{0} Attribute und {1} Knoten in der früheren Bauart", [umstellung.attributes, umstellung.nodes]) }}</span>
         <button class="primary" :disabled="!!busy" @click="umstellen">{{ $t("auf Klassengruppen umstellen") }}</button></div>

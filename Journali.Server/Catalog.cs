@@ -90,7 +90,7 @@ public sealed class Catalog
     }
 
     /// <summary>
-    /// Ein Tarifblatt des Lizenzservers übernehmen: nur, wenn es echt und stimmig ist und eine neuere Fassung hat als das
+    /// Ein Tarifblatt des Lizenzservers übernehmen: nur, wenn es echt und stimmig ist und eine neuere Version hat als das
     /// geltende. Danach bekommt das Init Team die Grenzen der Lizenz nach der neuen Liste. Liefert, ob übernommen wurde.
     /// </summary>
     public bool NimmTarifblatt(Core.Licensing.Tarifblatt? blatt, string actor)

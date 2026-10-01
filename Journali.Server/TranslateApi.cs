@@ -18,7 +18,7 @@ namespace Journali.Server;
 /// entscheidet je Einheit am Fingerabdruck — und verwirft nie einen Auftrag:
 /// <list type="bullet">
 /// <item>Quelle seit dem Auftrag unverändert → schreiben, Marke auf jetzt: fertig.</item>
-/// <item>Quelle ist weitergezogen → <b>trotzdem schreiben</b> (sie ist besser als die vorige), Marke auf die Auftragsfassung:
+/// <item>Quelle ist weitergezogen → <b>trotzdem schreiben</b> (sie ist besser als die vorige), Marke auf die Auftragsversion:
 /// die Einheit bleibt im Rückstand und geht als Differenz ins nächste Paket — nie wieder der ganze Text.</item>
 /// <item>Das Ziel wurde hier von Hand geändert, seit der Auftrag hinausging → nicht überschreiben, ein Mensch sieht es an.</item>
 /// </list>
@@ -80,7 +80,7 @@ public static class TranslateApi
                     var tAxis = new Axis(d.Key, to, axis.Channel, axis.Row);
                     n.Values.TryGetValue(tAxis, out var target);
                     var sAt = n.SetAt.GetValueOrDefault(axis); var tAt = n.SetAt.GetValueOrDefault(tAxis);
-                    // Zustand aus der Marke: gegen welche Quellfassung ist übersetzt? Ohne Marke wie bisher über die Zeit.
+                    // Zustand aus der Marke: gegen welche Quellversion ist übersetzt? Ohne Marke wie bisher über die Zeit.
                     var mark = marks?.Of(n.Id, tAxis);
                     var state = string.IsNullOrWhiteSpace(target) ? "missing"
                         : mark is { } mk ? (mk.SourceHash == Hash(source) ? "done" : "stale")
@@ -304,7 +304,7 @@ public static class TranslateApi
                     written++; nodes.Add(n.Id);
                 }
                 if (late) behind++;   // bleibt im Rückstand, ob geschrieben oder nicht — die Differenz geht ins nächste Paket
-                // die Marke sagt, gegen welche Quellfassung dieser Zieltext übersetzt ist — bei Fall 2 die des Auftrags, nicht die von jetzt
+                // die Marke sagt, gegen welche Quellversion dieser Zieltext übersetzt ist — bei Fall 2 die des Auftrags, nicht die von jetzt
                 write(actor, n.Id, Types.TranslationMarked, new TranslationMarked(attr, to, ch, row, late ? sentHash! : sourceHash, late ? (ord?.At ?? 0) : n.SetAt.GetValueOrDefault(srcAxis), ord?.Key), null);
             }
             if (ord is not null && !ord.Returned) write(actor, Translations.Stream + ord.Key, Types.TranslationReturned, new TranslationReturned(written, behind, conflicts, skipped), null);

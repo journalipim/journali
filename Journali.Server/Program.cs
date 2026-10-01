@@ -69,7 +69,7 @@ if (lastTick > 0) Progress(rebuilt, journal.Head, true);   // der Allerletzte be
 // Er kostet Sekunden (340 MB); ihn zu verpassen kostet beim nächsten Start nur, den Rest aus dem Journal anzuwenden (~18 µs je Eintrag).
 const int SchnappschussAb = 10_000;
 var SchnappschussAlter = TimeSpan.FromDays(1);
-// Gab es beim Start keinen brauchbaren Schnappschuss (neue Fassung des Kerns, erster Start), zählt der Start als Ausgangspunkt: gemessen dauerte der Start
+// Gab es beim Start keinen brauchbaren Schnappschuss (neue Version des Kerns, erster Start), zählt der Start als Ausgangspunkt: gemessen dauerte der Start
 // ohne Schnappschuss 3 bis 8 s, das Schreiben eines neuen 10 s unter der Lesesperre — bei jeder Änderung am Kern.
 var schnappschussStand = snapshotAt > 0 ? snapshotAt : catalog.Head;
 var schnappschussZeit = snapshotAt > 0 && snapshotPath is not null && File.Exists(snapshotPath) ? File.GetLastWriteTimeUtc(snapshotPath) : DateTime.UtcNow;
@@ -247,7 +247,7 @@ app.Use(async (ctx, next) =>
 // Was hier wirklich läuft: beides einmal beim Start lesen. Der Zeitstempel der Datei ändert sich
 // beim nächsten Bau — wer ihn bei jedem Aufruf liest, meldet einen Stand, den er gar nicht geladen hat.
 var gebautAm = System.IO.File.GetLastWriteTimeUtc(typeof(Program).Assembly.Location);
-var fassung = typeof(Program).Assembly.GetName().Version?.ToString(3);
+var laufendeVersion = typeof(Program).Assembly.GetName().Version?.ToString(3);
 
 var api = app.MapGroup("/api");
 BetriebApi.Map(api, dataDir, cachePath, Path.Combine(dataDir, $"snapshot-{connection.Host}-{connection.Port}-{connection.Database}.json"), builder.Configuration);
@@ -268,8 +268,8 @@ api.MapGet("/health", (HttpRequest req, Catalog c) => new
     // Verbrauchsstand in seinem Team ist“ — das Team der Mitgliedschaft, am Ende der Zahlerkette. Auch beim
     // Administrator: er führt vielleicht viele Teams, gehört aber genau einem an.
     usage = Nutzung(req, c),
-    built = gebautAm,      // Stand der LAUFENDEN Fassung — einmal beim Start gelesen
-    version = fassung,     // die Fassung, die läuft — steht oben in der Leiste
+    built = gebautAm,      // Stand der LAUFENDEN Version — einmal beim Start gelesen
+    version = laufendeVersion,     // die Version, die läuft — steht oben in der Leiste
     // der Tarif dieser Instanz: die Oberfläche richtet sich danach, was sie überhaupt anbietet
     tarif = new { key = catalog.InstanzTarif.Key, label = catalog.InstanzTarif.Label, schedules = catalog.InstanzTarif.Zeitplan },
     // wer sonst noch dort ist, wo der Fragende gerade steht (?ort=<Knoten oder Ansicht>) — leer ohne Angabe

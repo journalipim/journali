@@ -8,7 +8,7 @@ namespace Journali.Server;
 
 /// <summary>
 /// Vollsicherung und Wiederherstellung. Der Unterschied zu <c>pg_dump</c>: dieses Format
-/// hängt an nichts — nicht an der Postgres-Fassung, nicht am Schema, nicht am Treiber des Medienspeichers.
+/// hängt an nichts — nicht an der Postgres-Version, nicht am Schema, nicht am Treiber des Medienspeichers.
 /// <para>Eine Sicherung ist ein Verzeichnis: <c>journal.ndjson.gz</c> (ein Eintrag je Zeile, mit Nummer, Zeit,
 /// Urheber), <c>media/</c> (die Blobs, benannt nach ihrem Schlüssel) und <c>backup.json</c> (Zeitpunkt, Anzahl,
 /// Art des Medienspeichers). Zurück geht sie nur in ein leeres System — <see cref="IJournal.RestoreAll"/>.</para>
@@ -192,7 +192,7 @@ public static class BackupApi
     /// <summary>
     /// Ein Plugin-Verzeichnis kopieren — ohne <c>node_modules</c>. Die Pakete bleiben draussen: sie sind für ein Betriebssystem gebaut — sharp und pdfjs bringen
     /// Binärdateien mit, die auf einem anderen Rechner nicht laufen. Ein <c>npm install</c> stellt sie her, die
-    /// Fassungen stehen in package-lock.json, die mitkommt.
+    /// Versionen stehen in package-lock.json, die mitkommt.
     /// </summary>
     private static void Kopiere(string von, string nach)
     {

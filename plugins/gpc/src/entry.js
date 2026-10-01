@@ -23,7 +23,7 @@ async function install(ctx) {
   const { api, store, tree } = ctx
   if (!tree.loaded) await tree.load()
   const settings = (await api.get('/api/plugins/gpc/data/settings').catch(() => null)) ?? {}
-  // Einstellungen aus früheren Fassungen nennen eine Gruppe oder ein Klassenattribut, die es nicht (mehr) gibt: es gelten wieder die Namen des Systems
+  // Einstellungen aus früheren Versionen nennen eine Gruppe oder ein Klassenattribut, die es nicht (mehr) gibt: es gelten wieder die Namen des Systems
   const m = store.model
   let veraltet = false
   if (settings.group && !(m?.groups ?? []).some(g => g.key === settings.group)) { delete settings.group; veraltet = true }

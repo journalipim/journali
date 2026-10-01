@@ -13,7 +13,7 @@ Im Repo liegen keine GPC-Daten; `sample.json` ist erfunden und hat dieselbe Form
 1. **Einlesen** — Segment › Family › Class › Brick; am Brick die Attribute, am Attribut die erlaubten Werte. Attribute und Werte
    haben in allen Bricks dieselben Codes und Titel und stehen darum einmal im Wörterbuch (`dict`), am Brick nur die Codes.
 2. **Übernehmen** — ein Datensatz je Segment (`bricks:<segment>`), dazu `dict` und `release` als Plugin-Daten im Journal.
-   Eine weitere Sprache (eine andere Datei derselben Fassung) ergänzt die Titel, die Struktur bleibt.
+   Eine weitere Sprache (eine andere Datei derselben Version) ergänzt die Titel, die Struktur bleibt.
 3. **Suchen** — nach Code, Titel, Weg und Definition; alle Wörter müssen passen.
 4. **Zuweisen** — der Server legt an, was fehlt (`/api/classification/assign`): die Gruppe `gpc` (sie trägt das Klassenattribut
    `class_gpc` mit der Liste der Bricks), die Gruppe des Bricks `gpc_<brick>` (Bezeichnung: Code und Name) mit ihren Attributen — je
@@ -34,7 +34,7 @@ Im Repo liegen keine GPC-Daten; `sample.json` ist erfunden und hat dieselbe Form
 
 | Name | Inhalt |
 |---|---|
-| `release` | Fassung, Datum, Sprachen, Zählung |
+| `release` | Version, Datum, Sprachen, Zählung |
 | `dict` | Titel der Attribute, Werte und der oberen Ebenen je Sprache |
 | `bricks:<segment>` | die Bricks eines Segments: Weg, Texte je Sprache, Attribute mit den Codes ihrer Werte |
 | `settings` | `group`, `classAttr` — nur wenn der Server wegen einer Namenskollision ausgewichen ist |

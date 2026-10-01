@@ -7,7 +7,7 @@ namespace Journali.Server;
 
 /// <summary>
 /// Das Siegel eines Plugins: <c>certificate.json</c> im Plugin-Verzeichnis, signiert vom Herausgeber (ECDSA P-256,
-/// SHA-256, Signatur IEEE P1363 in Base64). Es nennt Schlüssel, Fassung und den Hash über alle Dateien des Verzeichnisses
+/// SHA-256, Signatur IEEE P1363 in Base64). Es nennt Schlüssel, Version und den Hash über alle Dateien des Verzeichnisses
 /// (ausser node_modules, __pycache__, .git, .cache, certificate.json und den Pfaden unter <c>ignore</c>). Passt eine Datei nicht
 /// mehr, ist das Siegel gebrochen — das Plugin bleibt nutzbar, trägt aber kein Siegel.
 /// <para>Geprüft wird mit dem eingebauten öffentlichen Schlüssel oder mit <c>JOURNALI_PLUGIN_KEY</c>; das Werkzeug
@@ -38,7 +38,7 @@ public static class PluginSeal
     /// <summary>Der öffentliche Schlüssel: Umgebung vor eingebautem.</summary>
     public static string PublicKey => Environment.GetEnvironmentVariable("JOURNALI_PLUGIN_KEY") is { Length: > 0 } k ? k : DefaultKey;
 
-    /// <summary>Das Siegel eines Plugin-Verzeichnisses prüfen: Zertifikat lesen, Schlüssel und Fassung gegen das Manifest, Signatur, dann den Hash.</summary>
+    /// <summary>Das Siegel eines Plugin-Verzeichnisses prüfen: Zertifikat lesen, Schlüssel und Version gegen das Manifest, Signatur, dann den Hash.</summary>
     public static Seal Check(string dir, string key, string version, string? pub = null)
     {
         var file = Path.Combine(dir, FileName);
@@ -48,7 +48,7 @@ public static class PluginSeal
         catch (Exception e) { return new Seal(false, Grund: "Zertifikat nicht lesbar: " + e.Message); }
         if (c is null) return new Seal(false, Grund: "Zertifikat leer");
         if (c.Key != key) return new Seal(false, c.Issued, c.Issuer, $"Zertifikat für {c.Key}");
-        if (c.Version != version) return new Seal(false, c.Issued, c.Issuer, $"Zertifikat für Fassung {c.Version}, Manifest {version}");
+        if (c.Version != version) return new Seal(false, c.Issued, c.Issuer, $"Zertifikat für Version {c.Version}, Manifest {version}");
         var (ok, grund) = Verify(c.Rumpf, c.Sig, pub ?? PublicKey);
         if (!ok) return new Seal(false, c.Issued, c.Issuer, grund);
         if (!string.Equals(Hash(dir, c.Ignore), c.Hash, StringComparison.OrdinalIgnoreCase)) return new Seal(false, c.Issued, c.Issuer, "Dateien verändert");

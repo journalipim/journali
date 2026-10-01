@@ -1,5 +1,5 @@
 // Plugin-Liste sortieren. Vier Spalten,
-// Klick dreht die Richtung. Key ist die Vorgabe und zugleich der zweite Schlüssel — gleiche Fassung oder gleicher
+// Klick dreht die Richtung. Key ist die Vorgabe und zugleich der zweite Schlüssel — gleiche Version oder gleicher
 // Zustand bleiben dadurch vorhersehbar statt zufällig.
 import test from 'node:test'
 import assert from 'node:assert/strict'
@@ -8,7 +8,7 @@ import { plugins } from '../src/plugins.js'
 
 const PluginsView = (await import('../src/views/PluginsView.vue')).default
 
-/// Fünf Plugins mit verschiedenen Fassungen und Zuständen
+/// Fünf Plugins mit verschiedenen Versionen und Zuständen
 function welt() {
   plugins.list = [
     { key: 'csv', version: '1.0.0', installed: true, enabled: true, onDisk: true, manifest: { kind: 'import', label: { de: 'Import: CSV / TSV' } } },
@@ -46,11 +46,11 @@ test('Klick auf denselben Kopf dreht die Richtung', async () => {
   assert.match(kopf(w, 'Key').text(), /▾/)
 })
 
-test('Fassung sortiert nach Zahlen, nicht nach Zeichen', async () => {
+test('Version sortiert nach Zahlen, nicht nach Zeichen', async () => {
   welt()
   const w = mount(PluginsView, { global: { stubs: { RouterLink: true, 'router-link': true, Splitter: true } } })
   await flushPromises()
-  await kopf(w, 'Fassung').trigger('click')
+  await kopf(w, 'Version').trigger('click')
   await flushPromises()
   // 1.10.0 steht über 1.0.0 — als Zeichenkette wäre es umgekehrt
   assert.deepEqual(keys(w), ['exceladdin', 'csv', 'rag', 'xliff', 'etim'])

@@ -11,7 +11,7 @@ namespace Journali.Core.Projections;
 /// aller Abbilder bei Eintrag #n als eine JSON-Datei. Beim nächsten Start werden die Abbilder daraus geladen und nur der Rest
 /// ab #n aus dem Journal angewandt — bei Millionen Einträgen ist das Anwenden (~18 µs je Eintrag) sonst der Start. Der
 /// Schnappschuss ist wie der Spiegel des Journals ein Cache, keine Wahrheit: er trägt den Bau-Stempel des Kerns (jede neue
-/// Fassung der Abbilder verwirft alte Schnappschüsse), und der Eintrag #n wird gegen das Journal geprüft (Nummer, Strom, Typ,
+/// Version der Abbilder verwirft alte Schnappschüsse), und der Eintrag #n wird gegen das Journal geprüft (Nummer, Strom, Typ,
 /// Zeit) — passt etwas nicht, wird die Datei gelöscht und alles wie bisher aus dem Journal gebaut. Datei löschen ist immer erlaubt.
 ///
 /// Wie: System.Text.Json über die Abbild-Klassen selbst — auch private Felder und private Setter (Resolver unten), Sammlungen

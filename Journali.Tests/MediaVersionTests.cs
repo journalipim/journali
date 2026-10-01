@@ -6,11 +6,11 @@ using Journali.Server;
 namespace Journali.Tests;
 
 /// <summary>
-/// Fassungen (27.09.2026): ein Medium bleibt unveränderlich, „dieses ersetzt jenes“ ist ein Eintrag am Vorgänger.
+/// Versionen (27.09.2026): ein Medium bleibt unveränderlich, „dieses ersetzt jenes“ ist ein Eintrag am Vorgänger.
 /// Die Zuordnungen wandern mit ihren Werten an den Nachfolger, der Vorgänger bleibt im Abbild — die Ausleitung von
 /// damals muss ihn auflösen — und die Bibliothek bietet ihn nicht mehr an.
 /// </summary>
-public class MediaFassungTests
+public class MediaVersionTests
 {
     private sealed class World
     {

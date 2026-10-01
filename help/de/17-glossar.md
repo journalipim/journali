@@ -12,7 +12,7 @@
 | Beleg | Quelle eines Werts, oder ein Dokument an einer Version |
 | Einbettung | eine Liste von 384 Zahlen, die das Modell aus einem Text rechnet: seine Lage im Raum der Bedeutungen. Grundlage der Suche nach Sinn; abgeleitet, nie im Journal |
 | Eintrag | eine Zeile im Journal: Nummer, Zeit, Urheber, Strom, Typ, Inhalt |
-| Fassung | Version eines Plugins oder des Servers |
+| Version | Version eines Plugins oder des Servers |
 | Freigabe | Erlaubnis, eine Variante in einem Kanal auszuleiten |
 | Init Team | das Team, das jede Anlage mitbringt und die Grenzen der Lizenz trägt |
 | Journal | die Folge aller Einträge; die einzige Wahrheit |

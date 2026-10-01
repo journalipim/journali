@@ -102,7 +102,7 @@ function railDrop(target) {
           :title="railTitle(n)" draggable="true"
           @dragstart="dragKey = n.to" @dragend="dragKey = null" @dragover.prevent @drop="railDrop(n.to)">
           <span class="icon">{{ n.icon }}</span>
-          <!-- Lämpchen: ein Plugin hat eine neuere Fassung auf der Platte als installiert ist -->
+          <!-- Lämpchen: ein Plugin hat eine neuere Version auf der Platte als installiert ist -->
           <span v-if="n.to === '/plugins' && pluginNews.length" class="lamp" />
         </router-link>
       </template>
@@ -137,7 +137,7 @@ function railDrop(target) {
         :title="$t('KI Austauschvolumen (mengenbasiert) — Diese Kennzahl gibt an, welche Datenmenge mit KIs über deren APIs ausgetauscht wurden (Senden+Empfangen). Wird zum Monatsbeginn zurückgesetzt.')"
         >{{ $t("✧ KI {0}", [kb(ai.server.volume?.month)]) }}</router-link></template>
       <span class="grow" />
-      <button v-if="store.stale" class="primary" style="padding:0 8px;height:20px;font-size:12px" @click="reload" :title="$t('Neue Fassung der Oberfläche laden')">{{ $t("↻ Neue Fassung") }}</button>
+      <button v-if="store.stale" class="primary" style="padding:0 8px;height:20px;font-size:12px" @click="reload" :title="$t('Neue Version der Oberfläche laden')">{{ $t("↻ Neue Version") }}</button>
       <template v-if="store.auth.enabled && store.auth.user"><span class="actor" :title="$t('Rolle') + ' ' + store.auth.role + ' · ' + (store.auth.rights ?? []).join(', ')">👤 {{ store.auth.name || store.auth.user }} <span class="muted">· {{ store.auth.role }}</span></span><button class="x" style="height:20px;padding:0 6px;font-size:12px" @click="logout" :title="$t('abmelden')">⏻</button></template>
       <span v-else-if="store.actor" class="actor">👤 {{ store.actor }}</span>
       <router-link v-else to="/settings" class="warn">{{ $t("👤 Name fehlt → Einstellungen") }}</router-link>

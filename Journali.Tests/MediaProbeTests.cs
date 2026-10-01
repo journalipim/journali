@@ -56,7 +56,7 @@ public class MediaProbeTests
         {
             b.Add(0xFF); b.Add(0xE0); Be16(b, 16);
             Text(b, "JFIF"); b.Add(0);
-            Be16(b, 0x0101); b.Add(1);                         // Fassung, Einheit 1 = Punkte je Zoll
+            Be16(b, 0x0101); b.Add(1);                         // Version, Einheit 1 = Punkte je Zoll
             Be16(b, dichte); Be16(b, dichte); b.Add(0); b.Add(0);
         }
         if (orientierung > 0)

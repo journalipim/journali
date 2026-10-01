@@ -30,7 +30,7 @@
  "⌂ alle Wurzeln": "⌂ all roots",
  "Ziel": "Target",
  "kein Zieltext": "no target text",
- "Zieltext vorhanden, aber gegen eine ältere Quellfassung übersetzt": "target text exists, but translated against an older source version",
+ "Zieltext vorhanden, aber gegen eine ältere Quellversion übersetzt": "target text exists, but translated against an older source version",
  "Einheiten in Aufträgen, die noch nicht zurück sind": "units in orders that have not come back yet",
  "{0} Auftrag/Aufträge draussen, ältester seit {1}": "{0} order(s) out, oldest since {1}",
  "nichts draussen": "nothing out",

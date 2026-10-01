@@ -16,7 +16,7 @@ namespace Journali.Server;
 /// Muster trägt schon die Ableitungen (<see cref="Media.Pending"/>).</para>
 /// <para>Ein Format, das der Leser nicht kennt — ein ZIP, eine Tabelle, auch ein PDF —, bekommt seinen Eintrag
 /// trotzdem, mit Mass 0 × 0. Sonst bliebe es für immer offen und jeder Lauf läse es erneut. Was einmal 0 × 0
-/// bekam, liest nur <c>again=true</c> wieder: das ist der Weg, wenn eine neue Fassung mehr Formate kennt.</para>
+/// bekam, liest nur <c>again=true</c> wieder: das ist der Weg, wenn eine neue Version mehr Formate kennt.</para>
 /// </summary>
 public static class ProbeApi
 {

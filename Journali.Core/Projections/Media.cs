@@ -113,7 +113,7 @@ public sealed class Media : IProjection
     /// <summary>Medien, deren Kopf noch nicht gelesen wurde — die offene Postenliste des Jobs <c>probe</c>.</summary>
     public IEnumerable<Medium> Unprobed() => _all.Values.Where(m => m.Probe is null);
     /// <summary>Medien, deren Kopf gelesen wurde, ohne ein bekanntes Format zu ergeben (Mass 0 × 0).
-    /// Eine neue Fassung des Servers kennt vielleicht mehr — <c>again=true</c> liest sie erneut.</summary>
+    /// Eine neue Version des Servers kennt vielleicht mehr — <c>again=true</c> liest sie erneut.</summary>
     public IEnumerable<Medium> Unknown() => _all.Values.Where(m => m.Probe is { Width: 0 });
     /// <summary>Liegt die Ableitung aktuell vor?</summary>
     public bool HasDerived(Medium m, MediaPreset preset) => m.Derived.TryGetValue(preset.Key, out var d) && d.Fingerprint == preset.Fingerprint;

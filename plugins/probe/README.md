@@ -21,7 +21,7 @@ Frage an das Journal. Ein abgebrochener Lauf, ein Absturz, ein Neustart des Serv
 genau dieselben Posten. Es gibt keinen Zustand, der mit dem Prozess stirbt.
 
 Ein Format, das der Leser nicht kennt, bekommt seinen Eintrag mit Mass 0 × 0 — sonst bliebe der Posten für immer
-offen und jede Runde läse ihn erneut. Kennt eine neue Fassung des Servers mehr Formate, liest `again=true` diese
+offen und jede Runde läse ihn erneut. Kennt eine neue Version des Servers mehr Formate, liest `again=true` diese
 Medien wieder.
 
 ## Gelesene Formate

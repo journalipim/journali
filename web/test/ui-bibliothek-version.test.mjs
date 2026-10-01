@@ -1,4 +1,4 @@
-// ▨ Medien: eine neue Fassung — die Datei wird ein neues Medium und ersetzt das alte. Die Zuordnungen wandern
+// ▨ Medien: eine neue Version — die Datei wird ein neues Medium und ersetzt das alte. Die Zuordnungen wandern
 // (Server), der Vorgänger bleibt für Belege und Versionen auflösbar, die Liste zeigt ihn nur auf Wunsch.
 import test from 'node:test'
 import assert from 'node:assert/strict'
@@ -55,21 +55,21 @@ const eintrag = label => menu.items.find(i => i.label && new RegExp(label).test(
 const datei = new File([new Uint8Array([1, 2, 3])], 'v2.jpg', { type: 'image/jpeg' })
 const reiter = async (w, sym) => { const t = w.findAll('.tab').find(t => t.text() === sym); if (t) await t.trigger('click') }
 
-test('das Menü bietet die neue Fassung — nur für eine einzelne Kachel', async () => {
+test('das Menü bietet die neue Version — nur für eine einzelne Kachel', async () => {
   const { w } = await bibliothek([medium('m1', 'v1.jpg'), medium('m2', 'x.jpg')])
   await kachel(w, 'v1.jpg').trigger('contextmenu')
-  assert.ok(eintrag('Neue Fassung'), 'der Eintrag fehlt')
+  assert.ok(eintrag('Neue Version'), 'der Eintrag fehlt')
 
   await kachel(w, 'v1.jpg').trigger('click')
   await kachel(w, 'x.jpg').trigger('click', { ctrlKey: true })
   await kachel(w, 'x.jpg').trigger('contextmenu')
-  assert.equal(eintrag('Neue Fassung'), undefined, 'bei einer Auswahl darf es den Eintrag nicht geben')
+  assert.equal(eintrag('Neue Version'), undefined, 'bei einer Auswahl darf es den Eintrag nicht geben')
 })
 
 test('die Datei wird hochgeladen und ersetzt dann das alte Medium', async () => {
   const { w, rufe } = await bibliothek([medium('m1', 'v1.jpg')])
   await kachel(w, 'v1.jpg').trigger('contextmenu')
-  eintrag('Neue Fassung').action()
+  eintrag('Neue Version').action()
   // der Dateidialog: die Auswahl kommt über das verborgene Feld
   const feld = w.find('input[type=file]:not([multiple])')
   Object.defineProperty(feld.element, 'files', { value: [datei] })
@@ -84,7 +84,7 @@ test('die Datei wird hochgeladen und ersetzt dann das alte Medium', async () => 
   assert.match(store.toasts.at(-1)?.text ?? '', /v1.jpg ersetzt durch v2.jpg/)
 })
 
-test('ein abgelöstes Medium ist als solches zu sehen und führt zur aktuellen Fassung', async () => {
+test('ein abgelöstes Medium ist als solches zu sehen und führt zur aktuellen Version', async () => {
   const alt = medium('m1', 'v1.jpg', { supersededBy: 'm2' }); const neu = medium('m2', 'v2.jpg', { supersedes: 'm1' })
   const { w, rufe } = await bibliothek([alt, neu])
   assert.equal(kachel(w, 'v1.jpg'), undefined, 'die Liste zeigt den Vorgänger ungefragt')

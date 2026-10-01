@@ -9,7 +9,7 @@ namespace Journali.Server;
 
 /// <summary>
 /// Plugins (docs/pflegestruktur.md, 19): ein Verzeichnis je Plugin unter <c>plugins/&lt;key&gt;/</c> mit
-/// <c>plugin.json</c>. Was auf der Platte liegt, listet der Server; was gilt (installiert, Fassung, an/aus),
+/// <c>plugin.json</c>. Was auf der Platte liegt, listet der Server; was gilt (installiert, Version, an/aus),
 /// steht im Journal (<c>plugin:&lt;key&gt;</c>). Kein Plugin läuft im Serverprozess: Browser-Plugins lädt die
 /// Oberfläche, Prozess-Plugins startet der Server als Kindprozess, der nur über /api redet.
 /// </summary>

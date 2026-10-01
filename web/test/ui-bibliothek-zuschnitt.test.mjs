@@ -1,5 +1,5 @@
 // ✂ Zuschneiden und Ausrichten: im Browser auf der Leinwand, das Ergebnis ein neues Medium mit Abstammung —
-// wahlweise gleich als neue Fassung. Geprüft an ersetzter Leinwand: was gezeichnet und was hochgeladen wird.
+// wahlweise gleich als neue Version. Geprüft an ersetzter Leinwand: was gezeichnet und was hochgeladen wird.
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { mount, flushPromises } from './ui.mjs'
@@ -132,12 +132,12 @@ test('„Neues Asset“ rechnet in voller Auflösung, lädt mit Abstammung hoch 
   assert.equal(rufe.some(r => /\/supersede$/.test(r.pfad)), false, 'ein neues Asset ersetzt nichts')
 })
 
-test('„Neue Fassung“ ersetzt das Original', async () => {
+test('„Neue Version“ ersetzt das Original', async () => {
   const { w, rufe } = await bibliothek([BILD])
   await kachel(w, 'vorne.jpg').trigger('contextmenu')
   eintrag('Zuschneiden').action()
   await flushPromises(); await flushPromises()
-  await knopf(w.findComponent(CropEditor), 'Neue Fassung').trigger('click')
+  await knopf(w.findComponent(CropEditor), 'Neue Version').trigger('click')
   await flushPromises(); await flushPromises()
   const ersetzt = rufe.find(r => /\/api\/media\/m1\/supersede/.test(r.pfad))
   assert.ok(ersetzt, 'nichts ersetzt')
@@ -145,7 +145,7 @@ test('„Neue Fassung“ ersetzt das Original', async () => {
   assert.match(store.toasts.at(-1)?.text ?? '', /ersetzt durch/)
 })
 
-test('ein abgelöstes Original bietet keine neue Fassung mehr an', async () => {
+test('ein abgelöstes Original bietet keine neue Version mehr an', async () => {
   const { w } = await bibliothek([medium('m1', 'vorne.jpg', 'image/jpeg', true, { supersededBy: 'm9' })])
   await kachel(w, 'vorne.jpg').trigger('click')
   await flushPromises()
@@ -153,5 +153,5 @@ test('ein abgelöstes Original bietet keine neue Fassung mehr an', async () => {
   await flushPromises(); await flushPromises()
   const ed = w.findComponent(CropEditor)
   assert.ok(knopf(ed, 'Neues Asset'))
-  assert.equal(knopf(ed, 'Neue Fassung'), undefined)
+  assert.equal(knopf(ed, 'Neue Version'), undefined)
 })

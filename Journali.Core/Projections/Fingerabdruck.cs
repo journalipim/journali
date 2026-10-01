@@ -14,7 +14,7 @@ namespace Journali.Core.Projections;
 /// Code. Verweise im Code (Felder, Methoden, Typen, Texte) gehen als Namen ein, nicht als Metadatennummern: die
 /// verschieben sich, sobald irgendwo im Kern ein Typ dazukommt. Er ändert sich also, wenn sich die Logik ändert, nach
 /// der die Abbilder rechnen — nicht bei Kommentaren, nicht bei Server oder Oberfläche, nicht bei einem neuen Commit.
-/// Dazu die Fassung der Laufzeit: sie liest und schreibt die Datei.</para>
+/// Dazu die Version der Laufzeit: sie liest und schreibt die Datei.</para>
 /// </summary>
 public static class Fingerabdruck
 {

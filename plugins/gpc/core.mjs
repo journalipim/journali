@@ -99,7 +99,7 @@ export function mergeDict(have, add) {
   for (const k of ['attributes', 'values', 'hierarchy']) for (const [c, n] of Object.entries(add[k] ?? {})) out[k][c] = mergeNames(out[k][c], n)
   return out
 }
-/// Die Bricks einer Veröffentlichung in die vorhandenen: Texte je Sprache dazu; Attribute und Werte bleiben die der neueren Fassung.
+/// Die Bricks einer Veröffentlichung in die vorhandenen: Texte je Sprache dazu; Attribute und Werte bleiben die der neueren Version.
 export function mergeBricks(have, add) {
   const byCode = new Map((have ?? []).map(b => [b.code, b]))
   return add.map(b => { const o = byCode.get(b.code); return o ? { ...b, t: mergeNames(o.t, b.t) } : b })

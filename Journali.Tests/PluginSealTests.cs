@@ -4,8 +4,8 @@ using Journali.Server;
 namespace Journali.Tests;
 
 /// <summary>
-/// Das Siegel eines Plugins: signiertes certificate.json über Schlüssel, Fassung und den Hash der Dateien.
-/// Gültig, solange nichts verändert ist; gebrochen bei jeder Änderung an Dateien, Fassung oder Zertifikat.
+/// Das Siegel eines Plugins: signiertes certificate.json über Schlüssel, Version und den Hash der Dateien.
+/// Gültig, solange nichts verändert ist; gebrochen bei jeder Änderung an Dateien, Version oder Zertifikat.
 /// </summary>
 public class PluginSealTests
 {
@@ -76,11 +76,11 @@ public class PluginSealTests
     }
 
     [Fact]
-    public void Andere_Fassung_oder_anderer_Schluessel_bricht_das_Siegel()
+    public void Andere_Version_oder_anderer_Schluessel_bricht_das_Siegel()
     {
         var (dir, priv, pub) = Welt();
         PluginSeal.Sign(dir, "demo", "1.2.0", priv);
-        Assert.Contains("Fassung", PluginSeal.Check(dir, "demo", "1.3.0", pub).Grund);
+        Assert.Contains("Version", PluginSeal.Check(dir, "demo", "1.3.0", pub).Grund);
         Assert.Equal("Signatur passt nicht", PluginSeal.Check(dir, "demo", "1.2.0", Convert.ToBase64String(ECDsa.Create(ECCurve.NamedCurves.nistP256).ExportSubjectPublicKeyInfo())).Grund);
     }
 

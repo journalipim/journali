@@ -1,4 +1,4 @@
-// Komfort-Excel: die freie SheetJS-Fassung schreibt weder
+// Komfort-Excel: die freie SheetJS-Version schreibt weder
 // Farben noch Tabellen. Also nachträglich in die fertige .xlsx (ein Zip aus XML): Kopfzeile fett, Pflichtspalten rot, Achsen dunkelgrün,
 // eine echte Excel-Tabelle (ListObject mit Streifen und Filter) über den Bereich, erste Zeile eingefroren. Ohne Bibliothek —
 // das Zip lesen wir selbst (SheetJS legt die Teile unkomprimiert ab; komprimierte nimmt DecompressionStream) und schreiben es neu.

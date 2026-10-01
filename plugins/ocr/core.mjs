@@ -4,7 +4,7 @@
 // wie ein gelesenes. Die Erkennung selbst (tesseract.js) und das Rendern der Seiten macht job.mjs.
 import { chunk, numbered, pack, joinHyphens, dropRunningLines, cellsOf, findTables, numberedTables } from '../docs/core.mjs'
 
-/// Die Zeilen eines Erkennungsergebnisses: ältere Fassungen liefern sie flach (data.lines), neuere in Blöcken →
+/// Die Zeilen eines Erkennungsergebnisses: ältere Versionen liefern sie flach (data.lines), neuere in Blöcken →
 /// Absätzen → Zeilen (data.blocks). Beides wird eine Liste von Zeilen mit Text und Wörtern.
 export function linesOf(data) {
   if (Array.isArray(data?.lines) && data.lines.length) return data.lines

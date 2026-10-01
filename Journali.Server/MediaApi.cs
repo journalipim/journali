@@ -42,7 +42,7 @@ public static class MediaApi
     private static IEnumerable<Medium> Gefiltert(Catalog c, (string? Role, bool Admin) sicht, string? q, string? folder, bool deep, int minW, int minH,
         string? plugin, DateTimeOffset? from, DateTimeOffset? to, string? keyword, bool superseded = false, string? valid = null, string? state = null)
     {
-        // Abgelöste Fassungen bleiben im Abbild, damit Belege und Versionen sie auflösen — die Bibliothek zeigt sie nur auf Wunsch
+        // Abgelöste Versionen bleiben im Abbild, damit Belege und Versionen sie auflösen — die Bibliothek zeigt sie nur auf Wunsch
         var all = superseded ? c.Media.All.Values.AsEnumerable() : c.Media.Current;
         // Sichtbarkeit (27.09.2026): ein Medium in einem Ordner, den die Rolle nicht sieht, ist für sie nicht da
         all = all.Where(m => c.Media.Visible(m, sicht.Role, sicht.Admin));
@@ -400,7 +400,7 @@ public static class MediaApi
             return Results.Ok(new { kind = store.Kind, config = store.Config.Masked() });
         });
 
-        // Herkunft nachtragen — für Bestand, der vor dieser Fassung ohne sie entstand, und für Importeure, die das
+        // Herkunft nachtragen — für Bestand, der vor dieser Version ohne sie entstand, und für Importeure, die das
         // Medium erst anlegen und dann wissen, aus welchem Profil es kam. Gesetzte Felder ergänzen, nichts wird gelöscht.
         api.MapPut("/media/{id}/source", (string id, SourceBody b, HttpRequest req, Catalog c) =>
         {
@@ -416,7 +416,7 @@ public static class MediaApi
         });
 
         api.MapDelete("/media/{id}", (string id, HttpRequest req, Catalog c) => TreeApi.Run(req, c, x => Commands.RetireMedium(x, id)));
-        // Fassung: dieses Medium durch ein anderes ersetzen — die Zuordnungen wandern, der Vorgänger bleibt auflösbar
+        // Version: dieses Medium durch ein anderes ersetzen — die Zuordnungen wandern, der Vorgänger bleibt auflösbar
         api.MapPost("/media/{id}/supersede", (string id, SupersedeBody b, HttpRequest req, Catalog c) => TreeApi.Run(req, c, x => Commands.SupersedeMedium(x, id, b.By)));
         api.MapPost("/media/{id}/attributes", (string id, AttributeSet b, HttpRequest req, Catalog c) =>
             TreeApi.Run(req, c, x => Commands.SetMediumAttribute(x, id, b.Attribute, b.Locale, b.Channel, b.Value, b.Values)));
@@ -431,7 +431,7 @@ public sealed record FolderBody(string? Name, string? Parent, string? Folder);
 public sealed record CopyRequest(MediaConfig? From);
 /// <summary>Herkunft nachtragen: Schnittstelle, Profil, Job, Bezug an der Quelle, Medium der Abstammung.</summary>
 public sealed record SourceBody(string? Plugin, string? Profile, string? Job, string? Ref, string? From);
-/// <summary>Fassung: das Medium, das dieses ersetzt.</summary>
+/// <summary>Version: das Medium, das dieses ersetzt.</summary>
 public sealed record SupersedeBody(string? By);
 
 public sealed record MediaView(string Id, string Sha256, long Bytes, string Mime, string Name, bool IsImage, List<ValueView> Values,

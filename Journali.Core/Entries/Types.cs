@@ -148,7 +148,7 @@ public static class Types
     public const string KeyRedeemed = "KeyRedeemed";
     /// <summary>Der Stand eines Abos, vom Lizenzserver signiert bestätigt — Strom team:&lt;key&gt;.</summary>
     public const string EntitlementReceived = "EntitlementReceived";
-    /// <summary>Ein Tarifblatt des Lizenzservers, signiert (25.09.2026) — Strom <c>tarife</c>. Die höchste echte Fassung gilt.</summary>
+    /// <summary>Ein Tarifblatt des Lizenzservers, signiert (25.09.2026) — Strom <c>tarife</c>. Die höchste echte Version gilt.</summary>
     public const string TarifeReceived = "TarifeReceived";
     public const string RegistrationSet = "RegistrationSet";
     public const string RoleDefined = "RoleDefined";
@@ -600,7 +600,7 @@ public sealed record WorkflowRetired();
 public sealed record WorkflowStateSet(string Workflow, string? State, string? Transition = null, string? Note = null, string? Locale = null);   // State leer = eigenen Zustand aufheben, es gilt wieder der geerbte. Locale nur bei PerLocale-Workflows; leer = der Zustand des Knotens (jeder Eintrag von früher bleibt gültig)
 
 /// <summary>
-/// Übersetzung, die Marke (docs/pflegestruktur.md 30): der Zielwert in <see cref="Locale"/> ist gegen <em>diese</em> Quellfassung übersetzt
+/// Übersetzung, die Marke (docs/pflegestruktur.md 30): der Zielwert in <see cref="Locale"/> ist gegen <em>diese</em> Quellversion übersetzt
 /// (<see cref="SourceHash"/>, gesetzt bei Journalnummer <see cref="SourceAt"/>). Nicht „wann zuletzt geschrieben“, sondern
 /// „gegen was übersetzt“ — daran hängt der Rückstand: ist die Quelle seither weitergezogen, bleibt die Einheit offen,
 /// obwohl der Zieltext frisch geschrieben wurde. Der Strom ist der Knoten.
@@ -694,7 +694,7 @@ public sealed record RelationTypeDefinition(string Key, Labels Label, Labels? Re
 
 public sealed record RelationTypeRetired(string Key);
 
-/// <summary>Plugin installiert (oder aktualisiert): Fassung und das Manifest (plugin.json), wie es dabei war.</summary>
+/// <summary>Plugin installiert (oder aktualisiert): Version und das Manifest (plugin.json), wie es dabei war.</summary>
 public sealed record PluginInstalled(string Version, string Manifest);
 public sealed record PluginEnabled();
 public sealed record PluginDisabled();
@@ -786,7 +786,7 @@ public sealed record EntitlementReceived(string Instance, string Team, string Pl
 /// <summary>
 /// Ein Tarifblatt des Lizenzservers (25.09.2026): <paramref name="Blatt"/> ist der Text, so wie er signiert wurde,
 /// <paramref name="Sig"/> die Signatur. Es kommt mit einem Abo-Stand oder einem Schlüssel zum Kopieren und nennt alle
-/// Tarife mit Grenzen, Publikationsbäumen und Plugins, dazu den Test. Es gilt die höchste Fassung, deren Signatur passt —
+/// Tarife mit Grenzen, Publikationsbäumen und Plugins, dazu den Test. Es gilt die höchste Version, deren Signatur passt —
 /// das Abbild prüft sie selbst, ein Eintrag ohne passende Signatur ändert nichts.
 /// </summary>
 public sealed record TarifeReceived(string Blatt, string Sig);

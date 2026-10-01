@@ -1,6 +1,6 @@
 <script setup>
 // ⬡ Plugins (docs/pflegestruktur.md, 19): links alles, was unter plugins/ liegt oder das Journal kennt,
-// mit Stand und Fassung; rechts das gewählte — installieren, ein/aus, aktualisieren, entfernen,
+// mit Stand und Version; rechts das gewählte — installieren, ein/aus, aktualisieren, entfernen,
 // und bei Prozess-Plugins der Start mit Parametern und der Ausgabe.
 import { ref, computed, onMounted, watch } from 'vue'
 import { api, when } from '../api.js'
@@ -64,13 +64,13 @@ const shown = computed(() => {
 })
 
 // Sortierung über die Spaltenköpfe.
-// Key ist die Vorgabe und zugleich der zweite Schlüssel — gleiche Fassung oder gleicher Zustand bleiben so vorhersehbar.
+// Key ist die Vorgabe und zugleich der zweite Schlüssel — gleiche Version oder gleicher Zustand bleiben so vorhersehbar.
 const sortBy = ref('key')
 const sortDesc = ref(false)
 const caret = c => sortBy.value !== c ? '' : sortDesc.value ? ' ▾' : ' ▴'
 /// Zustand als Rang: an, an mit fehlender Basis, aus, nicht installiert — so, wie man es sucht
 const rank = p => !p.installed ? 3 : !p.enabled ? 2 : plugins.active(p.key) ? 0 : 1
-/// Fassungen vergleichen sich nach Zahlen, nicht nach Zeichen: 1.10.0 steht über 1.9.0
+/// Versionen vergleichen sich nach Zahlen, nicht nach Zeichen: 1.10.0 steht über 1.9.0
 const ver = v => String(v ?? '').split('.').map(x => parseInt(x, 10) || 0)
 function verCmp(a, b) { const x = ver(a), y = ver(b); for (let i = 0; i < Math.max(x.length, y.length); i++) { const d = (x[i] ?? 0) - (y[i] ?? 0); if (d) return d } return 0 }
 const artOf = p => KIND[p.manifest?.kind] ?? p.manifest?.kind ?? ''
@@ -147,7 +147,7 @@ function pick(k) { cur.value = k }
       <span class="l" :title="$t('nach Bezeichnung sortieren{0}', [sortBy === 'label' ? ' ' + $t('— Klick dreht die Richtung') : ''])" @click="sortByCol('label')">{{ $t("Bezeichnung{0}", [caret('label')]) }}</span>
       <span class="r">
         <span class="c-art" :title="$t('nach Art sortieren — gleiche Arten stehen dann beisammen{0}', [sortBy === 'art' ? ' ' + $t('— Klick dreht die Richtung') : ''])" @click="sortByCol('art')">{{ $t("Art{0}", [caret('art')]) }}<i class="grip left" :title="$t('Spalte breiter oder schmaler ziehen; Doppelklick setzt zurück')" @mousedown="cols.zieh('art', $event)" @dblclick.stop="cols.zurueck()" /></span>
-        <span class="c-ver" :title="$t('nach Fassung sortieren{0}', [sortBy === 'version' ? ' ' + $t('— Klick dreht die Richtung') : ''])" @click="sortByCol('version')"><i class="grip left" :title="$t('Spalte breiter oder schmaler ziehen; Doppelklick setzt zurück')" @mousedown="cols.zieh('ver', $event)" @dblclick.stop="cols.zurueck()" />{{ $t("Fassung{0}", [caret('version')]) }}</span>
+        <span class="c-ver" :title="$t('nach Version sortieren{0}', [sortBy === 'version' ? ' ' + $t('— Klick dreht die Richtung') : ''])" @click="sortByCol('version')"><i class="grip left" :title="$t('Spalte breiter oder schmaler ziehen; Doppelklick setzt zurück')" @mousedown="cols.zieh('ver', $event)" @dblclick.stop="cols.zurueck()" />{{ $t("Version{0}", [caret('version')]) }}</span>
         <span class="c-seal" />
         <span class="c-state" :title="$t('nach Zustand sortieren (an, Basis fehlt, aus, nicht installiert){0}', [sortBy === 'state' ? ' ' + $t('— Klick dreht die Richtung') : ''])" @click="sortByCol('state')"><i class="grip left" :title="$t('Spalte breiter oder schmaler ziehen; Doppelklick setzt zurück')" @mousedown="cols.zieh('state', $event)" @dblclick.stop="cols.zurueck()" />{{ $t("Zustand{0}", [caret('state')]) }}</span>
       </span>
@@ -157,7 +157,7 @@ function pick(k) { cur.value = k }
         <span class="k">{{ p.key }}</span>
         <span class="l">{{ label(p.manifest) || p.key }}</span>
         <span class="r">
-          <!-- feste Spalten: Art, Fassung, Siegel, Zustand — damit sie untereinander stehen, gleich wie lang die Bezeichnung ist -->
+          <!-- feste Spalten: Art, Version, Siegel, Zustand — damit sie untereinander stehen, gleich wie lang die Bezeichnung ist -->
           <span class="c-art muted" :title="p.manifest?.kind ?? ''">{{ artOf(p) }}</span>
           <span class="c-ver mono">{{ p.version ?? '' }}<span v-if="p.update" class="warn" :title="$t('auf der Platte: {0}', [p.diskVersion])"> ↑</span></span>
           <span class="c-seal"><span v-if="p.installed && sealOf(p)" class="seal" :class="p.certified ? 'pos' : 'neg'" :title="sealTitle(p)">{{ sealOf(p) }}</span></span>
@@ -175,7 +175,7 @@ function pick(k) { cur.value = k }
         <span class="r">
           <span class="c-ver mono">{{ c.entry.version }}</span>
           <span v-if="c.onDisk && !c.newer" class="pos" :title="$t('liegt unter plugins/')">✓</span>
-          <button v-else class="mini" :title="c.newer ? $t('neue Fassung holen: {0} → {1}', [c.diskVersion, c.entry.version]) : $t('Zip laden, Siegel prüfen, nach plugins/ legen')" @click.stop="fetchPlugin(c.key)">{{ c.newer ? '↑ ' + c.entry.version : $t('⇩ holen') }}</button>
+          <button v-else class="mini" :title="c.newer ? $t('neue Version holen: {0} → {1}', [c.diskVersion, c.entry.version]) : $t('Zip laden, Siegel prüfen, nach plugins/ legen')" @click.stop="fetchPlugin(c.key)">{{ c.newer ? '↑ ' + c.entry.version : $t('⇩ holen') }}</button>
         </span>
       </div>
     </div>
@@ -199,11 +199,11 @@ function pick(k) { cur.value = k }
       </template>
     </div>
     <div class="toolbar meta muted">
-      <span>{{ $t("Fassung {0}", [current.version ?? '—']) }}</span><span v-if="current.diskVersion && current.diskVersion !== current.version">{{ $t("· auf der Platte {0}", [current.diskVersion]) }}</span>
+      <span>{{ $t("Version {0}", [current.version ?? '—']) }}</span><span v-if="current.diskVersion && current.diskVersion !== current.version">{{ $t("· auf der Platte {0}", [current.diskVersion]) }}</span>
       <span v-if="!current.onDisk" class="neg">{{ $t("· Verzeichnis plugins/{0} fehlt", [current.key]) }}</span>
       <span v-if="current.allowed === false && current.enabled" class="warn" :title="$t('Der Stand im Journal bleibt: kommt der Tarif zurück, wirkt es wieder.')">{{ $t("· aktiviert, ohne Wirkung") }}</span>
       <span v-if="notReady(current)" class="warn nichtbereit">{{ '· ' + notReady(current) }}</span>
-      <span v-if="current.certified" class="pos seal" :title="$t('Signatur des Herausgebers: Schlüssel, Fassung und alle Dateien sind unverändert')">· ❖ {{ sealName(current) }}</span>
+      <span v-if="current.certified" class="pos seal" :title="$t('Signatur des Herausgebers: Schlüssel, Version und alle Dateien sind unverändert')">· ❖ {{ sealName(current) }}</span>
       <span v-else-if="current.sealReason" class="neg seal" :title="current.sealReason">{{ $t("· ⚠ Siegel gebrochen") }}</span>
       <span class="grow" /><span v-if="current.lastAt">{{ when(current.lastAt) }} 👤 {{ current.lastActor }}</span>
     </div>

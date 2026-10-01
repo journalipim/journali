@@ -7,7 +7,7 @@ namespace Journali.Tests;
 
 /// <summary>
 /// Die offene Postenliste der Texterkennung (27.09.2026): Dokumente im Zustand <c>scan</c>, mit dem Hash, den der
-/// Index kennt. Eine neue Fassung (anderer Hash) ist wieder ein Fall des Lesers, nicht des Erkenners; ein gelesenes
+/// Index kennt. Eine neue Version (anderer Hash) ist wieder ein Fall des Lesers, nicht des Erkenners; ein gelesenes
 /// oder gescheitertes Dokument steht nicht darin.
 /// </summary>
 public class DocsScansTests
@@ -27,7 +27,7 @@ public class DocsScansTests
         var known = new Dictionary<string, (string Sha, string State)>
         {
             ["m1"] = ("aaa", DocText.States.Scan),     // wartet auf Texterkennung
-            ["m2"] = ("alt", DocText.States.Scan),     // neue Fassung seit dem Lesen — erst wieder der Leser
+            ["m2"] = ("alt", DocText.States.Scan),     // neue Version seit dem Lesen — erst wieder der Leser
             ["m3"] = ("ccc", DocText.States.Text),     // gelesen
             ["m4"] = ("ddd", DocText.States.Error),    // gescheitert — /docs/retry, nicht der Erkenner
         };
@@ -55,7 +55,7 @@ public class DocsScansTests
         var erkannt = new Dictionary<string, (string Sha, string State)> { ["b1"] = ("s1", DocText.States.Text) };
         Assert.Empty(DocsApi.Scans(erkannt, media.All.Values, 10));                          // erkannt: erledigt
         var alt = new Dictionary<string, (string Sha, string State)> { ["b1"] = ("anders", DocText.States.Text) };
-        Assert.Equal(["b1"], DocsApi.Scans(alt, media.All.Values, 10).Select(s => s.Id));    // neue Fassung: wieder offen
+        Assert.Equal(["b1"], DocsApi.Scans(alt, media.All.Values, 10).Select(s => s.Id));    // neue Version: wieder offen
         Assert.Contains(Model.Seeds(), s => s.Type == Types.ListValueDefined && s.Stream == Model.ListStream + Model.KeywordList && s.Payload.Contains("\"ocr\""));
     }
 

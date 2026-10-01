@@ -1,6 +1,6 @@
 // Servermeldungen in der Sprache der Oberfläche (Stufe 4): der Server schickt { error, template, args } — die Vorlage ist
 // der deutsche Text und damit der Schlüssel, die Werte füllen {0}, {1} …; api.js übersetzt, bevor die Meldung jemand sieht.
-// Ein Server ohne Vorlage (ältere Fassung, Ausnahme) liefert weiter seinen Text.
+// Ein Server ohne Vorlage (ältere Version, Ausnahme) liefert weiter seinen Text.
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import './ui.mjs'

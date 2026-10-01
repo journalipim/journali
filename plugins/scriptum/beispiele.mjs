@@ -168,7 +168,7 @@ export default async (ctx) => {
   {
     key: 'sap-sync',
     title: 'ERP-Sync über OData',
-    description: 'Die heutige Fassung der ERP-Synchronisierung: Material oder Preise per OData holen, je ERP-Nummer den Knoten finden und Attribute im Stapel setzen. Als Zeitplan-Job.',
+    description: 'Die heutige Version der ERP-Synchronisierung: Material oder Preise per OData holen, je ERP-Nummer den Knoten finden und Attribute im Stapel setzen. Als Zeitplan-Job.',
     source: `export const meta = {
   label: 'ERP-Sync über OData',
   params: [
@@ -180,7 +180,7 @@ export default async (ctx) => {
   ],
 }
 
-// ERP-Sync über OData — die heutige Fassung der alten DB-Tabellen-Synchronisierung: kein Bus, kein Polling einer DB.
+// ERP-Sync über OData — die heutige Version der alten DB-Tabellen-Synchronisierung: kein Bus, kein Polling einer DB.
 // Ein Zeitplan-Job holt periodisch, dieses Skript bildet ab. ERP reichert bestehende Artikel an; die Neuanlage bleibt
 // manuell. ANPASSEN: die Zuordnung ERP-Feld -> journali-Attribut (MAP_MATERIAL) und der Preis-Attributname. Der
 // Schlüssel, über den ein ERP-Datensatz seinen Knoten findet, ist hier die Fremd-Verknüpfung "sap" (external.link).
@@ -279,7 +279,7 @@ export default async (ctx) => {
 // Hebt scriptum-Skripte von dieser Instanz auf eine andere (test→prod). Das Ziel ist ein http-Zugang auf die Basis-URL
 // der Ziel-Instanz; sein Geheimnis ist ein API-Token dort mit dem Recht „Skripte schreiben". Standard ist Trockenlauf:
 // nur ein Bericht (neu/geändert/gleich). Mit „Anwenden" werden neue und geänderte Skripte per PUT übertragen — auf dem
-// Ziel wird nie etwas gelöscht. Das Modell hebt diese Fassung nicht (eigene Aufgabe).
+// Ziel wird nie etwas gelöscht. Das Modell hebt diese Version nicht (eigene Aufgabe).
 export default async (ctx) => {
   const ziel = ctx.zugang(ctx.params.ziel)
   const anwenden = String(ctx.params.anwenden) === 'true'

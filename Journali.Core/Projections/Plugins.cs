@@ -3,7 +3,7 @@ using Journali.Core.Journal;
 
 namespace Journali.Core.Projections;
 
-/// <summary>Ein Plugin, wie das Journal es kennt: installierte Fassung, Manifest, an oder aus.</summary>
+/// <summary>Ein Plugin, wie das Journal es kennt: installierte Version, Manifest, an oder aus.</summary>
 public sealed class PluginState
 {
     public required string Key { get; init; }

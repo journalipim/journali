@@ -54,7 +54,7 @@ test('Filter ❖ zeigt nur Originale', async () => {
   } finally { api.get = orig }
 })
 
-test('Katalog: holen ruft den Server, eine neuere Fassung steht als ↑ da', async () => {
+test('Katalog: holen ruft den Server, eine neuere Version steht als ↑ da', async () => {
   welt()
   store.actor = 'u1'
   const calls = []
@@ -72,14 +72,14 @@ test('Katalog: holen ruft den Server, eine neuere Fassung steht als ↑ da', asy
     assert.deepEqual(rows.map(r => r.find('.k').text()), ['csv', 'geo', 'json'])
     assert.equal(rows[0].find('button').text(), '↑ 1.1.0')      // neuer als auf der Platte
     assert.equal(rows[1].find('button').text(), '⇩ holen')      // fehlt
-    assert.ok(!rows[2].find('button').exists())                 // liegt schon da, gleiche Fassung
+    assert.ok(!rows[2].find('button').exists())                 // liegt schon da, gleiche Version
     await rows[1].find('button').trigger('click')
     await flushPromises()
     assert.deepEqual(calls, ['/api/plugins/catalog/geo/fetch'])
   } finally { api.get = origGet; api.post = origPost }
 })
 
-test('jede Zeile hat dieselben Spalten rechts — mit und ohne Fassung, Siegel, Verzeichnis', async () => {
+test('jede Zeile hat dieselben Spalten rechts — mit und ohne Version, Siegel, Verzeichnis', async () => {
   welt()
   plugins.list.push({ key: 'weg', installed: true, enabled: false, onDisk: false, manifest: { kind: 'tool', label: { de: 'Eine sehr lange Bezeichnung, die abgeschnitten wird' } } })
   const orig = api.get; api.get = async () => ({ plugins: [] })

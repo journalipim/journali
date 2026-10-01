@@ -1,5 +1,5 @@
 // Das Lämpchen an ⌁ Plugins in der Leiste (App.vue zeigt es, solange plugins.news() etwas nennt). Es leuchtet für ein
-// Update — auf der Platte liegt eine neuere Fassung, als installiert ist. Ein Plugin, das nur daliegt und nie
+// Update — auf der Platte liegt eine neuere Version, als installiert ist. Ein Plugin, das nur daliegt und nie
 // installiert wurde, steht nicht an (26.09.2026: als Lämpchen war es zu aufdringlich).
 import test from 'node:test'
 import assert from 'node:assert/strict'
@@ -11,7 +11,7 @@ test('ein Plugin, das nur daliegt, steht nicht an', () => {
   assert.deepEqual(plugins.news(), [])
 })
 
-test('ein Update steht an, mit beiden Fassungen', () => {
+test('ein Update steht an, mit beiden Versionen', () => {
   plugins.list = [
     { key: 'csv', onDisk: true, installed: true, enabled: true, update: true, version: '1.0.0', diskVersion: '1.1.0', manifest: {} },
     { key: 'json', onDisk: true, installed: true, enabled: true, version: '2.2.0', manifest: {} },

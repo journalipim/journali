@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Http;
 namespace Journali.Tests;
 
 // Übersetzungsspeicher, Paket und Rückkehr (docs/pflegestruktur.md 30). Geprüft wird genau das, woran es in der
-// Praxis scheitert: die Marke sagt, gegen welche Quellfassung übersetzt ist — und ein überholter Rücklauf wird eingespielt,
+// Praxis scheitert: die Marke sagt, gegen welche Quellversion übersetzt ist — und ein überholter Rücklauf wird eingespielt,
 // nicht verworfen.
 public class TranslationOrderTests
 {
@@ -63,7 +63,7 @@ public class TranslationOrderTests
         Assert.Equal(1, back.GetProperty("behind").GetInt32());
         Assert.Equal(0, back.GetProperty("skipped").GetInt32());
         Assert.Equal("Device X1", c.With((_, t, _) => t.Nodes[p].Values[new Axis("name", "en", null, null)]));
-        // und sie bleibt offen: die Marke steht auf der Auftragsfassung, nicht auf jetzt — die Differenz geht ins nächste Paket
+        // und sie bleibt offen: die Marke steht auf der Auftragsversion, nicht auf jetzt — die Differenz geht ins nächste Paket
         var still = Open(c).Single();
         Assert.Equal("stale", still.State);
         Assert.Equal("Gerät X1 Pro", still.Source);
@@ -98,7 +98,7 @@ public class TranslationOrderTests
         var unit = TranslateApi.UnitId(p, "name", null, null);
         TranslateApi.Import(c, "agentur", "de", "en", [new TranslateApi.ImportUnit(unit, "Device X1", Open(c).Single().SourceHash)], false);
         Assert.Empty(Open(c));
-        for (var i = 0; i < 10; i++) c.With((_, _, write) => write("t", p, Types.AttributeSet, new AttributeSet("name", "de", null, $"Gerät X1 Fassung {i}", null), null).Number);
+        for (var i = 0; i < 10; i++) c.With((_, _, write) => write("t", p, Types.AttributeSet, new AttributeSet("name", "de", null, $"Gerät X1 Version {i}", null), null).Number);
         Assert.Single(Open(c));   // verglichen wird Marke gegen jetzt, nicht ein Stapel von Änderungen
         // zurück auf den übersetzten Wortlaut: kein Rückstand mehr, ohne dass jemand etwas zurücknimmt
         c.With((_, _, write) => write("t", p, Types.AttributeSet, new AttributeSet("name", "de", null, "Gerät X1", null), null).Number);
@@ -110,11 +110,11 @@ public class TranslationOrderTests
     {
         var (c, p) = World();
         // zweiter Auslöser neben dem Zeitplan: ein Übergang mit der Wirkung translate:<sprache>
-        var def = new WorkflowDefined(Labels.Of("Fassung", "Release"), [new("draft", Labels.Of("Entwurf", "Draft")), new("final", Labels.Of("final", "final"), null, true)],
+        var def = new WorkflowDefined(Labels.Of("Version", "Release"), [new("draft", Labels.Of("Entwurf", "Draft")), new("final", Labels.Of("final", "final"), null, true)],
             [new("finalize", "draft", "final", Labels.Of("final", "finalize"), null, false, ["translate:en"])], "draft", ["product"]);
         Outcome Run(Func<Ctx, Outcome> cmd) => c.With((model, tree, write) => cmd(new Ctx { Model = model, Tree = tree, Relations = c.Relations, Media = c.Media, Workflows = c.Workflows, Translations = c.Translations, Write = (s, t, pl) => write("t", s, t, pl, null) }));
-        Assert.Null(Run(x => Commands.DefineWorkflow(x, "fassung", def)).Error);
-        Assert.Null(Run(x => Commands.WorkflowStep(x, p, "fassung", "finalize", null)).Error);
+        Assert.Null(Run(x => Commands.DefineWorkflow(x, "version", def)).Error);
+        Assert.Null(Run(x => Commands.WorkflowStep(x, p, "version", "finalize", null)).Error);
         var order = Assert.Single(c.Translations.Open);
         Assert.Equal("en", order.To);
         Assert.Equal(p, order.Root);

@@ -5,7 +5,7 @@ namespace Journali.Tests;
 
 /// <summary>
 /// Welches Plugin zu welchem Tarif gehört — am Saatgut festgehalten, damit ein neues Plugin nicht unbemerkt in den
-/// Einstieg rutscht. Im Betrieb gilt das signierte Tarifblatt; das Saatgut ist seine erste Fassung.
+/// Einstieg rutscht. Im Betrieb gilt das signierte Tarifblatt; das Saatgut ist seine erste Version.
 /// </summary>
 public class TarifPluginsTests
 {

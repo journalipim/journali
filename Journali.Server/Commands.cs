@@ -972,7 +972,7 @@ public static class Commands
     }
 
     /// <summary>
-    /// Ein Medium durch ein anderes ersetzen (Fassung, 27.09.2026). Der Nachfolger muss es geben, darf nicht selbst
+    /// Ein Medium durch ein anderes ersetzen (Version, 27.09.2026). Der Nachfolger muss es geben, darf nicht selbst
     /// abgelöst sein und nicht der Vorgänger sein; der Vorgänger darf nur einmal abgelöst werden — eine Kette
     /// a → b → c entsteht, indem b später selbst abgelöst wird.
     /// <para>Im selben Zug wandern die Zuordnungen: je Relation zum Vorgänger eine neue zum Nachfolger (gleicher Typ,

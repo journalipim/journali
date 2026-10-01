@@ -73,7 +73,7 @@ public static class ClassificationApi
 
     /// <summary>Auf jeder Ebene pflegbar, erbt nach unten.</summary>
     private static readonly string[] FeatureLevels = [Roles.Group, Roles.Product, Roles.Variant];
-    /// <summary>Was frühere Fassungen anlegten — wird beim nächsten Durchlauf gehoben.</summary>
+    /// <summary>Was frühere Versionen anlegten — wird beim nächsten Durchlauf gehoben.</summary>
     private static readonly string[] OldLevels = [Roles.Product, Roles.Variant];
 
     public static void Map(RouteGroupBuilder api)

@@ -1,7 +1,7 @@
 <script setup>
 // Übersicht eines Themas: nach Klick auf ⇩ Import (⇪ Export, ▤ Datenblatt, ✓ Datenanalyse, ⌁ Werkzeuge)
 // wählt man hier das Plugin, das man ausführen will — als Kacheln: Symbol gross, Name,
-// ein Satz aus dem Manifest, unten Plugin und Fassung. Kein festes Spaltenlayout für alle: jede Ansicht hat ihr eigenes.
+// ein Satz aus dem Manifest, unten Plugin und Version. Kein festes Spaltenlayout für alle: jede Ansicht hat ihr eigenes.
 import { computed, watchEffect } from 'vue'
 import { useRouter } from 'vue-router'
 import { plugins } from '../plugins.js'

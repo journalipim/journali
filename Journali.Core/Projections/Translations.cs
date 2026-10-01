@@ -3,7 +3,7 @@ using Journali.Core.Journal;
 
 namespace Journali.Core.Projections;
 
-/// <summary>Die Marke an einer Zielachse: gegen diese Quellfassung ist übersetzt (Fingerabdruck und Journalnummer der Quelle),
+/// <summary>Die Marke an einer Zielachse: gegen diese Quellversion ist übersetzt (Fingerabdruck und Journalnummer der Quelle),
 /// gesetzt bei <see cref="At"/>, aus welchem Auftrag.</summary>
 public readonly record struct TranslationMark(string SourceHash, long SourceAt, long At, string? Order);
 
@@ -34,7 +34,7 @@ public sealed class TranslationOrder
 }
 
 /// <summary>
-/// Abbild der Übersetzung (docs/pflegestruktur.md 30). Zwei Dinge stehen hier: die <b>Marken</b> (je Knoten und Zielachse: gegen welche Quellfassung ist
+/// Abbild der Übersetzung (docs/pflegestruktur.md 30). Zwei Dinge stehen hier: die <b>Marken</b> (je Knoten und Zielachse: gegen welche Quellversion ist
 /// übersetzt) und die <b>Aufträge</b> (Strom <c>translation:&lt;key&gt;</c>). Der „Übersetzungsspeicher“ ist kein
 /// Behälter — er ist die Frage „Marke gegen jetzt“, und darum ist zehnmal geändert ein Posten, nicht zehn.
 /// </summary>
