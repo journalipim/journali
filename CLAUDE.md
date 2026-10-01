@@ -75,6 +75,10 @@ und Betriebsrechner. Eine Beispieladresse ist `localhost` oder ein Platzhalter, 
   Datei erhalten.
 - **Nach jedem `git pull`:** `npm install` in `web/` (die andere Sitzung bringt neue Pakete mit — sonst
   brechen Tests mit `ERR_MODULE_NOT_FOUND`), dann `dotnet build -c Release` und beide Testläufe.
+  **Brachte der Pull Änderungen, immer auch `npm run build` in `web/`** (Oberfläche und Plugins): Die Plugins
+  liegen im Verzeichnis und sind sofort neu, das Paket der Oberfläche nicht — ein Plugin ruft dann Funktionen auf,
+  die das alte Paket nicht kennt (`ctx.compliance.setup is not a function`). Nach dem Bau zeigt die Oberfläche
+  „↻ Neue Fassung“; dem Anwender sagen, dass die Seite neu zu laden ist. Ohne Änderungen („Already up to date“) entfällt der Bau.
 - **Vor dem Commit:** `dotnet build -c Release` mit 0 Fehlern, `dotnet test Journali.Tests` (Kern) und
   `npm test` in `web/` grün. **Oberfläche wird geprüft, nicht vorgeführt**: jeder Dialog und jedes
   Fenster, das wir anfassen, bekommt einen Test in `web/test/ui-*.test.mjs` — echtes DOM (happy-dom), echte Komponente
