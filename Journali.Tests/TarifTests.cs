@@ -232,7 +232,7 @@ public class TarifTests
     {
         var j = new MemoryJournal();
         var c = new Catalog(j); c.Rebuild(); c.SeedMissing();
-        Assert.Equal(0, c.Tarife.Fassung);                                      // ohne Blatt: das Saatgut
+        Assert.Equal(0, c.Tarife.Version);                                      // ohne Blatt: das Saatgut
         Assert.NotNull(PluginApi.NichtImTarif(c, "etim"));
 
         Assert.True(c.NimmTarifblatt(PruefAussteller.Blatt(2, z => z.Key == "free" ? z with { Week = 7_000, PubTrees = 2, Plugins = [.. z.Plugins!, "etim"] } : z), "t"));
@@ -245,9 +245,9 @@ public class TarifTests
         using var fremd = System.Security.Cryptography.ECDsa.Create(System.Security.Cryptography.ECCurve.NamedCurves.nistP256);
         var falsch = PruefAussteller.Blatt(9, z => z with { Week = Tarife.Ohne }, mit: fremd);
         c.AppendRaw("t", Catalog.TarifStrom, Types.TarifeReceived, Types.Serialize(new TarifeReceived(falsch.Blatt, falsch.Sig)));
-        Assert.Equal(2, c.Tarife.Fassung);
+        Assert.Equal(2, c.Tarife.Version);
         var neu = new Catalog(j); neu.Rebuild();
-        Assert.Equal(2, neu.Tarife.Fassung);
+        Assert.Equal(2, neu.Tarife.Version);
         Assert.Equal(7_000, neu.Tarife.Free.Week);
     }
 

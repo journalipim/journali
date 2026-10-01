@@ -20,10 +20,10 @@ public sealed class Tarifliste
 {
     private readonly string _testTarif;
 
-    public Tarifliste(long fassung, IEnumerable<Tarif> tarife, string testTarif, int testMonate, string? kauf = null,
+    public Tarifliste(long version, IEnumerable<Tarif> tarife, string testTarif, int testMonate, string? kauf = null,
         IEnumerable<Licensing.RabattZeile>? rabatte = null)
     {
-        Fassung = fassung;
+        Version = version;
         Alle = [.. tarife.OrderBy(x => x.Rang)];
         _testTarif = testTarif;
         TestMonate = testMonate;
@@ -31,8 +31,8 @@ public sealed class Tarifliste
         Rabatte = [.. rabatte ?? []];
     }
 
-    /// <summary>Fassung des Tarifblatts — 0 für das Saatgut.</summary>
-    public long Fassung { get; }
+    /// <summary>Version des Tarifblatts — 0 für das Saatgut.</summary>
+    public long Version { get; }
     /// <summary>Alle Tarife, nach Rang aufsteigend.</summary>
     public IReadOnlyList<Tarif> Alle { get; }
     /// <summary>So lange gilt der Test einer neuen Instanz, gezählt ab dem ersten Eintrag im Journal.</summary>
@@ -62,18 +62,18 @@ public sealed class Tarifliste
 
     /// <summary>Aus dem Inhalt eines (geprüften) Tarifblatts.</summary>
     public static Tarifliste Aus(Licensing.TarifblattInhalt b) =>
-        new(b.Fassung, b.Tarife.Select(z => new Tarif(z.Key, z.Label, z.Rang, z.Week, z.Month, z.PubTrees, z.Plugins is null ? null : new HashSet<string>(z.Plugins))),
+        new(b.Version, b.Tarife.Select(z => new Tarif(z.Key, z.Label, z.Rang, z.Week, z.Month, z.PubTrees, z.Plugins is null ? null : new HashSet<string>(z.Plugins))),
             b.TestTarif, b.TestMonate, b.Kauf, b.Rabatte);
 
-    /// <summary>Als Inhalt eines Tarifblatts — so legt der Lizenzserver seine erste Fassung aus dem Saatgut an.</summary>
-    public Licensing.TarifblattInhalt AlsBlatt(long fassung, DateTimeOffset ausgestellt) =>
-        new(fassung, ausgestellt, Test.Key, TestMonate,
+    /// <summary>Als Inhalt eines Tarifblatts — so legt der Lizenzserver seine erste Version aus dem Saatgut an.</summary>
+    public Licensing.TarifblattInhalt AlsBlatt(long version, DateTimeOffset ausgestellt) =>
+        new(version, ausgestellt, Test.Key, TestMonate,
             [.. Alle.Select(t => new Licensing.TarifZeile(t.Key, t.Label, t.Rang, t.Week, t.Month, t.PubTrees, t.Plugins?.Order().ToArray()))], Kauf, Rabatte.Count == 0 ? null : [.. Rabatte]);
 }
 
 /// <summary>
 /// Das Saatgut der Tarife und was für alle gleich ist. Im Betrieb gilt die <see cref="Tarifliste"/> aus dem Journal —
-/// die Werte hier gelten nur, solange eine Instanz noch nie ein Tarifblatt bekommen hat, und sind die erste Fassung des
+/// die Werte hier gelten nur, solange eine Instanz noch nie ein Tarifblatt bekommen hat, und sind die erste Version des
 /// Lizenzservers. Grenzen je Woche und Monat hängen am Team (am Ende der Zahlerkette); Plugins und
 /// Publikationsbäume gelten für die ganze Instanz — nach dem höchsten Tarif, den sie hat.
 /// <list type="bullet">

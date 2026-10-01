@@ -70,7 +70,7 @@ services:
       # das Datenbankpasswort (nur lesen) — erzeugt vom Dienst db-passwort
       - journali-secrets:/run/journali:ro
       # Plugins vom Host: Datei tauschen = Plugin aktualisiert (Server liest sie bei jedem Zugriff, no-cache);
-      # neue Fassung unter ⌁ Plugins → ↑ aktualisieren. Kein neues Image noetig
+      # neue Version unter ⌁ Plugins → ↑ aktualisieren. Kein neues Image noetig
       - ./plugins:/app/plugins
       # ... aber ein Bind-Mount ueberdeckt alles darunter, auch die node_modules aus dem Image. Diese vier Plugins
       # brauchen Pakete (sharp, pdfjs, transformers, tesseract); ihre Ordner kommen darum aus dem Image zurueck, damit es autark bleibt

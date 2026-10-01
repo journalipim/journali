@@ -139,7 +139,7 @@ Rauschen, `ReleaseGranted` bleibt). Zwei Fallen:
 - Import/Export — in der Praxis die Hälfte des Systems
 - **Status am Asset** (28.09.2026, offen). Ein Knoten kann aktiv sein und eines seiner Assets trotzdem
   überholt — heute lässt sich das nicht sagen. Ein Medium kennt nur *zurückgezogen* (`MediaRetired`, es
-  verschwindet), *abgelöst* (`MediaSuperseded`, die Fassungskette) und einen Workflow-Zustand
+  verschwindet), *abgelöst* (`MediaSuperseded`, die Versionskette) und einen Workflow-Zustand
   (`MediaWorkflowApi`, „was noch zu tun ist“). Was fehlt, ist der **Status aus demselben Vokabular wie am Knoten**
   (`StatusDefinition` im Modell, `StatusSet` am Strom) — dieselben Werte, dieselbe Anzeige, nur am Medium.
   *Entwurf:* `StatusSet` am Medienstrom, wie es `WorkflowStateSet` dort schon tut — kein neuer Eintragstyp; das
@@ -207,7 +207,7 @@ Rauschen, `ReleaseGranted` bleibt). Zwei Fallen:
      *Zu entscheiden:* Versionen zeigen auf #n — liegt #n in einem zugeklappten Monat: jeden Monatsstand behalten
      (schnell, Platz), nur den jüngsten (langsam, selten), oder nur die Stände, auf die eine Version zeigt.
      *Zu beachten:* der Schnitt muss hinter allen Lesern liegen; der Monatsstand braucht ein stabiles Format wie (2).
-  4. **Update ohne Stillstand** — die neue Fassung startet neben der alten, baut ihre Abbilder im Hintergrund auf und
+  4. **Update ohne Stillstand** — die neue Version startet neben der alten, baut ihre Abbilder im Hintergrund auf und
      folgt dem Journal, während die alte weiterläuft; ist sie eingeholt, schaltet der Proxy um (Docker, NPMplus).
      Ein langer Aufbau heisst dann spätere Umschaltung, kein Ausfall.
 
@@ -236,7 +236,7 @@ Rauschen, `ReleaseGranted` bleibt). Zwei Fallen:
     Tarifblatt zählen nur mit seiner Signatur; die Testlizenz gilt nach der Regel. Wer die Prüfung entfernt, ändert
     den Quelltext — das verbietet die Lizenz von journali; technisch verhindern lässt es sich bei offenem Quelltext nicht.
   - Das **Tarifblatt** (`Tarifblatt`, `TarifeReceived`): alle Tarife mit Grenzen, Bäumen, Plugins und dem Test,
-    signiert, mit Fassung; kommt mit jedem Abo-Stand und jedem Schlüssel. `Tarife.cs` ist nur noch das Saatgut.
+    signiert, mit Version; kommt mit jedem Abo-Stand und jedem Schlüssel. `Tarife.cs` ist nur noch das Saatgut.
   - **Senken ab der nächsten Verlängerung**, erhöhen sofort: der Lizenzserver merkt sich je Abo, was er für die
     laufende Periode zugesagt hat, und liefert bis zu ihrem Ende nicht weniger.
   - **Keine Lizenz der Instanz**: jede gehört einem Team — Abo oder Schlüssel zum Kopieren. Das Einspielen einer

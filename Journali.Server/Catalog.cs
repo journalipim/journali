@@ -99,7 +99,7 @@ public sealed class Catalog
         lock (_write)
             return Aendernd(() =>
             {
-                if (neu.Fassung <= _teams.Tarife.Fassung) return false;
+                if (neu.Version <= _teams.Tarife.Version) return false;
                 Apply(_journal.Append(actor, TarifStrom, Types.TarifeReceived, Types.Serialize(new TarifeReceived(blatt.Blatt, blatt.Sig))));
                 LimitsAusLizenz();
                 return true;

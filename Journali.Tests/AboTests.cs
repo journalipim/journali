@@ -171,7 +171,7 @@ public class AboTests
         var w = new Welt();
         w.Server.Blatt = Blatt(w.Server.Aussteller, 2, z => z.Key == "free" ? z with { Week = 12_000, Plugins = [.. z.Plugins!, "etim"] } : z);
         Assert.Null((await w.Abos.VerbindenAsync(w.C, "de", Key, "taloan")).Fehler);
-        Assert.Equal(2, w.C.Tarife.Fassung);
+        Assert.Equal(2, w.C.Tarife.Version);
         Assert.Equal(12_000, w.C.Tarife.Free.Week);
         Assert.True(w.C.Tarife.Free.Erlaubt("etim"));
         Assert.Equal(12_000, w.C.With((_, _, _) => w.C.Teams.Get(Model.InitTeam)!.EntriesWeek));   // das Init Team trägt die Lizenz nach der neuen Liste
@@ -182,7 +182,7 @@ public class AboTests
         using var fremd = ECDsa.Create(ECCurve.NamedCurves.nistP256);
         w.Server.Blatt = Blatt(fremd, 9, z => z with { Week = 1 });
         await w.Abos.VerbindenAsync(w.C, "de", Key, "taloan");
-        Assert.Equal(2, w.C.Tarife.Fassung);
+        Assert.Equal(2, w.C.Tarife.Version);
         Assert.Equal(12_000, w.C.Tarife.Free.Week);
     }
 
@@ -209,7 +209,7 @@ public class AboTests
         Assert.Equal(0, await w.Abos.AuffrischenAsync(w.C));                   // kein Team hat ein Abo
         Assert.Equal(0, w.Server.Anfragen);                                     // nach einem Stand fragt niemand
         Assert.Equal(1, w.Server.Blattanfragen);                                // nach dem Blatt schon
-        Assert.Equal(4, w.C.Tarife.Fassung);
+        Assert.Equal(4, w.C.Tarife.Version);
         Assert.Equal("START50", w.C.Tarife.RabatteAm(Heute).Single().Code);
 
         // und nicht bei jedem Durchlauf: erst wieder, wenn es alt ist
@@ -278,7 +278,7 @@ public class AboTests
         using var fremd = ECDsa.Create(ECCurve.NamedCurves.nistP256);
         w.Server.Blatt = Tarifblaetter(fremd, 9, z => z, [new RabattZeile("FREMD", "nicht signiert")]);
         Assert.Null(await w.Abos.TarifblattAsync(w.C));
-        Assert.Equal(2, w.C.Tarife.Fassung);
+        Assert.Equal(2, w.C.Tarife.Version);
         Assert.DoesNotContain("FREMD", w.C.Tarife.Rabatte.Select(r => r.Code));
     }
 

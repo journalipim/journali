@@ -965,7 +965,7 @@ abgenommen werden.“ Was der Bestand dazu schon trägt — und wo die eine Lüc
 |---|---|---|
 | Der Redakteur speichert zehnmal, bis es „final“ ist | **Der Auslöser ist nie das Speichern, sondern ein Übergang.** Der Redakteur geht „final — zur Übersetzung“ oder „final — ohne Übersetzung“; das ist seine Entscheidung über die Relevanz, und sie ist modellierbar, ohne eine Zeile Code: zwei Übergänge aus demselben Zustand, Wirkung `translate:<sprache>` neben `release:` / `revoke:` | `WfTransition(… Effects …)`, `Types.cs:504`; Wirkungen heute `release:web`, `revoke:`, `status:` (`Workflows.cs:10`) |
 | Version blockiert, weil Französisch zwei Wochen braucht | **Freigabe und Version gibt es schon je Sprache** — Deutsch geht hinaus, Französisch wartet. Blockiert wird nur, wer eine Version über alle Sprachen zieht | `Release(string Channel, string? Locale)` (`Tree.cs:9`, gesetzt in `:567`, gelesen in `ReleasedVia` `:168`); `VersionState.Channel` / `.Locale` (`Versions.cs`) |
-| Fallback auf die Mastersprache will niemand | **Der Rückfall geht nicht auf Deutsch, sondern auf die letzte freigegebene französische Fassung.** Das kostet keinen zweiten Speicher: die Version ist ein Zeiger auf die Journalnummer, der alte französische Wert steht im Journal. Erst wenn es noch nie eine französische Fassung gab, muss der Kanal wählen: Mastersprache zeigen oder das Produkt in Französisch nicht zeigen | `VersionState.JournalNumber` (`Versions.cs`) |
+| Fallback auf die Mastersprache will niemand | **Der Rückfall geht nicht auf Deutsch, sondern auf die letzte freigegebene französische Version.** Das kostet keinen zweiten Speicher: die Version ist ein Zeiger auf die Journalnummer, der alte französische Wert steht im Journal. Erst wenn es noch nie eine französische Version gab, muss der Kanal wählen: Mastersprache zeigen oder das Produkt in Französisch nicht zeigen | `VersionState.JournalNumber` (`Versions.cs`) |
 | KI übersetzt sofort, lokal wird nur abgenommen | **Die KI ist ein Akteur mit eigener Rolle**, kein Sonderweg: sie schreibt den Wert, der Zustand heisst „maschinell übersetzt“, der lokal Verantwortliche geht den Übergang „abgenommen“. Die Rollenregel greift dann von allein — die KI-Rolle kann den Weg bis zur Freigabe nicht allein gehen, also bleibt das Vier-Augen-Prinzip stehen, ohne zweite Regel. Der „Auftrag“ ist dann ein Job im `tasker` statt ein Paket an die Agentur; die Warteschlange ist dieselbe | Benutzer und Rollen im Journal (`user:<key>`, `role:<key>`), Jobs mit eigenem Token (CLAUDE.md, `Auth.cs`) |
 
 **Die Lücke:** der Workflow-Zustand hängt je Knoten und Workflow — ohne Achse (`NodeWorkflow`
@@ -1005,7 +1005,7 @@ am Hash entschieden, nicht am Gefühl:
 |---|---|
 | Quelle seit dem Auftrag unverändert | einspielen, Marke auf jetzt, fertig |
 | Quelle ist weitergezogen | **die Übersetzung ist kein Abfall** — sie ist besser als die vorige. Einspielen, Marke auf die *Auftragsnummer* (nicht auf jetzt). Der Rückstand bleibt offen und geht als Differenz ins nächste Paket: die zweite Runde ist klein, meist ein Satz |
-| Zielwert wurde inzwischen von Hand geändert | **nur hier** ein Mensch: Konflikt zeigen, beide Fassungen nebeneinander |
+| Zielwert wurde inzwischen von Hand geändert | **nur hier** ein Mensch: Konflikt zeigen, beide Versionen nebeneinander |
 
 Nie: den Auftrag verwerfen, weil er „nicht mehr aktuell“ ist. Genau daraus entsteht das
 Hamsterrad — wer immer den ganzen Text neu übersetzen lässt, holt den
@@ -1026,7 +1026,7 @@ die Jobs gab es seit dem 21.09. Gebaut wurde das, was gefehlt hat:
 
 | Was | Wo |
 |---|---|
-| **Die Marke** je Knoten × Attribut × Zielsprache × Kanal × Zeile: gegen welche Quellfassung ist übersetzt (Fingerabdruck + Journalnummer) | `TranslationMarked`, Abbild `Translations` (`Journali.Core/Projections/Translations.cs`) |
+| **Die Marke** je Knoten × Attribut × Zielsprache × Kanal × Zeile: gegen welche Quellversion ist übersetzt (Fingerabdruck + Journalnummer) | `TranslationMarked`, Abbild `Translations` (`Journali.Core/Projections/Translations.cs`) |
 | **Der Zustand kommt aus der Marke**, nicht aus „wer wurde zuletzt geschrieben“ — ein frisch eingespielter, aber überholter Zieltext ist ⟳, nicht ✓. Ohne Marke (Bestand) gilt weiter der Zeitvergleich | `TranslateApi.Collect` |
 | **Das Paket** als Auftrag im Journal: Sprachrichtung, Umfang, Stand, je Einheit die Fingerabdrücke von Quelle **und** Ziel | `TranslationOrdered` / `TranslationReturned`, `POST /api/translate/order`, `GET /api/translate/orders` |
 | **Zwei Auslöser, ein Weg**: der Job nach Zeitplan (`Schedule`, cron) und die Wirkung `translate:<sprache>` an einem Übergang („Version der Mastersprache“) rufen dasselbe | `plugins/xliff/job.mjs`, `Commands.OrderTranslation` |
@@ -1040,7 +1040,7 @@ Wirkung am Übergang, Auftrag in der Datei), `WorkflowLocaleTests` (je Sprache, 
 nur die Sprache), `web/test/ui-workflow.test.mjs` (eine Zeile je Sprache, Klick schickt die Sprache mit, gesperrte Schritte).
 
 **Noch nicht gebaut** (die Wort fehlt): die Bagatellgrenze (Normalisieren vor dem Vergleich, Abstand statt „ungleich“),
-das Häkchen „unwesentliche Änderung“ am Wert, die Fallback-Regel je Kanal („letzte freigegebene Fassung der Zielsprache
+das Häkchen „unwesentliche Änderung“ am Wert, die Fallback-Regel je Kanal („letzte freigegebene Version der Zielsprache
 ausliefern“) und die KI-Strecke als Abnahme-Workflow (die Übersetzung gibt es schon, der Zustand „maschinell übersetzt“
 noch nicht).
 
@@ -1417,7 +1417,7 @@ Vorschlag, der zum Journal passt:
 - **Installiert / aktiv / Version stehen im Journal**: Strom
   `plugin:<key>`, `PluginInstalled {key, version, manifest}`,
   `PluginEnabled` / `PluginDisabled`, `PluginRemoved`. Wer welches Werkzeug
-  wann mit welcher Fassung benutzt hat, ist damit nachvollziehbar — und die
+  wann mit welcher Version benutzt hat, ist damit nachvollziehbar — und die
   Stapel eines Plugins tragen seinen Schlüssel als Urheber (`X-Actor`
   `taloan via solr@1.2`).
 - **Verwaltung** in der Oberfläche unter ⚙ → Plugins: Liste mit Version,
@@ -1435,7 +1435,7 @@ Gebaut: `plugins/<key>/plugin.json` (`key`, `version`, `label{}`,
 {command, args mit `{param}` und `{flag?--opt}`, params} für Prozesse,
 `builtin` für die eingebauten Ansichten, `autoInstall`); Abbild `Plugins`
 (`PluginInstalled/Enabled/Disabled/Removed`); ⬡ Plugins in der Leiste:
-Liste mit Stand und Fassung (↑ wenn die Platte neuer ist), installieren,
+Liste mit Stand und Version (↑ wenn die Platte neuer ist), installieren,
 ein/aus, aktualisieren, entfernen, Prozess starten mit Parametern und
 Ausgabe. Browser-Plugins: `default export { views: [{path, label, icon,
 mount(el, ctx)}], nodeActions: [{label, icon, run(nodeId, ctx)}] }` —
@@ -1677,7 +1677,7 @@ mit Mass 0 × 0, ein Dokument ohne Text seinen Zustand `fehler` — beides ist e
 TIFF. Bei JPEG und TIFF tauscht die EXIF-Orientierung Breite und Höhe, damit die Bibliothek dasselbe Mass nennt
 wie die Ableitung (`derive` dreht mit `rotate()`). Ein unbekanntes Format bekommt den Eintrag mit 0 × 0 — sonst
 bliebe der Posten für immer offen und jede Runde läse ihn erneut; `again=true` liest diese erneut, wenn eine neue
-Fassung mehr Formate kennt.
+Version mehr Formate kennt.
 
 Damit ist das Mass des **Originals** überhaupt zum ersten Mal bekannt: bisher stand es nur an der Ableitung. Erst
 dadurch lässt sich nach „mindestens 2000 px“ filtern.
@@ -1711,7 +1711,7 @@ stehendes Foto, ein feiner Winkel (±15°) zum Ausrichten eines schiefen Scans. 
 Bild in Pixeln des Originals; gerechnet wird in voller Auflösung, die Vorschau ist nur verkleinert. **Ein Medium
 ist unveränderlich** — das Ergebnis ist ein **neues** Medium, hochgeladen mit `from` = Original (`MediaSourced.From`,
 die Abstammung), im Format des Originals, wenn der Browser es schreibt (JPEG, PNG, WebP), sonst PNG. Wahlweise
-ersetzt es das Original gleich als neue Fassung (F) — dann wandern die Zuordnungen. Offen bleibt der *nicht
+ersetzt es das Original gleich als neue Version (F) — dann wandern die Zuordnungen. Offen bleibt der *nicht
 zerstörende* Zuschnitt (ein Rechteck am Medium, das die Presets anwenden — „quadratische Kachel ohne
 abgeschnittenen Kopf“): ein eigener Eintragstyp und eine Änderung an `derive`, die nur mit Siegel geht.
 
@@ -1723,7 +1723,7 @@ Ordner bleibt) und die Zuordnung am Knoten (`image` für ein Bild, sonst `docume
 kein Fehler). Was davon nicht geht, hält den Beleg nicht auf — der Eintrag an der Version bleibt die Wahrheit,
 die Hinweise gehen an den Erzeuger zurück. Die Zuordnung zählt als Pflege, die Herkunft nicht.
 
-**F. Fassungen — gebaut (27.09.2026).** „Ein neues Bild ist ein neues Medium“ bleibt richtig. „Dieses ersetzt
+**F. Versionen — gebaut (27.09.2026).** „Ein neues Bild ist ein neues Medium“ bleibt richtig. „Dieses ersetzt
 jenes“ ist ein Eintrag am Vorgänger (`MediaSuperseded {by}`, Art Datenpflege). Der Befehl dazu
 (`Commands.SupersedeMedium`, `POST /api/media/{id}/supersede`) legt im selben Zug je Zuordnung eine neue am
 Nachfolger an — gleicher Typ, gleicher Knoten, dieselben Werte (Reihenfolge, Verwendung, Vererbung, Stopp) — und
@@ -1731,7 +1731,7 @@ löst die alte; der Nachfolger bekommt `MediaSourced.from` auf den Vorgänger, d
 Richtungen lesbar. Der Vorgänger **bleibt im Abbild**: Belege, Versionen und die Ausleitung von damals nennen ihn
 weiter und lösen ihn auf. Nur die Bibliothek bietet ihn nicht mehr an (`Media.Current`; `?superseded=true` zeigt
 ihn). Ein Vorgänger wird nur einmal abgelöst, ein Nachfolger darf nicht selbst abgelöst sein — eine Kette
-a → b → c entsteht, indem b später selbst abgelöst wird. In der Bibliothek: Kontextmenü „Neue Fassung
+a → b → c entsteht, indem b später selbst abgelöst wird. In der Bibliothek: Kontextmenü „Neue Version
 hochladen …“ (Datei → Medium → ersetzen), rechts „ersetzt durch“ und „ersetzt“ als Sprung.
 
 **G. Rolle und Reihenfolge am Produkt — Reihenfolge gebaut (27.09.2026).** Berichtigung: die Gruppe

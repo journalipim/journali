@@ -2,10 +2,10 @@
 <!--
   Unraid-Vorlage für die Datenbank von journali: Postgres 18 mit der Erweiterung `vector` (Image pgvector/pgvector:pg18).
   Ohne diese Erweiterung fehlen die Suche nach Sinn, die Frage an die Dokumente und das Band „Ähnliche Knoten“ — der
-  Rest von journali läuft auch ohne. Dieselbe Fassung wie im Paket (compose.yaml).
+  Rest von journali läuft auch ohne. Dieselbe Version wie im Paket (compose.yaml).
 
   Das Datenverzeichnis liegt ab Postgres 18 unter /var/lib/postgresql/<major>/docker; der Mount gehört darum auf den
-  Elternordner /var/lib/postgresql, damit ein Wechsel der Hauptfassung später Platz hat.
+  Elternordner /var/lib/postgresql, damit ein Wechsel der Hauptversion später Platz hat.
 
   Das Passwort steht hier nicht: es wird beim Anlegen des Containers eingetragen (Feld maskiert) und danach einmal je
   Server im Einrichtungsdialog von journali angegeben; dort landet es in db.json im Datenverzeichnis.

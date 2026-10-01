@@ -156,7 +156,7 @@ bleiben. Die Erweiterung selbst legt journali beim ersten Start an (`Vectors.cs`
 vector`); dafür braucht der Datenbankbenutzer das Recht dazu (`postgres` hat es).
 
 Ein `apt-get install postgresql-18-pgvector` im laufenden Container tut es auch — aber nur bis zum nächsten Update:
-Unraid erzeugt den Container dann aus dem Image neu, und die Erweiterung fehlt wieder. Die Fassung der Hauptversion
+Unraid erzeugt den Container dann aus dem Image neu, und die Erweiterung fehlt wieder. Die Version der Hauptversion
 muss beim Tausch dieselbe bleiben (18 → `pg18`); ein Wechsel der Hauptversion ist ein eigener Vorgang mit Dump und
 Rückspielen.
 
@@ -260,7 +260,7 @@ baut es aus dem Checkout unter demselben Namen. Neuer Stand: `docker compose pul
 betreibt, verliert nichts als die Suche nach Sinn — `GET /api/docs/embed` sagt es. Plugins kommen per Bind-Mount `./plugins:/app/plugins` vom Host:
 eine Datei dort tauschen aktualisiert das Plugin ohne neues Image (der
 Server liest Manifeste und Module bei jedem Zugriff, `no-cache`; eine neue
-Fassung erscheint unter ⬡ Plugins als ↑ Update). Prozess-Plugins brauchen
+Version erscheint unter ⬡ Plugins als ↑ Update). Prozess-Plugins brauchen
 `node` im Laufzeit-Image — das Dockerfile kopiert die Binärdatei aus
 `node:22`. Basis-Plugins (table, da, tasker) liegen ebenfalls unter `plugins/`
 — auch ihre Ansichten lassen sich so austauschen; gebaute Plugins (`src/` →
@@ -431,7 +431,7 @@ Wer so sichert, muss das Volume mitnehmen.
 
 **Die Vollsicherung** — von Hand unter ⚙ Einstellungen → ⇅ B&R (jeder Tarif) oder als Zeitplan
 mit dem Plugin `backup` im Tasker (ab Pro); beide rufen `POST /api/backup` — schreibt einen
-Satz, der an nichts hängt — nicht an der Postgres-Fassung, nicht am Schema:
+Satz, der an nichts hängt — nicht an der Postgres-Version, nicht am Schema:
 
 | im Verzeichnis | was |
 |---|---|
@@ -646,7 +646,7 @@ Oberfläche bedient, nimmt `error`. Stapelfehler (`/api/batch`) tragen dieselben
 
 ## Zertifizierte Plugins
 
-Ein `certificate.json` neben `plugin.json`, signiert vom Herausgeber (ECDSA P-256 über Schlüssel, Fassung und den Hash
+Ein `certificate.json` neben `plugin.json`, signiert vom Herausgeber (ECDSA P-256 über Schlüssel, Version und den Hash
 aller Dateien). `PluginSeal.cs` prüft es bei jedem Lesen der Platte; `GET /api/plugins` liefert `certified`,
 `sealIssued`, `sealIssuer`, `sealReason`. Öffentlicher Schlüssel: `PluginSeal.DefaultKey`, überschreibbar mit
 `JOURNALI_PLUGIN_KEY`. Katalog: `GET /api/plugins/catalog` und `POST /api/plugins/catalog/{key}/fetch`
@@ -727,10 +727,10 @@ Ein Stand ohne passende Signatur wird nicht übernommen. Mit jedem Stand kommt d
 #### Tarifblatt
 
 Welche Tarife es gibt — Grenzen je Woche und Monat, Publikationsbäume, Plugins, dazu Tarif und Dauer des Tests —
-sagt der Lizenzserver, nicht das Image: er signiert ein Tarifblatt mit Fassungsnummer und liefert es mit jedem
-Abo-Stand und jedem Schlüssel zum Kopieren aus. journali legt eine neuere Fassung als `TarifeReceived` ins Journal
+sagt der Lizenzserver, nicht das Image: er signiert ein Tarifblatt mit Versionsnummer und liefert es mit jedem
+Abo-Stand und jedem Schlüssel zum Kopieren aus. journali legt eine neuere Version als `TarifeReceived` ins Journal
 (Strom `tarife`); ab dann gilt sie für Pakete, Plugins, Bäume, die Lizenz des Init Teams und den Test. Eine ältere
-Fassung oder eine ohne passende Signatur ändert nichts — auch nicht beim Neuaufbau, das Abbild prüft selbst. Ohne
+Version oder eine ohne passende Signatur ändert nichts — auch nicht beim Neuaufbau, das Abbild prüft selbst. Ohne
 Tarifblatt gilt das Saatgut aus `Tarife.cs`. Die Grenzen eines Abos stehen zusätzlich im signierten Stand selbst: ein
 gesenkter Tarif greift dort erst mit der nächsten Verlängerung.
 

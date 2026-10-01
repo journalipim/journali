@@ -62,7 +62,7 @@ public class SnapshotTests
             .Append($"model:{model.Attributes.Count}/{model.Groups.Count}/{model.Lists.Count}/{model.RelationTypes.Count}/{model.Locales.Count}/{model.Views.Count}/{model.MasterLocale}")
             .Append($"pub:{string.Join(",", tree.PubTrees.Select(p => p.Id + "/" + p.Channel))}")
             .Append($"placed:{string.Join(",", tree.Nodes.Values.SelectMany(n => n.Placed).Order())}")
-            .Append($"tarife:{c.Tarife.Fassung}/{c.Tarife.Von("pro")!.Week}"));
+            .Append($"tarife:{c.Tarife.Version}/{c.Tarife.Von("pro")!.Week}"));
     });
 
     [Fact]

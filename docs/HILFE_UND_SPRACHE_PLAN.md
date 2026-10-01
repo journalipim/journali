@@ -98,7 +98,7 @@ ist Vorschlag.
 | 14 | Datenschutz | was journali über Personen speichert, crypto-shredding (geplant), KI-Schlüssel und Volumen |
 | 15 | Lizenz | Elastic License 2.0 in drei Sätzen, Zusatzerlaubnis Hosting; Wortlaut in `LICENSE` |
 | 16 | Tastatur | die Kürzel der Leiste, des Baums, der Zellen |
-| 17 | Glossar | Anwender, Team, Kanal, Achse, Fassung, Kennung, Abbild, Strom … |
+| 17 | Glossar | Anwender, Team, Kanal, Achse, Version, Kennung, Abbild, Strom … |
 
 Nicht in die Hilfe: Installation, Docker, Voraussetzungen, Update — das ist die README auf Git (wer die Hilfe liest,
 hat eine laufende Instanz). Regeln für die Texte wie in der Oberfläche: kein Name, kein Zitat, keine Belehrung —

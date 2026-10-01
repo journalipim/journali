@@ -227,7 +227,7 @@ public sealed class Teams : IProjection
         {
             // nur eine echte, stimmige und neuere Version ersetzt die geltende
             var d = Types.Deserialize<TarifeReceived>(entry.Payload);
-            if (new Licensing.Tarifblatt(d.Blatt, d.Sig).Pruefe().Inhalt is { } neu && neu.Fassung > Tarife.Fassung) { _blatt = d.Blatt; _blattSig = d.Sig; }
+            if (new Licensing.Tarifblatt(d.Blatt, d.Sig).Pruefe().Inhalt is { } neu && neu.Version > Tarife.Version) { _blatt = d.Blatt; _blattSig = d.Sig; }
             return;
         }
         if (!entry.Stream.StartsWith(Stream, StringComparison.Ordinal)) return;

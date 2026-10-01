@@ -29,7 +29,7 @@ public static class LicenceApi
                 instanz = licences.InstanzId,
                 // der Tarif: aus der Lizenz, der Test, und was für die ganze Instanz gilt
                 tarif = new { key = lt.Key, label = lt.Label }, trial = roh.Trial == true, trialPlan = roh.TarifIn(liste).Label,
-                tarifblatt = liste.Fassung,
+                tarifblatt = liste.Version,
                 instanzTarif = new { key = t.Key, label = t.Label, pubTrees = t.PubTrees == Tarife.Ohne ? (int?)null : t.PubTrees },
                 // Die Adresse des Shops aus dem Tarifblatt: die Oberfläche hängt Instanz und Team daran, und was gekauft
                 // wird, findet über den Lizenzserver zum Team zurück — niemand fügt danach etwas ein.
@@ -76,7 +76,7 @@ public static class LicenceApi
             if (Actor(req) is not { } actor) return ActorMissing();
             c.Registrierung(body.Ja, actor);
             var fehler = body.Ja ? await abos.TarifblattAsync(c, ct) : null;
-            return Results.Ok(new { registriert = body.Ja, tarifblatt = c.Tarife.Fassung, fehler });
+            return Results.Ok(new { registriert = body.Ja, tarifblatt = c.Tarife.Version, fehler });
         });
 
         // Eine Lizenz für die ganze Instanz wird nicht eingespielt (25.09.2026): jede gehört einem Team — Abo

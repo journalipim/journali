@@ -9,7 +9,7 @@ der Katalog des Herausgebers listet nur zertifizierte Plugins, und der Server ho
 
 ## Was das Siegel aussagt
 
-- Schlüssel und Fassung des Plugins sind die, die der Herausgeber geprüft hat.
+- Schlüssel und Version des Plugins sind die, die der Herausgeber geprüft hat.
 - Keine Datei im Verzeichnis wurde seither verändert, hinzugefügt oder entfernt.
 
 Mehr nicht. Ein Plugin ohne Siegel läuft genauso; es trägt nur keins. Ein Plugin mit gebrochenem Siegel (⚠) ist

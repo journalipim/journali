@@ -127,7 +127,7 @@ public sealed record TarifZeile(string Key, string Label, int Rang, int Week, in
 
 /// <summary>
 /// Was im Tarifblatt steht: alle Tarife mit Grenzen, Publikationsbäumen und Plugins, dazu welcher Tarif wie viele Monate
-/// als Test gilt. <see cref="Fassung"/> zählt hoch — eine ältere Fassung ersetzt nie eine neuere.
+/// als Test gilt. <see cref="Version"/> zählt hoch — eine ältere Version ersetzt nie eine neuere.
 /// <para><see cref="Kauf"/> ist die Adresse des Shops (26.09.2026): eine für alle Tarife — der Shop führt ein Produkt mit
 /// je Tarif und Laufzeit einer Variante, und die Variante hat keine eigene Adresse. Sie steht hier, damit eine Instanz
 /// den Shop kennt, ohne dass jemand sie einträgt; wer ein Team führt, bestellt damit Kontingent, und was gekauft wird,
@@ -136,7 +136,7 @@ public sealed record TarifZeile(string Key, string Label, int Rang, int Week, in
 /// bis wann. Der Shop kennt keinen Streichpreis — er kennt nur Codes; der Code hängt beim Bestellen an der Adresse
 /// (<c>checkout[discount_code]</c>), und was er wert ist, sagt der Satz.</para>
 /// </summary>
-public sealed record TarifblattInhalt(long Fassung, DateTimeOffset Ausgestellt, string TestTarif, int TestMonate, TarifZeile[] Tarife,
+public sealed record TarifblattInhalt(long Version, DateTimeOffset Ausgestellt, string TestTarif, int TestMonate, TarifZeile[] Tarife,
     string? Kauf = null, RabattZeile[]? Rabatte = null)
 {
     public static JsonSerializerOptions Json => Signaturen.Json;
@@ -145,7 +145,7 @@ public sealed record TarifblattInhalt(long Fassung, DateTimeOffset Ausgestellt, 
     /// Signieren, journali vor dem Übernehmen.</summary>
     public string? Fehler()
     {
-        if (Fassung < 1) return "Fassung fehlt.";
+        if (Version < 1) return "Version fehlt.";
         if (Tarife is not { Length: > 0 }) return "Keine Tarife.";
         foreach (var z in Tarife)
         {
@@ -171,7 +171,7 @@ public sealed record TarifblattInhalt(long Fassung, DateTimeOffset Ausgestellt, 
 
 /// <summary>
 /// Das Tarifblatt, wie es der Lizenzserver ausliefert: der Text so, wie er signiert wurde, und die Signatur. Es kommt mit
-/// jedem Abo-Stand und jedem Schlüssel zum Kopieren; journali legt eine neuere Fassung als Eintrag ins Journal
+/// jedem Abo-Stand und jedem Schlüssel zum Kopieren; journali legt eine neuere Version als Eintrag ins Journal
 /// (<c>TarifeReceived</c>) — so ändern sich Grenzen, Plugins und Publikationsbäume ohne neues Image.
 /// </summary>
 public sealed record Tarifblatt(string Blatt, string Sig)
