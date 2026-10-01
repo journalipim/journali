@@ -262,6 +262,9 @@ else Console.WriteLine($"journali: {(anmeldung == Auth.Anmeldung.Einrichten ? "n
 
 // Ohne Sitzung (es gibt Benutzer, der Fragende hat keine) sagt /health nur, dass der Server und seine Datenbank da sind, dazu Version und Bau —
 // Journalstand, Knotenzahl, Nutzung und Tarif gehören zur angemeldeten Person (01.10.2026).
+// Die Beschreibung der Schnittstelle (OpenAPI 3.0), aus den Endpunkten erzeugt: wer sie ruft, braucht eine Sitzung oder ein Token wie bei jedem anderen Aufruf
+api.MapGet("/openapi.json", (EndpointDataSource quelle) => Results.Json(OpenApiDoc.Build(quelle.Endpoints, laufendeVersion), new System.Text.Json.JsonSerializerOptions { WriteIndented = false, DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull }));
+
 api.MapGet("/health", (HttpRequest req, Catalog c) =>
 {
     DatenbankPruefen();   // wirft bei unerreichbarer Datenbank; die Wache oben macht daraus 503
