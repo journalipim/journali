@@ -28,6 +28,10 @@ public static class Auth
     public static bool IsAdmin(Catalog c, string role) => RightsOf(c, role).Contains(Rights.Users);
     private static int AdminsLeft(Catalog c) => c.Lesen((_, _) => c.Users.All.Values.Count(u => u.Enabled && c.Users.RightsOf(u.Role).Contains(Rights.Users)));
     private const string Cookie = "journali.session";
+    /// <summary>Die Zähler der Fehlversuche bei der Anmeldung (ein Prozess, ein Zähler).</summary>
+    public static readonly LoginBremse Bremse = new();
+    /// <summary>Wie gross der Körper eines Aufrufs ohne Sitzung höchstens sein darf: eine Anmeldung ist ein paar hundert Bytes.</summary>
+    public const long KoerperOhneSitzung = 16 * 1024;
 
     public sealed record LoginBody(string? User, string? Password);
     public sealed record SetupBody(string? User, string? Name, string? Password, string? Code = null);
@@ -292,7 +296,12 @@ public static class Auth
         // Dazu die Dateien der Plugins (/plugins/…): sie liegen ausserhalb von /api und waren offen; ohne Sitzung gibt es nur noch die der Office-Add-ins.
         bool Beginnt(string vorn) => path.StartsWith(vorn, StringComparison.OrdinalIgnoreCase);
         var plugin = Beginnt("/plugins/");
-        if ((!Beginnt("/api") && !plugin) || (plugin && OeffentlichesPlugin(path)) || ApiOhneSitzung(path)) { await next(); return; }
+        if ((!Beginnt("/api") && !plugin) || (plugin && OeffentlichesPlugin(path)) || ApiOhneSitzung(path))
+        {
+            // Wer nicht angemeldet ist, bekommt keinen grossen Körper: Kestrel erlaubt sonst 30 MB, die ein JSON-Aufruf (Anmeldung) in den Speicher läse
+            if (ApiOhneSitzung(path) && ctx.Features.Get<Microsoft.AspNetCore.Http.Features.IHttpMaxRequestBodySizeFeature>() is { IsReadOnly: false } f) f.MaxRequestBodySize = KoerperOhneSitzung;
+            await next(); return;
+        }
         if (!Enabled(c)) { await next(); return; }   // noch kein Benutzer: offen
         var who = Resolve(ctx, c, dir);
         if (who is null) { ctx.Response.StatusCode = 401; await ctx.Response.WriteAsJsonAsync(new { error = "Anmeldung nötig.", template = "Anmeldung nötig.", login = true }); return; }
@@ -422,12 +431,26 @@ public static class Auth
             return Results.Ok(new { user = key, role = u.Role, name = u.Name });
         });
 
-        api.MapPost("/auth/login", (LoginBody body, HttpContext ctx, Catalog c) =>
+        api.MapPost("/auth/login", async (LoginBody body, HttpContext ctx, Catalog c) =>
         {
             var key = Key(body.User); var pw = body.Password ?? "";
+            // Erst die Bremse, dann (und nur dann) die Prüfung des Passworts: sie kostet 210 000 Runden PBKDF2. Gesperrt wird je Name und je Absender.
+            var absender = "ip:" + (ctx.Connection.RemoteIpAddress?.ToString() ?? "?"); var name = "u:" + (key ?? "?");
+            if ((Bremse.Gesperrt(absender) ?? Bremse.Gesperrt(name)) is { } rest)
+            {
+                var sek = (int)Math.Ceiling(rest.TotalSeconds);
+                ctx.Response.Headers.RetryAfter = sek.ToString();
+                return Results.Json(Err("Zu viele Anmeldeversuche — gesperrt für {0} Sekunden.", sek), statusCode: 429);
+            }
             var u = key is null ? null : c.Lesen((_, _) => c.Users.All.GetValueOrDefault(key));
             var stored = key is null ? null : Finde(dir, s => s.Passwords.GetValueOrDefault(key));
-            if (u is null || !u.Enabled || stored is null || !Verify(pw, stored)) { Thread.Sleep(300); return Results.Json(new { error = "Anwender oder Passwort falsch." }, statusCode: 401); }
+            if (u is null || !u.Enabled || stored is null || !Verify(pw, stored))
+            {
+                Bremse.Fehler(absender, LoginBremse.FehlversuchePerAbsender); Bremse.Fehler(name, LoginBremse.FehlversuchePerName);
+                await Task.Delay(300);   // kein Thread.Sleep: eine Flut falscher Anmeldungen hielte sonst Arbeitsthreads fest
+                return Results.Json(new { error = "Anwender oder Passwort falsch." }, statusCode: 401);
+            }
+            Bremse.Erfolg(name);
             StartSession(ctx, dir, key!);
             return Results.Ok(new { user = key, role = u.Role, name = u.Name });
         });

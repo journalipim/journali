@@ -90,6 +90,12 @@ Console.WriteLine($"journali: {rebuilt} Einträge in {sw0.ElapsedMilliseconds} m
 // wird beim ersten Lesen übernommen. Muss vor dem Saatgut stehen: daraus bekommt das Init Team seine Limits.
 var instanz = new Instanz(db);   // Kennung dieser Instanz — steht in der Lizenz, geht nicht in die Sicherung
 builder.Services.AddSingleton(instanz);
+// Uploads: ein Video darf einige hundert MB gross sein. Kestrel erlaubt sonst 30 MB je Anfrage; die Grenze hebt unten nur der Weg der Medien an, und nur für Angemeldete.
+// Einstellbar mit JOURNALI_UPLOAD_MB (Vorgabe 2048)
+var uploadMax = (long.TryParse(builder.Configuration["JOURNALI_UPLOAD_MB"], out var umb) && umb > 0 ? umb : 2048) * 1024 * 1024;
+builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(o => o.MultipartBodyLengthLimit = uploadMax);
+// Obergrenze je Absender im Netz (siehe Begrenzung): eine Flut von einer Adresse bekommt 429
+builder.Services.AddRateLimiter(o => { o.RejectionStatusCode = 429; o.GlobalLimiter = System.Threading.RateLimiting.PartitionedRateLimiter.Create<Microsoft.AspNetCore.Http.HttpContext, string>(ctx => Begrenzung.Partition(ctx)); });
 var licences = new Licences(dataDir, new LicenceStore(db), instanz) { ErsterTag = () => catalog.ErsterTag, Tarife = () => catalog.Tarife };   // ohne Lizenz: Test ab dem ersten Eintrag
 // Abo über den Lizenzserver: seine Adresse ist eingebaut (Core.Licensing.Aussteller.Adresse), geprüft wird mit
 // seinem eingebauten Schlüssel. Der Shop-Schlüssel liegt in jobs/secrets.json
@@ -232,7 +238,14 @@ app.Use(async (ctx, next) =>
 });
 
 // Benutzer & Rollen: ohne Benutzer offen wie bisher; mit Benutzern Sitzung oder Token noetig, X-Actor kommt aus der Sitzung
+app.UseRateLimiter();
 app.Use(Auth.Middleware(catalog, dataDir));
+// Nach der Anmeldung: der Weg der Medien nimmt grosse Dateien an (POST /api/media, PUT /api/media/blob/…); alles andere bleibt bei der Grenze von Kestrel
+app.Use(async (ctx, next) =>
+{
+    if (Begrenzung.IstUpload(ctx.Request) && ctx.Features.Get<Microsoft.AspNetCore.Http.Features.IHttpMaxRequestBodySizeFeature>() is { IsReadOnly: false } f) f.MaxRequestBodySize = uploadMax;
+    await next();
+});
 // Kein Kontingent: der Schreibpfad wirft, die Antwort sagt es sachlich — nicht als Serverfehler
 app.Use(async (ctx, next) =>
 {

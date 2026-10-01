@@ -2900,5 +2900,6 @@
  "Abfrage": "Query",
  "Körper": "Body",
  "keine Treffer": "no matches",
- "{ } Schnittstelle (API)": "{ } Interface (API)"
+ "{ } Schnittstelle (API)": "{ } Interface (API)",
+ "Zu viele Anmeldeversuche — gesperrt für {0} Sekunden.": "Too many sign-in attempts — locked for {0} seconds."
 }
