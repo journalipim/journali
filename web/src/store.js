@@ -10,7 +10,9 @@ const saved = JSON.parse(localStorage.getItem('journali.settings') || '{}')
 // Darstellung, Sichtsprachen, Zellen, Sicht je Knotentyp, Anordnung, Umfang, Attributnamen. Sie stehen am Benutzer im
 // Journal (UserPrefsSet) und kommen mit der Anmeldung an jedem Rechner mit. Alles andere ist Fensterzustand und bleibt
 // im Browser: Serveradresse, Journal auf/zu, zugeklappte Abschnitte, Reihenfolge der Leiste, zuletzt gewählter Knoten.
-const USER_PREFS = ['theme', 'lang', 'viewLocales', 'viewCells', 'viewKey', 'layout', 'scope', 'attrNames']   // lang: Oberflächensprache (24.09.2026)
+const USER_PREFS = ['theme', 'lang', 'viewLocales', 'viewCells', 'viewKey', 'layout', 'scope', 'attrNames', 'bookmarks']   // bookmarks: Lesezeichen auf Knoten (01.10.2026)
+/// So viele Lesezeichen hat eine Person höchstens: der Wert am Benutzer hat 4 000 Zeichen, eine Kennung braucht bis zu 16
+export const MAX_BOOKMARKS = 150   // lang: Oberflächensprache (24.09.2026)
 
 // Sprachen × Kanäle als Zellenliste (Stern je Achse dazu)
 function cellsFrom(locales, channels) { const out = ['|']; for (const c of ['', ...channels]) for (const l of ['', ...locales]) out.push(`${l}|${c}`); return [...new Set(out)] }
@@ -36,6 +38,7 @@ export const store = reactive({
   // 'only' = nur auf dieser Ebene änderbar (weder darüber noch darunter erlaubt). Drei Stufen, jede in der vorigen enthalten.
   scope: saved.scope ?? (saved.editableOnly ? 'can' : 'all'),
   attrNames: saved.attrNames ?? 'label',             // Attributnamen: label | key | both
+  bookmarks: Array.isArray(saved.bookmarks) ? saved.bookmarks.filter(x => typeof x === 'string') : [],   // Lesezeichen: Kennungen der Knoten, in der Reihenfolge des Setzens
   railOrder: Array.isArray(saved.railOrder) ? saved.railOrder : null,   // Reihenfolge der Leiste links, 'spacer' trennt oben/unten
   railOff: Array.isArray(saved.railOff) ? saved.railOff : [],   // Plugins, die nicht in der Leiste sind
   undo: {},                                         // ↶/↷ je Knoten: id → { history, redo } — im Store, weil NodeView je Knoten neu gebaut wird
@@ -87,7 +90,7 @@ export const store = reactive({
     return this.attrNames === 'key' ? def.key : this.attrNames === 'both' ? `${label} ⟨${def.key}⟩` : label
   },
   save() {
-    localStorage.setItem('journali.settings', JSON.stringify({ actor: this.actor, theme: this.theme, lang: this.lang, viewLocales: this.viewLocales, viewCells: this.viewCells, journalOpen: this.journalOpen, viewKey: this.viewKey, layout: this.layout, scope: this.scope, attrNames: this.attrNames, railOrder: this.railOrder, railOff: this.railOff, collapsed: this.collapsed }))
+    localStorage.setItem('journali.settings', JSON.stringify({ actor: this.actor, theme: this.theme, lang: this.lang, viewLocales: this.viewLocales, viewCells: this.viewCells, journalOpen: this.journalOpen, viewKey: this.viewKey, layout: this.layout, scope: this.scope, attrNames: this.attrNames, bookmarks: this.bookmarks, railOrder: this.railOrder, railOff: this.railOff, collapsed: this.collapsed }))
     this.applyTheme()
     this.savePrefs()
   },
@@ -115,6 +118,17 @@ export const store = reactive({
     this._prefsSent = Object.fromEntries(USER_PREFS.map(k => [k, JSON.stringify(this[k] ?? null)]))
     this.applyTheme()
     this.applyLang()
+  },
+
+  /// Lesezeichen: ein Knoten, den die Person wiederfinden will. Sie stehen am Benutzer (mit der Anmeldung an jedem Rechner), ohne Anmeldung im Browser.
+  isBookmarked(id) { return this.bookmarks.includes(id) },
+  /// Setzt oder entfernt das Lesezeichen; liefert den Zustand danach, oder null, wenn die Höchstzahl erreicht ist
+  toggleBookmark(id) {
+    const i = this.bookmarks.indexOf(id)
+    if (i >= 0) this.bookmarks.splice(i, 1)
+    else { if (this.bookmarks.length >= MAX_BOOKMARKS) return null; this.bookmarks.push(id) }
+    this.save()
+    return i < 0
   },
 
   /// Oberflächensprache setzen: gewählt oder die des Browsers; die Sprachdatei holt i18n.setLang

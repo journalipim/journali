@@ -29,6 +29,12 @@ function run(item) {
   menu.close()
   item.action?.()
 }
+/// Das Zeichen am Zeilenende (item.end): ein eigener Klick, ohne den Eintrag selbst zu wählen. Eine neue Liste als Ergebnis ersetzt die Einträge, das Menü bleibt offen.
+async function runEnd(item) {
+  const neu = await item.end?.action?.()
+  if (Array.isArray(neu)) { menu.items = neu.filter(Boolean); active.value = -1; sub.value = -1 }
+  else menu.close()
+}
 async function openSub(i) {
   sub.value = i; subActive.value = -1
   await nextTick()
@@ -79,6 +85,7 @@ onUnmounted(() => { window.removeEventListener('mousedown', onDown); window.remo
           <span class="label">{{ it.label }}</span>
           <span v-if="it.items && !it.disabled" class="hint">▸</span>
           <span v-else-if="it.hint" class="hint">{{ it.hint }}</span>
+          <span v-if="it.end" class="end" :title="it.end.title ?? ''" @click.stop="runEnd(it)">{{ it.end.icon ?? '×' }}</span>
         </div>
       </template>
     </div>
@@ -96,12 +103,14 @@ onUnmounted(() => { window.removeEventListener('mousedown', onDown); window.remo
 </template>
 
 <style scoped>
-.ctx { position: fixed; z-index: 30; min-width: 220px; background: var(--pane); border: 1px solid var(--line); border-radius: 6px; box-shadow: 0 8px 24px rgba(0,0,0,.35); padding: 4px; outline: none; font-size: 13px; }
+.ctx { position: fixed; z-index: 30; min-width: 220px; max-width: calc(100vw - 16px); background: var(--pane); border: 1px solid var(--line); border-radius: 6px; box-shadow: 0 8px 24px rgba(0,0,0,.35); padding: 4px; outline: none; font-size: 13px; }
 .item { display: flex; align-items: center; gap: 8px; padding: 5px 10px; border-radius: 4px; cursor: default; white-space: nowrap; }
 .item.active { background: var(--accent-soft); }
 .item.disabled { opacity: .4; }
 .item.danger .label { color: var(--neg); }
 .icon { width: 18px; text-align: center; color: var(--muted); }
-.hint { margin-left: auto; color: var(--muted); font-size: 11px; padding-left: 16px; }
+.hint { margin-left: auto; color: var(--muted); font-size: 11px; padding-left: 16px; max-width: 420px; overflow: hidden; text-overflow: ellipsis; }
+.end { margin-left: 8px; width: 18px; text-align: center; border-radius: 3px; color: var(--muted); cursor: pointer; }
+.end:hover { color: var(--neg); background: var(--accent-soft); }
 .sep { height: 1px; background: var(--line); margin: 4px 6px; }
 </style>

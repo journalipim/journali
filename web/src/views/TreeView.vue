@@ -5,7 +5,7 @@
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '../api.js'
-import { store } from '../store.js'
+import { store, MAX_BOOKMARKS } from '../store.js'
 import { setStatus as setStatusScoped, setStatusAb } from '../status.js'
 import { dialog as ask } from '../dialog.js'
 import { tree, icon } from '../tree.js'
@@ -114,8 +114,17 @@ const creating = ref(null)     // null | 'group' | 'product' | 'variant'
 const form = ref({})
 
 onMounted(async () => { if (!tree.loaded) await tree.load(); reveal() })
-// Der Pfad zum gewählten Knoten ist immer aufgeklappt.
-function reveal() { if (props.id) for (const a of tree.ancestors(props.id)) tree.expand(a.id) }
+// Der Pfad zum gewählten Knoten ist immer aufgeklappt, und der Knoten liegt im sichtbaren Teil der Liste: ein Lesezeichen, ein Link oder die Suche öffnen
+// Knoten, die weit unten oder oben im Baum stehen (01.10.2026). Was schon im Bild ist, bleibt, wo es ist — ein Klick in den Baum lässt ihn nicht springen.
+async function reveal() {
+  if (!props.id) return
+  for (const a of tree.ancestors(props.id)) tree.expand(a.id)
+  await nextTick()
+  const box = list.value, zeile = box?.querySelector('.node.selected')
+  if (!box || !zeile) return
+  const z = zeile.getBoundingClientRect(), b = box.getBoundingClientRect()
+  if (z.top < b.top || z.bottom > b.bottom) zeile.scrollIntoView({ block: 'center' })
+}
 watch(() => props.id, reveal)
 // merken, wo man war — der Leistenknopf ▣ Baum kehrt dorthin zurück (auch nach Modell, Plugin …)
 watch(() => props.id, id => { if (id) { store.lastNode = id; try { sessionStorage.setItem('journali.lastNode', id) } catch {} } }, { immediate: true })
@@ -608,20 +617,31 @@ async function contextMenu(e, r) {
         : { label: t_('Duplizieren'), icon: '⧉', key: 'd', hint: t_('ohne SKU/Freigaben'), disabled: r.role === 'variant' && Object.keys(r.axisValues).length > 0, action: () => duplicate(r, false) },
     !sel && r.role !== 'variant' && kids ? { label: t_('Mit {0} darunter duplizieren', [countBelow(r.id)]), icon: '⧉', key: 't', action: () => duplicate(r, true) } : null,
     { sep: true },
-    ...(r.role !== 'rubric' ? [...(store.model?.statuses ?? []).map(s => st(s.key)),
+    // Workflow und Status je ein Untermenü (01.10.2026): das Modell kennt beliebig viele Status, sie standen alle einzeln im Menü
+    ...(wfItems.length ? [{ label: t_('Workflow') + (sel ? ` (${sel.length})` : ''), icon: '⚑', items: wfItems }] : []),
+    ...(r.role !== 'rubric' ? [{ label: t_('Status') + (sel ? ` (${sel.length})` : ''), icon: '◉', items: [
+      ...(store.model?.statuses ?? []).map(s => st(s.key)).filter(Boolean),   // Status aus dem Modell, ohne den, der schon gilt
       // Ein Status gilt ab einem Tag: zum Jahreswechsel auslaufen, einen Stand nachtragen (28.09.2026)
+      { sep: true },
       { label: t_('Status ab Datum …'), icon: '⏱', hint: r.statusNext ? `${r.statusNextAb} ${store.statusLabel(r.statusNext)}` : '', action: () => statusAb(r), ...only1 },
-      { sep: true }] : []),   // Status aus dem Modell
-    ...(wfItems.length ? [{ label: t_('Workflow') + (sel ? ` (${sel.length})` : ''), icon: '⚑', items: wfItems }, { sep: true }] : []),
+    ] }] : []),
+    ...(wfItems.length || r.role !== 'rubric' ? [{ sep: true }] : []),
     { label: picked.value.has(r.id) ? t_('Abwählen') : t_('Auswählen'), icon: '☑', key: 'm', hint: 'Strg+Klick', action: () => { const s = new Set(picked.value); s.has(r.id) ? s.delete(r.id) : s.add(r.id); picked.value = s } },
     picked.value.size ? { label: t_('Auswahl aufheben ({0})', [picked.value.size]), icon: '☐', key: 'Escape', hint: 'Esc', action: () => { picked.value = new Set() } } : null,
     { label: t_('Im Journal zeigen'), icon: '≡', key: 'j', action: () => router.push({ path: '/journal', query: { q: r.id } }), ...only1 },
+    // Lesezeichen (01.10.2026): der Knoten steht danach unter ⚑ Aufgaben → Lesezeichen
+    { label: store.isBookmarked(r.id) ? t_('Lesezeichen entfernen') : t_('Lesezeichen setzen'), icon: '⚐', key: 'l', hint: store.isBookmarked(r.id) ? '⚐' : '', action: () => bookmark(r), ...only1 },
     ...(topicMenus.length ? [{ sep: true }, ...topicMenus] : []),
     ...(scriptMenu.length ? [{ label: t_('Skripte') + (sel ? ` (${sel.length})` : ''), icon: 'λ', items: scriptMenu }] : []),
     { sep: true },
     sel ? { label: t_('{0} Ausgewählte zurückziehen{1}', [sel.length, sel.reduce((k, x) => k + countBelow(x.id), 0) ? ' ' + t_('(mit {0} darunter)', [sel.reduce((k, x) => k + countBelow(x.id), 0)]) : '']), icon: '🗑', key: 'Delete', danger: true, action: () => retireAll(sel) }
         : { label: kids ? t_('Mit {0} darunter zurückziehen', [countBelow(r.id)]) : t_('Zurückziehen'), icon: '🗑', key: 'Delete', danger: true, action: () => retire(r) },
   ])
+}
+function bookmark(r) {
+  const gesetzt = store.toggleBookmark(r.id)
+  if (gesetzt === null) store.toast(t_('Höchstens {0} Lesezeichen', [MAX_BOOKMARKS]))
+  else store.toast(gesetzt ? t_('✓ Lesezeichen gesetzt') : t_('Lesezeichen entfernt'), 'ok')
 }
 function onGlobalKey(e) {
   if (e.key === '/' && !['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) { e.preventDefault(); search.value?.focus() }

@@ -1,6 +1,8 @@
 // Ein Kontextmenü für die ganze Oberfläche: wer eines braucht, ruft
-// menu.open(event, items). Einträge: { label, icon?, key?, action, disabled?, danger? }, { sep: true }
+// menu.open(event, items). Einträge: { label, icon?, key?, action, disabled?, danger?, end? }, { sep: true }
 // oder ein Untermenü { label, icon?, items: [...] } (Plugins je Plugin).
+// end: { icon, title, action } — ein Zeichen am Zeilenende (✕ zum Entfernen), das für sich anklickbar ist. Liefert action eine neue Liste von Einträgen,
+// bleibt das Menü offen und zeigt sie; sonst schliesst es.
 import { reactive } from 'vue'
 
 export const menu = reactive({
