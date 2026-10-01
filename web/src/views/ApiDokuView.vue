@@ -86,6 +86,10 @@ function beispiel(a) {
 </template>
 
 <style scoped>
+/* 299 Aufrufe in einer Liste: die Bereichszeilen dicht an dicht, nicht mit dem Abstand eines Abschnitts */
+.bereich { padding: 0; }
+.bereich h2 { margin: 0; }
+.bereich > div { padding-bottom: 4px; }
 .aufruf:hover > .kopf { background: var(--accent-soft); }
 .chip.recht { font-size: 11px; }
 </style>
