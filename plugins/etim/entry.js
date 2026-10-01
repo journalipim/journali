@@ -15,12 +15,11 @@ function el(tag, attrs = {}, ...kids) { const e = document.createElement(tag); f
 const ICON = { group: '▣', product: '▦', variant: '◆' }
 const SEV = { error: '✗', warn: '⚠', info: 'ℹ', ok: '✓' }
 const TYPE = { Alphanumeric: t_('Liste'), Numeric: t_('Zahl'), Range: t_('Bereich'), Logical: 'Ja/Nein' }
-const DEFAULTS = { classAttr: 'etim_class', unknownAs: 'UN', requireClass: false }
-/// Die Gruppe des Systems heisst class_etim (sie trägt das Klassenattribut; die Gruppe einer Klasse class_etim_<klasse>). Ein Bestand von früher mit
-/// der Gruppe etim behält sie, bis er umgestellt oder zurückgenommen ist — sonst bliebe seine Gruppe ohne Plugin zurück.
-const SYSTEMGRUPPE = 'class_etim', FRUEHER = 'etim'
+const DEFAULTS = { classAttr: 'class_etim', unknownAs: 'UN', requireClass: false }
+/// Gruppe und Klassenattribut des Systems heissen class_etim (die Gruppe einer Klasse class_etim_<klasse>); die Gruppe trägt das Klassenattribut.
+const SYSTEMGRUPPE = 'class_etim'
 const hatGruppe = k => (globalThis.journali?.store?.model?.groups ?? []).some(g => g.key === k)
-const groupKey = () => cache.settings.group || (hatGruppe(FRUEHER) && !hatGruppe(SYSTEMGRUPPE) ? FRUEHER : SYSTEMGRUPPE)
+const groupKey = () => cache.settings.group || SYSTEMGRUPPE
 /// Die Gruppe einer Klasse: die Gruppe des Systems, ein Unterstrich, der Code in Kleinschrift — so legt der Server sie an (ClassificationApi.ClassGroupKey).
 /// Jede Klasse hat ihre Attributgruppe mit ihren Attributen; die Gruppe des Systems trägt nur das Klassenattribut.
 const classGroupKey = code => `${groupKey()}_${String(code ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '')}`
@@ -1003,11 +1002,20 @@ async function mount(root, ctx) {
   return () => {}
 }
 
+/// Einstellungen aus früheren Fassungen nennen eine Gruppe oder ein Klassenattribut, die es im Modell nicht (mehr) gibt: es gelten wieder die Namen des Systems
+async function veralteteEinstellungen(ctx) {
+  const m = ctx.store.model; let geaendert = false
+  if (cache.settings.group && !(m?.groups ?? []).some(g => g.key === cache.settings.group)) { delete cache.settings.group; geaendert = true }
+  if (cache.settings.classAttr !== DEFAULTS.classAttr && !(m?.attributes ?? []).some(a => a.key === cache.settings.classAttr)) { cache.settings.classAttr = DEFAULTS.classAttr; geaendert = true }
+  if (geaendert) await ctx.data.set('settings', cache.settings)
+}
+
 // Einmal beim Einschalten. Die Attribute selbst entstehen erst mit der
 // ersten Klasse — die Gruppe allein kostet nichts: die ETIM-Attribute tragen Bedingungen und gelten nur, wo ihre Klasse gilt.
 async function install(ctx) {
   const { api, store, tree } = ctx; const ops = modelOps(ctx)
   await cache.loaded; if (!tree.loaded) await tree.load()
+  await veralteteEinstellungen(ctx)
   // Die Systemobjekte des Plugins, ohne die es nicht arbeiten kann: die Gruppe ETIM und das Klassenattribut. Der Server meldet sie an — solange
   // das Plugin an ist, lassen sie sich nicht zurückziehen.
   const sys = ops.system()

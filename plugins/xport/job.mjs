@@ -28,7 +28,7 @@ const api = { get: async p => { const r = await fetch(server + p, { headers }); 
   if (profile.etim !== false) {
     try {
       const etim = await import('../etim/core.mjs')
-      const settings = { classAttr: 'etim_class', unknownAs: 'UN', ...((await api.get('/api/plugins/etim/data/settings').catch(() => null)) ?? {}) }
+      const settings = { classAttr: 'class_etim', unknownAs: 'UN', ...((await api.get('/api/plugins/etim/data/settings').catch(() => null)) ?? {}) }
       const map = (await api.get('/api/plugins/etim/data/map').catch(() => null)) ?? {}
       for (const [k, v] of Object.entries((await api.get('/api/plugins/etim/data/mapping').catch(() => null)) ?? {})) if (v?.to && !/ähnlich|vielleicht/.test(v.why ?? '') && !map[k.toUpperCase()]) map[k.toUpperCase()] = v.to   // Zuordnung aus der Datenanalyse
       const classes = new Map()

@@ -164,7 +164,7 @@ function searchBricks(bricks, hierarchy, query, locale = "en", limit = 60) {
   }
   return out.sort((a, b) => b.score - a.score || a.brick.code.localeCompare(b.brick.code)).slice(0, limit).map((x) => x.brick);
 }
-const classAttr = () => "gpc_class";
+const classAttr = () => "class_gpc";
 const GROUP = "class_gpc";
 const attrKey = (code) => `gpc${code}`;
 function systemSpec(settings = {}) {
@@ -1576,6 +1576,17 @@ async function install(ctx) {
   const { api: api2, store: store2, tree: tree2 } = ctx;
   if (!tree2.loaded) await tree2.load();
   const settings = await api2.get("/api/plugins/gpc/data/settings").catch(() => null) ?? {};
+  const m2 = store2.model;
+  let veraltet = false;
+  if (settings.group && !(m2?.groups ?? []).some((g) => g.key === settings.group)) {
+    delete settings.group;
+    veraltet = true;
+  }
+  if (settings.classAttr && !(m2?.attributes ?? []).some((a) => a.key === settings.classAttr)) {
+    delete settings.classAttr;
+    veraltet = true;
+  }
+  if (veraltet) await api2.post("/api/plugins/gpc/data/settings", settings, "PUT");
   const sys = systemSpec(settings);
   const fehlt = !(store2.model?.groups ?? []).some((g) => g.key === sys.group) || !(store2.model?.attributes ?? []).some((a) => a.key === sys.classAttr);
   if (fehlt && !(await ctx.system?.ankuendigen?.({ label: "GPC", text: t("Das Plugin legt die Attributgruppe {0} mit dem Attribut {1} an und hängt die Gruppe an die Wurzeln. Ohne sie arbeitet es nicht, und solange es an ist, lassen sie sich nicht zurückziehen.", [sys.group, sys.classAttr]) }) ?? true)) return false;

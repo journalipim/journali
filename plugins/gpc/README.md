@@ -16,7 +16,7 @@ Im Repo liegen keine GPC-Daten; `sample.json` ist erfunden und hat dieselbe Form
    Eine weitere Sprache (eine andere Datei derselben Fassung) ergänzt die Titel, die Struktur bleibt.
 3. **Suchen** — nach Code, Titel, Weg und Definition; alle Wörter müssen passen.
 4. **Zuweisen** — der Server legt an, was fehlt (`/api/classification/assign`): die Gruppe `gpc` (sie trägt das Klassenattribut
-   `gpc_class` mit der Liste der Bricks), die Gruppe des Bricks `gpc_<brick>` (Bezeichnung: Code und Name) mit ihren Attributen — je
+   `class_gpc` mit der Liste der Bricks), die Gruppe des Bricks `gpc_<brick>` (Bezeichnung: Code und Name) mit ihren Attributen — je
    GPC-Attribut ein Listenattribut `gpc<code>`, das, wo es schon besteht, nur der Gruppe zugeordnet wird — und hängt die Gruppe des
    Bricks an den Knoten. Hat ein Attribut an einem anderen Brick weitere Werte, ergänzt der Server die Liste.
 5. **Am Knoten** — das Band ⌗ GPC zeigt die Klasse (eigen oder geerbt) und die Zahl ihrer Attribute; Knöpfe: Klasse wählen (Dialog mit

@@ -194,8 +194,8 @@ async function suggestScopes(catalog, rootRow, scopes, have) {
   let code = null
   try {
     const n = await api.get(`/api/nodes/${encodeURIComponent(rootRow.id)}`)
-    code = n.values?.find(v => v.attribute === 'etim_class' && !v.locale && !v.channel && !v.row)?.value ?? null
-    if (!code) for (const a of n.ancestors ?? []) { const v = a.values?.find(v => v.attribute === 'etim_class' && !v.locale && !v.channel)?.value; if (v) { code = v; break } }
+    code = n.values?.find(v => v.attribute === 'class_etim' && !v.locale && !v.channel && !v.row)?.value ?? null
+    if (!code) for (const a of n.ancestors ?? []) { const v = a.values?.find(v => v.attribute === 'class_etim' && !v.locale && !v.channel)?.value; if (v) { code = v; break } }
   } catch { }
   let cls = null
   if (code) { try { const rel = await api.get('/api/plugins/etim/data/release'); const ver = rel?.version ?? (rel?.number != null ? String(rel.number) : null); cls = (ver != null ? await api.get('/api/plugins/etim/data/' + encodeURIComponent(`class:${ver}:${code}`)).catch(() => null) : null) ?? await api.get('/api/plugins/etim/data/' + encodeURIComponent('class:' + code)).catch(() => null) } catch { } }

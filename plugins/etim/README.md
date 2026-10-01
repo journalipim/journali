@@ -19,7 +19,7 @@ erlaubten Werten, alles mit Übersetzungen (`de-DE`, `EN`, …).
    Datensatz an: Name, Gruppe, Version, alle ETIM-Attribute mit Typ, Einheit (Code, Abkürzung,
    Name) und Werten (EV-Code, Namen). Alles aufgelöst — Job, Prüfung und Export brauchen die
    Freigabe nicht mehr. „aus dem Baum“ übernimmt alle Klassen, die im Klassenattribut stehen.
-3. **Attribute anlegen** — Klassenattribut `etim_class` (Werteliste der übernommenen Klassen,
+3. **Attribute anlegen** — Klassenattribut `class_etim` (Werteliste der übernommenen Klassen,
    vererbbar, Gruppe ETIM) und je Klasse eine Attributgruppe `etim_<klasse>` („EC002712 Name“) mit ihren Attributen: ein
    Attribut `ef…` entsteht, wo es noch keins gibt, sonst wird das vorhandene nur dieser Gruppe zugeordnet.
    Numeric → `decimal` mit Einheit (vorhandene Einheit nach Abkürzung, sonst `u_<abk>`),
@@ -103,7 +103,7 @@ Zuordnung) stehen unter der Übersicht, zugeklappt.
 |---|---|
 | `release` | zuletzt gelesene Freigabe |
 | `class:<EC>` | Klasse aufgelöst (s. o.) |
-| `settings` | `group` (Attributgruppe der ETIM-Daten, Vorgabe `etim` — gibt es sie nicht, wird sie angelegt; eine vorhandene heißt: dort zuordnen, „↻ in … zuordnen“ rät nach Namen), `classAttr` (Vorgabe `etim_class`), `unknownAs` (UN / NA / skip), `requireClass` |
+| `settings` | `group` (Attributgruppe der ETIM-Daten, Vorgabe `class_etim` — gibt es sie nicht, wird sie angelegt; eine vorhandene heißt: dort zuordnen, „↻ in … zuordnen“ rät nach Namen), `classAttr` (Vorgabe `class_etim`), `unknownAs` (UN / NA / skip), `requireClass` |
 | `map` | EF-Code → Attributschlüssel, wo nicht das eigene `ef…` gilt |
 
 `sample.xml` ist eine kleine IXF-Datei zum Ausprobieren (2 Klassen, 4 ETIM-Attribute — erfunden).

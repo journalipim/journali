@@ -142,7 +142,7 @@ export function searchBricks(bricks, hierarchy, query, locale = 'en', limit = 60
 }
 
 // ---- Für den Server (ClassificationApi): die neutrale Beschreibung
-export const classAttr = () => 'gpc_class'
+export const classAttr = () => 'class_gpc'
 export const GROUP = 'class_gpc'   // die Gruppe des Systems; die einer Klasse heisst class_gpc_<brick>
 /// Der Schlüssel des Attributs zu einem GPC-Attribut
 export const attrKey = code => `gpc${code}`

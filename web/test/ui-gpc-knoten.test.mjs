@@ -25,9 +25,9 @@ globalThis.fetch = async (url, opts = {}) => {
 
 const MODELL = {
   masterLocale: 'de', locales: [{ code: 'de' }], views: [],
-  groups: [{ key: 'class_gpc', attributes: ['gpc_class'] }, { key: 'class_gpc_19900001', attributes: ['gpc29900001', 'gpc29900002'] }],
-  lists: [{ key: 'gpc_class', columns: ['group'], values: [{ value: '19900001', label: { de: 'Sample Lamps' } }, { value: '19900002', label: { de: 'Sample Cables' } }] }],
-  attributes: [{ key: 'gpc_class', type: 'enum', list: 'gpc_class', group: 'class_gpc' }],
+  groups: [{ key: 'class_gpc', attributes: ['class_gpc'] }, { key: 'class_gpc_19900001', attributes: ['gpc29900001', 'gpc29900002'] }],
+  lists: [{ key: 'class_gpc', columns: ['group'], values: [{ value: '19900001', label: { de: 'Sample Lamps' } }, { value: '19900002', label: { de: 'Sample Cables' } }] }],
+  attributes: [{ key: 'class_gpc', type: 'enum', list: 'class_gpc', group: 'class_gpc' }],
 }
 store.model = MODELL; store.poll = async () => {}
 tree.rows = BAUM; tree.byId = new Map(BAUM.map(r => [r.id, r])); tree.loaded = true; tree.load = async () => {}
@@ -44,7 +44,7 @@ async function band(nodeId) {
 }
 
 test('Band an einem Knoten mit eigener Klasse: Name, Zahl der Attribute in ihrer Gruppe und die Knöpfe', async () => {
-  knoten = { values: [{ attribute: 'gpc_class', value: '19900001' }], ancestors: [], groups: gruppen('class_gpc', 'class_gpc_19900001') }
+  knoten = { values: [{ attribute: 'class_gpc', value: '19900001' }], ancestors: [], groups: gruppen('class_gpc', 'class_gpc_19900001') }
   const { head, body, zu, knoepfe } = await band('g1')
   assert.equal(head.textContent, '· 19900001 Sample Lamps')
   assert.match(body.textContent, /19900001 Sample Lamps/); assert.match(body.textContent, /2 Attribute/)
@@ -53,7 +53,7 @@ test('Band an einem Knoten mit eigener Klasse: Name, Zahl der Attribute in ihrer
 })
 
 test('Band an einem Knoten mit geerbter Klasse: ohne ✕, mit dem Hinweis woher', async () => {
-  knoten = { values: [], ancestors: [{ id: 'g1', label: 'Leuchten', values: [{ attribute: 'gpc_class', value: '19900001' }] }], groups: gruppen('class_gpc', 'class_gpc_19900001') }
+  knoten = { values: [], ancestors: [{ id: 'g1', label: 'Leuchten', values: [{ attribute: 'class_gpc', value: '19900001' }] }], groups: gruppen('class_gpc', 'class_gpc_19900001') }
   const { head, body, zu, knoepfe } = await band('p1')
   assert.equal(head.textContent, '· 19900001 Sample Lamps ↑')
   assert.match(body.textContent, /↑ Leuchten/)
@@ -74,7 +74,7 @@ test('Band ohne Klasse und ohne Gruppe: „Klasse zuweisen“ und „Gruppe anh�
 })
 
 test('gilt die Gruppe der Klasse hier nicht, bietet das Band sie an', async () => {
-  knoten = { values: [{ attribute: 'gpc_class', value: '19900001' }], ancestors: [], groups: gruppen('class_gpc') }
+  knoten = { values: [{ attribute: 'class_gpc', value: '19900001' }], ancestors: [], groups: gruppen('class_gpc') }
   const { body, zu, knoepfe } = await band('p2')
   assert.deepEqual(knoepfe(), ['⌗ andere Klasse …', '✕ Klasse', '⌗ Gruppe class_gpc_19900001 anhängen'])
   const vorher = calls.length
@@ -84,7 +84,7 @@ test('gilt die Gruppe der Klasse hier nicht, bietet das Band sie an', async () =
 })
 
 test('gibt es die Gruppe der Klasse nicht mehr, führt das Band zur Wahl der Klasse statt sie anzuhängen', async () => {
-  knoten = { values: [{ attribute: 'gpc_class', value: '19900002' }], ancestors: [], groups: gruppen('class_gpc') }
+  knoten = { values: [{ attribute: 'class_gpc', value: '19900002' }], ancestors: [], groups: gruppen('class_gpc') }
   const { body, zu, knoepfe } = await band('p2')
   assert.deepEqual(knoepfe(), ['⌗ andere Klasse …', '✕ Klasse'], 'die Gruppe class_gpc_19900002 gibt es im Modell nicht')
   assert.ok(body.querySelector('button.primary'), 'die Wahl ist der Weg')
@@ -92,13 +92,13 @@ test('gibt es die Gruppe der Klasse nicht mehr, führt das Band zur Wahl der Kla
 })
 
 test('die eigene Klasse entfernen: nach der Rückfrage ruft das Band den Server, der auch die Gruppe abnimmt', async () => {
-  knoten = { values: [{ attribute: 'gpc_class', value: '19900001' }], ancestors: [], groups: gruppen('class_gpc', 'class_gpc_19900001') }
+  knoten = { values: [{ attribute: 'class_gpc', value: '19900001' }], ancestors: [], groups: gruppen('class_gpc', 'class_gpc_19900001') }
   const { body, zu } = await band('g1')
   dialog.confirm = async () => true
   const vorher = calls.length
   ;[...body.querySelectorAll('button')].find(b => /✕ Klasse/.test(b.textContent)).click(); await ruhe()
   const c = calls.slice(vorher).find(x => x.path === '/api/classification/clear')
-  assert.equal(c.method, 'POST'); assert.deepEqual(c.body, { node: 'g1', system: { group: 'class_gpc', classAttr: 'gpc_class' } })
+  assert.equal(c.method, 'POST'); assert.deepEqual(c.body, { node: 'g1', system: { group: 'class_gpc', classAttr: 'class_gpc' } })
   zu()
 })
 

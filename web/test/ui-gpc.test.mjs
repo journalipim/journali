@@ -27,7 +27,7 @@ function server({ assign = {}, migrate = null, node = { values: [], ancestors: [
     if (path === '/api/plugins/gpc/data' && method === 'GET') out = daten
     else if (path === '/api/plugins/gpc/data' && method === 'PUT') Object.assign(daten, body)
     else if (path.startsWith('/api/plugins/gpc/data/') && method === 'PUT') daten[decodeURIComponent(path.split('/').pop())] = body
-    else if (path === '/api/classification/assign') out = { group: 'class_gpc', classAttr: 'gpc_class', attributes: 2, groupAttached: true, readiness: { ready: true, groupExists: true, groupOn: true, missing: [] }, ...assign }
+    else if (path === '/api/classification/assign') out = { group: 'class_gpc', classAttr: 'class_gpc', attributes: 2, groupAttached: true, readiness: { ready: true, groupExists: true, groupOn: true, missing: [] }, ...assign }
     else if (path === '/api/classification/migrate') out = body.dryRun ? (migrate ?? { groups: 0, attributes: 0, nodes: 0 }) : { groups: 2, attributes: 5, nodes: 3 }
     else if (path.endsWith('/table')) out = tabelle
     else if (path.startsWith('/api/nodes/')) out = node
@@ -99,7 +99,7 @@ test('suchen, einen Brick wählen, zuweisen: der Server bekommt Klasse, System u
   await knopf(w, '✓ zuweisen').trigger('click'); await ruhe()
   const a = calls.find(c => c.path === '/api/classification/assign')
   assert.equal(a.body.node, 'p1'); assert.equal(a.body.class, '19900001')
-  assert.deepEqual([a.body.system.group, a.body.system.classAttr, a.body.system.ownPattern], ['class_gpc', 'gpc_class', '^gpc\\d+$'])
+  assert.deepEqual([a.body.system.group, a.body.system.classAttr, a.body.system.ownPattern], ['class_gpc', 'class_gpc', '^gpc\\d+$'])
   assert.deepEqual(a.body.features.map(f => [f.key, f.type, f.values.length, f.classes]), [['gpc29900001', 'enum', 3, ['19900001', '19900002']], ['gpc29900002', 'enum', 2, ['19900001']]])
   assert.deepEqual(a.body.classes.map(c => c.code).sort(), ['19900001', '19900002', '19900003'], 'die Liste der Klassen gibt es noch nicht: alle gehen mit')
 })
@@ -118,10 +118,10 @@ test('durchsehen: Segment › Family › Class › Brick mit Zahlen, ein Klick w
 })
 
 test('der Knoten steht schon da — mit der Klasse, die dort gilt, eigen oder geerbt', async () => {
-  const eigen = await mitDaten('p1', { node: { values: [{ attribute: 'gpc_class', value: '19900001' }], ancestors: [] } })
+  const eigen = await mitDaten('p1', { node: { values: [{ attribute: 'class_gpc', value: '19900001' }], ancestors: [] } })
   assert.match(eigen.w.text(), /gilt hier: 19900001 Sample Lamps/)
   assert.doesNotMatch(eigen.w.text(), /Sample Lamps ↑/)
-  const geerbt = await mitDaten('p1', { node: { values: [], ancestors: [{ label: 'Leuchten', values: [{ attribute: 'gpc_class', value: '19900002' }] }] } })
+  const geerbt = await mitDaten('p1', { node: { values: [], ancestors: [{ label: 'Leuchten', values: [{ attribute: 'class_gpc', value: '19900002' }] }] } })
   assert.match(geerbt.w.text(), /gilt hier: 19900002 Sample Cables ↑/)
   const keine = await mitDaten('p1')
   assert.match(keine.w.text(), /hier gilt noch keine Klasse/)
@@ -130,10 +130,10 @@ test('der Knoten steht schon da — mit der Klasse, die dort gilt, eigen oder ge
 test('Umfeld: die Klassen der Geschwister und der Knoten darunter, die häufigste zuerst, ein Klick wählt sie', async () => {
   // derselbe Stellvertreter antwortet auf beide Fragen (Geschwister, darunter): jede Klasse zählt zweimal
   const tabelle = { rows: [
-    { row: { id: 'p2' }, values: { gpc_class: { value: '19900002', own: true } } },
-    { row: { id: 'p3' }, values: { gpc_class: { value: '19900002', own: true } } },
-    { row: { id: 'p4' }, values: { gpc_class: { value: '19900001', own: true } } },
-    { row: { id: 'p1' }, values: { gpc_class: { value: '19900003', own: true } } },
+    { row: { id: 'p2' }, values: { class_gpc: { value: '19900002', own: true } } },
+    { row: { id: 'p3' }, values: { class_gpc: { value: '19900002', own: true } } },
+    { row: { id: 'p4' }, values: { class_gpc: { value: '19900001', own: true } } },
+    { row: { id: 'p1' }, values: { class_gpc: { value: '19900003', own: true } } },
   ] }
   const { w } = await mitDaten('p1', { tabelle })
   const zeilen = w.findAll('.pick').filter(p => /im Umfeld/.test(p.text()))

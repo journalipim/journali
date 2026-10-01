@@ -235,7 +235,7 @@ test('Bestand der früheren Bauart: das Band bietet die Umstellung an und ruft d
   assert.ok(!(await bandKnoepfe({ ...ctx })).some(k => /umstellen/.test(k.text)), 'ohne Bestand der früheren Bauart keine Umstellung')
 })
 
-test('install beim Einschalten: Gruppe etim anlegen und an die Wurzel hängen', async () => {
+test('install beim Einschalten: Gruppe class_etim anlegen und an die Wurzel hängen (die veraltete Einstellung „etim“ gilt nicht mehr)', async () => {
   const mod = await import('../../plugins/etim/entry.js')
   const calls = []
   const groups = MODEL.groups; MODEL.groups = groups.filter(g => g.key !== 'etim')   // Gruppe fehlt im Modell
@@ -247,21 +247,21 @@ test('install beim Einschalten: Gruppe etim anlegen und an die Wurzel hängen', 
   // das Anlegen im Modell macht der Server; beim Einschalten entstehen die Systemobjekte: die Gruppe und das Klassenattribut
   const ensure = calls.find(([p]) => p === '/api/classification/ensure')
   assert.ok(ensure, 'Gruppe angefordert: ' + JSON.stringify(calls.map(c => c[0])))
-  assert.equal(ensure[1].groupOnly, false, 'die Systemobjekte entstehen ganz: Gruppe und Klassenattribut'); assert.equal(ensure[1].system.group, 'etim'); assert.equal(ensure[1].system.plugin, 'etim')
+  assert.equal(ensure[1].groupOnly, false, 'die Systemobjekte entstehen ganz: Gruppe und Klassenattribut'); assert.equal(ensure[1].system.group, 'class_etim'); assert.equal(ensure[1].system.classAttr, 'etim_class', 'das vorhandene Klassenattribut der Einstellung bleibt'); assert.equal(ensure[1].system.plugin, 'etim')
   const attach = calls.find(([p, , m]) => p === '/api/nodes/g-root/groups' && m === 'PUT')
-  assert.ok(attach, 'an die Wurzel gehängt'); assert.deepEqual(attach[1].groups, ['etim'])
+  assert.ok(attach, 'an die Wurzel gehängt'); assert.deepEqual(attach[1].groups, ['class_etim'])
   MODEL.groups = groups; g1.parent = null; TREE.splice(TREE.indexOf(rootRow), 1)
 })
 
 test('Namenskollision: nennt der Server eine andere Gruppe, gilt sie ab jetzt — sie wird an die Wurzel gehängt und gemerkt', async () => {
   const mod = await import('../../plugins/etim/entry.js')
   const calls = [], gemerkt = []
-  // der Server hat die Kollision erkannt (seine Regel: ClassificationTests.cs) und weicht auf etim_std aus
-  const ctx2 = { ...ctx, api: { ...ctx.api, post: async (p, b, m) => { calls.push([p, b, m ?? 'POST']); return p === '/api/classification/ensure' ? { group: 'etim_std', classAttr: 'etim_class', groupRenamed: { from: 'etim', to: 'etim_std' } } : {} } },
+  // der Server hat die Kollision erkannt (seine Regel: ClassificationTests.cs) und weicht auf class_etim_std aus
+  const ctx2 = { ...ctx, api: { ...ctx.api, post: async (p, b, m) => { calls.push([p, b, m ?? 'POST']); return p === '/api/classification/ensure' ? { group: 'class_etim_std', classAttr: 'etim_class', groupRenamed: { from: 'class_etim', to: 'class_etim_std' } } : {} } },
     data: { ...ctx.data, set: async (k, v) => { gemerkt.push([k, v.group]) } }, store: { ...ctx.store, poll: async () => {}, toast: () => {} } }
   await mod.default.install(ctx2)
-  assert.equal(calls.find(([p]) => p === '/api/classification/ensure')[1].system.group, 'etim', 'angefragt wird der gewünschte Schlüssel')
-  assert.deepEqual(gemerkt, [['settings', 'etim_std']])
+  assert.equal(calls.find(([p]) => p === '/api/classification/ensure')[1].system.group, 'class_etim', 'angefragt wird der gewünschte Schlüssel')
+  assert.deepEqual(gemerkt, [['settings', 'class_etim_std']])
   const attach = calls.find(([p, , m]) => /\/groups$/.test(p) && m === 'PUT' && p.startsWith('/api/nodes/'))
-  assert.ok(attach[1].groups.includes('etim_std'))
+  assert.ok(attach[1].groups.includes('class_etim_std'))
 })
