@@ -1,12 +1,12 @@
 {
   "key": "geo",
-  "version": "1.1.0",
+  "version": "1.5.2",
   "label": {
     "de": "GEO-Texte (KI)",
     "en": "GEO texts (AI)"
   },
   "description": {
-    "de": "Gehört zur Datenanalyse: Prüfregeln erkennen heuristisch Texte, die für Suchmaschinen und KI-Antworten nicht taugen (zu kurz, kein Definitionssatz, Superlative statt Fakten, keine konkreten Angaben, Text = Name) — ohne KI, in ✓ Datenqualität. Dazu die Ansicht GEO-Texte: die KI schlägt aus den echten Produktdaten Definitionssatz, Kurzbeschreibung, Fragen & Antworten, Suchbegriffe vor (Zielattribut je Feld, übernehmen schreibt ins Journal) und Schema.org-Product-JSON-LD. Der KI-Schlüssel wird nur für die Vorschläge gebraucht.",
+    "de": "Gehört zur Datenanalyse: Prüfregeln erkennen heuristisch Texte, die für Suchmaschinen und KI-Antworten nicht taugen (zu kurz, kein Definitionssatz, Superlative statt Fakten, keine konkreten Angaben, Text = Name) — ohne KI, in ✓ Datenqualität. Dazu die Ansicht GEO-Texte: die KI schlägt aus den echten Produktdaten Definitionssatz, Kurzbeschreibung, Fragen & Antworten, Suchbegriffe vor (Zielattribut je Feld, übernehmen schreibt ins Journal) und Schema.org-Product-JSON-LD. In ✓ Datenqualität steht dazu der Knopf KI-Analyse: die KI bewertet den gewählten Knoten aus seinen Daten, nennt offene Nutzerfragen in vier Clustern, eine Entscheidungshilfe und Empfehlungen. Der KI-Schlüssel wird nur für Vorschläge und Analyse gebraucht. Dazu die GEO-Reife je Produkt in ✓ Datenqualität: Faktenbasis, Fragen & Antworten, Relationen zu anderen Produkten und Mengenangaben (je 25 Punkte, ohne KI). Beim Einschalten entstehen die Attributgruppe enrich_geo mit je einem Attribut für Definitionssatz, Kurzbeschreibung, Fragen & Antworten, Suchbegriffe und JSON-LD; sie hängt an den Wurzeln des Baums und ist das Standardziel der Vorschläge.",
     "en": "Part of data analysis: heuristic checks flag texts unsuitable for search engines and AI answers; the GEO texts view lets the AI suggest definition, description, FAQ, keywords from real product data; Schema.org Product JSON-LD."
   },
   "kind": "quality",
@@ -15,5 +15,6 @@
   "requires": [
     "da"
   ],
+  "health": "/api/plugins/geo/system/health",
   "autoInstall": true
 }

@@ -35,5 +35,17 @@
  "▶ prüfen": "▶ check",
  "Datenqualität": "Data quality",
  "Regeln: Pflicht, Muster, Zahlen, Listen, Leerzeichen, leeres HTML, SKU, Übersetzung, Formel — plus Prüfregeln der Plugins": "Rules: required, pattern, numbers, lists, spaces, empty HTML, SKU, translation, formula — plus the check rules of the plugins",
- "Datenqualität: {0} prüfen": "Data quality: check {0}"
+ "Datenqualität: {0} prüfen": "Data quality: check {0}",
+ "Auswahl geändert — ▶ prüfen": "Selection changed — ▶ check",
+ "Keine Regelgruppe gewählt": "No rule group selected",
+ "Kein KI-Schlüssel — Einstellungen → KI": "No AI key — Settings → AI",
+ "lese Daten …": "reading data …",
+ "Knoten nicht gefunden": "Node not found",
+ "Datenanalyse": "Data analysis",
+ "KI-Analyse · {0} · {1}": "AI analysis · {0} · {1}",
+ "Empfehlungen": "Recommendations",
+ "Analyse von {0}": "Analysis by {0}",
+ "✦ KI-Analyse": "✦ AI analysis",
+ "Gewählte Regelgruppen mit der KI analysieren (sie kennt nur die Daten dieses Knotens)": "Analyse the selected rule groups with the AI (it knows only this node's data)",
+ "Du prüfst ein Produkt gegen Prüfkriterien (Datenqualität, Werbeaussagen, Klassifikation …). Sprache: {0}. Du kennst nur die gelieferten Daten und die Befunde der Regelprüfung: keine Websuche, nichts erfinden. Antworte als JSON: { \"kriterien\": [{ \"gruppe\": string, \"kriterium\": string, \"urteil\": \"erfüllt\" | \"auffällig\" | \"unklar\", \"begruendung\": string, \"vorschlag\": string }] (ein Eintrag je genanntes Kriterium; Begründung und Vorschlag je ein kurzer Satz), \"empfehlungen\": string[] (höchstens vier, je ein kurzer Satz) }. Antworte knapp: die Länge der Antwort bestimmt die Wartezeit.": "You check a product against criteria (data quality, advertising claims, classification …). Language: {0}. You only know the data supplied and the findings of the rule check: no web search, invent nothing. Answer as JSON: { \"kriterien\": [{ \"gruppe\": string, \"kriterium\": string, \"urteil\": \"erfüllt\" | \"auffällig\" | \"unklar\", \"begruendung\": string, \"vorschlag\": string }] (one entry per criterion named; justification and suggestion one short sentence each), \"empfehlungen\": string[] (at most four, one short sentence each) }. Keep it brief: the length of the answer sets the waiting time."
 }

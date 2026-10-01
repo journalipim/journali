@@ -40,14 +40,18 @@ async function check(ctx, rootId, rules, say) {
   const byLocale = new Map(); let columns = [], all = []
   say(t_('lese {0} Sprachen …', [locales.length]))
   // Sprachen parallel: der Server rechnet je Anfrage nur einen Teilbaum, das Netz wartet nicht auf sich selbst.
-  const tables = await Promise.all(locales.map(l => api.get(`/api/nodes/${encodeURIComponent(rootId)}/table?deep=true&locale=${l}`)))
+  const tables = await Promise.all(locales.map(l => api.get(`/api/nodes/${encodeURIComponent(rootId)}/table?deep=true&self=true&locale=${l}`)))
   for (let i = 0; i < locales.length; i++) {
     const l = locales[i]; const t = tables[i]
     columns = t.columns; all = t.rows
     byLocale.set(l, new Map(t.rows.map(r => [r.row.id, r.values])))
   }
   const findings = []
-  const extra = (ctx.checks ?? []).map(c => ({ key: `${c.key}:${c.check}`, label: c.label, severity: c.severity ?? 'warn', run: c.run }))
+  const extra = (ctx.checks ?? []).map(c => ({ key: `${c.key}:${c.check}`, label: c.label, severity: c.severity ?? 'warn', run: c.run, needs: c.needs ?? [] }))
+  // Eine Regel kann Daten anfordern, die die Tabelle nicht trägt: relations = die Relationen des Teilbaums, je Knoten ({ knotenId: [{ type, direction, other: { id, label } }] }).
+  // Geholt wird nur, wenn eine gewählte Regel sie braucht, und einmal je Prüfung.
+  const gebraucht = new Set([...RULES, ...extra].filter(r => rules.has(r.key)).flatMap(r => r.needs ?? []))
+  const relations = gebraucht.has('relations') ? await api.get(`/api/nodes/${encodeURIComponent(rootId)}/relations/tree?deep=true`).catch(() => ({})) : undefined
   for (const l of locales) for (const r of all) {
     const values = byLocale.get(l).get(r.row.id)
     const cols = columns.filter(c => !(r.inactive ?? []).includes(c.key))   // nur, was an diesem Knoten gilt
@@ -55,11 +59,57 @@ async function check(ctx, rootId, rules, say) {
       if (!rules.has(rule.key)) continue
       if (l !== master && !['required', 'untranslated', 'status', 'pattern'].includes(rule.key) && !rule.perLocale) continue   // sprachunabhängige Regeln einmal
       let out = []
-      try { out = rule.run({ row: r.row, values, columns: cols, locale: l, master, byLocale, all, model }) ?? [] } catch (e) { out = [{ attribute: null, message: t_('Regel {0}: {1}', [rule.key, e.message]) }] }
+      try { out = rule.run({ row: r.row, values, columns: cols, locale: l, master, byLocale, all, model, relations }) ?? [] } catch (e) { out = [{ attribute: null, message: t_('Regel {0}: {1}', [rule.key, e.message]) }] }
       for (const f of out) findings.push({ rule: rule.key, label: rule.label, severity: f.severity ?? rule.severity, locale: l, node: r.row, attribute: f.attribute, message: f.message })
     }
   }
   return { findings, nodes: all.length, columns: columns.length }
+}
+
+const bezeichnung = l => typeof l === 'string' ? l : (globalThis.journali?.L ? globalThis.journali.L(l) : l?.de ?? Object.values(l ?? {})[0] ?? '')
+const URTEIL = { 'erfüllt': ['✓', 'pos'], 'auffällig': ['⚠', 'warn'], 'unklar': ['?', 'muted'] }
+
+/// Die allgemeine KI-Analyse: die gewählten Kriterien (Regelgruppen) gegen die Daten eines Knotens. Die KI kennt nur diese Daten und die Befunde der Regelprüfung — keine Websuche.
+async function regelAnalyse({ ctx, node, locale, gruppen, befunde, box, say }) {
+  const { api, ai } = ctx
+  say(t_('lese Daten …'))
+  const tab = await api.get(`/api/nodes/${encodeURIComponent(node)}/table?self=true&locale=${locale}`)
+  const zeile = (tab.rows ?? []).find(r => r.row.id === node)
+  if (!zeile) throw new Error(t_('Knoten nicht gefunden'))
+  const werte = (tab.columns ?? []).filter(c => String(zeile.values?.[c.key]?.value ?? '').trim() !== '')
+    .map(c => `- ${bezeichnung(c.label) || c.key}: ${zeile.values[c.key].value}${c.unit ? ' ' + c.unit : ''}`)
+  const kriterien = gruppen.map(g => `Gruppe ${g.label}:\n` + g.gewaehlt.map(r => `- ${r.label}`).join('\n')).join('\n')
+  const gewaehlt = new Set(gruppen.flatMap(g => g.gewaehlt.map(r => r.key)))
+  const fund = befunde.filter(f => gewaehlt.has(f.rule)).slice(0, 40).map(f => `- ${f.label}: ${f.node.label}${f.attribute ? ' · ' + f.attribute : ''} — ${f.message}`)
+  say(`frage ${ai.label()} …`)
+  const system = t_('Du prüfst ein Produkt gegen Prüfkriterien (Datenqualität, Werbeaussagen, Klassifikation …). Sprache: {0}. Du kennst nur die gelieferten Daten und die Befunde der Regelprüfung: keine Websuche, nichts erfinden. Antworte als JSON: { "kriterien": [{ "gruppe": string, "kriterium": string, "urteil": "erfüllt" | "auffällig" | "unklar", "begruendung": string, "vorschlag": string }] (ein Eintrag je genanntes Kriterium; Begründung und Vorschlag je ein kurzer Satz), "empfehlungen": string[] (höchstens vier, je ein kurzer Satz) }. Antworte knapp: die Länge der Antwort bestimmt die Wartezeit.', [locale])
+  const user = `Produkt: ${zeile.row.label}\nEigenschaften:\n${werte.join('\n') || '(keine Werte)'}\n\nKriterien:\n${kriterien}\n\nBefunde der Regelprüfung:\n${fund.join('\n') || '(keine)'}`
+  const j = await ai.ask({ system, user, json: true, maxTokens: 1500, purpose: t_('Datenanalyse') })
+  const liste = Array.isArray(j.kriterien) ? j.kriterien : []
+  box.innerHTML = ''
+  const abschnitt = (titel, ...inhalt) => box.append(el('div', { class: 'section' }, el('h2', {}, titel), ...inhalt))
+  for (const g of gruppen) {
+    const zu = liste.filter(k => String(k.gruppe ?? '') === g.label || gruppen.length === 1)
+    abschnitt(t_('KI-Analyse · {0} · {1}', [g.label, zeile.row.label]), el('table', { class: 'grid', style: 'width:100%' }, el('tbody', {}, ...zu.map(k => {
+      const [zeichen, ton] = URTEIL[k.urteil] ?? URTEIL['unklar']
+      return el('tr', {}, el('td', { style: 'width:300px' }, String(k.kriterium ?? '')), el('td', { class: ton, style: 'width:90px', title: String(k.urteil ?? '') }, `${zeichen} ${k.urteil ?? ''}`), el('td', {}, String(k.begruendung ?? '')), el('td', { class: 'muted' }, String(k.vorschlag ?? '')))
+    }))))
+  }
+  const rest = Array.isArray(j.empfehlungen) ? j.empfehlungen : []
+  if (rest.length) abschnitt(t_('Empfehlungen'), el('ul', { style: 'margin:4px 8px 4px 26px' }, ...rest.map(x => el('li', {}, String(x)))))
+  say(t_('Analyse von {0}', [ai.label()]))
+}
+
+/// Die wählbaren Regeln nach Herkunft: die eingebauten zuerst, dann je Plugin in der Reihenfolge, in der es Regeln liefert
+export function ruleGroups(checks) {
+  const L = l => (l && globalThis.journali?.L ? globalThis.journali.L(l) : l?.de ?? Object.values(l ?? {})[0] ?? '')
+  const groups = [{ id: '', label: t_('Datenqualität'), rules: RULES.map(r => ({ key: r.key, check: r.key, label: r.label, severity: r.severity })) }]
+  for (const c of checks) {
+    let g = groups.find(x => x.id === c.key)
+    if (!g) groups.push(g = { id: c.key, label: L(c.quelle) || c.key, rules: [] })
+    g.rules.push({ key: `${c.key}:${c.check}`, check: c.check, label: c.label, severity: c.severity ?? 'warn' })
+  }
+  return groups
 }
 
 async function mount(root, ctx) {
@@ -79,9 +129,30 @@ async function mount(root, ctx) {
   const status = el('span', { class: 'muted' }); const say = m => status.textContent = m
   const list = el('div', { class: 'scroll', style: 'flex:1' })
   const summary = el('div', { class: 'toolbar', style: 'gap:10px;font-size:12px' })
-  const ruleBox = el('div', { class: 'chips', style: 'padding:4px 8px;border-bottom:1px solid var(--line)' })
-  const allRules = [...RULES, ...(ctx.checks ?? []).map(c => ({ key: `${c.key}:${c.check}`, label: `${c.label} (${c.key})`, severity: c.severity ?? 'warn' }))]
-  for (const r of allRules) { const cb = el('input', { type: 'checkbox' }); cb.checked = rules.has(r.key); cb.addEventListener('change', async () => { cb.checked ? rules.add(r.key) : rules.delete(r.key); await ctx.data.set('settings', { rules: [...rules] }) }); ruleBox.append(el('label', { class: 'chip', title: r.key, style: 'cursor:pointer' }, cb, ` ${sev(r.severity)} ${r.label}`)) }
+  const ruleBox = el('div', { class: 'regeln', style: 'padding:4px 8px;border-bottom:1px solid var(--line)' })
+  // Die Regeln nach Herkunft: die eingebauten, dann je Plugin, das Regeln liefert. Eine Gruppe lässt sich als Ganzes an- und abwählen, jede Regel einzeln.
+  const groups = ruleGroups(ctx.checks ?? [])
+  for (const g of groups.slice(1)) for (const r of g.rules) { const alt = `${r.check}:${r.check}`; if (alt !== r.key && rules.has(alt) && !rules.has(r.key)) { rules.delete(alt); rules.add(r.key) } }   // frühere Auswahl: die Regel hieß unter ihrem eigenen Schlüssel
+  // Die Befunde unten sind die der letzten Prüfung: ändert sich die Auswahl, sagt die Statuszeile, dass sie neu laufen muss
+  const save = () => { if (state.result) say(t_('Auswahl geändert — ▶ prüfen')); return ctx.data.set('settings', { rules: [...rules] }) }
+  for (const g of groups) {
+    const gcb = el('input', { type: 'checkbox' }); const count = el('span', { class: 'muted' }); const einzeln = []
+    const update = () => {
+      const n = g.rules.filter(r => rules.has(r.key)).length
+      gcb.checked = n === g.rules.length; gcb.indeterminate = n > 0 && n < g.rules.length; count.textContent = `${n}/${g.rules.length}`
+      for (const [cb, r] of einzeln) cb.checked = rules.has(r.key)
+    }
+    gcb.addEventListener('change', async () => { for (const r of g.rules) gcb.checked ? rules.add(r.key) : rules.delete(r.key); update(); await save() })
+    const chips = g.rules.map(r => {
+      const cb = el('input', { type: 'checkbox' }); einzeln.push([cb, r])
+      cb.addEventListener('change', async () => { cb.checked ? rules.add(r.key) : rules.delete(r.key); update(); await save() })
+      return el('label', { class: 'chip', title: r.key, style: 'cursor:pointer' }, cb, ` ${sev(r.severity)} ${r.label}`)
+    })
+    // Die Gruppe hat eine eigene Kopfzeile (Kästchen für alle, Name, Zahl der gewählten); ihre Regeln stehen darunter, eingerückt
+    const kopf = el('label', { class: 'gruppe', title: t_('Alle Regeln der Gruppe an- oder abwählen'), style: 'display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:600;padding:2px 0' }, gcb, el('span', {}, g.label), count)
+    ruleBox.append(el('div', { class: 'regelgruppe', style: 'margin:0 0 6px' }, kopf, el('div', { style: 'display:flex;flex-wrap:wrap;gap:4px;margin-left:22px' }, ...chips)))
+    update()
+  }
   function sev(s) { return s === 'error' ? '✗' : s === 'warn' ? '⚠' : 'ℹ' }
   function draw() {
     list.innerHTML = ''; summary.innerHTML = ''
@@ -111,7 +182,26 @@ async function mount(root, ctx) {
   }
   async function run() { if (!state.root) return; say(t_('prüfe …')); try { state.result = await check(ctx, state.root, rules, say); say(t_('{0} Befunde', [state.result.findings.length])); draw() } catch (e) { say('✗ ' + e.message); store.toast(e.message) } }
   const qIn = el('input', { type: 'search', placeholder: 'filtern', style: 'width:160px', oninput: e => { state.q = e.target.value; draw() } })
-  root.append(el('div', { class: 'toolbar' }, el('h1', {}, t_('✓ Datenqualität')), el('span', { style: 'position:relative' }, rootIn, pick), el('button', { class: 'primary', onclick: run }, t_('▶ prüfen')), qIn, el('span', { class: 'grow' }), status), ruleBox, summary, list)
+  // KI-Analyse: die gewählten Regelgruppen am gewählten Knoten. Hat das Plugin einer Gruppe eine Analyse beigesteuert (ctx.analyses, Schlüssel = Plugin), läuft diese;
+  // alle übrigen Gruppen prüft die KI allgemein: die Kriterien der Gruppe gegen die Daten des Knotens und die Befunde der Regelprüfung.
+  const analyseBox = el('div')
+  async function analysieren() {
+    if (!state.root) return
+    const aktiv = groups.map(g => ({ ...g, gewaehlt: g.rules.filter(r => rules.has(r.key)) })).filter(g => g.gewaehlt.length)
+    if (!aktiv.length) { store.toast(t_('Keine Regelgruppe gewählt')); return }
+    const ai = ctx.ai
+    if (!ai?.available?.() && !ai?.key) { store.toast(t_('Kein KI-Schlüssel — Einstellungen → KI')); return }
+    const locale = store.model.masterLocale ?? 'de'
+    analyseBox.innerHTML = ''
+    try {
+      if (!state.result) await run()   // die Befunde gehen in die Analyse ein
+      const beitraege = (ctx.analyses ?? []).filter(a => aktiv.some(g => g.id === a.key))
+      for (const a of beitraege) { const box = el('div'); analyseBox.append(box); await a.run({ ctx, node: state.root, locale, box, say }) }
+      const allgemein = aktiv.filter(g => !beitraege.some(a => a.key === g.id))
+      if (allgemein.length) { const box = el('div'); analyseBox.append(box); await regelAnalyse({ ctx, node: state.root, locale, gruppen: allgemein, befunde: state.result?.findings ?? [], box, say }) }
+    } catch (e) { say('✗ ' + e.message); store.toast(e.message) }
+  }
+  root.append(el('div', { class: 'toolbar' }, el('h1', {}, t_('✓ Datenqualität')), el('span', { style: 'position:relative' }, rootIn, pick), el('button', { class: 'primary', onclick: run }, t_('▶ prüfen')), el('button', { class: 'primary ai', title: t_('Gewählte Regelgruppen mit der KI analysieren (sie kennt nur die Daten dieses Knotens)'), onclick: analysieren }, t_('✦ KI-Analyse')), qIn, el('span', { class: 'grow' }), status), ruleBox, analyseBox, summary, list)
   return () => {}
 }
 

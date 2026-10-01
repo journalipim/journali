@@ -1,8 +1,8 @@
 {
  "key": "da",
- "version": "1.1.0",
- "hash": "4adf6cfe93ae5b10d74e69ebe37120fbc5295f867eb8c8679dcf650d6488d9e7",
- "issued": "2026-09-30",
+ "version": "1.6.1",
+ "hash": "0f93354e96f7860ec4043dc2fbe908626f03d75b016506cd27980e47280587a7",
+ "issued": "2026-10-01",
  "issuer": "journali",
- "sig": "IZxhWzO1+9ImO8Tf6F1mxmbVqfkOS+NSVXs20A53qi0uEZkL6IeNO2qiTd/H7pqgwslcSLZWedkNr6/DjVVeCw=="
+ "sig": "6VTgFEAeIV9bPjGlFOcP3OcgEf0gBKKDcnQm1tSi+u33UB7DHiDD3ZVMrmtT3wpaUx7sri1sdZOXnOrd6psDgQ=="
 }

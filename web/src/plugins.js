@@ -14,6 +14,7 @@
 //   importers:   [{ key, label, accept: ['.csv'], parse(file, ctx) → { columns, rows, sheets? } }]
 //                Quellen für den Tabellenimport (⇩ Import → Tabelle); rows als Arrays in Spaltenreihenfolge
 //   checks:      [{ key, label, run({ row, values, columns, model }) → [{ severity: 'error'|'warn'|'info', attribute?, message }] }]
+//   analyses:    [{ key, label, title, run({ ctx, node, locale, box, say }) }] — ein Knopf in ✓ Datenqualität; die Analyse arbeitet am dort gewählten Knoten und schreibt ihr Ergebnis in box
 //   install(ctx): einmal beim Einschalten des Plugins — legt an, was das Plugin braucht (ETIM: Gruppe und
 //                Klassenattribut, an MasterTree gehängt). Läuft nicht bei jedem Seitenaufruf; der Lauf wird je Plugin gemerkt.
 //   nodeViews:   [{ key, label(row, ctx) | label, roles?, items(row, ctx) → [{ group, order: [attrKey] }] | null,
@@ -59,7 +60,8 @@ export const plugins = reactive({
   views: [],              // { key, path, label, icon, mount }
   nodeActions: [],        // { key, label, icon, run }
   importers: [],          // { key (Plugin), source (importer.key), label, accept, parse }
-  checks: [],             // { key (Plugin), check, label, run }
+  checks: [],             // { key (Plugin), check (Regel), quelle (Bezeichnung des Plugins), label, severity, run }
+  analyses: [],           // { key (Plugin), analyse, label, title, run({ ctx, node, locale, box, say }) } — Knöpfe der Datenqualität, die am gewählten Knoten arbeiten
   nodeBands: [],          // { key (Plugin), band (band.key), label, icon, roles, mount }
   nodeViews: [],          // { key (Plugin), view (view.key), label, roles, items(row, ctx) } — flüchtig, nie im Journal
   rev: 0,                 // Zähler: ein Plugin meldet mit ctx.touch(), dass seine Daten stehen — Ansichten rechnen dann neu
@@ -89,7 +91,7 @@ export const plugins = reactive({
       catch (e) { store.toast(t('Plugin {0}: {1}', [p.key, e.message])) }
     }
     // dann die Beiträge NEU sammeln
-    this.views = []; this.nodeActions = []; this.importers = []; this.checks = []; this.nodeBands = []; this.nodeViews = []
+    this.views = []; this.nodeActions = []; this.importers = []; this.checks = []; this.analyses = []; this.nodeBands = []; this.nodeViews = []
     for (const p of order) {
       if (!this.active(p.key)) continue
       const mod = this.modules.get(p.key); if (!mod) continue
@@ -99,7 +101,9 @@ export const plugins = reactive({
       for (const v of mod.views ?? []) if (!v.needs || this.active(v.needs)) this.views.push({ key: p.key, ...v, ...(v.component ? { component: markRaw(v.component) } : {}) })
       for (const a of mod.nodeActions ?? []) this.nodeActions.push({ key: p.key, ...a })
       for (const i of mod.importers ?? []) this.importers.push({ key: p.key, source: i.key, ...i })
-      for (const c of mod.checks ?? []) this.checks.push({ key: p.key, check: c.key, ...c })
+      // key = das Plugin, check = die Regel; vorher überschrieb der Schlüssel der Regel den des Plugins (…{ key: p.key, check: c.key, ...c }), und die Herkunft ging verloren
+      for (const a of mod.analyses ?? []) this.analyses.push({ ...a, key: p.key, analyse: a.key })
+      for (const c of mod.checks ?? []) this.checks.push({ ...c, key: p.key, check: c.key, quelle: p.manifest?.label ?? null })
       for (const b of mod.nodeBands ?? []) this.nodeBands.push({ key: p.key, band: b.key, ...b })
       for (const v of mod.nodeViews ?? []) this.nodeViews.push({ key: p.key, view: v.key, ...v })
     }
@@ -206,6 +210,7 @@ export const plugins = reactive({
         melden: (groups, attributes) => api.post(`/api/plugins/${key}/system`, { groups, attributes }, 'PUT'),
       },
       checks: this.checks,                                                      // Prüfregeln aller Plugins (für da)
+      analyses: this.analyses,                                                  // Analysen aller Plugins (für da)
       go: async path => (await import('./router.js')).router.push(path),        // Navigation in der Oberfläche
       // JSON-Datei zum Import übergeben und den JSON-Import öffnen (Baum-Drop, Menü, Tabellenimport)
       importJson: async (file, parent = null) => { store.pendingImport = { file, parent }; (await import('./router.js')).router.push('/p/json/import') },
