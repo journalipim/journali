@@ -104,6 +104,7 @@ public sealed class JobRunner : BackgroundService
     private async Task Nachziehen(CancellationToken stop)
     {
         if (Offen is null) return;
+        if (ImportLaeuft) return;   // ein Import hat Vorfahrt: kein Nachzieher startet, solange er läuft
         var jetzt = DateTimeOffset.Now;
         if (jetzt - _letztesNachziehen < TimeSpan.FromMinutes(1)) return;
         _letztesNachziehen = jetzt;
@@ -200,7 +201,8 @@ public sealed class JobRunner : BackgroundService
         try { p = Process.Start(psi) ?? throw new InvalidOperationException("Prozess startet nicht"); }
         catch (Exception e) { error = $"Prozess {psi.FileName} startet nicht: {e.Message}"; return null; }
         var cts = new CancellationTokenSource();
-        lock (_gate) _running[key] = (p, cts, run);
+        var vorrang = IstImport(m.Raw, job.Service);
+        lock (_gate) { _running[key] = (p, cts, run); if (vorrang) _vorrang.Add(key); }
         _catalog.With((_, _, write) => write(actor, Jobs.Stream + key, Types.JobRunStarted, new JobRunStarted(run, trigger), null));
         _ = Task.Run(() => Watch(key, job.TimeoutMinutes, run, p, cts, logPath, actor, token, plan, job));
         return run;
@@ -221,7 +223,10 @@ public sealed class JobRunner : BackgroundService
             cts.CancelAfter(TimeSpan.FromMinutes(Math.Max(1, timeoutMinutes)));
             await p.WaitForExitAsync(cts.Token);
             p.WaitForExit();   // Ausgabe zu Ende lesen
-            status = p.ExitCode switch { 0 => "ok", 3 => "warn", _ => "failed" };   // 3 = mit Warnungen (übersprungene Befehle) — Vereinbarung mit den Prozess-Plugins
+            // 3 = mit Warnungen (übersprungene Befehle) — Vereinbarung mit den Prozess-Plugins. 2 beim Anhalten (ein Import hat Vorfahrt, oder von Hand):
+            // der Lauf ist nicht gescheitert, die offenen Posten bleiben offen und der nächste Lauf findet dieselben. Sonst ist 2 ein Aufruffehler.
+            var angehalten = IsPaused(key);
+            status = p.ExitCode switch { 0 => "ok", 2 when angehalten => "ok", 3 => "warn", _ => "failed" };
         }
         catch (OperationCanceledException)
         {
@@ -231,7 +236,7 @@ public sealed class JobRunner : BackgroundService
         }
         finally
         {
-            lock (_gate) { _running.Remove(key); _paused.Remove(key); }
+            lock (_gate) { _running.Remove(key); _paused.Remove(key); _vorrang.Remove(key); }
             Auth.RevokeServiceToken(token);
             var exit = 0; try { exit = p.ExitCode; } catch { }
             var bytes = 0L; try { log.Flush(); bytes = new FileInfo(logPath).Length; } catch { }
@@ -298,10 +303,24 @@ public sealed class JobRunner : BackgroundService
     }
 
     /// <summary>Soll dieser Lauf warten?</summary>
-    public bool IsPaused(string key) { lock (_gate) return _paused.ContainsKey(key); }
+    public bool IsPaused(string key) { lock (_gate) return _paused.ContainsKey(key) || VorfahrtGrund(key) is not null; }
 
     /// <summary>Warum er wartet (null = er wartet nicht).</summary>
-    public string? PauseReason(string key) { lock (_gate) return _paused.GetValueOrDefault(key); }
+    public string? PauseReason(string key) { lock (_gate) return _paused.GetValueOrDefault(key) ?? VorfahrtGrund(key); }
+
+    /// <summary>Läufe, die ein Import sind: sie haben Vorfahrt vor allem anderen, was der Server nebenher tut (Vektoren, Ableitungen,
+    /// Dokumente lesen, Erkennen). Ein Import ist die Arbeit, auf die jemand wartet, und schreibt in dieselbe Datenbank.</summary>
+    private readonly HashSet<string> _vorrang = new();
+
+    /// <summary>Ein Import: ein Plugin der Art import (ixp, solr) oder der Dienst import eines Formats (csv, excel, json, xliff).</summary>
+    public static bool IstImport(JsonElement manifest, string? service) =>
+        service == "import" || (manifest.TryGetProperty("kind", out var k) && k.GetString() == "import");
+
+    /// <summary>Läuft gerade ein Import?</summary>
+    public bool ImportLaeuft { get { lock (_gate) return _vorrang.Count > 0; } }
+
+    /// <summary>Wartet dieser laufende Job, weil ein Import Vorfahrt hat? Der Import selbst wartet nie darauf. Unter <c>_gate</c> aufrufen.</summary>
+    private string? VorfahrtGrund(string key) => _vorrang.Count > 0 && _running.ContainsKey(key) && !_vorrang.Contains(key) ? "Import" : null;
 
     public bool Cancel(string key)
     {

@@ -2161,6 +2161,10 @@ journali fast alles, was es braucht:
   `/api` als Bearer und darf genau das, was die Rolle erlaubt.
   Ein Lauf, der aus einer Ansicht an den Tasker abgegeben wird (`/api/jobs/<key>/uebergabe`), hat die Rolle des Anfragenden
   (01.10.2026): ein Import, der neue Attribute anlegt, braucht das Recht „model“ und gelingt nur dem, der es selbst hat.
+  **Ein Import hat Vorfahrt** (02.10.2026): solange ein Import läuft (Plugin der Art `import`, oder der Dienst `import` eines
+  Formats), startet der Nachzieher keinen Systemjob, und die laufenden — Vektoren, Ableitungen, Dokumente lesen, Erkennen,
+  Messen — bekommen über `/api/jobs/<job>/signal` „anhalten“ (Grund „Import“) und enden mit Rückgabewert 2. Das gilt nicht
+  als Fehler; der nächste Lauf findet dieselben offenen Posten. Der Import schreibt in dieselbe Datenbank, und auf ihn wartet jemand.
 - Parameter stehen im Manifest und werden zum Formular; das Profil sagt, **was** getan wird, der Job **wohin und wann**.
 - Zugänge (`driver`) tragen Adresse und Anmeldung: die offenen Felder im Journal, das Geheimnis beim Server, und es
   geht nur an einen Prozess, nie an den Browser.

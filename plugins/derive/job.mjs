@@ -4,7 +4,7 @@
 // Aufruf: node job.mjs <journali> <actor> [limit] [preset] — der JobRunner setzt die Werte auch als JOURNALI_* in die Umgebung.
 // Holt /api/media/pending (Preset-Spezifikation je Bild), lädt das Original in eine Temp-Datei (grosse TIFFs nicht in den Speicher),
 // rechnet mit sharp (libvips), legt das Ergebnis per PUT /api/media/{id}/derived/{preset} ab. Läuft in Runden, bis nichts mehr fehlt.
-// Rückgabe 0 = alles gerechnet, 3 = einzelne Bilder scheiterten (Log), 1 = Abbruch.
+// Rückgabe 0 = alles gerechnet, 2 = angehalten (ein Import hat Vorfahrt), 3 = einzelne Bilder scheiterten (Log), 1 = Abbruch.
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
@@ -19,6 +19,7 @@ const [,, serverArg, actorArg, limitArg] = process.argv
 const E = process.env
 const server = (serverArg || E.JOURNALI_JOURNALI || 'http://localhost:5000').replace(/\/$/, '')
 const actor = actorArg || E.JOURNALI_ACTOR || 'job:derive'
+const jobKey = E.JOURNALI_JOB || 'derive'
 const limit = Math.max(1, parseInt(limitArg || E.JOURNALI_LIMIT || '200', 10) || 200)
 const headers = { 'X-Actor': actor, ...(E.JOURNALI_TOKEN ? { Authorization: 'Bearer ' + E.JOURNALI_TOKEN } : {}) }
 
@@ -43,6 +44,10 @@ async function pdfFirstPage(file, edge) {
   } finally { await doc.destroy() }
 }
 
+/// Hält der Tasker den Lauf an (ein Import hat Vorfahrt)? Dann endet der Prozess; der nächste Lauf findet dieselben Ableitungen.
+async function angehalten() {
+  try { return (await get(`/api/jobs/${encodeURIComponent(jobKey)}/signal`)).paused === true } catch { return false }
+}
 async function get(p) { const r = await fetch(server + p, { headers }); if (!r.ok) throw new Error(`${p}: ${r.status} ${await r.text()}`); return r.json() }
 
 async function download(id, file) {
@@ -89,6 +94,7 @@ let done = 0, failed = 0, rounds = 0, code = 0
 const failedIds = new Set()   // was scheiterte, nicht in der nächsten Runde wieder versuchen
 try {
   for (;;) {
+    if (await angehalten()) { console.log(`angehalten nach ${rounds} Runden — ${done} Ableitungen gerechnet`); code = 2; break }
     const pending = await get(`/api/media/pending?limit=${limit}`)
     const items = pending.items.filter(x => !failedIds.has(x.id + '/' + x.preset))
     if (!items.length) break
@@ -118,8 +124,7 @@ try {
     // Bytes ohne Beleg im Speicher — die Ableitung gilt dann als fehlend und wird neu gerechnet, kein Schaden
     await belege(runde)
   }
-  console.log(`${done} Ableitungen gerechnet${failed ? `, ${failed} gescheitert` : ''}${rounds ? '' : ' — nichts fehlte'}`)
-  code = failed ? 3 : 0
+  if (code !== 2) { console.log(`${done} Ableitungen gerechnet${failed ? `, ${failed} gescheitert` : ''}${rounds ? '' : ' — nichts fehlte'}`); code = failed ? 3 : 0 }
 } catch (e) { console.error('✗ ' + e.message); code = 1 }
 finally { try { fs.rmSync(tmp, { recursive: true, force: true }) } catch {} }
 process.exitCode = code

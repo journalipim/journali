@@ -55,9 +55,9 @@ const stand = await call('GET', `/api/docs/embed?model=${encodeURIComponent(mode
 if (stand.ready === false) { console.error('✗ ' + (stand.reason ?? 'keine Vektoren')); process.exitCode = 1 }
 console.log(`${stand.chunks} Abschnitte, ${stand.embedded} mit Vektor · ${stand.nodesTotal} Knoten, ${stand.nodes} mit Vektor · ${stand.offen} offen · Modell ${model}`)
 
-let abschnitte = 0, knoten = 0, runde = 0
+let abschnitte = 0, knoten = 0, runde = 0, pausiert = false
 for (;;) {
-  if (await angehalten()) { console.log(`angehalten nach ${runde} Runden — ${abschnitte} Abschnitte, ${knoten} Knoten`); process.exitCode = 2 }
+  if (await angehalten()) { console.log(`angehalten nach ${runde} Runden — ${abschnitte} Abschnitte, ${knoten} Knoten`); pausiert = true; break }
   const offen = await call('GET', `/api/docs/embed/pending?limit=${limit}&model=${encodeURIComponent(model)}`)
   if (offen.ready === false) { console.error('✗ ' + (offen.reason ?? 'keine Vektoren')); process.exitCode = 1 }
   const chunks = offen.chunks ?? [], nodes = offen.nodes ?? []
@@ -79,5 +79,5 @@ for (;;) {
   // Nichts kam voran, aber es war etwas offen: dann stimmt etwas nicht (leerer Text?) — aufhören statt kreisen
   if ((r.chunks ?? 0) + (r.nodes ?? 0) === 0 && (chunks.length + nodes.length) > 0) { console.error(`✗ ${chunks.length + nodes.length} Posten offen, aber nichts geschrieben`); process.exitCode = 1 }
 }
-console.log(`fertig: ${abschnitte} Abschnitte, ${knoten} Knoten eingebettet`)
-process.exitCode = 0
+if (!pausiert) console.log(`fertig: ${abschnitte} Abschnitte, ${knoten} Knoten eingebettet`)
+process.exitCode = pausiert ? 2 : (process.exitCode ?? 0)

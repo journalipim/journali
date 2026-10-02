@@ -55,9 +55,9 @@ const stand = await call('GET', '/api/media/probe')
 console.log(`${stand.total} Assets, ${stand.gelesen} gemessen, ${stand.offen} offen, ${stand.unbekannt} ohne bekanntes Format`)
 if (again) console.log('again: auch die ohne bekanntes Format werden erneut gelesen')
 
-let gelesen = 0, unbekannt = 0, fehlt = 0, runde = 0
+let gelesen = 0, unbekannt = 0, fehlt = 0, runde = 0, pausiert = false
 for (;;) {
-  if (await angehalten()) { console.log(`angehalten nach ${runde} Runden — ${gelesen} gelesen`); process.exitCode = 2 }
+  if (await angehalten()) { console.log(`angehalten nach ${runde} Runden — ${gelesen} gelesen`); pausiert = true; break }
   const r = await call('POST', `/api/media/probe?limit=${limit}&again=${again}`)
   runde++
   gelesen += r.gelesen; unbekannt += r.unbekannt; fehlt += r.fehlt
@@ -68,5 +68,5 @@ for (;;) {
   if (r.gelesen + r.unbekannt === 0) { console.error(`✗ ${r.offen} offen, aber nichts zu lesen — Dateien fehlen im Store (/api/media/missing)`); process.exitCode = 3 }
 }
 
-console.log(`fertig: ${gelesen} gemessen, ${unbekannt} ohne bekanntes Format, ${fehlt} fehlen im Store`)
-process.exitCode = fehlt > 0 ? 3 : 0
+if (!pausiert) console.log(`fertig: ${gelesen} gemessen, ${unbekannt} ohne bekanntes Format, ${fehlt} fehlen im Store`)
+process.exitCode = pausiert ? 2 : fehlt > 0 ? 3 : 0

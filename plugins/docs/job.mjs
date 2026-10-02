@@ -3,7 +3,7 @@
 // Aufruf: node job.mjs <journali> <actor> [limit] — der JobRunner setzt die Werte auch als JOURNALI_* in die Umgebung.
 // Holt /api/docs/status?pending=1 (was noch keinen Text hat), lädt die Datei, liest sie je nach Art, schneidet sie in
 // Abschnitte, findet die Tabellen (Schlüssel/Wert) und legt beides per PUT /api/docs/{id} ab. Läuft in Runden, bis nichts mehr fehlt.
-// Rückgabe 0 = alles gelesen, 3 = einzelne Dokumente scheiterten (Log), 1 = Abbruch.
+// Rückgabe 0 = alles gelesen, 2 = angehalten (ein Import hat Vorfahrt), 3 = einzelne Dokumente scheiterten (Log), 1 = Abbruch.
 import { chunk, numbered, fromHtml, pack, pairsFromText, numberedTables } from './core.mjs'
 import { pdfPages } from './pdf.mjs'
 import { layoutDocument } from './layout.mjs'
@@ -12,10 +12,15 @@ const [,, serverArg, actorArg, limitArg] = process.argv
 const E = process.env
 const server = (serverArg || E.JOURNALI_JOURNALI || 'http://localhost:5000').replace(/\/$/, '')
 const actor = actorArg || E.JOURNALI_ACTOR || 'job:docs'
+const jobKey = E.JOURNALI_JOB || 'docs'
 const limit = Math.max(1, parseInt(limitArg || E.JOURNALI_LIMIT || '50', 10) || 50)
 const headers = { 'X-Actor': actor, ...(E.JOURNALI_TOKEN ? { Authorization: 'Bearer ' + E.JOURNALI_TOKEN } : {}) }
 
 async function get(p) { const r = await fetch(server + p, { headers }); if (!r.ok) throw new Error(`${p}: ${r.status} ${await r.text()}`); return r.json() }
+/// Hält der Tasker den Lauf an (ein Import hat Vorfahrt)? Dann endet der Prozess; der nächste Lauf findet dieselben Dokumente.
+async function angehalten() {
+  try { return (await get(`/api/jobs/${encodeURIComponent(jobKey)}/signal`)).paused === true } catch { return false }
+}
 async function put(p, body) {
   const r = await fetch(server + p, { method: 'PUT', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
   if (!r.ok) throw new Error(`${p}: ${r.status} ${await r.text()}`)
@@ -45,8 +50,9 @@ async function read(medium, bytes) {
 
 async function main() {
   const t0 = Date.now()
-  let gelesen = 0, abschnitte = 0, tabellen = 0, fehler = 0, scans = 0
+  let gelesen = 0, abschnitte = 0, tabellen = 0, fehler = 0, scans = 0, pausiert = false
   for (let runde = 1; ; runde++) {
+    if (await angehalten()) { console.log(`angehalten nach ${runde - 1} Runden — ${gelesen} gelesen`); pausiert = true; break }
     const status = await get(`/api/docs/status?pending=true&limit=${limit}`)
     if (!status.ready) { console.error('✗ Kein Dokumentindex — der Server läuft ohne Postgres'); process.exitCode = 1 }
     const offen = status.pending ?? []
@@ -71,8 +77,8 @@ async function main() {
     if (offen.length < limit) break
   }
   const s = ((Date.now() - t0) / 1000).toFixed(1)
-  console.log(JSON.stringify({ gelesen, abschnitte, tabellen, scans, fehler, sekunden: +s }))
-  process.exitCode = fehler ? 3 : 0
+  if (!pausiert) console.log(JSON.stringify({ gelesen, abschnitte, tabellen, scans, fehler, sekunden: +s }))
+  process.exitCode = pausiert ? 2 : fehler ? 3 : 0
 }
 
 main().catch(e => { console.error('✗ ' + e.message); process.exitCode = 1 })
