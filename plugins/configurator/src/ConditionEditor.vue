@@ -5,14 +5,14 @@ import { CONDITION_KINDS, COMPARISONS, newCondition } from './model.js'
 import SelectorEditor from './SelectorEditor.vue'
 import { t } from 'journali'
 
-const props = defineProps({ cond: { type: Object, required: true }, attributes: { type: Array, default: () => [] }, depth: { type: Number, default: 1 } })
+const props = defineProps({ cond: { type: Object, required: true }, attributes: { type: Array, default: () => [] }, depth: { type: Number, default: 1 }, kinds: { type: Array, default: () => CONDITION_KINDS } })
 const OP = { '=': '=', '!=': '≠', '>': '>', '>=': '≥', '<': '<', '<=': '≤' }
 const KIND = {
   has: t('hat'), count: t('Anzahl'), sum: t('Summe'), balance: t('Bilanz'), and: t('alle von'), or: t('eine von'), not: t('keine von'),
 }
 const TITLE = {
   has: t('Teile sind gewählt; der Wert ist die Mindestmenge'), count: t('Menge der gewählten Teile vergleichen'), sum: t('Menge × Zahlenwert eines Attributs, aufsummiert'),
-  balance: t('Bereit minus verbraucht einer Ressource vergleichen'), and: t('Alle Teilbedingungen treffen zu'), or: t('Mindestens eine Teilbedingung trifft zu'), not: t('Die Teilbedingung trifft nicht zu'),
+  balance: t('Bereit minus verbraucht einer Gruppe vergleichen'), and: t('Alle Teilbedingungen treffen zu'), or: t('Mindestens eine Teilbedingung trifft zu'), not: t('Die Teilbedingung trifft nicht zu'),
 }
 
 function kind(k) {
@@ -27,7 +27,7 @@ const removePart = i => props.cond.parts.splice(i, 1)
 <template>
   <div class="cond" :style="{ marginLeft: depth > 1 ? '14px' : 0 }">
     <select :value="cond.kind" class="kind" :title="TITLE[cond.kind]" @change="kind($event.target.value)">
-      <option v-for="k in CONDITION_KINDS" :key="k" :value="k">{{ KIND[k] }}</option>
+      <option v-for="k in kinds" :key="k" :value="k">{{ KIND[k] }}</option>
     </select>
 
     <template v-if="cond.kind === 'has'">
@@ -49,14 +49,14 @@ const removePart = i => props.cond.parts.splice(i, 1)
       <input v-model.number="cond.value" type="number" class="zahl" />
     </template>
     <template v-else-if="cond.kind === 'balance'">
-      <input v-model="cond.resource" class="res" :placeholder="$t('Ressource')" />
+      <input v-model="cond.resource" class="res" :placeholder="$t('Gruppe')" />
       <select v-model="cond.comparison" class="cmp"><option v-for="c in COMPARISONS" :key="c" :value="c">{{ OP[c] }}</option></select>
       <input v-model.number="cond.value" type="number" class="zahl" />
     </template>
     <template v-else>
       <button v-if="cond.kind !== 'not'" type="button" class="plus" :title="$t('Teilbedingung hinzufügen')" @click="addPart">＋</button>
       <div v-for="(p, i) in cond.parts" :key="i" class="teil">
-        <ConditionEditor :cond="p" :attributes="attributes" :depth="depth + 1" />
+        <ConditionEditor :cond="p" :attributes="attributes" :depth="depth + 1" :kinds="kinds" />
         <button v-if="cond.parts.length > 1" type="button" class="x" :title="$t('Teilbedingung entfernen')" @click="removePart(i)">✕</button>
       </div>
     </template>

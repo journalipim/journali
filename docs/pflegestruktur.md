@@ -2413,4 +2413,11 @@ ungültig; der Kühler, der sie bereitstellt, trägt in `selectable` den Hinweis
 **Schnittstelle:** `POST /api/configurator/{key}/check` liest Gruppen und Zeilen aus den Plugin-Daten und antwortet zusätzlich mit `groups`; `violations` und `missing` nennen
 `group` statt `resource`. `GET /api/configurator-groups` liefert die Gruppen (mit der Zahl ihrer Mitglieder), die Zeilen der Teile und was an ihnen nicht stimmt.
 
-**Offen:** Ansicht (Reiter „Gruppen“, Zeilen am Produkt), Gruppen im Tarifblatt (gilt wie das Plugin), mehrere Container in einer Konfiguration (Abschnitt 39).
+**Ansicht** (Plugin `configurator`, Reiter *Gruppen* neben *Regeln* und *Prüfen*, gebaut am 02.10.2026): links die Gruppen mit der Zahl ihrer Mitglieder (anlegen; Bezeichnung und
+„alle Werte gleich“ je Gruppe, einzeln gespeichert als `group:<key>`), rechts die Teile mit Zeilen als Satz („PCI-Steckplätze: stellt 2 bereit, wenn Mainboard XYZ gewählt“) — gefiltert
+auf die gewählte Gruppe. Ein Teil wird im Baum gewählt; seine Zeilen (`member:<knoten>`) werden als Mitglied oder Vorgabe mit Bedingung bearbeitet und mit einem Knopf gespeichert,
+alle Zeilen zu entfernen löscht das Dokument. Die Bedingung einer Zeile kennt die Art „Bilanz“ nicht. Darunter stehen die Grenzen dieses Konfigurators; sie gehören zur Definition und
+werden mit ihr gespeichert. *Prüfen* zeigt die Bilanz mit der Bezeichnung der Gruppe, die Gruppen mit Vorgabe (Teile, Mindest- und Höchstmenge, erlaubte und vorkommende Werte) und an
+einem wählbaren Teil `↑ Gruppe`, wenn es die Summe einer Gruppe im Minus anhebt.
+
+**Offen:** Zeilen am Produkt selbst (ein Band in der Knotenansicht), Gruppen im Tarifblatt (gilt wie das Plugin), mehrere Container in einer Konfiguration (Abschnitt 39).

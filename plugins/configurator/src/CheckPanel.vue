@@ -19,6 +19,11 @@ const names = computed(() => Object.fromEntries((result.value?.selection ?? []).
 const name = ref => names.value[ref] ?? ref
 const available = computed(() => (result.value?.selectable ?? []).filter(c => !filter.value || (c.name ?? '').toLowerCase().includes(filter.value.toLowerCase()) || Object.values(c.keys ?? {}).some(k => String(k).toLowerCase().includes(filter.value.toLowerCase()))))
 const balance = computed(() => Object.entries(result.value?.balance ?? {}))
+// Gruppen mit Vorgabe: Zahl der Teile, Grenzen, erlaubte und vorkommende Werte
+const groups = computed(() => Object.entries(result.value?.groups ?? {}).filter(([, g]) => g.min != null || g.max != null || g.allowed))
+const groupName = k => result.value?.groups?.[k]?.label || k
+const limitText = g => g.min != null && g.max != null ? (g.min === g.max ? String(g.min) : `${g.min}–${g.max}`) : g.min != null ? `≥ ${g.min}` : g.max != null ? `≤ ${g.max}` : ''
+const liftsText = c => (c.lifts ?? []).map(groupName).join(', ')
 
 async function run() {
   const mine = ++ticket
@@ -70,7 +75,7 @@ const affects = v => (v.affects ?? []).map(name).join(', ')
 
         <template v-if="result">
           <div class="status">
-            <span :class="result.valid ? 'pos' : 'neg'" class="chip" :title="$t('Kein Verbot, keine Grenze und keine Ressource im Minus')">{{ result.valid ? '✓ ' + $t('zulässig') : '✗ ' + $t('unzulässig') }}</span>
+            <span :class="result.valid ? 'pos' : 'neg'" class="chip" :title="$t('Kein Verbot, keine Grenze, keine Gruppe im Minus oder mit falschen Werten')">{{ result.valid ? '✓ ' + $t('zulässig') : '✗ ' + $t('unzulässig') }}</span>
             <span :class="result.complete ? 'pos' : 'warn'" class="chip" :title="$t('Nichts verlangt, das fehlt')">{{ result.complete ? '✓ ' + $t('vollständig') : '◐ ' + $t('unvollständig') }}</span>
           </div>
           <ul v-if="result.violations.length" class="meldungen neg">
@@ -79,8 +84,11 @@ const affects = v => (v.affects ?? []).map(name).join(', ')
           <ul v-if="result.missing.length" class="meldungen warn">
             <li v-for="(v, i) in result.missing" :key="i" :title="affects(v)">◐ {{ v.text }}<span v-if="affects(v)" class="muted"> · {{ affects(v) }}</span></li>
           </ul>
-          <table v-if="balance.length" class="grid bilanz"><thead><tr><th>{{ $t('Ressource') }}</th><th>{{ $t('bereit') }}</th><th>{{ $t('verbraucht') }}</th><th>{{ $t('frei') }}</th></tr></thead><tbody>
-            <tr v-for="[res, b] in balance" :key="res"><td>{{ res }}</td><td>{{ num(b.provided) }}</td><td>{{ num(b.consumed) }}</td><td :class="b.free < 0 ? 'neg' : ''">{{ num(b.free) }}</td></tr>
+          <table v-if="balance.length" class="grid bilanz"><thead><tr><th>{{ $t('Gruppe') }}</th><th>{{ $t('bereit') }}</th><th>{{ $t('verbraucht') }}</th><th>{{ $t('frei') }}</th></tr></thead><tbody>
+            <tr v-for="[res, b] in balance" :key="res"><td>{{ groupName(res) }}</td><td>{{ num(b.provided) }}</td><td>{{ num(b.consumed) }}</td><td :class="b.free < 0 ? 'neg' : ''">{{ num(b.free) }}</td></tr>
+          </tbody></table>
+          <table v-if="groups.length" class="grid bilanz gruppentabelle"><thead><tr><th>{{ $t('Gruppe') }}</th><th :title="$t('Zahl der Teile in der Gruppe')">{{ $t('Teile') }}</th><th :title="$t('Mindest- und Höchstmenge, die Teile oder der Konfigurator vorgeben')">{{ $t('Vorgabe') }}</th><th :title="$t('Erlaubte Werte, danach die vorkommenden')">{{ $t('Werte') }}</th></tr></thead><tbody>
+            <tr v-for="[key, g] in groups" :key="key"><td>{{ g.label || key }}</td><td>{{ g.count }}</td><td>{{ limitText(g) }}</td><td>{{ (g.allowed ?? []).join(', ') }}<span v-if="g.values?.length" class="muted"> → {{ g.values.join(', ') }}</span></td></tr>
           </tbody></table>
         </template>
         <Cases :configurator="configurator" :selection="selection" :result="result" @load="load" />
@@ -92,7 +100,7 @@ const affects = v => (v.affects ?? []).map(name).join(', ')
         <table class="grid"><tbody>
           <tr v-for="c in available" :key="c.id" :class="{ gesperrt: !c.ok }" :title="c.ok ? $t('zur Auswahl hinzufügen') : reasonText(c)" @click="c.ok && add(c.id)">
             <td style="width:20px" :class="c.ok ? 'pos' : 'neg'">{{ c.ok ? '✓' : '✗' }}</td>
-            <td>{{ c.name }}<span v-for="(v, k) in c.keys" :key="k" class="muted"> · {{ v }}</span></td>
+            <td>{{ c.name }}<span v-for="(v, k) in c.keys" :key="k" class="muted"> · {{ v }}</span><span v-if="c.ok && c.lifts?.length" class="pos hebt" :title="$t('Hebt die Summe einer Gruppe, die im Minus ist')"> ↑ {{ liftsText(c) }}</span></td>
             <td v-if="!c.ok" class="muted grund">{{ reasonText(c) }}</td>
           </tr>
         </tbody></table>

@@ -6,6 +6,7 @@ import { api, store, dialog, tree, TreePicker, L, t } from 'journali'
 import { emptyDefinition, cleanDefinition, KEY_PATTERN } from './model.js'
 import { describeRule } from './describe.js'
 import RuleEditor from './RuleEditor.vue'
+import Groups from './Groups.vue'
 import CheckPanel from './CheckPanel.vue'
 
 const list = ref([])               // [{ key, label, root, rules, errors }]
@@ -34,6 +35,7 @@ async function open(key) {
     const r = await api.get(`/api/configurator/${encodeURIComponent(key)}`)
     def.value = { label: '', rules: [], ...JSON.parse(JSON.stringify(r.definition ?? {})) }
     def.value.rules ??= []
+    def.value.limits ??= []
     errors.value = r.errors ?? []
     baseline.value = JSON.stringify(cleanDefinition(def.value))
     cur.value = key; busy.value = ''
@@ -119,9 +121,11 @@ async function remove() {
 
         <div class="tabs">
           <button type="button" :class="{ on: tab === 'rules' }" @click="tab = 'rules'">{{ $t('Regeln') }} · {{ def.rules.length }}</button>
+          <button type="button" class="reiter-gruppen" :class="{ on: tab === 'groups' }" :title="$t('Konfiguratorgruppen: Teile gehören mit Zeilen zu Gruppen, die summieren, gleiche Werte verlangen oder Mengen und Werte vorgeben')" @click="tab = 'groups'">{{ $t('Gruppen') }}</button>
           <button type="button" :class="{ on: tab === 'check' }" @click="tab = 'check'">{{ $t('Prüfen') }}</button>
         </div>
         <RuleEditor v-if="tab === 'rules'" :def="def" :attributes="attributes" />
+        <Groups v-else-if="tab === 'groups'" :def="def" :attributes="attributes" />
         <CheckPanel v-else :configurator="cur" :unsaved="dirty" />
       </div>
       <div v-else class="rechts muted leer">{{ $t('Einen Konfigurator wählen oder anlegen') }}</div>

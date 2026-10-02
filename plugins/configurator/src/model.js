@@ -59,6 +59,50 @@ export function cleanCondition(c) {
   return o
 }
 
+// ---- Konfiguratorgruppen (docs/pflegestruktur.md 40): die Zeilen eines Teils und die Grenzen eines Konfigurators
+
+const has = v => !blank(v)
+const text = v => Array.isArray(v) ? v.join(', ') : String(v ?? '')
+/// Die erlaubten Werte als Liste: aus der Eingabe „8, 32“ oder aus einer Liste
+export const valuesOf = v => (Array.isArray(v) ? v : String(v ?? '').split(',')).map(x => String(x).trim()).filter(Boolean)
+/// Die erlaubten Werte als Eingabetext (die Eingabe geht vor, solange sie getippt wird)
+export const valuesText = x => x?.valuesText !== undefined ? x.valuesText : text(x?.values)
+
+/// Mitglied (stellt bereit, verbraucht, Wert) oder Vorgabe (Mindest-, Höchstmenge, erlaubte Werte) — wie der Server sie unterscheidet
+export const ROW_KINDS = ['member', 'limit']
+export const isLimit = r => has(r?.min) || has(r?.max) || valuesOf(r?.values).length > 0 || valuesOf(r?.valuesText).length > 0
+export const rowKind = r => r?.art ?? (isLimit(r) ? 'limit' : 'member')
+export const newRow = (art = 'member', group = '') => ({ art, group })
+
+/// Eine Zeile, wie sie gespeichert wird: ohne leere Felder, Zahlen als Zahlen, nur die Felder ihrer Art
+export function cleanRow(r) {
+  const o = { group: String(r?.group ?? '').trim() }
+  if (r?.when) o.when = cleanCondition(r.when)
+  if (rowKind(r) === 'limit') {
+    if (number(r.min) !== undefined) o.min = number(r.min)
+    if (number(r.max) !== undefined) o.max = number(r.max)
+    const values = valuesOf(r.valuesText !== undefined ? r.valuesText : r.values)
+    if (values.length) o.values = values
+  } else {
+    if (number(r.provides) !== undefined) o.provides = number(r.provides)
+    if (number(r.consumes) !== undefined) o.consumes = number(r.consumes)
+    if (has(r.value)) o.value = String(r.value).trim()
+  }
+  return o
+}
+export const cleanRows = rows => (rows ?? []).map(cleanRow)
+
+/// Eine Grenze am Konfigurator: Gruppe, Mindest-, Höchstmenge, erlaubte Werte
+export function cleanLimit(l) {
+  const o = { group: String(l?.group ?? '').trim() }
+  if (number(l.min) !== undefined) o.min = number(l.min)
+  if (number(l.max) !== undefined) o.max = number(l.max)
+  const values = valuesOf(l.valuesText !== undefined ? l.valuesText : l.values)
+  if (values.length) o.values = values
+  return o
+}
+export const cleanLimits = limits => (limits ?? []).map(cleanLimit)
+
 /// Was gespeichert wird: ohne leere Felder, Zahlen als Zahlen
 export function cleanDefinition(def) {
   const out = {}
@@ -77,6 +121,8 @@ export function cleanDefinition(def) {
     }
     return rule
   })
+  const limits = cleanLimits(def?.limits)
+  if (limits.length) out.limits = limits
   return out
 }
 

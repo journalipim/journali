@@ -47,7 +47,7 @@ function effectKind(r, k) {
       <ul>
         <li>{{ $t('Eine Regel sagt, welche Teile zusammen gewählt werden dürfen — ein Teil ist ein Produkt, eine Variante oder eine Gruppe mit allem darunter.') }}</li>
         <li>{{ $t('Die meisten Regeln sind ein Satz, in dem nur die Teile zu wählen sind: passt nicht zusammen, braucht, höchstens, mindestens.') }}</li>
-        <li>{{ $t('Steckplätze und andere Kapazität brauchen keine Regel: Teile tragen sie als Ressourcen, und der Konfigurator rechnet die Bilanz selbst.') }}</li>
+        <li>{{ $t('Steckplätze, Mengen und Werte brauchen keine Regel: Teile gehören mit Zeilen zu Gruppen (Reiter „Gruppen“), und der Konfigurator rechnet selbst.') }}</li>
         <li>{{ $t('Unter „Prüfen“ lässt sich eine Auswahl ausprobieren, und Testfälle halten fest, was herauskommen soll.') }}</li>
       </ul>
     </details>
@@ -87,7 +87,7 @@ function effectKind(r, k) {
     <div class="neu">
       <span class="muted">{{ $t('Neue Regel:') }}</span>
       <button v-for="k in TEMPLATES" :key="k" type="button" class="vorlage" :class="'v-' + k" :title="HINT[k]" @click="addFrom(k)">＋ {{ NAME[k] }}</button>
-      <button type="button" class="neue-regel" :title="$t('Mit allen Möglichkeiten: Summe eines Attributs, Bilanz einer Ressource, und, oder, nicht')" @click="addFrom('eigene')">＋ {{ $t('eigene Regel') }}</button>
+      <button type="button" class="neue-regel" :title="$t('Mit allen Möglichkeiten: Summe eines Attributs, Bilanz einer Gruppe, und, oder, nicht')" @click="addFrom('eigene')">＋ {{ $t('eigene Regel') }}</button>
     </div>
   </div>
 </template>

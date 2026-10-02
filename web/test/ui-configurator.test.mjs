@@ -220,7 +220,7 @@ const pruefen = body => {
   }
 }
 
-async function pruefTab(w) { await w.findAll('.tabs button')[1].trigger('click'); await warte() }
+async function pruefTab(w) { await w.findAll('.tabs button').find(b => b.text().includes('Prüfen')).trigger('click'); await warte() }
 
 test('Prüfen: die Auswahl geht an den Endpunkt, das Ergebnis zeigt zulässig, Verstösse, Bilanz und die wählbaren Teile mit Grund', async () => {
   const s = welt({ check: pruefen })
@@ -410,7 +410,7 @@ test('Ungespeichert ist, was vom gespeicherten Stand abweicht: wer eine Änderun
 test('die Erklärung ist offen, solange es keine Regel gibt, und danach zu', async () => {
   const leer = welt({ defs: { server: { label: 'Server', rules: [] } } })
   const w1 = mount(View); await flushPromises()
-  try { await oeffnen(w1); assert.ok(w1.find('details.hilfe').element.open); assert.match(w1.find('details.hilfe').text(), /Steckplätze und andere Kapazität brauchen keine Regel/) } finally { w1.unmount(); leer.ende() }
+  try { await oeffnen(w1); assert.ok(w1.find('details.hilfe').element.open); assert.match(w1.find('details.hilfe').text(), /Steckplätze, Mengen und Werte brauchen keine Regel/) } finally { w1.unmount(); leer.ende() }
   const s = welt()
   const w2 = mount(View); await flushPromises()
   try { await oeffnen(w2); assert.ok(!w2.find('details.hilfe').element.open) } finally { w2.unmount(); s.ende() }

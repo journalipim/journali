@@ -116,3 +116,53 @@ test('templateOf: nur „hat A, dann …“ ohne Menge und ohne Verknüpfung ist
   assert.equal(templateOf({ then: { kind: 'forbids', selector: sel } }), null, 'ohne Bedingung verbieten ist keine Vorlage')
   assert.equal(templateOf({ if: has, then: { kind: 'limits', selector: sel, max: 1 } }), null)
 })
+
+// ---- Konfiguratorgruppen: Zeilen an Teilen und Grenzen am Konfigurator
+
+import { cleanRow, cleanRows, cleanLimit, cleanLimits, valuesOf, valuesText, rowKind, newRow } from '../../plugins/configurator/src/model.js'
+import { describeRow } from '../../plugins/configurator/src/describe.js'
+
+const gnames = { pci: 'PCI-Steckplätze', ram: 'RAM' }
+const gctx = { ...ctx, nodeName: id => ({ board: 'Mainboard XYZ', geh: 'Gehäuse ABC' })[id] ?? id, groupName: k => gnames[k] ?? k }
+
+test('eine Zeile als Mitglied: nur ihre Felder, Zahlen als Zahlen, leere Felder fallen weg', () => {
+  assert.deepEqual(cleanRow({ group: ' pci ', provides: '2', consumes: '', value: ' ' }), { group: 'pci', provides: 2 })
+  assert.deepEqual(cleanRow({ group: 'pci', art: 'member', provides: 2, min: 3, values: ['x'] }), { group: 'pci', provides: 2 }, 'die gewählte Art zählt, Felder der anderen fallen weg')
+  assert.deepEqual(cleanRow({ group: 'ram', value: ' 8 ' }), { group: 'ram', value: '8' })
+  assert.deepEqual(cleanRow(newRow('member', 'pci')), { group: 'pci' }, 'ein Mitglied ohne Zahlen zählt nur')
+  assert.deepEqual(cleanRow({ group: 'pci', provides: 2, when: { kind: 'has', selector: { node: 'board' }, value: 1 } }), { group: 'pci', provides: 2, when: { kind: 'has', selector: { node: 'board' }, value: 1 } })
+})
+
+test('eine Zeile als Vorgabe: Mindest-, Höchstmenge und die Werte als Liste', () => {
+  assert.deepEqual(cleanRow({ group: 'ram', min: '2', max: 2, valuesText: ' 8, 32 ,, ', provides: 5 }), { group: 'ram', min: 2, max: 2, values: ['8', '32'] })
+  assert.equal(rowKind({ group: 'ram', min: 2 }), 'limit'); assert.equal(rowKind({ group: 'ram', values: ['8'] }), 'limit')
+  assert.equal(rowKind({ group: 'ram', provides: 1 }), 'member'); assert.equal(rowKind({ group: 'ram' }), 'member')
+  assert.equal(rowKind({ group: 'ram', art: 'limit' }), 'limit', 'was der Anwender gewählt hat, geht vor — auch ohne Angaben')
+  assert.deepEqual(cleanRows([{ group: 'a', art: 'limit', max: 1 }, { group: 'b' }]), [{ group: 'a', max: 1 }, { group: 'b' }])
+})
+
+test('erlaubte Werte: aus Text oder Liste, getrimmt, ohne Leeres; die Eingabe geht vor, solange sie getippt wird', () => {
+  assert.deepEqual(valuesOf('8, 32'), ['8', '32']); assert.deepEqual(valuesOf([' 8 ', '', 32]), ['8', '32']); assert.deepEqual(valuesOf(undefined), [])
+  assert.equal(valuesText({ values: ['8', '32'] }), '8, 32'); assert.equal(valuesText({ values: ['8'], valuesText: '8, ' }), '8, ')
+  assert.equal(valuesText({}), '')
+})
+
+test('eine Grenze am Konfigurator, und die Definition nimmt sie nur mit Angaben auf', () => {
+  assert.deepEqual(cleanLimit({ group: ' ram ', min: '1', max: '', valuesText: '8,16' }), { group: 'ram', min: 1, values: ['8', '16'] })
+  assert.deepEqual(cleanLimits(undefined), [])
+  assert.equal('limits' in cleanDefinition({ rules: [], limits: [] }), false, 'keine Grenzen: kein Feld, die Definition bleibt, wie sie war')
+  assert.deepEqual(cleanDefinition({ rules: [], limits: [{ group: 'ram', max: 2 }] }).limits, [{ group: 'ram', max: 2 }])
+})
+
+test('Zeilen als Satz: Mitglied, Vorgabe, mit Bedingung', () => {
+  assert.equal(describeRow({ group: 'pci', provides: 2, when: { kind: 'has', selector: { node: 'board' }, value: 1 } }, gctx), 'PCI-Steckplätze: stellt 2 bereit, wenn Mainboard XYZ gewählt')
+  assert.equal(describeRow({ group: 'pci', consumes: 1, provides: 2 }, gctx), 'PCI-Steckplätze: stellt 2 bereit, verbraucht 1')
+  assert.equal(describeRow({ group: 'ram', value: '8' }, gctx), 'RAM: Wert 8')
+  assert.equal(describeRow({ group: 'ram' }, gctx), 'RAM: Mitglied')
+  assert.equal(describeRow({ group: 'ram', min: 2, max: 2, values: ['8', '32'] }, gctx), 'RAM: genau 2 Teile, Werte 8, 32')
+  assert.equal(describeRow({ group: 'ram', min: 1, max: 4 }, gctx), 'RAM: 1 bis 4 Teile')
+  assert.equal(describeRow({ group: 'ram', min: 2 }, gctx), 'RAM: mindestens 2 Teile')
+  assert.equal(describeRow({ group: 'ram', max: 2, when: { kind: 'has', selector: { node: 'geh' }, value: 1 } }, gctx), 'RAM: höchstens 2 Teile, wenn Gehäuse ABC gewählt')
+  assert.equal(describeRow({ group: 'x', provides: 0 }, gctx), 'x: stellt 0 bereit', 'null ist eine Angabe')
+  assert.equal(describeRow({ group: 'ram', values: ['8'], valuesText: '8, 16' }, gctx), 'RAM: Werte 8, 16', 'die getippten Werte gehen vor')
+})
