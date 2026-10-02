@@ -1,4 +1,10 @@
+using Journali.Core.Journal;
 using Journali.Server;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 namespace Journali.Tests;
 
@@ -47,5 +53,32 @@ public class DriverApiTests
     {
         // Die offenen Felder gehen ins Journal, das Geheimnis zum Server. Gilt fuer jede Art, die je dazukommt
         Assert.All(DriverApi.Arten, a => Assert.Empty(a.Felder.Intersect(a.Geheim)));
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("&raw=1")]
+    [InlineData("&raw=true")]
+    public async Task Die_Weiterleitung_nimmt_einen_Aufruf_mit_und_ohne_raw_an(string zusatz)
+    {
+        // Ein Parameter „bool raw“ ohne Vorgabe weist jeden Aufruf ohne ?raw ab (400 „Required parameter“) — die Ansicht des Imports
+        // ruft ohne. Ein Zugang, den es nicht gibt, kommt erst nach dem Binden der Parameter: die Antwort nennt ihn.
+        var dir = Path.Combine(Path.GetTempPath(), "journali-relay-" + Guid.NewGuid().ToString("N")); Directory.CreateDirectory(dir);
+        var b = WebApplication.CreateBuilder();
+        b.WebHost.UseUrls("http://127.0.0.1:0");
+        var cat = new Catalog(new MemoryJournal()); cat.Rebuild(); cat.SeedMissing();
+        b.Services.AddSingleton(cat);
+        await using var app = b.Build();
+        DriverApi.Map(app.MapGroup("/api"), dir, app.Environment, dir);
+        await app.StartAsync();
+        try
+        {
+            using var http = new HttpClient();
+            var res = await http.GetAsync(app.Urls.First() + "/api/drivers/gibtsnicht/relay?path=%2Fdocuments" + zusatz);
+            var text = await res.Content.ReadAsStringAsync();
+            Assert.Contains("gibtsnicht", text);
+            Assert.DoesNotContain("Required parameter", text);
+        }
+        finally { await app.StopAsync(); Directory.Delete(dir, true); }
     }
 }

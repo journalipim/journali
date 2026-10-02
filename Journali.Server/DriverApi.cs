@@ -177,9 +177,9 @@ public static class DriverApi
         // Die Weiterleitung: der Server liest die Quelle (IXP, Solr, HTTP) und beschickt sie, hängt die Anmeldung an —
         // das Geheimnis verlässt ihn nie. GET liest, POST/PUT/DELETE schreiben mit Rumpf; nur unterhalb der Adresse des
         // Zugangs (path relativ, ohne ..). Mit ?raw=1 kommt statt des Rumpfs ein Umschlag { status, headers, body }
-        // zurück — für Abläufe, die eine Kopfzeile brauchen (ERP: X-CSRF-Token holen, dann mit Sitzungskeks schreiben).
+        // zurück (raw nur als Text lesen: ein fehlender Wert oder „1“ darf den Aufruf nicht abweisen) — für Abläufe, die eine Kopfzeile brauchen (ERP: X-CSRF-Token holen, dann mit Sitzungskeks schreiben).
         // Durchgereicht werden nur die Kopfzeilen aus RelayKopfDurch, nie das Authorization des Aufrufers
-        api.MapMethods("/drivers/{zugang}/relay", ["GET", "POST", "PUT", "DELETE"], async (string zugang, string? path, bool raw, HttpContext http, Catalog c, CancellationToken ct) =>
+        api.MapMethods("/drivers/{zugang}/relay", ["GET", "POST", "PUT", "DELETE"], async (string zugang, string? path, string? raw, HttpContext http, Catalog c, CancellationToken ct) =>
         {
             if (Alle(c).FirstOrDefault(x => x.Key == zugang) is not { } z) return Bad("Zugang {0} gibt es nicht.", zugang);
             if (!Anmeldungen.Contains(z.Art)) return Bad("Zugang {0} liest und beschickt nicht über die Weiterleitung.", zugang);
@@ -198,7 +198,7 @@ public static class DriverApi
             {
                 var res = await Weiter(z, Geheim(jobsDir, z.Key), path ?? "/", ct, methode, rumpf, rumpfTyp, durch);
                 http.Response.RegisterForDispose(res);
-                if (raw)
+                if (raw is "1" or "true")
                 {
                     var kopf = new Dictionary<string, object?>();
                     if (res.Headers.TryGetValues("X-CSRF-Token", out var tok)) kopf["x-csrf-token"] = tok.FirstOrDefault();
