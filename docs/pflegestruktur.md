@@ -2365,7 +2365,7 @@ warum eines gesperrt ist — über denselben Endpunkt wie der Shop, gegen den ge
 Regeln, die Zustände, das Prüfen und die Schnittstelle; der ?-Knopf in der Ansicht des Plugins öffnet es (`help.js`: `/p/configurator` → `konfigurator`), das Glossar nennt Konfigurator und
 Konfiguratorgruppe.
 
-**Offen:** der Tarif des Plugins im Tarifblatt des Lizenzservers.
+**Tarif:** `configurator` steht im Tarifblatt des Lizenzservers (02.10.2026); das Saatgut in `Tarife.cs` bleibt für ein leeres Journal.
 
 ## 40. Konfiguratorgruppen — Teile gehören mit Zeilen zu Gruppen, die Regel steht an der Gruppe (02.10.2026, Kern und Endpunkt gebaut)
 
@@ -2432,4 +2432,4 @@ gewählt werden darf, gehört zu dieser einen Konfiguration. Mehrere Container i
 eigenem Arbeitsspeicher), gibt es nicht als eigenes Merkmal: wer sie getrennt haben will, legt getrennte Gruppen an (`ram_a`, `ram_b`) und gibt den Teilen der jeweiligen Seite Zeilen in
 der jeweiligen Gruppe. Die Auswahl kennt dafür keine Container und keine Verschachtelung.
 
-**Offen:** Gruppen im Tarifblatt (gilt wie das Plugin).
+**Tarif:** Gruppen und Zeilen gehören zum Plugin; sie brauchen keinen eigenen Eintrag im Tarifblatt.
