@@ -2339,6 +2339,18 @@ Tests: `KonfiguratorTests` (das Beispiel eines Servers mit Mainboard, CPU, Kühl
 **Gewählt:** Die Definition liegt als Plugin-Daten im Journal (wie ein Skript, Abschnitt 37), nicht als eigener Eintragstyp — das spart ein
 neues Abbild im Katalog, und das Plugin steuert den Tarif. Ein eigener Typ bleibt möglich, wenn die Regeln im Abbild abfragbar sein sollen.
 
-**Offen:** der Endpunkt (`POST /api/konfigurator/{key}/pruefen`: Rechte — lesen, auch wenn es ein POST ist —, Auswahl über Knoten, Kennung
-oder SKU), die Ansicht zum Pflegen der Regeln, Beispiele und Testfälle, mehrere Container in einer Konfiguration (zwei Mainboards fallen
-heute in eine Bilanz zusammen), Hilfe.
+**Endpunkt (gebaut, `ConfiguratorApi.cs`):**
+
+- `POST /api/konfigurator/{key}/pruefen` mit `{ "auswahl": [{ "id": "<Knoten-Id oder eindeutiger Wert, z. B. SKU>", "menge": 1 }], "waehlbar": false }`.
+  Die Antwort: `zulaessig`, `vollstaendig`, `auswahl` (Kennung, Id, Name, Menge), `verstoesse` und `fehlt` (Art, Text, `betrifft`, Regel oder
+  Ressource), `bilanz` je Ressource und mit `waehlbar: true` zu jedem wählbaren Teil `ok` und die Gründe. In `betrifft` stehen die Kennungen, die
+  der Aufrufer geschickt hat — der Shop kennt unsere Ids nicht. Höchstens 500 Zeilen, Menge 1 bis 9999, höchstens 2 000 wählbare Teile.
+- `GET /api/konfigurator` (die Konfiguratoren mit Zahl der Regeln und Fehler) und `GET /api/konfigurator/{key}` (die Definition und was an ihr nicht stimmt).
+- **Recht:** Prüfen braucht nur das Recht zu lesen, auch wenn es ein POST ist (`Auth.Needed`). Ein Teil, das die Rolle des Aufrufers nicht sieht, gibt es für
+  ihn nicht (dieselbe Antwort wie für ein unbekanntes). Die Definition liegt unter den Plugin-Daten von `konfigurator` (`def:<key>`); sie zu ändern
+  ist Pflege dieser Daten.
+- **Das Plugin muss da, an und im Tarif sein**; im Saatgut gehört `konfigurator` zu Pro+ (nicht in der Liste von Kostenlos und Pro). Im Betrieb gilt das
+  signierte Tarifblatt: ein Blatt, das `konfigurator` nicht nennt, schliesst es aus.
+
+**Offen:** die Ansicht zum Pflegen der Regeln (Plugin `konfigurator`, das den Endpunkt der Prüfung ohnehin braucht), Beispiele und Testfälle,
+mehrere Container in einer Konfiguration (zwei Mainboards fallen heute in eine Bilanz zusammen), Hilfe.

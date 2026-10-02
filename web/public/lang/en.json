@@ -2921,5 +2921,14 @@
  "Probiert die Verbindung mit diesem Modus; nur wenn sie klappt, wird er gespeichert": "Tries the connection with this mode; it is saved only if that works",
  "Mit {0} lässt sich keine Verbindung herstellen: {1}": "No connection can be made with {0}: {1}",
  "Die Verbindung kommt aus der Umgebung des Servers — der Modus gehört in JOURNALI_DB (SSL Mode=…).": "The connection comes from the server's environment — the mode belongs in JOURNALI_DB (SSL Mode=…).",
- "Verschlüsselung: Disable, Prefer, Require, VerifyCA oder VerifyFull.": "Encryption: Disable, Prefer, Require, VerifyCA or VerifyFull."
+ "Verschlüsselung: Disable, Prefer, Require, VerifyCA oder VerifyFull.": "Encryption: Disable, Prefer, Require, VerifyCA or VerifyFull.",
+ "Konfigurator {0} gibt es nicht.": "Configurator {0} does not exist.",
+ "Konfigurator {0}: {1}": "Configurator {0}: {1}",
+ "Konfigurator {0} hat Fehler: {1}": "Configurator {0} has errors: {1}",
+ "Höchstens {0} Zeilen in der Auswahl.": "At most {0} lines in the selection.",
+ "Eine Zeile der Auswahl hat keine Id.": "A line of the selection has no id.",
+ "Menge {0} gilt nicht (1 bis {1}).": "Quantity {0} is not valid (1 to {1}).",
+ "{0} ist nicht eindeutig.": "{0} is not unique.",
+ "Teil {0} gibt es nicht.": "Part {0} does not exist.",
+ "Mehr als {0} wählbare Teile — die Wurzel des Konfigurators begrenzt sie.": "More than {0} selectable parts — the configurator's root limits them."
 }
