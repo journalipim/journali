@@ -1,6 +1,7 @@
-(function(){const s=document.createElement('style');s.textContent="\n.sel[data-v-16e6f4ce] { display: inline-flex; flex-wrap: wrap; gap: 4px; align-items: center;\n}\n.wahl[data-v-16e6f4ce] { position: relative; display: inline-flex; align-items: center; gap: 2px;\n}\n.popover[data-v-16e6f4ce] { position: absolute; left: 0; top: 100%; z-index: 20; width: 340px; padding: 6px; background: var(--pane); border: 1px solid var(--line); border-radius: 6px; box-shadow: 0 6px 20px rgba(0,0,0,.35);\n}\n.knoten[data-v-16e6f4ce] { border: 1px solid var(--line); background: var(--pane); color: var(--text); padding: 1px 8px; cursor: pointer; border-radius: 3px; max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;\n}\n.knoten.leer[data-v-16e6f4ce] { color: var(--accent); border-style: dashed;\n}\n.x[data-v-16e6f4ce] { border: 0; background: none; color: var(--muted); padding: 0 4px; cursor: pointer;\n}\n.x[data-v-16e6f4ce]:hover { color: var(--neg);\n}\n.filter[data-v-16e6f4ce] { border: 0; background: none; color: var(--muted); cursor: pointer; font-size: 12px;\n}\n.filter[data-v-16e6f4ce]:hover { color: var(--accent);\n}\n.attr[data-v-16e6f4ce] { max-width: 160px;\n}\n.cmp[data-v-16e6f4ce] { width: 52px;\n}\n.wert[data-v-16e6f4ce] { width: 80px;\n}\n\n.cond[data-v-a6fb4c3c] { display: flex; flex-wrap: wrap; gap: 4px; align-items: center;\n}\n.teil[data-v-a6fb4c3c] { display: flex; align-items: flex-start; gap: 4px; width: 100%;\n}\n.kind[data-v-a6fb4c3c] { min-width: 84px;\n}\n.cmp[data-v-a6fb4c3c] { width: 52px;\n}\n.zahl[data-v-a6fb4c3c] { width: 64px;\n}\n.res[data-v-a6fb4c3c] { width: 110px;\n}\n.attr[data-v-a6fb4c3c] { max-width: 160px;\n}\n.mal[data-v-a6fb4c3c] { color: var(--muted);\n}\n.plus[data-v-a6fb4c3c], .x[data-v-a6fb4c3c] { border: 0; background: none; color: var(--muted); cursor: pointer; padding: 0 4px;\n}\n.plus[data-v-a6fb4c3c]:hover { color: var(--accent);\n}\n.x[data-v-a6fb4c3c]:hover { color: var(--neg);\n}\n\n.satz-regel[data-v-fd22fced] { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 14px;\n}\n.zahl[data-v-fd22fced] { width: 56px;\n}\n\n.hilfe[data-v-ac68bf20] { margin: 0 0 10px;\n}\n.hilfe ul[data-v-ac68bf20] { margin: 4px 0 0 18px; padding: 0; font-size: 13px; color: var(--muted);\n}\n.regel[data-v-ac68bf20] { border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; margin: 0 0 8px; background: var(--pane);\n}\n.kopf[data-v-ac68bf20], .zeile[data-v-ac68bf20] { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 0 0 6px;\n}\n.kennung[data-v-ac68bf20] { width: 70px;\n}\n.text[data-v-ac68bf20] { flex: 1; min-width: 200px;\n}\n.wenn[data-v-ac68bf20] { display: inline-flex; gap: 4px; align-items: center; width: 52px; color: var(--muted);\n}\n.dann[data-v-ac68bf20] { width: 52px; color: var(--muted);\n}\n.folge[data-v-ac68bf20] { min-width: 170px;\n}\n.zahl[data-v-ac68bf20] { width: 64px;\n}\n.fuss[data-v-ac68bf20] { display: flex; gap: 8px; align-items: center; margin-top: 4px;\n}\n.satz[data-v-ac68bf20] { font-size: 12px; flex: 1;\n}\n.x[data-v-ac68bf20] { border: 0; background: none; color: var(--muted); cursor: pointer; padding: 0 4px;\n}\n.x[data-v-ac68bf20]:hover:not(:disabled) { color: var(--accent);\n}\n.x[data-v-ac68bf20]:disabled { opacity: .3; cursor: default;\n}\n.neu[data-v-ac68bf20] { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 8px;\n}\n.vorlage[data-v-ac68bf20], .neue-regel[data-v-ac68bf20] { border: 1px dashed var(--line); background: none; color: var(--muted); padding: 5px 12px; cursor: pointer; border-radius: 6px;\n}\n.vorlage[data-v-ac68bf20]:hover, .neue-regel[data-v-ac68bf20]:hover { color: var(--accent); border-color: var(--accent);\n}\n\n.faelle[data-v-ebd18361] { margin-top: 14px;\n}\n.kopf[data-v-ebd18361] { display: flex; gap: 6px; align-items: center; margin: 4px 0;\n}\n.kopf input[data-v-ebd18361] { flex: 1; min-width: 120px;\n}\n.diff[data-v-ebd18361] { font-size: 12px;\n}\n.x[data-v-ebd18361] { border: 0; background: none; color: var(--muted); cursor: pointer; padding: 0 4px;\n}\n.x[data-v-ebd18361]:hover { color: var(--accent);\n}\n\n.pruef[data-v-92f2287b] { padding: 8px 0;\n}\n.spalten[data-v-92f2287b] { display: flex; gap: 16px; align-items: flex-start;\n}\n.links[data-v-92f2287b] { flex: 1; min-width: 320px;\n}\n.waehlbar[data-v-92f2287b] { flex: 1; min-width: 320px;\n}\n.eingabe[data-v-92f2287b] { display: flex; gap: 6px; margin: 4px 0;\n}\n.eingabe input[data-v-92f2287b] { flex: 1;\n}\n.zahl[data-v-92f2287b] { width: 60px;\n}\n.status[data-v-92f2287b] { display: flex; gap: 8px; margin: 10px 0 4px;\n}\n.chip[data-v-92f2287b] { font-weight: 600;\n}\n.meldungen[data-v-92f2287b] { margin: 4px 0; padding-left: 16px; list-style: none;\n}\n.hinweis[data-v-92f2287b] { margin: 0 0 6px;\n}\n.leer[data-v-92f2287b] { padding: 6px 0;\n}\n.filter[data-v-92f2287b] { width: 100%; margin: 4px 0;\n}\ntr.gesperrt[data-v-92f2287b] { opacity: .55; cursor: not-allowed;\n}\ntr[data-v-92f2287b]:not(.gesperrt) { cursor: pointer;\n}\n.grund[data-v-92f2287b] { font-size: 12px;\n}\n.bilanz[data-v-92f2287b] { margin-top: 8px;\n}\n.x[data-v-92f2287b] { border: 0; background: none; color: var(--muted); cursor: pointer;\n}\n.x[data-v-92f2287b]:hover { color: var(--neg);\n}\n\n.seiten[data-v-e5c7423e] { display: flex; gap: 16px; align-items: flex-start; padding: 8px 12px; overflow: auto;\n}\n.liste[data-v-e5c7423e] { width: 240px; flex: none;\n}\n.rechts[data-v-e5c7423e] { flex: 1; min-width: 0;\n}\n.neu[data-v-e5c7423e] { display: flex; gap: 6px; margin: 8px 0;\n}\n.neu input[data-v-e5c7423e] { flex: 1; min-width: 0;\n}\n.kopf[data-v-e5c7423e] { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 0 0 8px;\n}\n.bez[data-v-e5c7423e] { flex: 1; min-width: 200px;\n}\n.res[data-v-e5c7423e] { width: 140px;\n}\n.knoten[data-v-e5c7423e] { border: 1px solid var(--line); background: var(--pane); color: var(--text); padding: 1px 8px; cursor: pointer; border-radius: 3px; max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;\n}\n.x[data-v-e5c7423e] { border: 0; background: none; color: var(--muted); cursor: pointer; padding: 0 4px;\n}\n.x[data-v-e5c7423e]:hover { color: var(--neg);\n}\n.fehler[data-v-e5c7423e] { list-style: none; padding-left: 0; margin: 0 0 8px;\n}\n.tabs[data-v-e5c7423e] { display: flex; gap: 4px; margin: 8px 0; border-bottom: 1px solid var(--line);\n}\n.tabs button[data-v-e5c7423e] { border: 0; border-bottom: 2px solid transparent; background: none; color: var(--muted); padding: 4px 12px; cursor: pointer;\n}\n.tabs button.on[data-v-e5c7423e] { color: var(--text); border-bottom-color: var(--accent);\n}\n.leer[data-v-e5c7423e] { padding: 24px;\n}\n";document.head.append(s)})();
+(function(){const s=document.createElement('style');s.textContent="\n.sel[data-v-fbf6a552] { display: inline-flex; flex-wrap: wrap; gap: 4px; align-items: center;\n}\n.wahl[data-v-fbf6a552] { display: inline-flex; align-items: center; gap: 2px;\n}\n.popover[data-v-fbf6a552] { position: fixed; z-index: 1000; width: 340px; overflow: auto; padding: 6px; background: var(--pane); border: 1px solid var(--line); border-radius: 6px; box-shadow: 0 6px 20px rgba(0,0,0,.35);\n}\n.knoten[data-v-fbf6a552] { border: 1px solid var(--line); background: var(--pane); color: var(--text); padding: 1px 8px; cursor: pointer; border-radius: 3px; max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;\n}\n.knoten.leer[data-v-fbf6a552] { color: var(--accent); border-style: dashed;\n}\n.x[data-v-fbf6a552] { border: 0; background: none; color: var(--muted); padding: 0 4px; cursor: pointer;\n}\n.x[data-v-fbf6a552]:hover { color: var(--neg);\n}\n.filter[data-v-fbf6a552] { border: 0; background: none; color: var(--muted); cursor: pointer; font-size: 12px;\n}\n.filter[data-v-fbf6a552]:hover { color: var(--accent);\n}\n.attr[data-v-fbf6a552] { max-width: 160px;\n}\n.cmp[data-v-fbf6a552] { width: 52px;\n}\n.wert[data-v-fbf6a552] { width: 80px;\n}\n\n.cond[data-v-a6fb4c3c] { display: flex; flex-wrap: wrap; gap: 4px; align-items: center;\n}\n.teil[data-v-a6fb4c3c] { display: flex; align-items: flex-start; gap: 4px; width: 100%;\n}\n.kind[data-v-a6fb4c3c] { min-width: 84px;\n}\n.cmp[data-v-a6fb4c3c] { width: 52px;\n}\n.zahl[data-v-a6fb4c3c] { width: 64px;\n}\n.res[data-v-a6fb4c3c] { width: 110px;\n}\n.attr[data-v-a6fb4c3c] { max-width: 160px;\n}\n.mal[data-v-a6fb4c3c] { color: var(--muted);\n}\n.plus[data-v-a6fb4c3c], .x[data-v-a6fb4c3c] { border: 0; background: none; color: var(--muted); cursor: pointer; padding: 0 4px;\n}\n.plus[data-v-a6fb4c3c]:hover { color: var(--accent);\n}\n.x[data-v-a6fb4c3c]:hover { color: var(--neg);\n}\n\n.satz-regel[data-v-fd22fced] { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 14px;\n}\n.zahl[data-v-fd22fced] { width: 56px;\n}\n\n.hilfe[data-v-ac68bf20] { margin: 0 0 10px;\n}\n.hilfe ul[data-v-ac68bf20] { margin: 4px 0 0 18px; padding: 0; font-size: 13px; color: var(--muted);\n}\n.regel[data-v-ac68bf20] { border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; margin: 0 0 8px; background: var(--pane);\n}\n.kopf[data-v-ac68bf20], .zeile[data-v-ac68bf20] { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 0 0 6px;\n}\n.kennung[data-v-ac68bf20] { width: 70px;\n}\n.text[data-v-ac68bf20] { flex: 1; min-width: 200px;\n}\n.wenn[data-v-ac68bf20] { display: inline-flex; gap: 4px; align-items: center; width: 52px; color: var(--muted);\n}\n.dann[data-v-ac68bf20] { width: 52px; color: var(--muted);\n}\n.folge[data-v-ac68bf20] { min-width: 170px;\n}\n.zahl[data-v-ac68bf20] { width: 64px;\n}\n.fuss[data-v-ac68bf20] { display: flex; gap: 8px; align-items: center; margin-top: 4px;\n}\n.satz[data-v-ac68bf20] { font-size: 12px; flex: 1;\n}\n.x[data-v-ac68bf20] { border: 0; background: none; color: var(--muted); cursor: pointer; padding: 0 4px;\n}\n.x[data-v-ac68bf20]:hover:not(:disabled) { color: var(--accent);\n}\n.x[data-v-ac68bf20]:disabled { opacity: .3; cursor: default;\n}\n.neu[data-v-ac68bf20] { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 8px;\n}\n.vorlage[data-v-ac68bf20], .neue-regel[data-v-ac68bf20] { border: 1px dashed var(--line); background: none; color: var(--muted); padding: 5px 12px; cursor: pointer; border-radius: 6px;\n}\n.vorlage[data-v-ac68bf20]:hover, .neue-regel[data-v-ac68bf20]:hover { color: var(--accent); border-color: var(--accent);\n}\n\n.faelle[data-v-ebd18361] { margin-top: 14px;\n}\n.kopf[data-v-ebd18361] { display: flex; gap: 6px; align-items: center; margin: 4px 0;\n}\n.kopf input[data-v-ebd18361] { flex: 1; min-width: 120px;\n}\n.diff[data-v-ebd18361] { font-size: 12px;\n}\n.x[data-v-ebd18361] { border: 0; background: none; color: var(--muted); cursor: pointer; padding: 0 4px;\n}\n.x[data-v-ebd18361]:hover { color: var(--accent);\n}\n\n.pruef[data-v-92f2287b] { padding: 8px 0;\n}\n.spalten[data-v-92f2287b] { display: flex; gap: 16px; align-items: flex-start;\n}\n.links[data-v-92f2287b] { flex: 1; min-width: 320px;\n}\n.waehlbar[data-v-92f2287b] { flex: 1; min-width: 320px;\n}\n.eingabe[data-v-92f2287b] { display: flex; gap: 6px; margin: 4px 0;\n}\n.eingabe input[data-v-92f2287b] { flex: 1;\n}\n.zahl[data-v-92f2287b] { width: 60px;\n}\n.status[data-v-92f2287b] { display: flex; gap: 8px; margin: 10px 0 4px;\n}\n.chip[data-v-92f2287b] { font-weight: 600;\n}\n.meldungen[data-v-92f2287b] { margin: 4px 0; padding-left: 16px; list-style: none;\n}\n.hinweis[data-v-92f2287b] { margin: 0 0 6px;\n}\n.leer[data-v-92f2287b] { padding: 6px 0;\n}\n.filter[data-v-92f2287b] { width: 100%; margin: 4px 0;\n}\ntr.gesperrt[data-v-92f2287b] { opacity: .55; cursor: not-allowed;\n}\ntr[data-v-92f2287b]:not(.gesperrt) { cursor: pointer;\n}\n.grund[data-v-92f2287b] { font-size: 12px;\n}\n.bilanz[data-v-92f2287b] { margin-top: 8px;\n}\n.x[data-v-92f2287b] { border: 0; background: none; color: var(--muted); cursor: pointer;\n}\n.x[data-v-92f2287b]:hover { color: var(--neg);\n}\n\n.seiten[data-v-e5c7423e] { display: flex; gap: 16px; align-items: flex-start; padding: 8px 12px; overflow: auto;\n}\n.liste[data-v-e5c7423e] { width: 240px; flex: none;\n}\n.rechts[data-v-e5c7423e] { flex: 1; min-width: 0;\n}\n.neu[data-v-e5c7423e] { display: flex; gap: 6px; margin: 8px 0;\n}\n.neu input[data-v-e5c7423e] { flex: 1; min-width: 0;\n}\n.kopf[data-v-e5c7423e] { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 0 0 8px;\n}\n.bez[data-v-e5c7423e] { flex: 1; min-width: 200px;\n}\n.res[data-v-e5c7423e] { width: 140px;\n}\n.knoten[data-v-e5c7423e] { border: 1px solid var(--line); background: var(--pane); color: var(--text); padding: 1px 8px; cursor: pointer; border-radius: 3px; max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;\n}\n.x[data-v-e5c7423e] { border: 0; background: none; color: var(--muted); cursor: pointer; padding: 0 4px;\n}\n.x[data-v-e5c7423e]:hover { color: var(--neg);\n}\n.fehler[data-v-e5c7423e] { list-style: none; padding-left: 0; margin: 0 0 8px;\n}\n.tabs[data-v-e5c7423e] { display: flex; gap: 4px; margin: 8px 0; border-bottom: 1px solid var(--line);\n}\n.tabs button[data-v-e5c7423e] { border: 0; border-bottom: 2px solid transparent; background: none; color: var(--muted); padding: 4px 12px; cursor: pointer;\n}\n.tabs button.on[data-v-e5c7423e] { color: var(--text); border-bottom-color: var(--accent);\n}\n.leer[data-v-e5c7423e] { padding: 24px;\n}\n";document.head.append(s)})();
 const m = window.journali.vue;
 const Fragment = m.Fragment;
+const Teleport = m.Teleport;
 const computed = m.computed;
 const createBlock = m.createBlock;
 const createCommentVNode = m.createCommentVNode;
@@ -216,22 +217,46 @@ const _hoisted_1$6 = { class: "sel" };
 const _hoisted_2$5 = { class: "wahl" };
 const _hoisted_3$5 = ["title"];
 const _hoisted_4$5 = ["title"];
-const _hoisted_5$5 = {
-  key: 1,
-  class: "popover"
-};
+const _hoisted_5$5 = ["title"];
 const _hoisted_6$5 = ["title"];
-const _hoisted_7$5 = ["title"];
-const _hoisted_8$5 = { value: "" };
+const _hoisted_7$5 = { value: "" };
+const _hoisted_8$5 = ["value"];
 const _hoisted_9$5 = ["value"];
-const _hoisted_10$5 = ["value"];
-const _hoisted_11$5 = ["placeholder"];
+const _hoisted_10$5 = ["placeholder"];
+const HOEHE = 300;
 const _sfc_main$6 = {
   __name: "SelectorEditor",
   props: { sel: { type: Object, required: true }, attributes: { type: Array, default: () => [] }, compact: { type: Boolean, default: false } },
   setup(__props) {
     const props = __props;
     const open = ref(false);
+    const knopf = ref(null);
+    const lage = ref({});
+    const popover = ref(null);
+    function oeffnen() {
+      if (open.value) return schliessen();
+      const r = knopf.value?.getBoundingClientRect?.();
+      const unten = r ? (window.innerHeight ?? 800) - r.bottom : HOEHE;
+      lage.value = r ? { left: Math.max(4, Math.min(r.left, (window.innerWidth ?? 1200) - 360)) + "px", ...unten < HOEHE && r.top > unten ? { bottom: (window.innerHeight ?? 800) - r.top + 4 + "px", maxHeight: Math.max(160, r.top - 12) + "px" } : { top: r.bottom + 4 + "px", maxHeight: Math.max(160, unten - 12) + "px" } } : {};
+      open.value = true;
+      document.addEventListener("mousedown", ausserhalb, true);
+      document.addEventListener("keydown", taste, true);
+    }
+    function schliessen() {
+      open.value = false;
+      document.removeEventListener("mousedown", ausserhalb, true);
+      document.removeEventListener("keydown", taste, true);
+    }
+    const ausserhalb = (e) => {
+      if (!popover.value?.contains(e.target) && !knopf.value?.contains(e.target)) schliessen();
+    };
+    const taste = (e) => {
+      if (e.key === "Escape") {
+        e.stopPropagation();
+        schliessen();
+      }
+    };
+    onBeforeUnmount(schliessen);
     const filterOpen = ref(!!props.sel.attribute);
     watch(() => props.sel.attribute, (attribute) => {
       if (attribute && !props.sel.comparison) props.sel.comparison = "=";
@@ -244,47 +269,63 @@ const _sfc_main$6 = {
       return openBlock(), createElementBlock("span", _hoisted_1$6, [
         createElementVNode("span", _hoisted_2$5, [
           createElementVNode("button", {
+            ref_key: "knopf",
+            ref: knopf,
             type: "button",
             class: normalizeClass(["knoten", { leer: !props.sel.node }]),
             title: _ctx.$t("Knoten wählen: ein Produkt, eine Variante oder eine Gruppe mit allem darunter"),
-            onClick: _cache[0] || (_cache[0] = ($event) => open.value = !open.value)
+            onClick: oeffnen
           }, toDisplayString(props.sel.node ? nodeName(props.sel.node) : _ctx.$t("Teil wählen …")), 11, _hoisted_3$5),
           props.sel.node ? (openBlock(), createElementBlock("button", {
             key: 0,
             type: "button",
             class: "x",
             title: _ctx.$t("Knoten entfernen"),
-            onClick: _cache[1] || (_cache[1] = ($event) => props.sel.node = "")
+            onClick: _cache[0] || (_cache[0] = ($event) => props.sel.node = "")
           }, "✕", 8, _hoisted_4$5)) : createCommentVNode("v-if", true),
-          open.value ? (openBlock(), createElementBlock("div", _hoisted_5$5, [
-            createVNode(unref(TreePicker), {
-              modelValue: props.sel.node,
-              "onUpdate:modelValue": _cache[2] || (_cache[2] = ($event) => props.sel.node = $event),
-              roles: ["group", "product", "variant"],
-              height: 200,
-              onPick: _cache[3] || (_cache[3] = ($event) => open.value = false)
-            }, null, 8, ["modelValue"])
-          ])) : createCommentVNode("v-if", true)
+          (openBlock(), createBlock(Teleport, { to: "body" }, [
+            open.value ? (openBlock(), createElementBlock(
+              "div",
+              {
+                key: 0,
+                ref_key: "popover",
+                ref: popover,
+                class: "popover",
+                style: normalizeStyle(lage.value)
+              },
+              [
+                createVNode(unref(TreePicker), {
+                  modelValue: props.sel.node,
+                  "onUpdate:modelValue": _cache[1] || (_cache[1] = ($event) => props.sel.node = $event),
+                  roles: ["group", "product", "variant"],
+                  height: 200,
+                  onPick: schliessen
+                }, null, 8, ["modelValue"])
+              ],
+              4
+              /* STYLE */
+            )) : createCommentVNode("v-if", true)
+          ]))
         ]),
         __props.compact && !filterOpen.value ? (openBlock(), createElementBlock("button", {
           key: 0,
           type: "button",
           class: "filter",
           title: _ctx.$t("Nur Teile, deren Attribut einen bestimmten Wert hat — etwa Leistung ≥ 850"),
-          onClick: _cache[4] || (_cache[4] = ($event) => filterOpen.value = true)
-        }, "＋ " + toDisplayString(_ctx.$t("Filter")), 9, _hoisted_6$5)) : createCommentVNode("v-if", true),
+          onClick: _cache[2] || (_cache[2] = ($event) => filterOpen.value = true)
+        }, "＋ " + toDisplayString(_ctx.$t("Filter")), 9, _hoisted_5$5)) : createCommentVNode("v-if", true),
         showFilter() ? (openBlock(), createElementBlock(
           Fragment,
           { key: 1 },
           [
             withDirectives(createElementVNode("select", {
-              "onUpdate:modelValue": _cache[5] || (_cache[5] = ($event) => props.sel.attribute = $event),
+              "onUpdate:modelValue": _cache[3] || (_cache[3] = ($event) => props.sel.attribute = $event),
               class: "attr",
               title: _ctx.$t("Nur Teile, deren Attribut so ist")
             }, [
               createElementVNode(
                 "option",
-                _hoisted_8$5,
+                _hoisted_7$5,
                 toDisplayString(_ctx.$t("— kein Filter —")),
                 1
                 /* TEXT */
@@ -296,12 +337,12 @@ const _sfc_main$6 = {
                   return openBlock(), createElementBlock("option", {
                     key: a.key,
                     value: a.key
-                  }, toDisplayString(a.label), 9, _hoisted_9$5);
+                  }, toDisplayString(a.label), 9, _hoisted_8$5);
                 }),
                 128
                 /* KEYED_FRAGMENT */
               ))
-            ], 8, _hoisted_7$5), [
+            ], 8, _hoisted_6$5), [
               [vModelSelect, props.sel.attribute]
             ]),
             props.sel.attribute ? (openBlock(), createElementBlock(
@@ -311,7 +352,7 @@ const _sfc_main$6 = {
                 withDirectives(createElementVNode(
                   "select",
                   {
-                    "onUpdate:modelValue": _cache[6] || (_cache[6] = ($event) => props.sel.comparison = $event),
+                    "onUpdate:modelValue": _cache[4] || (_cache[4] = ($event) => props.sel.comparison = $event),
                     class: "cmp"
                   },
                   [
@@ -322,7 +363,7 @@ const _sfc_main$6 = {
                         return openBlock(), createElementBlock("option", {
                           key: c,
                           value: c
-                        }, toDisplayString(OP[c]), 9, _hoisted_10$5);
+                        }, toDisplayString(OP[c]), 9, _hoisted_9$5);
                       }),
                       128
                       /* KEYED_FRAGMENT */
@@ -334,10 +375,10 @@ const _sfc_main$6 = {
                   [vModelSelect, props.sel.comparison]
                 ]),
                 withDirectives(createElementVNode("input", {
-                  "onUpdate:modelValue": _cache[7] || (_cache[7] = ($event) => props.sel.value = $event),
+                  "onUpdate:modelValue": _cache[5] || (_cache[5] = ($event) => props.sel.value = $event),
                   class: "wert",
                   placeholder: _ctx.$t("Wert")
-                }, null, 8, _hoisted_11$5), [
+                }, null, 8, _hoisted_10$5), [
                   [vModelText, props.sel.value]
                 ])
               ],
@@ -352,7 +393,7 @@ const _sfc_main$6 = {
     };
   }
 };
-const SelectorEditor = /* @__PURE__ */ _export_sfc(_sfc_main$6, [["__scopeId", "data-v-16e6f4ce"]]);
+const SelectorEditor = /* @__PURE__ */ _export_sfc(_sfc_main$6, [["__scopeId", "data-v-fbf6a552"]]);
 const _hoisted_1$5 = ["value", "title"];
 const _hoisted_2$4 = ["value"];
 const _hoisted_3$4 = ["title"];

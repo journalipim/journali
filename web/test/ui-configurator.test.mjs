@@ -3,7 +3,7 @@
 // Der Server ist ein Stellvertreter: geprüft wird, was die Ansicht ihm schickt und wie sie seine Antwort zeigt.
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { mount, flushPromises } from './ui.mjs'
+import { mount, flushPromises, win } from './ui.mjs'
 import { api } from '../src/api.js'
 import { store } from '../src/store.js'
 import { dialog } from '../src/dialog.js'
@@ -414,4 +414,58 @@ test('die Erklärung ist offen, solange es keine Regel gibt, und danach zu', asy
   const s = welt()
   const w2 = mount(View); await flushPromises()
   try { await oeffnen(w2); assert.ok(!w2.find('details.hilfe').element.open) } finally { w2.unmount(); s.ende() }
+})
+
+// ---- der Auswahlbaum schwebt über der Seite
+
+const STUB = { global: { stubs: { TreePicker: { template: '<div class="tp-stub">Baum</div>' } } }, attachTo: document.body }
+const popovers = () => [...document.querySelectorAll('.popover')]
+const maus = (el) => el.dispatchEvent(new win.MouseEvent('mousedown', { bubbles: true, cancelable: true }))
+
+test('der Auswahlbaum hängt am Ende des Dokuments und liegt fest an der Schaltfläche: eine Bildlaufleiste schneidet ihn nicht ab', async () => {
+  const s = welt({ defs: { server: { label: 'Server', rules: [] } } })
+  const w = mount(View, STUB); await flushPromises()
+  try {
+    await oeffnen(w); await w.find('.vorlage.v-excludes').trigger('click')
+    const knopf = w.find('.satz-regel .knoten')
+    knopf.element.getBoundingClientRect = () => ({ left: 120, right: 200, top: 100, bottom: 124, width: 80, height: 24 })
+    await knopf.trigger('click'); await flushPromises()
+    assert.equal(popovers().length, 1)
+    assert.equal(popovers()[0].parentElement, document.body, 'nicht im Bereich der Regeln, sondern am Dokument')
+    assert.equal(w.find('.popover').exists(), false, 'und damit ausserhalb des Bereichs, der scrollt')
+    const st = popovers()[0].style
+    assert.equal(st.left, '120px'); assert.equal(st.top, '128px', 'unter der Schaltfläche')
+    assert.ok(popovers()[0].querySelector('.tp-stub'))
+  } finally { w.unmount(); s.ende() }
+  assert.equal(popovers().length, 0, 'mit der Ansicht ist er weg')
+})
+
+test('Der Auswahlbaum klappt nach oben, wo unten kein Platz ist', async () => {
+  const s = welt({ defs: { server: { label: 'Server', rules: [] } } })
+  const w = mount(View, STUB); await flushPromises()
+  try {
+    await oeffnen(w); await w.find('.vorlage.v-max').trigger('click')
+    const knopf = w.find('.satz-regel .knoten')
+    const h = window.innerHeight
+    knopf.element.getBoundingClientRect = () => ({ left: 40, right: 120, top: h - 60, bottom: h - 36, width: 80, height: 24 })
+    await knopf.trigger('click'); await flushPromises()
+    const st = popovers()[0].style
+    assert.equal(st.bottom, (60 + 4) + 'px'); assert.equal(st.top, '', 'oben statt unten')
+  } finally { w.unmount(); s.ende() }
+})
+
+test('Ein Klick daneben und Esc schliessen den Auswahlbaum, ein Klick darin nicht; die Schaltfläche schaltet um', async () => {
+  const s = welt({ defs: { server: { label: 'Server', rules: [] } } })
+  const w = mount(View, STUB); await flushPromises()
+  try {
+    await oeffnen(w); await w.find('.vorlage.v-min').trigger('click')
+    const knopf = w.find('.satz-regel .knoten')
+    await knopf.trigger('click'); await flushPromises(); assert.equal(popovers().length, 1)
+    maus(popovers()[0].querySelector('.tp-stub')); await flushPromises(); assert.equal(popovers().length, 1, 'ein Klick im Baum lässt ihn offen')
+    maus(document.body); await flushPromises(); assert.equal(popovers().length, 0, 'daneben: zu')
+    await knopf.trigger('click'); await flushPromises(); assert.equal(popovers().length, 1)
+    document.dispatchEvent(new win.KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })); await flushPromises(); assert.equal(popovers().length, 0, 'Esc: zu')
+    await knopf.trigger('click'); await flushPromises(); assert.equal(popovers().length, 1)
+    await knopf.trigger('click'); await flushPromises(); assert.equal(popovers().length, 0, 'noch ein Klick auf die Schaltfläche: zu')
+  } finally { w.unmount(); s.ende() }
 })
