@@ -2351,5 +2351,12 @@ Tests: `ConfiguratorTests` (das Beispiel eines Servers mit Mainboard, CPU, Kühl
 - **Das Plugin muss da, an und im Tarif sein**; im Saatgut gehört `configurator` zu Pro+ (nicht in der Liste von Kostenlos und Pro). Im Betrieb gilt das
   signierte Tarifblatt: ein Blatt, das `configurator` nicht nennt, schliesst es aus.
 
-**Offen:** die Ansicht zum Pflegen der Regeln (Plugin `configurator`), Beispiele und Testfälle, mehrere Container in einer Konfiguration
-(zwei Mainboards fallen heute in eine Bilanz zusammen), Hilfe.
+**Ansicht (Plugin `configurator`, ⚙ Werkzeuge → Konfigurator):** links die Konfiguratoren (anlegen, entfernen), rechts die Definition. *Regeln* pflegt
+ein Formular: Kennung, Meldung, Bedingung (Art und Felder je Art, verschachtelbar) und Folge mit Selektor (Knoten über den Auswahlbaum, Attributfilter);
+unter jeder Regel steht sie als Satz. Die Definition steht als Plugin-Daten im Journal (`def:<key>`); was der Server an ihr bemängelt, steht darüber.
+*Prüfen* wählt Teile (Id oder SKU, Menge), zeigt zulässig und vollständig, Verstösse, fehlende Teile, die Bilanz und die wählbaren Teile mit dem Grund,
+warum eines gesperrt ist — über denselben Endpunkt wie der Shop, gegen den gespeicherten Stand. *Testfälle* merken eine Auswahl mit dem Ergebnis
+(`case:<key>:<name>`); „Alle prüfen“ vergleicht nach jeder Änderung der Regeln, was sich verschoben hat.
+
+**Offen:** mehrere Container in einer Konfiguration (zwei Mainboards fallen heute in eine Bilanz zusammen), Hilfe in der Instanz, der Tarif des Plugins im
+Tarifblatt des Lizenzservers.
