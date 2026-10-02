@@ -2361,8 +2361,11 @@ unter jeder Regel steht sie als Satz. Die Definition steht als Plugin-Daten im J
 warum eines gesperrt ist — über denselben Endpunkt wie der Shop, gegen den gespeicherten Stand. *Testfälle* merken eine Auswahl mit dem Ergebnis
 (`case:<key>:<name>`); „Alle prüfen“ vergleicht nach jeder Änderung der Regeln, was sich verschoben hat.
 
-**Offen:** Hilfe in der Instanz, der Tarif des Plugins im
-Tarifblatt des Lizenzservers.
+**Hilfe in der Instanz** (02.10.2026): das Kapitel „Konfigurator“ (`help/de/19-konfigurator.md`, `help/en/19-konfigurator.md`) beschreibt Ausgangspunkt, Gruppen und Zeilen,
+Regeln, die Zustände, das Prüfen und die Schnittstelle; der ?-Knopf in der Ansicht des Plugins öffnet es (`help.js`: `/p/configurator` → `konfigurator`), das Glossar nennt Konfigurator und
+Konfiguratorgruppe.
+
+**Offen:** der Tarif des Plugins im Tarifblatt des Lizenzservers.
 
 ## 40. Konfiguratorgruppen — Teile gehören mit Zeilen zu Gruppen, die Regel steht an der Gruppe (02.10.2026, Kern und Endpunkt gebaut)
 

@@ -29,6 +29,19 @@ test('das Kapitel zur Ansicht kommt aus dem Pfad', () => {
   assert.equal(chapterFor('/tree/p-1'), 'baum')
   assert.equal(chapterFor('/p/tasker/jobs'), 'jobs')
   assert.equal(chapterFor('/irgendwas'), 'was-journali-ist')
+  assert.equal(chapterFor('/p/configurator/regeln'), 'konfigurator', 'der Konfigurator hat ein eigenes Kapitel, nicht das der Plugins')
+})
+
+test('das Kapitel Konfigurator gibt es in deutsch und englisch und baut zu HTML', async () => {
+  const fs = await import('node:fs'), path = await import('node:path')
+  const root = path.resolve(new URL('../..', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1'))
+  for (const code of ['de', 'en']) {
+    const md = fs.readFileSync(path.join(root, 'help', code, '19-konfigurator.md'), 'utf8')
+    assert.match(md, /^# \S/, `${code}: Überschrift`)
+    for (const wort of ['/api/configurator/{key}/check', 'selectable']) assert.ok(md.includes(wort), `${code}: nennt ${wort}`)
+  }
+  const { marked } = await import('marked')
+  assert.match(marked.parse(fs.readFileSync(path.join(root, 'help', 'de', '19-konfigurator.md'), 'utf8'), { gfm: true }), /<table>/, 'die Tabelle der Zeilen wird zur Tabelle')
 })
 
 test('ein Eintrag öffnet seine Adresse in einem neuen Fenster', () => {

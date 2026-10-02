@@ -19,6 +19,8 @@
 | Kanal | Ausgabeweg wie Web oder Print, mit eigenen Werten, Pflichtfeldern und Freigaben |
 | Kennung | eindeutiger Wert eines Knotens, etwa SKU oder EAN; oder die Kennung einer Instanz |
 | Knoten | Produktgruppe, Produkt, Variante oder Rubrik |
+| Konfigurator | prüft eine Auswahl von Produkten gegen Gruppen und Regeln: zulässig, vollständig, was noch dazukommen kann; sein Ausgangspunkt ist die Wurzel seiner Definition |
+| Konfiguratorgruppe | Gruppe, zu der Teile mit Zeilen gehören: sie summiert, verlangt gleiche Werte oder gibt Mengen und Werte vor |
 | Kontingent | die Zahl der journali-Token, die ein Team je Woche und Monat hat |
 | Master | Sprache oder Kanal, von dem andere ihren Wert beziehen, solange sie nichts Eigenes haben |
 | Pflegebaum | der Baum, in dem gepflegt wird; Gegenstück zum Publikationsbaum |

@@ -9,6 +9,8 @@
 | Batch | several entries written together; undo takes back a batch |
 | Billing chain | via which team a team is billed; without circles |
 | Channel | output path such as Web or Print, with its own values, required fields and releases |
+| Configurator | checks a selection of products against groups and rules: valid, complete, what can still be added; its starting point is the root of its definition |
+| Configurator group | group to which parts belong with rows: it adds up, requires equal values or sets quantities and values |
 | Embedding | a list of 384 numbers the model computes from a text: its position in the space of meanings. Basis of the search by meaning; derived, never in the journal |
 | Entry | a line in the journal: number, time, author, stream, type, content |
 | Evidence | source of a value, or a document on a version |

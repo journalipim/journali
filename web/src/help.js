@@ -23,7 +23,7 @@ const CHAPTERS = [
   ['/tree', 'baum'], ['/table', 'werte-pflegen'], ['/pub', 'freigabe-und-publikation'], ['/model', 'modell'],
   ['/journal', 'was-journali-ist'], ['/import', 'import-und-export'], ['/export', 'import-und-export'],
   ['/p/table', 'import-und-export'], ['/p/json', 'import-und-export'], ['/p/ixp', 'import-und-export'], ['/p/solr', 'import-und-export'],
-  ['/p/xport', 'import-und-export'], ['/media', 'medien'], ['/tasks', 'workflows'], ['/jobs', 'jobs'], ['/p/tasker', 'jobs'],
+  ['/p/xport', 'import-und-export'], ['/p/configurator', 'konfigurator'], ['/media', 'medien'], ['/tasks', 'workflows'], ['/jobs', 'jobs'], ['/p/tasker', 'jobs'],
   ['/plugins', 'plugins'], ['/datasheet', 'plugins'], ['/analysis', 'plugins'], ['/translate', 'plugins'], ['/classification', 'plugins'],
   ['/tools', 'plugins'], ['/p/', 'plugins'], ['/settings', 'anwender-rollen-und-teams'], ['/login', 'erste-schritte'], ['/help', 'was-journali-ist'], ['/schnittstelle', 'schnittstelle'],
 ]
