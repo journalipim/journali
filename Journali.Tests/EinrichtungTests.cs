@@ -42,6 +42,41 @@ public class EinrichtungTests
     public void Nur_bekannte_Modi_der_Verschluesselung_gelten(string? modus, bool gueltig) => Assert.Equal(gueltig, DbZiel.SslGueltig(modus));
 
     [Fact]
+    public async Task Die_Verschluesselung_wird_erst_probiert_und_nur_bei_Erfolg_gespeichert()
+    {
+        var dir = Dir();
+        var ziel = new DbZiel("Host=db;Port=5432;Database=j;Username=postgres", "geheim", DbZiel.AusDatei);
+        DbZielDatei.Schreib(dir, ziel);
+
+        // die Probe scheitert (etwa Require gegen einen Server ohne SSL): db.json bleibt, wie sie war
+        var geprobt = new List<string>();
+        Task<DatenbankApi.SslErgebnis> scheitert(DbZiel z, CancellationToken _) { geprobt.Add(z.Ssl); return Task.FromResult(new DatenbankApi.SslErgebnis(false, null, null, "kein SSL")); }
+        var r = await DatenbankApi.SslSetzenAsync(ziel, dir, "Require", scheitert, default);
+        Assert.Equal(DatenbankApi.SslFehler.Probe, r.Fehler); Assert.Equal(("Require", "kein SSL"), (r.Modus, r.Detail));
+        Assert.Equal(new[] { "Require" }, geprobt);
+        Assert.Equal("Prefer", DbZielDatei.Lies(dir)!.Ssl);
+
+        // die Probe klappt: gespeichert, das Passwort bleibt
+        Task<DatenbankApi.SslErgebnis> klappt(DbZiel z, CancellationToken _) => Task.FromResult(new DatenbankApi.SslErgebnis(true, true, "TLSv1.3", null));
+        r = await DatenbankApi.SslSetzenAsync(ziel, dir, "require", klappt, default);
+        Assert.Equal(DatenbankApi.SslFehler.Keiner, r.Fehler);
+        var gespeichert = DbZielDatei.Lies(dir)!;
+        Assert.Equal(("Require", "geheim"), (gespeichert.Ssl, gespeichert.Password));
+
+        // ungültig oder leer: nicht einmal probiert
+        geprobt.Clear();
+        foreach (var falsch in new string?[] { "Allow", "", null, "Require; Host=evil" })
+            Assert.Equal(DatenbankApi.SslFehler.Modus, (await DatenbankApi.SslSetzenAsync(ziel, dir, falsch, scheitert, default)).Fehler);
+        Assert.Empty(geprobt);
+        Assert.Equal("Require", DbZielDatei.Lies(dir)!.Ssl);
+
+        // aus der Umgebung des Servers: hier ändert sich nichts
+        var env = new DbZiel("Host=db;Port=5432;Database=j;Username=postgres", "geheim", DbZiel.AusUmgebung);
+        Assert.Equal(DatenbankApi.SslFehler.Umgebung, (await DatenbankApi.SslSetzenAsync(env, dir, "Disable", klappt, default)).Fehler);
+        Assert.Equal("Require", DbZielDatei.Lies(dir)!.Ssl);
+    }
+
+    [Fact]
     public void Die_Verbindung_handelt_kein_Kerberos_aus()
     {
         // das Laufzeit-Image hat libgssapi_krb5 nicht; Npgsql würde beim Verbindungsaufbau GSS versuchen und mit „Cannot load library“ scheitern

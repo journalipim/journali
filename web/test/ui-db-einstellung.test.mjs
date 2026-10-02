@@ -93,3 +93,43 @@ test('Verschlüsselung: verschlüsselt mit Version, im Klartext rot, unbekannt a
   assert.match(zeile(w).text(), /—/); assert.match(zeile(w).text(), /· Require/); w.unmount()
 })
 
+// 02.10.2026: der Modus ist in den Einstellungen änderbar; der Server probiert, bevor er speichert — gilt nach dem nächsten Start
+test('Verschlüsselung ändern: Auswahl, Übernehmen schickt PUT, Hinweis auf den Neustart; Fehler bleibt stehen', async () => {
+  let ssl = { modus: 'Prefer', verschluesselt: true, version: 'TLSv1.3', aenderbar: true, vorgemerkt: null }
+  const calls = server({
+    '/api/backup/db': () => ({ ...verbindung, quelle: 'datei', ssl }),
+    '/api/backup/db/ssl': b => {
+      if (b.modus === 'VerifyFull') return { __status: 400, template: 'Mit {0} lässt sich keine Verbindung herstellen: {1}', args: ['VerifyFull', 'kein Zertifikat'] }
+      ssl = { ...ssl, vorgemerkt: b.modus }; return { modus: b.modus, neustart: true }
+    },
+  })
+  store.auth = { known: true, enabled: true, user: 'u1', role: 'admin', rights: ['users'] }
+  const w = mount(DbSettings); await flushPromises()
+  const wahl = () => w.find('tr.sslwahl select')
+  const uebernehmen = () => w.find('tr.sslwahl button')
+  assert.equal(wahl().element.value, 'Prefer')
+  assert.ok(!uebernehmen().exists(), 'ohne Änderung kein Knopf')
+
+  await wahl().setValue('VerifyFull'); assert.ok(uebernehmen().exists())
+  await uebernehmen().trigger('click'); await flushPromises()
+  assert.match(w.text(), /✗ Mit VerifyFull lässt sich keine Verbindung herstellen: kein Zertifikat/)
+  assert.ok(!w.find('tr.ssl').text().includes('→'), 'nichts vorgemerkt')
+
+  await wahl().setValue('Require')
+  await uebernehmen().trigger('click'); await flushPromises()
+  const put = calls.filter(c => c.path === '/api/backup/db/ssl' && c.method === 'PUT')
+  assert.deepEqual(put.map(c => c.body), [{ modus: 'VerifyFull' }, { modus: 'Require' }])
+  assert.match(w.text(), /✓ Require gespeichert — gilt nach dem nächsten Start/)
+  assert.match(w.find('tr.ssl').text(), /· Prefer\s*→ Require/, 'laufender Modus und vorgemerkter stehen nebeneinander')
+  assert.equal(wahl().element.value, 'Require')
+  assert.ok(!uebernehmen().exists(), 'das Vorgemerkte ist die Auswahl: kein Knopf')
+  w.unmount()
+})
+
+test('Verschlüsselung ändern: aus der Umgebung des Servers ist die Auswahl gesperrt', async () => {
+  server({ '/api/backup/db': { ...verbindung, ssl: { modus: 'Prefer', verschluesselt: true, version: 'TLSv1.3', aenderbar: false, vorgemerkt: null } } })
+  const w = mount(DbSettings); await flushPromises()
+  assert.ok(w.find('tr.sslwahl select').attributes('disabled') !== undefined)
+  assert.ok(!w.find('tr.sslwahl button').exists())
+  w.unmount()
+})

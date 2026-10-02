@@ -2913,5 +2913,13 @@
  "im Klartext": "in plain text",
  "Postgres bietet keine Verschlüsselung an (ssl = off) oder die Verbindung ist älter als diese Einstellung.": "Postgres offers no encryption (ssl = off) or the connection is older than this setting.",
  "Postgres hat die Frage nicht beantwortet.": "Postgres did not answer the question.",
- "Eingestellt in der Verbindung (SSL Mode)": "Set in the connection (SSL Mode)"
+ "Eingestellt in der Verbindung (SSL Mode)": "Set in the connection (SSL Mode)",
+ "✓ {0} gespeichert — gilt nach dem nächsten Start des Servers.": "✓ {0} saved — applies after the server's next start.",
+ "Gespeichert in db.json; gilt nach dem nächsten Start des Servers.": "Saved in db.json; applies after the server's next start.",
+ "Wie die Verbindung verschlüsselt wird; gilt nach dem nächsten Start des Servers.": "How the connection is encrypted; applies after the server's next start.",
+ "Die Verbindung kommt aus der Umgebung des Servers (JOURNALI_DB): dort steht SSL Mode.": "The connection comes from the server's environment (JOURNALI_DB): SSL Mode is set there.",
+ "Probiert die Verbindung mit diesem Modus; nur wenn sie klappt, wird er gespeichert": "Tries the connection with this mode; it is saved only if that works",
+ "Mit {0} lässt sich keine Verbindung herstellen: {1}": "No connection can be made with {0}: {1}",
+ "Die Verbindung kommt aus der Umgebung des Servers — der Modus gehört in JOURNALI_DB (SSL Mode=…).": "The connection comes from the server's environment — the mode belongs in JOURNALI_DB (SSL Mode=…).",
+ "Verschlüsselung: Disable, Prefer, Require, VerifyCA oder VerifyFull.": "Encryption: Disable, Prefer, Require, VerifyCA or VerifyFull."
 }

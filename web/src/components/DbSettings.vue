@@ -12,11 +12,27 @@ const d = ref(null)
 const klar = ref('')           // das angezeigte Datenbankpasswort
 const said = ref('')
 const busy = ref(false)
+const modus = ref('Prefer')    // die Wahl in der Zeile Verschlüsselung
 let verdecken = null
 
 const QUELLE = { datei: t('Einrichtungsdialog'), umgebung: t('Umgebung des Servers') }
 
-onMounted(async () => { try { d.value = await api.get('/api/backup/db') } catch (e) { said.value = '✗ ' + e.message } })
+const MODI = [['Prefer', t('wenn möglich (Prefer)')], ['Require', t('immer (Require)')], ['VerifyCA', t('immer, Aussteller geprüft (VerifyCA)')], ['VerifyFull', t('immer, Aussteller und Name geprüft (VerifyFull)')], ['Disable', t('nie (Disable)')]]
+async function laden() {
+  try { d.value = await api.get('/api/backup/db'); modus.value = d.value.ssl?.vorgemerkt ?? d.value.ssl?.modus ?? 'Prefer' } catch (e) { said.value = '✗ ' + e.message }
+}
+onMounted(laden)
+/// Was nach dem nächsten Start gilt: das Vorgemerkte, sonst der laufende Modus
+const gilt = () => d.value?.ssl?.vorgemerkt ?? d.value?.ssl?.modus
+async function sslUebernehmen() {
+  busy.value = true; said.value = ''
+  try {
+    const r = await api.post('/api/backup/db/ssl', { modus: modus.value }, 'PUT')
+    said.value = t('✓ {0} gespeichert — gilt nach dem nächsten Start des Servers.', [r.modus])
+    await laden()
+  } catch (e) { said.value = '✗ ' + e.message }
+  finally { busy.value = false }
+}
 onUnmounted(() => clearTimeout(verdecken))
 
 // Die Rückfrage steht in einem eigenen Fenster, nicht in der Zeile des Datenbankpassworts: dort sähe sie aus,
@@ -56,6 +72,14 @@ async function kopieren() { try { await navigator.clipboard.writeText(klar.value
           <span v-else class="muted" :title="$t('Postgres hat die Frage nicht beantwortet.')">—</span>
           <span v-if="d.ssl?.version" class="muted mono"> {{ d.ssl.version }}</span>
           <span v-if="d.ssl?.modus" class="muted mono" :title="$t('Eingestellt in der Verbindung (SSL Mode)')"> · {{ d.ssl.modus }}</span>
+          <span v-if="d.ssl?.vorgemerkt" class="warn mono" :title="$t('Gespeichert in db.json; gilt nach dem nächsten Start des Servers.')"> → {{ d.ssl.vorgemerkt }}</span>
+        </td></tr>
+      <tr class="sslwahl"><td class="attr"></td>
+        <td>
+          <select v-model="modus" :disabled="busy || !d.ssl?.aenderbar" :title="d.ssl?.aenderbar ? $t('Wie die Verbindung verschlüsselt wird; gilt nach dem nächsten Start des Servers.') : $t('Die Verbindung kommt aus der Umgebung des Servers (JOURNALI_DB): dort steht SSL Mode.')">
+            <option v-for="[k, l] in MODI" :key="k" :value="k">{{ l }}</option>
+          </select>
+          <button v-if="d.ssl?.aenderbar && modus !== gilt()" :disabled="busy" @click="sslUebernehmen" :title="$t('Probiert die Verbindung mit diesem Modus; nur wenn sie klappt, wird er gespeichert')">{{ $t("Übernehmen") }}</button>
         </td></tr>
       <tr><td class="attr">{{ $t("Passwort") }}</td>
         <td>

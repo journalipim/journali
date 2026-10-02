@@ -815,5 +815,9 @@ Neustart des Servers oder Zeit, bis sie erneuert sind. Der Ablauf im Container d
 3. Prüfen, mit einer Verbindung von journali: `select ssl, version from pg_stat_ssl where pid = pg_backend_pid()` muss `true` liefern.
 4. Erzwingen (erst, wenn 3 stimmt): in `pg_hba.conf` die Zeilen `host` durch `hostssl` ersetzen und `SELECT pg_reload_conf()` — Verbindungen ohne SSL werden dann abgewiesen.
 
+**Der Modus in journali** steht im Einrichtungsdialog und unter Einstellungen → ⇅ B&R → Datenbank (Prefer, Require, VerifyCA, VerifyFull, Disable). Dort steht auch, was
+Postgres über die laufende Verbindung sagt (`pg_stat_ssl`). Eine Änderung wird zuerst mit einer Verbindung geprüft und nur bei Erfolg in `db.json` geschrieben; sie gilt nach
+dem nächsten Start des Servers. Kommt die Verbindung aus der Umgebung (`JOURNALI_DB`), steht der Modus dort (`SSL Mode=…`) und ist hier nicht änderbar.
+
 Ein selbstsigniertes Zertifikat verschlüsselt, beweist dem Client aber nicht, mit wem er spricht (`Prefer`, `Require`). Das prüft erst `VerifyFull` mit dem Zertifikat der
 ausstellenden Stelle (`Root Certificate=<Datei>` in der Verbindung) und dem Namen des Servers im Zertifikat.
