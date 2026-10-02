@@ -2311,3 +2311,34 @@ Zugangs bleibt beim Server. Beispiel „ERP OData schreiben (CSRF)“ in der Bib
 **kuratierte Beispiele** mit (`plugins/scriptum/beispiele.mjs`): CSV-Export, Fremdsystem lesen, Fremdsystem beschicken,
 ein einfacher Bericht. Der Autor lädt eines in den Editor (＋ Beispiel …) und passt es an. Kein Fremdcode aus einem
 öffentlichen Markt — dazu die Begründung unter „Offen“ in Abschnitt 37.
+
+## 39. Konfigurator — Regeln, die zu einer Auswahl sagen, was geht (02.10.2026, Kern gebaut)
+
+Ein Konfigurator prüft eine Auswahl von Produkten gegen Regeln. Die Regeln pflegt ein Anwender im PIM und prüft dort Beispiele;
+ein Shop schickt, was ausgewählt ist, und bekommt zurück, was geht. **Die Logik steht nur auf dem Server**: der Shop kennt sie nicht,
+und die Ansicht des PIM fragt denselben Endpunkt wie der Shop.
+
+**Zwei Sorten von Regeln:**
+
+- **Bilanz.** Ein Teil stellt Ressourcen bereit (ein Mainboard 3 Steckplätze) oder verbraucht sie (eine CPU einen Steckplatz und eine Kühlung).
+  Eine Erweiterungskarte, die einen Steckplatz braucht und drei bereitstellt, trägt beides. Jede Ressource, die in der Auswahl vorkommt,
+  muss in der Summe ≥ 0 sein; eine Regel je Ressource gibt es nicht. Die Ressourcen stehen als Zeilenattribut `ressourcen` am Produkt
+  (Spalten `ressource` und `menge`, positiv = stellt bereit, negativ = verbraucht). Eine Variante ohne eigene Zeilen nimmt die ihres Produkts.
+- **„wenn A, dann B“.** Die Bedingung (`hat`, `anzahl`, `summe` eines Attributs, `bilanz` einer Ressource, verknüpft mit `und`, `oder`, `nicht`)
+  über Teile, die ein **Selektor** benennt: ein Knoten (Produkt, Gruppe oder Variante, sein ganzer Teilbaum), ein Attributfilter oder beides.
+  Die Folge: `verbietet`, `begrenzt` auf höchstens n, `verlangt` mindestens n. Eine Regel ohne Bedingung gilt immer.
+
+**Zwei Zustände.** *Unzulässig*: ein Verbot, eine Grenze oder eine Ressource im Minus ist verletzt. *Unvollständig*: etwas ist verlangt
+und fehlt. Eine unvollständige Auswahl kann zulässig sein. Zu jedem Teil, das noch dazukommen könnte, sagt das Ergebnis auf Wunsch
+(`waehlbar`), ob es geht und welchen Verstoss es neu verursachen würde; was verlangt ist und fehlt, sperrt kein Teil.
+
+**Gebaut (Kern, `Journali.Core/Konfigurator/`):** `Definition` (JSON, Prüfung der Regeln, jede Meldung nennt die Regel), `Pruefer` (Auswahl →
+`Ergebnis` mit Verstössen, Fehlendem, Bilanz je Ressource und Wählbarkeit), `Teile` (Baum → Teil, wählbare Teile unter einer Wurzel).
+Tests: `KonfiguratorTests` (das Beispiel eines Servers mit Mainboard, CPU, Kühlern, Karten und Grafikkarten).
+
+**Gewählt:** Die Definition liegt als Plugin-Daten im Journal (wie ein Skript, Abschnitt 37), nicht als eigener Eintragstyp — das spart ein
+neues Abbild im Katalog, und das Plugin steuert den Tarif. Ein eigener Typ bleibt möglich, wenn die Regeln im Abbild abfragbar sein sollen.
+
+**Offen:** der Endpunkt (`POST /api/konfigurator/{key}/pruefen`: Rechte — lesen, auch wenn es ein POST ist —, Auswahl über Knoten, Kennung
+oder SKU), die Ansicht zum Pflegen der Regeln, Beispiele und Testfälle, mehrere Container in einer Konfiguration (zwei Mainboards fallen
+heute in eine Bilanz zusammen), Hilfe.
