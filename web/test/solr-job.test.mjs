@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url'
 const cwd = fileURLToPath(new URL('../../plugins/solr/', import.meta.url))
 const DOCS = [{ id: 'g1', master_id: 'G1', type: 'group', name: 'Gruppe', lang: 'de', main_parent_id: '' }]
 
-function stellvertreter() {
+function stellvertreter(docs = DOCS) {
   const gerufen = []
   const server = http.createServer((req, res) => {
     const u = new URL(req.url, 'http://x')
@@ -19,7 +19,7 @@ function stellvertreter() {
     res.setHeader('Content-Type', 'application/json')
     if (u.pathname.endsWith('/select')) {
       const erste = u.searchParams.get('cursorMark') === '*' && !(u.searchParams.get('q') ?? '').includes('type:property')
-      return res.end(JSON.stringify({ response: { numFound: erste ? DOCS.length : 0, docs: erste ? DOCS : [] }, nextCursorMark: 'ende' }))
+      return res.end(JSON.stringify({ response: { numFound: erste ? docs.length : 0, docs: erste ? docs : [] }, nextCursorMark: 'ende' }))
     }
     if (u.pathname === '/api/model') return res.end(JSON.stringify({
       attributes: [{ key: 'name', type: 'text', group: 'stamm' }, ...Array.from({ length: 6 }, (_, i) => ({ key: 'abmessung_' + i, type: 'text', group: 'solr' }))],
@@ -32,8 +32,8 @@ function stellvertreter() {
   return new Promise(ok => server.listen(0, '127.0.0.1', () => ok({ server, gerufen, url: `http://127.0.0.1:${server.address().port}` })))
 }
 
-async function lauf(trocken, extra = {}) {
-  const s = await stellvertreter()
+async function lauf(trocken, extra = {}, docs = DOCS) {
+  const s = await stellvertreter(docs)
   try {
     const out = await new Promise(ok => {
       const p = spawn(process.execPath, ['job.mjs', s.url, 'job:test'], {
@@ -63,17 +63,30 @@ test('ohne Probelauf wird geschrieben: der vorhandene Knoten bekommt keine Neuan
   assert.ok(!/group\.create/.test(r.text), r.text)
 })
 
-test('regroup (Probelauf): die Attribute der Gruppe solr werden gezählt und nach dem Anfang geordnet, nichts geschrieben — ohne Solr-Kern', async () => {
-  const r = await lauf(true, { JOURNALI_REGROUP: 'true', JOURNALI_BASE: '', JOURNALI_ROOTS: '' })
+// Eine Quelle, in der abmessung_0–2 am Produkt und abmessung_3–5 an der Variante stehen: das Thema spannt zwei Ebenen
+const MIT_EBENEN = [
+  { id: 'g1', master_id: 'G1', type: 'group', name: 'Gruppe', lang: 'de', main_parent_id: '' },
+  { id: 'p1', master_id: 'P1', type: 'product', name: 'Produkt', lang: 'de', main_parent_id: 'g1', property__abmessung_0__string: 'a', property__abmessung_1__string: 'b', property__abmessung_2__string: 'c' },
+  { id: 'v1', master_id: 'V1', type: 'productVariant', name: 'Variante', lang: 'de', main_parent_id: 'p1', property__abmessung_3__string: 'd', property__abmessung_4__string: 'e', property__abmessung_5__string: 'f' },
+]
+
+test('regroup (Probelauf): Thema und Ebene der Werte in der Quelle ordnen die Attribute, nichts wird geschrieben', async () => {
+  const r = await lauf(true, { JOURNALI_REGROUP: 'true' }, MIT_EBENEN)
   assert.equal(r.code, 0, r.text)
-  assert.match(r.text, /6 Attribute der Gruppe solr → 1 Gruppen/)
-  assert.match(r.text, /abmessung \(Abmessung\): 6/)
-  assert.ok(!r.gerufen.some(g => g.startsWith('PUT') || g.startsWith('POST')), r.gerufen.join(' | '))
-  assert.ok(!r.gerufen.some(g => g.includes('/select')), 'Solr wird nicht gefragt')
+  assert.match(r.text, /6 Attribute der Gruppe solr → 2 Gruppen/)
+  assert.match(r.text, /abmessung_product \(Abmessung \(Produkt\)\) ab product: 3/)
+  assert.match(r.text, /abmessung_variant \(Abmessung \(Variante\)\) ab variant: 3/)
+  assert.ok(!r.gerufen.some(g => g.startsWith('PUT') || g.startsWith('POST /api/batch')), r.gerufen.join(' | '))
 })
 
-test('regroup: schreibt Gruppe, Attribute und die Gruppen der Knoten', async () => {
-  const r = await lauf(false, { JOURNALI_REGROUP: 'true', JOURNALI_BASE: '', JOURNALI_ROOTS: '' })
+test('regroup: schreibt Gruppen mit „aktiv ab“, vererbbare Attribute und lesbare Bezeichnungen', async () => {
+  const r = await lauf(false, { JOURNALI_REGROUP: 'true' }, MIT_EBENEN)
   assert.equal(r.code, 0, r.text)
-  assert.match(r.text, /✓ 6 Attribute in 1 Gruppen, 0 Knoten angepasst/)
+  assert.match(r.text, /✓ 6 Attribute in 2 Gruppen, 0 Knoten angepasst/)
+})
+
+test('regroup braucht die Quelle: ohne sie weiss der Job nicht, auf welcher Ebene die Werte stehen', async () => {
+  const r = await lauf(true, { JOURNALI_REGROUP: 'true', JOURNALI_BASE: '', JOURNALI_ROOTS: '' })
+  assert.equal(r.code, 1)
+  assert.match(r.text, /Quelle oder Wurzel fehlt/)
 })

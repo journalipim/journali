@@ -114,10 +114,18 @@ Belegt 17.09.2026 im Trockenlauf gegen `<KUNDE>_SHOP_Switche`: 117 Dokumente
 → 118 Knoten (1 Sammelprodukt), 157 neue Attribute in 21 Gruppen, 5 471
 Werte, 7 Stapel.
 
-**Gruppen neuer Attribute** (Parameter `group_by`): `auto` (Vorgabe) nimmt die Gruppe der Quelle, wo es sie gibt, sonst den Anfang des Schlüssels; `section`
-nur die der Quelle; `prefix` nur den Anfang des Schlüssels; `single` alles in `solr`. Der Plan nennt jede neue Gruppe mit der Zahl ihrer Attribute — im
-Trockenlauf steht dort, was der Lauf anlegen würde.
+**Gruppen neuer Attribute** — die Regeln stehen in `plugins/table/anlage.mjs` und gelten für jeden Import (auch IXP):
 
-**Attribute der Gruppe `solr` verteilen** (Parameter `regroup`, mit Trockenlauf prüfen): kein Import, sondern das Modell. Die Attribute, die früher alle in
-`solr` landeten, kommen nach dem Anfang ihres Schlüssels in eigene Gruppen; die neuen Gruppen hängen an den Knoten, an denen `solr` hing, und übernehmen
-„aktiv ab“. Die Werte bleiben, wo sie sind. Braucht das Recht „Modell ändern“.
+- **Eine Ebene je Gruppe.** Eine Gruppe enthält Attribute, deren Werte in der Quelle auf derselben Ebene stehen (Gruppe, Produkt, Variante), und ist dort „aktiv ab“. Attribute
+  oberhalb der Varianten sind **vererbbar**: die Varianten bekommen den Wert, ohne ihn zu wiederholen — und was ein Produkt trägt, schreibt der Import an der Variante nicht noch einmal.
+  Spannt ein Thema mehrere Ebenen, wird je Ebene eine Gruppe daraus („Abmessung (Produkt)“, „Abmessung (Variante)“); sonst heisst sie nur „Abmessung“.
+- **Das Thema** nennt die Quelle (Gruppe der Attributdefinition); fehlt sie, der Anfang des Schlüssels (`abmessung_a_max` → Abmessung, mindestens 5 Attribute; technische
+  Anfänge wie `ctrl_` und was weniger Verwandte hat → „Weitere Merkmale“).
+- **Namen:** die Bezeichnung des Attributs aus der Quelle, sonst aus dem Schlüssel (`abmessung_a_max` → „Abmessung a max“, Kennungen wie `d28e55178` entfallen).
+
+Parameter `group_by`: `auto` (Vorgabe) nimmt das Thema der Quelle, wo es eines gibt, sonst den Anfang des Schlüssels; `section` nur die der Quelle; `prefix` nur den Anfang; `single`
+alles in `solr`. Der Plan nennt jede neue Gruppe mit der Zahl ihrer Attribute — im Trockenlauf steht dort, was der Lauf anlegen würde.
+
+**Attribute der Gruppe `solr` neu ordnen** (Parameter `regroup`, mit Trockenlauf prüfen): kein Import, sondern das Modell. Die Attribute, die früher alle in `solr` landeten,
+bekommen Thema und Ebene wie oben — die Ebene liest der Job aus der Quelle (Kern und Wurzel wie beim Import). Die neuen Gruppen hängen an den Knoten, an denen `solr` hing; Attribute
+oberhalb der Varianten werden vererbbar, die Bezeichnungen lesbar. Die Werte bleiben, wo sie sind. Attribute ohne Wert in der Quelle bleiben in `solr`. Braucht das Recht „Modell ändern“.

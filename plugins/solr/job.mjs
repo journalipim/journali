@@ -123,7 +123,10 @@ try {
   if (neuOrdnen) {
     // kein Import: die Attribute der Gruppe solr auf Gruppen verteilen (Modell ändern, darum das Recht dazu)
     if (umgebung.rechte && !umgebung.rechte.rights.has('model')) throw new Error(`Rolle ${umgebung.rechte.rolle} darf das Modell nicht ändern.`)
-    const r = await ordneNeu({ umgebung, trocken })
+    if (!base || !wurzeln.length) throw new Error('Quelle oder Wurzel fehlt')
+    const client = solr(base, holen)
+    const plan = await plane({ client, umgebung, wurzeln, skip, pdefs: await client.propertyDefs(), gruppen: gruppierung })   // die Ebenen, auf denen die Werte stehen
+    const r = await ordneNeu({ umgebung, plan, trocken })
     process.exitCode = r.bewegt || trocken ? 0 : 2
   } else {
   if (!base || !wurzeln.length) throw new Error('Quelle oder Wurzel fehlt')

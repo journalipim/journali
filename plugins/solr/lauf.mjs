@@ -13,7 +13,8 @@
 //   }
 //
 // Die Abbildung selbst (welcher Solr-Wert wird welches Attribut) steht in solr.js und wird hier nur benutzt.
-import { SYSTEM, roleOf, valueCommands, modelNeeds, prefixPlan, DEFAULT_SKIP, relFields, complexIds, relationNeeds, REL_GROUP } from './solr.js'
+import { SYSTEM, roleOf, valueCommands, inheritedValues, modelNeeds, DEFAULT_SKIP, relFields, complexIds, relationNeeds, REL_GROUP } from './solr.js'
+import { themesByPrefix, groupsByLevel, humanize } from '../table/anlage.mjs'
 
 /// Die Rechte dessen, der den Lauf ausführt (Anwender im Browser, Rolle des Jobs im Prozess). Ein Server ohne Anwender
 /// antwortet nicht — dann gibt es nichts zu prüfen (null).
@@ -106,7 +107,7 @@ export async function schreibe({ plan, umgebung, ziel = null, skip = DEFAULT_SKI
   let geschrieben = 0, stapel = 0
 
   for (const [k, g] of needs.newGroups) {
-    await api.post(`/api/model/groups/${k}`, { key: k, label: { de: g.label, en: g.label }, activeFrom: g.activeFrom }, 'PUT')
+    await api.post(`/api/model/groups/${k}`, { key: k, label: { de: g.label, en: g.en ?? g.label }, activeFrom: g.activeFrom }, 'PUT')
     sag?.(`Attributgruppe ${k} (${g.label})${g.activeFrom ? ' ab ' + g.activeFrom : ''} angelegt`)
   }
   for (const [k, from] of needs.raise) {
@@ -120,6 +121,9 @@ export async function schreibe({ plan, umgebung, ziel = null, skip = DEFAULT_SKI
   const attrMap = new Map((umgebung.modell?.attributes ?? []).map(a => [a.key, a]))
 
   const refOf = new Map()   // Solr-Id → '@ref' oder journali-Id
+  const itemOf = new Map(items.map(i => [i.doc.id, i]))
+  // Der Knoten darüber (Solr-Dokument) trägt vererbbare Werte: sie stehen unten nicht noch einmal
+  const geerbt = it => { const parent = it.parentId != null ? itemOf.get(it.parentId) : null; return parent ? inheritedValues(parent.doc, attrMap) : new Map() }
   const eigene = async id => {
     const n = await api.get(`/api/nodes/${encodeURIComponent(id)}`)
     return new Map(n.values.filter(v => !v.row).map(v => [`${v.attribute}|${v.locale ?? ''}`, v.values ?? v.value]))
@@ -129,7 +133,7 @@ export async function schreibe({ plan, umgebung, ziel = null, skip = DEFAULT_SKI
     let node
     if (it.existing) {
       node = it.existing.id
-      cmds.push(...valueCommands(it.doc, node, attrMap, await eigene(node), skip))
+      cmds.push(...valueCommands(it.doc, node, attrMap, await eigene(node), skip, geerbt(it)))
     } else {
       const ref = 'n' + (++refNr)
       const parent = it.parentId != null && refOf.has(it.parentId) ? refOf.get(it.parentId) : (ziel || null)
@@ -143,7 +147,7 @@ export async function schreibe({ plan, umgebung, ziel = null, skip = DEFAULT_SKI
         cmds.push({ op: 'groups.attach', args: { node, groups: needs.used } })
         if (it.role !== 'variant') cmds.push({ op: 'label.set', args: { node, attribute: 'name' } })
       }
-      cmds.push(...valueCommands(it.doc, node, attrMap, new Map(), skip))
+      cmds.push(...valueCommands(it.doc, node, attrMap, new Map(), skip, geerbt(it)))
     }
     if (it.top && it.existing) {
       const haben = (it.existing.groups ?? '').split(',').filter(Boolean)
@@ -225,32 +229,42 @@ export async function schreibeRelationen({ plan, umgebung }) {
   return { geschrieben, stapel }
 }
 
-/// Die Attribute der Gruppe „solr“ — dorthin kamen früher alle, deren Quelle keine Gruppe nannte — nach dem Anfang ihres Schlüssels auf Gruppen verteilen.
-/// Die neuen Gruppen hängen dort, wo „solr“ hing; „aktiv ab“ übernehmen sie von „solr“. Werte bleiben, wo sie sind: nur die Gruppe des Attributs ändert sich.
-/// Ohne `trocken` wird geschrieben; im Probelauf steht nur, was geschähe.
-export async function ordneNeu({ umgebung, min = 5, trocken = false }) {
+/// Die Attribute der Gruppe „solr“ — dorthin kamen früher alle, deren Quelle keine Gruppe nannte — neu ordnen: nach Thema (Anfang des Schlüssels) und Ebene, auf der
+/// ihre Werte in der Quelle stehen (`plan` kommt aus plane; seine `levels` sagen es). Jede Gruppe enthält eine Ebene und ist dort „aktiv ab“, Attribute oberhalb der Varianten
+/// werden vererbbar, die Bezeichnungen lesbar. Die neuen Gruppen hängen dort, wo „solr“ hing. Werte bleiben, wo sie sind. Attribute, die in der Quelle keinen Wert haben,
+/// bleiben in „solr“. Ohne `trocken` wird geschrieben; im Probelauf steht nur, was geschähe.
+export async function ordneNeu({ umgebung, plan, min = 5, trocken = false }) {
   const { api, sag } = umgebung
   await umgebung.frisch?.()
-  const alt = (umgebung.modell?.attributes ?? []).filter(a => (a.group ?? '') === 'solr')
-  if (!alt.length) { sag?.('Gruppe solr: keine Attribute'); return { bewegt: 0, gruppen: 0 } }
-  const plan = prefixPlan(alt.map(a => a.key), min)
-  const nach = new Map()   // Gruppe → { label, attribute }
-  for (const a of alt) { const g = plan.get(a.key); if (!nach.has(g.group)) nach.set(g.group, { label: g.label, attribute: [] }); nach.get(g.group).attribute.push(a) }
+  const levels = plan?.needs?.levels ?? new Map()
+  const alle = (umgebung.modell?.attributes ?? []).filter(a => (a.group ?? '') === 'solr')
+  if (!alle.length) { sag?.('Gruppe solr: keine Attribute'); return { bewegt: 0, gruppen: 0 } }
+  const alt = alle.filter(a => levels.has(a.key))
+  if (alle.length > alt.length) sag?.(`${alle.length - alt.length} Attribute ohne Wert in der Quelle bleiben in solr`)
+  if (!alt.length) return { bewegt: 0, gruppen: 0 }
+  const themen = themesByPrefix(alt.map(a => a.key), min)
+  const gruppen = groupsByLevel(alt.map(a => ({ key: a.key, theme: themen.get(a.key), level: levels.get(a.key) })))
+  const nach = new Map()   // Gruppe → { label, activeFrom, attribute }
+  for (const a of alt) { const g = gruppen.get(a.key); if (!nach.has(g.group)) nach.set(g.group, { label: g.label, activeFrom: g.activeFrom, attribute: [] }); nach.get(g.group).attribute.push(a) }
   const vorhanden = new Set((umgebung.modell?.groups ?? []).map(g => g.key))
-  const vorlage = (umgebung.modell?.groups ?? []).find(g => g.key === 'solr')
   sag?.(`${alt.length} Attribute der Gruppe solr → ${nach.size} Gruppen`)
-  for (const [k, g] of [...nach].sort((x, y) => y[1].attribute.length - x[1].attribute.length)) sag?.(`  ${k} (${g.label}): ${g.attribute.length}${vorhanden.has(k) ? ' — gibt es schon' : ''}`)
+  for (const [k, g] of [...nach].sort((x, y) => y[1].attribute.length - x[1].attribute.length)) sag?.(`  ${k} (${g.label.de})${g.activeFrom ? ' ab ' + g.activeFrom : ''}: ${g.attribute.length}${vorhanden.has(k) ? ' — gibt es schon' : ''}`)
   const knoten = (umgebung.baum ?? []).filter(r => (r.groups ?? '').split(',').includes('solr'))
   sag?.(`${knoten.length} Knoten tragen die Gruppe solr`)
   if (trocken) { sag?.('Probelauf — nichts geschrieben'); return { bewegt: 0, gruppen: nach.size } }
 
-  for (const [k, g] of nach) if (!vorhanden.has(k)) await api.post(`/api/model/groups/${k}`, { key: k, label: { de: g.label, en: g.label }, activeFrom: vorlage?.activeFrom ?? null }, 'PUT')
+  for (const [k, g] of nach) if (!vorhanden.has(k)) await api.post(`/api/model/groups/${k}`, { key: k, label: g.label, activeFrom: g.activeFrom }, 'PUT')
   let bewegt = 0
-  for (const [k, g] of nach) for (const a of g.attribute) { await api.post(`/api/model/attributes/${encodeURIComponent(a.key)}`, { ...a, group: k }, 'PUT'); bewegt++ }
-  // jetzt ohne Attribute: „solr“ geht von den Knoten, die neuen Gruppen kommen dazu
+  for (const [k, g] of nach) for (const a of g.attribute) {
+    const lesbar = (a.label?.de ?? '') === a.key || /_/.test(a.label?.de ?? '') ? humanize(a.label?.de || a.key) : null
+    await api.post(`/api/model/attributes/${encodeURIComponent(a.key)}`, { ...a, group: k, inheritable: levels.get(a.key) < 2, ...(lesbar ? { label: { de: lesbar, en: lesbar } } : {}) }, 'PUT')
+    bewegt++
+  }
+  // „solr“ bleibt dort, wo noch Attribute darin sind; die neuen Gruppen kommen an dieselben Knoten
+  const rest = alle.length > alt.length
   const neu = [...nach.keys()]
   for (const r of knoten) {
-    const haben = (r.groups ?? '').split(',').filter(x => x && x !== 'solr')
+    const haben = (r.groups ?? '').split(',').filter(x => x && (rest || x !== 'solr'))
     await api.post(`/api/nodes/${encodeURIComponent(r.id)}/groups`, { groups: [...new Set([...haben, ...neu])] }, 'PUT')
   }
   sag?.(`✓ ${bewegt} Attribute in ${nach.size} Gruppen, ${knoten.length} Knoten angepasst`)

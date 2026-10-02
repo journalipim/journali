@@ -36,6 +36,53 @@ const ImportHead = h.ImportHead;
 const TreePicker = h.TreePicker;
 const m = window.journali.vueRouter;
 const useRouter = m.useRouter;
+const LEVELS = ["group", "product", "variant"];
+const LEVEL_LABEL = { group: { de: "Gruppe", en: "Group" }, product: { de: "Produkt", en: "Product" }, variant: { de: "Variante", en: "Variant" } };
+const WEITERE = { group: "weitere", label: { de: "Weitere Merkmale", en: "Other attributes" } };
+const TECHNISCH = /* @__PURE__ */ new Set(["ctrl", "control", "info", "meta", "parent", "sys", "tmp", "dp", "wsc", "id", "ref", "rel", "prc"]);
+function humanize(raw) {
+  const tokens = String(raw ?? "").replace(/([a-zäöüß0-9])([A-ZÄÖÜ])/g, "$1_$2").split(/[^A-Za-z0-9ÄÖÜäöüß]+/).filter(Boolean);
+  const keep = tokens.filter((t2) => !(t2.length >= 6 && /\d/.test(t2) && /[a-z]/i.test(t2)));
+  const words = (keep.length ? keep : tokens).map((w) => w.toLowerCase());
+  return words.join(" ").replace(/^./, (c) => c.toUpperCase());
+}
+const themeOf = (key) => {
+  const m2 = /^[a-zäöü]{4,}/.exec(String(key ?? "").toLowerCase());
+  return m2 && !TECHNISCH.has(m2[0]) ? m2[0] : "";
+};
+function themesByPrefix(keys, min = 5) {
+  const count = /* @__PURE__ */ new Map();
+  for (const k of keys) {
+    const a = themeOf(k);
+    if (a) count.set(a, (count.get(a) ?? 0) + 1);
+  }
+  const out = /* @__PURE__ */ new Map();
+  for (const k of keys) {
+    const a = themeOf(k);
+    const word = a ? a[0].toUpperCase() + a.slice(1) : "";
+    out.set(k, a && count.get(a) >= min ? { group: a, label: { de: word, en: word } } : WEITERE);
+  }
+  return out;
+}
+function groupsByLevel(entries) {
+  const levels = /* @__PURE__ */ new Map();
+  for (const e of entries) {
+    if (!levels.has(e.theme.group)) levels.set(e.theme.group, /* @__PURE__ */ new Set());
+    levels.get(e.theme.group).add(e.level);
+  }
+  const out = /* @__PURE__ */ new Map();
+  for (const e of entries) {
+    const split = levels.get(e.theme.group).size > 1;
+    const role = LEVELS[e.level] ?? "variant";
+    out.set(e.key, {
+      group: split ? `${e.theme.group}_${role}` : e.theme.group,
+      label: split ? { de: `${e.theme.label.de} (${LEVEL_LABEL[role].de})`, en: `${e.theme.label.en} (${LEVEL_LABEL[role].en})` } : e.theme.label,
+      activeFrom: e.level > 0 ? role : null,
+      inheritable: e.level < 2
+    });
+  }
+  return out;
+}
 const SYSTEM = "solr";
 const ROLE = { group: "group", product: "product", productvariant: "variant" };
 const roleOf = (d) => ROLE[(d.type || "").toLowerCase()];
@@ -169,46 +216,38 @@ function asStrings(suffix, v) {
 }
 const DEPTH = { group: 0, product: 1, variant: 2 };
 const ROLES = ["group", "product", "variant"];
-const WEITERE = { group: "weitere", label: "Weitere Merkmale" };
-function prefixPlan(keys, min = 5) {
-  const anfang = (k) => {
-    const m2 = /^[a-z]{2,}/.exec(k);
-    return m2 ? m2[0] : "";
-  };
-  const zaehler = /* @__PURE__ */ new Map();
-  for (const k of keys) {
-    const a = anfang(k);
-    if (a) zaehler.set(a, (zaehler.get(a) ?? 0) + 1);
-  }
-  const plan = /* @__PURE__ */ new Map();
-  for (const k of keys) {
-    const a = anfang(k);
-    plan.set(k, a && zaehler.get(a) >= min ? { group: a, label: a[0].toUpperCase() + a.slice(1) } : WEITERE);
-  }
-  return plan;
-}
 function modelNeeds(docs, attrs, groups, pdefs, skip, opts = {}) {
   const groupBy = opts.groupBy ?? "auto";
   const newGroups = /* @__PURE__ */ new Map();
   const newAttrs = /* @__PURE__ */ new Map();
   const used = /* @__PURE__ */ new Set();
   const counts = /* @__PURE__ */ new Map();
+  const levels = /* @__PURE__ */ new Map();
   const top = /* @__PURE__ */ new Map();
   const seen = (gkey, role) => {
     const d = DEPTH[role] ?? 0;
     if (!top.has(gkey) || d < top.get(gkey)) top.set(gkey, d);
   };
   const fresh = /* @__PURE__ */ new Map();
-  for (const d of docs) for (const { key, suffix, raw } of ownValues(d, skip)) if (!attrs.has(key) && !fresh.has(key)) fresh.set(key, { raw, suffix });
-  const plan = prefixPlan([...fresh.keys()].filter((k) => groupBy === "prefix" || groupBy === "auto" && !pdefs[fresh.get(k).raw]?.section), opts.min ?? 5);
-  const groupOf = (key) => {
-    const { raw } = fresh.get(key);
-    const p = pdefs[raw];
-    if (groupBy === "single") return { group: "solr", label: "solr" };
-    if ((groupBy === "section" || groupBy === "auto") && p?.section) return { group: slug(p.section), label: p.sectionName || p.section };
-    if (groupBy === "section") return { group: "solr", label: "solr" };
-    return plan.get(key);
+  for (const d of docs) for (const { key, suffix, raw } of ownValues(d, skip)) {
+    const depth = DEPTH[roleOf(d)] ?? 0;
+    if (!levels.has(key) || depth < levels.get(key)) levels.set(key, depth);
+    if (!attrs.has(key) && !fresh.has(key)) fresh.set(key, { raw, suffix });
+  }
+  const keys = [...fresh.keys()];
+  const byPrefix = themesByPrefix(keys.filter((k) => groupBy === "prefix" || groupBy === "auto" && !pdefs[fresh.get(k).raw]?.section), opts.min ?? 5);
+  const themeOf2 = (key) => {
+    const p = pdefs[fresh.get(key).raw];
+    if (groupBy === "single") return { group: "solr", label: { de: "solr", en: "solr" } };
+    if ((groupBy === "section" || groupBy === "auto") && p?.section) {
+      const l = p.sectionName || humanize(p.section);
+      return { group: slug(p.section), label: { de: l, en: l } };
+    }
+    if (groupBy === "section") return { group: "solr", label: { de: "solr", en: "solr" } };
+    return byPrefix.get(key);
   };
+  const einEbene = Math.min(...[...fresh.keys()].map((k) => levels.get(k)), 2);
+  const plan = groupsByLevel(keys.map((k) => ({ key: k, theme: themeOf2(k), level: groupBy === "single" ? einEbene : levels.get(k) })));
   for (const d of docs) for (const { key, suffix, raw } of ownValues(d, skip)) {
     counts.set(key, (counts.get(key) ?? 0) + 1);
     if (attrs.has(key)) {
@@ -216,18 +255,14 @@ function modelNeeds(docs, attrs, groups, pdefs, skip, opts = {}) {
       seen(attrs.get(key).group, roleOf(d));
       continue;
     }
-    const gkey = newAttrs.get(key)?.group ?? groupOf(key).group;
-    seen(gkey, roleOf(d));
+    const g = plan.get(key);
+    seen(g.group, roleOf(d));
     if (newAttrs.has(key)) continue;
-    if (!groups.has(gkey)) newGroups.set(gkey, { label: groupOf(key).label, activeFrom: null });
-    used.add(gkey);
+    if (!groups.has(g.group)) newGroups.set(g.group, { label: g.label.de, en: g.label.en, activeFrom: g.activeFrom });
+    used.add(g.group);
     const [type, multiple, perLocale] = TYPES[suffix];
-    const label = pdefs[raw]?.name || raw;
-    newAttrs.set(key, { key, label: { de: label, en: label }, type, group: gkey, axes: perLocale ? ["locale"] : null, multiple });
-  }
-  for (const [gkey, g] of newGroups) {
-    const t2 = top.get(gkey) ?? 0;
-    g.activeFrom = t2 > 0 ? ROLES[t2] : null;
+    const label = pdefs[raw]?.name || humanize(raw);
+    newAttrs.set(key, { key, label: { de: label, en: label }, type, group: g.group, axes: perLocale ? ["locale"] : null, multiple, inheritable: groupBy === "single" ? levels.get(key) < 2 : g.inheritable });
   }
   const raise = /* @__PURE__ */ new Map();
   for (const [gkey, t2] of top) {
@@ -238,7 +273,7 @@ function modelNeeds(docs, attrs, groups, pdefs, skip, opts = {}) {
   used.delete(void 0);
   used.delete(null);
   used.delete("");
-  return { newGroups, newAttrs, raise, used: [...used].sort(), counts };
+  return { newGroups, newAttrs, raise, used: [...used].sort(), counts, levels };
 }
 const REL_POINTER = "component_complex";
 const REL_GROUP = "relation_component";
