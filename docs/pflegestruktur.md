@@ -2361,7 +2361,7 @@ unter jeder Regel steht sie als Satz. Die Definition steht als Plugin-Daten im J
 warum eines gesperrt ist — über denselben Endpunkt wie der Shop, gegen den gespeicherten Stand. *Testfälle* merken eine Auswahl mit dem Ergebnis
 (`case:<key>:<name>`); „Alle prüfen“ vergleicht nach jeder Änderung der Regeln, was sich verschoben hat.
 
-**Offen:** mehrere Container in einer Konfiguration (zwei Mainboards fallen heute in eine Bilanz zusammen), Hilfe in der Instanz, der Tarif des Plugins im
+**Offen:** Hilfe in der Instanz, der Tarif des Plugins im
 Tarifblatt des Lizenzservers.
 
 ## 40. Konfiguratorgruppen — Teile gehören mit Zeilen zu Gruppen, die Regel steht an der Gruppe (02.10.2026, Kern und Endpunkt gebaut)
@@ -2424,4 +2424,9 @@ einem wählbaren Teil `↑ Gruppe`, wenn es die Summe einer Gruppe im Minus anhe
 und bearbeitet sie dort, mit demselben Editor wie der Reiter *Gruppen*. Der Kopf nennt die Zahl der Zeilen. Hat der Knoten keine eigenen, stehen die des nächsten Vorfahren da
 („↑ geerbt von …“); „Eigene Zeilen“ übernimmt sie als Kopie, und eigene ersetzen die geerbten ganz.
 
-**Offen:** Gruppen im Tarifblatt (gilt wie das Plugin), mehrere Container in einer Konfiguration (Abschnitt 39).
+**Wo eine Konfiguration beginnt, bestimmt der Anwender** (entschieden 02.10.2026): ein Konfigurator ist ein Ausgangspunkt, die Wurzel (`root`) seiner Definition; was darunter
+gewählt werden darf, gehört zu dieser einen Konfiguration. Mehrere Container in einer Konfiguration, die getrennt zu betrachten sind (zwei Mainboards mit je eigenen Steckplätzen und
+eigenem Arbeitsspeicher), gibt es nicht als eigenes Merkmal: wer sie getrennt haben will, legt getrennte Gruppen an (`ram_a`, `ram_b`) und gibt den Teilen der jeweiligen Seite Zeilen in
+der jeweiligen Gruppe. Die Auswahl kennt dafür keine Container und keine Verschachtelung.
+
+**Offen:** Gruppen im Tarifblatt (gilt wie das Plugin).
