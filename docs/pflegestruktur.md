@@ -2312,45 +2312,44 @@ Zugangs bleibt beim Server. Beispiel „ERP OData schreiben (CSRF)“ in der Bib
 ein einfacher Bericht. Der Autor lädt eines in den Editor (＋ Beispiel …) und passt es an. Kein Fremdcode aus einem
 öffentlichen Markt — dazu die Begründung unter „Offen“ in Abschnitt 37.
 
-## 39. Konfigurator — Regeln, die zu einer Auswahl sagen, was geht (02.10.2026, Kern gebaut)
+## 39. Konfigurator (`configurator`) — Regeln, die zu einer Auswahl sagen, was geht (02.10.2026, Kern und Endpunkt gebaut)
 
 Ein Konfigurator prüft eine Auswahl von Produkten gegen Regeln. Die Regeln pflegt ein Anwender im PIM und prüft dort Beispiele;
 ein Shop schickt, was ausgewählt ist, und bekommt zurück, was geht. **Die Logik steht nur auf dem Server**: der Shop kennt sie nicht,
-und die Ansicht des PIM fragt denselben Endpunkt wie der Shop.
+und die Ansicht des PIM fragt denselben Endpunkt wie der Shop. Das Plugin heisst `configurator`; die Namen in der Definition und in der
+Schnittstelle sind englisch, weil sie im Journal stehen und nach aussen gehen.
 
 **Zwei Sorten von Regeln:**
 
 - **Bilanz.** Ein Teil stellt Ressourcen bereit (ein Mainboard 3 Steckplätze) oder verbraucht sie (eine CPU einen Steckplatz und eine Kühlung).
   Eine Erweiterungskarte, die einen Steckplatz braucht und drei bereitstellt, trägt beides. Jede Ressource, die in der Auswahl vorkommt,
-  muss in der Summe ≥ 0 sein; eine Regel je Ressource gibt es nicht. Die Ressourcen stehen als Zeilenattribut `ressourcen` am Produkt
-  (Spalten `ressource` und `menge`, positiv = stellt bereit, negativ = verbraucht). Eine Variante ohne eigene Zeilen nimmt die ihres Produkts.
-- **„wenn A, dann B“.** Die Bedingung (`hat`, `anzahl`, `summe` eines Attributs, `bilanz` einer Ressource, verknüpft mit `und`, `oder`, `nicht`)
-  über Teile, die ein **Selektor** benennt: ein Knoten (Produkt, Gruppe oder Variante, sein ganzer Teilbaum), ein Attributfilter oder beides.
-  Die Folge: `verbietet`, `begrenzt` auf höchstens n, `verlangt` mindestens n. Eine Regel ohne Bedingung gilt immer.
+  muss in der Summe ≥ 0 sein; eine Regel je Ressource gibt es nicht. Die Ressourcen stehen als Zeilenattribut `resources` am Produkt
+  (Spalten `resource` und `amount`, positiv = stellt bereit, negativ = verbraucht). Eine Variante ohne eigene Zeilen nimmt die ihres Produkts.
+- **„wenn A, dann B“** (`if` und `then` an der Regel). Die Bedingung (`has`, `count`, `sum` eines Attributs, `balance` einer Ressource, verknüpft mit
+  `and`, `or`, `not`) fragt nach Teilen, die ein **Selektor** (`selector`) benennt: ein Knoten (Produkt, Gruppe oder Variante, sein ganzer Teilbaum),
+  ein Attributfilter oder beides. Die Folge: `forbids`, `limits` auf höchstens `max`, `requires` mindestens `min`. Eine Regel ohne Bedingung gilt immer.
 
-**Zwei Zustände.** *Unzulässig*: ein Verbot, eine Grenze oder eine Ressource im Minus ist verletzt. *Unvollständig*: etwas ist verlangt
-und fehlt. Eine unvollständige Auswahl kann zulässig sein. Zu jedem Teil, das noch dazukommen könnte, sagt das Ergebnis auf Wunsch
-(`waehlbar`), ob es geht und welchen Verstoss es neu verursachen würde; was verlangt ist und fehlt, sperrt kein Teil.
+**Zwei Zustände.** *Unzulässig* (`valid: false`): ein Verbot, eine Grenze oder eine Ressource im Minus ist verletzt. *Unvollständig*
+(`complete: false`): etwas ist verlangt und fehlt. Eine unvollständige Auswahl kann zulässig sein. Zu jedem Teil, das noch dazukommen könnte,
+sagt das Ergebnis auf Wunsch (`selectable`), ob es geht und welchen Verstoss es neu verursachen würde; was verlangt ist und fehlt, sperrt kein Teil.
 
-**Gebaut (Kern, `Journali.Core/Konfigurator/`):** `Definition` (JSON, Prüfung der Regeln, jede Meldung nennt die Regel), `Pruefer` (Auswahl →
-`Ergebnis` mit Verstössen, Fehlendem, Bilanz je Ressource und Wählbarkeit), `Teile` (Baum → Teil, wählbare Teile unter einer Wurzel).
-Tests: `KonfiguratorTests` (das Beispiel eines Servers mit Mainboard, CPU, Kühlern, Karten und Grafikkarten).
+**Kern (`Journali.Core/Configurator/`):** `Definition` (JSON, Prüfung der Regeln, jede Meldung nennt die Regel), `Checker` (Auswahl → `Evaluation` mit
+Verstössen, Fehlendem, Bilanz je Ressource und Wählbarkeit), `Parts` (Baum → Teil, wählbare Teile unter einer Wurzel).
+Tests: `ConfiguratorTests` (das Beispiel eines Servers mit Mainboard, CPU, Kühlern, Karten und Grafikkarten).
 
-**Gewählt:** Die Definition liegt als Plugin-Daten im Journal (wie ein Skript, Abschnitt 37), nicht als eigener Eintragstyp — das spart ein
-neues Abbild im Katalog, und das Plugin steuert den Tarif. Ein eigener Typ bleibt möglich, wenn die Regeln im Abbild abfragbar sein sollen.
+**Endpunkt (`ConfiguratorApi.cs`):**
 
-**Endpunkt (gebaut, `ConfiguratorApi.cs`):**
-
-- `POST /api/konfigurator/{key}/pruefen` mit `{ "auswahl": [{ "id": "<Knoten-Id oder eindeutiger Wert, z. B. SKU>", "menge": 1 }], "waehlbar": false }`.
-  Die Antwort: `zulaessig`, `vollstaendig`, `auswahl` (Kennung, Id, Name, Menge), `verstoesse` und `fehlt` (Art, Text, `betrifft`, Regel oder
-  Ressource), `bilanz` je Ressource und mit `waehlbar: true` zu jedem wählbaren Teil `ok` und die Gründe. In `betrifft` stehen die Kennungen, die
-  der Aufrufer geschickt hat — der Shop kennt unsere Ids nicht. Höchstens 500 Zeilen, Menge 1 bis 9999, höchstens 2 000 wählbare Teile.
-- `GET /api/konfigurator` (die Konfiguratoren mit Zahl der Regeln und Fehler) und `GET /api/konfigurator/{key}` (die Definition und was an ihr nicht stimmt).
+- `POST /api/configurator/{key}/check` mit `{ "selection": [{ "id": "<Knoten-Id oder eindeutiger Wert, z. B. SKU>", "amount": 1 }], "selectable": false }`.
+  Die Antwort: `valid`, `complete`, `selection` (`ref`, `id`, `name`, `amount`), `violations` und `missing` (`kind`, `text`, `affects`, `rule` oder
+  `resource`), `balance` je Ressource (`provided`, `consumed`, `free`) und mit `selectable: true` zu jedem wählbaren Teil `ok` und die `reasons`. In
+  `affects` stehen die Kennungen, die der Aufrufer geschickt hat — der Shop kennt unsere Ids nicht. Höchstens 500 Zeilen, Menge 1 bis 9999,
+  höchstens 2 000 wählbare Teile.
+- `GET /api/configurator` (die Konfiguratoren mit Zahl der Regeln und Fehler) und `GET /api/configurator/{key}` (die Definition und was an ihr nicht stimmt).
 - **Recht:** Prüfen braucht nur das Recht zu lesen, auch wenn es ein POST ist (`Auth.Needed`). Ein Teil, das die Rolle des Aufrufers nicht sieht, gibt es für
-  ihn nicht (dieselbe Antwort wie für ein unbekanntes). Die Definition liegt unter den Plugin-Daten von `konfigurator` (`def:<key>`); sie zu ändern
+  ihn nicht (dieselbe Antwort wie für ein unbekanntes). Die Definition liegt unter den Plugin-Daten von `configurator` (`def:<key>`); sie zu ändern
   ist Pflege dieser Daten.
-- **Das Plugin muss da, an und im Tarif sein**; im Saatgut gehört `konfigurator` zu Pro+ (nicht in der Liste von Kostenlos und Pro). Im Betrieb gilt das
-  signierte Tarifblatt: ein Blatt, das `konfigurator` nicht nennt, schliesst es aus.
+- **Das Plugin muss da, an und im Tarif sein**; im Saatgut gehört `configurator` zu Pro+ (nicht in der Liste von Kostenlos und Pro). Im Betrieb gilt das
+  signierte Tarifblatt: ein Blatt, das `configurator` nicht nennt, schliesst es aus.
 
-**Offen:** die Ansicht zum Pflegen der Regeln (Plugin `konfigurator`, das den Endpunkt der Prüfung ohnehin braucht), Beispiele und Testfälle,
-mehrere Container in einer Konfiguration (zwei Mainboards fallen heute in eine Bilanz zusammen), Hilfe.
+**Offen:** die Ansicht zum Pflegen der Regeln (Plugin `configurator`), Beispiele und Testfälle, mehrere Container in einer Konfiguration
+(zwei Mainboards fallen heute in eine Bilanz zusammen), Hilfe.

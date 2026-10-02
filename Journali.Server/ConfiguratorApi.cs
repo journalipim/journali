@@ -1,117 +1,117 @@
-using Journali.Core.Konfigurator;
+using Journali.Core.Configurator;
 using Journali.Core.Projections;
 
 namespace Journali.Server;
 
 /// <summary>
 /// Der Konfigurator als Schnittstelle (docs/pflegestruktur.md 39, 02.10.2026). Ein Shop schickt, was ausgewählt ist, und bekommt zurück, was geht —
-/// die Regeln kennt er nicht. Die Definitionen liegen als Plugin-Daten von <c>konfigurator</c> im Journal (Name <c>def:&lt;key&gt;</c>, ein JSON-Dokument,
+/// die Regeln kennt er nicht. Die Definitionen liegen als Plugin-Daten von <c>configurator</c> im Journal (Name <c>def:&lt;key&gt;</c>, ein JSON-Dokument,
 /// <see cref="Definition"/>); gepflegt werden sie in der Ansicht des Plugins. Geprüft wird hier, mit derselben Funktion wie in den Tests
-/// (<see cref="Pruefer"/>): es gibt keine zweite Umsetzung der Logik im Browser.
+/// (<see cref="Checker"/>): es gibt keine zweite Umsetzung der Logik im Browser.
 /// <para><b>Recht.</b> Prüfen ändert nichts und braucht darum nur das Recht zu lesen, auch wenn es ein POST ist (<see cref="Auth.Needed"/>).
 /// Ein Teil, das die Rolle des Aufrufers nicht sieht, gibt es für ihn nicht.</para>
 /// </summary>
 public static class ConfiguratorApi
 {
-    public const string Plugin = "konfigurator";
-    public const string Praefix = "def:";
-    public const int MaxZeilen = 500;
-    public const int MaxMenge = 9999;
-    public const int MaxWaehlbar = 2000;
+    public const string Plugin = "configurator";
+    public const string Prefix = "def:";
+    public const int MaxLines = 500;
+    public const int MaxAmount = 9999;
+    public const int MaxSelectable = 2000;
 
     /// <summary>Ein Teil der Auswahl: <c>Id</c> ist eine Knoten-Id oder der eindeutige Wert eines Attributs (SKU, EAN …).</summary>
-    public sealed record Zeile(string? Id, int? Menge = null);
-    public sealed record Pruefung(List<Zeile>? Auswahl, bool? Waehlbar = null);
+    public sealed record SelectionLine(string? Id, int? Amount = null);
+    public sealed record Check(List<SelectionLine>? Selection, bool? Selectable = null);
 
     public static void Map(RouteGroupBuilder api)
     {
         // Die Konfiguratoren dieser Instanz
-        api.MapGet("/konfigurator", (Catalog c) =>
+        api.MapGet("/configurator", (Catalog c) =>
         {
-            if (Bereit(c) is { } nein) return nein;
-            return Results.Ok(c.Lesen((_, _) => Alle(c).Select(kv =>
+            if (Ready(c) is { } no) return no;
+            return Results.Ok(c.Lesen((_, _) => All(c).Select(kv =>
             {
-                var (d, fehler) = Definition.Lesen(kv.Value);
-                return new { key = kv.Key, bezeichnung = d?.Bezeichnung, wurzel = d?.Wurzel, regeln = d?.Alle.Count ?? 0, fehler = fehler is not null ? 1 : d!.Fehler().Count };
+                var (d, error) = Definition.Read(kv.Value);
+                return new { key = kv.Key, label = d?.Label, root = d?.Root, rules = d?.All.Count ?? 0, errors = error is not null ? 1 : d!.Errors().Count };
             }).ToList()));
         });
 
         // Eine Definition mit dem, was an ihr nicht stimmt
-        api.MapGet("/konfigurator/{key}", (string key, Catalog c) =>
+        api.MapGet("/configurator/{key}", (string key, Catalog c) =>
         {
-            if (Bereit(c) is { } nein) return nein;
-            var def = c.Lesen((_, _) => Alle(c).FirstOrDefault(kv => kv.Key == key).Value);
-            if (def is null) return Unbekannt(key);
-            var (d, lesefehler) = Definition.Lesen(def);
-            return Results.Ok(new { key, definition = d, fehler = lesefehler is not null ? new List<string> { lesefehler } : d!.Fehler() });
+            if (Ready(c) is { } no) return no;
+            var def = c.Lesen((_, _) => All(c).FirstOrDefault(kv => kv.Key == key).Value);
+            if (def is null) return Unknown(key);
+            var (d, readError) = Definition.Read(def);
+            return Results.Ok(new { key, definition = d, errors = readError is not null ? new List<string> { readError } : d!.Errors() });
         });
 
         // Die Auswahl prüfen
-        api.MapPost("/konfigurator/{key}/pruefen", (string key, Pruefung body, HttpRequest req, Catalog c) =>
+        api.MapPost("/configurator/{key}/check", (string key, Check body, HttpRequest req, Catalog c) =>
         {
-            if (Bereit(c) is { } nein) return nein;
-            var def = c.Lesen((_, _) => Alle(c).FirstOrDefault(kv => kv.Key == key).Value);
-            if (def is null) return Unbekannt(key);
-            var (d, lesefehler) = Definition.Lesen(def);
-            if (d is null) return Bad("Konfigurator {0}: {1}", key, lesefehler ?? "");
-            if (d.Fehler() is { Count: > 0 } mangel) return Bad("Konfigurator {0} hat Fehler: {1}", key, mangel[0]);
-            var zeilen = body.Auswahl ?? [];
-            if (zeilen.Count > MaxZeilen) return Bad("Höchstens {0} Zeilen in der Auswahl.", MaxZeilen);
-            var sicht = Auth.Sicht(req);
+            if (Ready(c) is { } no) return no;
+            var def = c.Lesen((_, _) => All(c).FirstOrDefault(kv => kv.Key == key).Value);
+            if (def is null) return Unknown(key);
+            var (d, readError) = Definition.Read(def);
+            if (d is null) return Bad("Konfigurator {0}: {1}", key, readError ?? "");
+            if (d.Errors() is { Count: > 0 } faults) return Bad("Konfigurator {0} hat Fehler: {1}", key, faults[0]);
+            var lines = body.Selection ?? [];
+            if (lines.Count > MaxLines) return Bad("Höchstens {0} Zeilen in der Auswahl.", MaxLines);
+            var view = Auth.Sicht(req);
 
             return c.Lesen((model, tree) =>
             {
                 // Aus der Kennung des Aufrufers wird ein Knoten: Id, sonst der eindeutige Wert eines Attributs
-                Dictionary<string, List<Node>>? ueberWert = null;
-                var gewaehlt = new List<(string Kennung, Node Knoten, int Menge)>();
-                foreach (var z in zeilen)
+                Dictionary<string, List<Node>>? byValue = null;
+                var chosen = new List<(string Ref, Node Node, int Amount)>();
+                foreach (var z in lines)
                 {
-                    var kennung = z.Id?.Trim();
-                    if (string.IsNullOrEmpty(kennung)) return Bad("Eine Zeile der Auswahl hat keine Id.");
-                    var menge = z.Menge ?? 1;
-                    if (menge < 1 || menge > MaxMenge) return Bad("Menge {0} gilt nicht (1 bis {1}).", menge, MaxMenge);
+                    var reference = z.Id?.Trim();
+                    if (string.IsNullOrEmpty(reference)) return Bad("Eine Zeile der Auswahl hat keine Id.");
+                    var amount = z.Amount ?? 1;
+                    if (amount < 1 || amount > MaxAmount) return Bad("Menge {0} gilt nicht (1 bis {1}).", amount, MaxAmount);
                     Node? n = null;
-                    if (tree.Nodes.TryGetValue(kennung, out var direkt)) n = direkt;
+                    if (tree.Nodes.TryGetValue(reference, out var direct)) n = direct;
                     else
                     {
-                        ueberWert ??= WerteIndex(tree, model);
-                        if (ueberWert.TryGetValue(kennung, out var treffer))
+                        byValue ??= ValueIndex(tree, model);
+                        if (byValue.TryGetValue(reference, out var hits))
                         {
-                            if (treffer.Count > 1) return Bad("{0} ist nicht eindeutig.", kennung);
-                            n = treffer[0];
+                            if (hits.Count > 1) return Bad("{0} ist nicht eindeutig.", reference);
+                            n = hits[0];
                         }
                     }
-                    if (n is null || !tree.Visible(n, sicht.Role, sicht.Admin)) return Bad("Teil {0} gibt es nicht.", kennung);
-                    gewaehlt.Add((kennung, n, menge));
+                    if (n is null || !tree.Visible(n, view.Role, view.Admin)) return Bad("Teil {0} gibt es nicht.", reference);
+                    chosen.Add((reference, n, amount));
                 }
 
-                var ress = d.RessourcenAttribut;
-                var teile = gewaehlt.Select(g => new Journali.Core.Konfigurator.Zeile(Teile.Aus(tree, model, g.Knoten, ress), g.Menge)).ToList();
-                IReadOnlyList<Teil>? kandidaten = null;
-                if (body.Waehlbar == true)
+                var resources = d.ResourcesAttribute;
+                var parts = chosen.Select(g => new Line(Parts.From(tree, model, g.Node, resources), g.Amount)).ToList();
+                IReadOnlyList<Part>? candidates = null;
+                if (body.Selectable == true)
                 {
-                    kandidaten = Teile.Waehlbare(tree, model, d.Wurzel, ress).Where(t => tree.Nodes.TryGetValue(t.Id, out var k) && tree.Visible(k, sicht.Role, sicht.Admin)).ToList();
-                    if (kandidaten.Count > MaxWaehlbar) return Bad("Mehr als {0} wählbare Teile — die Wurzel des Konfigurators begrenzt sie.", MaxWaehlbar);
+                    candidates = Parts.Candidates(tree, model, d.Root, resources).Where(t => tree.Nodes.TryGetValue(t.Id, out var k) && tree.Visible(k, view.Role, view.Admin)).ToList();
+                    if (candidates.Count > MaxSelectable) return Bad("Mehr als {0} wählbare Teile — die Wurzel des Konfigurators begrenzt sie.", MaxSelectable);
                 }
 
-                var e = Pruefer.Pruefe(d, teile, kandidaten);
+                var e = Checker.Check(d, parts, candidates);
                 // Der Aufrufer kennt seine Kennungen, nicht unsere Ids: zurück in seiner Sprache
-                var zurueck = gewaehlt.GroupBy(g => g.Knoten.Id).ToDictionary(g => g.Key, g => g.First().Kennung);
-                string Kennung(string id) => zurueck.GetValueOrDefault(id, id);
-                object Satz(Verstoss v) => new { v.Art, v.Text, betrifft = v.Betrifft.Select(Kennung).ToList(), v.Regel, v.Ressource };
+                var back = chosen.GroupBy(g => g.Node.Id).ToDictionary(g => g.Key, g => g.First().Ref);
+                string Ref(string id) => back.GetValueOrDefault(id, id);
+                object Sentence(Violation v) => new { v.Kind, v.Text, affects = v.Affects.Select(Ref).ToList(), v.Rule, v.Resource };
 
                 return Results.Ok(new
                 {
-                    zulaessig = e.Zulaessig,
-                    vollstaendig = e.Vollstaendig,
-                    auswahl = gewaehlt.Select(g => new { kennung = g.Kennung, id = g.Knoten.Id, name = NodeRow.LabelOf(tree, model, g.Knoten), menge = g.Menge }).ToList(),
-                    verstoesse = e.Verstoesse.Select(Satz).ToList(),
-                    fehlt = e.Fehlt.Select(Satz).ToList(),
-                    bilanz = e.Bilanz.OrderBy(kv => kv.Key, StringComparer.Ordinal).ToDictionary(kv => kv.Key, kv => kv.Value),
-                    waehlbar = e.Waehlbar?.Select(w =>
+                    valid = e.Valid,
+                    complete = e.Complete,
+                    selection = chosen.Select(g => new { @ref = g.Ref, id = g.Node.Id, name = NodeRow.LabelOf(tree, model, g.Node), amount = g.Amount }).ToList(),
+                    violations = e.Violations.Select(Sentence).ToList(),
+                    missing = e.Missing.Select(Sentence).ToList(),
+                    balance = e.Balance.OrderBy(kv => kv.Key, StringComparer.Ordinal).ToDictionary(kv => kv.Key, kv => kv.Value),
+                    selectable = e.Selectable?.Select(w =>
                     {
                         var k = tree.Nodes[w.Id];
-                        return new { id = w.Id, name = NodeRow.LabelOf(tree, model, k), keys = tree.KeysOf(model, k), ok = w.Ok, gruende = w.Gruende.Select(Satz).ToList() };
+                        return new { id = w.Id, name = NodeRow.LabelOf(tree, model, k), keys = tree.KeysOf(model, k), ok = w.Ok, reasons = w.Reasons.Select(Sentence).ToList() };
                     }).ToList(),
                 });
             });
@@ -119,20 +119,20 @@ public static class ConfiguratorApi
     }
 
     /// <summary>Die Definitionen im Journal: Name ohne Präfix und das JSON-Dokument.</summary>
-    private static List<KeyValuePair<string, string>> Alle(Catalog c) =>
+    private static List<KeyValuePair<string, string>> All(Catalog c) =>
         c.Plugins.All.TryGetValue(Plugin, out var p)
-            ? p.Data.Where(kv => kv.Key.StartsWith(Praefix, StringComparison.Ordinal)).Select(kv => new KeyValuePair<string, string>(kv.Key[Praefix.Length..], kv.Value)).OrderBy(kv => kv.Key, StringComparer.Ordinal).ToList()
+            ? p.Data.Where(kv => kv.Key.StartsWith(Prefix, StringComparison.Ordinal)).Select(kv => new KeyValuePair<string, string>(kv.Key[Prefix.Length..], kv.Value)).OrderBy(kv => kv.Key, StringComparer.Ordinal).ToList()
             : [];
 
     /// <summary>Das Plugin muss da, an und im Tarif sein — sonst gibt es keinen Konfigurator.</summary>
-    private static IResult? Bereit(Catalog c)
+    private static IResult? Ready(Catalog c)
     {
         if (!c.Lesen((_, _) => c.Plugins.All.TryGetValue(Plugin, out var p) && p.Enabled)) return Bad("Plugin {0} ist nicht installiert oder aus.", Plugin);
         return PluginApi.NichtImTarif(c, Plugin);
     }
 
     /// <summary>Wert → Knoten, für jedes eindeutige Attribut (SKU, EAN …) einmal je Anfrage gebaut.</summary>
-    private static Dictionary<string, List<Node>> WerteIndex(Tree tree, ModelCatalog model)
+    private static Dictionary<string, List<Node>> ValueIndex(Tree tree, ModelCatalog model)
     {
         var index = new Dictionary<string, List<Node>>(StringComparer.Ordinal);
         foreach (var n in tree.Nodes.Values)
@@ -145,6 +145,6 @@ public static class ConfiguratorApi
         return index;
     }
 
-    private static IResult Unbekannt(string key) => Results.Json(ModelApi.Err("Konfigurator {0} gibt es nicht.", key), statusCode: 404);
-    private static IResult Bad(string vorlage, params object[] werte) => ModelApi.Bad(vorlage, werte);
+    private static IResult Unknown(string key) => Results.Json(ModelApi.Err("Konfigurator {0} gibt es nicht.", key), statusCode: 404);
+    private static IResult Bad(string template, params object[] values) => ModelApi.Bad(template, values);
 }

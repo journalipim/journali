@@ -3,7 +3,7 @@ using System.Text;
 using System.Text.Json;
 using Journali.Core.Entries;
 using Journali.Core.Journal;
-using Journali.Core.Konfigurator;
+using Journali.Core.Configurator;
 using Journali.Core.Projections;
 using Journali.Server;
 using Microsoft.AspNetCore.Builder;
@@ -22,7 +22,7 @@ public class ConfiguratorApiTests
     // Mainboard, CPU, ein Kühler, ein Grafikkarten-Kühler 2 und ein zweiter; Regel: Kühler 1 schliesst Grafikkarten-Kühler 2 aus
     static readonly Definition Server = new("Server", null, null,
     [
-        new Regel("k1-gk2", "CPU-Kühler 1 passt nicht zum Grafikkarten-Kühler 2", new Bedingung("hat", Selektor: new Selektor("kuehler1")), new Folge("verbietet", new Selektor("gkuehler2"))),
+        new Rule("k1-gk2", "CPU-Kühler 1 passt nicht zum Grafikkarten-Kühler 2", new Condition("has", Selector: new Selector("kuehler1")), new Effect("forbids", new Selector("gkuehler2"))),
     ]);
 
     sealed class Welt : IAsyncDisposable
@@ -46,9 +46,9 @@ public class ConfiguratorApiTests
                 {
                     write("t", Plugins.Stream + ConfiguratorApi.Plugin, Types.PluginInstalled, new PluginInstalled("1", "{}"), null);
                     write("t", Plugins.Stream + ConfiguratorApi.Plugin, Types.PluginEnabled, new PluginEnabled(), null);
-                    write("t", Plugins.Stream + ConfiguratorApi.Plugin, Types.PluginDataSet, new PluginDataSet(ConfiguratorApi.Praefix + "server", json ?? Server.Schreiben()), null);
+                    write("t", Plugins.Stream + ConfiguratorApi.Plugin, Types.PluginDataSet, new PluginDataSet(ConfiguratorApi.Prefix + "server", json ?? Server.Write()), null);
                 }
-                foreach (var (key, typ, spalten) in new[] { ("ressource", "text", (string[]?)null), ("menge", "decimal", null), ("ressourcen", "rows", ["ressource", "menge"]) })
+                foreach (var (key, typ, spalten) in new[] { ("resource", "text", (string[]?)null), ("amount", "decimal", null), ("resources", "rows", ["resource", "amount"]) })
                     write("t", Model.AttributeStream + key, Types.AttributeDefined, new AttributeDefinition(key, Labels.Of(key, key), typ, Group: "mastergroup", Columns: spalten), null);
                 // der eindeutige Wert, über den ein Shop ein Teil nennt (die SKU der Vorlage gilt erst an Varianten)
                 write("t", Model.AttributeStream + "artikelnr", Types.AttributeDefined, new AttributeDefinition("artikelnr", Labels.Of("Artikelnummer", "Item no."), "text", Group: "mastergroup", Unique: true), null);
@@ -76,9 +76,9 @@ public class ConfiguratorApiTests
         {
             string Zeilen(string node, params (string Res, string Menge)[] z) => string.Join(",", z.SelectMany((r, i) => new[]
             {
-                $$$"""{"op":"row.add","ref":"{{{node}}}r{{{i}}}","args":{"node":"@{{{node}}}","attribute":"ressourcen"}}""",
-                $$$"""{"op":"attribute.set","args":{"node":"@{{{node}}}","attribute":"ressource","row":"@{{{node}}}r{{{i}}}","value":"{{{r.Res}}}"}}""",
-                $$$"""{"op":"attribute.set","args":{"node":"@{{{node}}}","attribute":"menge","row":"@{{{node}}}r{{{i}}}","value":"{{{r.Menge}}}"}}""",
+                $$$"""{"op":"row.add","ref":"{{{node}}}r{{{i}}}","args":{"node":"@{{{node}}}","attribute":"resources"}}""",
+                $$$"""{"op":"attribute.set","args":{"node":"@{{{node}}}","attribute":"resource","row":"@{{{node}}}r{{{i}}}","value":"{{{r.Res}}}"}}""",
+                $$$"""{"op":"attribute.set","args":{"node":"@{{{node}}}","attribute":"amount","row":"@{{{node}}}r{{{i}}}","value":"{{{r.Menge}}}"}}""",
             }));
             var befehle = new List<string>
             {
@@ -111,15 +111,15 @@ public class ConfiguratorApiTests
             {
                 var d = new Definition("Server", null, null,
                 [
-                    new Regel("k1-gk2", "CPU-Kühler 1 passt nicht zum Grafikkarten-Kühler 2", new Bedingung("hat", Selektor: new Selektor(Ids["kuehler1"])), new Folge("verbietet", new Selektor(Ids["gkuehler2"]))),
+                    new Rule("k1-gk2", "CPU-Kühler 1 passt nicht zum Grafikkarten-Kühler 2", new Condition("has", Selector: new Selector(Ids["kuehler1"])), new Effect("forbids", new Selector(Ids["gkuehler2"]))),
                 ]);
-                C.With((_, _, write) => write("t", Plugins.Stream + ConfiguratorApi.Plugin, Types.PluginDataSet, new PluginDataSet(ConfiguratorApi.Praefix + "server", d.Schreiben()), null));
+                C.With((_, _, write) => write("t", Plugins.Stream + ConfiguratorApi.Plugin, Types.PluginDataSet, new PluginDataSet(ConfiguratorApi.Prefix + "server", d.Write()), null));
             }
         }
 
         public async Task<(HttpStatusCode Status, JsonElement Json)> Pruefe(string body, string key = "server")
         {
-            var r = await Http.PostAsync(Url + $"/api/konfigurator/{key}/pruefen", new StringContent(body, Encoding.UTF8, "application/json"));
+            var r = await Http.PostAsync(Url + $"/api/configurator/{key}/check", new StringContent(body, Encoding.UTF8, "application/json"));
             var text = await r.Content.ReadAsStringAsync();
             return (r.StatusCode, text.Length > 0 ? JsonDocument.Parse(text).RootElement : default);
         }
@@ -135,7 +135,7 @@ public class ConfiguratorApiTests
     public async Task Ein_Konfigurator_den_es_nicht_gibt_ist_ein_404_mit_Meldung()
     {
         await using var w = await Welt.Neu();
-        var (status, json) = await w.Pruefe("""{"auswahl":[]}""", "gibtsnicht");
+        var (status, json) = await w.Pruefe("""{"selection":[]}""", "gibtsnicht");
         Assert.Equal(HttpStatusCode.NotFound, status);
         Assert.Contains("gibtsnicht", json.GetProperty("error").GetString());
     }
@@ -144,30 +144,30 @@ public class ConfiguratorApiTests
     public async Task Ohne_das_Plugin_gibt_es_keinen_Konfigurator()
     {
         await using var w = await Welt.Neu(plugin: false);
-        var (status, json) = await w.Pruefe("""{"auswahl":[]}""");
+        var (status, json) = await w.Pruefe("""{"selection":[]}""");
         Assert.Equal(HttpStatusCode.BadRequest, status);
-        Assert.Contains("konfigurator", json.GetProperty("error").GetString());
+        Assert.Contains("configurator", json.GetProperty("error").GetString());
     }
 
     [Fact]
     public async Task Das_Plugin_gehoert_nicht_zu_jedem_Tarif()
     {
         await using var w = await Welt.Neu(enterprise: false);                 // Kostenlos
-        var (status, json) = await w.Pruefe("""{"auswahl":[]}""");
+        var (status, json) = await w.Pruefe("""{"selection":[]}""");
         Assert.Equal(HttpStatusCode.Forbidden, status);
-        Assert.Contains("konfigurator", json.GetProperty("error").GetString());
+        Assert.Contains("configurator", json.GetProperty("error").GetString());
     }
 
     [Fact]
     public async Task Eine_Definition_mit_Fehlern_wird_nicht_ausgewertet_und_nennt_den_ersten()
     {
-        await using var w = await Welt.Neu(json: new Definition(Regeln: [new Regel("x", null, null, new Folge("fuehrtaus", new Selektor("a")))]).Schreiben());
-        var (status, json) = await w.Pruefe("""{"auswahl":[]}""");
+        await using var w = await Welt.Neu(json: new Definition(Rules: [new Rule("x", null, null, new Effect("fuehrtaus", new Selector("a")))]).Write());
+        var (status, json) = await w.Pruefe("""{"selection":[]}""");
         Assert.Equal(HttpStatusCode.BadRequest, status);
         Assert.Contains("fuehrtaus", json.GetProperty("error").GetString());
         var kaputt = await Welt.Neu(json: "{ kein json");
         await using var _ = kaputt;
-        Assert.Equal(HttpStatusCode.BadRequest, (await kaputt.Pruefe("""{"auswahl":[]}""")).Status);
+        Assert.Equal(HttpStatusCode.BadRequest, (await kaputt.Pruefe("""{"selection":[]}""")).Status);
     }
 
     // ---- die Auswahl
@@ -178,19 +178,19 @@ public class ConfiguratorApiTests
         await using var w = await Welt.Neu();
         await w.Teile();
         // das Mainboard über seine Id, die CPU über die SKU: die CPU braucht Kühlung, die fehlt
-        var (status, j) = await w.Pruefe($$$"""{"auswahl":[{"id":"{{{w.Ids["board"]}}}"},{"id":"SKU-cpu","menge":1}]}""");
+        var (status, j) = await w.Pruefe($$$"""{"selection":[{"id":"{{{w.Ids["board"]}}}"},{"id":"SKU-cpu","amount":1}]}""");
         Assert.Equal(HttpStatusCode.OK, status);
-        Assert.False(j.GetProperty("zulaessig").GetBoolean());
-        var v = j.GetProperty("verstoesse").EnumerateArray().Single();
-        Assert.Equal("bilanz", v.GetProperty("art").GetString());
-        Assert.Equal("kuehlmittel", v.GetProperty("ressource").GetString());
-        Assert.Equal(["SKU-cpu"], Namen(v, "betrifft"));                       // die Kennung, die der Aufrufer geschickt hat, nicht unsere Id
-        Assert.Equal(["board", "cpu"], j.GetProperty("auswahl").EnumerateArray().Select(x => x.GetProperty("id").GetString() == w.Ids["board"] ? "board" : "cpu").ToArray());
-        Assert.Equal(2, j.GetProperty("bilanz").GetProperty("cpu_slot").GetProperty("frei").GetInt32());
+        Assert.False(j.GetProperty("valid").GetBoolean());
+        var v = j.GetProperty("violations").EnumerateArray().Single();
+        Assert.Equal("balance", v.GetProperty("kind").GetString());
+        Assert.Equal("kuehlmittel", v.GetProperty("resource").GetString());
+        Assert.Equal(["SKU-cpu"], Namen(v, "affects"));                       // die Kennung, die der Aufrufer geschickt hat, nicht unsere Id
+        Assert.Equal(["board", "cpu"], j.GetProperty("selection").EnumerateArray().Select(x => x.GetProperty("id").GetString() == w.Ids["board"] ? "board" : "cpu").ToArray());
+        Assert.Equal(2, j.GetProperty("balance").GetProperty("cpu_slot").GetProperty("free").GetInt32());
 
         // mit Kühler ist es zulässig
-        var (_, ok) = await w.Pruefe("""{"auswahl":[{"id":"SKU-board"},{"id":"SKU-cpu"},{"id":"SKU-kuehler1"}]}""");
-        Assert.True(ok.GetProperty("zulaessig").GetBoolean()); Assert.True(ok.GetProperty("vollstaendig").GetBoolean());
+        var (_, ok) = await w.Pruefe("""{"selection":[{"id":"SKU-board"},{"id":"SKU-cpu"},{"id":"SKU-kuehler1"}]}""");
+        Assert.True(ok.GetProperty("valid").GetBoolean()); Assert.True(ok.GetProperty("complete").GetBoolean());
     }
 
     [Fact]
@@ -198,13 +198,13 @@ public class ConfiguratorApiTests
     {
         await using var w = await Welt.Neu();
         await w.Teile();
-        var (_, j) = await w.Pruefe("""{"auswahl":[{"id":"SKU-kuehler1"},{"id":"SKU-gkuehler2"}]}""");
-        Assert.False(j.GetProperty("zulaessig").GetBoolean());
-        var v = j.GetProperty("verstoesse").EnumerateArray().Single(x => x.GetProperty("art").GetString() == "regel");
-        Assert.Equal("k1-gk2", v.GetProperty("regel").GetString());
-        Assert.Equal(["SKU-gkuehler2", "SKU-kuehler1"], Namen(v, "betrifft").Order().ToArray());
-        var (_, andere) = await w.Pruefe("""{"auswahl":[{"id":"SKU-kuehler3"},{"id":"SKU-gkuehler2"}]}""");
-        Assert.True(andere.GetProperty("zulaessig").GetBoolean());
+        var (_, j) = await w.Pruefe("""{"selection":[{"id":"SKU-kuehler1"},{"id":"SKU-gkuehler2"}]}""");
+        Assert.False(j.GetProperty("valid").GetBoolean());
+        var v = j.GetProperty("violations").EnumerateArray().Single(x => x.GetProperty("kind").GetString() == "rule");
+        Assert.Equal("k1-gk2", v.GetProperty("rule").GetString());
+        Assert.Equal(["SKU-gkuehler2", "SKU-kuehler1"], Namen(v, "affects").Order().ToArray());
+        var (_, andere) = await w.Pruefe("""{"selection":[{"id":"SKU-kuehler3"},{"id":"SKU-gkuehler2"}]}""");
+        Assert.True(andere.GetProperty("valid").GetBoolean());
     }
 
     [Fact]
@@ -212,22 +212,22 @@ public class ConfiguratorApiTests
     {
         await using var w = await Welt.Neu();
         await w.Teile();
-        var (_, ohne) = await w.Pruefe("""{"auswahl":[{"id":"SKU-kuehler1"}]}""");
-        Assert.Equal(JsonValueKind.Null, ohne.GetProperty("waehlbar").ValueKind);   // nicht verlangt: nicht gerechnet
+        var (_, ohne) = await w.Pruefe("""{"selection":[{"id":"SKU-kuehler1"}]}""");
+        Assert.Equal(JsonValueKind.Null, ohne.GetProperty("selectable").ValueKind);   // nicht verlangt: nicht gerechnet
 
-        var (_, j) = await w.Pruefe("""{"auswahl":[{"id":"SKU-kuehler1"}],"waehlbar":true}""");
-        var nach = j.GetProperty("waehlbar").EnumerateArray().ToDictionary(x => x.GetProperty("keys").GetProperty("artikelnr").GetString()!);
+        var (_, j) = await w.Pruefe("""{"selection":[{"id":"SKU-kuehler1"}],"selectable":true}""");
+        var nach = j.GetProperty("selectable").EnumerateArray().ToDictionary(x => x.GetProperty("keys").GetProperty("artikelnr").GetString()!);
         Assert.False(nach["SKU-gkuehler2"].GetProperty("ok").GetBoolean());
-        Assert.Equal("k1-gk2", nach["SKU-gkuehler2"].GetProperty("gruende").EnumerateArray().Single().GetProperty("regel").GetString());
+        Assert.Equal("k1-gk2", nach["SKU-gkuehler2"].GetProperty("reasons").EnumerateArray().Single().GetProperty("rule").GetString());
         Assert.True(nach["SKU-kuehler3"].GetProperty("ok").GetBoolean());
         Assert.False(string.IsNullOrEmpty(nach["SKU-board"].GetProperty("name").GetString()));
     }
 
     [Theory]
-    [InlineData("""{"auswahl":[{"id":"gibtsnicht"}]}""", "gibtsnicht")]
-    [InlineData("""{"auswahl":[{"id":""}]}""", "Id")]
-    [InlineData("""{"auswahl":[{"id":"SKU-cpu","menge":0}]}""", "Menge")]
-    [InlineData("""{"auswahl":[{"id":"SKU-cpu","menge":100000}]}""", "Menge")]
+    [InlineData("""{"selection":[{"id":"gibtsnicht"}]}""", "gibtsnicht")]
+    [InlineData("""{"selection":[{"id":""}]}""", "Id")]
+    [InlineData("""{"selection":[{"id":"SKU-cpu","amount":0}]}""", "Menge")]
+    [InlineData("""{"selection":[{"id":"SKU-cpu","amount":100000}]}""", "Menge")]
     public async Task Eine_Auswahl_die_nicht_geht_wird_abgewiesen_und_sagt_warum(string body, string enthaelt)
     {
         await using var w = await Welt.Neu();
@@ -241,9 +241,9 @@ public class ConfiguratorApiTests
     public async Task Eine_leere_Auswahl_ist_zulaessig_und_vollstaendig()
     {
         await using var w = await Welt.Neu();
-        var (status, j) = await w.Pruefe("""{"auswahl":[]}""");
+        var (status, j) = await w.Pruefe("""{"selection":[]}""");
         Assert.Equal(HttpStatusCode.OK, status);
-        Assert.True(j.GetProperty("zulaessig").GetBoolean()); Assert.True(j.GetProperty("vollstaendig").GetBoolean());
+        Assert.True(j.GetProperty("valid").GetBoolean()); Assert.True(j.GetProperty("complete").GetBoolean());
     }
 
     [Fact]
@@ -252,15 +252,15 @@ public class ConfiguratorApiTests
         await using var w = await Welt.Neu();
         await w.Teile();
         w.C.With((_, _, write) => write("t", w.Ids["cpu"], Types.NodeRestricted, new NodeRestricted(["admin"]), null));
-        var (status, j) = await w.Pruefe("""{"auswahl":[{"id":"SKU-cpu"}]}""");
+        var (status, j) = await w.Pruefe("""{"selection":[{"id":"SKU-cpu"}]}""");
         Assert.Equal(HttpStatusCode.BadRequest, status);                       // dieselbe Antwort wie für ein Teil, das es nicht gibt
         Assert.Contains("SKU-cpu", j.GetProperty("error").GetString());
         w.Rolle = "admin";
-        Assert.Equal(HttpStatusCode.OK, (await w.Pruefe("""{"auswahl":[{"id":"SKU-cpu"}]}""")).Status);
+        Assert.Equal(HttpStatusCode.OK, (await w.Pruefe("""{"selection":[{"id":"SKU-cpu"}]}""")).Status);
         // und als wählbar taucht es für den Editor nicht auf
         w.Rolle = "editor";
-        var (_, j2) = await w.Pruefe("""{"auswahl":[],"waehlbar":true}""");
-        Assert.DoesNotContain(j2.GetProperty("waehlbar").EnumerateArray(), x => x.GetProperty("keys").GetProperty("artikelnr").GetString() == "SKU-cpu");
+        var (_, j2) = await w.Pruefe("""{"selection":[],"selectable":true}""");
+        Assert.DoesNotContain(j2.GetProperty("selectable").EnumerateArray(), x => x.GetProperty("keys").GetProperty("artikelnr").GetString() == "SKU-cpu");
     }
 
     // ---- lesen
@@ -269,21 +269,21 @@ public class ConfiguratorApiTests
     public async Task Die_Liste_und_die_Definition_nennen_was_an_ihnen_nicht_stimmt()
     {
         await using var w = await Welt.Neu();
-        var liste = JsonDocument.Parse(await w.Http.GetStringAsync(w.Url + "/api/konfigurator")).RootElement.EnumerateArray().Single();
+        var liste = JsonDocument.Parse(await w.Http.GetStringAsync(w.Url + "/api/configurator")).RootElement.EnumerateArray().Single();
         Assert.Equal("server", liste.GetProperty("key").GetString());
-        Assert.Equal(1, liste.GetProperty("regeln").GetInt32()); Assert.Equal(0, liste.GetProperty("fehler").GetInt32());
-        var d = JsonDocument.Parse(await w.Http.GetStringAsync(w.Url + "/api/konfigurator/server")).RootElement;
-        Assert.Equal("Server", d.GetProperty("definition").GetProperty("bezeichnung").GetString());
-        Assert.Empty(d.GetProperty("fehler").EnumerateArray());
-        Assert.Equal(HttpStatusCode.NotFound, (await w.Http.GetAsync(w.Url + "/api/konfigurator/gibtsnicht")).StatusCode);
+        Assert.Equal(1, liste.GetProperty("rules").GetInt32()); Assert.Equal(0, liste.GetProperty("errors").GetInt32());
+        var d = JsonDocument.Parse(await w.Http.GetStringAsync(w.Url + "/api/configurator/server")).RootElement;
+        Assert.Equal("Server", d.GetProperty("definition").GetProperty("label").GetString());
+        Assert.Empty(d.GetProperty("errors").EnumerateArray());
+        Assert.Equal(HttpStatusCode.NotFound, (await w.Http.GetAsync(w.Url + "/api/configurator/gibtsnicht")).StatusCode);
     }
 
     // ---- das Recht
 
     [Theory]
-    [InlineData("POST", "/api/konfigurator/server/pruefen", Rights.Read)]     // ein POST, der nur liest
-    [InlineData("GET", "/api/konfigurator", Rights.Read)]
-    [InlineData("GET", "/api/konfigurator/server", Rights.Read)]
+    [InlineData("POST", "/api/configurator/server/check", Rights.Read)]     // ein POST, der nur liest
+    [InlineData("GET", "/api/configurator", Rights.Read)]
+    [InlineData("GET", "/api/configurator/server", Rights.Read)]
     public void Pruefen_braucht_nur_das_Recht_zu_lesen(string methode, string pfad, string recht)
     {
         var ctx = new DefaultHttpContext(); ctx.Request.Method = methode; ctx.Request.Path = pfad;
@@ -293,7 +293,7 @@ public class ConfiguratorApiTests
     [Fact]
     public void Die_Definition_zu_aendern_bleibt_Pflege_der_Plugin_Daten()
     {
-        var ctx = new DefaultHttpContext(); ctx.Request.Method = "PUT"; ctx.Request.Path = "/api/plugins/konfigurator/data/def:server";
+        var ctx = new DefaultHttpContext(); ctx.Request.Method = "PUT"; ctx.Request.Path = "/api/plugins/configurator/data/def:server";
         Assert.Equal(Rights.Write, Auth.Needed(ctx.Request));
     }
 }
