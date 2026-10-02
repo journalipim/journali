@@ -94,7 +94,7 @@ onUnmounted(() => clearInterval(timer))
       <div v-if="stand && !startet" class="lage" :class="stand.lage === 'unerreichbar' ? 'warn' : 'neg'" :title="stand.detail">
         {{ lage }}<span v-if="stand.auto" class="muted" :title="$t('versucht es alle 5 Sekunden neu, bis hier geprüft oder gespeichert wird')"> · ↻</span>
       </div>
-      <div v-if="startet" class="lage muted">{{ $t("Server lädt das Journal …") }}</div>
+      <div v-if="startet" class="lage starten pos">{{ $t("Server lädt das Journal …") }}</div>
       <fieldset :disabled="startet">
         <label>{{ $t("Einrichtungscode") }}<input v-model="form.code" type="text" autocomplete="off" autofocus placeholder="XXXX-XXXX" :title="$t('steht in der Konsole des Servers und in einrichtungscode.txt im Datenverzeichnis')" /></label>
         <div class="row" style="gap:8px">
@@ -135,6 +135,7 @@ label { display: block; font-size: 12px; color: var(--muted); margin-top: 8px; }
 label input { display: block; width: 100%; margin-top: 3px; }
 .row { display: flex; }
 .lage { font-size: 13px; margin: 0 0 6px; }
+.starten { font-weight: 700; }
 .msg { font-size: 13px; margin-top: 8px; }
 .quelle { font-size: 11px; margin-top: 10px; display: flex; gap: 6px; align-items: center; }
 .x { border: 0; background: none; color: var(--muted); padding: 0 3px; font-size: 11px; }

@@ -82,6 +82,10 @@ test('speichern: der Server startet, die Seite wartet und geht zur Anmeldung, so
   await flushPromises()
   assert.match(w.find('.msg').text(), /Server startet mit dieser Datenbank/)
   assert.ok(w.find('fieldset').attributes('disabled') !== undefined, 'während des Starts ist nichts mehr zu ändern')
+  const start = w.find('.lage.starten')
+  assert.match(start.text(), /Server lädt das Journal/)
+  assert.ok(start.classes().includes('pos'), 'das Laden dauert: grün und fett, nicht gedämpft')
+  assert.ok(!start.classes().includes('muted'))
   fertig = true
   await new Promise(r => setTimeout(r, 2200)); await flushPromises()
   assert.equal(router.path, '/login')
