@@ -18,14 +18,15 @@ const ZUGAENGE = [
 ]
 
 async function welt(gesendet = []) {
-  const get = api.get, put = api.put
+  const get = api.get, post = api.post
   api.get = async (p) => (p === '/api/drivers/arten' ? ARTEN : ZUGAENGE)
-  api.put = async (p, body) => { gesendet.push({ p, body }); return {} }
+  // wie die echte Schnittstelle: es gibt kein api.put — geschrieben wird mit post und der Methode PUT
+  api.post = async (p, body, methode = 'POST') => { gesendet.push({ p, body, methode }); return {} }
   const { default: View } = await import('../../plugins/driver/src/View.vue')
   const w = mount(View)
   await new Promise(r => setTimeout(r, 0))
   await w.vm.$nextTick()
-  return { w, ende: () => { api.get = get; api.put = put } }
+  return { w, ende: () => { api.get = get; api.post = post } }
 }
 
 test('die Liste trennt Dateizugänge von Anmeldungen', async () => {
@@ -71,6 +72,22 @@ test('beim Aendern bleibt das Passwortfeld leer und behaelt das hinterlegte', as
     assert.equal(pw.length, 1)
     assert.equal(pw[0].element.value, '', 'das hinterlegte Passwort kommt nicht zurueck')
     assert.match(pw[0].attributes('placeholder') ?? '', /hinterlegt/)
+  } finally { ende() }
+})
+
+test('Anlegen schreibt den Zugang mit PUT über api.post — api.put gibt es nicht', async () => {
+  assert.equal(api.put, undefined)
+  const gesendet = []
+  const { w, ende } = await welt(gesendet)
+  try {
+    const eingaben = w.findAll('table.form input').filter(i => i.attributes('type') !== 'password')
+    await eingaben[0].setValue('ablage')                       // Name
+    await w.find('table.form button.primary').trigger('click')
+    await new Promise(r => setTimeout(r, 0))
+    const put = gesendet.find(g => g.methode === 'PUT')
+    assert.ok(put, 'der Zugang wurde mit PUT geschickt')
+    assert.equal(put.p, '/api/drivers/ablage')
+    assert.equal(put.body.art, 'ftp')
   } finally { ende() }
 })
 

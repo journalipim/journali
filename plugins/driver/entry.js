@@ -1,4 +1,4 @@
-(function(){const s=document.createElement('style');s.textContent="\n.x[data-v-3c157226] { border: 0; background: none; color: var(--muted); padding: 0 4px; cursor: pointer;\n}\n.x[data-v-3c157226]:hover { color: var(--accent);\n}\n.form td.attr[data-v-3c157226] { white-space: nowrap; color: var(--muted);\n}\n";document.head.append(s)})();
+(function(){const s=document.createElement('style');s.textContent="\n.x[data-v-6816da86] { border: 0; background: none; color: var(--muted); padding: 0 4px; cursor: pointer;\n}\n.x[data-v-6816da86]:hover { color: var(--accent);\n}\n.form td.attr[data-v-6816da86] { white-space: nowrap; color: var(--muted);\n}\n";document.head.append(s)})();
 const m = window.journali.vue;
 const Fragment = m.Fragment;
 const computed = m.computed;
@@ -136,7 +136,7 @@ const _sfc_main = {
       }
       busy.value = t("speichere …");
       try {
-        await api.put(`/api/drivers/${encodeURIComponent(f.key.trim())}`, { art: f.art, label: f.label, felder: f.felder, geheim: f.geheim });
+        await api.post(`/api/drivers/${encodeURIComponent(f.key.trim())}`, { art: f.art, label: f.label, felder: f.felder, geheim: f.geheim }, "PUT");
         await laden();
         neu();
         store.toast(t("Zugang gespeichert"), "ok");
@@ -578,7 +578,7 @@ const _sfc_main = {
     };
   }
 };
-const View = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-3c157226"]]);
+const View = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-6816da86"]]);
 const entry = {
   views: [{ path: "zugaenge", topic: "tools", label: t("Zugänge"), icon: "⌁", hint: t("Dateisystem, FTP, WebDAV, Anmeldungen an MySQL, Solr, IXP — einmal einrichten, von jedem Plugin nutzbar"), component: View }]
 };

@@ -62,7 +62,7 @@ async function speichern() {
   if (!f.key.trim()) { store.toast(t_('Name des Zugangs fehlt')); return }
   busy.value = t_('speichere …')
   try {
-    await api.put(`/api/drivers/${encodeURIComponent(f.key.trim())}`, { art: f.art, label: f.label, felder: f.felder, geheim: f.geheim })
+    await api.post(`/api/drivers/${encodeURIComponent(f.key.trim())}`, { art: f.art, label: f.label, felder: f.felder, geheim: f.geheim }, 'PUT')
     await laden()
     neu()
     store.toast(t_('Zugang gespeichert'), 'ok')
