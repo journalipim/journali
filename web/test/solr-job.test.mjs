@@ -74,15 +74,15 @@ test('regroup (Probelauf): Thema und Ebene der Werte in der Quelle ordnen die At
   const r = await lauf(true, { JOURNALI_REGROUP: 'true' }, MIT_EBENEN)
   assert.equal(r.code, 0, r.text)
   assert.match(r.text, /6 Attribute der Gruppe solr → 2 Gruppen/)
-  assert.match(r.text, /abmessung_product \(Abmessung \(Produkt\)\) ab product: 3/)
-  assert.match(r.text, /abmessung_variant \(Abmessung \(Variante\)\) ab variant: 3/)
+  assert.match(r.text, /gruppe_product \(Gruppe · Produktmerkmale\) an Gruppe ab product: 3/)
+  assert.match(r.text, /gruppe_variant \(Gruppe · Variantenmerkmale\) an Gruppe ab variant: 3/)
   assert.ok(!r.gerufen.some(g => g.startsWith('PUT') || g.startsWith('POST /api/batch')), r.gerufen.join(' | '))
 })
 
 test('regroup: schreibt Gruppen mit „aktiv ab“, vererbbare Attribute und lesbare Bezeichnungen', async () => {
   const r = await lauf(false, { JOURNALI_REGROUP: 'true' }, MIT_EBENEN)
   assert.equal(r.code, 0, r.text)
-  assert.match(r.text, /✓ 6 Attribute in 2 Gruppen, 0 Knoten angepasst/)
+  assert.match(r.text, /✓ 6 Attribute in 2 Gruppen, 1 Knoten angepasst/)
 })
 
 test('regroup braucht die Quelle: ohne sie weiss der Job nicht, auf welcher Ebene die Werte stehen', async () => {

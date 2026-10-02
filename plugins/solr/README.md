@@ -116,16 +116,21 @@ Werte, 7 Stapel.
 
 **Gruppen neuer Attribute** — die Regeln stehen in `plugins/table/anlage.mjs` und gelten für jeden Import (auch IXP):
 
-- **Eine Ebene je Gruppe.** Eine Gruppe enthält Attribute, deren Werte in der Quelle auf derselben Ebene stehen (Gruppe, Produkt, Variante), und ist dort „aktiv ab“. Attribute
-  oberhalb der Varianten sind **vererbbar**: die Varianten bekommen den Wert, ohne ihn zu wiederholen — und was ein Produkt trägt, schreibt der Import an der Variante nicht noch einmal.
-  Spannt ein Thema mehrere Ebenen, wird je Ebene eine Gruppe daraus („Abmessung (Produkt)“, „Abmessung (Variante)“); sonst heisst sie nur „Abmessung“.
-- **Das Thema** nennt die Quelle (Gruppe der Attributdefinition); fehlt sie, der Anfang des Schlüssels (`abmessung_a_max` → Abmessung, mindestens 5 Attribute; technische
-  Anfänge wie `ctrl_` und was weniger Verwandte hat → „Weitere Merkmale“).
+- **Die Position.** Ein Attribut gehört an den Knoten, unter dem alle seine Werte stehen: den tiefsten gemeinsamen Vorfahren der Gruppen, in denen es vorkommt. Dort hängt seine
+  Attributgruppe, und wer darunter arbeitet, sieht genau die Attribute, die dort vorkommen — nichts von den Zweigen daneben. Was mehrere Kategorien gemeinsam haben, steht eine
+  Stufe höher, was nur eine betrifft, an ihr. Die Gruppe heisst nach dem Knoten („Federnde Druckstücke“).
+- **Zu klein, zu gross.** Eine Gruppe mit weniger als 3 Attributen geht zum Knoten darüber (Schritt für Schritt), eine mit mehr als 60 wird nach Thema geteilt (Anfang des
+  Schlüssels; „Weitere Merkmale“ für den Rest).
+- **Eine Ebene je Gruppe.** Eine Gruppe enthält Attribute, deren Werte auf derselben Ebene stehen (Gruppe, Produkt, Variante), und ist dort „aktiv ab“. Hat ein Knoten Attribute auf
+  mehreren Ebenen, steht die Ebene im Namen („Spannelemente · Produktmerkmale“, „… · Variantenmerkmale“). Attribute oberhalb der Varianten sind **vererbbar**: die Varianten
+  bekommen den Wert, ohne ihn zu wiederholen — und was ein Produkt trägt, schreibt der Import an der Variante nicht noch einmal.
+- **Das Thema** nennt die Quelle, wo sie es kennt (Gruppe der Attributdefinition); sonst gilt die Position. Wo es keine Gruppenknoten gibt, ordnet der Anfang des Schlüssels
+  (`abmessung_a_max` → Abmessung, mindestens 5 Attribute; technische Anfänge wie `ctrl_` kommen in „Weitere Merkmale“).
 - **Namen:** die Bezeichnung des Attributs aus der Quelle, sonst aus dem Schlüssel (`abmessung_a_max` → „Abmessung a max“, Kennungen wie `d28e55178` entfallen).
 
-Parameter `group_by`: `auto` (Vorgabe) nimmt das Thema der Quelle, wo es eines gibt, sonst den Anfang des Schlüssels; `section` nur die der Quelle; `prefix` nur den Anfang; `single`
-alles in `solr`. Der Plan nennt jede neue Gruppe mit der Zahl ihrer Attribute — im Trockenlauf steht dort, was der Lauf anlegen würde.
+Parameter `group_by`: `auto` (Vorgabe) nimmt die Gruppe der Quelle, wo es eine gibt, sonst die Position; `section` nur die der Quelle; `position` nur die Position; `prefix` nur den Anfang des
+Schlüssels; `single` alles in `solr`. Der Plan nennt jede neue Gruppe mit Ort, „aktiv ab“ und Zahl ihrer Attribute — im Trockenlauf steht dort, was der Lauf anlegen würde.
 
-**Attribute der Gruppe `solr` neu ordnen** (Parameter `regroup`, mit Trockenlauf prüfen): kein Import, sondern das Modell. Die Attribute, die früher alle in `solr` landeten,
-bekommen Thema und Ebene wie oben — die Ebene liest der Job aus der Quelle (Kern und Wurzel wie beim Import). Die neuen Gruppen hängen an den Knoten, an denen `solr` hing; Attribute
-oberhalb der Varianten werden vererbbar, die Bezeichnungen lesbar. Die Werte bleiben, wo sie sind. Attribute ohne Wert in der Quelle bleiben in `solr`. Braucht das Recht „Modell ändern“.
+**Attribute der Gruppe `solr` neu ordnen** (Parameter `regroup`, mit Trockenlauf prüfen): kein Import, sondern das Modell. Die Attribute, die früher alle in `solr` landeten, kommen
+an ihre Position — die liest der Job aus der Quelle (Kern und Wurzel wie beim Import). Die neuen Gruppen hängen an den Knoten ihrer Position, „solr“ geht von den Knoten; Attribute oberhalb
+der Varianten werden vererbbar, die Bezeichnungen lesbar. Die Werte bleiben, wo sie sind. Attribute ohne Wert in der Quelle bleiben in `solr`. Braucht das Recht „Modell ändern“.

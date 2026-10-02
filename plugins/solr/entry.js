@@ -83,6 +83,89 @@ function groupsByLevel(entries) {
   }
   return out;
 }
+const LEVEL_WORD = {
+  group: { de: "Gruppenmerkmale", en: "Group attributes" },
+  product: { de: "Produktmerkmale", en: "Product attributes" },
+  variant: { de: "Variantenmerkmale", en: "Variant attributes" }
+};
+const keyOf = (s) => {
+  const k = String(s ?? "").toLowerCase().replace(/ä/g, "ae").replace(/ö/g, "oe").replace(/ü/g, "ue").replace(/ß/g, "ss").replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+  return /^[a-z]/.test(k) ? k : "g_" + k;
+};
+function placeByPosition(entries, tree2, { min = 3, max = 60, themeMin = 5 } = {}) {
+  const pathOf = (id) => {
+    const p = [];
+    for (let n = id; n != null; n = tree2.parentOf(n)) p.unshift(n);
+    return p;
+  };
+  const commonOf = (ids) => {
+    const paths = [...ids].map(pathOf);
+    if (!paths.length) return null;
+    let i = 0;
+    while (paths.every((p) => i < p.length && p[i] === paths[0][i])) i++;
+    return i ? paths[0][i - 1] : paths[0][0];
+  };
+  const depth = (id) => pathOf(id).length;
+  const buckets = /* @__PURE__ */ new Map();
+  const put = (position, level, key) => {
+    const k = position + "|" + level;
+    if (!buckets.has(k)) buckets.set(k, { position, level, keys: [] });
+    buckets.get(k).keys.push(key);
+  };
+  const top = commonOf(entries.flatMap((e) => [...e.positions]));
+  for (const e of entries) put(commonOf(e.positions) ?? top, e.level, e.key);
+  const tiefen = /* @__PURE__ */ new Map();
+  const tiefeVon = (id) => {
+    if (!tiefen.has(id)) tiefen.set(id, depth(id));
+    return tiefen.get(id);
+  };
+  for (let d = Math.max(0, ...[...buckets.values()].map((b) => tiefeVon(b.position))); d >= 1; d--) {
+    for (const b of [...buckets.values()].filter((x) => tiefeVon(x.position) === d)) {
+      const parent = tree2.parentOf(b.position);
+      if (b.keys.length >= min || parent == null) continue;
+      buckets.delete(b.position + "|" + b.level);
+      for (const key of b.keys) put(parent, b.level, key);
+    }
+  }
+  const levelsAt = /* @__PURE__ */ new Map();
+  for (const b of buckets.values()) {
+    if (!levelsAt.has(b.position)) levelsAt.set(b.position, /* @__PURE__ */ new Set());
+    levelsAt.get(b.position).add(b.level);
+  }
+  const used = /* @__PURE__ */ new Set();
+  const unique = (k) => {
+    let c = k, n = 2;
+    while (used.has(c)) c = `${k}_${n++}`;
+    used.add(c);
+    return c;
+  };
+  const byKey = /* @__PURE__ */ new Map(), groups = /* @__PURE__ */ new Map();
+  for (const b of [...buckets.values()].sort((x, y) => depth(x.position) - depth(y.position) || x.level - y.level)) {
+    const role = LEVELS[b.level] ?? "variant";
+    const name = tree2.name(b.position);
+    const mitEbene = levelsAt.get(b.position).size > 1;
+    const parts = b.keys.length > max ? [...groupBy(b.keys, themesByPrefix(b.keys, themeMin))] : [[null, b.keys]];
+    for (const [theme, keys] of parts) {
+      const word = theme ? theme.label : null;
+      const de = [name, word ? `${word.de}${mitEbene ? ` (${LEVEL_LABEL[role].de})` : ""}` : mitEbene ? LEVEL_WORD[role].de : null].filter(Boolean).join(" · ");
+      const en = [name, word ? `${word.en}${mitEbene ? ` (${LEVEL_LABEL[role].en})` : ""}` : mitEbene ? LEVEL_WORD[role].en : null].filter(Boolean).join(" · ");
+      const group = unique([keyOf(name), mitEbene && !word ? role : null, word ? keyOf(theme.group) + (mitEbene ? "_" + role : "") : null].filter(Boolean).join("_"));
+      groups.set(group, { label: { de, en }, activeFrom: b.level > 0 ? role : null, position: b.position });
+      for (const key of keys) byKey.set(key, { group, label: { de, en }, activeFrom: b.level > 0 ? role : null, inheritable: b.level < 2, position: b.position });
+    }
+  }
+  return { byKey, groups };
+}
+function groupBy(keys, themes) {
+  const out = /* @__PURE__ */ new Map();
+  for (const k of keys) {
+    const t2 = themes.get(k);
+    const g = out.get(t2.group) ?? [t2, []];
+    g[1].push(k);
+    out.set(t2.group, g);
+  }
+  return [...out.values()];
+}
 const SYSTEM = "solr";
 const ROLE = { group: "group", product: "product", productvariant: "variant" };
 const roleOf = (d) => ROLE[(d.type || "").toLowerCase()];
@@ -216,38 +299,82 @@ function asStrings(suffix, v) {
 }
 const DEPTH = { group: 0, product: 1, variant: 2 };
 const ROLES = ["group", "product", "variant"];
+function docTree(docs) {
+  const byId = new Map(docs.map((d) => [d.id, d]));
+  const parentGroup = (d) => {
+    for (let n = byId.get(d?.main_parent_id); n; n = byId.get(n.main_parent_id)) if (roleOf(n) === "group") return n.id;
+    return null;
+  };
+  return {
+    byId,
+    positionOf: (d) => roleOf(d) === "group" ? d.id : parentGroup(d),
+    parentOf: (id) => parentGroup(byId.get(id)),
+    name: (id) => byId.get(id)?.name || byId.get(id)?.remote_id || id
+  };
+}
 function modelNeeds(docs, attrs, groups, pdefs, skip, opts = {}) {
-  const groupBy = opts.groupBy ?? "auto";
+  const groupBy2 = opts.groupBy ?? "auto";
   const newGroups = /* @__PURE__ */ new Map();
   const newAttrs = /* @__PURE__ */ new Map();
   const used = /* @__PURE__ */ new Set();
   const counts = /* @__PURE__ */ new Map();
   const levels = /* @__PURE__ */ new Map();
+  const usage = /* @__PURE__ */ new Map();
+  const attach = /* @__PURE__ */ new Map();
   const top = /* @__PURE__ */ new Map();
   const seen = (gkey, role) => {
     const d = DEPTH[role] ?? 0;
     if (!top.has(gkey) || d < top.get(gkey)) top.set(gkey, d);
   };
+  const tree2 = docTree(docs);
   const fresh = /* @__PURE__ */ new Map();
   for (const d of docs) for (const { key, suffix, raw } of ownValues(d, skip)) {
     const depth = DEPTH[roleOf(d)] ?? 0;
     if (!levels.has(key) || depth < levels.get(key)) levels.set(key, depth);
+    const pos = tree2.positionOf(d);
+    if (pos) {
+      if (!usage.has(key)) usage.set(key, /* @__PURE__ */ new Set());
+      usage.get(key).add(pos);
+    }
     if (!attrs.has(key) && !fresh.has(key)) fresh.set(key, { raw, suffix });
   }
   const keys = [...fresh.keys()];
-  const byPrefix = themesByPrefix(keys.filter((k) => groupBy === "prefix" || groupBy === "auto" && !pdefs[fresh.get(k).raw]?.section), opts.min ?? 5);
-  const themeOf2 = (key) => {
+  const wie = (key) => {
     const p = pdefs[fresh.get(key).raw];
-    if (groupBy === "single") return { group: "solr", label: { de: "solr", en: "solr" } };
-    if ((groupBy === "section" || groupBy === "auto") && p?.section) {
-      const l = p.sectionName || humanize(p.section);
-      return { group: slug(p.section), label: { de: l, en: l } };
-    }
-    if (groupBy === "section") return { group: "solr", label: { de: "solr", en: "solr" } };
-    return byPrefix.get(key);
+    if (groupBy2 === "single") return "single";
+    if ((groupBy2 === "section" || groupBy2 === "auto") && p?.section) return "section";
+    if (groupBy2 === "section") return "single";
+    return groupBy2 === "prefix" || !usage.get(key)?.size ? "prefix" : "position";
   };
-  const einEbene = Math.min(...[...fresh.keys()].map((k) => levels.get(k)), 2);
-  const plan = groupsByLevel(keys.map((k) => ({ key: k, theme: themeOf2(k), level: groupBy === "single" ? einEbene : levels.get(k) })));
+  const art = new Map(keys.map((k) => [k, wie(k)]));
+  const nur = (x) => keys.filter((k) => art.get(k) === x);
+  const sectionTheme = (key) => {
+    const p = pdefs[fresh.get(key).raw];
+    const l = p.sectionName || humanize(p.section);
+    return { group: slug(p.section), label: { de: l, en: l } };
+  };
+  const solrTheme = { group: "solr", label: { de: "solr", en: "solr" } };
+  const byPrefix = themesByPrefix(nur("prefix"), opts.min ?? 5);
+  const einEbene = Math.min(...keys.map((k) => levels.get(k)), 2);
+  const plan = /* @__PURE__ */ new Map();
+  for (const [k, g] of groupsByLevel([
+    ...nur("section").map((k2) => ({ key: k2, theme: sectionTheme(k2), level: levels.get(k2) })),
+    ...nur("prefix").map((k2) => ({ key: k2, theme: byPrefix.get(k2), level: levels.get(k2) })),
+    ...nur("single").map((k2) => ({ key: k2, theme: solrTheme, level: einEbene }))
+  ])) plan.set(k, g);
+  const ort = nur("position");
+  if (ort.length) {
+    const platz = placeByPosition(ort.map((k) => ({ key: k, level: levels.get(k), positions: usage.get(k) ?? /* @__PURE__ */ new Set() })), tree2, { min: opts.minGroup ?? 3, max: opts.maxGroup ?? 60 });
+    for (const [k, g] of platz.byKey) plan.set(k, g);
+    for (const [gk, g] of platz.groups) newGroups.set(gk, { label: g.label.de, en: g.label.en, activeFrom: g.activeFrom, position: g.position, ort: tree2.name(g.position) });
+  }
+  for (const [gk, g] of [...newGroups]) {
+    if (g.position) {
+      if (!attach.has(g.position)) attach.set(g.position, []);
+      attach.get(g.position).push(gk);
+    }
+    if (groups.has(gk)) newGroups.delete(gk);
+  }
   for (const d of docs) for (const { key, suffix, raw } of ownValues(d, skip)) {
     counts.set(key, (counts.get(key) ?? 0) + 1);
     if (attrs.has(key)) {
@@ -258,11 +385,11 @@ function modelNeeds(docs, attrs, groups, pdefs, skip, opts = {}) {
     const g = plan.get(key);
     seen(g.group, roleOf(d));
     if (newAttrs.has(key)) continue;
-    if (!groups.has(g.group)) newGroups.set(g.group, { label: g.label.de, en: g.label.en, activeFrom: g.activeFrom });
-    used.add(g.group);
+    if (!groups.has(g.group) && !newGroups.has(g.group)) newGroups.set(g.group, { label: g.label.de, en: g.label.en, activeFrom: g.activeFrom });
+    if (!g.position) used.add(g.group);
     const [type, multiple, perLocale] = TYPES[suffix];
     const label = pdefs[raw]?.name || humanize(raw);
-    newAttrs.set(key, { key, label: { de: label, en: label }, type, group: g.group, axes: perLocale ? ["locale"] : null, multiple, inheritable: groupBy === "single" ? levels.get(key) < 2 : g.inheritable });
+    newAttrs.set(key, { key, label: { de: label, en: label }, type, group: g.group, axes: perLocale ? ["locale"] : null, multiple, inheritable: groupBy2 === "single" ? levels.get(key) < 2 : g.inheritable });
   }
   const raise = /* @__PURE__ */ new Map();
   for (const [gkey, t2] of top) {
@@ -273,7 +400,7 @@ function modelNeeds(docs, attrs, groups, pdefs, skip, opts = {}) {
   used.delete(void 0);
   used.delete(null);
   used.delete("");
-  return { newGroups, newAttrs, raise, used: [...used].sort(), counts, levels };
+  return { newGroups, newAttrs, raise, used: [...used].sort(), counts, levels, usage, attach };
 }
 const REL_POINTER = "component_complex";
 const REL_GROUP = "relation_component";
@@ -436,7 +563,7 @@ async function plane({ client, umgebung, wurzeln, eltern = /* @__PURE__ */ new M
   }
   for (const it of items) it.existing = bekannt.get(it.doc.master_id) ?? null;
   const needs = modelNeeds(items.map((i) => i.doc), attrs, gruppen, pdefs, skip, gruppierung);
-  for (const [k, g] of needs.newGroups) sag?.(`neue Gruppe ${k} (${g.label}): ${[...needs.newAttrs.values()].filter((a) => a.group === k).length} Attribute`);
+  for (const [k, g] of needs.newGroups) sag?.(`neue Gruppe ${k} (${g.label})${g.ort ? " an " + g.ort : ""}${g.activeFrom ? " ab " + g.activeFrom : ""}: ${[...needs.newAttrs.values()].filter((a) => a.group === k).length} Attribute`);
   sag?.(`analysiert: ${items.length} Knoten (${items.filter((i) => i.existing).length} vorhanden), ${needs.newAttrs.size} neue Attribute in ${needs.newGroups.size} neuen Gruppen`);
   return { items, needs, wurzeln: wurzeln.length };
 }

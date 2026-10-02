@@ -21,7 +21,7 @@ const SKIP_SUFFIX = ['_rel', 'image', 'file', 'json', 'loc', 'cur', 'coordinate'
 export const DEFAULT_SKIP = ['*_finder', 'technical_details', 'group_title', 'prodexa_classification']
 
 /// journali-Schlüssel: [a-z][a-z0-9_]* — für immer.
-import { themesByPrefix, groupsByLevel, humanize } from '../table/anlage.mjs'
+import { themesByPrefix, groupsByLevel, placeByPosition, humanize } from '../table/anlage.mjs'
 export const slug = s => { const k = s.toLowerCase().replace(/[^a-z0-9_]+/g, '_').replace(/^_+|_+$/g, ''); return /^[a-z]/.test(k) ? k : 'p_' + k }
 const matches = (key, patterns) => patterns.some(p => new RegExp('^' + p.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*') + '$').test(key))
 
@@ -174,42 +174,76 @@ export function inheritedValues(doc, attrs) {
 const DEPTH = { group: 0, product: 1, variant: 2 }
 const ROLES = ['group', 'product', 'variant']
 
+/// Der Baum der Gruppenknoten in den Dokumenten: die Position eines Dokuments ist die Gruppe darüber (oder es selbst, wenn es eine ist) — dort hängen Attributgruppen.
+export function docTree(docs) {
+  const byId = new Map(docs.map(d => [d.id, d]))
+  const parentGroup = d => { for (let n = byId.get(d?.main_parent_id); n; n = byId.get(n.main_parent_id)) if (roleOf(n) === 'group') return n.id; return null }
+  return {
+    byId,
+    positionOf: d => roleOf(d) === 'group' ? d.id : parentGroup(d),
+    parentOf: id => parentGroup(byId.get(id)),
+    name: id => byId.get(id)?.name || byId.get(id)?.remote_id || id,
+  }
+}
+
 /// Welche Attribute und Gruppen ein Satz Dokumente braucht: fehlende Definitionen, benutzte Gruppen.
 /// `groups` ist key → { activeFrom }. Die Regeln für neue Attribute stehen in table/anlage.mjs (für jeden Import): eine Gruppe enthält Attribute einer Ebene,
 /// ihr „aktiv ab“ ist diese Ebene, Attribute oberhalb der Varianten sind vererbbar, und die Namen lesen sich wie Bezeichnungen. Eine vorhandene
 /// Gruppe, deren „aktiv ab“ tiefer liegt als eine Fundstelle, wird angehoben (`raise`), sonst lehnte der Server den Wert ab.
 ///
-/// Das Thema eines neuen Attributs (`opts.groupBy`): `section` — die Gruppe der Quelle (Definition des Attributs); `prefix` — nach dem Anfang des
-/// Schlüssels (`opts.min` Attribute je Thema, sonst „Weitere Merkmale“); `auto` (Vorgabe) — die der Quelle, wo es sie gibt, sonst nach dem Anfang;
-/// `single` — alles in „solr“. Liefert auch `levels`: je Schlüssel die oberste Ebene (0 Gruppe, 1 Produkt, 2 Variante), auf der ein Wert vorkommt.
+/// Wohin ein neues Attribut kommt (`opts.groupBy`): `section` — in die Gruppe der Quelle (Definition des Attributs); `position` — an den Knoten, unter dem alle seine Werte stehen
+/// (tiefster gemeinsamer Vorfahre), eine Gruppe je Knoten und Ebene, benannt nach dem Knoten; `prefix` — nach dem Anfang des Schlüssels (`opts.min` Attribute je Thema);
+/// `auto` (Vorgabe) — die Gruppe der Quelle, wo es sie gibt, sonst die Position; `single` — alles in „solr“. Liefert auch `levels` (je Schlüssel die oberste Ebene, auf der ein
+/// Wert vorkommt), `usage` (je Schlüssel die Gruppenknoten, die ihn benutzen) und `attach` (Gruppenknoten → Gruppen, die dort hängen sollen).
 export function modelNeeds(docs, attrs, groups, pdefs, skip, opts = {}) {
   const groupBy = opts.groupBy ?? 'auto'
-  const newGroups = new Map()   // key → { label, en, activeFrom }
+  const newGroups = new Map()   // key → { label, en, activeFrom, ort? }
   const newAttrs = new Map()    // key → Definition für PUT /api/model/attributes
   const used = new Set()
   const counts = new Map()      // key → wie oft ein Wert vorkommt
   const levels = new Map()      // key → oberste Ebene, auf der ein Wert vorkommt
+  const usage = new Map()       // key → Gruppenknoten, die das Attribut benutzen
+  const attach = new Map()      // Gruppenknoten → Gruppen
   const top = new Map()         // Gruppe → oberste Rolle (Tiefe), an der ein Wert vorkommt
   const seen = (gkey, role) => { const d = DEPTH[role] ?? 0; if (!top.has(gkey) || d < top.get(gkey)) top.set(gkey, d) }
+  const tree = docTree(docs)
 
-  // erster Durchgang: welche Attribute fehlen und auf welcher Ebene stehen ihre Werte — erst dann lässt sich in Gruppen ordnen
+  // erster Durchgang: welche Attribute fehlen, auf welcher Ebene und unter welchen Gruppenknoten stehen ihre Werte — erst dann lässt sich in Gruppen ordnen
   const fresh = new Map()       // key → { raw, suffix }
   for (const d of docs) for (const { key, suffix, raw } of ownValues(d, skip)) {
     const depth = DEPTH[roleOf(d)] ?? 0
     if (!levels.has(key) || depth < levels.get(key)) levels.set(key, depth)
+    const pos = tree.positionOf(d); if (pos) { if (!usage.has(key)) usage.set(key, new Set()); usage.get(key).add(pos) }
     if (!attrs.has(key) && !fresh.has(key)) fresh.set(key, { raw, suffix })
   }
   const keys = [...fresh.keys()]
-  const byPrefix = themesByPrefix(keys.filter(k => groupBy === 'prefix' || (groupBy === 'auto' && !pdefs[fresh.get(k).raw]?.section)), opts.min ?? 5)
-  const themeOf = key => {
+  const wie = key => {
     const p = pdefs[fresh.get(key).raw]
-    if (groupBy === 'single') return { group: 'solr', label: { de: 'solr', en: 'solr' } }
-    if ((groupBy === 'section' || groupBy === 'auto') && p?.section) { const l = p.sectionName || humanize(p.section); return { group: slug(p.section), label: { de: l, en: l } } }
-    if (groupBy === 'section') return { group: 'solr', label: { de: 'solr', en: 'solr' } }
-    return byPrefix.get(key)
+    if (groupBy === 'single') return 'single'
+    if ((groupBy === 'section' || groupBy === 'auto') && p?.section) return 'section'
+    if (groupBy === 'section') return 'single'
+    // ohne Gruppenknoten über den Werten (lose Dokumente) gibt es keine Position: dann ordnet der Anfang des Schlüssels
+    return groupBy === 'prefix' || !(usage.get(key)?.size) ? 'prefix' : 'position'
   }
-  const einEbene = Math.min(...[...fresh.keys()].map(k => levels.get(k)), 2)   // single: eine Gruppe, die Ebene des obersten Werts
-  const plan = groupsByLevel(keys.map(k => ({ key: k, theme: themeOf(k), level: groupBy === 'single' ? einEbene : levels.get(k) })))
+  const art = new Map(keys.map(k => [k, wie(k)]))
+  const nur = x => keys.filter(k => art.get(k) === x)
+  const sectionTheme = key => { const p = pdefs[fresh.get(key).raw]; const l = p.sectionName || humanize(p.section); return { group: slug(p.section), label: { de: l, en: l } } }
+  const solrTheme = { group: 'solr', label: { de: 'solr', en: 'solr' } }
+  const byPrefix = themesByPrefix(nur('prefix'), opts.min ?? 5)
+  const einEbene = Math.min(...keys.map(k => levels.get(k)), 2)   // single: eine Gruppe, die Ebene des obersten Werts
+  const plan = new Map()
+  for (const [k, g] of groupsByLevel([
+    ...nur('section').map(k => ({ key: k, theme: sectionTheme(k), level: levels.get(k) })),
+    ...nur('prefix').map(k => ({ key: k, theme: byPrefix.get(k), level: levels.get(k) })),
+    ...nur('single').map(k => ({ key: k, theme: solrTheme, level: einEbene })),
+  ])) plan.set(k, g)
+  const ort = nur('position')
+  if (ort.length) {
+    const platz = placeByPosition(ort.map(k => ({ key: k, level: levels.get(k), positions: usage.get(k) ?? new Set() })), tree, { min: opts.minGroup ?? 3, max: opts.maxGroup ?? 60 })
+    for (const [k, g] of platz.byKey) plan.set(k, g)
+    for (const [gk, g] of platz.groups) newGroups.set(gk, { label: g.label.de, en: g.label.en, activeFrom: g.activeFrom, position: g.position, ort: tree.name(g.position) })
+  }
+  for (const [gk, g] of [...newGroups]) { if (g.position) { if (!attach.has(g.position)) attach.set(g.position, []); attach.get(g.position).push(gk) } if (groups.has(gk)) newGroups.delete(gk) }
 
   for (const d of docs) for (const { key, suffix, raw } of ownValues(d, skip)) {
     counts.set(key, (counts.get(key) ?? 0) + 1)
@@ -217,8 +251,8 @@ export function modelNeeds(docs, attrs, groups, pdefs, skip, opts = {}) {
     const g = plan.get(key)
     seen(g.group, roleOf(d))
     if (newAttrs.has(key)) continue
-    if (!groups.has(g.group)) newGroups.set(g.group, { label: g.label.de, en: g.label.en, activeFrom: g.activeFrom })
-    used.add(g.group)
+    if (!groups.has(g.group) && !newGroups.has(g.group)) newGroups.set(g.group, { label: g.label.de, en: g.label.en, activeFrom: g.activeFrom })
+    if (!g.position) used.add(g.group)   // an einer Position hängt die Gruppe dort, nicht oben
     const [type, multiple, perLocale] = TYPES[suffix]
     const label = pdefs[raw]?.name || humanize(raw)
     newAttrs.set(key, { key, label: { de: label, en: label }, type, group: g.group, axes: perLocale ? ['locale'] : null, multiple, inheritable: groupBy === 'single' ? levels.get(key) < 2 : g.inheritable })
@@ -227,7 +261,7 @@ export function modelNeeds(docs, attrs, groups, pdefs, skip, opts = {}) {
   for (const [gkey, t] of top) { const g = groups.get(gkey); if (g?.activeFrom && DEPTH[g.activeFrom] > t) raise.set(gkey, t > 0 ? ROLES[t] : null) }
   for (const k of ['name', 'description', 'sku']) if (attrs.has(k)) used.add(attrs.get(k).group)
   used.delete(undefined); used.delete(null); used.delete('')
-  return { newGroups, newAttrs, raise, used: [...used].sort(), counts, levels }
+  return { newGroups, newAttrs, raise, used: [...used].sort(), counts, levels, usage, attach }
 }
 
 // ---- Relationen (docs/pflegestruktur.md, 18): *_doc_rel-Felder am Knoten sind einfache Kanten (Typ = Schlüssel),

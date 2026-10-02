@@ -6,7 +6,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 
-const { humanize, themeOf, themesByPrefix, groupsByLevel, WEITERE } = await import('../../plugins/table/anlage.mjs')
+const { humanize, themeOf, themesByPrefix, groupsByLevel, placeByPosition, WEITERE } = await import('../../plugins/table/anlage.mjs')
 const { modelNeeds, valueCommands, inheritedValues } = await import('../../plugins/solr/solr.js')
 const { plane, ordneNeu } = await import('../../plugins/solr/lauf.mjs')
 
@@ -64,7 +64,7 @@ test('modelNeeds: Ebene, aktiv ab und Vererbbarkeit folgen den Werten in der Que
 
 test('ein Wert an Gruppe und Produkt: die oberste Ebene gilt', () => {
   const docs = [doc(['farbe_a'], 'productVariant', 'v'), doc(['farbe_a'], 'product', 'p'), doc(['farbe_a'], 'group', 'g')]
-  const n = modelNeeds(docs, new Map(), new Map(), {}, [], { min: 1 })
+  const n = modelNeeds(docs, new Map(), new Map(), {}, [], { groupBy: 'prefix', min: 1 })
   assert.equal(n.levels.get('farbe_a'), 0)
   assert.equal(n.newAttrs.get('farbe_a').inheritable, true)
   assert.equal(n.newGroups.get('farbe').activeFrom, null, 'an der Gruppe: überall aktiv')
@@ -102,9 +102,13 @@ test('der Plan nennt jede neue Gruppe mit der Zahl ihrer Attribute — im Probel
   const zeilen = []
   const umgebung = { sag: z => zeilen.push(z), modell: { attributes: [], groups: [] }, baum: [], frisch: async () => {}, api: {} }
   const client = { subtree: async (w, on) => { on?.(DOCS.length, DOCS.length, DOCS); return DOCS }, byIds: async () => [], propertyDefs: async () => ({}) }
+  await plane({ client, umgebung, wurzeln: ['g1'], skip: [], gruppen: { groupBy: 'prefix' } })
+  assert.ok(zeilen.includes('neue Gruppe abmessung (Abmessung) ab product: 6 Attribute'), zeilen.join('\n'))
+  assert.ok(zeilen.includes('neue Gruppe material (Material) ab product: 5 Attribute'))
+  // nach Position: eine Gruppe am Knoten, unter dem alles steht
+  zeilen.length = 0
   await plane({ client, umgebung, wurzeln: ['g1'], skip: [] })
-  assert.ok(zeilen.includes('neue Gruppe abmessung (Abmessung): 6 Attribute'), zeilen.join('\n'))
-  assert.ok(zeilen.includes('neue Gruppe material (Material): 5 Attribute'))
+  assert.ok(zeilen.includes('neue Gruppe g (G) an G ab product: 11 Attribute'), zeilen.join('\n'))
 })
 
 // ---- Vererbung beim Schreiben
@@ -136,72 +140,193 @@ test('ohne Vererbung (kein Knoten darüber) schreibt valueCommands alles wie bis
   assert.deepEqual(cmds.map(c => c.args.attribute), ['farbe', 'hub'])
 })
 
-// ---- die vorhandenen Attribute der Gruppe solr
+// ---- die vorhandenen Attribute der Gruppe solr: an ihre Position
 
-function welt({ gruppen = [{ key: 'solr', activeFrom: 'variant' }], knoten, levels } = {}) {
-  const attrs = [...viele('abmessung', 6), ...viele('material', 5), 'sonst_a'].map(k => ({ key: k, label: { de: k, en: k }, type: 'text', group: 'solr' }))
+// Die Quelle: Wurzel „Wurzel“ mit den Kategorien „Spannen“ und „Bohren“.
+//   abmessung_0–2 stehen am Produkt, abmessung_3–5 an der Variante — beide unter Spannen
+//   material_0–4 stehen am Produkt, unter Spannen und unter Bohren — also an der Wurzel
+//   sonst_a steht an der Variante unter Bohren — allein, darum wandert es nach oben
+const G = (id, name, parent) => ({ id, master_id: id, type: 'group', name, main_parent_id: parent })
+const QUELLE = [G('r', 'Wurzel', ''), G('a', 'Spannen', 'r'), G('b', 'Bohren', 'r')]
+function welt({ gruppen = [{ key: 'solr', activeFrom: 'variant' }], levels, nurMit } = {}) {
+  const stufen = new Map(); const nutzer = new Map()
+  const setze = (keys, level, ...pos) => keys.forEach(k => { stufen.set(k, level); nutzer.set(k, new Set(pos)) })
+  setze(viele('abmessung', 6).slice(0, 3), 1, 'a'); setze(viele('abmessung', 6).slice(3), 2, 'a')
+  setze(viele('material', 5), 1, 'a', 'b'); setze(['sonst_a'], 2, 'b')
+  const attrs = [...stufen.keys()].map(k => ({ key: k, label: { de: k, en: k }, type: 'text', group: 'solr' }))
   attrs.push({ key: 'name', type: 'text', group: 'stamm' })
-  // abmessung_0–2 und material_* stehen am Produkt, abmessung_3–5 an der Variante, sonst_a an der Variante
-  const stufen = new Map(attrs.filter(a => a.group === 'solr').map(a => [a.key, /^abmessung_[345]$/.test(a.key) || a.key === 'sonst_a' ? 2 : 1]))
   const gesendet = [], zeilen = []
+  const items = QUELLE.map(d => ({ doc: d, existing: { id: 'j-' + d.id } }))
   return {
-    gesendet, zeilen, plan: { needs: { levels: levels ?? stufen } },
+    gesendet, zeilen, plan: { items, needs: { levels: levels ?? stufen, usage: nutzer } },
     umgebung: {
       sag: z => zeilen.push(z),
-      modell: { attributes: attrs, groups: gruppen },
-      baum: knoten ?? [{ id: 'w1', groups: 'solr' }, { id: 'w2', groups: 'andere,solr' }, { id: 'w3', groups: 'andere' }],
+      modell: { attributes: nurMit ? attrs.filter(a => nurMit.includes(a.key) || a.key === 'name') : attrs, groups: gruppen },
+      baum: [{ id: 'j-r', groups: 'solr' }, { id: 'j-a', groups: 'solr,andere' }, { id: 'x', groups: 'andere' }],
       frisch: async () => {},
       api: { post: async (p, b, m) => { gesendet.push([m ?? 'POST', p, b]); return {} } },
     },
   }
 }
 
-test('ordneNeu im Probelauf zählt nur: Gruppen mit Ebene und Größe, Knoten, nichts wird geschrieben', async () => {
+test('ordneNeu im Probelauf zählt nur: Gruppen an ihrer Position, mit Ebene und Größe; nichts wird geschrieben', async () => {
   const w = welt()
   const r = await ordneNeu({ umgebung: w.umgebung, plan: w.plan, trocken: true })
   assert.deepEqual(w.gesendet, [])
   assert.equal(r.gruppen, 4)
   assert.ok(w.zeilen.includes('12 Attribute der Gruppe solr → 4 Gruppen'), w.zeilen.join('\n'))
-  assert.ok(w.zeilen.includes('  abmessung_product (Abmessung (Produkt)) ab product: 3'), w.zeilen.join('\n'))
-  assert.ok(w.zeilen.includes('  abmessung_variant (Abmessung (Variante)) ab variant: 3'))
-  assert.ok(w.zeilen.includes('  material (Material) ab product: 5'))
-  assert.ok(w.zeilen.includes('  weitere (Weitere Merkmale) ab variant: 1'))
+  assert.ok(w.zeilen.includes('  spannen_product (Spannen · Produktmerkmale) an Spannen ab product: 3'), w.zeilen.join('\n'))
+  assert.ok(w.zeilen.includes('  spannen_variant (Spannen · Variantenmerkmale) an Spannen ab variant: 3'))
+  assert.ok(w.zeilen.includes('  wurzel_product (Wurzel · Produktmerkmale) an Wurzel ab product: 5'), 'material steht unter Spannen und Bohren: Wurzel')
+  assert.ok(w.zeilen.includes('  wurzel_variant (Wurzel · Variantenmerkmale) an Wurzel ab variant: 1'), 'sonst_a allein: von Bohren nach oben')
   assert.ok(w.zeilen.includes('2 Knoten tragen die Gruppe solr'))
 })
 
-test('ordneNeu legt Gruppen mit „aktiv ab“ an, macht Attribute oberhalb der Varianten vererbbar, benennt sie lesbar und hängt die Gruppen an', async () => {
+test('ordneNeu legt die Gruppen an, setzt Gruppe, Vererbbarkeit und Bezeichnung der Attribute und hängt jede Gruppe an den Knoten ihrer Position', async () => {
   const w = welt()
   const r = await ordneNeu({ umgebung: w.umgebung, plan: w.plan })
   assert.equal(r.bewegt, 12)
   const gruppen = Object.fromEntries(w.gesendet.filter(([, p]) => p.startsWith('/api/model/groups/')).map(([, p, b]) => [p.split('/').pop(), b]))
-  assert.deepEqual(Object.keys(gruppen).sort(), ['abmessung_product', 'abmessung_variant', 'material', 'weitere'])
-  assert.equal(gruppen.abmessung_product.activeFrom, 'product'); assert.equal(gruppen.abmessung_variant.activeFrom, 'variant')
-  assert.deepEqual(gruppen.material.label, { de: 'Material', en: 'Material' })
+  assert.deepEqual(Object.keys(gruppen).sort(), ['spannen_product', 'spannen_variant', 'wurzel_product', 'wurzel_variant'])
+  assert.equal(gruppen.spannen_product.activeFrom, 'product'); assert.equal(gruppen.wurzel_variant.activeFrom, 'variant')
+  assert.deepEqual(gruppen.spannen_product.label, { de: 'Spannen · Produktmerkmale', en: 'Spannen · Product attributes' })
   const attribute = Object.fromEntries(w.gesendet.filter(([, p]) => p.startsWith('/api/model/attributes/')).map(([, p, b]) => [p.split('/').pop(), b]))
-  assert.equal(attribute.abmessung_1.group, 'abmessung_product'); assert.equal(attribute.abmessung_1.inheritable, true)
-  assert.equal(attribute.abmessung_4.group, 'abmessung_variant'); assert.equal(attribute.abmessung_4.inheritable, false)
-  assert.equal(attribute.sonst_a.group, 'weitere')
+  assert.equal(attribute.abmessung_1.group, 'spannen_product'); assert.equal(attribute.abmessung_1.inheritable, true)
+  assert.equal(attribute.abmessung_4.group, 'spannen_variant'); assert.equal(attribute.abmessung_4.inheritable, false)
+  assert.equal(attribute.material_2.group, 'wurzel_product'); assert.equal(attribute.sonst_a.group, 'wurzel_variant')
   assert.deepEqual(attribute.abmessung_1.label, { de: 'Abmessung 1', en: 'Abmessung 1' })
   assert.ok(!('name' in attribute), 'Attribute anderer Gruppen bleiben')
-  const knoten = Object.fromEntries(w.gesendet.filter(([, p]) => p.startsWith('/api/nodes/')).map(([, p, b]) => [p.split('/')[3], b.groups]))
-  assert.deepEqual(knoten.w1.sort(), ['abmessung_product', 'abmessung_variant', 'material', 'weitere'])
-  assert.deepEqual(knoten.w2.sort(), ['abmessung_product', 'abmessung_variant', 'andere', 'material', 'weitere'])
-  assert.equal(knoten.w3, undefined, 'ein Knoten ohne solr bleibt unberührt')
+  // die Gruppen der Knoten: jede an ihrer Position, „solr“ geht, andere bleiben
+  const knoten = Object.fromEntries(w.gesendet.filter(([, p]) => p.startsWith('/api/nodes/')).map(([, p, b]) => [p.split('/')[3], b.groups.slice().sort()]))
+  assert.deepEqual(knoten['j-r'], ['wurzel_product', 'wurzel_variant'])
+  assert.deepEqual(knoten['j-a'], ['andere', 'spannen_product', 'spannen_variant'])
+  assert.equal(knoten.x, undefined, 'ein Knoten ohne solr und ohne Position bleibt unberührt')
 })
 
 test('ordneNeu: Attribute ohne Wert in der Quelle bleiben in solr — und mit ihnen die Gruppe an den Knoten', async () => {
-  const w = welt({ levels: new Map([['abmessung_0', 1], ['abmessung_1', 1], ['abmessung_2', 1], ['abmessung_3', 1], ['abmessung_4', 1], ['abmessung_5', 1]]) })
+  const w = welt({ nurMit: [...viele('abmessung', 6), ...viele('material', 5), 'sonst_a'], levels: new Map(viele('abmessung', 6).map(k => [k, 1])) })
   const r = await ordneNeu({ umgebung: w.umgebung, plan: w.plan })
   assert.equal(r.bewegt, 6)
   assert.ok(w.zeilen.includes('6 Attribute ohne Wert in der Quelle bleiben in solr'))
   const knoten = Object.fromEntries(w.gesendet.filter(([, p]) => p.startsWith('/api/nodes/')).map(([, p, b]) => [p.split('/')[3], b.groups]))
-  assert.ok(knoten.w1.includes('solr') && knoten.w1.includes('abmessung'))
+  assert.ok(knoten['j-a'].includes('solr'))
 })
 
 test('ordneNeu: eine Gruppe, die es schon gibt, wird nicht überschrieben; ohne Attribute in solr geschieht nichts', async () => {
-  const w = welt({ gruppen: [{ key: 'solr' }, { key: 'material' }] })
+  const w = welt({ gruppen: [{ key: 'solr' }, { key: 'wurzel_product' }] })
   await ordneNeu({ umgebung: w.umgebung, plan: w.plan })
-  assert.ok(!w.gesendet.some(([, p]) => p === '/api/model/groups/material'))
+  assert.ok(!w.gesendet.some(([, p]) => p === '/api/model/groups/wurzel_product'))
   const leer = { sag: () => {}, modell: { attributes: [{ key: 'a', group: 'x' }], groups: [] }, baum: [], api: { post: async () => assert.fail('nichts zu schreiben') } }
   assert.deepEqual(await ordneNeu({ umgebung: leer, plan: w.plan }), { bewegt: 0, gruppen: 0 })
+})
+
+// ---- die Position: der tiefste gemeinsame Vorfahre
+
+const BAUM = { R: null, A: 'R', A1: 'A', A2: 'A', B: 'R' }
+const baum = { parentOf: id => BAUM[id] ?? null, name: id => id }
+const e = (key, level, ...pos) => ({ key, level, positions: new Set(pos) })
+
+test('placeByPosition: ein Attribut gehört an den tiefsten gemeinsamen Vorfahren der Knoten, die es benutzen', () => {
+  const r = placeByPosition([
+    ...['a1', 'a2', 'a3'].map(k => e(k, 2, 'A1')),           // nur A1
+    ...['u1', 'u2', 'u3'].map(k => e(k, 2, 'A1', 'A2')),     // A1 und A2: darüber, A
+    ...['z1', 'z2', 'z3'].map(k => e(k, 2, 'A1', 'B')),      // A1 und B: R
+  ], baum)
+  assert.equal(r.byKey.get('a1').position, 'A1'); assert.equal(r.byKey.get('u1').position, 'A'); assert.equal(r.byKey.get('z1').position, 'R')
+  assert.deepEqual([...r.groups.keys()].sort(), ['a', 'a1', 'r'])
+  assert.equal(r.byKey.get('a1').label.de, 'A1', 'der Name des Knotens'); assert.equal(r.byKey.get('a1').group, 'a1')
+})
+
+test('placeByPosition: eine Gruppe mit weniger als drei Attributen geht zum Knoten darüber, Schritt für Schritt', () => {
+  const r = placeByPosition([e('x', 2, 'A1'), e('y', 2, 'A2')], baum)
+  assert.equal(r.byKey.get('x').position, 'R', 'A1 hat eins, A hat dann zwei, R bekommt beide')
+  assert.deepEqual([...r.groups.keys()], ['r'])
+  const drei = placeByPosition([e('x', 2, 'A1'), e('y', 2, 'A2'), e('w', 2, 'A2'), e('v', 2, 'A2')], baum)
+  assert.equal(drei.byKey.get('y').position, 'A2'); assert.equal(drei.byKey.get('x').position, 'R', 'das eine von A1 ist in A allein und wandert weiter nach R')
+})
+
+test('placeByPosition: die Ebene steht im Namen, wo ein Knoten mehrere hat; aktiv ab und vererbbar folgen der Ebene', () => {
+  const r = placeByPosition([...['p1', 'p2', 'p3'].map(k => e(k, 1, 'B')), ...['v1', 'v2', 'v3'].map(k => e(k, 2, 'B'))], baum)
+  assert.deepEqual(r.byKey.get('p1'), { group: 'b_product', label: { de: 'B · Produktmerkmale', en: 'B · Product attributes' }, activeFrom: 'product', inheritable: true, position: 'B' })
+  assert.deepEqual(r.byKey.get('v1'), { group: 'b_variant', label: { de: 'B · Variantenmerkmale', en: 'B · Variant attributes' }, activeFrom: 'variant', inheritable: false, position: 'B' })
+  const eine = placeByPosition(['a', 'b', 'c'].map(k => e(k, 2, 'B')), baum)
+  assert.equal(eine.byKey.get('a').group, 'b'); assert.equal(eine.byKey.get('a').label.de, 'B', 'eine Ebene: nur der Name')
+})
+
+test('placeByPosition: eine zu grosse Gruppe wird nach Thema geteilt', () => {
+  const keys = [...viele('abmessung', 8), ...viele('material', 7), 'x']
+  const r = placeByPosition(keys.map(k => e(k, 2, 'B')), baum, { max: 10 })
+  assert.equal(r.byKey.get('abmessung_1').group, 'b_abmessung'); assert.equal(r.byKey.get('abmessung_1').label.de, 'B · Abmessung')
+  assert.equal(r.byKey.get('material_1').group, 'b_material'); assert.equal(r.byKey.get('x').group, 'b_weitere')
+  assert.equal(r.byKey.get('x').label.de, 'B · Weitere Merkmale')
+})
+
+test('placeByPosition: gleiche Namen an verschiedenen Knoten ergeben verschiedene Schlüssel', () => {
+  const t = { parentOf: id => ({ x1: 'R', x2: 'R' })[id] ?? null, name: () => 'Zubehör' }
+  const r = placeByPosition([...['a', 'b', 'c'].map(k => e(k, 2, 'x1')), ...['d', 'e', 'f'].map(k => e(k, 2, 'x2'))], t)
+  assert.deepEqual([...r.groups.keys()].sort(), ['zubehoer', 'zubehoer_2'])
+})
+
+// ---- im Import: Gruppen an Positionen
+
+const DOCS_BAUM = (() => {
+  const prod = (id, parent, keys) => ({ ...doc(keys, 'product', id), main_parent_id: parent })
+  const variante = (id, parent, keys) => ({ ...doc(keys, 'productVariant', id), main_parent_id: parent })
+  return [
+    G('r', 'Wurzel', ''), G('a', 'Spannen', 'r'), G('b', 'Bohren', 'r'),
+    prod('pa', 'a', viele('breite', 3)), variante('va', 'pa', viele('laenge', 3)),
+    prod('pb', 'b', viele('tiefe', 3)), variante('vb', 'pb', viele('weite', 3)),
+  ]
+})()
+
+test('modelNeeds (Position): jede Gruppe hängt am Knoten, unter dem ihre Attribute stehen, mit „aktiv ab“ und Vererbbarkeit', () => {
+  const n = modelNeeds(DOCS_BAUM, new Map(), new Map(), {}, [])
+  const g = gruppenVon(n)
+  assert.equal(g.breite_0, 'spannen_product'); assert.equal(g.laenge_0, 'spannen_variant'); assert.equal(g.tiefe_0, 'bohren_product'); assert.equal(g.weite_0, 'bohren_variant')
+  assert.deepEqual([...n.attach].map(([k, v]) => [k, v.sort()]).sort(), [['a', ['spannen_product', 'spannen_variant']], ['b', ['bohren_product', 'bohren_variant']]])
+  assert.equal(n.newGroups.get('spannen_product').ort, 'Spannen'); assert.equal(n.newGroups.get('spannen_product').activeFrom, 'product')
+  assert.equal(n.newAttrs.get('breite_0').inheritable, true); assert.equal(n.newAttrs.get('laenge_0').inheritable, false)
+  assert.deepEqual(n.used, [], 'nichts hängt oben — jede Gruppe an ihrer Position')
+  assert.deepEqual([...n.usage.get('breite_0')], ['a'])
+})
+
+test('modelNeeds: ein Attribut unter mehreren Kategorien kommt an deren gemeinsamen Vorfahren', () => {
+  const docs = [
+    ...DOCS_BAUM.filter(d => ['r', 'a', 'b'].includes(d.id)),
+    { ...doc(viele('farbe', 3), 'product', 'p1'), main_parent_id: 'a' }, { ...doc(viele('farbe', 3), 'product', 'p2'), main_parent_id: 'b' },
+  ]
+  const n = modelNeeds(docs, new Map(), new Map(), {}, [])
+  assert.equal(gruppenVon(n).farbe_0, 'wurzel'); assert.equal(n.newGroups.get('wurzel').ort, 'Wurzel')
+  assert.deepEqual(n.attach.get('r'), ['wurzel'])
+})
+
+test('Die Gruppen der Quelle gehen vor: ein Attribut mit Gruppe in der Definition kommt nicht an eine Position', () => {
+  const docs = [...DOCS_BAUM.filter(d => ['r', 'a'].includes(d.id)), { ...doc(['breite_0'], 'product', 'p1'), main_parent_id: 'a' }]
+  const n = modelNeeds(docs, new Map(), new Map(), { breite_0: { section: 'techData_Mass', sectionName: 'Masse' } }, [])
+  assert.equal(gruppenVon(n).breite_0, 'techdata_mass'); assert.equal(n.attach.size, 0)
+})
+
+test('der Lauf hängt die Gruppen an die Gruppenknoten: neue Knoten im Stapel, vorhandene mit ihren bisherigen Gruppen', async () => {
+  const gestapelt = []
+  const mkUmgebung = baumZeilen => ({
+    sag: () => {}, modell: { attributes: [{ key: 'name', type: 'text', group: 'stamm' }, { key: 'sku', type: 'text', group: 'stamm' }], groups: [{ key: 'stamm' }] }, baum: baumZeilen,
+    frisch: async function () {}, api: {
+      get: async () => ({ values: [] }), post: async () => ({}),
+      batchChunked: async cmds => { gestapelt.push(cmds); return { batch: 'b', results: cmds.map((c, i) => ({ index: i, ref: c.ref, node: c.ref ? 'n-' + c.ref : undefined })), error: null, errors: [], refs: new Map() } },
+    },
+  })
+  const client = { subtree: async (w, on) => { on?.(DOCS_BAUM.length, DOCS_BAUM.length, DOCS_BAUM); return DOCS_BAUM }, byIds: async () => [], propertyDefs: async () => ({}) }
+  const { schreibe } = await import('../../plugins/solr/lauf.mjs')
+  const u = mkUmgebung([])
+  // die Modellanlage legt die Attribute an, danach kennt das Modell sie
+  u.api.post = async (p, b) => { if (p.startsWith('/api/model/attributes/')) u.modell.attributes.push(b); return {} }
+  const plan = await plane({ client, umgebung: u, wurzeln: ['r'], skip: [] })
+  await schreibe({ plan, umgebung: u, ziel: 'z' })
+  const attach = gestapelt.flat().filter(c => c.op === 'groups.attach')
+  const anKnoten = ref => attach.find(c => c.args.node === ref)?.args.groups
+  const refs = Object.fromEntries(gestapelt.flat().filter(c => c.op === 'external.link').map(c => [c.args.id, c.args.node]))
+  assert.deepEqual(anKnoten(refs.a), ['spannen_product', 'spannen_variant'])
+  assert.deepEqual(anKnoten(refs.b), ['bohren_product', 'bohren_variant'])
+  assert.deepEqual(anKnoten(refs.r), ['stamm'], 'an der Wurzel hängt, was schon galt — keine neue Gruppe')
+  assert.equal(anKnoten(refs.pa), undefined, 'an Produkten und Varianten hängt nichts')
 })

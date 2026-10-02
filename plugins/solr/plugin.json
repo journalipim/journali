@@ -84,14 +84,14 @@
       },
       {
         "key": "group_by",
-        "label": "Thema neuer Attribute: auto (die Gruppe der Quelle, sonst der Anfang des Schlüssels) · section · prefix · single",
+        "label": "Gruppen neuer Attribute: auto (die der Quelle, sonst die Position im Baum) · section · position · prefix · single",
         "type": "text",
         "default": "auto",
         "perJob": false
       },
       {
         "key": "regroup",
-        "label": "Kein Import: die Attribute der Gruppe solr nach Thema und Ebene der Werte in der Quelle auf Gruppen verteilen (mit Trockenlauf prüfen)",
+        "label": "Kein Import: die Attribute der Gruppe solr an ihre Position im Baum verteilen (mit Trockenlauf prüfen)",
         "type": "boolean",
         "default": "false",
         "perJob": true

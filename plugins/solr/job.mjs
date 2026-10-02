@@ -25,8 +25,8 @@ const skip = skipListe(E.JOURNALI_SKIP || '')
 const mitKanten = /^(true|1|ja)$/i.test(E.JOURNALI_RELATIONS || '')
 const trocken = /^(true|1|ja)$/i.test(E.JOURNALI_DRY_RUN || '')
 const neuOrdnen = /^(true|1|ja)$/i.test(E.JOURNALI_REGROUP || '')
-// Wie neue Attribute zu Gruppen kommen: auto (die der Quelle, sonst nach dem Anfang des Schlüssels), section, prefix, single
-const gruppierung = { groupBy: ['auto', 'section', 'prefix', 'single'].includes((E.JOURNALI_GROUP_BY || '').trim()) ? E.JOURNALI_GROUP_BY.trim() : 'auto' }
+// Wie neue Attribute zu Gruppen kommen: auto (die der Quelle, sonst die Position im Baum), section, position, prefix, single
+const gruppierung = { groupBy: ['auto', 'section', 'position', 'prefix', 'single'].includes((E.JOURNALI_GROUP_BY || '').trim()) ? E.JOURNALI_GROUP_BY.trim() : 'auto' }
 const headers = { 'X-Actor': actor, 'Content-Type': 'application/json', ...(E.JOURNALI_TOKEN ? { Authorization: 'Bearer ' + E.JOURNALI_TOKEN } : {}) }
 
 if (!neuOrdnen && !base) { console.error('✗ Solr-Kern fehlt (Zugang oder base)'); process.exitCode = 1 }

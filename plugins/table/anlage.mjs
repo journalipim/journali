@@ -60,3 +60,77 @@ export function groupsByLevel(entries) {
   }
   return out
 }
+
+/// Die Wörter, die eine Ebene im Namen einer Gruppe bezeichnet
+export const LEVEL_WORD = {
+  group: { de: 'Gruppenmerkmale', en: 'Group attributes' },
+  product: { de: 'Produktmerkmale', en: 'Product attributes' },
+  variant: { de: 'Variantenmerkmale', en: 'Variant attributes' },
+}
+
+const keyOf = s => { const k = String(s ?? '').toLowerCase().replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss').replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, ''); return /^[a-z]/.test(k) ? k : 'g_' + k }
+
+/// Die sinnvollste Position für Attributgruppen: jedes Attribut gehört an den Knoten, unter dem alle seine Werte stehen — den untersten gemeinsamen Vorfahren der Knoten, die es
+/// benutzen. Dort hängt die Gruppe; wer darunter arbeitet, sieht genau die Attribute, die dort vorkommen, und nichts von den Zweigen daneben. Was ein Zweig gemeinsam hat,
+/// wandert nach oben, was nur ihm gehört, bleibt unten. Dazu die Ebene (Gruppe, Produkt, Variante: aktiv ab, vererbbar) und die Grösse: eine Gruppe mit weniger als `min`
+/// Attributen geht zum Knoten darüber (sonst entstünden Gruppen mit einem Attribut), eine mit mehr als `max` wird nach Thema geteilt.
+///
+/// `entries`: [{ key, level, positions: Set<id> }] (positions: die Knoten, die das Attribut benutzen). `tree`: { parentOf(id) → id | null, name(id) }.
+/// Liefert { byKey: key → { group, label, activeFrom, inheritable, position }, groups: group → { label, activeFrom, position } }.
+export function placeByPosition(entries, tree, { min = 3, max = 60, themeMin = 5 } = {}) {
+  const pathOf = id => { const p = []; for (let n = id; n != null; n = tree.parentOf(n)) p.unshift(n); return p }
+  const commonOf = ids => {
+    const paths = [...ids].map(pathOf)
+    if (!paths.length) return null
+    let i = 0
+    while (paths.every(p => i < p.length && p[i] === paths[0][i])) i++
+    return i ? paths[0][i - 1] : paths[0][0]
+  }
+  const depth = id => pathOf(id).length
+
+  // Eimer je Knoten und Ebene
+  const buckets = new Map()   // `${position}|${level}` → { position, level, keys }
+  const put = (position, level, key) => { const k = position + '|' + level; if (!buckets.has(k)) buckets.set(k, { position, level, keys: [] }); buckets.get(k).keys.push(key) }
+  const top = commonOf(entries.flatMap(e => [...e.positions]))
+  for (const e of entries) put(commonOf(e.positions) ?? top, e.level, e.key)
+
+  // zu kleine Eimer gehen zum Knoten darüber — Tiefe für Tiefe von unten nach oben: was oben ankommt, wird dort noch einmal geprüft
+  const tiefen = new Map()
+  const tiefeVon = id => { if (!tiefen.has(id)) tiefen.set(id, depth(id)); return tiefen.get(id) }
+  for (let d = Math.max(0, ...[...buckets.values()].map(b => tiefeVon(b.position))); d >= 1; d--) {
+    for (const b of [...buckets.values()].filter(x => tiefeVon(x.position) === d)) {
+      const parent = tree.parentOf(b.position)
+      if (b.keys.length >= min || parent == null) continue
+      buckets.delete(b.position + '|' + b.level)
+      for (const key of b.keys) put(parent, b.level, key)
+    }
+  }
+
+  // Namen: die Ebene steht nur dabei, wo ein Knoten mehrere hat; zu grosse Eimer teilt das Thema
+  const levelsAt = new Map()
+  for (const b of buckets.values()) { if (!levelsAt.has(b.position)) levelsAt.set(b.position, new Set()); levelsAt.get(b.position).add(b.level) }
+  const used = new Set()
+  const unique = k => { let c = k, n = 2; while (used.has(c)) c = `${k}_${n++}`; used.add(c); return c }
+  const byKey = new Map(), groups = new Map()
+  for (const b of [...buckets.values()].sort((x, y) => depth(x.position) - depth(y.position) || x.level - y.level)) {
+    const role = LEVELS[b.level] ?? 'variant'
+    const name = tree.name(b.position)
+    const mitEbene = levelsAt.get(b.position).size > 1
+    const parts = b.keys.length > max ? [...groupBy(b.keys, themesByPrefix(b.keys, themeMin))] : [[null, b.keys]]
+    for (const [theme, keys] of parts) {
+      const word = theme ? theme.label : null
+      const de = [name, word ? `${word.de}${mitEbene ? ` (${LEVEL_LABEL[role].de})` : ''}` : mitEbene ? LEVEL_WORD[role].de : null].filter(Boolean).join(' · ')
+      const en = [name, word ? `${word.en}${mitEbene ? ` (${LEVEL_LABEL[role].en})` : ''}` : mitEbene ? LEVEL_WORD[role].en : null].filter(Boolean).join(' · ')
+      const group = unique([keyOf(name), mitEbene && !word ? role : null, word ? keyOf(theme.group) + (mitEbene ? '_' + role : '') : null].filter(Boolean).join('_'))
+      groups.set(group, { label: { de, en }, activeFrom: b.level > 0 ? role : null, position: b.position })
+      for (const key of keys) byKey.set(key, { group, label: { de, en }, activeFrom: b.level > 0 ? role : null, inheritable: b.level < 2, position: b.position })
+    }
+  }
+  return { byKey, groups }
+}
+
+function groupBy(keys, themes) {
+  const out = new Map()
+  for (const k of keys) { const t = themes.get(k); const g = out.get(t.group) ?? [t, []]; g[1].push(k); out.set(t.group, g) }
+  return [...out.values()]
+}
