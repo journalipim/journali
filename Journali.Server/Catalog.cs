@@ -455,6 +455,9 @@ public sealed class Catalog
     /// <summary>Verbrauch je Zahler, mitgeführt statt bei jedem Eintrag neu summiert — ein Import schreibt Zehntausende.</summary>
     private readonly Dictionary<string, (DateOnly Tag, int Woche, int Monat)> _stand = new();
 
+    /// <summary>Wohin die Zeit eines Stapels ging (Wartezeit auf die Schreibsperre, Anwenden im Speicher, Schreiben ins Journal) — die Konsole nennt es bei einer langsamen Anfrage.</summary>
+    public static volatile string? LetzterStapel;
+
     public delegate Entry Writer(string actor, string stream, string type, object payload, string? batch);
 
     /// <summary>
@@ -467,8 +470,10 @@ public sealed class Catalog
     /// </summary>
     public TResult WithBatch<TResult>(string actor, string? batch, Func<ModelCatalog, Tree, Writer, TResult> action)
     {
+        var uhr = System.Diagnostics.Stopwatch.StartNew();
         lock (_write)
         {
+            var wartete = uhr.ElapsedMilliseconds; uhr.Restart();
             var offen = new List<(string Stream, string Type, string Payload)>();
             var basis = _journal.Head;
             TResult ergebnis;
@@ -490,10 +495,12 @@ public sealed class Catalog
                 throw;
             }
             if (offen.Count == 0) return ergebnis;
+            var anwenden = uhr.ElapsedMilliseconds; uhr.Restart();
             IReadOnlyList<Entry> echte;
             try { echte = _journal.AppendMany(actor, offen, batch); }
             catch { NeuAufbauen(); throw; }
             if (echte.Count != offen.Count || echte[0].Number != basis + 1) NeuAufbauen();
+            LetzterStapel = $"{offen.Count} Einträge: Sperre {wartete} ms, anwenden {anwenden} ms, schreiben {uhr.ElapsedMilliseconds} ms";
             return ergebnis;
         }
     }

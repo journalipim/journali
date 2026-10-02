@@ -192,7 +192,7 @@ app.Use(async (ctx, next) =>
 {
     var uhr = System.Diagnostics.Stopwatch.StartNew();
     try { await next(); }
-    finally { if (uhr.ElapsedMilliseconds >= 300 && ctx.Request.Path.StartsWithSegments("/api")) app.Logger.LogWarning("langsam: {Methode} {Pfad} {Ms} ms ({Status})", ctx.Request.Method, ctx.Request.Path + ctx.Request.QueryString, uhr.ElapsedMilliseconds, ctx.Response.StatusCode); }
+    finally { if (uhr.ElapsedMilliseconds >= 300 && ctx.Request.Path.StartsWithSegments("/api")) app.Logger.LogWarning("langsam: {Methode} {Pfad} {Ms} ms ({Status}){Stapel}", ctx.Request.Method, ctx.Request.Path + ctx.Request.QueryString, uhr.ElapsedMilliseconds, ctx.Response.StatusCode, ctx.Request.Path.Value?.EndsWith("/batch") == true && Catalog.LetzterStapel is { } z ? " · " + z : ""); }
 });
 
 app.UseCors();   // auch im Betrieb: das OnlyOffice-Plugin ruft /api aus dem Editor-Origin; noch keine Anmeldung, daher offen
