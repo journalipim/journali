@@ -67,14 +67,14 @@ export function solr(core, holen = jsonp) {
     if (d.error) throw new Error(`Solr: ${d.error.msg}`)
     return d
   }
-  /// Alle Treffer, seitenweise mit cursorMark; `onPage` meldet den Fortschritt.
+  /// Alle Treffer, seitenweise mit cursorMark; `onPage(bisher, gesamt, seite)` meldet den Fortschritt und gibt die Seite her.
   async function all(q, opts = {}, onPage) {
     const out = []
     let cursor = '*'
     for (;;) {
       const d = await select(q, { ...opts, cursor })
       out.push(...d.response.docs)
-      onPage?.(out.length, d.response.numFound)
+      onPage?.(out.length, d.response.numFound, d.response.docs)
       const next = d.nextCursorMark
       if (!next || next === cursor) return out
       cursor = next

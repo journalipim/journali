@@ -9,10 +9,25 @@
 //     frisch: async () => void                            — Modell und Baum neu holen (nach Modelländerungen)
 //     sag:    text => void                                — eine Zeile Fortschritt
 //     halt?:  async () => void                            — wartet, solange der Lauf pausiert ist
+//     rechte?: { rolle, rights: Set }                     — was die Rolle des Laufs darf (rechteVon); fehlt es, wird nicht geprüft
 //   }
 //
 // Die Abbildung selbst (welcher Solr-Wert wird welches Attribut) steht in solr.js und wird hier nur benutzt.
 import { SYSTEM, roleOf, valueCommands, modelNeeds, DEFAULT_SKIP, relFields, complexIds, relationNeeds, REL_GROUP } from './solr.js'
+
+/// Die Rechte dessen, der den Lauf ausführt (Anwender im Browser, Rolle des Jobs im Prozess). Ein Server ohne Anwender
+/// antwortet nicht — dann gibt es nichts zu prüfen (null).
+export async function rechteVon(api) {
+  try {
+    const me = await api.get('/api/auth/me')
+    return me?.rights ? { rolle: me.role, rights: new Set(me.rights) } : null
+  } catch { return null }
+}
+
+/// Ein Import schreibt Knoten und Werte: ohne das Recht write ist jeder Befehl abgewiesen — das steht vor dem Einlesen fest.
+export function pruefeSchreiben(rechte) {
+  if (rechte && !rechte.rights.has('write')) throw new Error(`Rolle ${rechte.rolle} darf nicht pflegen — der Import schreibt Knoten und Werte.`)
+}
 
 /// Geschwister sortieren: Gruppen, dann Produkte, dann Varianten — dieselbe Reihenfolge wie in der Quelle
 const RANG = { group: 0, product: 1, variant: 2 }
@@ -26,14 +41,28 @@ export const skipListe = (text = '') => [...DEFAULT_SKIP, ...String(text).split(
  * `wurzeln` sind Solr-Ids; `eltern` sagt je Wurzel, unter welchem Solr-Knoten sie hängt (null = ans Ziel).
  */
 export async function plane({ client, umgebung, wurzeln, eltern = new Map(), skip = DEFAULT_SKIP, pdefs = {} }) {
-  const { modell, baum, sag } = umgebung
+  const { modell, baum, sag, rechte } = umgebung
+  pruefeSchreiben(rechte)
   const bekannt = new Map(baum.filter(r => r.external?.[SYSTEM]).map(r => [r.external[SYSTEM], r]))
   const attrs = new Map((modell?.attributes ?? []).map(a => [a.key, a]))
   const gruppen = new Map((modell?.groups ?? []).map(g => [g.key, g]))
 
+  // Darf die Rolle das Modell nicht ändern, scheitert der Import am ersten neuen Attribut oder an der ersten neuen Gruppe: das zeigt
+  // sich schon an der ersten Seite — dann ist das Einlesen der übrigen überflüssig.
+  const ohneModell = rechte && !rechte.rights.has('model')
+  const seiteGeprueft = (n, of, seite) => {
+    sag?.(`lade … ${n}/${of}`)
+    if (!ohneModell || !seite) return
+    const braucht = modelNeeds(seite, attrs, gruppen, pdefs, skip)
+    if (braucht.newAttrs.size || braucht.newGroups.size || braucht.raise.size) {
+      const beispiel = [...braucht.newAttrs.keys()][0] ?? [...braucht.newGroups.keys()][0] ?? [...braucht.raise.keys()][0]
+      throw new Error(`Rolle ${rechte.rolle} darf das Modell nicht ändern — der Import braucht neue Attribute oder Gruppen (zuerst ${beispiel}), nach ${n} von ${of} Knoten abgebrochen.`)
+    }
+  }
+
   const items = []   // { doc, parentId (Solr-Id des Elternknotens oder null), role, top }
   for (const wurzel of wurzeln) {
-    const docs = await client.subtree(wurzel, (n, of) => sag?.(`lade … ${n}/${of}`))
+    const docs = await client.subtree(wurzel, seiteGeprueft)
     const kinder = new Map()
     for (const d of docs) { const k = d.main_parent_id || ''; if (!kinder.has(k)) kinder.set(k, []); kinder.get(k).push(d) }
     for (const l of kinder.values()) byRole(l)

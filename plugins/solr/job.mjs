@@ -11,7 +11,7 @@
 //   JOURNALI_DRY_RUN   "true" = nur analysieren, nichts schreiben
 // Rückgabe 0 = geschrieben, 2 = nichts zu tun, 1 = Abbruch.
 import { solr, holenMitFetch } from './solr.js'
-import { plane, schreibe, planeRelationen, schreibeRelationen, skipListe } from './lauf.mjs'
+import { plane, schreibe, planeRelationen, schreibeRelationen, skipListe, rechteVon, pruefeSchreiben } from './lauf.mjs'
 
 const [, , serverArg, actorArg] = process.argv
 const E = process.env
@@ -106,13 +106,15 @@ async function halt() {
 /// Ein Stapel, der am Kontingent scheitert, ist nichts geschrieben (eine Transaktion) — also warten und ihn wiederholen.
 const istKontingent = e => /Kontingent/i.test(e?.message ?? '')
 
-const umgebung = { api, sag, halt, modell: null, baum: [], frisch: async () => {
+const umgebung = { api, sag, halt, modell: null, baum: [], rechte: null, frisch: async () => {
   umgebung.modell = await api.get('/api/model')
   umgebung.baum = (await api.get('/api/tree')).rows ?? []
 } }
 
 try {
   await umgebung.frisch()
+  umgebung.rechte = await rechteVon(api)
+  pruefeSchreiben(umgebung.rechte)   // vor jedem Einlesen
   const client = solr(base, holen)
   const pdefs = await client.propertyDefs()
   sag(`Quelle ${base} · ${wurzeln.length} Wurzel(n) · Ziel ${ziel ?? 'oberste Ebene'}`)

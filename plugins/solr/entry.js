@@ -117,7 +117,7 @@ function solr(core, holen = jsonp) {
     for (; ; ) {
       const d = await select(q, { ...opts, cursor });
       out.push(...d.response.docs);
-      onPage?.(out.length, d.response.numFound);
+      onPage?.(out.length, d.response.numFound, d.response.docs);
       const next = d.nextCursorMark;
       if (!next || next === cursor) return out;
       cursor = next;
@@ -317,16 +317,30 @@ function relationNeeds(docs, byExt, complexById, existing, model) {
   }
   return { newTypes, newAttrs, needGroup, perNode, stats, missingFrom };
 }
+function pruefeSchreiben(rechte) {
+  if (rechte && !rechte.rights.has("write")) throw new Error(`Rolle ${rechte.rolle} darf nicht pflegen — der Import schreibt Knoten und Werte.`);
+}
 const RANG = { group: 0, product: 1, variant: 2 };
 const byRole = (liste) => liste.sort((a, b) => (RANG[roleOf(a)] ?? 9) - (RANG[roleOf(b)] ?? 9));
 async function plane({ client, umgebung, wurzeln, eltern = /* @__PURE__ */ new Map(), skip = DEFAULT_SKIP, pdefs = {} }) {
-  const { modell, baum, sag } = umgebung;
+  const { modell, baum, sag, rechte } = umgebung;
+  pruefeSchreiben(rechte);
   const bekannt = new Map(baum.filter((r) => r.external?.[SYSTEM]).map((r) => [r.external[SYSTEM], r]));
   const attrs = new Map((modell?.attributes ?? []).map((a) => [a.key, a]));
   const gruppen = new Map((modell?.groups ?? []).map((g) => [g.key, g]));
+  const ohneModell = rechte && !rechte.rights.has("model");
+  const seiteGeprueft = (n, of, seite) => {
+    sag?.(`lade … ${n}/${of}`);
+    if (!ohneModell || !seite) return;
+    const braucht = modelNeeds(seite, attrs, gruppen, pdefs, skip);
+    if (braucht.newAttrs.size || braucht.newGroups.size || braucht.raise.size) {
+      const beispiel = [...braucht.newAttrs.keys()][0] ?? [...braucht.newGroups.keys()][0] ?? [...braucht.raise.keys()][0];
+      throw new Error(`Rolle ${rechte.rolle} darf das Modell nicht ändern — der Import braucht neue Attribute oder Gruppen (zuerst ${beispiel}), nach ${n} von ${of} Knoten abgebrochen.`);
+    }
+  };
   const items = [];
   for (const wurzel of wurzeln) {
-    const docs = await client.subtree(wurzel, (n, of) => sag?.(`lade … ${n}/${of}`));
+    const docs = await client.subtree(wurzel, seiteGeprueft);
     const kinder = /* @__PURE__ */ new Map();
     for (const d of docs) {
       const k = d.main_parent_id || "";
