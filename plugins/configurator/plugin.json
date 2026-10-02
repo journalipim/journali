@@ -6,8 +6,8 @@
     "en": "Configurator"
   },
   "description": {
-    "de": "Regeln, die zu einer Auswahl von Produkten sagen, was zulässig ist und was noch fehlt: Teile stellen Ressourcen bereit oder verbrauchen sie, und Regeln der Form „wenn A, dann B“ verbieten, begrenzen oder verlangen Teile. Die Regeln stehen im Journal, geprüft wird auf dem Server (POST /api/configurator/{key}/check); die Ansicht pflegt die Regeln, prüft Beispiele und hält Testfälle.",
-    "en": "Rules that tell, for a selection of products, what is valid and what is still missing: parts provide or consume resources, and rules of the form \"if A, then B\" forbid, limit or require parts. The rules live in the journal and are checked on the server (POST /api/configurator/{key}/check); the view maintains the rules, checks examples and keeps test cases."
+    "de": "Regeln, die zu einer Auswahl von Produkten sagen, was zulässig ist und was noch fehlt: Teile gehören mit Zeilen zu Konfiguratorgruppen, die summieren, gleiche Werte verlangen oder Mengen und Werte vorgeben, und Regeln der Form „wenn A, dann B“ verbieten, begrenzen oder verlangen Teile. Gruppen und Regeln stehen im Journal, geprüft wird auf dem Server (POST /api/configurator/{key}/check); die Ansicht pflegt Gruppen und Regeln, prüft Beispiele und hält Testfälle; das Band in der Knotenansicht pflegt die Zeilen eines Teils.",
+    "en": "Rules that tell, for a selection of products, what is valid and what is still missing: parts belong with rows to configurator groups, which add up, require equal values or set quantities and values, and rules of the form \"if A, then B\" forbid, limit or require parts. Groups and rules live in the journal and are checked on the server (POST /api/configurator/{key}/check); the view maintains groups and rules, checks examples and keeps test cases; the band in the node view maintains the rows of a part."
   },
   "kind": "tool",
   "runs": "browser",

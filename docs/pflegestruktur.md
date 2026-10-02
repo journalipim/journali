@@ -2420,4 +2420,8 @@ alle Zeilen zu entfernen löscht das Dokument. Die Bedingung einer Zeile kennt d
 werden mit ihr gespeichert. *Prüfen* zeigt die Bilanz mit der Bezeichnung der Gruppe, die Gruppen mit Vorgabe (Teile, Mindest- und Höchstmenge, erlaubte und vorkommende Werte) und an
 einem wählbaren Teil `↑ Gruppe`, wenn es die Summe einer Gruppe im Minus anhebt.
 
-**Offen:** Zeilen am Produkt selbst (ein Band in der Knotenansicht), Gruppen im Tarifblatt (gilt wie das Plugin), mehrere Container in einer Konfiguration (Abschnitt 39).
+**Band am Knoten** (Beitragspunkt `nodeBands`, Rollen Gruppe, Produkt, Variante, gebaut am 02.10.2026): „⚙ Konfiguratorgruppen“ in der Knotenansicht zeigt die Zeilen des Teils als Sätze
+und bearbeitet sie dort, mit demselben Editor wie der Reiter *Gruppen*. Der Kopf nennt die Zahl der Zeilen. Hat der Knoten keine eigenen, stehen die des nächsten Vorfahren da
+(„↑ geerbt von …“); „Eigene Zeilen“ übernimmt sie als Kopie, und eigene ersetzen die geerbten ganz.
+
+**Offen:** Gruppen im Tarifblatt (gilt wie das Plugin), mehrere Container in einer Konfiguration (Abschnitt 39).

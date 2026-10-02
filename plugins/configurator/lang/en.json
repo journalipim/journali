@@ -193,5 +193,17 @@
  "stellt {0} bereit": "provides {0}",
  "verbraucht {0}": "consumes {0}",
  "Wert {0}": "value {0}",
- ", wenn {0}": ", if {0}"
+ ", wenn {0}": ", if {0}",
+ "{0} Zeilen": "{0} rows",
+ "keine": "none",
+ "Keine Zeilen": "No rows",
+ "geerbt von {0}": "inherited from {0}",
+ "Eigene Zeilen ersetzen die geerbten ganz": "Own rows replace the inherited ones entirely",
+ "Die Zeilen dieses Teils bearbeiten": "Edit the rows of this part",
+ "Die geerbten Zeilen als eigene übernehmen und bearbeiten": "Take the inherited rows as own and edit them",
+ "Dieses Teil gehört mit Zeilen zu Gruppen": "This part belongs to groups with rows",
+ "Zeilen": "Rows",
+ "Eigene Zeilen": "Own rows",
+ "Zeile": "Row",
+ "Konfiguratorgruppen": "Configurator groups"
 }

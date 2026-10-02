@@ -1,14 +1,16 @@
-(function(){const s=document.createElement('style');s.textContent="\n.sel[data-v-fbf6a552] { display: inline-flex; flex-wrap: wrap; gap: 4px; align-items: center;\n}\n.wahl[data-v-fbf6a552] { display: inline-flex; align-items: center; gap: 2px;\n}\n.popover[data-v-fbf6a552] { position: fixed; z-index: 1000; width: 340px; overflow: auto; padding: 6px; background: var(--pane); border: 1px solid var(--line); border-radius: 6px; box-shadow: 0 6px 20px rgba(0,0,0,.35);\n}\n.knoten[data-v-fbf6a552] { border: 1px solid var(--line); background: var(--pane); color: var(--text); padding: 1px 8px; cursor: pointer; border-radius: 3px; max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;\n}\n.knoten.leer[data-v-fbf6a552] { color: var(--accent); border-style: dashed;\n}\n.x[data-v-fbf6a552] { border: 0; background: none; color: var(--muted); padding: 0 4px; cursor: pointer;\n}\n.x[data-v-fbf6a552]:hover { color: var(--neg);\n}\n.filter[data-v-fbf6a552] { border: 0; background: none; color: var(--muted); cursor: pointer; font-size: 12px;\n}\n.filter[data-v-fbf6a552]:hover { color: var(--accent);\n}\n.attr[data-v-fbf6a552] { max-width: 160px;\n}\n.cmp[data-v-fbf6a552] { width: 52px;\n}\n.wert[data-v-fbf6a552] { width: 80px;\n}\n\n.cond[data-v-3168b8b5] { display: flex; flex-wrap: wrap; gap: 4px; align-items: center;\n}\n.teil[data-v-3168b8b5] { display: flex; align-items: flex-start; gap: 4px; width: 100%;\n}\n.kind[data-v-3168b8b5] { min-width: 84px;\n}\n.cmp[data-v-3168b8b5] { width: 52px;\n}\n.zahl[data-v-3168b8b5] { width: 64px;\n}\n.res[data-v-3168b8b5] { width: 110px;\n}\n.attr[data-v-3168b8b5] { max-width: 160px;\n}\n.mal[data-v-3168b8b5] { color: var(--muted);\n}\n.plus[data-v-3168b8b5], .x[data-v-3168b8b5] { border: 0; background: none; color: var(--muted); cursor: pointer; padding: 0 4px;\n}\n.plus[data-v-3168b8b5]:hover { color: var(--accent);\n}\n.x[data-v-3168b8b5]:hover { color: var(--neg);\n}\n\n.satz-regel[data-v-fd22fced] { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 14px;\n}\n.zahl[data-v-fd22fced] { width: 56px;\n}\n\n.hilfe[data-v-f8703721] { margin: 0 0 10px;\n}\n.hilfe ul[data-v-f8703721] { margin: 4px 0 0 18px; padding: 0; font-size: 13px; color: var(--muted);\n}\n.regel[data-v-f8703721] { border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; margin: 0 0 8px; background: var(--pane);\n}\n.kopf[data-v-f8703721], .zeile[data-v-f8703721] { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 0 0 6px;\n}\n.kennung[data-v-f8703721] { width: 70px;\n}\n.text[data-v-f8703721] { flex: 1; min-width: 200px;\n}\n.wenn[data-v-f8703721] { display: inline-flex; gap: 4px; align-items: center; width: 52px; color: var(--muted);\n}\n.dann[data-v-f8703721] { width: 52px; color: var(--muted);\n}\n.folge[data-v-f8703721] { min-width: 170px;\n}\n.zahl[data-v-f8703721] { width: 64px;\n}\n.fuss[data-v-f8703721] { display: flex; gap: 8px; align-items: center; margin-top: 4px;\n}\n.satz[data-v-f8703721] { font-size: 12px; flex: 1;\n}\n.x[data-v-f8703721] { border: 0; background: none; color: var(--muted); cursor: pointer; padding: 0 4px;\n}\n.x[data-v-f8703721]:hover:not(:disabled) { color: var(--accent);\n}\n.x[data-v-f8703721]:disabled { opacity: .3; cursor: default;\n}\n.neu[data-v-f8703721] { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 8px;\n}\n.vorlage[data-v-f8703721], .neue-regel[data-v-f8703721] { border: 1px dashed var(--line); background: none; color: var(--muted); padding: 5px 12px; cursor: pointer; border-radius: 6px;\n}\n.vorlage[data-v-f8703721]:hover, .neue-regel[data-v-f8703721]:hover { color: var(--accent); border-color: var(--accent);\n}\n\n.teil[data-v-69623a03] { border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; margin: 8px 0; background: var(--pane);\n}\n.kopf[data-v-69623a03] { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 0 0 8px;\n}\n.grow[data-v-69623a03] { flex: 1;\n}\n.zeile[data-v-69623a03] { margin: 0 0 8px; padding: 0 0 6px; border-bottom: 1px dashed var(--line);\n}\n.felder[data-v-69623a03] { display: flex; flex-wrap: wrap; gap: 6px; align-items: center;\n}\n.grp[data-v-69623a03] { width: 130px;\n}\n.art[data-v-69623a03] { min-width: 90px;\n}\n.zahl[data-v-69623a03] { width: 70px;\n}\n.wert[data-v-69623a03] { width: 110px;\n}\n.werte[data-v-69623a03] { width: 160px;\n}\n.wenn[data-v-69623a03] { display: inline-flex; gap: 4px; align-items: center; color: var(--muted);\n}\n.bedingung[data-v-69623a03] { margin: 6px 0 0 8px; padding-left: 8px; border-left: 2px solid var(--line);\n}\n.satz[data-v-69623a03] { font-size: 12px; margin-top: 4px;\n}\n.neu[data-v-69623a03] { display: flex; gap: 6px;\n}\n.neue-zeile[data-v-69623a03], .neue-vorgabe[data-v-69623a03] { border: 1px dashed var(--line); background: none; color: var(--muted); padding: 4px 12px; cursor: pointer; border-radius: 6px;\n}\n.neue-zeile[data-v-69623a03]:hover, .neue-vorgabe[data-v-69623a03]:hover { color: var(--accent); border-color: var(--accent);\n}\n.x[data-v-69623a03] { border: 0; background: none; color: var(--muted); cursor: pointer; padding: 0 4px;\n}\n.x[data-v-69623a03]:hover { color: var(--neg);\n}\n\n.gruppen[data-v-56b38a7c] { padding: 4px 0;\n}\n.spalten[data-v-56b38a7c] { display: flex; gap: 16px; align-items: flex-start;\n}\n.liste[data-v-56b38a7c] { width: 240px; flex: none;\n}\n.rechts[data-v-56b38a7c] { flex: 1; min-width: 0;\n}\n.neu[data-v-56b38a7c] { display: flex; gap: 6px; margin: 8px 0;\n}\n.neu input[data-v-56b38a7c] { flex: 1; min-width: 0;\n}\n.kopf[data-v-56b38a7c] { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 6px 0;\n}\n.bez[data-v-56b38a7c] { flex: 1; min-width: 160px;\n}\n.gleich[data-v-56b38a7c] { display: inline-flex; gap: 4px; align-items: center; color: var(--muted);\n}\n.fehler[data-v-56b38a7c] { list-style: none; padding-left: 0; margin: 0 0 8px;\n}\n.zusammen[data-v-56b38a7c] { max-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;\n}\n.leer[data-v-56b38a7c] { padding: 6px 0;\n}\n.grenzen[data-v-56b38a7c] { margin-top: 18px;\n}\n.grp[data-v-56b38a7c] { width: 130px;\n}\n.zahl[data-v-56b38a7c] { width: 70px;\n}\n.werte[data-v-56b38a7c] { width: 160px;\n}\n.satz[data-v-56b38a7c] { font-size: 12px;\n}\n.neues-teil[data-v-56b38a7c], .neue-grenze[data-v-56b38a7c] { border: 1px dashed var(--line); background: none; color: var(--muted); padding: 4px 12px; cursor: pointer; border-radius: 6px;\n}\n.neues-teil[data-v-56b38a7c]:hover, .neue-grenze[data-v-56b38a7c]:hover { color: var(--accent); border-color: var(--accent);\n}\n.x[data-v-56b38a7c] { border: 0; background: none; color: var(--muted); cursor: pointer; padding: 0 4px;\n}\n.x[data-v-56b38a7c]:hover { color: var(--neg);\n}\n\n.faelle[data-v-ebd18361] { margin-top: 14px;\n}\n.kopf[data-v-ebd18361] { display: flex; gap: 6px; align-items: center; margin: 4px 0;\n}\n.kopf input[data-v-ebd18361] { flex: 1; min-width: 120px;\n}\n.diff[data-v-ebd18361] { font-size: 12px;\n}\n.x[data-v-ebd18361] { border: 0; background: none; color: var(--muted); cursor: pointer; padding: 0 4px;\n}\n.x[data-v-ebd18361]:hover { color: var(--accent);\n}\n\n.pruef[data-v-a6b54beb] { padding: 8px 0;\n}\n.spalten[data-v-a6b54beb] { display: flex; gap: 16px; align-items: flex-start;\n}\n.links[data-v-a6b54beb] { flex: 1; min-width: 320px;\n}\n.waehlbar[data-v-a6b54beb] { flex: 1; min-width: 320px;\n}\n.eingabe[data-v-a6b54beb] { display: flex; gap: 6px; margin: 4px 0;\n}\n.eingabe input[data-v-a6b54beb] { flex: 1;\n}\n.zahl[data-v-a6b54beb] { width: 60px;\n}\n.status[data-v-a6b54beb] { display: flex; gap: 8px; margin: 10px 0 4px;\n}\n.chip[data-v-a6b54beb] { font-weight: 600;\n}\n.meldungen[data-v-a6b54beb] { margin: 4px 0; padding-left: 16px; list-style: none;\n}\n.hinweis[data-v-a6b54beb] { margin: 0 0 6px;\n}\n.leer[data-v-a6b54beb] { padding: 6px 0;\n}\n.filter[data-v-a6b54beb] { width: 100%; margin: 4px 0;\n}\ntr.gesperrt[data-v-a6b54beb] { opacity: .55; cursor: not-allowed;\n}\ntr[data-v-a6b54beb]:not(.gesperrt) { cursor: pointer;\n}\n.grund[data-v-a6b54beb] { font-size: 12px;\n}\n.bilanz[data-v-a6b54beb] { margin-top: 8px;\n}\n.x[data-v-a6b54beb] { border: 0; background: none; color: var(--muted); cursor: pointer;\n}\n.x[data-v-a6b54beb]:hover { color: var(--neg);\n}\r\n\n.seiten[data-v-0df34234] { display: flex; gap: 16px; align-items: flex-start; padding: 8px 12px; overflow: auto;\n}\n.liste[data-v-0df34234] { width: 240px; flex: none;\n}\n.rechts[data-v-0df34234] { flex: 1; min-width: 0;\n}\n.neu[data-v-0df34234] { display: flex; gap: 6px; margin: 8px 0;\n}\n.neu input[data-v-0df34234] { flex: 1; min-width: 0;\n}\n.kopf[data-v-0df34234] { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 0 0 8px;\n}\n.bez[data-v-0df34234] { flex: 1; min-width: 200px;\n}\n.res[data-v-0df34234] { width: 140px;\n}\n.knoten[data-v-0df34234] { border: 1px solid var(--line); background: var(--pane); color: var(--text); padding: 1px 8px; cursor: pointer; border-radius: 3px; max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;\n}\n.x[data-v-0df34234] { border: 0; background: none; color: var(--muted); cursor: pointer; padding: 0 4px;\n}\n.x[data-v-0df34234]:hover { color: var(--neg);\n}\n.fehler[data-v-0df34234] { list-style: none; padding-left: 0; margin: 0 0 8px;\n}\n.tabs[data-v-0df34234] { display: flex; gap: 4px; margin: 8px 0; border-bottom: 1px solid var(--line);\n}\n.tabs button[data-v-0df34234] { border: 0; border-bottom: 2px solid transparent; background: none; color: var(--muted); padding: 4px 12px; cursor: pointer;\n}\n.tabs button.on[data-v-0df34234] { color: var(--text); border-bottom-color: var(--accent);\n}\n.leer[data-v-0df34234] { padding: 24px;\n}\n";document.head.append(s)})();
+(function(){const s=document.createElement('style');s.textContent="\n.sel[data-v-fbf6a552] { display: inline-flex; flex-wrap: wrap; gap: 4px; align-items: center;\n}\n.wahl[data-v-fbf6a552] { display: inline-flex; align-items: center; gap: 2px;\n}\n.popover[data-v-fbf6a552] { position: fixed; z-index: 1000; width: 340px; overflow: auto; padding: 6px; background: var(--pane); border: 1px solid var(--line); border-radius: 6px; box-shadow: 0 6px 20px rgba(0,0,0,.35);\n}\n.knoten[data-v-fbf6a552] { border: 1px solid var(--line); background: var(--pane); color: var(--text); padding: 1px 8px; cursor: pointer; border-radius: 3px; max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;\n}\n.knoten.leer[data-v-fbf6a552] { color: var(--accent); border-style: dashed;\n}\n.x[data-v-fbf6a552] { border: 0; background: none; color: var(--muted); padding: 0 4px; cursor: pointer;\n}\n.x[data-v-fbf6a552]:hover { color: var(--neg);\n}\n.filter[data-v-fbf6a552] { border: 0; background: none; color: var(--muted); cursor: pointer; font-size: 12px;\n}\n.filter[data-v-fbf6a552]:hover { color: var(--accent);\n}\n.attr[data-v-fbf6a552] { max-width: 160px;\n}\n.cmp[data-v-fbf6a552] { width: 52px;\n}\n.wert[data-v-fbf6a552] { width: 80px;\n}\n\n.cond[data-v-3168b8b5] { display: flex; flex-wrap: wrap; gap: 4px; align-items: center;\n}\n.teil[data-v-3168b8b5] { display: flex; align-items: flex-start; gap: 4px; width: 100%;\n}\n.kind[data-v-3168b8b5] { min-width: 84px;\n}\n.cmp[data-v-3168b8b5] { width: 52px;\n}\n.zahl[data-v-3168b8b5] { width: 64px;\n}\n.res[data-v-3168b8b5] { width: 110px;\n}\n.attr[data-v-3168b8b5] { max-width: 160px;\n}\n.mal[data-v-3168b8b5] { color: var(--muted);\n}\n.plus[data-v-3168b8b5], .x[data-v-3168b8b5] { border: 0; background: none; color: var(--muted); cursor: pointer; padding: 0 4px;\n}\n.plus[data-v-3168b8b5]:hover { color: var(--accent);\n}\n.x[data-v-3168b8b5]:hover { color: var(--neg);\n}\n\n.satz-regel[data-v-fd22fced] { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 14px;\n}\n.zahl[data-v-fd22fced] { width: 56px;\n}\n\n.hilfe[data-v-f8703721] { margin: 0 0 10px;\n}\n.hilfe ul[data-v-f8703721] { margin: 4px 0 0 18px; padding: 0; font-size: 13px; color: var(--muted);\n}\n.regel[data-v-f8703721] { border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; margin: 0 0 8px; background: var(--pane);\n}\n.kopf[data-v-f8703721], .zeile[data-v-f8703721] { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 0 0 6px;\n}\n.kennung[data-v-f8703721] { width: 70px;\n}\n.text[data-v-f8703721] { flex: 1; min-width: 200px;\n}\n.wenn[data-v-f8703721] { display: inline-flex; gap: 4px; align-items: center; width: 52px; color: var(--muted);\n}\n.dann[data-v-f8703721] { width: 52px; color: var(--muted);\n}\n.folge[data-v-f8703721] { min-width: 170px;\n}\n.zahl[data-v-f8703721] { width: 64px;\n}\n.fuss[data-v-f8703721] { display: flex; gap: 8px; align-items: center; margin-top: 4px;\n}\n.satz[data-v-f8703721] { font-size: 12px; flex: 1;\n}\n.x[data-v-f8703721] { border: 0; background: none; color: var(--muted); cursor: pointer; padding: 0 4px;\n}\n.x[data-v-f8703721]:hover:not(:disabled) { color: var(--accent);\n}\n.x[data-v-f8703721]:disabled { opacity: .3; cursor: default;\n}\n.neu[data-v-f8703721] { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 8px;\n}\n.vorlage[data-v-f8703721], .neue-regel[data-v-f8703721] { border: 1px dashed var(--line); background: none; color: var(--muted); padding: 5px 12px; cursor: pointer; border-radius: 6px;\n}\n.vorlage[data-v-f8703721]:hover, .neue-regel[data-v-f8703721]:hover { color: var(--accent); border-color: var(--accent);\n}\n\n.teil[data-v-69623a03] { border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; margin: 8px 0; background: var(--pane);\n}\n.kopf[data-v-69623a03] { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 0 0 8px;\n}\n.grow[data-v-69623a03] { flex: 1;\n}\n.zeile[data-v-69623a03] { margin: 0 0 8px; padding: 0 0 6px; border-bottom: 1px dashed var(--line);\n}\n.felder[data-v-69623a03] { display: flex; flex-wrap: wrap; gap: 6px; align-items: center;\n}\n.grp[data-v-69623a03] { width: 130px;\n}\n.art[data-v-69623a03] { min-width: 90px;\n}\n.zahl[data-v-69623a03] { width: 70px;\n}\n.wert[data-v-69623a03] { width: 110px;\n}\n.werte[data-v-69623a03] { width: 160px;\n}\n.wenn[data-v-69623a03] { display: inline-flex; gap: 4px; align-items: center; color: var(--muted);\n}\n.bedingung[data-v-69623a03] { margin: 6px 0 0 8px; padding-left: 8px; border-left: 2px solid var(--line);\n}\n.satz[data-v-69623a03] { font-size: 12px; margin-top: 4px;\n}\n.neu[data-v-69623a03] { display: flex; gap: 6px;\n}\n.neue-zeile[data-v-69623a03], .neue-vorgabe[data-v-69623a03] { border: 1px dashed var(--line); background: none; color: var(--muted); padding: 4px 12px; cursor: pointer; border-radius: 6px;\n}\n.neue-zeile[data-v-69623a03]:hover, .neue-vorgabe[data-v-69623a03]:hover { color: var(--accent); border-color: var(--accent);\n}\n.x[data-v-69623a03] { border: 0; background: none; color: var(--muted); cursor: pointer; padding: 0 4px;\n}\n.x[data-v-69623a03]:hover { color: var(--neg);\n}\n\n.gruppen[data-v-56b38a7c] { padding: 4px 0;\n}\n.spalten[data-v-56b38a7c] { display: flex; gap: 16px; align-items: flex-start;\n}\n.liste[data-v-56b38a7c] { width: 240px; flex: none;\n}\n.rechts[data-v-56b38a7c] { flex: 1; min-width: 0;\n}\n.neu[data-v-56b38a7c] { display: flex; gap: 6px; margin: 8px 0;\n}\n.neu input[data-v-56b38a7c] { flex: 1; min-width: 0;\n}\n.kopf[data-v-56b38a7c] { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 6px 0;\n}\n.bez[data-v-56b38a7c] { flex: 1; min-width: 160px;\n}\n.gleich[data-v-56b38a7c] { display: inline-flex; gap: 4px; align-items: center; color: var(--muted);\n}\n.fehler[data-v-56b38a7c] { list-style: none; padding-left: 0; margin: 0 0 8px;\n}\n.zusammen[data-v-56b38a7c] { max-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;\n}\n.leer[data-v-56b38a7c] { padding: 6px 0;\n}\n.grenzen[data-v-56b38a7c] { margin-top: 18px;\n}\n.grp[data-v-56b38a7c] { width: 130px;\n}\n.zahl[data-v-56b38a7c] { width: 70px;\n}\n.werte[data-v-56b38a7c] { width: 160px;\n}\n.satz[data-v-56b38a7c] { font-size: 12px;\n}\n.neues-teil[data-v-56b38a7c], .neue-grenze[data-v-56b38a7c] { border: 1px dashed var(--line); background: none; color: var(--muted); padding: 4px 12px; cursor: pointer; border-radius: 6px;\n}\n.neues-teil[data-v-56b38a7c]:hover, .neue-grenze[data-v-56b38a7c]:hover { color: var(--accent); border-color: var(--accent);\n}\n.x[data-v-56b38a7c] { border: 0; background: none; color: var(--muted); cursor: pointer; padding: 0 4px;\n}\n.x[data-v-56b38a7c]:hover { color: var(--neg);\n}\n\n.faelle[data-v-ebd18361] { margin-top: 14px;\n}\n.kopf[data-v-ebd18361] { display: flex; gap: 6px; align-items: center; margin: 4px 0;\n}\n.kopf input[data-v-ebd18361] { flex: 1; min-width: 120px;\n}\n.diff[data-v-ebd18361] { font-size: 12px;\n}\n.x[data-v-ebd18361] { border: 0; background: none; color: var(--muted); cursor: pointer; padding: 0 4px;\n}\n.x[data-v-ebd18361]:hover { color: var(--accent);\n}\n\n.pruef[data-v-a6b54beb] { padding: 8px 0;\n}\n.spalten[data-v-a6b54beb] { display: flex; gap: 16px; align-items: flex-start;\n}\n.links[data-v-a6b54beb] { flex: 1; min-width: 320px;\n}\n.waehlbar[data-v-a6b54beb] { flex: 1; min-width: 320px;\n}\n.eingabe[data-v-a6b54beb] { display: flex; gap: 6px; margin: 4px 0;\n}\n.eingabe input[data-v-a6b54beb] { flex: 1;\n}\n.zahl[data-v-a6b54beb] { width: 60px;\n}\n.status[data-v-a6b54beb] { display: flex; gap: 8px; margin: 10px 0 4px;\n}\n.chip[data-v-a6b54beb] { font-weight: 600;\n}\n.meldungen[data-v-a6b54beb] { margin: 4px 0; padding-left: 16px; list-style: none;\n}\n.hinweis[data-v-a6b54beb] { margin: 0 0 6px;\n}\n.leer[data-v-a6b54beb] { padding: 6px 0;\n}\n.filter[data-v-a6b54beb] { width: 100%; margin: 4px 0;\n}\ntr.gesperrt[data-v-a6b54beb] { opacity: .55; cursor: not-allowed;\n}\ntr[data-v-a6b54beb]:not(.gesperrt) { cursor: pointer;\n}\n.grund[data-v-a6b54beb] { font-size: 12px;\n}\n.bilanz[data-v-a6b54beb] { margin-top: 8px;\n}\n.x[data-v-a6b54beb] { border: 0; background: none; color: var(--muted); cursor: pointer;\n}\n.x[data-v-a6b54beb]:hover { color: var(--neg);\n}\r\n\n.seiten[data-v-0df34234] { display: flex; gap: 16px; align-items: flex-start; padding: 8px 12px; overflow: auto;\n}\n.liste[data-v-0df34234] { width: 240px; flex: none;\n}\n.rechts[data-v-0df34234] { flex: 1; min-width: 0;\n}\n.neu[data-v-0df34234] { display: flex; gap: 6px; margin: 8px 0;\n}\n.neu input[data-v-0df34234] { flex: 1; min-width: 0;\n}\n.kopf[data-v-0df34234] { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 0 0 8px;\n}\n.bez[data-v-0df34234] { flex: 1; min-width: 200px;\n}\n.res[data-v-0df34234] { width: 140px;\n}\n.knoten[data-v-0df34234] { border: 1px solid var(--line); background: var(--pane); color: var(--text); padding: 1px 8px; cursor: pointer; border-radius: 3px; max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;\n}\n.x[data-v-0df34234] { border: 0; background: none; color: var(--muted); cursor: pointer; padding: 0 4px;\n}\n.x[data-v-0df34234]:hover { color: var(--neg);\n}\n.fehler[data-v-0df34234] { list-style: none; padding-left: 0; margin: 0 0 8px;\n}\n.tabs[data-v-0df34234] { display: flex; gap: 4px; margin: 8px 0; border-bottom: 1px solid var(--line);\n}\n.tabs button[data-v-0df34234] { border: 0; border-bottom: 2px solid transparent; background: none; color: var(--muted); padding: 4px 12px; cursor: pointer;\n}\n.tabs button.on[data-v-0df34234] { color: var(--text); border-bottom-color: var(--accent);\n}\n.leer[data-v-0df34234] { padding: 24px;\n}\n\n.konfband[data-v-05d59a55] { padding: 0 0 4px;\n}\n.saetze[data-v-05d59a55] { margin: 0 0 6px; padding-left: 16px;\n}\n.satz[data-v-05d59a55] { font-size: 13px;\n}\n.geerbt[data-v-05d59a55] { margin: 0 0 6px;\n}\n.leiste[data-v-05d59a55] { display: flex; gap: 6px;\n}\n.bearbeiten[data-v-05d59a55] { border: 1px dashed var(--line); background: none; color: var(--muted); padding: 4px 12px; cursor: pointer; border-radius: 6px;\n}\n.bearbeiten[data-v-05d59a55]:hover { color: var(--accent); border-color: var(--accent);\n}\n";document.head.append(s)})();
 const m = window.journali.vue;
 const Fragment = m.Fragment;
 const Teleport = m.Teleport;
 const computed = m.computed;
+const createApp = m.createApp;
 const createBlock = m.createBlock;
 const createCommentVNode = m.createCommentVNode;
 const createElementBlock = m.createElementBlock;
 const createElementVNode = m.createElementVNode;
 const createTextVNode = m.createTextVNode;
 const createVNode = m.createVNode;
+const h$1 = m.h;
 const normalizeClass = m.normalizeClass;
 const normalizeStyle = m.normalizeStyle;
 const onBeforeUnmount = m.onBeforeUnmount;
@@ -269,18 +271,18 @@ const _export_sfc = (sfc, props) => {
   }
   return target;
 };
-const _hoisted_1$8 = { class: "sel" };
-const _hoisted_2$7 = { class: "wahl" };
-const _hoisted_3$7 = ["title"];
-const _hoisted_4$7 = ["title"];
-const _hoisted_5$7 = ["title"];
-const _hoisted_6$7 = ["title"];
-const _hoisted_7$7 = { value: "" };
+const _hoisted_1$9 = { class: "sel" };
+const _hoisted_2$8 = { class: "wahl" };
+const _hoisted_3$8 = ["title"];
+const _hoisted_4$8 = ["title"];
+const _hoisted_5$8 = ["title"];
+const _hoisted_6$8 = ["title"];
+const _hoisted_7$8 = { value: "" };
 const _hoisted_8$7 = ["value"];
 const _hoisted_9$7 = ["value"];
 const _hoisted_10$7 = ["placeholder"];
 const HOEHE = 300;
-const _sfc_main$8 = {
+const _sfc_main$9 = {
   __name: "SelectorEditor",
   props: { sel: { type: Object, required: true }, attributes: { type: Array, default: () => [] }, compact: { type: Boolean, default: false } },
   setup(__props) {
@@ -322,8 +324,8 @@ const _sfc_main$8 = {
     const OP = { "=": "=", "!=": "≠", ">": ">", ">=": "≥", "<": "<", "<=": "≤" };
     const showFilter = () => !props.compact || filterOpen.value;
     return (_ctx, _cache) => {
-      return openBlock(), createElementBlock("span", _hoisted_1$8, [
-        createElementVNode("span", _hoisted_2$7, [
+      return openBlock(), createElementBlock("span", _hoisted_1$9, [
+        createElementVNode("span", _hoisted_2$8, [
           createElementVNode("button", {
             ref_key: "knopf",
             ref: knopf,
@@ -331,14 +333,14 @@ const _sfc_main$8 = {
             class: normalizeClass(["knoten", { leer: !props.sel.node }]),
             title: _ctx.$t("Knoten wählen: ein Produkt, eine Variante oder eine Gruppe mit allem darunter"),
             onClick: oeffnen
-          }, toDisplayString(props.sel.node ? nodeName(props.sel.node) : _ctx.$t("Teil wählen …")), 11, _hoisted_3$7),
+          }, toDisplayString(props.sel.node ? nodeName(props.sel.node) : _ctx.$t("Teil wählen …")), 11, _hoisted_3$8),
           props.sel.node ? (openBlock(), createElementBlock("button", {
             key: 0,
             type: "button",
             class: "x",
             title: _ctx.$t("Knoten entfernen"),
             onClick: _cache[0] || (_cache[0] = ($event) => props.sel.node = "")
-          }, "✕", 8, _hoisted_4$7)) : createCommentVNode("v-if", true),
+          }, "✕", 8, _hoisted_4$8)) : createCommentVNode("v-if", true),
           (openBlock(), createBlock(Teleport, { to: "body" }, [
             open.value ? (openBlock(), createElementBlock(
               "div",
@@ -369,7 +371,7 @@ const _sfc_main$8 = {
           class: "filter",
           title: _ctx.$t("Nur Teile, deren Attribut einen bestimmten Wert hat — etwa Leistung ≥ 850"),
           onClick: _cache[2] || (_cache[2] = ($event) => filterOpen.value = true)
-        }, "＋ " + toDisplayString(_ctx.$t("Filter")), 9, _hoisted_5$7)) : createCommentVNode("v-if", true),
+        }, "＋ " + toDisplayString(_ctx.$t("Filter")), 9, _hoisted_5$8)) : createCommentVNode("v-if", true),
         showFilter() ? (openBlock(), createElementBlock(
           Fragment,
           { key: 1 },
@@ -381,7 +383,7 @@ const _sfc_main$8 = {
             }, [
               createElementVNode(
                 "option",
-                _hoisted_7$7,
+                _hoisted_7$8,
                 toDisplayString(_ctx.$t("— kein Filter —")),
                 1
                 /* TEXT */
@@ -398,7 +400,7 @@ const _sfc_main$8 = {
                 128
                 /* KEYED_FRAGMENT */
               ))
-            ], 8, _hoisted_6$7), [
+            ], 8, _hoisted_6$8), [
               [vModelSelect, props.sel.attribute]
             ]),
             props.sel.attribute ? (openBlock(), createElementBlock(
@@ -449,20 +451,20 @@ const _sfc_main$8 = {
     };
   }
 };
-const SelectorEditor = /* @__PURE__ */ _export_sfc(_sfc_main$8, [["__scopeId", "data-v-fbf6a552"]]);
-const _hoisted_1$7 = ["value", "title"];
-const _hoisted_2$6 = ["value"];
-const _hoisted_3$6 = ["title"];
-const _hoisted_4$6 = ["value"];
-const _hoisted_5$6 = ["title"];
-const _hoisted_6$6 = { value: "" };
-const _hoisted_7$6 = ["value"];
+const SelectorEditor = /* @__PURE__ */ _export_sfc(_sfc_main$9, [["__scopeId", "data-v-fbf6a552"]]);
+const _hoisted_1$8 = ["value", "title"];
+const _hoisted_2$7 = ["value"];
+const _hoisted_3$7 = ["title"];
+const _hoisted_4$7 = ["value"];
+const _hoisted_5$7 = ["title"];
+const _hoisted_6$7 = { value: "" };
+const _hoisted_7$7 = ["value"];
 const _hoisted_8$6 = ["value"];
 const _hoisted_9$6 = ["placeholder"];
 const _hoisted_10$6 = ["value"];
 const _hoisted_11$6 = ["title"];
 const _hoisted_12$6 = ["title", "onClick"];
-const _sfc_main$7 = {
+const _sfc_main$8 = {
   __name: "ConditionEditor",
   props: { cond: { type: Object, required: true }, attributes: { type: Array, default: () => [] }, depth: { type: Number, default: 1 }, kinds: { type: Array, default: () => CONDITION_KINDS } },
   setup(__props) {
@@ -515,12 +517,12 @@ const _sfc_main$7 = {
                 return openBlock(), createElementBlock("option", {
                   key: k,
                   value: k
-                }, toDisplayString(KIND[k]), 9, _hoisted_2$6);
+                }, toDisplayString(KIND[k]), 9, _hoisted_2$7);
               }),
               128
               /* KEYED_FRAGMENT */
             ))
-          ], 40, _hoisted_1$7),
+          ], 40, _hoisted_1$8),
           __props.cond.kind === "has" ? (openBlock(), createElementBlock(
             Fragment,
             { key: 0 },
@@ -557,7 +559,7 @@ const _sfc_main$7 = {
                     { number: true }
                   ]
                 ])
-              ], 8, _hoisted_3$6)
+              ], 8, _hoisted_3$7)
             ],
             64
             /* STABLE_FRAGMENT */
@@ -583,7 +585,7 @@ const _sfc_main$7 = {
                       return openBlock(), createElementBlock("option", {
                         key: c,
                         value: c
-                      }, toDisplayString(OP[c]), 9, _hoisted_4$6);
+                      }, toDisplayString(OP[c]), 9, _hoisted_4$7);
                     }),
                     128
                     /* KEYED_FRAGMENT */
@@ -626,7 +628,7 @@ const _sfc_main$7 = {
               }, [
                 createElementVNode(
                   "option",
-                  _hoisted_6$6,
+                  _hoisted_6$7,
                   toDisplayString(_ctx.$t("— Attribut —")),
                   1
                   /* TEXT */
@@ -638,12 +640,12 @@ const _sfc_main$7 = {
                     return openBlock(), createElementBlock("option", {
                       key: a.key,
                       value: a.key
-                    }, toDisplayString(a.label), 9, _hoisted_7$6);
+                    }, toDisplayString(a.label), 9, _hoisted_7$7);
                   }),
                   128
                   /* KEYED_FRAGMENT */
                 ))
-              ], 8, _hoisted_5$6), [
+              ], 8, _hoisted_5$7), [
                 [vModelSelect, __props.cond.attribute]
               ]),
               createVNode(SelectorEditor, {
@@ -801,14 +803,14 @@ const _sfc_main$7 = {
     };
   }
 };
-const ConditionEditor = /* @__PURE__ */ _export_sfc(_sfc_main$7, [["__scopeId", "data-v-3168b8b5"]]);
-const _hoisted_1$6 = { class: "satz-regel" };
-const _sfc_main$6 = {
+const ConditionEditor = /* @__PURE__ */ _export_sfc(_sfc_main$8, [["__scopeId", "data-v-3168b8b5"]]);
+const _hoisted_1$7 = { class: "satz-regel" };
+const _sfc_main$7 = {
   __name: "RuleSentence",
   props: { rule: { type: Object, required: true }, kind: { type: String, required: true }, attributes: { type: Array, default: () => [] } },
   setup(__props) {
     return (_ctx, _cache) => {
-      return openBlock(), createElementBlock("div", _hoisted_1$6, [
+      return openBlock(), createElementBlock("div", _hoisted_1$7, [
         __props.kind === "excludes" ? (openBlock(), createElementBlock(
           Fragment,
           { key: 0 },
@@ -1020,14 +1022,14 @@ const _sfc_main$6 = {
     };
   }
 };
-const RuleSentence = /* @__PURE__ */ _export_sfc(_sfc_main$6, [["__scopeId", "data-v-fd22fced"]]);
-const _hoisted_1$5 = { class: "regeln" };
-const _hoisted_2$5 = ["open"];
-const _hoisted_3$5 = { class: "muted" };
-const _hoisted_4$5 = { class: "kopf" };
-const _hoisted_5$5 = ["onUpdate:modelValue", "title"];
-const _hoisted_6$5 = ["onUpdate:modelValue", "placeholder", "title"];
-const _hoisted_7$5 = ["title", "disabled", "onClick"];
+const RuleSentence = /* @__PURE__ */ _export_sfc(_sfc_main$7, [["__scopeId", "data-v-fd22fced"]]);
+const _hoisted_1$6 = { class: "regeln" };
+const _hoisted_2$6 = ["open"];
+const _hoisted_3$6 = { class: "muted" };
+const _hoisted_4$6 = { class: "kopf" };
+const _hoisted_5$6 = ["onUpdate:modelValue", "title"];
+const _hoisted_6$6 = ["onUpdate:modelValue", "placeholder", "title"];
+const _hoisted_7$6 = ["title", "disabled", "onClick"];
 const _hoisted_8$5 = ["title", "disabled", "onClick"];
 const _hoisted_9$5 = ["title", "onClick"];
 const _hoisted_10$5 = { class: "zeile" };
@@ -1046,7 +1048,7 @@ const _hoisted_22$4 = { class: "neu" };
 const _hoisted_23$4 = { class: "muted" };
 const _hoisted_24$4 = ["title", "onClick"];
 const _hoisted_25$4 = ["title"];
-const _sfc_main$5 = {
+const _sfc_main$6 = {
   __name: "RuleEditor",
   props: { def: { type: Object, required: true }, attributes: { type: Array, default: () => [] } },
   setup(__props) {
@@ -1085,14 +1087,14 @@ const _sfc_main$5 = {
       r.then.selector = keep;
     }
     return (_ctx, _cache) => {
-      return openBlock(), createElementBlock("div", _hoisted_1$5, [
+      return openBlock(), createElementBlock("div", _hoisted_1$6, [
         createElementVNode("details", {
           class: "hilfe",
           open: !__props.def.rules.length
         }, [
           createElementVNode(
             "summary",
-            _hoisted_3$5,
+            _hoisted_3$6,
             toDisplayString(_ctx.$t("So funktioniert es")),
             1
             /* TEXT */
@@ -1127,7 +1129,7 @@ const _sfc_main$5 = {
               /* TEXT */
             )
           ])
-        ], 8, _hoisted_2$5),
+        ], 8, _hoisted_2$6),
         (openBlock(true), createElementBlock(
           Fragment,
           null,
@@ -1136,12 +1138,12 @@ const _sfc_main$5 = {
               key: i,
               class: "regel"
             }, [
-              createElementVNode("div", _hoisted_4$5, [
+              createElementVNode("div", _hoisted_4$6, [
                 withDirectives(createElementVNode("input", {
                   "onUpdate:modelValue": ($event) => r.id = $event,
                   class: "kennung",
                   title: _ctx.$t("Kennung der Regel — je Konfigurator einmal")
-                }, null, 8, _hoisted_5$5), [
+                }, null, 8, _hoisted_5$6), [
                   [vModelText, r.id]
                 ]),
                 withDirectives(createElementVNode("input", {
@@ -1149,7 +1151,7 @@ const _sfc_main$5 = {
                   class: "text",
                   placeholder: sentence(r),
                   title: _ctx.$t("Meldung, wenn die Regel verletzt ist — leer: der Satz unten")
-                }, null, 8, _hoisted_6$5), [
+                }, null, 8, _hoisted_6$6), [
                   [vModelText, r.text]
                 ]),
                 createElementVNode("button", {
@@ -1158,7 +1160,7 @@ const _sfc_main$5 = {
                   title: _ctx.$t("nach oben"),
                   disabled: i === 0,
                   onClick: ($event) => move(i, -1)
-                }, "↑", 8, _hoisted_7$5),
+                }, "↑", 8, _hoisted_7$6),
                 createElementVNode("button", {
                   type: "button",
                   class: "x",
@@ -1324,17 +1326,17 @@ const _sfc_main$5 = {
     };
   }
 };
-const RuleEditor = /* @__PURE__ */ _export_sfc(_sfc_main$5, [["__scopeId", "data-v-f8703721"]]);
-const _hoisted_1$4 = { class: "teil" };
-const _hoisted_2$4 = { class: "kopf" };
-const _hoisted_3$4 = { class: "name" };
-const _hoisted_4$4 = {
+const RuleEditor = /* @__PURE__ */ _export_sfc(_sfc_main$6, [["__scopeId", "data-v-f8703721"]]);
+const _hoisted_1$5 = { class: "teil" };
+const _hoisted_2$5 = { class: "kopf" };
+const _hoisted_3$5 = { class: "name" };
+const _hoisted_4$5 = {
   key: 0,
   class: "muted id"
 };
-const _hoisted_5$4 = ["disabled", "title"];
-const _hoisted_6$4 = ["title"];
-const _hoisted_7$4 = ["title"];
+const _hoisted_5$5 = ["disabled", "title"];
+const _hoisted_6$5 = ["title"];
+const _hoisted_7$5 = ["title"];
 const _hoisted_8$4 = { class: "felder" };
 const _hoisted_9$4 = ["onUpdate:modelValue", "placeholder", "title"];
 const _hoisted_10$4 = ["value", "title", "onChange"];
@@ -1359,7 +1361,7 @@ const _hoisted_25$3 = ["title"];
 const _hoisted_26$2 = ["title"];
 const _hoisted_27$2 = { id: "kg-gruppen" };
 const _hoisted_28$2 = ["value"];
-const _sfc_main$4 = {
+const _sfc_main$5 = {
   __name: "MemberEditor",
   props: {
     edit: { type: Object, required: true },
@@ -1392,18 +1394,18 @@ const _sfc_main$4 = {
     const add = (art) => props.edit.rows.push(newRow(art, props.edit.rows.at(-1)?.group ?? ""));
     const remove = (i) => props.edit.rows.splice(i, 1);
     return (_ctx, _cache) => {
-      return openBlock(), createElementBlock("div", _hoisted_1$4, [
-        createElementVNode("div", _hoisted_2$4, [
+      return openBlock(), createElementBlock("div", _hoisted_1$5, [
+        createElementVNode("div", _hoisted_2$5, [
           createElementVNode(
             "strong",
-            _hoisted_3$4,
+            _hoisted_3$5,
             toDisplayString(name.value),
             1
             /* TEXT */
           ),
           name.value !== __props.edit.node ? (openBlock(), createElementBlock(
             "span",
-            _hoisted_4$4,
+            _hoisted_4$5,
             toDisplayString(__props.edit.node),
             1
             /* TEXT */
@@ -1421,19 +1423,19 @@ const _sfc_main$4 = {
             disabled: !__props.dirty || !complete.value,
             title: complete.value ? "" : _ctx.$t("Jede Zeile braucht eine Gruppe (a–z, 0–9, _ und -)"),
             onClick: _cache[0] || (_cache[0] = ($event) => emit("save"))
-          }, toDisplayString(_ctx.$t("Speichern")), 9, _hoisted_5$4),
+          }, toDisplayString(_ctx.$t("Speichern")), 9, _hoisted_5$5),
           createElementVNode("button", {
             type: "button",
             class: "x entfernen",
             title: _ctx.$t("Alle Zeilen dieses Teils entfernen"),
             onClick: _cache[1] || (_cache[1] = ($event) => emit("remove"))
-          }, "✕", 8, _hoisted_6$4),
+          }, "✕", 8, _hoisted_6$5),
           createElementVNode("button", {
             type: "button",
             class: "x schliessen",
             title: _ctx.$t("Schliessen"),
             onClick: _cache[2] || (_cache[2] = ($event) => emit("close"))
-          }, "–", 8, _hoisted_7$4)
+          }, "–", 8, _hoisted_7$5)
         ]),
         (openBlock(true), createElementBlock(
           Fragment,
@@ -1637,20 +1639,20 @@ const _sfc_main$4 = {
     };
   }
 };
-const MemberEditor = /* @__PURE__ */ _export_sfc(_sfc_main$4, [["__scopeId", "data-v-69623a03"]]);
-const _hoisted_1$3 = { class: "gruppen" };
-const _hoisted_2$3 = {
+const MemberEditor = /* @__PURE__ */ _export_sfc(_sfc_main$5, [["__scopeId", "data-v-69623a03"]]);
+const _hoisted_1$4 = { class: "gruppen" };
+const _hoisted_2$4 = {
   key: 0,
   class: "neg fehler"
 };
-const _hoisted_3$3 = {
+const _hoisted_3$4 = {
   key: 1,
   class: "fehler neg"
 };
-const _hoisted_4$3 = { class: "spalten" };
-const _hoisted_5$3 = { class: "liste" };
-const _hoisted_6$3 = { class: "step-band" };
-const _hoisted_7$3 = { class: "grid" };
+const _hoisted_4$4 = { class: "spalten" };
+const _hoisted_5$4 = { class: "liste" };
+const _hoisted_6$4 = { class: "step-band" };
+const _hoisted_7$4 = { class: "grid" };
 const _hoisted_8$3 = ["onClick"];
 const _hoisted_9$3 = {
   key: 0,
@@ -1701,7 +1703,7 @@ const _hoisted_39 = ["title"];
 const _hoisted_40 = { class: "muted" };
 const _hoisted_41 = { id: "kg-gruppen-grenzen" };
 const _hoisted_42 = ["value"];
-const _sfc_main$3 = {
+const _sfc_main$4 = {
   __name: "Groups",
   props: { def: { type: Object, required: true }, attributes: { type: Array, default: () => [] } },
   setup(__props) {
@@ -1835,15 +1837,15 @@ const _sfc_main$3 = {
     };
     const removeLimit = (i) => props.def.limits.splice(i, 1);
     return (_ctx, _cache) => {
-      return openBlock(), createElementBlock("div", _hoisted_1$3, [
+      return openBlock(), createElementBlock("div", _hoisted_1$4, [
         busy.value ? (openBlock(), createElementBlock(
           "div",
-          _hoisted_2$3,
+          _hoisted_2$4,
           toDisplayString(busy.value),
           1
           /* TEXT */
         )) : createCommentVNode("v-if", true),
-        errors.value.length ? (openBlock(), createElementBlock("ul", _hoisted_3$3, [
+        errors.value.length ? (openBlock(), createElementBlock("ul", _hoisted_3$4, [
           (openBlock(true), createElementBlock(
             Fragment,
             null,
@@ -1860,16 +1862,16 @@ const _sfc_main$3 = {
             /* KEYED_FRAGMENT */
           ))
         ])) : createCommentVNode("v-if", true),
-        createElementVNode("div", _hoisted_4$3, [
-          createElementVNode("div", _hoisted_5$3, [
+        createElementVNode("div", _hoisted_4$4, [
+          createElementVNode("div", _hoisted_5$4, [
             createElementVNode(
               "div",
-              _hoisted_6$3,
+              _hoisted_6$4,
               toDisplayString(_ctx.$t("Gruppen")) + " · " + toDisplayString(groups.value.length),
               1
               /* TEXT */
             ),
-            createElementVNode("table", _hoisted_7$3, [
+            createElementVNode("table", _hoisted_7$4, [
               createElementVNode("tbody", null, [
                 (openBlock(true), createElementBlock(
                   Fragment,
@@ -2214,14 +2216,14 @@ const _sfc_main$3 = {
     };
   }
 };
-const Groups = /* @__PURE__ */ _export_sfc(_sfc_main$3, [["__scopeId", "data-v-56b38a7c"]]);
-const _hoisted_1$2 = { class: "faelle" };
-const _hoisted_2$2 = { class: "step-band" };
-const _hoisted_3$2 = { class: "kopf" };
-const _hoisted_4$2 = ["placeholder"];
-const _hoisted_5$2 = ["disabled", "title"];
-const _hoisted_6$2 = ["disabled", "title"];
-const _hoisted_7$2 = {
+const Groups = /* @__PURE__ */ _export_sfc(_sfc_main$4, [["__scopeId", "data-v-56b38a7c"]]);
+const _hoisted_1$3 = { class: "faelle" };
+const _hoisted_2$3 = { class: "step-band" };
+const _hoisted_3$3 = { class: "kopf" };
+const _hoisted_4$3 = ["placeholder"];
+const _hoisted_5$3 = ["disabled", "title"];
+const _hoisted_6$3 = ["disabled", "title"];
+const _hoisted_7$3 = {
   key: 0,
   class: "grid"
 };
@@ -2233,7 +2235,7 @@ const _hoisted_9$2 = {
 const _hoisted_10$2 = { style: { "width": "56px", "text-align": "right", "white-space": "nowrap" } };
 const _hoisted_11$2 = ["title", "onClick"];
 const _hoisted_12$2 = ["title", "onClick"];
-const _sfc_main$2 = {
+const _sfc_main$3 = {
   __name: "Cases",
   props: { configurator: { type: String, required: true }, selection: { type: Array, default: () => [] }, result: { type: Object, default: null } },
   emits: ["load"],
@@ -2307,20 +2309,20 @@ const _sfc_main$2 = {
       return !o ? "" : o.error ?? o.differences.map(difference).join(" · ");
     };
     return (_ctx, _cache) => {
-      return openBlock(), createElementBlock("div", _hoisted_1$2, [
+      return openBlock(), createElementBlock("div", _hoisted_1$3, [
         createElementVNode(
           "div",
-          _hoisted_2$2,
+          _hoisted_2$3,
           toDisplayString(_ctx.$t("Testfälle")) + " · " + toDisplayString(rows.value.length),
           1
           /* TEXT */
         ),
-        createElementVNode("div", _hoisted_3$2, [
+        createElementVNode("div", _hoisted_3$3, [
           withDirectives(createElementVNode("input", {
             "onUpdate:modelValue": _cache[0] || (_cache[0] = ($event) => newName.value = $event),
             placeholder: _ctx.$t("Name des Testfalls"),
             onKeydown: withKeys(save, ["enter"])
-          }, null, 40, _hoisted_4$2), [
+          }, null, 40, _hoisted_4$3), [
             [vModelText, newName.value]
           ]),
           createElementVNode("button", {
@@ -2328,7 +2330,7 @@ const _sfc_main$2 = {
             disabled: !canSave.value,
             title: _ctx.$t("Die Auswahl mit dem jetzigen Ergebnis als Testfall merken"),
             onClick: save
-          }, toDisplayString(_ctx.$t("Speichern")), 9, _hoisted_5$2),
+          }, toDisplayString(_ctx.$t("Speichern")), 9, _hoisted_5$3),
           _cache[1] || (_cache[1] = createElementVNode(
             "span",
             { class: "grow" },
@@ -2360,9 +2362,9 @@ const _sfc_main$2 = {
               64
               /* STABLE_FRAGMENT */
             )) : createCommentVNode("v-if", true)
-          ], 8, _hoisted_6$2)
+          ], 8, _hoisted_6$3)
         ]),
-        rows.value.length ? (openBlock(), createElementBlock("table", _hoisted_7$2, [
+        rows.value.length ? (openBlock(), createElementBlock("table", _hoisted_7$3, [
           createElementVNode("tbody", null, [
             (openBlock(true), createElementBlock(
               Fragment,
@@ -2427,20 +2429,20 @@ const _sfc_main$2 = {
     };
   }
 };
-const Cases = /* @__PURE__ */ _export_sfc(_sfc_main$2, [["__scopeId", "data-v-ebd18361"]]);
-const _hoisted_1$1 = { class: "pruef" };
-const _hoisted_2$1 = {
+const Cases = /* @__PURE__ */ _export_sfc(_sfc_main$3, [["__scopeId", "data-v-ebd18361"]]);
+const _hoisted_1$2 = { class: "pruef" };
+const _hoisted_2$2 = {
   key: 0,
   class: "hinweis muted"
 };
-const _hoisted_3$1 = {
+const _hoisted_3$2 = {
   key: 1,
   class: "neg fehler"
 };
-const _hoisted_4$1 = { class: "spalten" };
-const _hoisted_5$1 = { class: "links" };
-const _hoisted_6$1 = { class: "step-band" };
-const _hoisted_7$1 = ["placeholder", "title"];
+const _hoisted_4$2 = { class: "spalten" };
+const _hoisted_5$2 = { class: "links" };
+const _hoisted_6$2 = { class: "step-band" };
+const _hoisted_7$2 = ["placeholder", "title"];
 const _hoisted_8$1 = ["disabled"];
 const _hoisted_9$1 = {
   key: 0,
@@ -2504,7 +2506,7 @@ const _hoisted_37 = {
   key: 0,
   class: "muted grund"
 };
-const _sfc_main$1 = {
+const _sfc_main$2 = {
   __name: "CheckPanel",
   props: { configurator: { type: String, required: true }, unsaved: { type: Boolean, default: false } },
   setup(__props) {
@@ -2563,26 +2565,26 @@ const _sfc_main$1 = {
     const reasonText = (c) => (c.reasons ?? []).map((r) => r.text).join(" · ");
     const affects = (v) => (v.affects ?? []).map(name).join(", ");
     return (_ctx, _cache) => {
-      return openBlock(), createElementBlock("div", _hoisted_1$1, [
+      return openBlock(), createElementBlock("div", _hoisted_1$2, [
         __props.unsaved ? (openBlock(), createElementBlock(
           "div",
-          _hoisted_2$1,
+          _hoisted_2$2,
           toDisplayString(_ctx.$t("Ungespeicherte Änderungen — geprüft wird der gespeicherte Stand")),
           1
           /* TEXT */
         )) : createCommentVNode("v-if", true),
         error.value ? (openBlock(), createElementBlock(
           "div",
-          _hoisted_3$1,
+          _hoisted_3$2,
           "✗ " + toDisplayString(error.value),
           1
           /* TEXT */
         )) : createCommentVNode("v-if", true),
-        createElementVNode("div", _hoisted_4$1, [
-          createElementVNode("div", _hoisted_5$1, [
+        createElementVNode("div", _hoisted_4$2, [
+          createElementVNode("div", _hoisted_5$2, [
             createElementVNode(
               "div",
-              _hoisted_6$1,
+              _hoisted_6$2,
               toDisplayString(_ctx.$t("Auswahl")) + " · " + toDisplayString(selection.value.reduce((n, s) => n + s.amount, 0)),
               1
               /* TEXT */
@@ -2598,7 +2600,7 @@ const _sfc_main$1 = {
                   "onUpdate:modelValue": _cache[0] || (_cache[0] = ($event) => input.value = $event),
                   placeholder: _ctx.$t("Id oder SKU"),
                   title: _ctx.$t("Id eines Knotens oder der eindeutige Wert eines Attributs, wie ein Shop ihn schickt")
-                }, null, 8, _hoisted_7$1), [
+                }, null, 8, _hoisted_7$2), [
                   [vModelText, input.value]
                 ]),
                 createElementVNode("button", {
@@ -2979,17 +2981,17 @@ const _sfc_main$1 = {
     };
   }
 };
-const CheckPanel = /* @__PURE__ */ _export_sfc(_sfc_main$1, [["__scopeId", "data-v-a6b54beb"]]);
-const _hoisted_1 = {
+const CheckPanel = /* @__PURE__ */ _export_sfc(_sfc_main$2, [["__scopeId", "data-v-a6b54beb"]]);
+const _hoisted_1$1 = {
   class: "pane",
   style: { "flex": "1" }
 };
-const _hoisted_2 = { class: "toolbar" };
-const _hoisted_3 = { class: "seiten" };
-const _hoisted_4 = { class: "liste" };
-const _hoisted_5 = { class: "step-band" };
-const _hoisted_6 = { class: "grid" };
-const _hoisted_7 = ["onClick"];
+const _hoisted_2$1 = { class: "toolbar" };
+const _hoisted_3$1 = { class: "seiten" };
+const _hoisted_4$1 = { class: "liste" };
+const _hoisted_5$1 = { class: "step-band" };
+const _hoisted_6$1 = { class: "grid" };
+const _hoisted_7$1 = ["onClick"];
 const _hoisted_8 = { class: "muted" };
 const _hoisted_9 = ["title"];
 const _hoisted_10 = ["title"];
@@ -3017,7 +3019,7 @@ const _hoisted_25 = {
   key: 1,
   class: "rechts muted leer"
 };
-const _sfc_main = {
+const _sfc_main$1 = {
   __name: "View",
   setup(__props) {
     const list = ref([]);
@@ -3101,8 +3103,8 @@ const _sfc_main = {
       }
     }
     return (_ctx, _cache) => {
-      return openBlock(), createElementBlock("div", _hoisted_1, [
-        createElementVNode("div", _hoisted_2, [
+      return openBlock(), createElementBlock("div", _hoisted_1$1, [
+        createElementVNode("div", _hoisted_2$1, [
           createElementVNode(
             "h1",
             null,
@@ -3127,16 +3129,16 @@ const _sfc_main = {
             /* TEXT, CLASS */
           )
         ]),
-        createElementVNode("div", _hoisted_3, [
-          createElementVNode("div", _hoisted_4, [
+        createElementVNode("div", _hoisted_3$1, [
+          createElementVNode("div", _hoisted_4$1, [
             createElementVNode(
               "div",
-              _hoisted_5,
+              _hoisted_5$1,
               toDisplayString(_ctx.$t("Konfiguratoren")) + " · " + toDisplayString(list.value.length),
               1
               /* TEXT */
             ),
-            createElementVNode("table", _hoisted_6, [
+            createElementVNode("table", _hoisted_6$1, [
               createElementVNode("tbody", null, [
                 (openBlock(true), createElementBlock(
                   Fragment,
@@ -3172,7 +3174,7 @@ const _sfc_main = {
                         class: normalizeClass(c.errors ? "neg" : ""),
                         title: c.errors ? _ctx.$t("Die Definition hat Fehler") : ""
                       }, toDisplayString(c.errors ? "✗" : ""), 11, _hoisted_10)
-                    ], 10, _hoisted_7);
+                    ], 10, _hoisted_7$1);
                   }),
                   128
                   /* KEYED_FRAGMENT */
@@ -3346,9 +3348,187 @@ const _sfc_main = {
     };
   }
 };
-const View = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-0df34234"]]);
+const View = /* @__PURE__ */ _export_sfc(_sfc_main$1, [["__scopeId", "data-v-0df34234"]]);
+const _hoisted_1 = { class: "konfband" };
+const _hoisted_2 = {
+  key: 0,
+  class: "neg"
+};
+const _hoisted_3 = {
+  key: 0,
+  class: "saetze"
+};
+const _hoisted_4 = {
+  key: 1,
+  class: "muted keine"
+};
+const _hoisted_5 = ["title"];
+const _hoisted_6 = { class: "leiste" };
+const _hoisted_7 = ["title"];
+const _sfc_main = {
+  __name: "Band",
+  props: { nodeId: String },
+  emits: ["kopf"],
+  setup(__props, { emit: __emit }) {
+    const props = __props;
+    const emit = __emit;
+    const own = ref(null);
+    const inherited = ref(null);
+    const groups = ref([]);
+    const edit = ref(null);
+    const base = ref("");
+    const error = ref("");
+    const attributes = computed(() => (store.model?.attributes ?? []).map((a) => ({ key: a.key, label: L(a.label) || a.key })));
+    const nameOf = (id) => tree.byId?.get(id)?.label ?? id;
+    const rows = computed(() => own.value ?? inherited.value?.rows ?? []);
+    const dirty = computed(() => !!edit.value && JSON.stringify(cleanRows(edit.value.rows)) !== base.value);
+    const ctx = computed(() => ({
+      t,
+      nodeName: nameOf,
+      attributeName: (k) => attributes.value.find((a) => a.key === k)?.label ?? k,
+      groupName: (k) => groups.value.find((g) => g.key === k)?.label || k
+    }));
+    const sentence = (r) => describeRow(r, ctx.value);
+    const doc = (id) => `/api/plugins/configurator/data/${encodeURIComponent("member:" + id)}`;
+    const clone = (x) => JSON.parse(JSON.stringify(x));
+    async function read() {
+      error.value = "";
+      edit.value = null;
+      try {
+        const [names, defined] = await Promise.all([
+          api.get("/api/plugins/configurator/data?prefix=" + encodeURIComponent("member:")),
+          api.get("/api/plugins/configurator/data?prefix=" + encodeURIComponent("group:") + "&values=true")
+        ]);
+        const have = new Set((names ?? []).map((n) => n.slice("member:".length)));
+        groups.value = Object.entries(defined ?? {}).map(([n, v]) => ({ key: n.slice("group:".length), label: v?.label ?? null }));
+        own.value = have.has(props.nodeId) ? (await api.get(doc(props.nodeId)))?.rows ?? [] : null;
+        inherited.value = null;
+        if (own.value === null) {
+          for (const a of [...tree.ancestors?.(props.nodeId) ?? []].reverse())
+            if (have.has(a.id)) {
+              inherited.value = { from: a.id, rows: (await api.get(doc(a.id)))?.rows ?? [] };
+              break;
+            }
+        }
+        emit("kopf", own.value ? "· " + t("{0} Zeilen", [own.value.length]) : inherited.value ? "· " + t("{0} Zeilen", [inherited.value.rows.length]) + " ↑ " + nameOf(inherited.value.from) : "· " + t("keine"));
+      } catch (e) {
+        error.value = e.message;
+        emit("kopf", "· ✗ " + e.message);
+      }
+    }
+    onMounted(read);
+    watch(() => props.nodeId, read);
+    function open() {
+      const copy = clone(own.value ?? inherited.value?.rows ?? []);
+      edit.value = { node: props.nodeId, rows: copy.length ? copy : [newRow("member")] };
+      base.value = own.value ? JSON.stringify(cleanRows(copy)) : "[]";
+    }
+    async function save() {
+      const list = cleanRows(edit.value.rows);
+      try {
+        if (list.length) await api.post(doc(props.nodeId), { rows: list }, "PUT");
+        else await api.del(doc(props.nodeId));
+        store.toast(t("Gespeichert"), "ok");
+        await read();
+      } catch (e) {
+        store.toast(e.message);
+      }
+    }
+    async function remove() {
+      if (own.value === null) {
+        edit.value = null;
+        return;
+      }
+      const ok = await dialog.confirm({ title: t("Zeilen entfernen"), text: t("{0} — alle Zeilen dieses Teils.", [nameOf(props.nodeId)]), ok: t("Entfernen"), danger: true });
+      if (!ok) return;
+      try {
+        await api.del(doc(props.nodeId));
+        await read();
+      } catch (e) {
+        store.toast(e.message);
+      }
+    }
+    return (_ctx, _cache) => {
+      return openBlock(), createElementBlock("div", _hoisted_1, [
+        error.value ? (openBlock(), createElementBlock(
+          "div",
+          _hoisted_2,
+          "✗ " + toDisplayString(error.value),
+          1
+          /* TEXT */
+        )) : createCommentVNode("v-if", true),
+        !edit.value ? (openBlock(), createElementBlock(
+          Fragment,
+          { key: 1 },
+          [
+            rows.value.length ? (openBlock(), createElementBlock("ul", _hoisted_3, [
+              (openBlock(true), createElementBlock(
+                Fragment,
+                null,
+                renderList(rows.value, (r, i) => {
+                  return openBlock(), createElementBlock(
+                    "li",
+                    {
+                      key: i,
+                      class: "satz"
+                    },
+                    toDisplayString(sentence(r)),
+                    1
+                    /* TEXT */
+                  );
+                }),
+                128
+                /* KEYED_FRAGMENT */
+              ))
+            ])) : (openBlock(), createElementBlock(
+              "div",
+              _hoisted_4,
+              toDisplayString(_ctx.$t("Keine Zeilen")),
+              1
+              /* TEXT */
+            )),
+            inherited.value ? (openBlock(), createElementBlock("div", {
+              key: 2,
+              class: "muted geerbt",
+              title: _ctx.$t("Eigene Zeilen ersetzen die geerbten ganz")
+            }, "↑ " + toDisplayString(_ctx.$t("geerbt von {0}", [nameOf(inherited.value.from)])), 9, _hoisted_5)) : createCommentVNode("v-if", true),
+            createElementVNode("div", _hoisted_6, [
+              createElementVNode("button", {
+                type: "button",
+                class: "bearbeiten",
+                title: own.value ? _ctx.$t("Die Zeilen dieses Teils bearbeiten") : inherited.value ? _ctx.$t("Die geerbten Zeilen als eigene übernehmen und bearbeiten") : _ctx.$t("Dieses Teil gehört mit Zeilen zu Gruppen"),
+                onClick: open
+              }, toDisplayString(own.value ? "✎ " + _ctx.$t("Zeilen") : inherited.value ? "✎ " + _ctx.$t("Eigene Zeilen") : "＋ " + _ctx.$t("Zeile")), 9, _hoisted_7)
+            ])
+          ],
+          64
+          /* STABLE_FRAGMENT */
+        )) : (openBlock(), createBlock(MemberEditor, {
+          key: 2,
+          edit: edit.value,
+          groups: groups.value,
+          attributes: attributes.value,
+          dirty: dirty.value,
+          onSave: save,
+          onRemove: remove,
+          onClose: _cache[0] || (_cache[0] = ($event) => edit.value = null)
+        }, null, 8, ["edit", "groups", "attributes", "dirty"]))
+      ]);
+    };
+  }
+};
+const Band = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-05d59a55"]]);
+async function bandMount({ head, body }, nodeId) {
+  const app = createApp({ render: () => h$1(Band, { nodeId, onKopf: (text2) => {
+    head.textContent = text2;
+  } }) });
+  app.config.globalProperties.$t = t;
+  app.mount(body);
+  return () => app.unmount();
+}
 const entry = {
-  views: [{ path: "regeln", topic: "tools", label: t("Konfigurator"), icon: "⚙", hint: t("Regeln, die zu einer Auswahl von Produkten sagen, was zulässig ist und was fehlt — mit Beispielen und Testfällen"), component: View }]
+  views: [{ path: "regeln", topic: "tools", label: t("Konfigurator"), icon: "⚙", hint: t("Regeln, die zu einer Auswahl von Produkten sagen, was zulässig ist und was fehlt — mit Beispielen und Testfällen"), component: View }],
+  nodeBands: [{ key: "gruppen", label: t("Konfiguratorgruppen"), icon: "⚙", roles: ["group", "product", "variant"], mount: bandMount }]
 };
 export {
   entry as default
