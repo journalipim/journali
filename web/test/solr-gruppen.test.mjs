@@ -6,7 +6,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 
-const { humanize, themeOf, themesByPrefix, groupsByLevel, placeByPosition, WEITERE } = await import('../../plugins/table/anlage.mjs')
+const { humanize, themeOf, themesByPrefix, groupsByLevel, placeByPosition, lexicon, restoreUmlauts, WEITERE } = await import('../../plugins/table/anlage.mjs')
 const { modelNeeds, valueCommands, inheritedValues } = await import('../../plugins/solr/solr.js')
 const { plane, ordneNeu } = await import('../../plugins/solr/lauf.mjs')
 
@@ -329,4 +329,45 @@ test('der Lauf hängt die Gruppen an die Gruppenknoten: neue Knoten im Stapel, v
   assert.deepEqual(anKnoten(refs.b), ['bohren_product', 'bohren_variant'])
   assert.deepEqual(anKnoten(refs.r), ['stamm'], 'an der Wurzel hängt, was schon galt — keine neue Gruppe')
   assert.equal(anKnoten(refs.pa), undefined, 'an Produkten und Varianten hängt nichts')
+})
+
+// ---- Umlaute in Namen: nur, was belegt ist
+
+test('restoreUmlauts: ein Wort aus der Liste, sein Anfang oder sein Ende wird mit Umlaut geschrieben — alles andere bleibt', () => {
+  const lex = lexicon([])
+  assert.equal(restoreUmlauts('fuer', lex), 'für'); assert.equal(restoreUmlauts('ueber', lex), 'über'); assert.equal(restoreUmlauts('hoehe', lex), 'höhe')
+  assert.equal(restoreUmlauts('schluesselweite', lex), 'schlüsselweite', 'Anfang: schluessel + weite')
+  assert.equal(restoreUmlauts('gesamtlaenge', lex), 'gesamtlänge', 'Ende: gesamt + laenge')
+  for (const w of ['quelle', 'neue', 'dauer', 'aktuell', 'masse', 'blue', 'fuerst'.slice(0, 0) + 'durchmesser']) assert.equal(restoreUmlauts(w, lex), w, `${w} bleibt`)
+  assert.equal(restoreUmlauts('länge', lex), 'länge', 'ein Wort mit Umlaut bleibt'); assert.equal(restoreUmlauts('fuer', null), 'fuer', 'ohne Nachschlagewerk nichts')
+})
+
+test('lexicon: die Wörter der Quelle mit Umlaut — aber nur, wenn sie dort öfter so stehen als in der Umschrift', () => {
+  const lex = lexicon(['Schonhämmer', 'Federnde Druckstücke', 'Spannen', 'Maße Maße Maße', 'Masse'])
+  assert.equal(restoreUmlauts('schonhaemmer', lex), 'schonhämmer'); assert.equal(restoreUmlauts('druckstuecke', lex), 'druckstücke')
+  assert.equal(restoreUmlauts('masse', lex), 'maße', '3 mit, 1 ohne: die Mehrheit gilt')
+  const gegen = lexicon(['Maße', 'Masse', 'Masse'])
+  assert.equal(restoreUmlauts('masse', gegen), 'masse', 'öfter ohne: bleibt')
+})
+
+test('humanize mit Nachschlagewerk: Schlüssel ohne Umlaut werden zu Wörtern mit Umlaut', () => {
+  const lex = lexicon(['Federnde Druckstücke'])
+  assert.equal(humanize('schluesselweite', lex), 'Schlüsselweite'); assert.equal(humanize('fuer_gewinde_a', lex), 'Für gewinde a')
+  assert.equal(humanize('druckstuecke_anzahl', lex), 'Druckstücke anzahl'); assert.equal(humanize('fuer_gewinde'), 'Fuer gewinde', 'ohne Nachschlagewerk wie bisher')
+})
+
+test('themesByPrefix: der Name des Themas bekommt den Umlaut', () => {
+  const t = themesByPrefix(viele('fuer', 5), 5, lexicon([]))
+  assert.deepEqual(t.get('fuer_1'), { group: 'fuer', label: { de: 'Für', en: 'Für' } }, 'der Schlüssel der Gruppe bleibt ohne Umlaut')
+})
+
+test('modelNeeds: Bezeichnungen und Gruppennamen lesen Wörter mit Umlaut aus den Namen der Quelle', () => {
+  const docs = [
+    { id: 'g', master_id: 'g', type: 'group', name: 'Schonhämmer', main_parent_id: '' },
+    { ...doc(['schluesselweite', 'fuer_gewinde', 'schonhaemmer_art'], 'productVariant', 'v'), main_parent_id: 'g', name: 'Variante' },
+  ]
+  const n = modelNeeds(docs, new Map(), new Map(), {}, [], { min: 1 })
+  assert.equal(n.newAttrs.get('schluesselweite').label.de, 'Schlüsselweite')
+  assert.equal(n.newAttrs.get('fuer_gewinde').label.de, 'Für gewinde')
+  assert.equal(n.newAttrs.get('schonhaemmer_art').label.de, 'Schonhämmer art', 'aus dem Namen der Gruppe in der Quelle')
 })

@@ -53,3 +53,10 @@ test('run: legt die Gruppen mit „aktiv ab“ an und schreibt vererbbare Attrib
   assert.deepEqual(attribute.ixp_breite_mm.label, { de: 'Breite mm', en: 'Breite mm' })
   assert.ok(gesagt.some(z => z.startsWith('Gruppe ixp_technik_product (ab product) angelegt')), gesagt.join('\n'))
 })
+
+test('planSummary: Wörter mit Umlaut in den Namen der Quelle machen aus dem Schlüssel einen Namen mit Umlaut', () => {
+  const p = plan({ schluesselweite_mm: prop(2), kraft_n: prop(2) }, { schluesselweite_mm: 'ixp_technik', kraft_n: 'ixp_technik' }, { items: [{ role: 'variant', doc: { name: 'Ölschauglas Sechskant' } }, { role: 'variant', doc: { name: 'Schlüsselweite' } }] })
+  const s = planSummary(p, model())
+  assert.equal(s.newAttrs.find(a => a.from === 'schluesselweite_mm').label, 'Schlüsselweite mm')
+  assert.equal(s.newAttrs.find(a => a.from === 'kraft_n').label, 'Kraft n')
+})

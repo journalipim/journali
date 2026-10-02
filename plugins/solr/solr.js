@@ -21,7 +21,7 @@ const SKIP_SUFFIX = ['_rel', 'image', 'file', 'json', 'loc', 'cur', 'coordinate'
 export const DEFAULT_SKIP = ['*_finder', 'technical_details', 'group_title', 'prodexa_classification']
 
 /// journali-Schlüssel: [a-z][a-z0-9_]* — für immer.
-import { themesByPrefix, groupsByLevel, placeByPosition, humanize } from '../table/anlage.mjs'
+import { themesByPrefix, groupsByLevel, placeByPosition, humanize, lexicon } from '../table/anlage.mjs'
 export const slug = s => { const k = s.toLowerCase().replace(/[^a-z0-9_]+/g, '_').replace(/^_+|_+$/g, ''); return /^[a-z]/.test(k) ? k : 'p_' + k }
 const matches = (key, patterns) => patterns.some(p => new RegExp('^' + p.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*') + '$').test(key))
 
@@ -207,6 +207,8 @@ export function modelNeeds(docs, attrs, groups, pdefs, skip, opts = {}) {
   const top = new Map()         // Gruppe → oberste Rolle (Tiefe), an der ein Wert vorkommt
   const seen = (gkey, role) => { const d = DEPTH[role] ?? 0; if (!top.has(gkey) || d < top.get(gkey)) top.set(gkey, d) }
   const tree = docTree(docs)
+  // Wörter mit Umlaut aus den Namen der Quelle: damit „fuer“ im Schlüssel „für“ im Namen wird
+  const lex = opts.lex ?? lexicon([...docs.map(d => d.name), ...Object.values(pdefs).map(p => p.name)])
 
   // erster Durchgang: welche Attribute fehlen, auf welcher Ebene und unter welchen Gruppenknoten stehen ihre Werte — erst dann lässt sich in Gruppen ordnen
   const fresh = new Map()       // key → { raw, suffix }
@@ -227,9 +229,9 @@ export function modelNeeds(docs, attrs, groups, pdefs, skip, opts = {}) {
   }
   const art = new Map(keys.map(k => [k, wie(k)]))
   const nur = x => keys.filter(k => art.get(k) === x)
-  const sectionTheme = key => { const p = pdefs[fresh.get(key).raw]; const l = p.sectionName || humanize(p.section); return { group: slug(p.section), label: { de: l, en: l } } }
+  const sectionTheme = key => { const p = pdefs[fresh.get(key).raw]; const l = p.sectionName || humanize(p.section, lex); return { group: slug(p.section), label: { de: l, en: l } } }
   const solrTheme = { group: 'solr', label: { de: 'solr', en: 'solr' } }
-  const byPrefix = themesByPrefix(nur('prefix'), opts.min ?? 5)
+  const byPrefix = themesByPrefix(nur('prefix'), opts.min ?? 5, lex)
   const einEbene = Math.min(...keys.map(k => levels.get(k)), 2)   // single: eine Gruppe, die Ebene des obersten Werts
   const plan = new Map()
   for (const [k, g] of groupsByLevel([
@@ -239,7 +241,7 @@ export function modelNeeds(docs, attrs, groups, pdefs, skip, opts = {}) {
   ])) plan.set(k, g)
   const ort = nur('position')
   if (ort.length) {
-    const platz = placeByPosition(ort.map(k => ({ key: k, level: levels.get(k), positions: usage.get(k) ?? new Set() })), tree, { min: opts.minGroup ?? 3, max: opts.maxGroup ?? 60 })
+    const platz = placeByPosition(ort.map(k => ({ key: k, level: levels.get(k), positions: usage.get(k) ?? new Set() })), tree, { min: opts.minGroup ?? 3, max: opts.maxGroup ?? 60, lex })
     for (const [k, g] of platz.byKey) plan.set(k, g)
     for (const [gk, g] of platz.groups) newGroups.set(gk, { label: g.label.de, en: g.label.en, activeFrom: g.activeFrom, position: g.position, ort: tree.name(g.position) })
   }
@@ -254,7 +256,7 @@ export function modelNeeds(docs, attrs, groups, pdefs, skip, opts = {}) {
     if (!groups.has(g.group) && !newGroups.has(g.group)) newGroups.set(g.group, { label: g.label.de, en: g.label.en, activeFrom: g.activeFrom })
     if (!g.position) used.add(g.group)   // an einer Position hängt die Gruppe dort, nicht oben
     const [type, multiple, perLocale] = TYPES[suffix]
-    const label = pdefs[raw]?.name || humanize(raw)
+    const label = pdefs[raw]?.name || humanize(raw, lex)
     newAttrs.set(key, { key, label: { de: label, en: label }, type, group: g.group, axes: perLocale ? ['locale'] : null, multiple, inheritable: groupBy === 'single' ? levels.get(key) < 2 : g.inheritable })
   }
   const raise = new Map()       // vorhandene Gruppe → flacheres „aktiv ab“

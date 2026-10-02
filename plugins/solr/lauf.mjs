@@ -14,7 +14,7 @@
 //
 // Die Abbildung selbst (welcher Solr-Wert wird welches Attribut) steht in solr.js und wird hier nur benutzt.
 import { SYSTEM, roleOf, valueCommands, inheritedValues, modelNeeds, docTree, DEFAULT_SKIP, relFields, complexIds, relationNeeds, REL_GROUP } from './solr.js'
-import { placeByPosition, humanize } from '../table/anlage.mjs'
+import { placeByPosition, humanize, lexicon } from '../table/anlage.mjs'
 
 /// Die Rechte dessen, der den Lauf ausführt (Anwender im Browser, Rolle des Jobs im Prozess). Ein Server ohne Anwender
 /// antwortet nicht — dann gibt es nichts zu prüfen (null).
@@ -243,7 +243,8 @@ export async function ordneNeu({ umgebung, plan, trocken = false }) {
   if (!alt.length) return { bewegt: 0, gruppen: 0 }
   const docs = (plan?.items ?? []).map(i => i.doc)
   const baum = docTree(docs)
-  const platz = placeByPosition(alt.map(a => ({ key: a.key, level: levels.get(a.key), positions: usage.get(a.key) ?? new Set() })), baum)
+  const lex = lexicon(docs.map(d => d.name))
+  const platz = placeByPosition(alt.map(a => ({ key: a.key, level: levels.get(a.key), positions: usage.get(a.key) ?? new Set() })), baum, { lex })
   const nach = new Map()   // Gruppe → { label, activeFrom, position, attribute }
   for (const a of alt) { const g = platz.byKey.get(a.key); if (!nach.has(g.group)) nach.set(g.group, { label: g.label, activeFrom: g.activeFrom, position: g.position, attribute: [] }); nach.get(g.group).attribute.push(a) }
   const vorhanden = new Set((umgebung.modell?.groups ?? []).map(g => g.key))
@@ -257,7 +258,7 @@ export async function ordneNeu({ umgebung, plan, trocken = false }) {
   for (const [k, g] of nach) if (!vorhanden.has(k)) await api.post(`/api/model/groups/${k}`, { key: k, label: g.label, activeFrom: g.activeFrom }, 'PUT')
   let bewegt = 0
   for (const [k, g] of nach) for (const a of g.attribute) {
-    const lesbar = (a.label?.de ?? '') === a.key || /_/.test(a.label?.de ?? '') ? humanize(a.label?.de || a.key) : null
+    const lesbar = (a.label?.de ?? '') === a.key || /_/.test(a.label?.de ?? '') ? humanize(a.label?.de || a.key, lex) : null
     await api.post(`/api/model/attributes/${encodeURIComponent(a.key)}`, { ...a, group: k, inheritable: levels.get(a.key) < 2, ...(lesbar ? { label: { de: lesbar, en: lesbar } } : {}) }, 'PUT')
     bewegt++
   }

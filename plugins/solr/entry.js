@@ -40,17 +40,81 @@ const LEVELS = ["group", "product", "variant"];
 const LEVEL_LABEL = { group: { de: "Gruppe", en: "Group" }, product: { de: "Produkt", en: "Product" }, variant: { de: "Variante", en: "Variant" } };
 const WEITERE = { group: "weitere", label: { de: "Weitere Merkmale", en: "Other attributes" } };
 const TECHNISCH = /* @__PURE__ */ new Set(["ctrl", "control", "info", "meta", "parent", "sys", "tmp", "dp", "wsc", "id", "ref", "rel", "prc"]);
-function humanize(raw) {
+const UMLAUTE = {
+  fuer: "für",
+  ueber: "über",
+  laenge: "länge",
+  hoehe: "höhe",
+  groesse: "größe",
+  schluessel: "schlüssel",
+  praezision: "präzision",
+  waerme: "wärme",
+  kuehlung: "kühlung",
+  fuehrung: "führung",
+  buegel: "bügel",
+  stuetze: "stütze",
+  traeger: "träger",
+  haerte: "härte",
+  oel: "öl",
+  oeffnung: "öffnung",
+  oberflaeche: "oberfläche",
+  zubehoer: "zubehör",
+  gehaeuse: "gehäuse",
+  staerke: "stärke",
+  aeusserer: "äußerer",
+  aeusseren: "äußeren",
+  gewaehrleistung: "gewährleistung",
+  verlaengerung: "verlängerung",
+  geraet: "gerät",
+  spaenne: "späne",
+  kraefte: "kräfte",
+  draehte: "drähte",
+  schaerfe: "schärfe",
+  abstuetzung: "abstützung",
+  fuehler: "fühler",
+  lueftung: "lüftung"
+};
+const UMSCHRIFT = { ä: "ae", ö: "oe", ü: "ue", ß: "ss" };
+const umschreiben = (w) => w.toLowerCase().replace(/[äöüß]/g, (ch) => UMSCHRIFT[ch]);
+function lexicon(texts = []) {
+  const mit = /* @__PURE__ */ new Map(), ohne = /* @__PURE__ */ new Map();
+  for (const t2 of texts) for (const w of String(t2 ?? "").toLowerCase().split(/[^\p{L}]+/u)) {
+    if (w.length < 3) continue;
+    if (/[äöüß]/.test(w)) {
+      const k = umschreiben(w);
+      mit.set(k, [...mit.get(k) ?? [], w]);
+    } else ohne.set(w, (ohne.get(w) ?? 0) + 1);
+  }
+  const lex = new Map(Object.entries(UMLAUTE));
+  for (const [k, ws] of mit) {
+    const best = [...new Set(ws)].sort((x, y) => ws.filter((v) => v === y).length - ws.filter((v) => v === x).length)[0];
+    if (ws.length > (ohne.get(k) ?? 0)) lex.set(k, best);
+  }
+  return lex;
+}
+function restoreUmlauts(word, lex) {
+  const w = String(word ?? "").toLowerCase();
+  if (!lex?.size || !w || /[äöüß]/.test(w)) return w;
+  if (lex.has(w)) return lex.get(w);
+  let best = null;
+  for (const [k, v] of lex) {
+    if (k.length < 4 || k.length >= w.length) continue;
+    if (w.startsWith(k) && (!best || k.length > best.k.length)) best = { k, v, front: true };
+    else if (w.endsWith(k) && (!best || k.length > best.k.length)) best = { k, v, front: false };
+  }
+  return best ? best.front ? best.v + w.slice(best.k.length) : w.slice(0, w.length - best.k.length) + best.v : w;
+}
+function humanize(raw, lex = null) {
   const tokens = String(raw ?? "").replace(/([a-zäöüß0-9])([A-ZÄÖÜ])/g, "$1_$2").split(/[^A-Za-z0-9ÄÖÜäöüß]+/).filter(Boolean);
   const keep = tokens.filter((t2) => !(t2.length >= 6 && /\d/.test(t2) && /[a-z]/i.test(t2)));
-  const words = (keep.length ? keep : tokens).map((w) => w.toLowerCase());
+  const words = (keep.length ? keep : tokens).map((w) => restoreUmlauts(w, lex));
   return words.join(" ").replace(/^./, (c) => c.toUpperCase());
 }
 const themeOf = (key) => {
   const m2 = /^[a-zäöü]{4,}/.exec(String(key ?? "").toLowerCase());
   return m2 && !TECHNISCH.has(m2[0]) ? m2[0] : "";
 };
-function themesByPrefix(keys, min = 5) {
+function themesByPrefix(keys, min = 5, lex = null) {
   const count = /* @__PURE__ */ new Map();
   for (const k of keys) {
     const a = themeOf(k);
@@ -59,7 +123,8 @@ function themesByPrefix(keys, min = 5) {
   const out = /* @__PURE__ */ new Map();
   for (const k of keys) {
     const a = themeOf(k);
-    const word = a ? a[0].toUpperCase() + a.slice(1) : "";
+    const wort = a ? restoreUmlauts(a, lex) : "";
+    const word = wort ? wort[0].toUpperCase() + wort.slice(1) : "";
     out.set(k, a && count.get(a) >= min ? { group: a, label: { de: word, en: word } } : WEITERE);
   }
   return out;
@@ -92,7 +157,7 @@ const keyOf = (s) => {
   const k = String(s ?? "").toLowerCase().replace(/ä/g, "ae").replace(/ö/g, "oe").replace(/ü/g, "ue").replace(/ß/g, "ss").replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
   return /^[a-z]/.test(k) ? k : "g_" + k;
 };
-function placeByPosition(entries, tree2, { min = 3, max = 60, themeMin = 5 } = {}) {
+function placeByPosition(entries, tree2, { min = 3, max = 60, themeMin = 5, lex = null } = {}) {
   const pathOf = (id) => {
     const p = [];
     for (let n = id; n != null; n = tree2.parentOf(n)) p.unshift(n);
@@ -144,7 +209,7 @@ function placeByPosition(entries, tree2, { min = 3, max = 60, themeMin = 5 } = {
     const role = LEVELS[b.level] ?? "variant";
     const name = tree2.name(b.position);
     const mitEbene = levelsAt.get(b.position).size > 1;
-    const parts = b.keys.length > max ? [...groupBy(b.keys, themesByPrefix(b.keys, themeMin))] : [[null, b.keys]];
+    const parts = b.keys.length > max ? [...groupBy(b.keys, themesByPrefix(b.keys, themeMin, lex))] : [[null, b.keys]];
     for (const [theme, keys] of parts) {
       const word = theme ? theme.label : null;
       const de = [name, word ? `${word.de}${mitEbene ? ` (${LEVEL_LABEL[role].de})` : ""}` : mitEbene ? LEVEL_WORD[role].de : null].filter(Boolean).join(" · ");
@@ -327,6 +392,7 @@ function modelNeeds(docs, attrs, groups, pdefs, skip, opts = {}) {
     if (!top.has(gkey) || d < top.get(gkey)) top.set(gkey, d);
   };
   const tree2 = docTree(docs);
+  const lex = opts.lex ?? lexicon([...docs.map((d) => d.name), ...Object.values(pdefs).map((p) => p.name)]);
   const fresh = /* @__PURE__ */ new Map();
   for (const d of docs) for (const { key, suffix, raw } of ownValues(d, skip)) {
     const depth = DEPTH[roleOf(d)] ?? 0;
@@ -350,11 +416,11 @@ function modelNeeds(docs, attrs, groups, pdefs, skip, opts = {}) {
   const nur = (x) => keys.filter((k) => art.get(k) === x);
   const sectionTheme = (key) => {
     const p = pdefs[fresh.get(key).raw];
-    const l = p.sectionName || humanize(p.section);
+    const l = p.sectionName || humanize(p.section, lex);
     return { group: slug(p.section), label: { de: l, en: l } };
   };
   const solrTheme = { group: "solr", label: { de: "solr", en: "solr" } };
-  const byPrefix = themesByPrefix(nur("prefix"), opts.min ?? 5);
+  const byPrefix = themesByPrefix(nur("prefix"), opts.min ?? 5, lex);
   const einEbene = Math.min(...keys.map((k) => levels.get(k)), 2);
   const plan = /* @__PURE__ */ new Map();
   for (const [k, g] of groupsByLevel([
@@ -364,7 +430,7 @@ function modelNeeds(docs, attrs, groups, pdefs, skip, opts = {}) {
   ])) plan.set(k, g);
   const ort = nur("position");
   if (ort.length) {
-    const platz = placeByPosition(ort.map((k) => ({ key: k, level: levels.get(k), positions: usage.get(k) ?? /* @__PURE__ */ new Set() })), tree2, { min: opts.minGroup ?? 3, max: opts.maxGroup ?? 60 });
+    const platz = placeByPosition(ort.map((k) => ({ key: k, level: levels.get(k), positions: usage.get(k) ?? /* @__PURE__ */ new Set() })), tree2, { min: opts.minGroup ?? 3, max: opts.maxGroup ?? 60, lex });
     for (const [k, g] of platz.byKey) plan.set(k, g);
     for (const [gk, g] of platz.groups) newGroups.set(gk, { label: g.label.de, en: g.label.en, activeFrom: g.activeFrom, position: g.position, ort: tree2.name(g.position) });
   }
@@ -388,7 +454,7 @@ function modelNeeds(docs, attrs, groups, pdefs, skip, opts = {}) {
     if (!groups.has(g.group) && !newGroups.has(g.group)) newGroups.set(g.group, { label: g.label.de, en: g.label.en, activeFrom: g.activeFrom });
     if (!g.position) used.add(g.group);
     const [type, multiple, perLocale] = TYPES[suffix];
-    const label = pdefs[raw]?.name || humanize(raw);
+    const label = pdefs[raw]?.name || humanize(raw, lex);
     newAttrs.set(key, { key, label: { de: label, en: label }, type, group: g.group, axes: perLocale ? ["locale"] : null, multiple, inheritable: groupBy2 === "single" ? levels.get(key) < 2 : g.inheritable });
   }
   const raise = /* @__PURE__ */ new Map();
