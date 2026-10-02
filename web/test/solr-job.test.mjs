@@ -21,7 +21,9 @@ function stellvertreter() {
       const erste = u.searchParams.get('cursorMark') === '*' && !(u.searchParams.get('q') ?? '').includes('type:property')
       return res.end(JSON.stringify({ response: { numFound: erste ? DOCS.length : 0, docs: erste ? DOCS : [] }, nextCursorMark: 'ende' }))
     }
-    if (u.pathname === '/api/model') return res.end(JSON.stringify({ attributes: [{ key: 'name', type: 'text', group: 'stamm' }], groups: [{ key: 'stamm', label: { de: 'Stamm' } }] }))
+    if (u.pathname === '/api/model') return res.end(JSON.stringify({
+      attributes: [{ key: 'name', type: 'text', group: 'stamm' }, ...Array.from({ length: 6 }, (_, i) => ({ key: 'abmessung_' + i, type: 'text', group: 'solr' }))],
+      groups: [{ key: 'stamm', label: { de: 'Stamm' } }, { key: 'solr', label: { de: 'solr' } }] }))
     if (u.pathname === '/api/tree') return res.end(JSON.stringify([{ id: 'k-alt', role: 'group', external: { solr: 'G1' }, groups: 'stamm' }]))   // eine Liste, kein { rows }
     if (u.pathname === '/api/auth/me') { res.statusCode = 401; return res.end('{}') }
     if (u.pathname === '/api/batch') return res.end(JSON.stringify({ batch: 'b-1', results: [], error: null, skipped: [] }))
@@ -30,12 +32,12 @@ function stellvertreter() {
   return new Promise(ok => server.listen(0, '127.0.0.1', () => ok({ server, gerufen, url: `http://127.0.0.1:${server.address().port}` })))
 }
 
-async function lauf(trocken) {
+async function lauf(trocken, extra = {}) {
   const s = await stellvertreter()
   try {
     const out = await new Promise(ok => {
       const p = spawn(process.execPath, ['job.mjs', s.url, 'job:test'], {
-        cwd, env: { ...process.env, JOURNALI_BASE: s.url + '/solr/products', JOURNALI_ROOTS: 'g1', JOURNALI_DRY_RUN: trocken ? 'true' : 'false' } })
+        cwd, env: { ...process.env, JOURNALI_BASE: s.url + '/solr/products', JOURNALI_ROOTS: 'g1', JOURNALI_DRY_RUN: trocken ? 'true' : 'false', ...extra } })
       let text = ''; p.stdout.on('data', d => text += d); p.stderr.on('data', d => text += d)
       p.on('close', code => ok({ code, text }))
     })
@@ -59,4 +61,19 @@ test('ohne Probelauf wird geschrieben: der vorhandene Knoten bekommt keine Neuan
   const r = await lauf(false)
   assert.match(r.text, /analysiert: 1 Knoten \(1 vorhanden\)/, r.text)
   assert.ok(!/group\.create/.test(r.text), r.text)
+})
+
+test('regroup (Probelauf): die Attribute der Gruppe solr werden gezählt und nach dem Anfang geordnet, nichts geschrieben — ohne Solr-Kern', async () => {
+  const r = await lauf(true, { JOURNALI_REGROUP: 'true', JOURNALI_BASE: '', JOURNALI_ROOTS: '' })
+  assert.equal(r.code, 0, r.text)
+  assert.match(r.text, /6 Attribute der Gruppe solr → 1 Gruppen/)
+  assert.match(r.text, /abmessung \(Abmessung\): 6/)
+  assert.ok(!r.gerufen.some(g => g.startsWith('PUT') || g.startsWith('POST')), r.gerufen.join(' | '))
+  assert.ok(!r.gerufen.some(g => g.includes('/select')), 'Solr wird nicht gefragt')
+})
+
+test('regroup: schreibt Gruppe, Attribute und die Gruppen der Knoten', async () => {
+  const r = await lauf(false, { JOURNALI_REGROUP: 'true', JOURNALI_BASE: '', JOURNALI_ROOTS: '' })
+  assert.equal(r.code, 0, r.text)
+  assert.match(r.text, /✓ 6 Attribute in 1 Gruppen, 0 Knoten angepasst/)
 })

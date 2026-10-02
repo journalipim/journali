@@ -13,7 +13,7 @@
 //   }
 //
 // Die Abbildung selbst (welcher Solr-Wert wird welches Attribut) steht in solr.js und wird hier nur benutzt.
-import { SYSTEM, roleOf, valueCommands, modelNeeds, DEFAULT_SKIP, relFields, complexIds, relationNeeds, REL_GROUP } from './solr.js'
+import { SYSTEM, roleOf, valueCommands, modelNeeds, prefixPlan, DEFAULT_SKIP, relFields, complexIds, relationNeeds, REL_GROUP } from './solr.js'
 
 /// Die Rechte dessen, der den Lauf ausführt (Anwender im Browser, Rolle des Jobs im Prozess). Ein Server ohne Anwender
 /// antwortet nicht — dann gibt es nichts zu prüfen (null).
@@ -40,7 +40,7 @@ export const skipListe = (text = '') => [...DEFAULT_SKIP, ...String(text).split(
  * Was der Import täte: die Knoten der gewählten Teilbäume und was dem Modell dafür fehlt.
  * `wurzeln` sind Solr-Ids; `eltern` sagt je Wurzel, unter welchem Solr-Knoten sie hängt (null = ans Ziel).
  */
-export async function plane({ client, umgebung, wurzeln, eltern = new Map(), skip = DEFAULT_SKIP, pdefs = {} }) {
+export async function plane({ client, umgebung, wurzeln, eltern = new Map(), skip = DEFAULT_SKIP, pdefs = {}, gruppen: gruppierung = {} }) {
   const { modell, baum, sag, rechte } = umgebung
   pruefeSchreiben(rechte)
   const bekannt = new Map(baum.filter(r => r.external?.[SYSTEM]).map(r => [r.external[SYSTEM], r]))
@@ -53,7 +53,7 @@ export async function plane({ client, umgebung, wurzeln, eltern = new Map(), ski
   const seiteGeprueft = (n, of, seite) => {
     sag?.(`lade … ${n}/${of}`)
     if (!ohneModell || !seite) return
-    const braucht = modelNeeds(seite, attrs, gruppen, pdefs, skip)
+    const braucht = modelNeeds(seite, attrs, gruppen, pdefs, skip, gruppierung)
     if (braucht.newAttrs.size || braucht.newGroups.size || braucht.raise.size) {
       const beispiel = [...braucht.newAttrs.keys()][0] ?? [...braucht.newGroups.keys()][0] ?? [...braucht.raise.keys()][0]
       throw new Error(`Rolle ${rechte.rolle} darf das Modell nicht ändern — der Import braucht neue Attribute oder Gruppen (zuerst ${beispiel}), nach ${n} von ${of} Knoten abgebrochen.`)
@@ -89,7 +89,9 @@ export async function plane({ client, umgebung, wurzeln, eltern = new Map(), ski
   }
   for (const it of items) it.existing = bekannt.get(it.doc.master_id) ?? null
 
-  const needs = modelNeeds(items.map(i => i.doc), attrs, gruppen, pdefs, skip)
+  const needs = modelNeeds(items.map(i => i.doc), attrs, gruppen, pdefs, skip, gruppierung)
+  // Die neuen Gruppen mit der Zahl ihrer Attribute — im Probelauf steht hier, was der Lauf anlegen würde
+  for (const [k, g] of needs.newGroups) sag?.(`neue Gruppe ${k} (${g.label}): ${[...needs.newAttrs.values()].filter(a => a.group === k).length} Attribute`)
   sag?.(`analysiert: ${items.length} Knoten (${items.filter(i => i.existing).length} vorhanden), ${needs.newAttrs.size} neue Attribute in ${needs.newGroups.size} neuen Gruppen`)
   return { items, needs, wurzeln: wurzeln.length }
 }
@@ -221,4 +223,36 @@ export async function schreibeRelationen({ plan, umgebung }) {
   }
   sag?.(geschrieben ? `Relationen fertig: ${geschrieben} Einträge in ${stapel} Stapeln` : 'Relationen: nichts zu schreiben')
   return { geschrieben, stapel }
+}
+
+/// Die Attribute der Gruppe „solr“ — dorthin kamen früher alle, deren Quelle keine Gruppe nannte — nach dem Anfang ihres Schlüssels auf Gruppen verteilen.
+/// Die neuen Gruppen hängen dort, wo „solr“ hing; „aktiv ab“ übernehmen sie von „solr“. Werte bleiben, wo sie sind: nur die Gruppe des Attributs ändert sich.
+/// Ohne `trocken` wird geschrieben; im Probelauf steht nur, was geschähe.
+export async function ordneNeu({ umgebung, min = 5, trocken = false }) {
+  const { api, sag } = umgebung
+  await umgebung.frisch?.()
+  const alt = (umgebung.modell?.attributes ?? []).filter(a => (a.group ?? '') === 'solr')
+  if (!alt.length) { sag?.('Gruppe solr: keine Attribute'); return { bewegt: 0, gruppen: 0 } }
+  const plan = prefixPlan(alt.map(a => a.key), min)
+  const nach = new Map()   // Gruppe → { label, attribute }
+  for (const a of alt) { const g = plan.get(a.key); if (!nach.has(g.group)) nach.set(g.group, { label: g.label, attribute: [] }); nach.get(g.group).attribute.push(a) }
+  const vorhanden = new Set((umgebung.modell?.groups ?? []).map(g => g.key))
+  const vorlage = (umgebung.modell?.groups ?? []).find(g => g.key === 'solr')
+  sag?.(`${alt.length} Attribute der Gruppe solr → ${nach.size} Gruppen`)
+  for (const [k, g] of [...nach].sort((x, y) => y[1].attribute.length - x[1].attribute.length)) sag?.(`  ${k} (${g.label}): ${g.attribute.length}${vorhanden.has(k) ? ' — gibt es schon' : ''}`)
+  const knoten = (umgebung.baum ?? []).filter(r => (r.groups ?? '').split(',').includes('solr'))
+  sag?.(`${knoten.length} Knoten tragen die Gruppe solr`)
+  if (trocken) { sag?.('Probelauf — nichts geschrieben'); return { bewegt: 0, gruppen: nach.size } }
+
+  for (const [k, g] of nach) if (!vorhanden.has(k)) await api.post(`/api/model/groups/${k}`, { key: k, label: { de: g.label, en: g.label }, activeFrom: vorlage?.activeFrom ?? null }, 'PUT')
+  let bewegt = 0
+  for (const [k, g] of nach) for (const a of g.attribute) { await api.post(`/api/model/attributes/${encodeURIComponent(a.key)}`, { ...a, group: k }, 'PUT'); bewegt++ }
+  // jetzt ohne Attribute: „solr“ geht von den Knoten, die neuen Gruppen kommen dazu
+  const neu = [...nach.keys()]
+  for (const r of knoten) {
+    const haben = (r.groups ?? '').split(',').filter(x => x && x !== 'solr')
+    await api.post(`/api/nodes/${encodeURIComponent(r.id)}/groups`, { groups: [...new Set([...haben, ...neu])] }, 'PUT')
+  }
+  sag?.(`✓ ${bewegt} Attribute in ${nach.size} Gruppen, ${knoten.length} Knoten angepasst`)
+  return { bewegt, gruppen: nach.size }
 }

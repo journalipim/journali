@@ -169,7 +169,26 @@ function asStrings(suffix, v) {
 }
 const DEPTH = { group: 0, product: 1, variant: 2 };
 const ROLES = ["group", "product", "variant"];
-function modelNeeds(docs, attrs, groups, pdefs, skip) {
+const WEITERE = { group: "weitere", label: "Weitere Merkmale" };
+function prefixPlan(keys, min = 5) {
+  const anfang = (k) => {
+    const m2 = /^[a-z]{2,}/.exec(k);
+    return m2 ? m2[0] : "";
+  };
+  const zaehler = /* @__PURE__ */ new Map();
+  for (const k of keys) {
+    const a = anfang(k);
+    if (a) zaehler.set(a, (zaehler.get(a) ?? 0) + 1);
+  }
+  const plan = /* @__PURE__ */ new Map();
+  for (const k of keys) {
+    const a = anfang(k);
+    plan.set(k, a && zaehler.get(a) >= min ? { group: a, label: a[0].toUpperCase() + a.slice(1) } : WEITERE);
+  }
+  return plan;
+}
+function modelNeeds(docs, attrs, groups, pdefs, skip, opts = {}) {
+  const groupBy = opts.groupBy ?? "auto";
   const newGroups = /* @__PURE__ */ new Map();
   const newAttrs = /* @__PURE__ */ new Map();
   const used = /* @__PURE__ */ new Set();
@@ -179,6 +198,17 @@ function modelNeeds(docs, attrs, groups, pdefs, skip) {
     const d = DEPTH[role] ?? 0;
     if (!top.has(gkey) || d < top.get(gkey)) top.set(gkey, d);
   };
+  const fresh = /* @__PURE__ */ new Map();
+  for (const d of docs) for (const { key, suffix, raw } of ownValues(d, skip)) if (!attrs.has(key) && !fresh.has(key)) fresh.set(key, { raw, suffix });
+  const plan = prefixPlan([...fresh.keys()].filter((k) => groupBy === "prefix" || groupBy === "auto" && !pdefs[fresh.get(k).raw]?.section), opts.min ?? 5);
+  const groupOf = (key) => {
+    const { raw } = fresh.get(key);
+    const p = pdefs[raw];
+    if (groupBy === "single") return { group: "solr", label: "solr" };
+    if ((groupBy === "section" || groupBy === "auto") && p?.section) return { group: slug(p.section), label: p.sectionName || p.section };
+    if (groupBy === "section") return { group: "solr", label: "solr" };
+    return plan.get(key);
+  };
   for (const d of docs) for (const { key, suffix, raw } of ownValues(d, skip)) {
     counts.set(key, (counts.get(key) ?? 0) + 1);
     if (attrs.has(key)) {
@@ -186,14 +216,13 @@ function modelNeeds(docs, attrs, groups, pdefs, skip) {
       seen(attrs.get(key).group, roleOf(d));
       continue;
     }
-    const p = pdefs[raw];
-    const gkey = newAttrs.get(key)?.group ?? slug(p?.section || "solr");
+    const gkey = newAttrs.get(key)?.group ?? groupOf(key).group;
     seen(gkey, roleOf(d));
     if (newAttrs.has(key)) continue;
-    if (!groups.has(gkey)) newGroups.set(gkey, { label: p?.sectionName || p?.section || "solr", activeFrom: null });
+    if (!groups.has(gkey)) newGroups.set(gkey, { label: groupOf(key).label, activeFrom: null });
     used.add(gkey);
     const [type, multiple, perLocale] = TYPES[suffix];
-    const label = p?.name || raw;
+    const label = pdefs[raw]?.name || raw;
     newAttrs.set(key, { key, label: { de: label, en: label }, type, group: gkey, axes: perLocale ? ["locale"] : null, multiple });
   }
   for (const [gkey, g] of newGroups) {
@@ -322,7 +351,7 @@ function pruefeSchreiben(rechte) {
 }
 const RANG = { group: 0, product: 1, variant: 2 };
 const byRole = (liste) => liste.sort((a, b) => (RANG[roleOf(a)] ?? 9) - (RANG[roleOf(b)] ?? 9));
-async function plane({ client, umgebung, wurzeln, eltern = /* @__PURE__ */ new Map(), skip = DEFAULT_SKIP, pdefs = {} }) {
+async function plane({ client, umgebung, wurzeln, eltern = /* @__PURE__ */ new Map(), skip = DEFAULT_SKIP, pdefs = {}, gruppen: gruppierung = {} }) {
   const { modell, baum, sag, rechte } = umgebung;
   pruefeSchreiben(rechte);
   const bekannt = new Map(baum.filter((r) => r.external?.[SYSTEM]).map((r) => [r.external[SYSTEM], r]));
@@ -332,7 +361,7 @@ async function plane({ client, umgebung, wurzeln, eltern = /* @__PURE__ */ new M
   const seiteGeprueft = (n, of, seite) => {
     sag?.(`lade … ${n}/${of}`);
     if (!ohneModell || !seite) return;
-    const braucht = modelNeeds(seite, attrs, gruppen, pdefs, skip);
+    const braucht = modelNeeds(seite, attrs, gruppen, pdefs, skip, gruppierung);
     if (braucht.newAttrs.size || braucht.newGroups.size || braucht.raise.size) {
       const beispiel = [...braucht.newAttrs.keys()][0] ?? [...braucht.newGroups.keys()][0] ?? [...braucht.raise.keys()][0];
       throw new Error(`Rolle ${rechte.rolle} darf das Modell nicht ändern — der Import braucht neue Attribute oder Gruppen (zuerst ${beispiel}), nach ${n} von ${of} Knoten abgebrochen.`);
@@ -371,7 +400,8 @@ async function plane({ client, umgebung, wurzeln, eltern = /* @__PURE__ */ new M
     gehe(wurzelDoc, eltern.get(wurzel) ?? null, true);
   }
   for (const it of items) it.existing = bekannt.get(it.doc.master_id) ?? null;
-  const needs = modelNeeds(items.map((i) => i.doc), attrs, gruppen, pdefs, skip);
+  const needs = modelNeeds(items.map((i) => i.doc), attrs, gruppen, pdefs, skip, gruppierung);
+  for (const [k, g] of needs.newGroups) sag?.(`neue Gruppe ${k} (${g.label}): ${[...needs.newAttrs.values()].filter((a) => a.group === k).length} Attribute`);
   sag?.(`analysiert: ${items.length} Knoten (${items.filter((i) => i.existing).length} vorhanden), ${needs.newAttrs.size} neue Attribute in ${needs.newGroups.size} neuen Gruppen`);
   return { items, needs, wurzeln: wurzeln.length };
 }

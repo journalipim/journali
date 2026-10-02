@@ -11,7 +11,7 @@
 //   JOURNALI_DRY_RUN   "true" = nur analysieren, nichts schreiben
 // Rückgabe 0 = geschrieben, 2 = nichts zu tun, 1 = Abbruch.
 import { solr, holenMitFetch } from './solr.js'
-import { plane, schreibe, planeRelationen, schreibeRelationen, skipListe, rechteVon, pruefeSchreiben } from './lauf.mjs'
+import { plane, schreibe, planeRelationen, schreibeRelationen, ordneNeu, skipListe, rechteVon, pruefeSchreiben } from './lauf.mjs'
 
 const [, , serverArg, actorArg] = process.argv
 const E = process.env
@@ -24,10 +24,13 @@ const ziel = (E.JOURNALI_TARGET || '').trim() || null
 const skip = skipListe(E.JOURNALI_SKIP || '')
 const mitKanten = /^(true|1|ja)$/i.test(E.JOURNALI_RELATIONS || '')
 const trocken = /^(true|1|ja)$/i.test(E.JOURNALI_DRY_RUN || '')
+const neuOrdnen = /^(true|1|ja)$/i.test(E.JOURNALI_REGROUP || '')
+// Wie neue Attribute zu Gruppen kommen: auto (die der Quelle, sonst nach dem Anfang des Schlüssels), section, prefix, single
+const gruppierung = { groupBy: ['auto', 'section', 'prefix', 'single'].includes((E.JOURNALI_GROUP_BY || '').trim()) ? E.JOURNALI_GROUP_BY.trim() : 'auto' }
 const headers = { 'X-Actor': actor, 'Content-Type': 'application/json', ...(E.JOURNALI_TOKEN ? { Authorization: 'Bearer ' + E.JOURNALI_TOKEN } : {}) }
 
-if (!base) { console.error('✗ Solr-Kern fehlt (Zugang oder base)'); process.exitCode = 1 }
-if (!wurzeln.length) { console.error('✗ keine Wurzel gewählt (roots)'); process.exitCode = 1 }
+if (!neuOrdnen && !base) { console.error('✗ Solr-Kern fehlt (Zugang oder base)'); process.exitCode = 1 }
+if (!neuOrdnen && !wurzeln.length) { console.error('✗ keine Wurzel gewählt (roots)'); process.exitCode = 1 }
 
 const sag = text => console.log(text)
 
@@ -114,15 +117,21 @@ const umgebung = { api, sag, halt, modell: null, baum: [], rechte: null, frisch:
 } }
 
 try {
-  if (!base || !wurzeln.length) throw new Error('Quelle oder Wurzel fehlt')
   await umgebung.frisch()
   umgebung.rechte = await rechteVon(api)
   pruefeSchreiben(umgebung.rechte)   // vor jedem Einlesen
+  if (neuOrdnen) {
+    // kein Import: die Attribute der Gruppe solr auf Gruppen verteilen (Modell ändern, darum das Recht dazu)
+    if (umgebung.rechte && !umgebung.rechte.rights.has('model')) throw new Error(`Rolle ${umgebung.rechte.rolle} darf das Modell nicht ändern.`)
+    const r = await ordneNeu({ umgebung, trocken })
+    process.exitCode = r.bewegt || trocken ? 0 : 2
+  } else {
+  if (!base || !wurzeln.length) throw new Error('Quelle oder Wurzel fehlt')
   const client = solr(base, holen)
   const pdefs = await client.propertyDefs()
   sag(`Quelle ${base} · ${wurzeln.length} Wurzel(n) · Ziel ${ziel ?? 'oberste Ebene'}`)
 
-  const plan = await plane({ client, umgebung, wurzeln, skip, pdefs })
+  const plan = await plane({ client, umgebung, wurzeln, skip, pdefs, gruppen: gruppierung })
   // Probelauf und „nichts zu tun“ enden hier: der Rückgabewert allein hielt den Lauf nicht an, und er schrieb trotzdem
   if (trocken) { sag('Probelauf — nichts geschrieben'); process.exitCode = plan.items.length ? 0 : 2 }
   else if (!plan.items.length) { sag('nichts zu tun'); process.exitCode = 2 }
@@ -137,6 +146,7 @@ try {
     }
     sag(`✓ ${geschrieben} Einträge in ${stapel} Stapeln${kanten ? ` · ${kanten} Kanten` : ''}`)
     process.exitCode = geschrieben || kanten ? 0 : 2
+  }
   }
 } catch (e) {
   console.error('✗ ' + e.message)

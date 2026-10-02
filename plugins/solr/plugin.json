@@ -81,6 +81,20 @@
         "type": "boolean",
         "default": "false",
         "perJob": false
+      },
+      {
+        "key": "group_by",
+        "label": "Gruppen neuer Attribute: auto (die der Quelle, sonst nach dem Anfang des Schlüssels) · section · prefix · single",
+        "type": "text",
+        "default": "auto",
+        "perJob": false
+      },
+      {
+        "key": "regroup",
+        "label": "Kein Import: die Attribute der Gruppe solr nach dem Anfang ihres Schlüssels auf Gruppen verteilen (mit Trockenlauf prüfen)",
+        "type": "boolean",
+        "default": "false",
+        "perJob": true
       }
     ]
   }

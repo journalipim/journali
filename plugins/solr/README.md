@@ -53,7 +53,7 @@ dynamischen Feldern `property__<schlüssel>__<typ>`; der Typ ist das Suffix:
 | `name` | Attribut `name` (Achse locale = `lang`) |
 | `description` | Attribut `description` (locale) |
 | `property__<k>__<typ>` | Attribut `slug(k)`; Typ nach Suffix: string/text → text, xhtml → html, int/long → integer, float/double → decimal, boolean, date/dateTime → date (`JJJJ-MM-TT`); `multi_*` → mehrfach; Text und HTML mit Achse locale |
-| `property`-Dokument `remote_id` | Label und Attributgruppe des Attributs (`control__section_id__string` → Gruppe `slug(section)`, z. B. `techdata_hardware`); ohne Definition → Gruppe `solr` |
+| `property`-Dokument `remote_id` | Label und Attributgruppe des Attributs (`control__section_id__string` → Gruppe `slug(section)`, z. B. `techdata_hardware`); ohne Gruppe in der Quelle → nach dem Anfang des Schlüssels (`abmessung_a_max` → Gruppe `abmessung`, mindestens 5 Attribute; weniger Verwandte → „Weitere Merkmale“) |
 | Fundstellen einer Gruppe | „aktiv ab" der neuen Gruppe = oberste Rolle, an der ein Wert vorkommt (nur Varianten → ab Variante); eine vorhandene Gruppe mit tieferem „aktiv ab" wird angehoben, sonst lehnte der Server den Wert ab |
 | `*_rel`, `image`, `file`, `json`, `loc`, `cur` | übergangen — Medien und Relationen kommen später (docs/pflegestruktur.md, 6) |
 | `*_finder`, `technical_details`, `group_title`, `prodexa_classification` | übergangen (Ableitungen der Quelle); mehr mit `--skip` |
@@ -113,3 +113,11 @@ Stapel). Ein vorhandener Knoten (Kennung `solr`) wird gelesen
 Belegt 17.09.2026 im Trockenlauf gegen `<KUNDE>_SHOP_Switche`: 117 Dokumente
 → 118 Knoten (1 Sammelprodukt), 157 neue Attribute in 21 Gruppen, 5 471
 Werte, 7 Stapel.
+
+**Gruppen neuer Attribute** (Parameter `group_by`): `auto` (Vorgabe) nimmt die Gruppe der Quelle, wo es sie gibt, sonst den Anfang des Schlüssels; `section`
+nur die der Quelle; `prefix` nur den Anfang des Schlüssels; `single` alles in `solr`. Der Plan nennt jede neue Gruppe mit der Zahl ihrer Attribute — im
+Trockenlauf steht dort, was der Lauf anlegen würde.
+
+**Attribute der Gruppe `solr` verteilen** (Parameter `regroup`, mit Trockenlauf prüfen): kein Import, sondern das Modell. Die Attribute, die früher alle in
+`solr` landeten, kommen nach dem Anfang ihres Schlüssels in eigene Gruppen; die neuen Gruppen hängen an den Knoten, an denen `solr` hing, und übernehmen
+„aktiv ab“. Die Werte bleiben, wo sie sind. Braucht das Recht „Modell ändern“.
