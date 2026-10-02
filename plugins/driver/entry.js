@@ -1,4 +1,4 @@
-(function(){const s=document.createElement('style');s.textContent="\n.x[data-v-6816da86] { border: 0; background: none; color: var(--muted); padding: 0 4px; cursor: pointer;\n}\n.x[data-v-6816da86]:hover { color: var(--accent);\n}\n.form td.attr[data-v-6816da86] { white-space: nowrap; color: var(--muted);\n}\n";document.head.append(s)})();
+(function(){const s=document.createElement('style');s.textContent="\n.x[data-v-0b89615a] { border: 0; background: none; color: var(--muted); padding: 0 4px; cursor: pointer;\n}\n.x[data-v-0b89615a]:hover { color: var(--accent);\n}\n.form td.attr[data-v-0b89615a] { white-space: nowrap; color: var(--muted);\n}\n";document.head.append(s)})();
 const m = window.journali.vue;
 const Fragment = m.Fragment;
 const computed = m.computed;
@@ -56,14 +56,14 @@ const _hoisted_16 = {
 const _hoisted_17 = { class: "attr" };
 const _hoisted_18 = ["readonly", "placeholder"];
 const _hoisted_19 = { class: "attr" };
-const _hoisted_20 = ["disabled"];
-const _hoisted_21 = ["value"];
-const _hoisted_22 = {
+const _hoisted_20 = ["placeholder"];
+const _hoisted_21 = { class: "attr" };
+const _hoisted_22 = ["disabled"];
+const _hoisted_23 = ["value"];
+const _hoisted_24 = {
   key: 0,
   class: "muted"
 };
-const _hoisted_23 = { class: "attr" };
-const _hoisted_24 = ["placeholder"];
 const _hoisted_25 = { class: "attr" };
 const _hoisted_26 = ["onUpdate:modelValue"];
 const _hoisted_27 = { value: "" };
@@ -367,13 +367,31 @@ const _sfc_main = {
               createElementVNode(
                 "td",
                 _hoisted_19,
+                toDisplayString(_ctx.$t("Bezeichnung")),
+                1
+                /* TEXT */
+              ),
+              createElementVNode("td", null, [
+                withDirectives(createElementVNode("input", {
+                  "onUpdate:modelValue": _cache[1] || (_cache[1] = ($event) => form.value.label = $event),
+                  placeholder: _ctx.$t("wie es in der Auswahl steht"),
+                  style: { "width": "240px" }
+                }, null, 8, _hoisted_20), [
+                  [vModelText, form.value.label]
+                ])
+              ])
+            ]),
+            createElementVNode("tr", null, [
+              createElementVNode(
+                "td",
+                _hoisted_21,
                 toDisplayString(_ctx.$t("Art")),
                 1
                 /* TEXT */
               ),
               createElementVNode("td", null, [
                 withDirectives(createElementVNode("select", {
-                  "onUpdate:modelValue": _cache[1] || (_cache[1] = ($event) => form.value.art = $event),
+                  "onUpdate:modelValue": _cache[2] || (_cache[2] = ($event) => form.value.art = $event),
                   disabled: !!bearbeitet.value,
                   style: { "width": "240px" }
                 }, [
@@ -384,39 +402,21 @@ const _sfc_main = {
                       return openBlock(), createElementBlock("option", {
                         key: a.key,
                         value: a.key
-                      }, toDisplayString(artName(a)), 9, _hoisted_21);
+                      }, toDisplayString(artName(a)), 9, _hoisted_23);
                     }),
                     128
                     /* KEYED_FRAGMENT */
                   ))
-                ], 8, _hoisted_20), [
+                ], 8, _hoisted_22), [
                   [vModelSelect, form.value.art]
                 ]),
                 art.value ? (openBlock(), createElementBlock(
                   "span",
-                  _hoisted_22,
+                  _hoisted_24,
                   toDisplayString(" " + (art.value.dateien ? _ctx.$t("liefert Dateien") : _ctx.$t("nur Anmeldung"))),
                   1
                   /* TEXT */
                 )) : createCommentVNode("v-if", true)
-              ])
-            ]),
-            createElementVNode("tr", null, [
-              createElementVNode(
-                "td",
-                _hoisted_23,
-                toDisplayString(_ctx.$t("Bezeichnung")),
-                1
-                /* TEXT */
-              ),
-              createElementVNode("td", null, [
-                withDirectives(createElementVNode("input", {
-                  "onUpdate:modelValue": _cache[2] || (_cache[2] = ($event) => form.value.label = $event),
-                  placeholder: _ctx.$t("wie es in der Auswahl steht"),
-                  style: { "width": "240px" }
-                }, null, 8, _hoisted_24), [
-                  [vModelText, form.value.label]
-                ])
               ])
             ]),
             (openBlock(true), createElementBlock(
@@ -578,7 +578,7 @@ const _sfc_main = {
     };
   }
 };
-const View = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-6816da86"]]);
+const View = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-0b89615a"]]);
 const entry = {
   views: [{ path: "zugaenge", topic: "tools", label: t("Zugänge"), icon: "⌁", hint: t("Dateisystem, FTP, WebDAV, Anmeldungen an MySQL, Solr, IXP — einmal einrichten, von jedem Plugin nutzbar"), component: View }]
 };

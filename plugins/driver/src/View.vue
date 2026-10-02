@@ -111,13 +111,13 @@ function browsen(z) {
       <tr><td class="attr">{{ $t("Name") }}</td><td>
         <input v-model="form.key" :readonly="!!bearbeitet" :placeholder="$t('kurz, ohne Leerzeichen — z. B. archiv-ftp')" style="width:240px" />
       </td></tr>
+      <tr><td class="attr">{{ $t("Bezeichnung") }}</td><td><input v-model="form.label" :placeholder="$t('wie es in der Auswahl steht')" style="width:240px" /></td></tr>
       <tr><td class="attr">{{ $t("Art") }}</td><td>
         <select v-model="form.art" :disabled="!!bearbeitet" style="width:240px">
           <option v-for="a in anlegbar" :key="a.key" :value="a.key">{{ artName(a) }}</option>
         </select>
         <span v-if="art" class="muted">{{ ' ' + (art.dateien ? $t('liefert Dateien') : $t('nur Anmeldung')) }}</span>
       </td></tr>
-      <tr><td class="attr">{{ $t("Bezeichnung") }}</td><td><input v-model="form.label" :placeholder="$t('wie es in der Auswahl steht')" style="width:240px" /></td></tr>
       <tr v-for="f in art?.felder ?? []" :key="f"><td class="attr">{{ feldName(f) }}</td>
         <td><select v-if="f === 'tls'" v-model="form.felder[f]" style="width:240px"><option value="">{{ $t("nein") }}</option><option value="ja">{{ $t("ja — explizites TLS") }}</option></select>
           <select v-else-if="f === 'auth'" v-model="form.felder[f]" style="width:240px">

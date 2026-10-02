@@ -91,6 +91,14 @@ test('Anlegen schreibt den Zugang mit PUT über api.post — api.put gibt es nic
   } finally { ende() }
 })
 
+test('im Formular stehen Name und Bezeichnung vor der Art; nur die Felder danach hängen von der Art ab', async () => {
+  const { w, ende } = await welt()
+  try {
+    const kopf = w.findAll('table.form td.attr').map(td => td.text())
+    assert.deepEqual(kopf.slice(0, 3), ['Name', 'Bezeichnung', 'Art'])
+  } finally { ende() }
+})
+
 test('gibt es nur den eingebauten Zugang, steht kein leeres Formular da', async () => {
   const get = api.get
   api.get = async (p) => (p === '/api/drivers/arten'
