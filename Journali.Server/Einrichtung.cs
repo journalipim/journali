@@ -37,6 +37,10 @@ public sealed record DbZiel
     public int Port => B.Port;
     public string Database => B.Database ?? "";
     public string User => B.Username ?? "";
+    /// <summary>Wie die Verbindung zur Datenbank verschlüsselt wird (Npgsql SSL Mode): Disable, Prefer (Vorgabe), Require, VerifyCA, VerifyFull.</summary>
+    public string Ssl => B.SslMode.ToString();
+    public static readonly string[] SslModi = ["Disable", "Prefer", "Require", "VerifyCA", "VerifyFull"];
+    public static bool SslGueltig(string? modus) => modus is null || SslModi.Contains(modus, StringComparer.OrdinalIgnoreCase);
 
     /// <summary>Die vollständige Zeichenfolge zum Verbinden; <paramref name="timeout"/> in Sekunden für Prüfungen.</summary>
     public string ConnectionString(int? timeout = null)
@@ -50,9 +54,10 @@ public sealed record DbZiel
     }
 
     /// <summary>Dieselben Zusätze (SSL usw.), andere Adresse; ein leeres Passwort behält das bisherige.</summary>
-    public static DbZiel Aus(DbZiel? bisher, string host, int port, string database, string user, string? password, string quelle)
+    public static DbZiel Aus(DbZiel? bisher, string host, int port, string database, string user, string? password, string quelle, string? ssl = null)
     {
         var b = new NpgsqlConnectionStringBuilder(bisher?.Verbindung ?? "") { Host = host, Port = port, Database = database, Username = user };
+        if (ssl is { Length: > 0 } && SslGueltig(ssl)) b.SslMode = Enum.Parse<SslMode>(ssl, ignoreCase: true);   // nicht angegeben: die Einstellung bleibt, wie sie war
         var gleich = bisher is not null && bisher.Host == host && bisher.User == user;
         return new DbZiel(b.ConnectionString, string.IsNullOrEmpty(password) && gleich ? bisher!.Password : password, quelle);
     }
@@ -168,7 +173,7 @@ public static class Einrichtungscode
 /// </summary>
 public static class Einrichtung
 {
-    public sealed record DbBody(string? Host, int? Port, string? Database, string? User, string? Password, string? Code);
+    public sealed record DbBody(string? Host, int? Port, string? Database, string? User, string? Password, string? Code, string? Ssl = null);
     public sealed record CodeBody(string? Code);
 
     /// <summary>Was ein Fehler beim Verbinden bedeutet: Lage, Grund (Schlüssel für die Oberfläche) und der Text dahinter.</summary>
@@ -219,7 +224,7 @@ public static class Einrichtung
         public object Stand() { lock (_gate) return new
         {
             lage = LageKey(Lage), grund = Grund, detail = Detail, versuch = Versuch, auto = Auto && Lage == DbLage.Unerreichbar,
-            quelle = Ziel?.Quelle, ziel = Ziel is null ? null : new { host = Ziel.Host, port = Ziel.Port, database = Ziel.Database, user = Ziel.User, password = Ziel.Password is { Length: > 0 } },
+            quelle = Ziel?.Quelle, ziel = Ziel is null ? null : new { host = Ziel.Host, port = Ziel.Port, database = Ziel.Database, user = Ziel.User, password = Ziel.Password is { Length: > 0 }, ssl = Ziel.Ssl },
         }; }
 
         /// <summary>Ein Versuch im Hintergrund — nur, solange niemand eingegriffen hat und die Datenbank bloss nicht erreichbar war.</summary>
@@ -239,7 +244,7 @@ public static class Einrichtung
         /// <summary>Aus dem Dialog: Automatik aus, das Ziel ist ab jetzt, was dort steht.</summary>
         public DbZiel Uebernimm(DbBody b)
         {
-            lock (_gate) { Auto = false; return DbZiel.Aus(Ziel, b.Host!.Trim(), b.Port!.Value, b.Database!.Trim(), b.User!.Trim(), b.Password, DbZiel.AusDatei); }
+            lock (_gate) { Auto = false; return DbZiel.Aus(Ziel, b.Host!.Trim(), b.Port!.Value, b.Database!.Trim(), b.User!.Trim(), b.Password, DbZiel.AusDatei, b.Ssl); }
         }
 
         public (DbLage Lage, string Grund, string Detail) Versuche(DbZiel z, bool speichern)
@@ -354,6 +359,7 @@ public static class Einrichtung
         if (b.Port is not (>= 1 and <= 65535)) return Bad("Port: 1 bis 65535.");
         if (string.IsNullOrWhiteSpace(b.Database)) return Bad("Datenbank fehlt.");
         if (string.IsNullOrWhiteSpace(b.User)) return Bad("Anmeldename fehlt.");
+        if (!DbZiel.SslGueltig(b.Ssl)) return Bad("Verschlüsselung: Disable, Prefer, Require, VerifyCA oder VerifyFull.");
         return null;
     }
 }

@@ -2901,5 +2901,17 @@
  "Körper": "Body",
  "keine Treffer": "no matches",
  "{ } Schnittstelle (API)": "{ } Interface (API)",
- "Zu viele Anmeldeversuche — gesperrt für {0} Sekunden.": "Too many sign-in attempts — locked for {0} seconds."
+ "Zu viele Anmeldeversuche — gesperrt für {0} Sekunden.": "Too many sign-in attempts — locked for {0} seconds.",
+ "Die Verbindung zwischen diesem Server und der Datenbank. Wie sie verschlüsselt wird, entscheidet der Betreiber der Datenbank.": "The connection between this server and the database. How it is encrypted is decided by the operator of the database.",
+ "wenn möglich (Prefer)": "if possible (Prefer)",
+ "immer (Require)": "always (Require)",
+ "immer, Aussteller geprüft (VerifyCA)": "always, issuer checked (VerifyCA)",
+ "immer, Aussteller und Name geprüft (VerifyFull)": "always, issuer and name checked (VerifyFull)",
+ "nie (Disable)": "never (Disable)",
+ "Die Verbindung zwischen diesem Server und der Datenbank. Ob sie verschlüsselt wird, entscheidet der Betreiber der Datenbank.": "The connection between this server and the database. Whether it is encrypted is decided by the operator of the database.",
+ "verschlüsselt": "encrypted",
+ "im Klartext": "in plain text",
+ "Postgres bietet keine Verschlüsselung an (ssl = off) oder die Verbindung ist älter als diese Einstellung.": "Postgres offers no encryption (ssl = off) or the connection is older than this setting.",
+ "Postgres hat die Frage nicht beantwortet.": "Postgres did not answer the question.",
+ "Eingestellt in der Verbindung (SSL Mode)": "Set in the connection (SSL Mode)"
 }

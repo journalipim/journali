@@ -11,7 +11,7 @@ import { t } from '../i18n.js'
 
 const router = useRouter()
 const stand = ref(null)
-const form = ref({ host: '', port: 5432, database: 'journali', user: 'postgres', password: '', code: '' })
+const form = ref({ host: '', port: 5432, database: 'journali', user: 'postgres', password: '', code: '', ssl: 'Prefer' })
 const busy = ref('')
 const msg = ref(null)          // { ok, text, title }
 const startet = ref(false)     // gespeichert: der Server lädt jetzt die Datenbank
@@ -49,7 +49,7 @@ async function laden() {
     stand.value = await api.get('/api/setup/state')
     if (!befuellt && stand.value.ziel) {
       const z = stand.value.ziel
-      Object.assign(form.value, { host: z.host, port: z.port, database: z.database, user: z.user })
+      Object.assign(form.value, { host: z.host, port: z.port, database: z.database, user: z.user, ssl: z.ssl ?? 'Prefer' })
       befuellt = true
     }
   } catch { /* der Server startet gerade neu — weiter warten */ }
@@ -104,6 +104,15 @@ onUnmounted(() => clearInterval(timer))
         <label>{{ $t("Datenbank") }}<input v-model="form.database" type="text" autocomplete="off" /></label>
         <label>{{ $t("Anmeldename") }}<input v-model="form.user" type="text" autocomplete="username" /></label>
         <label>{{ $t("Passwort") }}<input v-model="form.password" type="password" autocomplete="current-password" :placeholder="stand?.ziel?.password ? $t('unverändert') : ''" /></label>
+        <label :title="$t('Die Verbindung zwischen diesem Server und der Datenbank. Wie sie verschlüsselt wird, entscheidet der Betreiber der Datenbank.')">{{ $t("Verschlüsselung") }}
+          <select v-model="form.ssl" style="display:block;width:100%;margin-top:3px">
+            <option value="Prefer">{{ $t("wenn möglich (Prefer)") }}</option>
+            <option value="Require">{{ $t("immer (Require)") }}</option>
+            <option value="VerifyCA">{{ $t("immer, Aussteller geprüft (VerifyCA)") }}</option>
+            <option value="VerifyFull">{{ $t("immer, Aussteller und Name geprüft (VerifyFull)") }}</option>
+            <option value="Disable">{{ $t("nie (Disable)") }}</option>
+          </select>
+        </label>
         <div v-if="msg" class="msg" :class="msg.ok ? 'pos' : 'neg'" :title="msg.title">{{ msg.ok ? '✓' : '✗' }} {{ msg.text }}</div>
         <div class="row" style="gap:8px;margin-top:10px">
           <button type="button" :disabled="!!busy" @click="pruefen" :title="$t('verbindet sich einmal, ohne zu speichern')">{{ $t("Prüfen") }}</button>

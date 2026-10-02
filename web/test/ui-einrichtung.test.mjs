@@ -133,3 +133,27 @@ test('Anmeldeseite: ersten Administrator anlegen schickt den Code mit; normale A
   assert.ok(!w.find('select').exists())
   w.unmount()
 })
+
+// 02.10.2026: die Verschlüsselung der Verbindung zur Datenbank ist im Dialog einstellbar (Npgsql SSL Mode); die Vorgabe ist „wenn möglich“.
+test('Verschlüsselung: Vorgabe „wenn möglich“, aus der gespeicherten Verbindung vorbefüllt, geht mit Prüfen und Speichern hinaus', async () => {
+  const calls = server({ '/api/auth/state': { dbSetup: true }, '/api/setup/state': { ...unerreichbar, ziel: { ...unerreichbar.ziel, ssl: 'Require' } },
+    '/api/setup/db/test': { ok: true, lage: 'ok', grund: '', detail: '' }, '/api/setup/db': { ok: true, lage: 'ok', grund: '', detail: '' } })
+  const { w } = await aufbauen(DbSetupView, '/setup')
+  const wahl = w.find('select')
+  assert.deepEqual(wahl.findAll('option').map(o => o.attributes('value')), ['Prefer', 'Require', 'VerifyCA', 'VerifyFull', 'Disable'])
+  assert.equal(wahl.element.value, 'Require', 'aus der gespeicherten Verbindung')
+  await wahl.setValue('VerifyFull')
+  await w.findAll('input')[0].setValue('ABCD-EFGH')
+  await w.findAll('button').find(b => b.text() === 'Prüfen').trigger('click'); await flushPromises()
+  assert.equal(calls.find(c => c.path === '/api/setup/db/test').body.ssl, 'VerifyFull')
+  w.unmount()
+})
+
+test('Verschlüsselung: ohne gespeicherte Angabe steht „wenn möglich“ da', async () => {
+  server({ '/api/auth/state': { dbSetup: true }, '/api/setup/state': unerreichbar })
+  const { w } = await aufbauen(DbSetupView, '/setup')
+  assert.equal(w.find('select').element.value, 'Prefer')
+  assert.match(w.find('label select').element.closest('label').getAttribute('title'), /entscheidet der Betreiber der Datenbank/)
+  w.unmount()
+})
+

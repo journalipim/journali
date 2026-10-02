@@ -16,6 +16,32 @@ public class EinrichtungTests
         .AddInMemoryCollection(new Dictionary<string, string?> { ["JOURNALI_DB"] = db, ["JOURNALI_DB_PASSWORD"] = pw }).Build();
 
     [Fact]
+    public void Die_Verschluesselung_der_Verbindung_ist_einstellbar_und_bleibt_sonst_wie_sie_war()
+    {
+        var z = new DbZiel("Host=db;Port=5432;Database=j;Username=postgres", "geheim", DbZiel.AusUmgebung);
+        Assert.Equal("Prefer", z.Ssl);                                                   // die Vorgabe von Npgsql: verschlüsseln, wenn Postgres es anbietet
+        var streng = DbZiel.Aus(z, "db", 5432, "j", "postgres", null, DbZiel.AusDatei, "Require");
+        Assert.Equal("Require", streng.Ssl); Assert.Contains("SSL Mode=Require", streng.ConnectionString());
+        Assert.Equal("geheim", streng.Password);                                         // das Passwort bleibt, wenn nur die Verschlüsselung wechselt
+        // nicht angegeben: die frühere Einstellung bleibt
+        Assert.Equal("Require", DbZiel.Aus(streng, "db", 5432, "j", "postgres", null, DbZiel.AusDatei).Ssl);
+        Assert.Equal("VerifyFull", DbZiel.Aus(streng, "db", 5432, "j", "postgres", null, DbZiel.AusDatei, "verifyfull").Ssl);   // Gross-/Kleinschreibung egal
+        Assert.Equal("Disable", DbZiel.Aus(z, "db", 5432, "j", "postgres", null, DbZiel.AusDatei, "Disable").Ssl);
+    }
+
+    [Theory]
+    [InlineData(null, true)]
+    [InlineData("Disable", true)]
+    [InlineData("Prefer", true)]
+    [InlineData("require", true)]
+    [InlineData("VerifyCA", true)]
+    [InlineData("VerifyFull", true)]
+    [InlineData("Allow", false)]
+    [InlineData("an", false)]
+    [InlineData("Require; Host=evil", false)]
+    public void Nur_bekannte_Modi_der_Verschluesselung_gelten(string? modus, bool gueltig) => Assert.Equal(gueltig, DbZiel.SslGueltig(modus));
+
+    [Fact]
     public void Die_Verbindung_handelt_kein_Kerberos_aus()
     {
         // das Laufzeit-Image hat libgssapi_krb5 nicht; Npgsql würde beim Verbindungsaufbau GSS versuchen und mit „Cannot load library“ scheitern

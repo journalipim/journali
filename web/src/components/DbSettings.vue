@@ -48,6 +48,15 @@ async function kopieren() { try { await navigator.clipboard.writeText(klar.value
       <tr><td class="attr">{{ $t("Datenbank") }}</td><td class="mono">{{ d.database }}</td></tr>
       <tr><td class="attr">{{ $t("Anmeldename") }}</td><td class="mono">{{ d.user }}</td></tr>
       <tr><td class="attr">{{ $t("Quelle") }}</td><td>{{ QUELLE[d.quelle] ?? d.quelle }}</td></tr>
+      <!-- Was die Verbindung wirklich ist (Postgres sagt es: pg_stat_ssl), daneben, was eingestellt ist -->
+      <tr class="ssl"><td class="attr" :title="$t('Die Verbindung zwischen diesem Server und der Datenbank. Ob sie verschlüsselt wird, entscheidet der Betreiber der Datenbank.')">{{ $t("Verschlüsselung") }}</td>
+        <td>
+          <span v-if="d.ssl?.verschluesselt === true" class="pos">✓ {{ $t("verschlüsselt") }}</span>
+          <span v-else-if="d.ssl?.verschluesselt === false" class="neg" :title="$t('Postgres bietet keine Verschlüsselung an (ssl = off) oder die Verbindung ist älter als diese Einstellung.')">✗ {{ $t("im Klartext") }}</span>
+          <span v-else class="muted" :title="$t('Postgres hat die Frage nicht beantwortet.')">—</span>
+          <span v-if="d.ssl?.version" class="muted mono"> {{ d.ssl.version }}</span>
+          <span v-if="d.ssl?.modus" class="muted mono" :title="$t('Eingestellt in der Verbindung (SSL Mode)')"> · {{ d.ssl.modus }}</span>
+        </td></tr>
       <tr><td class="attr">{{ $t("Passwort") }}</td>
         <td>
           <template v-if="klar"><span class="mono klar">{{ klar }}</span> <button class="x" @click="kopieren" :title="$t('in die Zwischenablage')">⧉</button> <button class="x" @click="klar = ''" :title="$t('wieder verdecken')">◌</button></template>

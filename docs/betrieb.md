@@ -799,7 +799,10 @@ Verbindung HTTPS ist.
 **Verschlüsselung zur Datenbank.** Npgsql steht auf `SSL Mode=Prefer`: es verschlüsselt, wenn Postgres es anbietet. Das Image `pgvector/pgvector` bietet es in der
 Vorgabe nicht an (`ssl = off`), die Verbindung läuft dann **im Klartext** — gemessen am 01.10.2026 mit `pg_stat_ssl`. Im eigenen Docker-Netz oder im Heimnetz ist das
 ein geringes Risiko; über ein fremdes Netz nicht. Ob die Verbindung verschlüsselt wird, entscheidet der Betreiber der Datenbank, nicht journali: ein Betreiber in einer Cloud wird es verlangen, ein Heimnetz nicht.
-journali kann beides: es verschlüsselt, wenn Postgres es anbietet, und mit `SSL Mode=Require` oder `VerifyFull` in der Verbindung verlangt es die Verschlüsselung.
+journali kann beides: es verschlüsselt, wenn Postgres es anbietet, und verlangt es, wenn man es einstellt. Eingestellt wird es im Einrichtungsdialog der Datenbank (Feld
+**Verschlüsselung**: wenn möglich / immer / immer mit geprüftem Aussteller / immer mit geprüftem Aussteller und Namen / nie; das ist der `SSL Mode` von Npgsql, Vorgabe `Prefer`)
+oder in `db.json`. Was die Verbindung wirklich ist, zeigt ⚙ Einstellungen → ⇅ B&R → Datenbank in der Zeile **Verschlüsselung**: `✓ verschlüsselt` mit der TLS-Version oder
+`✗ im Klartext`, daneben der eingestellte Modus. Die Zeile stammt aus `pg_stat_ssl`, also von Postgres selbst, nicht aus der Einstellung.
 
 **Verschlüsselung der Datenbank einschalten, ohne Neustart** (Postgres-Dokumentation „Secure TCP/IP Connections with SSL“): `ssl = on` ändert sich mit
 `pg_reload_conf()`. Zertifikat und Schlüssel liegen standardmässig im Datenverzeichnis (`server.crt`, `server.key`; der Schlüssel mit den Rechten 0600, ohne Passwort,

@@ -74,3 +74,22 @@ test('ohne Passwort in der Verbindung gibt es nichts anzuzeigen', async () => {
   assert.ok(!w.findAll('button').some(b => b.text().includes('anzeigen')))
   w.unmount()
 })
+
+// 02.10.2026: die Zeile Verschlüsselung sagt, was die Verbindung wirklich ist (Postgres: pg_stat_ssl), daneben, was eingestellt ist
+test('Verschlüsselung: verschlüsselt mit Version, im Klartext rot, unbekannt als Strich — dazu der eingestellte Modus', async () => {
+  const zeile = w => w.find('tr.ssl')
+  server({ '/api/backup/db': { ...verbindung, ssl: { modus: 'Prefer', verschluesselt: true, version: 'TLSv1.3' } } })
+  let w = mount(DbSettings); await flushPromises()
+  assert.match(zeile(w).text(), /Verschlüsselung\s*✓ verschlüsselt\s*TLSv1\.3\s*· Prefer/)
+  assert.ok(zeile(w).find('.pos').exists()); w.unmount()
+
+  server({ '/api/backup/db': { ...verbindung, ssl: { modus: 'Prefer', verschluesselt: false, version: null } } })
+  w = mount(DbSettings); await flushPromises()
+  assert.match(zeile(w).text(), /✗ im Klartext/); assert.ok(zeile(w).find('.neg').exists(), 'unverschlüsselt ist rot')
+  assert.match(zeile(w).text(), /· Prefer/); w.unmount()
+
+  server({ '/api/backup/db': { ...verbindung, ssl: { modus: 'Require', verschluesselt: null, version: null } } })
+  w = mount(DbSettings); await flushPromises()
+  assert.match(zeile(w).text(), /—/); assert.match(zeile(w).text(), /· Require/); w.unmount()
+})
+
