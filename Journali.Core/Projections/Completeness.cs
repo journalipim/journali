@@ -29,6 +29,18 @@ public static class CompletenessRules
         }
     }
 
+    /// <summary>Gilt dieses Attribut an diesem Knoten? Dasselbe wie <c>ActiveAttributes(…).Any(a =&gt; a.Key == def.Key)</c>, aber ohne die Attribute der Gruppen
+    /// aufzuzählen: je Befehl eines Imports kostete das alle Attribute der Gruppen am Pfad (1 500 Attribute: 40-mal so lange wie mit 20).
+    /// Es genügt eine aktive Gruppe am Pfad, zu der das Attribut gehört, an dieser Rolle erlaubt und mit erfüllter Bedingung.</summary>
+    public static bool IstAktiv(Tree tree, ModelCatalog model, Node node, AttributeDefinition def)
+    {
+        if (!def.AllowedAt(node.Role)) return false;
+        foreach (var (group, _) in tree.EffectiveGroups(node))
+            if (model.GroupActiveAt(group, node.Role) && model.IsMember(def.Key, group))
+                return WhenHolds(tree, model, node, def);
+        return false;
+    }
+
     /// <summary>Bedingung eines Attributs am Knoten: der wirksame Wert (eigen oder geerbt, mit Master/Stern) des Bedingungsattributs ist einer der erlaubten.</summary>
     public static bool WhenHolds(Tree tree, ModelCatalog model, Node node, AttributeDefinition a) =>
         a.When is null || a.When.Holds(tree.Resolve(model, node, a.When.Attribute, null, null).Value);

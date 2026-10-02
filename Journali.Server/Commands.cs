@@ -399,7 +399,7 @@ public static class Commands
         if (def.Type == AttributeTypes.Rows) return Outcome.Bad("{0} ist vermehrbar — Zeilen über RowAdded, Zellen mit row.", def.Key);
         row = Blank(row);
         // Gilt das Attribut hier? Über eine Gruppe am Pfad, die an dieser Rolle aktiv ist (oder als Zelle einer Zeile).
-        if (row is null && !CompletenessRules.ActiveAttributes(c.Tree, c.Model, n).Any(a => a.Key == def.Key) && !IstFormelSpalte(c, n, def))
+        if (row is null && !CompletenessRules.IstAktiv(c.Tree, c.Model, n, def) && !IstFormelSpalte(c, n, def))
             return Outcome.Bad(WhyNotActive(c, n, def));
         if (row is not null)
         {
@@ -440,7 +440,7 @@ public static class Commands
         if (!c.Model.Attributes.TryGetValue(attribute, out var def)) return Outcome.Bad("Unbekanntes Attribut: {0}", attribute);
         if (def.Type == AttributeTypes.Rows) return Outcome.Bad("{0} ist vermehrbar — Zeilen über RowAdded, Zellen mit row.", def.Key);
         row = Blank(row);
-        if (row is null && !CompletenessRules.ActiveAttributes(c.Tree, c.Model, n).Any(a => a.Key == def.Key) && !IstFormelSpalte(c, n, def))
+        if (row is null && !CompletenessRules.IstAktiv(c.Tree, c.Model, n, def) && !IstFormelSpalte(c, n, def))
             return Outcome.Bad(WhyNotActive(c, n, def));
         if (row is not null)
         {
@@ -478,7 +478,7 @@ public static class Commands
     {
         if (!c.Tree.Nodes.TryGetValue(id, out var n)) return Outcome.Missing;
         if (!c.Model.Attributes.TryGetValue(attribute ?? "", out var def) || def.Type != AttributeTypes.Rows) return Outcome.Bad("{0} ist kein vermehrbares Attribut.", attribute);
-        if (!CompletenessRules.ActiveAttributes(c.Tree, c.Model, n).Any(a => a.Key == def.Key)) return Outcome.Bad(WhyNotActive(c, n, def));
+        if (!CompletenessRules.IstAktiv(c.Tree, c.Model, n, def)) return Outcome.Bad(WhyNotActive(c, n, def));
         var rowId = "r-" + Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(3)).ToLowerInvariant();
         return Outcome.Ok(c.Write(id, Types.RowAdded, new RowAdded(def.Key, rowId)));
     }

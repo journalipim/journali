@@ -123,6 +123,11 @@ public sealed class ModelCatalog : IProjection
         return aus.Order();
     }
 
+    /// <summary>Gehört das Attribut zu dieser Gruppe (Zuordnung oder Mitgliedschaft)? Eine Nachschlagefrage, ohne die Gruppen des Attributs aufzulisten.</summary>
+    public bool IsMember(string attribute, string group) =>
+        (Attributes.TryGetValue(attribute, out var a) && (a.Group ?? "") == group)
+        || (AttributeGroups.TryGetValue(attribute, out var gs) && gs.Contains(group));
+
     /// <summary>Jede Gruppe, die es gibt: definierte, am Attribut zugeordnete und solche, die nur Mitglieder haben.</summary>
     public IEnumerable<string> AllGroupKeys =>
         Groups.Keys.Concat(Attributes.Values.Select(a => a.Group ?? "")).Concat(AttributeGroups.Values.SelectMany(g => g))
