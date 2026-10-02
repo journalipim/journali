@@ -24,7 +24,7 @@
  "kurz, ohne Leerzeichen — z. B. archiv-ftp": "short, no spaces — e.g. archive-ftp",
  "liefert Dateien": "provides files",
  "nur Anmeldung": "sign-in only",
- "Bezeichnung": "Label",
+ "Anzeigename (optional)": "Display name (optional)",
  "wie es in der Auswahl steht": "as it appears in the list",
  "hinterlegt — leer lassen, um es zu behalten": "stored — leave empty to keep it",
  "bleibt beim Server, nie im Journal": "stays with the server, never in the journal",

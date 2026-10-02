@@ -111,7 +111,7 @@ function browsen(z) {
       <tr><td class="attr">{{ $t("Name") }}</td><td>
         <input v-model="form.key" :readonly="!!bearbeitet" :placeholder="$t('kurz, ohne Leerzeichen — z. B. archiv-ftp')" style="width:240px" />
       </td></tr>
-      <tr><td class="attr">{{ $t("Bezeichnung") }}</td><td><input v-model="form.label" :placeholder="$t('wie es in der Auswahl steht')" style="width:240px" /></td></tr>
+      <tr><td class="attr">{{ $t("Anzeigename (optional)") }}</td><td><input v-model="form.label" :placeholder="$t('wie es in der Auswahl steht')" style="width:240px" /></td></tr>
       <tr><td class="attr">{{ $t("Art") }}</td><td>
         <select v-model="form.art" :disabled="!!bearbeitet" style="width:240px">
           <option v-for="a in anlegbar" :key="a.key" :value="a.key">{{ artName(a) }}</option>

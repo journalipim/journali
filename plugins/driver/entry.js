@@ -1,4 +1,4 @@
-(function(){const s=document.createElement('style');s.textContent="\n.x[data-v-0b89615a] { border: 0; background: none; color: var(--muted); padding: 0 4px; cursor: pointer;\n}\n.x[data-v-0b89615a]:hover { color: var(--accent);\n}\n.form td.attr[data-v-0b89615a] { white-space: nowrap; color: var(--muted);\n}\n";document.head.append(s)})();
+(function(){const s=document.createElement('style');s.textContent="\n.x[data-v-040eedb9] { border: 0; background: none; color: var(--muted); padding: 0 4px; cursor: pointer;\n}\n.x[data-v-040eedb9]:hover { color: var(--accent);\n}\n.form td.attr[data-v-040eedb9] { white-space: nowrap; color: var(--muted);\n}\n";document.head.append(s)})();
 const m = window.journali.vue;
 const Fragment = m.Fragment;
 const computed = m.computed;
@@ -367,7 +367,7 @@ const _sfc_main = {
               createElementVNode(
                 "td",
                 _hoisted_19,
-                toDisplayString(_ctx.$t("Bezeichnung")),
+                toDisplayString(_ctx.$t("Anzeigename (optional)")),
                 1
                 /* TEXT */
               ),
@@ -578,7 +578,7 @@ const _sfc_main = {
     };
   }
 };
-const View = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-0b89615a"]]);
+const View = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-040eedb9"]]);
 const entry = {
   views: [{ path: "zugaenge", topic: "tools", label: t("Zugänge"), icon: "⌁", hint: t("Dateisystem, FTP, WebDAV, Anmeldungen an MySQL, Solr, IXP — einmal einrichten, von jedem Plugin nutzbar"), component: View }]
 };
