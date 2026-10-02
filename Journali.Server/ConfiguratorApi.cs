@@ -8,6 +8,8 @@ namespace Journali.Server;
 /// die Regeln kennt er nicht. Die Definitionen liegen als Plugin-Daten von <c>configurator</c> im Journal (Name <c>def:&lt;key&gt;</c>, ein JSON-Dokument,
 /// <see cref="Definition"/>); gepflegt werden sie in der Ansicht des Plugins. Geprüft wird hier, mit derselben Funktion wie in den Tests
 /// (<see cref="Checker"/>): es gibt keine zweite Umsetzung der Logik im Browser.
+/// <para><b>Gruppen</b> (docs/pflegestruktur.md 40): <c>group:&lt;key&gt;</c> (Bezeichnung, gleiche Werte) und <c>member:&lt;knoten&gt;</c> (die Zeilen eines Teils)
+/// stehen ebenfalls in den Plugin-Daten und gelten für alle Konfiguratoren.</para>
 /// <para><b>Recht.</b> Prüfen ändert nichts und braucht darum nur das Recht zu lesen, auch wenn es ein POST ist (<see cref="Auth.Needed"/>).
 /// Ein Teil, das die Rolle des Aufrufers nicht sieht, gibt es für ihn nicht.</para>
 /// </summary>
@@ -36,6 +38,26 @@ public static class ConfiguratorApi
             }).ToList()));
         });
 
+        // Die Konfiguratorgruppen und die Zeilen der Teile, wie die Prüfung sie liest — mit dem, was an ihnen nicht stimmt
+        api.MapGet("/configurator-groups", (Catalog c) =>
+        {
+            if (Ready(c) is { } no) return no;
+            return Results.Ok(c.Lesen((_, _) =>
+            {
+                var data = Data(c);
+                var (groups, ge) = Groups.ReadGroups(data);
+                var (rows, re) = Groups.ReadRows(data);
+                var members = rows.Values.SelectMany(l => l.Where(r => !r.IsLimit).Select(r => r.Group!)).GroupBy(g => g).ToDictionary(g => g.Key, g => g.Count());
+                var keys = groups.Keys.Concat(rows.Values.SelectMany(l => l.Select(r => r.Group!))).Distinct().OrderBy(k => k, StringComparer.Ordinal);
+                return new
+                {
+                    groups = keys.Select(k => new { key = k, label = groups.GetValueOrDefault(k)?.Label, equal = groups.GetValueOrDefault(k)?.Equal ?? false, defined = groups.ContainsKey(k), members = members.GetValueOrDefault(k) }).ToList(),
+                    parts = rows.OrderBy(kv => kv.Key, StringComparer.Ordinal).Select(kv => new { node = kv.Key, rows = kv.Value }).ToList(),
+                    errors = ge.Concat(re).ToList(),
+                };
+            }));
+        });
+
         // Eine Definition mit dem, was an ihr nicht stimmt
         api.MapGet("/configurator/{key}", (string key, Catalog c) =>
         {
@@ -61,6 +83,10 @@ public static class ConfiguratorApi
 
             return c.Lesen((model, tree) =>
             {
+                var data = Data(c);
+                var (groups, _) = Groups.ReadGroups(data);
+                var (memberRows, _) = Groups.ReadRows(data);
+
                 // Aus der Kennung des Aufrufers wird ein Knoten: Id, sonst der eindeutige Wert eines Attributs
                 Dictionary<string, List<Node>>? byValue = null;
                 var chosen = new List<(string Ref, Node Node, int Amount)>();
@@ -86,19 +112,19 @@ public static class ConfiguratorApi
                 }
 
                 var resources = d.ResourcesAttribute;
-                var parts = chosen.Select(g => new Line(Parts.From(tree, model, g.Node, resources), g.Amount)).ToList();
+                var parts = chosen.Select(g => new Line(Parts.From(tree, model, g.Node, resources, memberRows), g.Amount)).ToList();
                 IReadOnlyList<Part>? candidates = null;
                 if (body.Selectable == true)
                 {
-                    candidates = Parts.Candidates(tree, model, d.Root, resources).Where(t => tree.Nodes.TryGetValue(t.Id, out var k) && tree.Visible(k, view.Role, view.Admin)).ToList();
+                    candidates = Parts.Candidates(tree, model, d.Root, resources, memberRows).Where(t => tree.Nodes.TryGetValue(t.Id, out var k) && tree.Visible(k, view.Role, view.Admin)).ToList();
                     if (candidates.Count > MaxSelectable) return Bad("Mehr als {0} wählbare Teile — die Wurzel des Konfigurators begrenzt sie.", MaxSelectable);
                 }
 
-                var e = Checker.Check(d, parts, candidates);
+                var e = Checker.Check(d, parts, candidates, groups);
                 // Der Aufrufer kennt seine Kennungen, nicht unsere Ids: zurück in seiner Sprache
                 var back = chosen.GroupBy(g => g.Node.Id).ToDictionary(g => g.Key, g => g.First().Ref);
                 string Ref(string id) => back.GetValueOrDefault(id, id);
-                object Sentence(Violation v) => new { v.Kind, v.Text, affects = v.Affects.Select(Ref).ToList(), v.Rule, v.Resource };
+                object Sentence(Violation v) => new { v.Kind, v.Text, affects = v.Affects.Select(Ref).ToList(), v.Rule, v.Group };
 
                 return Results.Ok(new
                 {
@@ -108,15 +134,20 @@ public static class ConfiguratorApi
                     violations = e.Violations.Select(Sentence).ToList(),
                     missing = e.Missing.Select(Sentence).ToList(),
                     balance = e.Balance.OrderBy(kv => kv.Key, StringComparer.Ordinal).ToDictionary(kv => kv.Key, kv => kv.Value),
+                    groups = e.Groups!.OrderBy(kv => kv.Key, StringComparer.Ordinal).ToDictionary(kv => kv.Key, kv => new { label = Groups.Label(groups, kv.Key), count = kv.Value.Count, min = kv.Value.Min, max = kv.Value.Max, allowed = kv.Value.Allowed, values = kv.Value.Values }),
                     selectable = e.Selectable?.Select(w =>
                     {
                         var k = tree.Nodes[w.Id];
-                        return new { id = w.Id, name = NodeRow.LabelOf(tree, model, k), keys = tree.KeysOf(model, k), ok = w.Ok, reasons = w.Reasons.Select(Sentence).ToList() };
+                        return new { id = w.Id, name = NodeRow.LabelOf(tree, model, k), keys = tree.KeysOf(model, k), ok = w.Ok, reasons = w.Reasons.Select(Sentence).ToList(), lifts = w.Lifts ?? [] };
                     }).ToList(),
                 });
             });
         });
     }
+
+    /// <summary>Alle Plugin-Daten von <c>configurator</c>: Name (mit Präfix) und JSON-Dokument — Definitionen, Gruppen, Zeilen der Teile und Testfälle.</summary>
+    private static List<KeyValuePair<string, string>> Data(Catalog c) =>
+        c.Plugins.All.TryGetValue(Plugin, out var p) ? p.Data.Where(kv => kv.Key.StartsWith(Groups.GroupPrefix, StringComparison.Ordinal) || kv.Key.StartsWith(Groups.MemberPrefix, StringComparison.Ordinal)).ToList() : [];
 
     /// <summary>Die Definitionen im Journal: Name ohne Präfix und das JSON-Dokument.</summary>
     private static List<KeyValuePair<string, string>> All(Catalog c) =>

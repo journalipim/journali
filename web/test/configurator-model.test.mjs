@@ -54,11 +54,13 @@ test('verschachtelte Bedingungen werden mit ihren Teilen aufgeräumt', () => {
 test('ein Testfall erwartet zulässig, vollständig und die Schlüssel der Verstösse', () => {
   const r = {
     valid: false, complete: false,
-    violations: [{ kind: 'rule', rule: 'k1-gk2' }, { kind: 'balance', resource: 'kuehlmittel' }],
+    violations: [{ kind: 'rule', rule: 'k1-gk2' }, { kind: 'balance', group: 'kuehlmittel' }],
     missing: [{ kind: 'rule', rule: 'psu' }],
   }
   assert.deepEqual(expectFrom(r), { valid: false, complete: false, violations: ['balance:kuehlmittel', 'rule:k1-gk2'], missing: ['rule:psu'] })
-  assert.equal(violationKey({ kind: 'balance', resource: 'pci' }), 'balance:pci')
+  assert.equal(violationKey({ kind: 'balance', group: 'pci' }), 'balance:pci')
+  assert.equal(violationKey({ kind: 'max', group: 'ram' }), 'max:ram')      // Vorgaben der Gruppen: Art und Gruppe
+  assert.equal(violationKey({ kind: 'min', group: 'ram' }), 'min:ram')
 })
 
 test('der Vergleich eines Testfalls nennt, was abweicht', () => {

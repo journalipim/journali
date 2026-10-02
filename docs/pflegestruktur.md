@@ -2325,13 +2325,15 @@ Schnittstelle sind englisch, weil sie im Journal stehen und nach aussen gehen.
   Eine Erweiterungskarte, die einen Steckplatz braucht und drei bereitstellt, trägt beides. Jede Ressource, die in der Auswahl vorkommt,
   muss in der Summe ≥ 0 sein; eine Regel je Ressource gibt es nicht. Die Ressourcen stehen als Zeilenattribut `resources` am Produkt
   (Spalten `resource` und `amount`, positiv = stellt bereit, negativ = verbraucht). Eine Variante ohne eigene Zeilen nimmt die ihres Produkts.
+  Das ist der Weg vor Abschnitt 40: dort ist die Ressource eine Konfiguratorgruppe, und eine Zeile an einem Teil geht diesem Attribut vor.
 - **„wenn A, dann B“** (`if` und `then` an der Regel). Die Bedingung (`has`, `count`, `sum` eines Attributs, `balance` einer Ressource, verknüpft mit
   `and`, `or`, `not`) fragt nach Teilen, die ein **Selektor** (`selector`) benennt: ein Knoten (Produkt, Gruppe oder Variante, sein ganzer Teilbaum),
   ein Attributfilter oder beides. Die Folge: `forbids`, `limits` auf höchstens `max`, `requires` mindestens `min`. Eine Regel ohne Bedingung gilt immer.
 
 **Zwei Zustände.** *Unzulässig* (`valid: false`): ein Verbot, eine Grenze oder eine Ressource im Minus ist verletzt. *Unvollständig*
 (`complete: false`): etwas ist verlangt und fehlt. Eine unvollständige Auswahl kann zulässig sein. Zu jedem Teil, das noch dazukommen könnte,
-sagt das Ergebnis auf Wunsch (`selectable`), ob es geht und welchen Verstoss es neu verursachen würde; was verlangt ist und fehlt, sperrt kein Teil.
+sagt das Ergebnis auf Wunsch (`selectable`), ob es geht und welchen Verstoss es neu verursachen würde; was verlangt ist und fehlt, sperrt kein Teil —
+und eine Summe im Minus ebenso wenig: ein weiteres Teil kann sie beheben (Abschnitt 40).
 
 **Kern (`Journali.Core/Configurator/`):** `Definition` (JSON, Prüfung der Regeln, jede Meldung nennt die Regel), `Checker` (Auswahl → `Evaluation` mit
 Verstössen, Fehlendem, Bilanz je Ressource und Wählbarkeit), `Parts` (Baum → Teil, wählbare Teile unter einer Wurzel).
@@ -2341,7 +2343,8 @@ Tests: `ConfiguratorTests` (das Beispiel eines Servers mit Mainboard, CPU, Kühl
 
 - `POST /api/configurator/{key}/check` mit `{ "selection": [{ "id": "<Knoten-Id oder eindeutiger Wert, z. B. SKU>", "amount": 1 }], "selectable": false }`.
   Die Antwort: `valid`, `complete`, `selection` (`ref`, `id`, `name`, `amount`), `violations` und `missing` (`kind`, `text`, `affects`, `rule` oder
-  `resource`), `balance` je Ressource (`provided`, `consumed`, `free`) und mit `selectable: true` zu jedem wählbaren Teil `ok` und die `reasons`. In
+  `group`), `balance` je Gruppe (`provided`, `consumed`, `free`), `groups` (`label`, `count`, `min`, `max`, `allowed`, `values`) und mit `selectable: true` zu jedem
+  wählbaren Teil `ok`, die `reasons` und die `lifts` (die Gruppen im Minus, die es anhebt). In
   `affects` stehen die Kennungen, die der Aufrufer geschickt hat — der Shop kennt unsere Ids nicht. Höchstens 500 Zeilen, Menge 1 bis 9999,
   höchstens 2 000 wählbare Teile.
 - `GET /api/configurator` (die Konfiguratoren mit Zahl der Regeln und Fehler) und `GET /api/configurator/{key}` (die Definition und was an ihr nicht stimmt).
@@ -2360,3 +2363,54 @@ warum eines gesperrt ist — über denselben Endpunkt wie der Shop, gegen den ge
 
 **Offen:** mehrere Container in einer Konfiguration (zwei Mainboards fallen heute in eine Bilanz zusammen), Hilfe in der Instanz, der Tarif des Plugins im
 Tarifblatt des Lizenzservers.
+
+## 40. Konfiguratorgruppen — Teile gehören mit Zeilen zu Gruppen, die Regel steht an der Gruppe (02.10.2026, Kern und Endpunkt gebaut)
+
+Eine Regel „Teil A schliesst Teil B aus“ gilt für genau diese zwei Produkte und muss bei jedem neuen Produkt nachgepflegt werden. Darum steht die Regel an einer
+**Konfiguratorgruppe**; das Produkt ist Mitglied und trägt Zahlen oder einen Wert. Eine Gruppe gilt für alle Konfiguratoren, ihre Mitglieder auch. Die wenn/dann-Regeln
+aus Abschnitt 39 bleiben für Fälle, die keine Gruppe abdeckt.
+
+**Speicherung** (Plugin-Daten von `configurator`, kein neuer Eintragstyp; Namen und Felder englisch, sie stehen im Journal):
+
+- `group:<key>`: `label` (für Meldungen) und `equal` (alle Werte der Mitglieder müssen gleich sein). Eine Gruppe, die nur in Zeilen vorkommt, hat den Schlüssel als
+  Bezeichnung.
+- `member:<knoten>`: die **Zeilen** des Teils (`rows`). Hat eine Variante keine, gelten die des nächsten Vorfahren, der welche hat (Produkt, Gruppe im Baum); hat sie
+  eigene, gelten nur diese.
+- `def:<key>` (Abschnitt 39) bekommt `limits`: eine Grenze je Zeile für eine Gruppe, die der Konfigurator selbst setzt.
+
+**Eine Zeile** nennt ihre Gruppe (`group`), optional eine Bedingung (`when`) und entweder eine Wirkung als **Mitglied** oder eine **Vorgabe**:
+
+| Art | Felder | Das Teil zählt in der Gruppe |
+|---|---|---|
+| Mitglied | `provides` (stellt bereit), `consumes` (verbraucht), `value` (Wert in der Gruppe) | ja |
+| Vorgabe | `min`, `max` (Zahl der Mitglieder), `values` (erlaubte Werte) | nein |
+
+**Alle Zeilen, deren Bedingung zutrifft, wirken**; es gibt keine Reihenfolge und keinen Rückfall. Ein Teil hat beliebig viele Zeilen in beliebig vielen Gruppen
+(eine CPU: verbraucht einen CPU-Steckplatz; stellt mit einem bestimmten Mainboard zwei PCI-Steckplätze bereit; verbraucht mit einem bestimmten Gehäuse zwei Kühlungen).
+`when` ist eine Bedingung aus Abschnitt 39 (`has`, `count`, `sum`, `and`, `or`, `not`) über die **Teile der Auswahl**; nach der Bilanz einer Gruppe darf sie nicht
+fragen, weil die Bilanz von den Zeilen abhängt, die sie auswählt (ein Kreis). Eine Zeile mit Fehlern wirkt nicht und wird beim Lesen gemeldet.
+
+**Was daraus folgt** (`Checker`):
+
+- **Summe.** Je Gruppe, in der eine Zeile `provides` oder `consumes` nennt: bereit − verbraucht über alle Teile mal Menge, Zeilen derselben Gruppe addieren sich. Im Minus
+  ist die Auswahl **ungültig** (`valid: false`, Art `balance`); ein Teil, das die Summe ins Minus bringt, bleibt trotzdem **wählbar**, und die `lifts` am wählbaren Teil
+  nennen, welche Gruppe im Minus es anhebt.
+- **Mitglieder und Werte.** Ein Teil zählt in einer Gruppe einmal (mal Menge), egal wie viele seiner Zeilen sie nennen. Hat es mehrere Werte, hat es sie alle. Werte werden
+  als Zahlen verglichen, wo sie Zahlen sind (8 = 8,0), sonst ohne Beachtung der Gross- und Kleinschreibung.
+- **Gleiche Werte** (`equal`): zwei verschiedene Werte in der Gruppe sind ungültig (Art `equal`).
+- **Vorgaben.** Alle zutreffenden Vorgaben einer Gruppe gelten zusammen, auch die des Konfigurators: das höchste `min`, das niedrigste `max`, die Schnittmenge der erlaubten
+  Werte. Mehr Mitglieder als `max` ist ungültig (`max`), ein Wert, der nicht erlaubt ist, ebenso (`value`); weniger als `min` ist **unvollständig** (`min`, unter `missing`).
+  Ein Mitglied ohne Wert prüft die Liste der erlaubten Werte nicht. Eine Vorgabe gibt es nur, solange das Teil, das sie macht, in der Auswahl ist.
+- **Wählbar.** Gesperrt ist ein Teil, das einen **neuen** Verstoss der Arten `rule`, `equal`, `max` oder `value` verursacht — nicht eines, das nur die Summe ins Minus
+  bringt oder eine Mindestmenge offen lässt. Ein Verstoss, den die Auswahl schon hat, sperrt kein weiteres Teil.
+- **Bestellbar** ist eine Auswahl, wenn `valid` und `complete` zutreffen.
+
+**Beispiele** (Tests in `ConfiguratorGruppenTests`): ein Mainboard gibt der Gruppe „RAM“ vor: `min 2`, `max 2`, erlaubte Werte 8 und 32 (die Kapazität in GB, als Wert der
+Gruppe, unabhängig vom Attribut am Produkt); ein 16-GB-Baustein ist dann ungültig und gesperrt, ein einzelner Baustein unvollständig, ein dritter gesperrt. Eine Gruppe
+„nur ein CPU-Typ“ mit `equal` schliesst Silber- neben Gold-CPUs aus, zwei Silber-CPUs gehen. Eine CPU, die eine Kühlpaste verbraucht, ist ohne ein Teil, das sie bereitstellt,
+ungültig; der Kühler, der sie bereitstellt, trägt in `selectable` den Hinweis `lifts: ["paste"]`.
+
+**Schnittstelle:** `POST /api/configurator/{key}/check` liest Gruppen und Zeilen aus den Plugin-Daten und antwortet zusätzlich mit `groups`; `violations` und `missing` nennen
+`group` statt `resource`. `GET /api/configurator-groups` liefert die Gruppen (mit der Zahl ihrer Mitglieder), die Zeilen der Teile und was an ihnen nicht stimmt.
+
+**Offen:** Ansicht (Reiter „Gruppen“, Zeilen am Produkt), Gruppen im Tarifblatt (gilt wie das Plugin), mehrere Container in einer Konfiguration (Abschnitt 39).

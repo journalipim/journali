@@ -183,7 +183,7 @@ public class ConfiguratorApiTests
         Assert.False(j.GetProperty("valid").GetBoolean());
         var v = j.GetProperty("violations").EnumerateArray().Single();
         Assert.Equal("balance", v.GetProperty("kind").GetString());
-        Assert.Equal("kuehlmittel", v.GetProperty("resource").GetString());
+        Assert.Equal("kuehlmittel", v.GetProperty("group").GetString());
         Assert.Equal(["SKU-cpu"], Namen(v, "affects"));                       // die Kennung, die der Aufrufer geschickt hat, nicht unsere Id
         Assert.Equal(["board", "cpu"], j.GetProperty("selection").EnumerateArray().Select(x => x.GetProperty("id").GetString() == w.Ids["board"] ? "board" : "cpu").ToArray());
         Assert.Equal(2, j.GetProperty("balance").GetProperty("cpu_slot").GetProperty("free").GetInt32());
@@ -295,5 +295,60 @@ public class ConfiguratorApiTests
     {
         var ctx = new DefaultHttpContext(); ctx.Request.Method = "PUT"; ctx.Request.Path = "/api/plugins/configurator/data/def:server";
         Assert.Equal(Rights.Write, Auth.Needed(ctx.Request));
+    }
+
+    // ---- Konfiguratorgruppen
+
+    [Fact]
+    public async Task Zeilen_an_den_Teilen_gelten_in_der_Pruefung_mit_Gruppe_Summe_und_dem_Hinweis_wer_sie_hebt()
+    {
+        await using var w = await Welt.Neu();
+        await w.Teile();
+        // Kühlpaste: die CPU verbraucht eine, der Kühler 3 stellt eine bereit — als Zeilen an den Teilen, mit einer Gruppe, die eine Bezeichnung hat
+        w.C.With((_, _, write) =>
+        {
+            write("t", Plugins.Stream + ConfiguratorApi.Plugin, Types.PluginDataSet, new PluginDataSet(Groups.GroupPrefix + "paste", Groups.Write(new GroupInfo("Kühlpaste"))), null);
+            write("t", Plugins.Stream + ConfiguratorApi.Plugin, Types.PluginDataSet, new PluginDataSet(Groups.MemberPrefix + w.Ids["cpu"], Groups.Write(new Membership([new GroupRow("paste", Consumes: 1)]))), null);
+            write("t", Plugins.Stream + ConfiguratorApi.Plugin, Types.PluginDataSet, new PluginDataSet(Groups.MemberPrefix + w.Ids["kuehler3"], Groups.Write(new Membership([new GroupRow("paste", Provides: 1)]))), null);
+            return 0;
+        });
+        var (_, j) = await w.Pruefe("""{"selection":[{"id":"SKU-board"},{"id":"SKU-cpu"},{"id":"SKU-kuehler1"}],"selectable":true}""");
+        Assert.False(j.GetProperty("valid").GetBoolean());
+        var v = j.GetProperty("violations").EnumerateArray().Single();
+        Assert.Equal("paste", v.GetProperty("group").GetString());
+        Assert.StartsWith("Kühlpaste:", v.GetProperty("text").GetString());
+        Assert.Equal(["SKU-cpu"], Namen(v, "affects"));
+        Assert.Equal(1, j.GetProperty("balance").GetProperty("paste").GetProperty("consumed").GetInt32());
+        Assert.Equal("Kühlpaste", j.GetProperty("groups").GetProperty("paste").GetProperty("label").GetString());
+        var nach = j.GetProperty("selectable").EnumerateArray().ToDictionary(x => x.GetProperty("keys").GetProperty("artikelnr").GetString()!);
+        Assert.True(nach["SKU-kuehler3"].GetProperty("ok").GetBoolean());
+        Assert.Equal(["paste"], Namen(nach["SKU-kuehler3"], "lifts"));
+        Assert.Empty(nach["SKU-gkuehler2"].GetProperty("lifts").EnumerateArray());
+
+        var (_, ok) = await w.Pruefe("""{"selection":[{"id":"SKU-board"},{"id":"SKU-cpu"},{"id":"SKU-kuehler1"},{"id":"SKU-kuehler3"}]}""");
+        Assert.True(ok.GetProperty("valid").GetBoolean());
+    }
+
+    [Fact]
+    public async Task Die_Gruppen_und_Zeilen_lassen_sich_lesen_mit_dem_was_an_ihnen_nicht_stimmt()
+    {
+        await using var w = await Welt.Neu();
+        await w.Teile();
+        w.C.With((_, _, write) =>
+        {
+            write("t", Plugins.Stream + ConfiguratorApi.Plugin, Types.PluginDataSet, new PluginDataSet(Groups.GroupPrefix + "ram", Groups.Write(new GroupInfo("RAM", true))), null);
+            write("t", Plugins.Stream + ConfiguratorApi.Plugin, Types.PluginDataSet, new PluginDataSet(Groups.MemberPrefix + w.Ids["board"], Groups.Write(new Membership([new GroupRow("ram", Min: 2, Max: 2, Values: ["8", "32"]), new GroupRow("kaputt", Provides: -1)]))), null);
+            return 0;
+        });
+        var r = await w.Http.GetAsync(w.Url + "/api/configurator-groups");
+        Assert.Equal(HttpStatusCode.OK, r.StatusCode);
+        var j = JsonDocument.Parse(await r.Content.ReadAsStringAsync()).RootElement;
+        var ram = j.GetProperty("groups").EnumerateArray().Single(g => g.GetProperty("key").GetString() == "ram");
+        Assert.Equal("RAM", ram.GetProperty("label").GetString()); Assert.True(ram.GetProperty("equal").GetBoolean()); Assert.True(ram.GetProperty("defined").GetBoolean());
+        Assert.Equal(0, ram.GetProperty("members").GetInt32());                                       // das Mainboard gibt vor, es ist kein Mitglied
+        var teil = j.GetProperty("parts").EnumerateArray().Single();
+        Assert.Equal(w.Ids["board"], teil.GetProperty("node").GetString());
+        Assert.Equal(1, teil.GetProperty("rows").GetArrayLength());                                    // die falsche Zeile fehlt
+        Assert.Contains("ab 0", j.GetProperty("errors").EnumerateArray().Single().GetString());
     }
 }

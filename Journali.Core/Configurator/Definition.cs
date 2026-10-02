@@ -10,6 +10,9 @@ namespace Journali.Core.Configurator;
 //    Jede Ressource, die in der Auswahl vorkommt, muss in der Summe ≥ 0 sein. Dazu braucht es keine Regel je Ressource.
 //  · „wenn A, dann B“: Wenn eine Bedingung über die Auswahl zutrifft (has, count, sum, balance — verknüpfbar), folgt: forbids, limits auf
 //    höchstens n, oder requires mindestens n. Verbot und Grenze machen die Auswahl unzulässig; was verlangt ist und fehlt, macht sie unvollständig.
+//  · Gruppen (Groups.cs, docs/pflegestruktur.md 40): die Teile gehören mit Zeilen zu Konfiguratorgruppen; jede Gruppe hat eine Summe (Bilanz), kann
+//    gleiche Werte verlangen, und Teile oder der Konfigurator geben ihr Mindest- und Höchstmenge und erlaubte Werte vor. „Ressource“ in einer
+//    Bedingung `balance` ist der Schlüssel einer Gruppe (der alte Name bleibt, er steht im Journal).
 //
 // Eine Regel ohne Bedingung gilt immer („höchstens ein Mainboard“). Die Definition ist ein JSON-Dokument mit englischen Namen, geschrieben
 // von der Ansicht des Plugins, gelesen und geprüft hier. Die Namen stehen im Journal und gelten damit für immer.
@@ -34,9 +37,10 @@ public sealed record Rule(string Id, string? Text = null, Condition? If = null, 
 
 /// <summary>
 /// Ein Konfigurator. <c>Root</c> ist der Teilbaum, aus dem gewählt werden darf (leer = alles); <c>Resources</c> das Zeilenattribut am Produkt,
-/// dessen Zeilen die Spalten <c>resource</c> (Schlüssel) und <c>amount</c> (Zahl, positiv = stellt bereit, negativ = verbraucht) haben.
+/// dessen Zeilen die Spalten <c>resource</c> (Schlüssel einer Gruppe) und <c>amount</c> (Zahl, positiv = stellt bereit, negativ = verbraucht) haben —
+/// der Weg vor den Zeilen an den Teilen, er gilt weiter. <c>Limits</c>: Grenzen für Gruppen, die dieser Konfigurator selbst setzt.
 /// </summary>
-public sealed record Definition(string? Label = null, string? Root = null, string? Resources = null, List<Rule>? Rules = null)
+public sealed record Definition(string? Label = null, string? Root = null, string? Resources = null, List<Rule>? Rules = null, List<GroupLimit>? Limits = null)
 {
     public const string DefaultResources = "resources";
     public const int MaxDepth = 12;
@@ -46,6 +50,7 @@ public sealed record Definition(string? Label = null, string? Root = null, strin
 
     public string ResourcesAttribute => string.IsNullOrWhiteSpace(Resources) ? DefaultResources : Resources!;
     public IReadOnlyList<Rule> All => Rules ?? [];
+    public IReadOnlyList<GroupLimit> AllLimits => Limits ?? [];
 
     static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web) { WriteIndented = false, DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull };
 
@@ -72,6 +77,16 @@ public sealed record Definition(string? Label = null, string? Root = null, strin
             EffectErrors(wo, r.Then, f);
             if (r.If is not null) ConditionErrors(wo, r.If, 1, f);
         }
+        var i = 0;
+        foreach (var l in AllLimits)
+        {
+            i++;
+            var wol = string.IsNullOrWhiteSpace(l.Group) ? $"Grenze {i}" : $"Grenze {l.Group}";
+            if (string.IsNullOrWhiteSpace(l.Group)) f.Add($"{wol}: Gruppe fehlt.");
+            else if (!Groups.KeyPattern.IsMatch(l.Group)) f.Add($"{wol}: Gruppe „{l.Group}“ gilt nicht.");
+            if (l.Min is null && l.Max is null && l.Values is not { Count: > 0 }) f.Add($"{wol}: weder Mindest- noch Höchstmenge noch erlaubte Werte.");
+            Groups.LimitErrors(wol, l.Min, l.Max, f);
+        }
         return f;
     }
 
@@ -84,14 +99,14 @@ public sealed record Definition(string? Label = null, string? Root = null, strin
         if (d.Kind == "requires" && d.Min is < 1) f.Add($"{wo}: „requires“ braucht eine Mindestmenge ab 1.");
     }
 
-    static void SelectorErrors(string wo, Selector s, List<string> f)
+    public static void SelectorErrors(string wo, Selector s, List<string> f)
     {
         if (s.Attribute is null && (s.Comparison is not null || s.Value is not null)) f.Add($"{wo}: Selektor hat Vergleich oder Wert, aber kein Attribut.");
         if (s.Attribute is not null && (s.Comparison is null || s.Value is null)) f.Add($"{wo}: Selektor mit Attribut {s.Attribute} braucht Vergleich und Wert.");
         if (s.Comparison is not null && !Comparisons.Contains(s.Comparison)) f.Add($"{wo}: Vergleich „{s.Comparison}“ gibt es nicht ({string.Join(", ", Comparisons)}).");
     }
 
-    static void ConditionErrors(string wo, Condition b, int depth, List<string> f)
+    public static void ConditionErrors(string wo, Condition b, int depth, List<string> f)
     {
         if (depth > MaxDepth) { f.Add($"{wo}: Bedingung ist zu tief verschachtelt (höchstens {MaxDepth} Ebenen)."); return; }
         if (!ConditionKinds.Contains(b.Kind)) { f.Add($"{wo}: Bedingung „{b.Kind}“ gibt es nicht ({string.Join(", ", ConditionKinds)})."); return; }

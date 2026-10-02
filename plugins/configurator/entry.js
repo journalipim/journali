@@ -116,7 +116,7 @@ function cleanDefinition(def) {
   });
   return out;
 }
-const violationKey = (v) => v.kind === "balance" ? "balance:" + v.resource : "rule:" + v.rule;
+const violationKey = (v) => v.group ? v.kind + ":" + v.group : "rule:" + v.rule;
 const expectFrom = (r) => ({
   valid: !!r.valid,
   complete: !!r.complete,

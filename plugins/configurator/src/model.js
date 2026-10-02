@@ -80,8 +80,8 @@ export function cleanDefinition(def) {
   return out
 }
 
-/// Der Schlüssel eines Verstosses: Regel oder Ressource
-export const violationKey = v => v.kind === 'balance' ? 'balance:' + v.resource : 'rule:' + v.rule
+/// Der Schlüssel eines Verstosses: Regel, oder Art und Gruppe (balance:paste, max:ram). Bei Testfällen von vorher steht „balance:<ressource>“ — dasselbe.
+export const violationKey = v => v.group ? v.kind + ':' + v.group : 'rule:' + v.rule
 
 /// Was ein Testfall von einem Ergebnis erwartet
 export const expectFrom = r => ({

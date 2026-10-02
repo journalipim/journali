@@ -14,11 +14,20 @@ public static class Parts
     /// Das Teil zu einem Knoten. Die Ressourcen stehen in den Zeilen des Attributs <paramref name="resources"/> (Spalten <c>resource</c> und <c>amount</c>);
     /// hat eine Variante selbst keine, gelten die ihres Produkts. Gleiche Ressourcen in mehreren Zeilen werden summiert.
     /// </summary>
-    public static Part From(Tree tree, ModelCatalog model, Node n, string resources)
+    public static Part From(Tree tree, ModelCatalog model, Node n, string resources, IReadOnlyDictionary<string, List<GroupRow>>? rows = null)
     {
         var path = new HashSet<string>(StringComparer.Ordinal) { n.Id };
         foreach (var a in tree.Ancestors(n)) path.Add(a.Id);
-        return new Part(n.Id, path, key => tree.Resolve(model, n, key, null, null).Value, ResourcesOf(tree, n, resources));
+        return new Part(n.Id, path, key => tree.Resolve(model, n, key, null, null).Value, ResourcesOf(tree, n, resources), RowsOf(tree, n, rows));
+    }
+
+    /// <summary>Die Zeilen eines Teils: seine eigenen, sonst die des nächsten Vorfahren, der welche hat (eine Variante nimmt die ihres Produkts).</summary>
+    static IReadOnlyList<GroupRow>? RowsOf(Tree tree, Node n, IReadOnlyDictionary<string, List<GroupRow>>? rows)
+    {
+        if (rows is null || rows.Count == 0) return null;
+        if (rows.TryGetValue(n.Id, out var own)) return own;
+        foreach (var a in tree.Ancestors(n)) if (rows.TryGetValue(a.Id, out var up)) return up;
+        return null;
     }
 
     static Dictionary<string, decimal> ResourcesOf(Tree tree, Node n, string attribute)
@@ -42,7 +51,7 @@ public static class Parts
     /// Was gewählt werden darf: alle Varianten unter der Wurzel (leer = überall) und die Produkte, die keine haben. Ein Produkt mit Varianten
     /// wird über seine Variante gewählt.
     /// </summary>
-    public static List<Part> Candidates(Tree tree, ModelCatalog model, string? root, string resources)
+    public static List<Part> Candidates(Tree tree, ModelCatalog model, string? root, string resources, IReadOnlyDictionary<string, List<GroupRow>>? rows = null)
     {
         var list = new List<Part>();
         foreach (var n in tree.Nodes.Values.OrderBy(x => x.Id, StringComparer.Ordinal))
@@ -50,7 +59,7 @@ public static class Parts
             if (n.Role != Roles.Variant && n.Role != Roles.Product) continue;
             if (n.Role == Roles.Product && tree.Children(n.Id).Any(c => c.Role == Roles.Variant)) continue;
             if (!string.IsNullOrEmpty(root) && n.Id != root && !tree.Ancestors(n).Any(a => a.Id == root)) continue;
-            list.Add(From(tree, model, n, resources));
+            list.Add(From(tree, model, n, resources, rows));
         }
         return list;
     }

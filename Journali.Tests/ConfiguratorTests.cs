@@ -60,7 +60,7 @@ public class ConfiguratorTests
         var e = Checker.Check(Regeln(), [Z(Board), Z(Cpu)]);
         Assert.False(e.Valid);
         var v = Assert.Single(e.Violations);
-        Assert.Equal("balance", v.Kind); Assert.Equal("kuehlmittel", v.Resource);
+        Assert.Equal("balance", v.Kind); Assert.Equal("kuehlmittel", v.Group);
         Assert.Equal(["cpu"], v.Affects);
     }
 
@@ -69,7 +69,7 @@ public class ConfiguratorTests
     {
         var e = Checker.Check(Regeln(), [Z(Board), Z(Cpu, 4), Z(Kuehler1, 4)]);
         Assert.False(e.Valid);
-        Assert.Contains(e.Violations, v => v.Resource == "cpu_slot");
+        Assert.Contains(e.Violations, v => v.Group == "cpu_slot");
     }
 
     [Fact]
@@ -178,8 +178,7 @@ public class ConfiguratorTests
         Assert.All(e.Selectable!, w => Assert.True(w.Ok));
         // schon verletzt: ein Verstoss, den die Auswahl vorher hatte, sperrt keine anderen Teile
         var schonKaputt = Checker.Check(Regeln(EinMainboard), [Z(Board, 2)], [Cpu]);
-        Assert.False(schonKaputt.Selectable![0].Ok);                                              // die CPU ohne Kühlung ist ein neuer Verstoss
-        Assert.Contains(schonKaputt.Selectable[0].Reasons, g => g.Resource == "kuehlmittel");
+        Assert.True(schonKaputt.Selectable![0].Ok);                                               // die CPU ohne Kühlung bringt die Summe ins Minus; ein weiteres Teil kann das beheben: sie bleibt wählbar
         Assert.DoesNotContain(schonKaputt.Selectable[0].Reasons, g => g.Rule == "board-max");
     }
 
