@@ -2,6 +2,12 @@ using Journali.Core.Entries;
 using Journali.Core.Journal;
 using Journali.Core.Projections;
 using Journali.Server;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Journali.Tests;
 
@@ -67,4 +73,38 @@ public class UebergabeTests
         var wieder = new Catalog(j); wieder.Rebuild();
         Assert.Equal("u1", wieder.With((_, _, _) => wieder.Jobs.All["solr_import"].Owner));
     }
+
+    // Die Rolle des abgegebenen Laufs ist die des Anfragenden: ein Import mit neuen Attributen braucht das Recht „model“,
+    // und der Job lief bisher als „editor“, auch für einen Administrator. Eine am Job gesetzte Rolle hebt nicht über den Anfragenden hinaus.
+    private static async Task<string?> Abgeben(string? bisher, string? rolleDesAnfragenden)
+    {
+        var dir = Path.Combine(Path.GetTempPath(), "journali-uebergabe-" + Guid.NewGuid().ToString("N")); Directory.CreateDirectory(dir);
+        var c = Welt();
+        c.With((_, _, write) => { write("t", Plugins.Stream + "solr", Types.PluginInstalled, new PluginInstalled("1", "{}"), null); return write("t", Plugins.Stream + "solr", Types.PluginEnabled, new PluginEnabled(), null); });
+        if (bisher is not null) c.With((_, _, write) => write("t", Jobs.Stream + "solr_import", Types.JobDefined, new JobDefined("Import", "solr", null, null, true, 180, null, null, bisher, "u1"), null));
+        var b = WebApplication.CreateBuilder(); b.WebHost.UseUrls("http://127.0.0.1:0");
+        b.Services.AddSingleton(c);
+        await using var app = b.Build();
+        var runner = new JobRunner(c, dir, dir, NullLogger<JobRunner>.Instance);
+        app.Use(async (ctx, next) => { ctx.Request.Headers["X-Actor"] = "u1"; if (rolleDesAnfragenden is not null) ctx.Items["role"] = rolleDesAnfragenden; await next(); });
+        JobApi.Map(app.MapGroup("/api"), runner);
+        await app.StartAsync();
+        try
+        {
+            using var http = new HttpClient();
+            // der Lauf selbst scheitert hier (kein Prozess im Plugin) — der Job ist vorher geschrieben
+            await http.PostAsync(app.Urls.First() + "/api/jobs/solr_import/uebergabe", new StringContent("{\"service\":\"solr\",\"params\":{}}", System.Text.Encoding.UTF8, "application/json"));
+            return c.With((_, _, _) => c.Jobs.All.GetValueOrDefault("solr_import")?.Role);
+        }
+        finally { await app.StopAsync(); Directory.Delete(dir, true); }
+    }
+
+    [Fact]
+    public async Task Ein_abgegebener_Lauf_hat_die_Rolle_des_Anfragenden() => Assert.Equal("admin", await Abgeben(null, "admin"));
+
+    [Fact]
+    public async Task Eine_am_Job_gesetzte_hoehere_Rolle_gilt_nicht_fuer_einen_anderen_Anfragenden() => Assert.Equal("editor", await Abgeben("admin", "editor"));
+
+    [Fact]
+    public async Task Ohne_Anmeldung_bleibt_die_Rolle_am_Job_wie_sie_war() => Assert.Equal("admin", await Abgeben("admin", null));
 }

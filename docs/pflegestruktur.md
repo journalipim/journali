@@ -2159,6 +2159,8 @@ journali fast alles, was es braucht:
 - Ein Plugin mit `runs: process` läuft als Kindprozess des Servers (`JobRunner`), nie im Serverprozess.
 - Je Lauf gibt es ein Token mit der Rolle des Jobs (`Auth.IssueServiceToken`, `JOURNALI_TOKEN`); der Prozess spricht
   `/api` als Bearer und darf genau das, was die Rolle erlaubt.
+  Ein Lauf, der aus einer Ansicht an den Tasker abgegeben wird (`/api/jobs/<key>/uebergabe`), hat die Rolle des Anfragenden
+  (01.10.2026): ein Import, der neue Attribute anlegt, braucht das Recht „model“ und gelingt nur dem, der es selbst hat.
 - Parameter stehen im Manifest und werden zum Formular; das Profil sagt, **was** getan wird, der Job **wohin und wann**.
 - Zugänge (`driver`) tragen Adresse und Anmeldung: die offenen Felder im Journal, das Geheimnis beim Server, und es
   geht nur an einen Prozess, nie an den Browser.

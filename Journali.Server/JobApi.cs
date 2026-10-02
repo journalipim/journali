@@ -150,6 +150,8 @@ public static class JobApi
         });
         // Einen Lauf an den Tasker abgeben. Der Job entsteht oder wird aktualisiert, gehört dem Anfragenden — auf sein Kontingent geht,
         // was der Lauf schreibt — und läuft sofort los. Wer pflegen darf, darf das; es ist dieselbe Arbeit, nur nebenan.
+        // Der Lauf hat die Rolle des Anfragenden, nicht mehr und nicht weniger: ein Import, der neue Attribute braucht, gelingt dem mit
+        // dem Recht „model“ und scheitert beim anderen gleich zu Beginn; eine früher am Job gesetzte Rolle ersetzt die des Anfragenden.
         api.MapPost("/jobs/{key}/uebergabe", (string key, UebergabeBody body, HttpRequest req, Catalog c) =>
         {
             if (Actor(req) is not { } actor) return ActorMissing();
@@ -163,7 +165,7 @@ public static class JobApi
                 if (!c.Plugins.All.TryGetValue(p, out var st) || !st.Enabled) return Bad("Plugin {0} ist nicht installiert oder aus.", p);
                 var prms = body.Params ?? cur?.Params ?? new();
                 write(actor, Jobs.Stream + key, Types.JobDefined,
-                    new JobDefined(Blank(body.Label) ?? cur?.Label ?? key, p, prms, null, true, cur?.TimeoutMinutes ?? 180, cur?.Service, cur?.Files, cur?.Role, actor), null);
+                    new JobDefined(Blank(body.Label) ?? cur?.Label ?? key, p, prms, null, true, cur?.TimeoutMinutes ?? 180, cur?.Service, cur?.Files, req.HttpContext.Items["role"] as string ?? cur?.Role, actor), null);
                 return (IResult?)null;
             });
             if (fehler is not null) return fehler;
