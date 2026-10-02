@@ -1,4 +1,4 @@
-(function(){const s=document.createElement('style');s.textContent="\n.sel[data-v-f63a61f0] { display: inline-flex; flex-wrap: wrap; gap: 4px; align-items: center;\n}\n.knoten[data-v-f63a61f0] { border: 1px solid var(--line); background: var(--pane); color: var(--text); padding: 1px 6px; cursor: pointer; border-radius: 3px; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;\n}\n.knoten.leer[data-v-f63a61f0] { color: var(--muted);\n}\n.x[data-v-f63a61f0] { border: 0; background: none; color: var(--muted); padding: 0 4px; cursor: pointer;\n}\n.x[data-v-f63a61f0]:hover { color: var(--neg);\n}\n.attr[data-v-f63a61f0] { max-width: 160px;\n}\n.cmp[data-v-f63a61f0] { width: 52px;\n}\n.wert[data-v-f63a61f0] { width: 80px;\n}\n\n.cond[data-v-a6fb4c3c] { display: flex; flex-wrap: wrap; gap: 4px; align-items: center;\n}\n.teil[data-v-a6fb4c3c] { display: flex; align-items: flex-start; gap: 4px; width: 100%;\n}\n.kind[data-v-a6fb4c3c] { min-width: 84px;\n}\n.cmp[data-v-a6fb4c3c] { width: 52px;\n}\n.zahl[data-v-a6fb4c3c] { width: 64px;\n}\n.res[data-v-a6fb4c3c] { width: 110px;\n}\n.attr[data-v-a6fb4c3c] { max-width: 160px;\n}\n.mal[data-v-a6fb4c3c] { color: var(--muted);\n}\n.plus[data-v-a6fb4c3c], .x[data-v-a6fb4c3c] { border: 0; background: none; color: var(--muted); cursor: pointer; padding: 0 4px;\n}\n.plus[data-v-a6fb4c3c]:hover { color: var(--accent);\n}\n.x[data-v-a6fb4c3c]:hover { color: var(--neg);\n}\n\n.regel[data-v-506b447d] { border: 1px solid var(--line); border-radius: 6px; padding: 8px; margin: 0 0 8px; background: var(--pane);\n}\n.kopf[data-v-506b447d], .zeile[data-v-506b447d] { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 0 0 4px;\n}\n.kennung[data-v-506b447d] { width: 84px;\n}\n.text[data-v-506b447d] { flex: 1; min-width: 200px;\n}\n.wenn[data-v-506b447d], .dann[data-v-506b447d] { width: 52px; color: var(--muted);\n}\n.folge[data-v-506b447d] { min-width: 150px;\n}\n.zahl[data-v-506b447d] { width: 64px;\n}\n.satz[data-v-506b447d] { font-size: 12px; margin-top: 2px;\n}\n.x[data-v-506b447d] { border: 0; background: none; color: var(--muted); cursor: pointer; padding: 0 4px;\n}\n.x[data-v-506b447d]:hover:not(:disabled) { color: var(--accent);\n}\n.x[data-v-506b447d]:disabled { opacity: .3; cursor: default;\n}\n.neue-regel[data-v-506b447d] { border: 1px dashed var(--line); background: none; color: var(--muted); padding: 6px 12px; cursor: pointer; border-radius: 6px;\n}\n.neue-regel[data-v-506b447d]:hover { color: var(--accent);\n}\n\n.faelle[data-v-ebd18361] { margin-top: 14px;\n}\n.kopf[data-v-ebd18361] { display: flex; gap: 6px; align-items: center; margin: 4px 0;\n}\n.kopf input[data-v-ebd18361] { flex: 1; min-width: 120px;\n}\n.diff[data-v-ebd18361] { font-size: 12px;\n}\n.x[data-v-ebd18361] { border: 0; background: none; color: var(--muted); cursor: pointer; padding: 0 4px;\n}\n.x[data-v-ebd18361]:hover { color: var(--accent);\n}\n\n.pruef[data-v-92f2287b] { padding: 8px 0;\n}\n.spalten[data-v-92f2287b] { display: flex; gap: 16px; align-items: flex-start;\n}\n.links[data-v-92f2287b] { flex: 1; min-width: 320px;\n}\n.waehlbar[data-v-92f2287b] { flex: 1; min-width: 320px;\n}\n.eingabe[data-v-92f2287b] { display: flex; gap: 6px; margin: 4px 0;\n}\n.eingabe input[data-v-92f2287b] { flex: 1;\n}\n.zahl[data-v-92f2287b] { width: 60px;\n}\n.status[data-v-92f2287b] { display: flex; gap: 8px; margin: 10px 0 4px;\n}\n.chip[data-v-92f2287b] { font-weight: 600;\n}\n.meldungen[data-v-92f2287b] { margin: 4px 0; padding-left: 16px; list-style: none;\n}\n.hinweis[data-v-92f2287b] { margin: 0 0 6px;\n}\n.leer[data-v-92f2287b] { padding: 6px 0;\n}\n.filter[data-v-92f2287b] { width: 100%; margin: 4px 0;\n}\ntr.gesperrt[data-v-92f2287b] { opacity: .55; cursor: not-allowed;\n}\ntr[data-v-92f2287b]:not(.gesperrt) { cursor: pointer;\n}\n.grund[data-v-92f2287b] { font-size: 12px;\n}\n.bilanz[data-v-92f2287b] { margin-top: 8px;\n}\n.x[data-v-92f2287b] { border: 0; background: none; color: var(--muted); cursor: pointer;\n}\n.x[data-v-92f2287b]:hover { color: var(--neg);\n}\n\n.seiten[data-v-9e27bb6f] { display: flex; gap: 16px; align-items: flex-start; padding: 8px 12px; overflow: auto;\n}\n.liste[data-v-9e27bb6f] { width: 240px; flex: none;\n}\n.rechts[data-v-9e27bb6f] { flex: 1; min-width: 0;\n}\n.neu[data-v-9e27bb6f] { display: flex; gap: 6px; margin: 8px 0;\n}\n.neu input[data-v-9e27bb6f] { flex: 1; min-width: 0;\n}\n.kopf[data-v-9e27bb6f] { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 0 0 8px;\n}\n.bez[data-v-9e27bb6f] { flex: 1; min-width: 200px;\n}\n.res[data-v-9e27bb6f] { width: 140px;\n}\n.knoten[data-v-9e27bb6f] { border: 1px solid var(--line); background: var(--pane); color: var(--text); padding: 1px 8px; cursor: pointer; border-radius: 3px; max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;\n}\n.x[data-v-9e27bb6f] { border: 0; background: none; color: var(--muted); cursor: pointer; padding: 0 4px;\n}\n.x[data-v-9e27bb6f]:hover { color: var(--neg);\n}\n.fehler[data-v-9e27bb6f] { list-style: none; padding-left: 0; margin: 0 0 8px;\n}\n.tabs[data-v-9e27bb6f] { display: flex; gap: 4px; margin: 8px 0; border-bottom: 1px solid var(--line);\n}\n.tabs button[data-v-9e27bb6f] { border: 0; border-bottom: 2px solid transparent; background: none; color: var(--muted); padding: 4px 12px; cursor: pointer;\n}\n.tabs button.on[data-v-9e27bb6f] { color: var(--text); border-bottom-color: var(--accent);\n}\n.leer[data-v-9e27bb6f] { padding: 24px;\n}\n";document.head.append(s)})();
+(function(){const s=document.createElement('style');s.textContent="\n.sel[data-v-16e6f4ce] { display: inline-flex; flex-wrap: wrap; gap: 4px; align-items: center;\n}\n.wahl[data-v-16e6f4ce] { position: relative; display: inline-flex; align-items: center; gap: 2px;\n}\n.popover[data-v-16e6f4ce] { position: absolute; left: 0; top: 100%; z-index: 20; width: 340px; padding: 6px; background: var(--pane); border: 1px solid var(--line); border-radius: 6px; box-shadow: 0 6px 20px rgba(0,0,0,.35);\n}\n.knoten[data-v-16e6f4ce] { border: 1px solid var(--line); background: var(--pane); color: var(--text); padding: 1px 8px; cursor: pointer; border-radius: 3px; max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;\n}\n.knoten.leer[data-v-16e6f4ce] { color: var(--accent); border-style: dashed;\n}\n.x[data-v-16e6f4ce] { border: 0; background: none; color: var(--muted); padding: 0 4px; cursor: pointer;\n}\n.x[data-v-16e6f4ce]:hover { color: var(--neg);\n}\n.filter[data-v-16e6f4ce] { border: 0; background: none; color: var(--muted); cursor: pointer; font-size: 12px;\n}\n.filter[data-v-16e6f4ce]:hover { color: var(--accent);\n}\n.attr[data-v-16e6f4ce] { max-width: 160px;\n}\n.cmp[data-v-16e6f4ce] { width: 52px;\n}\n.wert[data-v-16e6f4ce] { width: 80px;\n}\n\n.cond[data-v-a6fb4c3c] { display: flex; flex-wrap: wrap; gap: 4px; align-items: center;\n}\n.teil[data-v-a6fb4c3c] { display: flex; align-items: flex-start; gap: 4px; width: 100%;\n}\n.kind[data-v-a6fb4c3c] { min-width: 84px;\n}\n.cmp[data-v-a6fb4c3c] { width: 52px;\n}\n.zahl[data-v-a6fb4c3c] { width: 64px;\n}\n.res[data-v-a6fb4c3c] { width: 110px;\n}\n.attr[data-v-a6fb4c3c] { max-width: 160px;\n}\n.mal[data-v-a6fb4c3c] { color: var(--muted);\n}\n.plus[data-v-a6fb4c3c], .x[data-v-a6fb4c3c] { border: 0; background: none; color: var(--muted); cursor: pointer; padding: 0 4px;\n}\n.plus[data-v-a6fb4c3c]:hover { color: var(--accent);\n}\n.x[data-v-a6fb4c3c]:hover { color: var(--neg);\n}\n\n.satz-regel[data-v-fd22fced] { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 14px;\n}\n.zahl[data-v-fd22fced] { width: 56px;\n}\n\n.hilfe[data-v-ac68bf20] { margin: 0 0 10px;\n}\n.hilfe ul[data-v-ac68bf20] { margin: 4px 0 0 18px; padding: 0; font-size: 13px; color: var(--muted);\n}\n.regel[data-v-ac68bf20] { border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; margin: 0 0 8px; background: var(--pane);\n}\n.kopf[data-v-ac68bf20], .zeile[data-v-ac68bf20] { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 0 0 6px;\n}\n.kennung[data-v-ac68bf20] { width: 70px;\n}\n.text[data-v-ac68bf20] { flex: 1; min-width: 200px;\n}\n.wenn[data-v-ac68bf20] { display: inline-flex; gap: 4px; align-items: center; width: 52px; color: var(--muted);\n}\n.dann[data-v-ac68bf20] { width: 52px; color: var(--muted);\n}\n.folge[data-v-ac68bf20] { min-width: 170px;\n}\n.zahl[data-v-ac68bf20] { width: 64px;\n}\n.fuss[data-v-ac68bf20] { display: flex; gap: 8px; align-items: center; margin-top: 4px;\n}\n.satz[data-v-ac68bf20] { font-size: 12px; flex: 1;\n}\n.x[data-v-ac68bf20] { border: 0; background: none; color: var(--muted); cursor: pointer; padding: 0 4px;\n}\n.x[data-v-ac68bf20]:hover:not(:disabled) { color: var(--accent);\n}\n.x[data-v-ac68bf20]:disabled { opacity: .3; cursor: default;\n}\n.neu[data-v-ac68bf20] { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 8px;\n}\n.vorlage[data-v-ac68bf20], .neue-regel[data-v-ac68bf20] { border: 1px dashed var(--line); background: none; color: var(--muted); padding: 5px 12px; cursor: pointer; border-radius: 6px;\n}\n.vorlage[data-v-ac68bf20]:hover, .neue-regel[data-v-ac68bf20]:hover { color: var(--accent); border-color: var(--accent);\n}\n\n.faelle[data-v-ebd18361] { margin-top: 14px;\n}\n.kopf[data-v-ebd18361] { display: flex; gap: 6px; align-items: center; margin: 4px 0;\n}\n.kopf input[data-v-ebd18361] { flex: 1; min-width: 120px;\n}\n.diff[data-v-ebd18361] { font-size: 12px;\n}\n.x[data-v-ebd18361] { border: 0; background: none; color: var(--muted); cursor: pointer; padding: 0 4px;\n}\n.x[data-v-ebd18361]:hover { color: var(--accent);\n}\n\n.pruef[data-v-92f2287b] { padding: 8px 0;\n}\n.spalten[data-v-92f2287b] { display: flex; gap: 16px; align-items: flex-start;\n}\n.links[data-v-92f2287b] { flex: 1; min-width: 320px;\n}\n.waehlbar[data-v-92f2287b] { flex: 1; min-width: 320px;\n}\n.eingabe[data-v-92f2287b] { display: flex; gap: 6px; margin: 4px 0;\n}\n.eingabe input[data-v-92f2287b] { flex: 1;\n}\n.zahl[data-v-92f2287b] { width: 60px;\n}\n.status[data-v-92f2287b] { display: flex; gap: 8px; margin: 10px 0 4px;\n}\n.chip[data-v-92f2287b] { font-weight: 600;\n}\n.meldungen[data-v-92f2287b] { margin: 4px 0; padding-left: 16px; list-style: none;\n}\n.hinweis[data-v-92f2287b] { margin: 0 0 6px;\n}\n.leer[data-v-92f2287b] { padding: 6px 0;\n}\n.filter[data-v-92f2287b] { width: 100%; margin: 4px 0;\n}\ntr.gesperrt[data-v-92f2287b] { opacity: .55; cursor: not-allowed;\n}\ntr[data-v-92f2287b]:not(.gesperrt) { cursor: pointer;\n}\n.grund[data-v-92f2287b] { font-size: 12px;\n}\n.bilanz[data-v-92f2287b] { margin-top: 8px;\n}\n.x[data-v-92f2287b] { border: 0; background: none; color: var(--muted); cursor: pointer;\n}\n.x[data-v-92f2287b]:hover { color: var(--neg);\n}\n\n.seiten[data-v-e5c7423e] { display: flex; gap: 16px; align-items: flex-start; padding: 8px 12px; overflow: auto;\n}\n.liste[data-v-e5c7423e] { width: 240px; flex: none;\n}\n.rechts[data-v-e5c7423e] { flex: 1; min-width: 0;\n}\n.neu[data-v-e5c7423e] { display: flex; gap: 6px; margin: 8px 0;\n}\n.neu input[data-v-e5c7423e] { flex: 1; min-width: 0;\n}\n.kopf[data-v-e5c7423e] { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 0 0 8px;\n}\n.bez[data-v-e5c7423e] { flex: 1; min-width: 200px;\n}\n.res[data-v-e5c7423e] { width: 140px;\n}\n.knoten[data-v-e5c7423e] { border: 1px solid var(--line); background: var(--pane); color: var(--text); padding: 1px 8px; cursor: pointer; border-radius: 3px; max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;\n}\n.x[data-v-e5c7423e] { border: 0; background: none; color: var(--muted); cursor: pointer; padding: 0 4px;\n}\n.x[data-v-e5c7423e]:hover { color: var(--neg);\n}\n.fehler[data-v-e5c7423e] { list-style: none; padding-left: 0; margin: 0 0 8px;\n}\n.tabs[data-v-e5c7423e] { display: flex; gap: 4px; margin: 8px 0; border-bottom: 1px solid var(--line);\n}\n.tabs button[data-v-e5c7423e] { border: 0; border-bottom: 2px solid transparent; background: none; color: var(--muted); padding: 4px 12px; cursor: pointer;\n}\n.tabs button.on[data-v-e5c7423e] { color: var(--text); border-bottom-color: var(--accent);\n}\n.leer[data-v-e5c7423e] { padding: 24px;\n}\n";document.head.append(s)})();
 const m = window.journali.vue;
 const Fragment = m.Fragment;
 const computed = m.computed;
@@ -8,12 +8,12 @@ const createElementBlock = m.createElementBlock;
 const createElementVNode = m.createElementVNode;
 const createTextVNode = m.createTextVNode;
 const createVNode = m.createVNode;
-const nextTick = m.nextTick;
 const normalizeClass = m.normalizeClass;
 const normalizeStyle = m.normalizeStyle;
 const onBeforeUnmount = m.onBeforeUnmount;
 const onMounted = m.onMounted;
 const openBlock = m.openBlock;
+const reactive = m.reactive;
 const ref = m.ref;
 const renderList = m.renderList;
 const resolveComponent = m.resolveComponent;
@@ -134,6 +134,30 @@ function compareCase(expect, result) {
   }
   return { ok: diff.length === 0, differences: diff };
 }
+const TEMPLATES = ["excludes", "needs", "max", "min"];
+function templateRule(id, kind) {
+  switch (kind) {
+    case "excludes":
+      return { id, text: "", if: { kind: "has", selector: {}, value: 1 }, then: { kind: "forbids", selector: {} } };
+    case "needs":
+      return { id, text: "", if: { kind: "has", selector: {}, value: 1 }, then: { kind: "requires", selector: {}, min: 1 } };
+    case "max":
+      return { id, text: "", then: { kind: "limits", selector: {}, max: 1 } };
+    case "min":
+      return { id, text: "", then: { kind: "requires", selector: {}, min: 1 } };
+    default:
+      return { id, text: "", then: newEffect("forbids") };
+  }
+}
+function templateOf(r) {
+  const einfach = !r.if || r.if.kind === "has" && (r.if.value ?? 1) <= 1;
+  if (!einfach) return null;
+  if (r.if && r.then?.kind === "forbids") return "excludes";
+  if (r.if && r.then?.kind === "requires") return "needs";
+  if (!r.if && r.then?.kind === "limits") return "max";
+  if (!r.if && r.then?.kind === "requires") return "min";
+  return null;
+}
 const op = (c) => ({ "=": "=", "!=": "≠", ">": ">", ">=": "≥", "<": "<", "<=": "≤" })[c] ?? c;
 function describeSelector(s, { t: t2, nodeName, attributeName = (k) => k }) {
   const filter = s?.attribute ? `${attributeName(s.attribute)} ${op(s.comparison)} ${s.value ?? ""}`.trim() : "";
@@ -188,121 +212,148 @@ const _export_sfc = (sfc, props) => {
   }
   return target;
 };
-const _hoisted_1$5 = { class: "sel" };
-const _hoisted_2$5 = ["title"];
+const _hoisted_1$6 = { class: "sel" };
+const _hoisted_2$5 = { class: "wahl" };
 const _hoisted_3$5 = ["title"];
 const _hoisted_4$5 = ["title"];
-const _hoisted_5$5 = { value: "" };
-const _hoisted_6$5 = ["value"];
-const _hoisted_7$5 = ["value"];
-const _hoisted_8$5 = ["placeholder"];
-const _sfc_main$5 = {
+const _hoisted_5$5 = {
+  key: 1,
+  class: "popover"
+};
+const _hoisted_6$5 = ["title"];
+const _hoisted_7$5 = ["title"];
+const _hoisted_8$5 = { value: "" };
+const _hoisted_9$5 = ["value"];
+const _hoisted_10$5 = ["value"];
+const _hoisted_11$5 = ["placeholder"];
+const _sfc_main$6 = {
   __name: "SelectorEditor",
-  props: { sel: { type: Object, required: true }, attributes: { type: Array, default: () => [] } },
+  props: { sel: { type: Object, required: true }, attributes: { type: Array, default: () => [] }, compact: { type: Boolean, default: false } },
   setup(__props) {
     const props = __props;
     const open = ref(false);
+    const filterOpen = ref(!!props.sel.attribute);
     watch(() => props.sel.attribute, (attribute) => {
       if (attribute && !props.sel.comparison) props.sel.comparison = "=";
+      if (attribute) filterOpen.value = true;
     }, { immediate: true });
     const nodeName = (id) => tree.byId?.get(id)?.label ?? id;
     const OP = { "=": "=", "!=": "≠", ">": ">", ">=": "≥", "<": "<", "<=": "≤" };
+    const showFilter = () => !props.compact || filterOpen.value;
     return (_ctx, _cache) => {
-      return openBlock(), createElementBlock("span", _hoisted_1$5, [
-        createElementVNode("button", {
-          type: "button",
-          class: normalizeClass(["knoten", { leer: !props.sel.node }]),
-          title: _ctx.$t("Knoten wählen: ein Produkt, eine Variante oder eine Gruppe mit allem darunter"),
-          onClick: _cache[0] || (_cache[0] = ($event) => open.value = !open.value)
-        }, toDisplayString(props.sel.node ? nodeName(props.sel.node) : _ctx.$t("jedes Teil")), 11, _hoisted_2$5),
-        props.sel.node ? (openBlock(), createElementBlock("button", {
+      return openBlock(), createElementBlock("span", _hoisted_1$6, [
+        createElementVNode("span", _hoisted_2$5, [
+          createElementVNode("button", {
+            type: "button",
+            class: normalizeClass(["knoten", { leer: !props.sel.node }]),
+            title: _ctx.$t("Knoten wählen: ein Produkt, eine Variante oder eine Gruppe mit allem darunter"),
+            onClick: _cache[0] || (_cache[0] = ($event) => open.value = !open.value)
+          }, toDisplayString(props.sel.node ? nodeName(props.sel.node) : _ctx.$t("Teil wählen …")), 11, _hoisted_3$5),
+          props.sel.node ? (openBlock(), createElementBlock("button", {
+            key: 0,
+            type: "button",
+            class: "x",
+            title: _ctx.$t("Knoten entfernen"),
+            onClick: _cache[1] || (_cache[1] = ($event) => props.sel.node = "")
+          }, "✕", 8, _hoisted_4$5)) : createCommentVNode("v-if", true),
+          open.value ? (openBlock(), createElementBlock("div", _hoisted_5$5, [
+            createVNode(unref(TreePicker), {
+              modelValue: props.sel.node,
+              "onUpdate:modelValue": _cache[2] || (_cache[2] = ($event) => props.sel.node = $event),
+              roles: ["group", "product", "variant"],
+              height: 200,
+              onPick: _cache[3] || (_cache[3] = ($event) => open.value = false)
+            }, null, 8, ["modelValue"])
+          ])) : createCommentVNode("v-if", true)
+        ]),
+        __props.compact && !filterOpen.value ? (openBlock(), createElementBlock("button", {
           key: 0,
           type: "button",
-          class: "x",
-          title: _ctx.$t("Knoten entfernen"),
-          onClick: _cache[1] || (_cache[1] = ($event) => props.sel.node = "")
-        }, "✕", 8, _hoisted_3$5)) : createCommentVNode("v-if", true),
-        withDirectives(createElementVNode("select", {
-          "onUpdate:modelValue": _cache[2] || (_cache[2] = ($event) => props.sel.attribute = $event),
-          class: "attr",
-          title: _ctx.$t("Nur Teile, deren Attribut so ist")
-        }, [
-          createElementVNode(
-            "option",
-            _hoisted_5$5,
-            toDisplayString(_ctx.$t("— kein Filter —")),
-            1
-            /* TEXT */
-          ),
-          (openBlock(true), createElementBlock(
-            Fragment,
-            null,
-            renderList(props.attributes, (a) => {
-              return openBlock(), createElementBlock("option", {
-                key: a.key,
-                value: a.key
-              }, toDisplayString(a.label), 9, _hoisted_6$5);
-            }),
-            128
-            /* KEYED_FRAGMENT */
-          ))
-        ], 8, _hoisted_4$5), [
-          [vModelSelect, props.sel.attribute]
-        ]),
-        props.sel.attribute ? (openBlock(), createElementBlock(
+          class: "filter",
+          title: _ctx.$t("Nur Teile, deren Attribut einen bestimmten Wert hat — etwa Leistung ≥ 850"),
+          onClick: _cache[4] || (_cache[4] = ($event) => filterOpen.value = true)
+        }, "＋ " + toDisplayString(_ctx.$t("Filter")), 9, _hoisted_6$5)) : createCommentVNode("v-if", true),
+        showFilter() ? (openBlock(), createElementBlock(
           Fragment,
           { key: 1 },
           [
-            withDirectives(createElementVNode(
-              "select",
-              {
-                "onUpdate:modelValue": _cache[3] || (_cache[3] = ($event) => props.sel.comparison = $event),
-                class: "cmp"
-              },
-              [
-                (openBlock(true), createElementBlock(
-                  Fragment,
-                  null,
-                  renderList(unref(COMPARISONS), (c) => {
-                    return openBlock(), createElementBlock("option", {
-                      key: c,
-                      value: c
-                    }, toDisplayString(OP[c]), 9, _hoisted_7$5);
-                  }),
-                  128
-                  /* KEYED_FRAGMENT */
-                ))
-              ],
-              512
-              /* NEED_PATCH */
-            ), [
-              [vModelSelect, props.sel.comparison]
+            withDirectives(createElementVNode("select", {
+              "onUpdate:modelValue": _cache[5] || (_cache[5] = ($event) => props.sel.attribute = $event),
+              class: "attr",
+              title: _ctx.$t("Nur Teile, deren Attribut so ist")
+            }, [
+              createElementVNode(
+                "option",
+                _hoisted_8$5,
+                toDisplayString(_ctx.$t("— kein Filter —")),
+                1
+                /* TEXT */
+              ),
+              (openBlock(true), createElementBlock(
+                Fragment,
+                null,
+                renderList(props.attributes, (a) => {
+                  return openBlock(), createElementBlock("option", {
+                    key: a.key,
+                    value: a.key
+                  }, toDisplayString(a.label), 9, _hoisted_9$5);
+                }),
+                128
+                /* KEYED_FRAGMENT */
+              ))
+            ], 8, _hoisted_7$5), [
+              [vModelSelect, props.sel.attribute]
             ]),
-            withDirectives(createElementVNode("input", {
-              "onUpdate:modelValue": _cache[4] || (_cache[4] = ($event) => props.sel.value = $event),
-              class: "wert",
-              placeholder: _ctx.$t("Wert")
-            }, null, 8, _hoisted_8$5), [
-              [vModelText, props.sel.value]
-            ])
+            props.sel.attribute ? (openBlock(), createElementBlock(
+              Fragment,
+              { key: 0 },
+              [
+                withDirectives(createElementVNode(
+                  "select",
+                  {
+                    "onUpdate:modelValue": _cache[6] || (_cache[6] = ($event) => props.sel.comparison = $event),
+                    class: "cmp"
+                  },
+                  [
+                    (openBlock(true), createElementBlock(
+                      Fragment,
+                      null,
+                      renderList(unref(COMPARISONS), (c) => {
+                        return openBlock(), createElementBlock("option", {
+                          key: c,
+                          value: c
+                        }, toDisplayString(OP[c]), 9, _hoisted_10$5);
+                      }),
+                      128
+                      /* KEYED_FRAGMENT */
+                    ))
+                  ],
+                  512
+                  /* NEED_PATCH */
+                ), [
+                  [vModelSelect, props.sel.comparison]
+                ]),
+                withDirectives(createElementVNode("input", {
+                  "onUpdate:modelValue": _cache[7] || (_cache[7] = ($event) => props.sel.value = $event),
+                  class: "wert",
+                  placeholder: _ctx.$t("Wert")
+                }, null, 8, _hoisted_11$5), [
+                  [vModelText, props.sel.value]
+                ])
+              ],
+              64
+              /* STABLE_FRAGMENT */
+            )) : createCommentVNode("v-if", true)
           ],
           64
           /* STABLE_FRAGMENT */
-        )) : createCommentVNode("v-if", true),
-        open.value ? (openBlock(), createBlock(unref(TreePicker), {
-          key: 2,
-          modelValue: props.sel.node,
-          "onUpdate:modelValue": _cache[5] || (_cache[5] = ($event) => props.sel.node = $event),
-          roles: ["group", "product", "variant"],
-          height: 180,
-          onPick: _cache[6] || (_cache[6] = ($event) => open.value = false)
-        }, null, 8, ["modelValue"])) : createCommentVNode("v-if", true)
+        )) : createCommentVNode("v-if", true)
       ]);
     };
   }
 };
-const SelectorEditor = /* @__PURE__ */ _export_sfc(_sfc_main$5, [["__scopeId", "data-v-f63a61f0"]]);
-const _hoisted_1$4 = ["value", "title"];
+const SelectorEditor = /* @__PURE__ */ _export_sfc(_sfc_main$6, [["__scopeId", "data-v-16e6f4ce"]]);
+const _hoisted_1$5 = ["value", "title"];
 const _hoisted_2$4 = ["value"];
 const _hoisted_3$4 = ["title"];
 const _hoisted_4$4 = ["value"];
@@ -314,7 +365,7 @@ const _hoisted_9$4 = ["placeholder"];
 const _hoisted_10$4 = ["value"];
 const _hoisted_11$4 = ["title"];
 const _hoisted_12$4 = ["title", "onClick"];
-const _sfc_main$4 = {
+const _sfc_main$5 = {
   __name: "ConditionEditor",
   props: { cond: { type: Object, required: true }, attributes: { type: Array, default: () => [] }, depth: { type: Number, default: 1 } },
   setup(__props) {
@@ -372,7 +423,7 @@ const _sfc_main$4 = {
               128
               /* KEYED_FRAGMENT */
             ))
-          ], 40, _hoisted_1$4),
+          ], 40, _hoisted_1$5),
           __props.cond.kind === "has" ? (openBlock(), createElementBlock(
             Fragment,
             { key: 0 },
@@ -652,38 +703,274 @@ const _sfc_main$4 = {
     };
   }
 };
-const ConditionEditor = /* @__PURE__ */ _export_sfc(_sfc_main$4, [["__scopeId", "data-v-a6fb4c3c"]]);
+const ConditionEditor = /* @__PURE__ */ _export_sfc(_sfc_main$5, [["__scopeId", "data-v-a6fb4c3c"]]);
+const _hoisted_1$4 = { class: "satz-regel" };
+const _sfc_main$4 = {
+  __name: "RuleSentence",
+  props: { rule: { type: Object, required: true }, kind: { type: String, required: true }, attributes: { type: Array, default: () => [] } },
+  setup(__props) {
+    return (_ctx, _cache) => {
+      return openBlock(), createElementBlock("div", _hoisted_1$4, [
+        __props.kind === "excludes" ? (openBlock(), createElementBlock(
+          Fragment,
+          { key: 0 },
+          [
+            createElementVNode(
+              "span",
+              null,
+              toDisplayString(_ctx.$t("Wenn")),
+              1
+              /* TEXT */
+            ),
+            createVNode(SelectorEditor, {
+              sel: __props.rule.if.selector,
+              attributes: __props.attributes,
+              compact: ""
+            }, null, 8, ["sel", "attributes"]),
+            createElementVNode(
+              "span",
+              null,
+              toDisplayString(_ctx.$t("gewählt ist, darf")),
+              1
+              /* TEXT */
+            ),
+            createVNode(SelectorEditor, {
+              sel: __props.rule.then.selector,
+              attributes: __props.attributes,
+              compact: ""
+            }, null, 8, ["sel", "attributes"]),
+            createElementVNode(
+              "span",
+              null,
+              toDisplayString(_ctx.$t("nicht gewählt sein.")),
+              1
+              /* TEXT */
+            )
+          ],
+          64
+          /* STABLE_FRAGMENT */
+        )) : __props.kind === "needs" ? (openBlock(), createElementBlock(
+          Fragment,
+          { key: 1 },
+          [
+            createElementVNode(
+              "span",
+              null,
+              toDisplayString(_ctx.$t("Wenn")),
+              1
+              /* TEXT */
+            ),
+            createVNode(SelectorEditor, {
+              sel: __props.rule.if.selector,
+              attributes: __props.attributes,
+              compact: ""
+            }, null, 8, ["sel", "attributes"]),
+            createElementVNode(
+              "span",
+              null,
+              toDisplayString(_ctx.$t("gewählt ist, müssen mindestens")),
+              1
+              /* TEXT */
+            ),
+            withDirectives(createElementVNode(
+              "input",
+              {
+                "onUpdate:modelValue": _cache[0] || (_cache[0] = ($event) => __props.rule.then.min = $event),
+                type: "number",
+                min: "1",
+                class: "zahl"
+              },
+              null,
+              512
+              /* NEED_PATCH */
+            ), [
+              [
+                vModelText,
+                __props.rule.then.min,
+                void 0,
+                { number: true }
+              ]
+            ]),
+            createElementVNode(
+              "span",
+              null,
+              toDisplayString(_ctx.$t("von")),
+              1
+              /* TEXT */
+            ),
+            createVNode(SelectorEditor, {
+              sel: __props.rule.then.selector,
+              attributes: __props.attributes,
+              compact: ""
+            }, null, 8, ["sel", "attributes"]),
+            createElementVNode(
+              "span",
+              null,
+              toDisplayString(_ctx.$t("gewählt sein.")),
+              1
+              /* TEXT */
+            )
+          ],
+          64
+          /* STABLE_FRAGMENT */
+        )) : __props.kind === "max" ? (openBlock(), createElementBlock(
+          Fragment,
+          { key: 2 },
+          [
+            createElementVNode(
+              "span",
+              null,
+              toDisplayString(_ctx.$t("Von")),
+              1
+              /* TEXT */
+            ),
+            createVNode(SelectorEditor, {
+              sel: __props.rule.then.selector,
+              attributes: __props.attributes,
+              compact: ""
+            }, null, 8, ["sel", "attributes"]),
+            createElementVNode(
+              "span",
+              null,
+              toDisplayString(_ctx.$t("dürfen höchstens")),
+              1
+              /* TEXT */
+            ),
+            withDirectives(createElementVNode(
+              "input",
+              {
+                "onUpdate:modelValue": _cache[1] || (_cache[1] = ($event) => __props.rule.then.max = $event),
+                type: "number",
+                min: "0",
+                class: "zahl"
+              },
+              null,
+              512
+              /* NEED_PATCH */
+            ), [
+              [
+                vModelText,
+                __props.rule.then.max,
+                void 0,
+                { number: true }
+              ]
+            ]),
+            createElementVNode(
+              "span",
+              null,
+              toDisplayString(_ctx.$t("gewählt sein.")),
+              1
+              /* TEXT */
+            )
+          ],
+          64
+          /* STABLE_FRAGMENT */
+        )) : (openBlock(), createElementBlock(
+          Fragment,
+          { key: 3 },
+          [
+            createElementVNode(
+              "span",
+              null,
+              toDisplayString(_ctx.$t("Von")),
+              1
+              /* TEXT */
+            ),
+            createVNode(SelectorEditor, {
+              sel: __props.rule.then.selector,
+              attributes: __props.attributes,
+              compact: ""
+            }, null, 8, ["sel", "attributes"]),
+            createElementVNode(
+              "span",
+              null,
+              toDisplayString(_ctx.$t("müssen mindestens")),
+              1
+              /* TEXT */
+            ),
+            withDirectives(createElementVNode(
+              "input",
+              {
+                "onUpdate:modelValue": _cache[2] || (_cache[2] = ($event) => __props.rule.then.min = $event),
+                type: "number",
+                min: "1",
+                class: "zahl"
+              },
+              null,
+              512
+              /* NEED_PATCH */
+            ), [
+              [
+                vModelText,
+                __props.rule.then.min,
+                void 0,
+                { number: true }
+              ]
+            ]),
+            createElementVNode(
+              "span",
+              null,
+              toDisplayString(_ctx.$t("gewählt sein.")),
+              1
+              /* TEXT */
+            )
+          ],
+          64
+          /* STABLE_FRAGMENT */
+        ))
+      ]);
+    };
+  }
+};
+const RuleSentence = /* @__PURE__ */ _export_sfc(_sfc_main$4, [["__scopeId", "data-v-fd22fced"]]);
 const _hoisted_1$3 = { class: "regeln" };
-const _hoisted_2$3 = { class: "kopf" };
-const _hoisted_3$3 = ["onUpdate:modelValue", "title"];
-const _hoisted_4$3 = ["onUpdate:modelValue", "placeholder"];
-const _hoisted_5$3 = ["title", "disabled", "onClick"];
-const _hoisted_6$3 = ["title", "disabled", "onClick"];
-const _hoisted_7$3 = ["title", "onClick"];
-const _hoisted_8$3 = { class: "zeile" };
-const _hoisted_9$3 = ["title"];
-const _hoisted_10$3 = ["checked", "onChange"];
-const _hoisted_11$3 = { class: "zeile" };
-const _hoisted_12$3 = { class: "dann" };
-const _hoisted_13$2 = ["value", "title", "onChange"];
-const _hoisted_14$2 = ["value"];
-const _hoisted_15$2 = ["onUpdate:modelValue"];
-const _hoisted_16$2 = ["onUpdate:modelValue"];
-const _hoisted_17$2 = { class: "satz muted" };
+const _hoisted_2$3 = ["open"];
+const _hoisted_3$3 = { class: "muted" };
+const _hoisted_4$3 = { class: "kopf" };
+const _hoisted_5$3 = ["onUpdate:modelValue", "title"];
+const _hoisted_6$3 = ["onUpdate:modelValue", "placeholder", "title"];
+const _hoisted_7$3 = ["title", "disabled", "onClick"];
+const _hoisted_8$3 = ["title", "disabled", "onClick"];
+const _hoisted_9$3 = ["title", "onClick"];
+const _hoisted_10$3 = { class: "zeile" };
+const _hoisted_11$3 = ["title"];
+const _hoisted_12$3 = ["checked", "onChange"];
+const _hoisted_13$2 = { class: "zeile" };
+const _hoisted_14$2 = { class: "dann" };
+const _hoisted_15$2 = ["value", "title", "onChange"];
+const _hoisted_16$2 = ["value"];
+const _hoisted_17$2 = ["onUpdate:modelValue"];
+const _hoisted_18$2 = ["onUpdate:modelValue"];
+const _hoisted_19$2 = { class: "fuss" };
+const _hoisted_20$2 = { class: "satz muted" };
+const _hoisted_21$2 = ["title", "onClick"];
+const _hoisted_22$2 = { class: "neu" };
+const _hoisted_23$2 = { class: "muted" };
+const _hoisted_24$2 = ["title", "onClick"];
+const _hoisted_25$1 = ["title"];
 const _sfc_main$3 = {
   __name: "RuleEditor",
   props: { def: { type: Object, required: true }, attributes: { type: Array, default: () => [] } },
   setup(__props) {
     const props = __props;
-    const KIND = { forbids: t("verbietet"), limits: t("begrenzt auf höchstens"), requires: t("verlangt mindestens") };
+    const technical = reactive({});
+    const KIND = { forbids: t("darf nicht gewählt sein"), limits: t("höchstens"), requires: t("mindestens") };
     const TITLE = { forbids: t("Kein passendes Teil darf gewählt sein"), limits: t("Höchstens so viele passende Teile"), requires: t("Mindestens so viele passende Teile — fehlt es, ist die Auswahl unvollständig") };
+    const NAME = { excludes: t("passt nicht zusammen"), needs: t("braucht"), max: t("höchstens"), min: t("mindestens") };
+    const HINT = {
+      excludes: t("Zwei Teile oder Gruppen dürfen nicht zusammen gewählt werden — etwa Kühler 1 und Grafikkarten-Kühler 2"),
+      needs: t("Wer ein Teil wählt, braucht ein anderes dazu — etwa eine CPU einen Kühler"),
+      max: t("Von einem Teil oder einer Gruppe höchstens so viele — etwa ein Mainboard"),
+      min: t("Von einem Teil oder einer Gruppe mindestens so viele — sonst ist die Auswahl unvollständig")
+    };
     const ctx = computed(() => ({
       t,
       nodeName: (id) => tree.byId?.get(id)?.label ?? id,
       attributeName: (k) => props.attributes.find((a) => a.key === k)?.label ?? k
     }));
     const sentence = (r) => describeRule(r, ctx.value);
-    const add = () => props.def.rules.push({ id: nextRuleId(props.def.rules), text: "", then: newEffect("forbids") });
+    const form = (r) => technical[r.id] ? null : templateOf(r);
+    const addFrom = (kind) => props.def.rules.push(templateRule(nextRuleId(props.def.rules), kind));
     const remove = (i) => props.def.rules.splice(i, 1);
     const move = (i, d) => {
       const j = i + d;
@@ -701,6 +988,48 @@ const _sfc_main$3 = {
     }
     return (_ctx, _cache) => {
       return openBlock(), createElementBlock("div", _hoisted_1$3, [
+        createElementVNode("details", {
+          class: "hilfe",
+          open: !__props.def.rules.length
+        }, [
+          createElementVNode(
+            "summary",
+            _hoisted_3$3,
+            toDisplayString(_ctx.$t("So funktioniert es")),
+            1
+            /* TEXT */
+          ),
+          createElementVNode("ul", null, [
+            createElementVNode(
+              "li",
+              null,
+              toDisplayString(_ctx.$t("Eine Regel sagt, welche Teile zusammen gewählt werden dürfen — ein Teil ist ein Produkt, eine Variante oder eine Gruppe mit allem darunter.")),
+              1
+              /* TEXT */
+            ),
+            createElementVNode(
+              "li",
+              null,
+              toDisplayString(_ctx.$t("Die meisten Regeln sind ein Satz, in dem nur die Teile zu wählen sind: passt nicht zusammen, braucht, höchstens, mindestens.")),
+              1
+              /* TEXT */
+            ),
+            createElementVNode(
+              "li",
+              null,
+              toDisplayString(_ctx.$t("Steckplätze und andere Kapazität brauchen keine Regel: Teile tragen sie als Ressourcen, und der Konfigurator rechnet die Bilanz selbst.")),
+              1
+              /* TEXT */
+            ),
+            createElementVNode(
+              "li",
+              null,
+              toDisplayString(_ctx.$t("Unter „Prüfen“ lässt sich eine Auswahl ausprobieren, und Testfälle halten fest, was herauskommen soll.")),
+              1
+              /* TEXT */
+            )
+          ])
+        ], 8, _hoisted_2$3),
         (openBlock(true), createElementBlock(
           Fragment,
           null,
@@ -709,19 +1038,20 @@ const _sfc_main$3 = {
               key: i,
               class: "regel"
             }, [
-              createElementVNode("div", _hoisted_2$3, [
+              createElementVNode("div", _hoisted_4$3, [
                 withDirectives(createElementVNode("input", {
                   "onUpdate:modelValue": ($event) => r.id = $event,
                   class: "kennung",
                   title: _ctx.$t("Kennung der Regel — je Konfigurator einmal")
-                }, null, 8, _hoisted_3$3), [
+                }, null, 8, _hoisted_5$3), [
                   [vModelText, r.id]
                 ]),
                 withDirectives(createElementVNode("input", {
                   "onUpdate:modelValue": ($event) => r.text = $event,
                   class: "text",
-                  placeholder: _ctx.$t("Meldung, wenn die Regel verletzt ist")
-                }, null, 8, _hoisted_4$3), [
+                  placeholder: sentence(r),
+                  title: _ctx.$t("Meldung, wenn die Regel verletzt ist — leer: der Satz unten")
+                }, null, 8, _hoisted_6$3), [
                   [vModelText, r.text]
                 ]),
                 createElementVNode("button", {
@@ -730,132 +1060,173 @@ const _sfc_main$3 = {
                   title: _ctx.$t("nach oben"),
                   disabled: i === 0,
                   onClick: ($event) => move(i, -1)
-                }, "↑", 8, _hoisted_5$3),
+                }, "↑", 8, _hoisted_7$3),
                 createElementVNode("button", {
                   type: "button",
                   class: "x",
                   title: _ctx.$t("nach unten"),
                   disabled: i === __props.def.rules.length - 1,
                   onClick: ($event) => move(i, 1)
-                }, "↓", 8, _hoisted_6$3),
+                }, "↓", 8, _hoisted_8$3),
                 createElementVNode("button", {
                   type: "button",
                   class: "x",
                   title: _ctx.$t("Regel entfernen"),
                   onClick: ($event) => remove(i)
-                }, "✕", 8, _hoisted_7$3)
+                }, "✕", 8, _hoisted_9$3)
               ]),
-              createElementVNode("div", _hoisted_8$3, [
-                createElementVNode("label", {
-                  class: "wenn",
-                  title: _ctx.$t("Ohne Bedingung gilt die Regel immer")
-                }, [
-                  createElementVNode("input", {
-                    type: "checkbox",
-                    checked: !!r.if,
-                    onChange: ($event) => toggleIf(r)
-                  }, null, 40, _hoisted_10$3),
-                  createTextVNode(
-                    " " + toDisplayString(_ctx.$t("wenn")),
-                    1
-                    /* TEXT */
-                  )
-                ], 8, _hoisted_9$3),
-                r.if ? (openBlock(), createBlock(ConditionEditor, {
-                  key: 0,
-                  cond: r.if,
-                  attributes: __props.attributes
-                }, null, 8, ["cond", "attributes"])) : createCommentVNode("v-if", true)
-              ]),
-              createElementVNode("div", _hoisted_11$3, [
+              form(r) ? (openBlock(), createBlock(RuleSentence, {
+                key: 0,
+                rule: r,
+                kind: form(r),
+                attributes: __props.attributes
+              }, null, 8, ["rule", "kind", "attributes"])) : (openBlock(), createElementBlock(
+                Fragment,
+                { key: 1 },
+                [
+                  createElementVNode("div", _hoisted_10$3, [
+                    createElementVNode("label", {
+                      class: "wenn",
+                      title: _ctx.$t("Ohne Bedingung gilt die Regel immer")
+                    }, [
+                      createElementVNode("input", {
+                        type: "checkbox",
+                        checked: !!r.if,
+                        onChange: ($event) => toggleIf(r)
+                      }, null, 40, _hoisted_12$3),
+                      createTextVNode(
+                        " " + toDisplayString(_ctx.$t("wenn")),
+                        1
+                        /* TEXT */
+                      )
+                    ], 8, _hoisted_11$3),
+                    r.if ? (openBlock(), createBlock(ConditionEditor, {
+                      key: 0,
+                      cond: r.if,
+                      attributes: __props.attributes
+                    }, null, 8, ["cond", "attributes"])) : createCommentVNode("v-if", true)
+                  ]),
+                  createElementVNode("div", _hoisted_13$2, [
+                    createElementVNode(
+                      "span",
+                      _hoisted_14$2,
+                      toDisplayString(_ctx.$t("dann")),
+                      1
+                      /* TEXT */
+                    ),
+                    r.then ? (openBlock(), createBlock(SelectorEditor, {
+                      key: 0,
+                      sel: r.then.selector,
+                      attributes: __props.attributes
+                    }, null, 8, ["sel", "attributes"])) : createCommentVNode("v-if", true),
+                    createElementVNode("select", {
+                      value: r.then?.kind,
+                      class: "folge",
+                      title: TITLE[r.then?.kind],
+                      onChange: ($event) => effectKind(r, $event.target.value)
+                    }, [
+                      (openBlock(true), createElementBlock(
+                        Fragment,
+                        null,
+                        renderList(unref(EFFECT_KINDS), (k) => {
+                          return openBlock(), createElementBlock("option", {
+                            key: k,
+                            value: k
+                          }, toDisplayString(KIND[k]), 9, _hoisted_16$2);
+                        }),
+                        128
+                        /* KEYED_FRAGMENT */
+                      ))
+                    ], 40, _hoisted_15$2),
+                    r.then?.kind === "limits" ? withDirectives((openBlock(), createElementBlock("input", {
+                      key: 1,
+                      "onUpdate:modelValue": ($event) => r.then.max = $event,
+                      type: "number",
+                      min: "0",
+                      class: "zahl"
+                    }, null, 8, _hoisted_17$2)), [
+                      [
+                        vModelText,
+                        r.then.max,
+                        void 0,
+                        { number: true }
+                      ]
+                    ]) : createCommentVNode("v-if", true),
+                    r.then?.kind === "requires" ? withDirectives((openBlock(), createElementBlock("input", {
+                      key: 2,
+                      "onUpdate:modelValue": ($event) => r.then.min = $event,
+                      type: "number",
+                      min: "1",
+                      class: "zahl"
+                    }, null, 8, _hoisted_18$2)), [
+                      [
+                        vModelText,
+                        r.then.min,
+                        void 0,
+                        { number: true }
+                      ]
+                    ]) : createCommentVNode("v-if", true)
+                  ])
+                ],
+                64
+                /* STABLE_FRAGMENT */
+              )),
+              createElementVNode("div", _hoisted_19$2, [
                 createElementVNode(
                   "span",
-                  _hoisted_12$3,
-                  toDisplayString(_ctx.$t("dann")),
+                  _hoisted_20$2,
+                  toDisplayString(sentence(r)),
                   1
                   /* TEXT */
                 ),
-                createElementVNode("select", {
-                  value: r.then?.kind,
-                  class: "folge",
-                  title: TITLE[r.then?.kind],
-                  onChange: ($event) => effectKind(r, $event.target.value)
-                }, [
-                  (openBlock(true), createElementBlock(
-                    Fragment,
-                    null,
-                    renderList(unref(EFFECT_KINDS), (k) => {
-                      return openBlock(), createElementBlock("option", {
-                        key: k,
-                        value: k
-                      }, toDisplayString(KIND[k]), 9, _hoisted_14$2);
-                    }),
-                    128
-                    /* KEYED_FRAGMENT */
-                  ))
-                ], 40, _hoisted_13$2),
-                r.then?.kind === "limits" ? withDirectives((openBlock(), createElementBlock("input", {
+                unref(templateOf)(r) ? (openBlock(), createElementBlock("button", {
                   key: 0,
-                  "onUpdate:modelValue": ($event) => r.then.max = $event,
-                  type: "number",
-                  min: "0",
-                  class: "zahl"
-                }, null, 8, _hoisted_15$2)), [
-                  [
-                    vModelText,
-                    r.then.max,
-                    void 0,
-                    { number: true }
-                  ]
-                ]) : createCommentVNode("v-if", true),
-                r.then?.kind === "requires" ? withDirectives((openBlock(), createElementBlock("input", {
-                  key: 1,
-                  "onUpdate:modelValue": ($event) => r.then.min = $event,
-                  type: "number",
-                  min: "1",
-                  class: "zahl"
-                }, null, 8, _hoisted_16$2)), [
-                  [
-                    vModelText,
-                    r.then.min,
-                    void 0,
-                    { number: true }
-                  ]
-                ]) : createCommentVNode("v-if", true),
-                r.then ? (openBlock(), createBlock(SelectorEditor, {
-                  key: 2,
-                  sel: r.then.selector,
-                  attributes: __props.attributes
-                }, null, 8, ["sel", "attributes"])) : createCommentVNode("v-if", true)
-              ]),
-              createElementVNode(
-                "div",
-                _hoisted_17$2,
-                toDisplayString(sentence(r)),
-                1
-                /* TEXT */
-              )
+                  type: "button",
+                  class: "x umschalten",
+                  title: _ctx.$t("Dieselbe Regel mit allen Feldern: Bedingung, Folge, Mengen"),
+                  onClick: ($event) => technical[r.id] = !technical[r.id]
+                }, toDisplayString(technical[r.id] ? _ctx.$t("einfach") : _ctx.$t("technisch")), 9, _hoisted_21$2)) : createCommentVNode("v-if", true)
+              ])
             ]);
           }),
           128
           /* KEYED_FRAGMENT */
         )),
-        createElementVNode(
-          "button",
-          {
+        createElementVNode("div", _hoisted_22$2, [
+          createElementVNode(
+            "span",
+            _hoisted_23$2,
+            toDisplayString(_ctx.$t("Neue Regel:")),
+            1
+            /* TEXT */
+          ),
+          (openBlock(true), createElementBlock(
+            Fragment,
+            null,
+            renderList(unref(TEMPLATES), (k) => {
+              return openBlock(), createElementBlock("button", {
+                key: k,
+                type: "button",
+                class: normalizeClass(["vorlage", "v-" + k]),
+                title: HINT[k],
+                onClick: ($event) => addFrom(k)
+              }, "＋ " + toDisplayString(NAME[k]), 11, _hoisted_24$2);
+            }),
+            128
+            /* KEYED_FRAGMENT */
+          )),
+          createElementVNode("button", {
             type: "button",
             class: "neue-regel",
-            onClick: add
-          },
-          "＋ " + toDisplayString(_ctx.$t("Regel")),
-          1
-          /* TEXT */
-        )
+            title: _ctx.$t("Mit allen Möglichkeiten: Summe eines Attributs, Bilanz einer Ressource, und, oder, nicht"),
+            onClick: _cache[0] || (_cache[0] = ($event) => addFrom("eigene"))
+          }, "＋ " + toDisplayString(_ctx.$t("eigene Regel")), 9, _hoisted_25$1)
+        ])
       ]);
     };
   }
 };
-const RuleEditor = /* @__PURE__ */ _export_sfc(_sfc_main$3, [["__scopeId", "data-v-506b447d"]]);
+const RuleEditor = /* @__PURE__ */ _export_sfc(_sfc_main$3, [["__scopeId", "data-v-ac68bf20"]]);
 const _hoisted_1$2 = { class: "faelle" };
 const _hoisted_2$2 = { class: "step-band" };
 const _hoisted_3$2 = { class: "kopf" };
@@ -1574,7 +1945,8 @@ const _sfc_main = {
     const cur = ref("");
     const def = ref(null);
     const errors = ref([]);
-    const dirty = ref(false);
+    const baseline = ref("");
+    const dirty = computed(() => !!def.value && JSON.stringify(cleanDefinition(def.value)) !== baseline.value);
     const tab = ref("rules");
     const busy = ref("");
     const newKey = ref("");
@@ -1598,17 +1970,13 @@ const _sfc_main = {
         def.value = { label: "", rules: [], ...JSON.parse(JSON.stringify(r.definition ?? {})) };
         def.value.rules ??= [];
         errors.value = r.errors ?? [];
+        baseline.value = JSON.stringify(cleanDefinition(def.value));
         cur.value = key;
         busy.value = "";
-        await nextTick();
-        dirty.value = false;
       } catch (e) {
         busy.value = "✗ " + e.message;
       }
     }
-    watch(def, () => {
-      dirty.value = true;
-    }, { deep: true });
     async function writeDef(key, d) {
       await api.post(`/api/plugins/configurator/data/${encodeURIComponent("def:" + key)}`, cleanDefinition(d), "PUT");
     }
@@ -1625,6 +1993,8 @@ const _sfc_main = {
       }
     }
     async function save() {
+      const ctx = { t, nodeName: (id) => tree.byId?.get(id)?.label ?? id, attributeName: (k) => attributes.value.find((a) => a.key === k)?.label ?? k };
+      for (const r of def.value.rules) if (!String(r.text ?? "").trim()) r.text = describeRule(r, ctx);
       try {
         await writeDef(cur.value, def.value);
         await loadList();
@@ -1886,7 +2256,7 @@ const _sfc_main = {
     };
   }
 };
-const View = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-9e27bb6f"]]);
+const View = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-e5c7423e"]]);
 const entry = {
   views: [{ path: "regeln", topic: "tools", label: t("Konfigurator"), icon: "⚙", hint: t("Regeln, die zu einer Auswahl von Produkten sagen, was zulässig ist und was fehlt — mit Beispielen und Testfällen"), component: View }]
 };

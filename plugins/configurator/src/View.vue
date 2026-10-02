@@ -1,9 +1,10 @@
 <script setup>
 // ⚙ Konfigurator: Regeln pflegen und Beispiele prüfen. Die Regeln stehen als Plugin-Daten im Journal (def:<konfigurator>); geprüft wird auf dem
 // Server — hier steht nur die Bedienung. Die Prüfung eines Beispiels fragt denselben Endpunkt wie ein Shop.
-import { ref, computed, watch, nextTick, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { api, store, dialog, tree, TreePicker, L, t } from 'journali'
 import { emptyDefinition, cleanDefinition, KEY_PATTERN } from './model.js'
+import { describeRule } from './describe.js'
 import RuleEditor from './RuleEditor.vue'
 import CheckPanel from './CheckPanel.vue'
 
@@ -11,7 +12,8 @@ const list = ref([])               // [{ key, label, root, rules, errors }]
 const cur = ref('')                // Schlüssel des offenen Konfigurators
 const def = ref(null)              // die Definition, wie sie bearbeitet wird
 const errors = ref([])             // was der Server an der gespeicherten Definition bemängelt
-const dirty = ref(false)
+const baseline = ref('')            // die Definition, wie sie gespeichert ist (aufgeräumt) — ungespeichert ist, was davon abweicht
+const dirty = computed(() => !!def.value && JSON.stringify(cleanDefinition(def.value)) !== baseline.value)
 const tab = ref('rules')
 const busy = ref('')
 const newKey = ref('')
@@ -33,12 +35,10 @@ async function open(key) {
     def.value = { label: '', rules: [], ...JSON.parse(JSON.stringify(r.definition ?? {})) }
     def.value.rules ??= []
     errors.value = r.errors ?? []
+    baseline.value = JSON.stringify(cleanDefinition(def.value))
     cur.value = key; busy.value = ''
-    await nextTick(); dirty.value = false   // die Beobachtung hat das Laden als Änderung gesehen
   } catch (e) { busy.value = '✗ ' + e.message }
 }
-// jede Änderung am Formular macht die Definition „ungespeichert“; open() nimmt das Laden selbst wieder zurück
-watch(def, () => { dirty.value = true }, { deep: true })
 
 async function writeDef(key, d) { await api.post(`/api/plugins/configurator/data/${encodeURIComponent('def:' + key)}`, cleanDefinition(d), 'PUT') }
 
@@ -53,6 +53,9 @@ async function create() {
 }
 
 async function save() {
+  // eine Regel ohne eigene Meldung bekommt ihren Satz als Meldung
+  const ctx = { t, nodeName: id => tree.byId?.get(id)?.label ?? id, attributeName: k => attributes.value.find(a => a.key === k)?.label ?? k }
+  for (const r of def.value.rules) if (!String(r.text ?? '').trim()) r.text = describeRule(r, ctx)
   try {
     await writeDef(cur.value, def.value)
     await loadList(); await open(cur.value)

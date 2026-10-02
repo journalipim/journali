@@ -1,7 +1,7 @@
 // Konfigurator, Datenmodell und Satzbildung der Ansicht (plugins/configurator/src): die Definition, wie der Server sie liest, und die Regel als Satz.
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { newCondition, newEffect, nextRuleId, cleanDefinition, cleanSelector, expectFrom, compareCase, violationKey, KEY_PATTERN, emptyDefinition } from '../../plugins/configurator/src/model.js'
+import { newCondition, newEffect, nextRuleId, cleanDefinition, cleanSelector, expectFrom, compareCase, violationKey, KEY_PATTERN, emptyDefinition, templateRule, templateOf, TEMPLATES } from '../../plugins/configurator/src/model.js'
 import { describeRule, describeCondition, describeEffect, describeSelector } from '../../plugins/configurator/src/describe.js'
 
 const t = (k, p = []) => k.replace(/\{(\d+)\}/g, (_, i) => p[i] ?? '')
@@ -93,4 +93,24 @@ test('Bedingungen als Satz: Menge, Summe, Bilanz, und, oder, nicht', () => {
   assert.equal(describeCondition({ kind: 'not', parts: [{ kind: 'has', selector: { node: 'netz' } }] }, ctx), 'nicht (Netzteil gewählt)')
   assert.equal(describeEffect({ kind: 'forbids', selector: {} }, ctx), 'jedes Teil verboten')
   assert.equal(describeSelector({ attribute: 'leistung', comparison: '<=', value: '300' }, ctx), 'Leistung ≤ 300')
+})
+
+test('Vorlagen: jede erzeugt eine Regel, die als dieselbe Form erkannt wird', () => {
+  assert.deepEqual(TEMPLATES, ['excludes', 'needs', 'max', 'min'])
+  for (const k of TEMPLATES) assert.equal(templateOf(templateRule('r', k)), k, k)
+  assert.equal(templateOf(templateRule('r', 'eigene')), null, 'eine eigene Regel hat keine einfache Form')
+})
+
+test('templateOf: nur „hat A, dann …“ ohne Menge und ohne Verknüpfung ist einfach', () => {
+  const has = { kind: 'has', selector: { node: 'a' } }
+  const sel = { node: 'b' }
+  assert.equal(templateOf({ if: has, then: { kind: 'forbids', selector: sel } }), 'excludes')
+  assert.equal(templateOf({ if: { ...has, value: 1 }, then: { kind: 'requires', selector: sel, min: 2 } }), 'needs')
+  assert.equal(templateOf({ then: { kind: 'limits', selector: sel, max: 2 } }), 'max')
+  assert.equal(templateOf({ then: { kind: 'requires', selector: sel } }), 'min')
+  assert.equal(templateOf({ if: { ...has, value: 3 }, then: { kind: 'forbids', selector: sel } }), null, 'mindestens 3 × A')
+  assert.equal(templateOf({ if: { kind: 'count', selector: sel, comparison: '>=', value: 2 }, then: { kind: 'forbids', selector: sel } }), null)
+  assert.equal(templateOf({ if: { kind: 'and', parts: [has, has] }, then: { kind: 'forbids', selector: sel } }), null)
+  assert.equal(templateOf({ then: { kind: 'forbids', selector: sel } }), null, 'ohne Bedingung verbieten ist keine Vorlage')
+  assert.equal(templateOf({ if: has, then: { kind: 'limits', selector: sel, max: 1 } }), null)
 })

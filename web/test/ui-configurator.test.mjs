@@ -60,6 +60,8 @@ async function oeffnen(w, key = 'server') {
 }
 const speichern = w => w.find('.primary')
 const ids = w => w.findAll('.kennung').map(i => i.element.value)
+/// Der Satz einer einfachen Regel, wie er auf dem Schirm steht: Wörter, gewählte Teile und Mengen
+const satzText = el => [...el.element.children].map(c => c.classList.contains('sel') ? (c.querySelector('.knoten')?.textContent ?? '') : c.tagName === 'INPUT' ? c.value : c.textContent).join(' ').replace(/\s+/g, ' ').trim()
 
 test('die Liste nennt die Konfiguratoren mit der Zahl der Regeln, ein Klick öffnet die Regeln als Formular und als Satz', async () => {
   const s = welt()
@@ -87,7 +89,7 @@ test('eine neue Regel anlegen und speichern schreibt die Definition als Plugin-D
     const put = s.gesendet.find(g => g.method === 'PUT')
     assert.equal(put.p, '/api/plugins/configurator/data/def:server')
     assert.equal(put.body.label, 'Server')
-    assert.deepEqual(put.body.rules[1], { id: 'r1', then: { kind: 'forbids', selector: {} } })
+    assert.deepEqual(put.body.rules[1], { id: 'r1', text: 'Immer: jedes Teil verboten', then: { kind: 'forbids', selector: {} } }, 'ohne eigene Meldung ist der Satz die Meldung')
     assert.deepEqual(put.body.rules[0].if, { kind: 'has', selector: { node: 'k1' }, value: 1 })
     assert.ok(speichern(w).attributes('disabled') !== undefined, 'nach dem Speichern ist der Stand wieder gleich')
     assert.ok(s.toasts.some(t => t[0] === 'Gespeichert'))
@@ -99,6 +101,7 @@ test('die Art der Bedingung wechseln zeigt ihre Felder; ein Attributfilter bekom
   const w = mount(View); await flushPromises()
   try {
     await oeffnen(w)
+    await w.find('.umschalten').trigger('click')
     const kind = w.find('select.kind')
     await kind.setValue('count')
     assert.ok(w.find('.cond select.cmp').exists(), 'count hat einen Vergleich')
@@ -123,6 +126,7 @@ test('verknüpfte Bedingungen tragen Teilbedingungen, die sich hinzufügen und e
   const w = mount(View); await flushPromises()
   try {
     await oeffnen(w)
+    await w.find('.umschalten').trigger('click')
     await w.find('select.kind').setValue('and')
     assert.equal(w.findAll('.cond .teil').length, 1)
     await w.find('.cond .plus').trigger('click')
@@ -139,6 +143,7 @@ test('eine Regel ohne Bedingung: „wenn“ ausschalten macht sie zur Regel, die
   const w = mount(View); await flushPromises()
   try {
     await oeffnen(w)
+    await w.find('.umschalten').trigger('click')
     await w.findAll('input[type=checkbox]')[0].setValue(false)
     assert.match(w.findAll('.satz')[0].text(), /^Immer: Grafikkarten-Kühler 2 verboten/)
     // Folge: begrenzt auf höchstens 3
@@ -315,4 +320,98 @@ test('Testfälle: weicht das Ergebnis von der Erwartung ab, zeigt der Fall ✗ u
     await w2.find('.faelle table .x').trigger('click'); await warte()
     assert.equal(w2.findAll('.auswahl tbody tr').length, 2)
   } finally { w2.unmount(); s2.ende() }
+})
+
+// ---- einfache Regeln als Satz, Vorlagen, Erklärung
+
+test('eine einfache Regel steht als Satz mit Auswahlfeldern; „technisch“ zeigt dieselbe Regel mit allen Feldern und „einfach“ geht zurück', async () => {
+  const s = welt()
+  const w = mount(View); await flushPromises()
+  try {
+    await oeffnen(w)
+    const satz = () => satzText(w.find('.satz-regel'))
+    assert.equal(satz(), 'Wenn CPU-Kühler 1 gewählt ist, darf Grafikkarten-Kühler 2 nicht gewählt sein.')
+    assert.ok(!w.find('select.kind').exists(), 'kein technischer Editor')
+    assert.equal(w.find('.umschalten').text(), 'technisch')
+    await w.find('.umschalten').trigger('click')
+    assert.ok(w.find('select.kind').exists() && !w.find('.satz-regel').exists())
+    assert.equal(w.find('.umschalten').text(), 'einfach')
+    await w.find('.umschalten').trigger('click')
+    assert.ok(w.find('.satz-regel').exists())
+  } finally { w.unmount(); s.ende() }
+})
+
+test('Vorlagen: „passt nicht zusammen“, „braucht“, „höchstens“ und „mindestens“ legen eine Regel mit leeren Teilen an, die als Satz zu füllen ist', async () => {
+  const s = welt({ defs: { server: { label: 'Server', rules: [] } } })
+  const w = mount(View); await flushPromises()
+  try {
+    await oeffnen(w)
+    for (const k of ['excludes', 'needs', 'max', 'min']) await w.find('.vorlage.v-' + k).trigger('click')
+    assert.deepEqual(ids(w), ['r1', 'r2', 'r3', 'r4'])
+    const saetze = w.findAll('.satz-regel').map(satzText)
+    assert.deepEqual(saetze, [
+      'Wenn Teil wählen … gewählt ist, darf Teil wählen … nicht gewählt sein.',
+      'Wenn Teil wählen … gewählt ist, müssen mindestens 1 von Teil wählen … gewählt sein.',
+      'Von Teil wählen … dürfen höchstens 1 gewählt sein.',
+      'Von Teil wählen … müssen mindestens 1 gewählt sein.',
+    ])
+    await speichern(w).trigger('click'); await flushPromises()
+    const regeln = s.gesendet.find(g => g.method === 'PUT').body.rules
+    assert.deepEqual(regeln[0].if, { kind: 'has', selector: {}, value: 1 }); assert.deepEqual(regeln[0].then, { kind: 'forbids', selector: {} })
+    assert.deepEqual(regeln[1].then, { kind: 'requires', selector: {}, min: 1 })
+    assert.deepEqual(regeln[2].then, { kind: 'limits', selector: {}, max: 1 }); assert.equal(regeln[2].if, undefined)
+    assert.deepEqual(regeln[3].then, { kind: 'requires', selector: {}, min: 1 })
+    assert.ok(regeln.every(r => r.text), 'jede Regel hat eine Meldung')
+  } finally { w.unmount(); s.ende() }
+})
+
+test('im Satz lassen sich Mengen ändern; „braucht“ trägt seine Menge in die Folge', async () => {
+  const s = welt({ defs: { server: { label: 'Server', rules: [] } } })
+  const w = mount(View); await flushPromises()
+  try {
+    await oeffnen(w)
+    await w.find('.vorlage.v-needs').trigger('click'); await w.find('.vorlage.v-max').trigger('click')
+    await w.findAll('.satz-regel')[0].find('input.zahl').setValue(2)
+    await w.findAll('.satz-regel')[1].find('input.zahl').setValue(4)
+    await speichern(w).trigger('click'); await flushPromises()
+    const regeln = s.gesendet.find(g => g.method === 'PUT').body.rules
+    assert.equal(regeln[0].then.min, 2); assert.equal(regeln[1].then.max, 4)
+  } finally { w.unmount(); s.ende() }
+})
+
+test('eine Regel mit Summe, Bilanz oder Verknüpfung hat keine einfache Form: sie zeigt gleich den technischen Editor, ohne Umschalter', async () => {
+  const regel = { id: 's', then: { kind: 'forbids', selector: { node: 'gk2' } }, if: { kind: 'sum', selector: { node: 'k1' }, attribute: 'leistung', comparison: '>', value: 500 } }
+  const s = welt({ defs: { server: { label: 'Server', rules: [regel] } } })
+  const w = mount(View); await flushPromises()
+  try {
+    await oeffnen(w)
+    assert.ok(w.find('select.kind').exists()); assert.ok(!w.find('.satz-regel').exists()); assert.ok(!w.find('.umschalten').exists())
+    // die Regel mit „hat“ und Menge 3 ist auch keine einfache: „mindestens 3 × A“ gibt der Satz nicht her
+    const drei = { id: 'd', then: { kind: 'forbids', selector: { node: 'gk2' } }, if: { kind: 'has', selector: { node: 'k1' }, value: 3 } }
+    s.defs.server = { label: 'Server', rules: [drei] }
+    await oeffnen(w)
+    assert.ok(!w.find('.satz-regel').exists())
+  } finally { w.unmount(); s.ende() }
+})
+
+test('Ungespeichert ist, was vom gespeicherten Stand abweicht: wer eine Änderung zurücknimmt, hat nichts mehr zu speichern', async () => {
+  const s = welt()
+  const w = mount(View); await flushPromises()
+  try {
+    await oeffnen(w)
+    assert.ok(speichern(w).attributes('disabled') !== undefined)
+    await w.find('.bez').setValue('Server 2'); assert.equal(speichern(w).attributes('disabled'), undefined)
+    await w.find('.bez').setValue('Server'); assert.ok(speichern(w).attributes('disabled') !== undefined, 'wieder wie gespeichert')
+    await w.find('.umschalten').trigger('click')
+    assert.ok(speichern(w).attributes('disabled') !== undefined, 'die Ansicht (einfach oder technisch) ist keine Änderung')
+  } finally { w.unmount(); s.ende() }
+})
+
+test('die Erklärung ist offen, solange es keine Regel gibt, und danach zu', async () => {
+  const leer = welt({ defs: { server: { label: 'Server', rules: [] } } })
+  const w1 = mount(View); await flushPromises()
+  try { await oeffnen(w1); assert.ok(w1.find('details.hilfe').element.open); assert.match(w1.find('details.hilfe').text(), /Steckplätze und andere Kapazität brauchen keine Regel/) } finally { w1.unmount(); leer.ende() }
+  const s = welt()
+  const w2 = mount(View); await flushPromises()
+  try { await oeffnen(w2); assert.ok(!w2.find('details.hilfe').element.open) } finally { w2.unmount(); s.ende() }
 })

@@ -103,3 +103,27 @@ export function compareCase(expect, result) {
   }
   return { ok: diff.length === 0, differences: diff }
 }
+
+/// Die einfachen Formen einer Regel — was die meisten Regeln sind. excludes: A und B passen nicht zusammen · needs: A braucht B · max: höchstens n von A · min: mindestens n von A
+export const TEMPLATES = ['excludes', 'needs', 'max', 'min']
+
+export function templateRule(id, kind) {
+  switch (kind) {
+    case 'excludes': return { id, text: '', if: { kind: 'has', selector: {}, value: 1 }, then: { kind: 'forbids', selector: {} } }
+    case 'needs': return { id, text: '', if: { kind: 'has', selector: {}, value: 1 }, then: { kind: 'requires', selector: {}, min: 1 } }
+    case 'max': return { id, text: '', then: { kind: 'limits', selector: {}, max: 1 } }
+    case 'min': return { id, text: '', then: { kind: 'requires', selector: {}, min: 1 } }
+    default: return { id, text: '', then: newEffect('forbids') }
+  }
+}
+
+/// Welche einfache Form hat diese Regel? null = keine, sie braucht den technischen Editor (Summe, Bilanz, und/oder/nicht, mehrere Teile …)
+export function templateOf(r) {
+  const einfach = !r.if || (r.if.kind === 'has' && (r.if.value ?? 1) <= 1)
+  if (!einfach) return null
+  if (r.if && r.then?.kind === 'forbids') return 'excludes'
+  if (r.if && r.then?.kind === 'requires') return 'needs'
+  if (!r.if && r.then?.kind === 'limits') return 'max'
+  if (!r.if && r.then?.kind === 'requires') return 'min'
+  return null
+}
