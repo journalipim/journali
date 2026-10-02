@@ -108,10 +108,13 @@ const istKontingent = e => /Kontingent/i.test(e?.message ?? '')
 
 const umgebung = { api, sag, halt, modell: null, baum: [], rechte: null, frisch: async () => {
   umgebung.modell = await api.get('/api/model')
-  umgebung.baum = (await api.get('/api/tree')).rows ?? []
+  // /api/tree liefert die Knoten als Liste, nicht als { rows } — sonst kennt der Lauf keinen Knoten, den ein früherer Lauf angelegt hat, und legt alles noch einmal an
+  const baum = await api.get('/api/tree')
+  umgebung.baum = Array.isArray(baum) ? baum : baum?.rows ?? []
 } }
 
 try {
+  if (!base || !wurzeln.length) throw new Error('Quelle oder Wurzel fehlt')
   await umgebung.frisch()
   umgebung.rechte = await rechteVon(api)
   pruefeSchreiben(umgebung.rechte)   // vor jedem Einlesen
@@ -120,19 +123,21 @@ try {
   sag(`Quelle ${base} · ${wurzeln.length} Wurzel(n) · Ziel ${ziel ?? 'oberste Ebene'}`)
 
   const plan = await plane({ client, umgebung, wurzeln, skip, pdefs })
+  // Probelauf und „nichts zu tun“ enden hier: der Rückgabewert allein hielt den Lauf nicht an, und er schrieb trotzdem
   if (trocken) { sag('Probelauf — nichts geschrieben'); process.exitCode = plan.items.length ? 0 : 2 }
-  if (!plan.items.length) { sag('nichts zu tun'); process.exitCode = 2 }
+  else if (!plan.items.length) { sag('nichts zu tun'); process.exitCode = 2 }
+  else {
+    const { geschrieben, stapel } = await schreibe({ plan, umgebung, ziel, skip })
 
-  const { geschrieben, stapel } = await schreibe({ plan, umgebung, ziel, skip })
-
-  let kanten = 0
-  if (mitKanten) {
-    await umgebung.frisch()
-    const rp = await planeRelationen({ client, umgebung, wurzeln })
-    if (rp.cmds) ({ geschrieben: kanten } = await schreibeRelationen({ plan: rp, umgebung }))
+    let kanten = 0
+    if (mitKanten) {
+      await umgebung.frisch()
+      const rp = await planeRelationen({ client, umgebung, wurzeln })
+      if (rp.cmds) ({ geschrieben: kanten } = await schreibeRelationen({ plan: rp, umgebung }))
+    }
+    sag(`✓ ${geschrieben} Einträge in ${stapel} Stapeln${kanten ? ` · ${kanten} Kanten` : ''}`)
+    process.exitCode = geschrieben || kanten ? 0 : 2
   }
-  sag(`✓ ${geschrieben} Einträge in ${stapel} Stapeln${kanten ? ` · ${kanten} Kanten` : ''}`)
-  process.exitCode = geschrieben || kanten ? 0 : 2
 } catch (e) {
   console.error('✗ ' + e.message)
   process.exitCode = 1
