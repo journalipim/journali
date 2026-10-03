@@ -30,7 +30,7 @@ public class TarifPluginsTests
     public void Ein_Skript_ist_kein_Systemjob()
     {
         Assert.DoesNotContain(ScriptumApiPlugin, Tarife.Systemjobs);
-        Assert.Equal(["derive", "embed", "probe"], Tarife.Systemjobs.Order().ToArray());
+        Assert.Equal(["derive", "probe"], Tarife.Systemjobs.Order().ToArray());   // embed nicht mehr: ein Merkmal des Tarifs (03.10.2026)
     }
 
     /// <summary>Der Einstieg bleibt, was er ist: die Tabelle und der Tasker, der ihre Jobs startet.</summary>

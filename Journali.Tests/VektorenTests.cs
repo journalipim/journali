@@ -161,10 +161,16 @@ public class VektorenTests
         Assert.Contains("ausschliesslich aus den nummerierten Auszügen", system);
     }
 
+    /// <summary>Die Vektoren sind ein Merkmal des Tarifs (03.10.2026): Kostenlos enthält sie nicht, Pro und darüber schon — was gilt, sagt das Tarifblatt
+    /// mit dem Schlüssel embed. Ein Systemjob bleibt embed trotzdem: läuft er, dann auf dem Hauptserver.</summary>
     [Fact]
-    public void Embed_ist_ein_Systemjob_und_in_jedem_Tarif_erlaubt()
+    public void Embed_ist_ein_Merkmal_des_Tarifs_nicht_in_Kostenlos()
     {
-        Assert.Contains("embed", Tarife.Systemjobs);
-        Assert.True(Tarife.Free.Erlaubt("embed"));
+        Assert.DoesNotContain("embed", Tarife.Systemjobs);
+        Assert.False(Tarife.Free.Erlaubt("embed"));
+        Assert.True(Tarife.Pro.Erlaubt("embed"));
+        Assert.True(Tarife.ProPlus.Erlaubt("embed"));
+        // ein Tarifblatt, das embed nicht nennt, enthält es nicht
+        Assert.False(new Tarif("x", "X", 1, 1, 1, 1, new HashSet<string> { "table" }).Erlaubt("embed"));
     }
 }

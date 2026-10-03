@@ -101,22 +101,23 @@ public static class Tarife
     public const int Ohne = int.MaxValue;
 
     /// <summary>
-    /// Systemjobs: sie rechnen und messen, was jede Anlage braucht — die Vorschauen, die Bildabmessungen, die Vektoren.
-    /// Das ist Betrieb, kein Merkmal eines Tarifs, und darum sind sie in jedem erlaubt.
+    /// Systemjobs: sie rechnen und messen, was jede Anlage braucht — die Vorschauen und die Bildabmessungen.
+    /// Das ist Betrieb, kein Merkmal eines Tarifs, und darum sind sie in jedem erlaubt. Die Vektoren (<c>embed</c>) nicht mehr (03.10.2026): sie sind ein
+    /// Merkmal des Tarifs — welcher Tarif sie enthält, sagt das Tarifblatt des Lizenzservers mit dem Schlüssel <c>embed</c>; Kostenlos enthält sie nicht.
     /// <para>Die Ausnahme steht hier und nicht nur in <see cref="Basis"/>, weil im Betrieb das signierte Tarifblatt
     /// gilt und nicht das Saatgut: ein Blatt, das einen neuen Systemjob noch nicht kennt, sperrte ihn sonst aus. In
     /// der Liste stünde dann der Tarif, der ihn enthält, statt an/aus — und einmal ausgeschaltet liesse er sich nicht
     /// wieder einschalten (27.09.2026).</para>
     /// </summary>
-    public static readonly IReadOnlySet<string> Systemjobs = new HashSet<string> { "derive", "probe", "embed" };
+    public static readonly IReadOnlySet<string> Systemjobs = new HashSet<string> { "derive", "probe" };
 
     // Die Systemjobs stehen auch hier: das Saatgut soll dasselbe sagen wie die Ausnahme darüber.
     // Nicht hier und nicht bei Pro: scriptum — es gibt es erst ab Pro+ (Prüfstand TarifPluginsTests).
-    private static readonly string[] Basis = ["table", "csv", "excel", "json", "exceladdin", "ooaddin", "derive", "probe", "embed", "tasker", "driver"];
+    private static readonly string[] Basis = ["table", "csv", "excel", "json", "exceladdin", "ooaddin", "derive", "probe", "tasker", "driver"];
 
     public static readonly Tarif Free = new("free", "Kostenlos", 0, 10_000, 50_000, 1, new HashSet<string>(Basis));
     public static readonly Tarif Pro = new("pro", "Pro", 1, 50_000, 250_000, 5,
-        new HashSet<string>([.. Basis, "datasheet", "xliff", "xport", "etim", "gpc", "da", "backup"]));
+        new HashSet<string>([.. Basis, "datasheet", "xliff", "xport", "etim", "gpc", "da", "backup", "embed"]));   // embed ab Pro (03.10.2026)
     public static readonly Tarif ProPlus = new("proplus", "Pro+", 2, 50_000, 250_000, 5, null);
     public static readonly Tarif Enterprise = new("enterprise", "Enterprise", 3, 200_000, 1_000_000, Ohne, null);
     public static readonly Tarif Unlimited = new("unlimited", "Unlimited", 4, Ohne, Ohne, Ohne, null);
