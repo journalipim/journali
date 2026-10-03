@@ -112,7 +112,7 @@ public static class ScriptumApi
             {
                 var cur = c.Jobs.All.GetValueOrDefault(job);
                 return write(actor, Jobs.Stream + job, Types.JobDefined,
-                    new JobDefined(s.Label, Plugin, prm, cur?.Schedule, true, Math.Max(1, (s.Grenze + 119) / 60), null, cur?.Files, s.Role, actor), null);
+                    new JobDefined(s.Label, Plugin, prm, cur?.Schedule, true, Math.Max(1, (s.Grenze + 119) / 60), null, cur?.Files, s.Role, actor, cur is null ? runner.HierId : cur.Server), null);
             });
             runner.Origin = $"{req.Scheme}://{req.Host}";
             var run = runner.Start(job, "manual", out var fehler);

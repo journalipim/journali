@@ -114,5 +114,14 @@
  "noch kein Zugang dieser Art — unter ⌁ Zugänge anlegen": "no access of this kind yet — create one under ⌁ Accesses",
  "— kein Skript —": "— no script —",
  "noch kein Skript — unter ⌨ Skripte anlegen": "no script yet — create one under ⌨ Scripts",
- "Dieses Skript hat keine Parameter.": "This script has no parameters."
+ "Dieses Skript hat keine Parameter.": "This script has no parameters.",
+ "Läuft auf Server {0}; dort wird er geändert.": "Runs on server {0}; it is changed there.",
+ "läuft — erst danach herholen": "running — move it here afterwards",
+ "auf diesen Server holen (läuft dann hier, mit den Pfaden dieses Servers)": "move to this server (it then runs here, with this server's paths)",
+ "{0} auf diesen Server holen": "Move {0} to this server",
+ "Pfade, Fächer und Zugänge gelten danach für diesen Server.": "Paths, folders and accesses then apply to this server.",
+ "⇣ Herholen": "⇣ Move here",
+ "⇣ {0} läuft jetzt auf diesem Server": "⇣ {0} now runs on this server",
+ "Eingang · auf Server {0}": "Input · on server {0}",
+ "liegt auf dem Server des Jobs": "lies on the job's server"
 }

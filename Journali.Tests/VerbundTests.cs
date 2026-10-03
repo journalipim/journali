@@ -75,43 +75,86 @@ public class VerbundTests
         Assert.True(nachId["srv-weg"].GetProperty("gesperrt").GetBoolean());
     }
 
-    [Fact]
-    public void Ein_Arbeitsserver_startet_keinen_Lauf_und_ein_Import_anderswo_zaehlt_als_Import()
+    /// <summary>Plugin-Verzeichnis mit einem Systemjob (embed) und einem gewöhnlichen Plugin (csv).</summary>
+    private static string Plugins()
     {
-        var c = Katalog();
-        var runner = new JobRunner(c, Dir(), Dir(), NullLogger<JobRunner>.Instance) { IstHaupt = () => false };
-        Assert.Null(runner.Start("irgendwas", "manual", out var fehler));
-        Assert.Equal("Jobs laufen auf dem Hauptserver.", fehler);
+        var d = Dir();
+        foreach (var (key, system) in new[] { ("embed", true), ("csv", false) })
+        {
+            Directory.CreateDirectory(Path.Combine(d, key));
+            File.WriteAllText(Path.Combine(d, key, "plugin.json"), JsonSerializer.Serialize(new { key, version = "1.0.0", system }));
+        }
+        return d;
+    }
+    private static void Job(Catalog c, string key, string plugin, string? server) =>
+        c.With((_, _, w) => w("t", Jobs.Stream + key, Types.JobDefined, new JobDefined(key, plugin, new(), null, Server: server), null));
+
+    [Fact]
+    public void Ein_Import_anderswo_zaehlt_als_Import_gemeldet_wird_nur_was_hier_laeuft()
+    {
+        var runner = new JobRunner(Katalog(), Dir(), Dir(), NullLogger<JobRunner>.Instance);
         Assert.False(runner.ImportLaeuft);
         runner.ImportAnderswo = () => true;
         Assert.True(runner.ImportLaeuft);
-        Assert.False(runner.ImportHier);                               // gemeldet wird nur, was hier läuft
+        Assert.False(runner.ImportHier);
         Assert.Empty(runner.Laufende());
     }
 
     [Fact]
-    public void Auf_einem_Arbeitsserver_gehen_Start_Anhalten_Weiter_und_Abbruch_an_den_Hauptserver()
+    public void Ein_Job_laeuft_auf_seinem_Server_ein_Systemjob_auf_dem_Hauptserver_ohne_Angabe_der_Hauptserver()
     {
         var c = Katalog();
+        Job(c, "export_asien", "csv", "srv-asien"); Job(c, "export_alt", "csv", null); Job(c, "embed", "embed", "srv-asien");
+        var asien = new JobRunner(c, Plugins(), Dir(), NullLogger<JobRunner>.Instance) { HierId = "srv-asien", HauptId = () => "srv-europa", IstHaupt = () => false };
+        var europa = new JobRunner(c, Plugins(), Dir(), NullLogger<JobRunner>.Instance) { HierId = "srv-europa", HauptId = () => "srv-europa", IstHaupt = () => true };
+        JobState J(string k) => c.Lesen((_, _) => c.Jobs.All[k]);
+        Assert.True(asien.Hier(J("export_asien"))); Assert.False(europa.Hier(J("export_asien")));
+        Assert.False(asien.Hier(J("export_alt"))); Assert.True(europa.Hier(J("export_alt")));      // ältere Jobs ohne Server: Hauptserver
+        Assert.False(asien.Hier(J("embed"))); Assert.True(europa.Hier(J("embed")));                // ein Systemjob immer dort, auch mit Server
+        Assert.Equal("srv-europa", asien.Ziel(J("embed")));
+        // ohne Verbund läuft alles hier
+        Assert.True(new JobRunner(c, Plugins(), Dir(), NullLogger<JobRunner>.Instance).Hier(J("export_asien")));
+    }
+
+    [Fact]
+    public void Start_Anhalten_Weiter_und_Abbruch_eines_fremden_Jobs_gehen_an_seinen_Server()
+    {
+        var c = Katalog();
+        Job(c, "export_europa", "csv", "srv-europa"); Job(c, "embed", "embed", null); Job(c, "export_asien", "csv", "srv-asien");
         var auftraege = new List<string>();
-        var runner = new JobRunner(c, Dir(), Dir(), NullLogger<JobRunner>.Instance)
+        var runner = new JobRunner(c, Plugins(), Dir(), NullLogger<JobRunner>.Instance)
         {
-            IstHaupt = () => false,
-            AnHaupt = (art, key, ausloeser) => { auftraege.Add($"{art} {key} {ausloeser}"); return art == "cancel" ? (null, "Der Job läuft nicht.") : (art == "start" ? "20261003-1200-ab12" : "ok", null); },
-            AmHaupt = () => [new JobRunner.Laufend("embed", "r7", "Import")],
+            HierId = "srv-asien", HauptId = () => "srv-haupt", IstHaupt = () => false,
+            AnServer = (an, art, key, ausloeser) => { auftraege.Add($"{an} {art} {key} {ausloeser}"); return art == "cancel" ? (null, "Der Job läuft nicht.") : (art == "start" ? "20261003-1200-ab12" : "ok", null); },
+            Anderswo = () => [new JobRunner.Laufend("embed", "r7", "Import")],
         };
-        Assert.Equal("20261003-1200-ab12", runner.Start("export", "manual", out var fehler));
+        Assert.Equal("20261003-1200-ab12", runner.Start("export_europa", "manual", out var fehler));
         Assert.Null(fehler);
         Assert.True(runner.Pause("embed"));
         Assert.True(runner.Resume("embed"));
-        Assert.False(runner.Cancel("embed"));                          // der Fehler des Hauptservers kommt zurück
-        Assert.Equal(["start export manual", "pause embed von Hand", "resume embed ", "cancel embed "], auftraege);
+        Assert.False(runner.Cancel("embed"));                          // der Fehler des anderen Servers kommt zurück
+        Assert.Equal(["srv-europa start export_europa manual", "srv-haupt pause embed von Hand", "srv-haupt resume embed ", "srv-haupt cancel embed "], auftraege);
         // was dort läuft, steht hier in der Jobliste
         Assert.True(runner.IsRunning("embed"));
         Assert.Equal("r7", runner.RunningId("embed"));
-        Assert.True(runner.IsPaused("embed"));
         Assert.Equal("Import", runner.PauseReason("embed"));
-        Assert.False(runner.IsRunning("export"));
+        // ein eigener Job geht nicht weiter (er startet hier — und scheitert hier, weil das Plugin nicht installiert ist)
+        auftraege.Clear();
+        Assert.Null(runner.Start("export_asien", "manual", out fehler));
+        Assert.Empty(auftraege);
+        Assert.Contains("csv", fehler);
+    }
+
+    [Fact]
+    public void Ein_Auftrag_gibt_nicht_weiter()
+    {
+        var c = Katalog();
+        Job(c, "export_europa", "csv", "srv-europa");
+        var gerufen = 0;
+        var runner = new JobRunner(c, Plugins(), Dir(), NullLogger<JobRunner>.Instance) { HierId = "srv-asien", HauptId = () => "srv-haupt", AnServer = (_, _, _, _) => { gerufen++; return ("x", null); } };
+        var (lauf, fehler) = runner.Ausfuehren("start", "export_europa", "manual");   // sähe Asien ihn als fremd an: er wird hier versucht, nicht zurückgeschickt
+        Assert.Null(lauf); Assert.Contains("csv", fehler);
+        Assert.Equal(0, gerufen);
     }
 
     [Fact]
@@ -138,7 +181,7 @@ public class VerbundTests
     public void Ohne_Datenbank_gibt_es_keinen_Hauptserver_fuer_einen_Auftrag()
     {
         var v = new Verbund(null, Katalog(), Dir(), "1", DateTime.UtcNow);
-        Assert.Equal((null, "Kein Hauptserver."), v.Auftrag("start", "x", "manual"));
+        Assert.Equal((null, "Kein Hauptserver."), v.Auftrag("srv-x", "start", "x", "manual"));
         Assert.Null(v.ProtokollLesen("x", "r"));
     }
 

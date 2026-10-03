@@ -2977,5 +2977,8 @@
  "Anderer Bau als dieser Server.": "Different build from this server.",
  "Ein Name hat höchstens {0} Zeichen.": "A name has at most {0} characters.",
  "gebaut {0}": "built {0}",
- "Version und Bau wie in der Kopfleiste (TTMM.hhmm)": "Version and build as in the header bar (DDMM.hhmm)"
+ "Version und Bau wie in der Kopfleiste (TTMM.hhmm)": "Version and build as in the header bar (DDMM.hhmm)",
+ "Job {0} läuft auf Server {1}; geändert wird er dort.": "Job {0} runs on server {1}; it is changed there.",
+ "Es gibt nur diesen Server.": "There is only this server.",
+ "{0} ist ein Systemjob; er läuft auf dem Hauptserver.": "{0} is a system job; it runs on the main server."
 }

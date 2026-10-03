@@ -46,6 +46,8 @@ public sealed class JobState
     public string? Role { get; set; }
     /// <summary>Wem der Job gehört: auf dessen Kontingent geht, was der Lauf schreibt (null = niemandem).</summary>
     public string? Owner { get; set; }
+    /// <summary>Auf welchem Server er läuft (null = auf dem Hauptserver).</summary>
+    public string? Server { get; set; }
     public List<JobRun> Runs { get; } = new();               // jüngste zuerst, höchstens 200
     public JobFiles? Files { get; set; }                     // Fächer (docs/tasker-dateien.md); null = wie bisher, jobs/<key>
     public List<JobFile> Consumed { get; } = new();          // verarbeitete Eingänge, jüngste zuerst, höchstens 500
@@ -104,6 +106,7 @@ public sealed class Jobs : IProjection
                 j.Enabled = d.Enabled; j.TimeoutMinutes = d.TimeoutMinutes is > 0 ? d.TimeoutMinutes.Value : 60;
                 j.Role = string.IsNullOrWhiteSpace(d.Role) ? null : d.Role.Trim();
                 j.Owner = string.IsNullOrWhiteSpace(d.Owner) ? null : d.Owner.Trim();
+                j.Server = string.IsNullOrWhiteSpace(d.Server) ? null : d.Server.Trim();
                 j.Files = d.Files;
                 Touch(j, entry);
                 break;

@@ -94,6 +94,11 @@ public static class JobApi
             if (body.Schedule is { Length: > 0 } && !c.InstanzTarif.Zeitplan)
                 return Results.Json(ModelApi.Err("Ein Zeitplan gehört zum Tarif {0} — diese Instanz hat {1}.", c.Tarife.AbZeitplan?.Label ?? "?", c.InstanzTarif.Label), statusCode: 403);
             var manifests = PluginApi.Scan(runner.PluginDir);
+            // Pfade, Fächer und der Dateibrowser meinen die Platte des Servers, auf dem man arbeitet: ein Job eines anderen Servers wird dort geändert.
+            // An und aus geht von überall — darin steht kein Pfad
+            var nurSchalter = body is { Label: null, Plugin: null, Service: null, Params: null, Schedule: null, TimeoutMinutes: null, Secrets: null, Files: null, Role: null };
+            if (!nurSchalter && c.Lesen((_, _) => c.Jobs.All.GetValueOrDefault(key)) is { } fremd && !runner.Hier(fremd))
+                return Bad("Job {0} läuft auf Server {1}; geändert wird er dort.", key, runner.ServerName(runner.Ziel(fremd) ?? ""));
             return c.With((_, _, write) =>
             {
                 var cur = c.Jobs.All.GetValueOrDefault(key);
@@ -128,10 +133,27 @@ public static class JobApi
                     rolle = Blank(body.Role);
                     if (rolle is not null && !c.Users.Roles.ContainsKey(rolle)) return Bad("Unbekannte Rolle {0}.", rolle);
                 }
-                var def = new JobDefined(Blank(body.Label) ?? cur?.Label ?? key, plugin, prms, Blank(body.Schedule) ?? (body.Schedule is null ? cur?.Schedule : null), body.Enabled ?? cur?.Enabled ?? true, body.TimeoutMinutes ?? cur?.TimeoutMinutes, service.Length > 0 ? service : null, files, rolle, cur?.Owner ?? actor);
+                var server = cur is null ? (runner.IstSystemjob(plugin) ? null : runner.HierId) : cur.Server;   // ein neuer Job gehört dem Server, auf dem er entsteht
+                var def = new JobDefined(Blank(body.Label) ?? cur?.Label ?? key, plugin, prms, Blank(body.Schedule) ?? (body.Schedule is null ? cur?.Schedule : null), body.Enabled ?? cur?.Enabled ?? true, body.TimeoutMinutes ?? cur?.TimeoutMinutes, service.Length > 0 ? service : null, files, rolle, cur?.Owner ?? actor, server);
                 write(actor, Jobs.Stream + key, Types.JobDefined, def, null);
                 return Results.Ok(View(c.Jobs.All[key], runner));
             });
+        });
+
+        // Auf diesen Server holen: der Job läuft danach hier, mit den Pfaden, Fächern und Zugängen dieses Servers. Nicht, solange er läuft; ein Systemjob
+        // gehört immer dem Hauptserver
+        api.MapPost("/jobs/{key}/holen", (string key, HttpRequest req, Catalog c) =>
+        {
+            if (Actor(req) is not { } actor) return ActorMissing();
+            if (runner.HierId is null) return Bad("Es gibt nur diesen Server.");
+            var j = c.Lesen((_, _) => c.Jobs.All.GetValueOrDefault(key));
+            if (j is null) return Results.NotFound();
+            if (runner.IstSystemjob(j.Plugin)) return Bad("{0} ist ein Systemjob; er läuft auf dem Hauptserver.", j.Plugin);
+            if (runner.IsRunning(key)) return Bad("Der Job läuft.");
+            if (j.Server == runner.HierId) return Results.Ok(View(j, runner));
+            c.With((_, _, write) => write(actor, Jobs.Stream + key, Types.JobDefined,
+                new JobDefined(j.Label, j.Plugin, j.Params, j.Schedule, j.Enabled, j.TimeoutMinutes, j.Service.Length > 0 ? j.Service : null, j.Files, j.Role, j.Owner, runner.HierId), null));
+            return Results.Ok(View(c.Lesen((_, _) => c.Jobs.All[key]), runner));
         });
 
         api.MapDelete("/jobs/{key}", (string key, HttpRequest req, Catalog c) =>
@@ -166,7 +188,8 @@ public static class JobApi
                 if (!c.Plugins.All.TryGetValue(p, out var st) || !st.Enabled) return Bad("Plugin {0} ist nicht installiert oder aus.", p);
                 var prms = body.Params ?? cur?.Params ?? new();
                 write(actor, Jobs.Stream + key, Types.JobDefined,
-                    new JobDefined(Blank(body.Label) ?? cur?.Label ?? key, p, prms, null, true, cur?.TimeoutMinutes ?? 180, cur?.Service, cur?.Files, req.HttpContext.Items["role"] as string ?? cur?.Role, actor), null);
+                    new JobDefined(Blank(body.Label) ?? cur?.Label ?? key, p, prms, null, true, cur?.TimeoutMinutes ?? 180, cur?.Service, cur?.Files, req.HttpContext.Items["role"] as string ?? cur?.Role, actor,
+                        runner.IstSystemjob(p) ? null : runner.HierId), null);   // der Lauf gehört dem Server, an dem abgegeben wird: die Datei dazu liegt dort
                 return (IResult?)null;
             });
             if (fehler is not null) return fehler;
@@ -208,7 +231,8 @@ public static class JobApi
             {
                 @base = runner.Fach.Base(j), files = j.Files,
                 uses = new { @in = inSpec is not null, @out = outSpec is not null, pattern = inSpec?.Patterns, mode = inSpec?.Mode, many = outSpec?.Many },
-                waiting = runner.Fach.Waiting(j, inSpec).Select(w => new { w.Name, w.Bytes, w.At }).ToList(),
+                waiting = runner.Hier(j) ? runner.Fach.Waiting(j, inSpec).Select(w => new { w.Name, w.Bytes, w.At }).ToList() : null,   // auf der Platte eines anderen Servers
+                fern = !runner.Hier(j),
                 consumed = j.Consumed.Take(200).Select(f => new { f.Run, f.Name, f.Hash, f.Bytes, f.Status, f.MediaId, f.At }).ToList(),
                 written = j.Written.Take(200).Select(f => new { f.Run, f.Name, f.Hash, f.Bytes, f.Latest, f.MediaId, f.At }).ToList(),
                 latest,
@@ -244,7 +268,9 @@ public static class JobApi
         return new
         {
             j.Key, j.Label, j.Plugin, j.Service, j.Params, j.Schedule, scheduleText = Cron.Describe(j.Schedule), j.Enabled, j.TimeoutMinutes, files = j.Files, role = j.Role, owner = j.Owner, paused = runner.IsPaused(j.Key), pauseReason = runner.PauseReason(j.Key),
-            waiting = runner.Fach.Waiting(j, null).Count, consumed = j.Consumed.Count, written = j.Written.Count,
+            waiting = runner.Hier(j) ? runner.Fach.Waiting(j, null).Count : 0, consumed = j.Consumed.Count, written = j.Written.Count,
+            // auf welchem Server er läuft (pflegestruktur 41); fern = nicht auf diesem — geändert wird er dort, gestartet von überall
+            server = runner.Ziel(j), serverName = runner.Ziel(j) is { } sv ? runner.ServerName(sv) : null, fern = !runner.Hier(j),
             secrets, nextDue = j.Enabled ? JobRunner.NextDue(j.Schedule) : null,
             running = runner.RunningId(j.Key),
             last = j.Last is { } l ? Run(l) : null,

@@ -34,18 +34,55 @@ public sealed class JobRunner : BackgroundService
     /// </summary>
     public Func<string, Task<int>>? Offen { get; set; }
 
-    /// <summary>Ist dieser Server Hauptserver (pflegestruktur 41)? Nur er hat einen Takt für Jobs und startet Läufe. Ohne Verbund immer.</summary>
+    // ---- Mehrere Server (pflegestruktur 41): der Hauptserver führt die Systemjobs aus, jeder andere Job läuft auf seinem Server ----
+    /// <summary>Ist dieser Server Hauptserver? Nur er führt Systemjobs aus. Ohne Verbund immer.</summary>
     public Func<bool> IstHaupt { get; set; } = () => true;
+    /// <summary>Die Kennung dieses Servers — null ohne Verbund: dann läuft alles hier.</summary>
+    public string? HierId { get; set; }
+    /// <summary>Der festgelegte Hauptserver (null = noch keiner).</summary>
+    public Func<string?> HauptId { get; set; } = () => null;
+    /// <summary>Name eines Servers für Meldungen und die Jobliste.</summary>
+    public Func<string, string> ServerName { get; set; } = id => id;
     /// <summary>Läuft auf einem anderen Server ein Import? Dann warten die Läufe hier wie bei einem eigenen Import.</summary>
     public Func<bool> ImportAnderswo { get; set; } = () => false;
-    /// <summary>Auf einem Arbeitsserver: einen Auftrag an den Hauptserver geben (start, pause, resume, cancel) — Ergebnis oder Fehler. Null = es gibt keinen Weg dorthin.</summary>
-    public Func<string, string, string?, (string? Ergebnis, string? Fehler)>? AnHaupt { get; set; }
-    /// <summary>Auf einem Arbeitsserver: was auf dem Hauptserver gerade läuft (aus dem Puls).</summary>
-    public Func<IReadOnlyList<Laufend>> AmHaupt { get; set; } = () => [];
+    /// <summary>Einen Auftrag an einen anderen Server geben (an, art: start | pause | resume | cancel, Job, Auslöser) — Ergebnis oder Fehler.</summary>
+    public Func<string, string, string, string?, (string? Ergebnis, string? Fehler)>? AnServer { get; set; }
+    /// <summary>Was auf den anderen Servern gerade läuft (aus ihrem Puls).</summary>
+    public Func<IReadOnlyList<Laufend>> Anderswo { get; set; } = () => [];
     /// <summary>Das Log eines laufenden Laufs hat sich geändert / der Lauf ist zu Ende (Job, Lauf, Datei) — der Verbund schreibt es in die Datenbank.</summary>
     public Action<string, string, string>? LogFertig { get; set; }
 
-    private Laufend? Fern(string key) => IstHaupt() ? null : AmHaupt().FirstOrDefault(l => l.Key == key);
+    private Laufend? Fern(string key) => Anderswo().FirstOrDefault(l => l.Key == key);
+
+    /// <summary>Ist das Plugin ein Systemjob (<c>system: true</c> im Manifest)? Die Manifeste werden für eine halbe Minute gemerkt.</summary>
+    public bool IstSystemjob(string plugin)
+    {
+        if (DateTime.UtcNow - _systemAm > TimeSpan.FromSeconds(30))
+        {
+            _system = PluginApi.Scan(_pluginDir).Where(kv => kv.Value.Raw.TryGetProperty("system", out var sy) && sy.ValueKind == JsonValueKind.True).Select(kv => kv.Key).ToHashSet();
+            _systemAm = DateTime.UtcNow;
+        }
+        return _system.Contains(plugin);
+    }
+    private HashSet<string> _system = new();
+    private DateTime _systemAm = DateTime.MinValue;
+
+    /// <summary>Auf welchem Server läuft dieser Job? Ein Systemjob auf dem Hauptserver, jeder andere auf seinem Server, ohne Angabe auf dem Hauptserver.</summary>
+    public string? Ziel(JobState j) => IstSystemjob(j.Plugin) ? HauptId() : j.Server ?? HauptId();
+    /// <summary>Läuft dieser Job hier? Ohne Verbund immer; ein Systemjob nur auf dem Hauptserver, der die Sperre hält.</summary>
+    public bool Hier(JobState j) => HierId is null || (IstSystemjob(j.Plugin) ? IstHaupt() : Ziel(j) == HierId);
+
+    /// <summary>Einen Auftrag an den Server des Jobs geben. Null = der Job läuft hier (der Aufrufer macht es selbst).</summary>
+    private (string? Ergebnis, string? Fehler)? Weiter(string key, string art, string? ausloeser)
+    {
+        if (HierId is null) return null;
+        var job = _catalog.Lesen((_, _) => _catalog.Jobs.All.GetValueOrDefault(key));
+        if (job is null || Hier(job)) return null;
+        if (Ziel(job) is not { } an) return (null, "Kein Hauptserver festgelegt.");
+        if (an == HierId) return null;   // dieser Server ist gemeint, hält aber die Sperre des Hauptservers gerade nicht: hier, statt an sich selbst
+        if (AnServer is null) return (null, "Der Job läuft auf einem anderen Server.");
+        return AnServer(an, art, key, ausloeser);
+    }
 
     public JobRunner(Catalog catalog, string pluginDir, string jobDir, ILogger<JobRunner> log)
     {
@@ -61,13 +98,9 @@ public sealed class JobRunner : BackgroundService
     {
         while (!stop.IsCancellationRequested)
         {
-            // Nur der Hauptserver führt Jobs aus: auf einem Arbeitsserver liefen Zeitplan und Systemjobs sonst ein zweites Mal
-            if (IstHaupt())
-            {
-                try { Tick(); } catch (Exception e) { _log.LogError(e, "Job-Takt"); }
-                try { await Nachziehen(stop); } catch (Exception e) { _log.LogError(e, "Systemjobs"); }
-            }
-            else _lastMinute = Floor(DateTimeOffset.Now);   // wird er Hauptserver, holt er keine Minuten nach, in denen ein anderer zuständig war
+            // Der Zeitplan nimmt nur die Jobs dieses Servers; die Systemjobs zieht nur der Hauptserver nach — auf zwei Servern liefen sie sonst doppelt
+            try { Tick(); } catch (Exception e) { _log.LogError(e, "Job-Takt"); }
+            if (IstHaupt()) try { await Nachziehen(stop); } catch (Exception e) { _log.LogError(e, "Systemjobs"); }
             try { await Task.Delay(TimeSpan.FromSeconds(20), stop); } catch (OperationCanceledException) { }
         }
         lock (_gate) foreach (var (_, r) in _running) { try { r.Process.Kill(true); } catch { } }
@@ -82,7 +115,7 @@ public sealed class JobRunner : BackgroundService
         _lastMinute = now;
         // Ohne den Tarif dafür läuft nichts nach Zeitplan — von Hand geht weiter
         if (!_catalog.InstanzTarif.Zeitplan) return;
-        var jobs = _catalog.Lesen((_, _) => _catalog.Jobs.All.Values.Where(j => j.Enabled && j.Schedule is not null).Select(j => (j.Key, j.Schedule!)).ToList());
+        var jobs = _catalog.Lesen((_, _) => _catalog.Jobs.All.Values.Where(j => j.Enabled && j.Schedule is not null).ToList()).Where(Hier).Select(j => (j.Key, j.Schedule!)).ToList();
         foreach (var (key, schedule) in jobs)
         {
             if (!Cron.TryParse(schedule, out var cron)) continue;
@@ -169,18 +202,15 @@ public sealed class JobRunner : BackgroundService
     public bool IsRunning(string key) { lock (_gate) if (_running.ContainsKey(key)) return true; return Fern(key) is not null; }
 
     /// <summary>Lauf starten — sofort zurück; der Prozess läuft weiter, der Ausgang kommt ins Journal.</summary>
-    public string? Start(string key, string trigger, out string? error)
+    public string? Start(string key, string trigger, out string? error) => Start(key, trigger, weitergeben: true, out error);
+
+    /// <param name="weitergeben">Läuft der Job auf einem anderen Server, geht der Start als Auftrag dorthin. Ein Auftrag selbst gibt nicht weiter —
+    /// sähen zwei Server den Job für einen Moment verschieden (das Journal ist noch nicht nachgezogen), schöben sie ihn sonst hin und her.</param>
+    private string? Start(string key, string trigger, bool weitergeben, out string? error)
     {
         error = null;
-        // Arbeitsserver (pflegestruktur 41, Entscheidung 3): der Lauf gehört dem Hauptserver — Log und Fächer liegen dort
-        if (!IstHaupt())
-        {
-            if (AnHaupt is null) { error = "Jobs laufen auf dem Hauptserver."; return null; }
-            var (lauf, fehler) = AnHaupt("start", key, trigger);
-            error = fehler;
-            return lauf;
-        }
         lock (_gate) if (_running.ContainsKey(key)) { error = "läuft schon"; return null; }
+        if (weitergeben && Weiter(key, "start", trigger) is { } fern) { error = fern.Fehler; return fern.Ergebnis; }
         var job = _catalog.Lesen((_, _) => _catalog.Jobs.All.GetValueOrDefault(key));
         if (job is null) { error = "unbekannter Job"; return null; }
         var state = _catalog.Lesen((_, _) => _catalog.Plugins.All.GetValueOrDefault(job.Plugin));
@@ -313,22 +343,23 @@ public sealed class JobRunner : BackgroundService
     /// Jobliste; „Kontingent“ setzt der Server selbst, wenn der Zähler voll ist. Fortgesetzt wird nur von Hand:
     /// sonst nähmen wartende Jobs das neue Kontingent im selben Moment wieder weg.
     /// </summary>
-    public bool Pause(string key, string grund = "von Hand")
+    public bool Pause(string key, string grund = "von Hand") => Pause(key, grund, weitergeben: true);
+    private bool Pause(string key, string grund, bool weitergeben)
     {
-        if (!IstHaupt() && AnHaupt is not null) return AnHaupt("pause", key, grund).Fehler is null;
         lock (_gate)
         {
-            if (!_running.ContainsKey(key)) return false;
+            if (!_running.ContainsKey(key)) return weitergeben && Weiter(key, "pause", grund) is { Fehler: null };
             if (!_paused.ContainsKey(key)) _paused[key] = grund;
             return true;
         }
     }
 
     /// <summary>Weiter — das macht ein Mensch, nie der Server.</summary>
-    public bool Resume(string key)
+    public bool Resume(string key) => Resume(key, weitergeben: true);
+    private bool Resume(string key, bool weitergeben)
     {
-        if (!IstHaupt() && AnHaupt is not null) return AnHaupt("resume", key, null).Fehler is null;
-        lock (_gate) return _paused.Remove(key);
+        lock (_gate) if (_running.ContainsKey(key)) return _paused.Remove(key);
+        return weitergeben && Weiter(key, "resume", null) is { Fehler: null };
     }
 
     /// <summary>Soll dieser Lauf warten?</summary>
@@ -361,12 +392,12 @@ public sealed class JobRunner : BackgroundService
     /// <summary>Wartet dieser laufende Job, weil ein Import Vorfahrt hat? Der Import selbst wartet nie darauf. Unter <c>_gate</c> aufrufen.</summary>
     private string? VorfahrtGrund(string key) => (_vorrang.Count > 0 || ImportAnderswo()) && _running.ContainsKey(key) && !_vorrang.Contains(key) ? "Import" : null;
 
-    public bool Cancel(string key)
+    public bool Cancel(string key) => Cancel(key, weitergeben: true);
+    private bool Cancel(string key, bool weitergeben)
     {
-        if (!IstHaupt() && AnHaupt is not null) return AnHaupt("cancel", key, null).Fehler is null;
         lock (_gate)
         {
-            if (!_running.TryGetValue(key, out var r)) return false;
+            if (!_running.TryGetValue(key, out var r)) return weitergeben && Weiter(key, "cancel", null) is { Fehler: null };
             _paused.Remove(key);   // wer abbricht, wartet nicht mehr
             _cancelled.Add(key); r.Cancel.Cancel(); return true;
         }
@@ -375,17 +406,17 @@ public sealed class JobRunner : BackgroundService
     public string? RunningId(string key) { lock (_gate) if (_running.TryGetValue(key, out var r)) return r.Run; return Fern(key)?.Run; }
 
     /// <summary>
-    /// Auf dem Hauptserver: einen Auftrag eines Arbeitsservers ausführen. Für start ist das Ergebnis die Kennung des Laufs; „läuft schon“ ist kein Fehler,
-    /// wenn ein Systemjob nachziehen soll — das entscheidet der Aufrufer wie bisher.
+    /// Einen Auftrag eines anderen Servers hier ausführen. Für start ist das Ergebnis die Kennung des Laufs; „läuft schon“ ist kein Fehler,
+    /// wenn ein Systemjob nachziehen soll — das entscheidet der Aufrufer wie bisher. Weitergegeben wird nichts.
     /// </summary>
     public (string? Ergebnis, string? Fehler) Ausfuehren(string art, string key, string? ausloeser)
     {
         switch (art)
         {
-            case "start": { var run = Start(key, ausloeser ?? "manual", out var e); return (run, run is null ? e ?? "nicht gestartet" : null); }
-            case "pause": return Pause(key, ausloeser ?? "von Hand") ? ("ok", null) : (null, "Der Job läuft nicht.");
-            case "resume": return Resume(key) ? ("ok", null) : (null, "Der Job wartet nicht.");
-            case "cancel": return Cancel(key) ? ("ok", null) : (null, "Der Job läuft nicht.");
+            case "start": { var run = Start(key, ausloeser ?? "manual", weitergeben: false, out var e); return (run, run is null ? e ?? "nicht gestartet" : null); }
+            case "pause": return Pause(key, ausloeser ?? "von Hand", weitergeben: false) ? ("ok", null) : (null, "Der Job läuft nicht.");
+            case "resume": return Resume(key, weitergeben: false) ? ("ok", null) : (null, "Der Job wartet nicht.");
+            case "cancel": return Cancel(key, weitergeben: false) ? ("ok", null) : (null, "Der Job läuft nicht.");
             default: return (null, $"unbekannter Auftrag {art}");
         }
     }

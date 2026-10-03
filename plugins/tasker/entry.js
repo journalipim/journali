@@ -82,6 +82,11 @@ export function jobGesperrt(job, aktiv) {
   return !(typeof aktiv === 'function' ? aktiv(job?.plugin) : true)
 }
 
+/// Läuft der Job auf einem anderen Server (pflegestruktur 41)? Dann meinen seine Pfade und Fächer dessen Platte: geändert wird er dort,
+/// hier lässt er sich starten, anhalten und herholen. Die Marke nennt den Server.
+export function fremd(job) { return job?.fern === true }
+export function serverMarke(job) { return fremd(job) ? '⧉ ' + (job.serverName ?? job.server ?? '?') : '' }
+
 export function profilPflicht(profileDef) {
   return !!profileDef && !/leer/.test(profileDef.label ?? '')
 }
@@ -281,7 +286,8 @@ async function mount(root, ctx) {
       const [sym, cls] = j.running && j.paused ? ['⏸', 'warn'] : j.running ? ['▶', 'warn'] : STATUS[j.last?.status] ?? ['·', 'muted']
       const tr = el('tr', { class: 'row' + (st.cur === j.key ? ' selected' : ''), style: 'cursor:default', onclick: () => { st.cur = j.key; drawList(); loadDetail(j.key) } },
         el('td', { class: cls, title: j.running ? t('läuft') : j.last?.status ?? t('noch nie gelaufen') }, sym),
-        el('td', {}, el('b', {}, j.label), el('span', { class: 'mono muted', style: 'margin-left:6px;font-size:11px' }, j.key)),
+        el('td', {}, el('b', {}, j.label), el('span', { class: 'mono muted', style: 'margin-left:6px;font-size:11px' }, j.key),
+          fremd(j) ? el('span', { class: 'muted server', style: 'margin-left:6px', title: t('Läuft auf Server {0}; dort wird er geändert.', [j.serverName ?? j.server ?? '']) }, serverMarke(j)) : ''),
         el('td', { class: zu(j) ? 'warn' : 'muted', title: zu(j) ? grund(j) : '' }, j.plugin + (j.service ? '/' + j.service : '') + (zu(j) ? ' ◇' : '')),
         el('td', { title: j.schedule && store.tarif?.schedules === false ? t('Ein Zeitplan gehört zum Tarif Pro. Von Hand läuft der Job in jedem Tarif.') : j.schedule ?? '' },
           !j.enabled ? el('span', { class: 'muted' }, '○ aus')
@@ -299,7 +305,9 @@ async function mount(root, ctx) {
             : el('button', { class: 'x', title: t('jetzt starten'), onclick: ev => { ev.stopPropagation(); tut(ev, () => run(j)) } }, '▶'),
           j.running && !zu(j) ? el('button', { class: 'x', title: abbruchText(j, st.plugins).title, onclick: ev => { ev.stopPropagation(); tut(ev, () => cancel(j)) } }, '⊘') : el('span', { class: 'x leer' }),
           el('button', { class: 'x', title: zu(j) ? grund(j) : j.enabled ? t('ausschalten (Zeitplan ruht)') : 'einschalten', disabled: zu(j), onclick: ev => { ev.stopPropagation(); if (!zu(j)) tut(ev, () => toggle(j)) } }, j.enabled ? '●' : '○'),
-          el('button', { class: 'x', title: zu(j) ? grund(j) : 'bearbeiten', disabled: zu(j), onclick: ev => { ev.stopPropagation(); if (!zu(j)) openEdit(j) } }, '✎'),
+          // Ein Job eines anderen Servers wird dort bearbeitet; an seinem Platz steht „herholen“
+          fremd(j) ? el('button', { class: 'x holen', title: j.running ? t('läuft — erst danach herholen') : t('auf diesen Server holen (läuft dann hier, mit den Pfaden dieses Servers)'), disabled: !!j.running, onclick: ev => { ev.stopPropagation(); if (!j.running) tut(ev, () => holen(j)) } }, '⇣')
+            : el('button', { class: 'x', title: zu(j) ? grund(j) : 'bearbeiten', disabled: zu(j), onclick: ev => { ev.stopPropagation(); if (!zu(j)) openEdit(j) } }, '✎'),
           el('button', { class: 'x', title: t('Job entfernen (Läufe bleiben im Journal)'), onclick: ev => { ev.stopPropagation(); remove(j) } }, '🗑')))
       tb.append(tr)
     }
@@ -323,6 +331,10 @@ async function mount(root, ctx) {
   // Anhalten und weiter: der Lauf wartet beim nächsten Stapel, statt zu sterben
   async function pause(j) { try { await api.post(`/api/jobs/${j.key}/pause`); store.toast(t('⏸ {0} hält beim nächsten Stapel an', [j.label])); await load() } catch (e) { store.toast(e.message) } }
   async function resume(j) { try { await api.post(`/api/jobs/${j.key}/resume`); store.toast(t('▶ {0} läuft weiter', [j.label]), 'ok'); await load() } catch (e) { store.toast(e.message) } }
+  async function holen(j) {
+    if (!await dialog.confirm({ title: t('{0} auf diesen Server holen', [j.label]), text: t('Pfade, Fächer und Zugänge gelten danach für diesen Server.'), ok: t('⇣ Herholen') })) return
+    try { await api.post(`/api/jobs/${j.key}/holen`); store.toast(t('⇣ {0} läuft jetzt auf diesem Server', [j.label]), 'ok'); await load() } catch (e) { store.toast(e.message) }
+  }
   async function toggle(j) { try { await api.post(`/api/jobs/${j.key}`, { enabled: !j.enabled }, 'PUT'); await load() } catch (e) { store.toast(e.message) } }
   async function remove(j) { if (!await dialog.confirm({ title: `Job „${j.label}“ entfernen?`, ok: t('🗑 Entfernen'), danger: true })) return; try { await api.del(`/api/jobs/${j.key}`); if (st.cur === j.key) { st.cur = null; detail.innerHTML = '' } await load() } catch (e) { store.toast(e.message) } }
 
@@ -351,7 +363,7 @@ async function mount(root, ctx) {
       el('span', { class: 'muted mono', style: 'font-size:11px' }, (() => {
         const kennt = new Set((st.plugins.find(p => p.key === d.plugin && (p.service ?? '') === (d.service ?? ''))?.params ?? []).map(x => x.key))
         return Object.entries(d.params).filter(([k]) => !kennt.size || kennt.has(k)).map(([k, v]) => `${k}=${v}`).join(' ')
-      })()), d.secrets.length ? el('span', { class: 'chip', title: t('Geheimnisse liegen beim Server (jobs/secrets.json), nicht im Journal') }, `🔒 ${d.secrets.join(', ')}`) : '')
+      })()), fremd(d) ? el('span', { class: 'chip', title: t('Läuft auf Server {0}; dort wird er geändert.', [d.serverName ?? d.server ?? '']) }, serverMarke(d)) : '', d.secrets.length ? el('span', { class: 'chip', title: t('Geheimnisse liegen beim Server (jobs/secrets.json), nicht im Journal') }, `🔒 ${d.secrets.join(', ')}`) : '')
     const runs = el('div', { style: 'width:340px;border-right:1px solid var(--line);overflow:auto' })
     const tbl = el('table', { class: 'grid', style: 'width:100%' })
     for (const r of d.runs) {
@@ -371,7 +383,9 @@ async function mount(root, ctx) {
         const col = (title, rows, empty) => el('div', { style: 'flex:1;min-width:200px' }, el('div', { style: 'font-weight:600;margin-bottom:2px' }, title), rows.length ? el('table', { class: 'grid', style: 'width:100%' }, ...rows) : el('div', { class: 'muted' }, empty))
         const cols = []
         if (f.uses.in) {
-          cols.push(col(`Eingang · ${f.waiting.length} wartend`, f.waiting.map(w => el('tr', { class: 'row', title: `${w.name} · ${size(w.bytes)} · ${when(w.at)}` }, el('td', {}, w.name), el('td', { class: 'muted', style: 'text-align:right' }, size(w.bytes)))), t('nichts in in/ — ▶ läuft dann nicht')),
+          // Die wartenden Eingänge liegen auf der Platte des Servers, auf dem der Job läuft
+          if (!f.waiting) cols.push(col(t('Eingang · auf Server {0}', [d.serverName ?? d.server ?? '']), [], t('liegt auf dem Server des Jobs')))
+          else cols.push(col(`Eingang · ${f.waiting.length} wartend`, f.waiting.map(w => el('tr', { class: 'row', title: `${w.name} · ${size(w.bytes)} · ${when(w.at)}` }, el('td', {}, w.name), el('td', { class: 'muted', style: 'text-align:right' }, size(w.bytes)))), t('nichts in in/ — ▶ läuft dann nicht')),
             col(t('Verarbeitet · {0}', [f.consumed.length]), f.consumed.map(c => el('tr', { class: 'row' + (c.status === 'duplicate' ? ' muted' : ''), style: c.run ? 'cursor:pointer' : '', title: `${c.name} · ${size(c.bytes)} · ${when(c.at)} · ${c.status}${c.run ? ' · Lauf ' + c.run : ' · ohne Lauf'}${c.mediaId ? ' · archiviert ' + c.mediaId : ''}\nSHA-256 ${c.hash}`, onclick: () => { if (c.run) loadLog(d.key, c.run) } },
               el('td', { class: c.status === 'ok' ? 'pos' : c.status === 'failed' ? 'neg' : 'muted', style: 'width:18px' }, c.status === 'ok' ? '✓' : c.status === 'failed' ? '✗' : '≡'), el('td', {}, c.name), el('td', { class: 'muted', style: 'text-align:right;white-space:nowrap' }, when(c.at)))), t('noch nichts verarbeitet')))
         }

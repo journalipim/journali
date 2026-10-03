@@ -715,7 +715,9 @@ public sealed record PluginDataSet(string Name, string? Value);
 /// <para><paramref name="Owner"/> ist der Anwender, auf dessen Kontingent der Lauf geht — sonst
 /// liefe ein Import als Job daran vorbei: der Urheber <c>job:&lt;key&gt;</c> ist kein Anwender.</para>
 /// </summary>
-public sealed record JobDefined(string Label, string Plugin, Dictionary<string, string>? Params, string? Schedule, bool Enabled = true, int? TimeoutMinutes = null, string? Service = null, JobFiles? Files = null, string? Role = null, string? Owner = null);
+/// <param name="Server">Der Server, auf dem der Job läuft (pflegestruktur 41, 03.10.2026) — seine Pfade, Fächer und Zugänge meinen dessen Platte. Null = der Hauptserver
+/// (so stehen alle Jobs von vorher im Journal); Systemjobs laufen immer dort.</param>
+public sealed record JobDefined(string Label, string Plugin, Dictionary<string, string>? Params, string? Schedule, bool Enabled = true, int? TimeoutMinutes = null, string? Service = null, JobFiles? Files = null, string? Role = null, string? Owner = null, string? Server = null);
 
 /// <summary>
 /// Fächer eines Jobs (docs/tasker-dateien.md): <c>Base</c> = Verzeichnis mit in/, done/, failed/, out/ (leer = jobs/&lt;key&gt;;

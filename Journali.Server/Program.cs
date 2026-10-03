@@ -212,9 +212,13 @@ jobRunner.IstHaupt = () => verbund.IstHaupt;
 jobRunner.ImportAnderswo = () => verbund.ImportAnderswo;
 verbund.ImportHier = () => jobRunner.ImportHier;
 verbund.JobsHier = () => jobRunner.Laufende();
-// Arbeitsserver: Läufe, Anhalten und Abbrechen gehen als Auftrag an den Hauptserver; was dort läuft, kommt aus dessen Puls, das Log aus der Datenbank
-jobRunner.AnHaupt = (art, key, ausloeser) => verbund.Auftrag(art, key, ausloeser);
-jobRunner.AmHaupt = verbund.LaufendAmHaupt;
+// Jeder Job läuft auf seinem Server, ein Systemjob auf dem Hauptserver (pflegestruktur 41). Start, Anhalten und Abbrechen eines Jobs, der woanders
+// läuft, gehen als Auftrag dorthin; was dort läuft, kommt aus dessen Puls, das Log aus der Datenbank
+jobRunner.HierId = verbund.Id;
+jobRunner.HauptId = verbund.Festgelegt;
+jobRunner.ServerName = verbund.NameVon;
+jobRunner.AnServer = (an, art, key, ausloeser) => verbund.Auftrag(an, art, key, ausloeser);
+jobRunner.Anderswo = verbund.LaufendAnderswo;
 jobRunner.LogFertig = verbund.ProtokollFertig;
 verbund.LogsHier = () => jobRunner.LaufendeLogs();
 builder.Services.AddSingleton(verbund);
@@ -573,7 +577,7 @@ if (snapshotPath is not null)
         }
     });
 }
-// Der Hauptserver hört auf Aufträge der Arbeitsserver (LISTEN journali_server), ein Arbeitsserver wartet nur
+// Jeder Server hört auf die Aufträge an ihn (LISTEN journali_server)
 _ = Task.Run(() => verbund.HoerenAsync(jobRunner.Ausfuehren, app.Lifetime.ApplicationStopping));
 // Die Adresse, unter der die Jobs diesen Server erreichen, bevor die erste Anfrage kam: ein Hauptserver bekommt vielleicht nie eine —
 // die Oberfläche läuft auf den Arbeitsservern. Die eigene Adresse, mit localhost statt „alle Adressen“

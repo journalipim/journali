@@ -118,6 +118,7 @@ public sealed class Verbund : IDisposable
                 at     TIMESTAMPTZ NOT NULL DEFAULT now(),
                 PRIMARY KEY (job, run)
             );
+            ALTER TABLE server_auftrag ADD COLUMN IF NOT EXISTS an TEXT;
             """);
         cmd.ExecuteNonQuery();
         _tabelle = true;
@@ -150,8 +151,8 @@ public sealed class Verbund : IDisposable
         _zeilen = zeilen;
         _importAnderswo = zeilen.Any(z => z.Id != Id && z.Import && Erreichbar(z, jetzt));
         _haupt = RolleKlaeren();
-        if (_haupt)
-            foreach (var (job, run, pfad) in LogsHier())
+        // jeder Server schreibt die Logs seiner Läufe — so liest man sie von jedem Server aus
+        foreach (var (job, run, pfad) in LogsHier())
                 try { Protokoll(job, run, pfad); } catch (IOException) { }   // die Datei wird gerade geschrieben: im nächsten Takt
         return _haupt;
     }
@@ -173,13 +174,15 @@ public sealed class Verbund : IDisposable
     /// <summary>Die Server, wie der letzte Takt sie sah.</summary>
     public IReadOnlyList<Zeile> Zeilen => _zeilen;
 
-    /// <summary>Was auf dem Hauptserver gerade läuft — für die Jobliste eines Arbeitsservers (aus dem letzten Takt, ohne Anfrage).</summary>
-    public IReadOnlyList<JobRunner.Laufend> LaufendAmHaupt()
+    /// <summary>Was auf den anderen erreichbaren Servern gerade läuft — für die Jobliste (aus dem letzten Takt, ohne Anfrage).</summary>
+    public IReadOnlyList<JobRunner.Laufend> LaufendAnderswo()
     {
-        var main = Festgelegt();
-        if (main is null || _zeilen.FirstOrDefault(z => z.Id == main) is not { Jobs: { } jobs } z || !Erreichbar(z, DateTimeOffset.UtcNow)) return [];
-        return LaufendAus(jobs);
+        var jetzt = DateTimeOffset.UtcNow;
+        return _zeilen.Where(z => z.Id != Id && z.Jobs is not null && Erreichbar(z, jetzt)).SelectMany(z => LaufendAus(z.Jobs!.Value)).ToList();
     }
+
+    /// <summary>Name eines Servers aus Journal und Tabelle.</summary>
+    public string NameVon(string id) => NameVon(id, _zeilen.FirstOrDefault(z => z.Id == id)?.Host);
 
     /// <summary>Die laufenden Jobs aus der Spalte <c>jobs</c>; Unlesbares zählt als nichts.</summary>
     public static List<JobRunner.Laufend> LaufendAus(JsonElement jobs)
@@ -187,28 +190,28 @@ public sealed class Verbund : IDisposable
         try { return jobs.ValueKind == JsonValueKind.Array ? jobs.Deserialize<List<JobRunner.Laufend>>(Camel) ?? [] : []; } catch (JsonException) { return []; }
     }
 
-    // ---- Aufträge an den Hauptserver (Entscheidung 3) ------------------------------------------------------------
+    // ---- Aufträge an einen anderen Server: ein Job läuft auf seinem Server, ein Systemjob auf dem Hauptserver ----------------
 
-    /// <summary>Kanal für den Anstoss: wer einen Auftrag einträgt, ruft NOTIFY; der Hauptserver wartet mit LISTEN.</summary>
+    /// <summary>Kanal für den Anstoss: wer einen Auftrag einträgt, ruft NOTIFY; jeder Server wartet mit LISTEN und nimmt die an ihn.</summary>
     public const string Kanal = "journali_server";
-    /// <summary>Ein Auftrag, den niemand in dieser Zeit angenommen hat, gilt nicht mehr — ein später Hauptserver startet keinen Job, den keiner mehr erwartet.</summary>
+    /// <summary>Ein Auftrag, den niemand in dieser Zeit angenommen hat, gilt nicht mehr — ein später Server startet keinen Job, den keiner mehr erwartet.</summary>
     public static readonly TimeSpan AuftragGilt = TimeSpan.FromMinutes(1);
 
     /// <summary>
-    /// Einen Auftrag an den Hauptserver geben und auf die Antwort warten: <c>start</c> (mit Auslöser), <c>pause</c>, <c>resume</c>, <c>cancel</c>.
-    /// Liefert das Ergebnis (bei start die Kennung des Laufs) oder den Fehler. Antwortet der Hauptserver nicht, wird der Auftrag zurückgezogen,
+    /// Einen Auftrag an den Server <paramref name="an"/> geben und auf die Antwort warten: <c>start</c> (mit Auslöser), <c>pause</c>, <c>resume</c>, <c>cancel</c>.
+    /// Liefert das Ergebnis (bei start die Kennung des Laufs) oder den Fehler. Antwortet der Server nicht, wird der Auftrag zurückgezogen,
     /// solange er ihn nicht angenommen hat; hat er ihn angenommen, wird länger gewartet (ein Start holt vielleicht noch den Eingang über einen Zugang).
     /// </summary>
-    public (string? Ergebnis, string? Fehler) Auftrag(string art, string job, string? ausloeser, TimeSpan? warten = null)
+    public (string? Ergebnis, string? Fehler) Auftrag(string an, string art, string job, string? ausloeser, TimeSpan? warten = null)
     {
         if (_db is null) return (null, "Kein Hauptserver.");
-        var main = Festgelegt();
-        if (main is null || _zeilen.FirstOrDefault(z => z.Id == main) is not { } hz || !Erreichbar(hz, DateTimeOffset.UtcNow)) return (null, "Der Hauptserver antwortet nicht.");
+        var ziel = NameVon(an);
+        if (_zeilen.FirstOrDefault(z => z.Id == an) is not { } hz || !Erreichbar(hz, DateTimeOffset.UtcNow)) return (null, $"Server {ziel} antwortet nicht.");
         Tabelle();
         long id;
-        using (var cmd = _db.CreateCommand("INSERT INTO server_auftrag (art, job, ausloeser, von) VALUES (@art, @job, @ausloeser, @von) RETURNING id"))
+        using (var cmd = _db.CreateCommand("INSERT INTO server_auftrag (an, art, job, ausloeser, von) VALUES (@an, @art, @job, @ausloeser, @von) RETURNING id"))
         {
-            cmd.Parameters.AddWithValue("art", art); cmd.Parameters.AddWithValue("job", job);
+            cmd.Parameters.AddWithValue("an", an); cmd.Parameters.AddWithValue("art", art); cmd.Parameters.AddWithValue("job", job);
             cmd.Parameters.AddWithValue("ausloeser", (object?)ausloeser ?? DBNull.Value); cmd.Parameters.AddWithValue("von", Id);
             id = (long)cmd.ExecuteScalar()!;
         }
@@ -221,7 +224,7 @@ public sealed class Verbund : IDisposable
             using var cmd = _db.CreateCommand("SELECT angenommen IS NOT NULL, erledigt IS NOT NULL, ergebnis, fehler FROM server_auftrag WHERE id = @id");
             cmd.Parameters.AddWithValue("id", id);
             using var r = cmd.ExecuteReader();
-            if (!r.Read()) return (null, "Der Hauptserver antwortet nicht.");
+            if (!r.Read()) return (null, $"Server {ziel} antwortet nicht.");
             var (angenommen, erledigt) = (r.GetBoolean(0), r.GetBoolean(1));
             if (erledigt) return (r.IsDBNull(2) ? null : r.GetString(2), r.IsDBNull(3) ? null : r.GetString(3));
             var jetzt = DateTime.UtcNow;
@@ -230,23 +233,24 @@ public sealed class Verbund : IDisposable
                 r.Close();
                 using var weg = _db.CreateCommand("UPDATE server_auftrag SET erledigt = now(), fehler = 'zurückgezogen' WHERE id = @id AND angenommen IS NULL");
                 weg.Parameters.AddWithValue("id", id);
-                if (weg.ExecuteNonQuery() > 0 || jetzt > spaetestens) return (null, "Der Hauptserver antwortet nicht.");
+                if (weg.ExecuteNonQuery() > 0 || jetzt > spaetestens) return (null, $"Server {ziel} antwortet nicht.");
             }
         }
     }
 
     /// <summary>
-    /// Auf dem Hauptserver: offene Aufträge annehmen und ausführen. Abgelaufene werden nicht ausgeführt. Liefert, wie viele ausgeführt wurden.
+    /// Die offenen Aufträge an diesen Server annehmen und ausführen. Abgelaufene werden nicht ausgeführt. Liefert, wie viele angenommen wurden.
     /// </summary>
     public int Abarbeiten(Func<string, string, string?, (string? Ergebnis, string? Fehler)> ausfuehren)
     {
-        if (_db is null || !_haupt) return 0;
+        if (_db is null) return 0;
         Tabelle();
         var offen = new List<(long Id, string Art, string Job, string? Ausloeser, DateTimeOffset At)>();
-        using (var cmd = _db.CreateCommand(
-            "UPDATE server_auftrag SET angenommen = now() WHERE id IN (SELECT id FROM server_auftrag WHERE angenommen IS NULL AND erledigt IS NULL ORDER BY id FOR UPDATE SKIP LOCKED) " +
-            "RETURNING id, art, job, ausloeser, at"))
-        using (var r = cmd.ExecuteReader())
+        using var annehmen = _db.CreateCommand(
+            "UPDATE server_auftrag SET angenommen = now() WHERE id IN (SELECT id FROM server_auftrag WHERE an = @an AND angenommen IS NULL AND erledigt IS NULL ORDER BY id FOR UPDATE SKIP LOCKED) " +
+            "RETURNING id, art, job, ausloeser, at");
+        annehmen.Parameters.AddWithValue("an", Id);
+        using (var r = annehmen.ExecuteReader())
             while (r.Read()) offen.Add((r.GetInt64(0), r.GetString(1), r.GetString(2), r.IsDBNull(3) ? null : r.GetString(3), r.GetFieldValue<DateTimeOffset>(4)));
         foreach (var a in offen.OrderBy(a => a.Id))
         {
@@ -261,8 +265,8 @@ public sealed class Verbund : IDisposable
     }
 
     /// <summary>
-    /// Der Hörer des Hauptservers: wartet mit LISTEN auf einen Anstoss, höchstens 2 Sekunden, und arbeitet dann ab. Geht ein Anstoss verloren, findet
-    /// die nächste Runde den Auftrag trotzdem — die Tabelle ist die Wahrheit. Auf einem Arbeitsserver wartet die Schleife nur.
+    /// Der Hörer jedes Servers: wartet mit LISTEN auf einen Anstoss, höchstens 2 Sekunden, und arbeitet dann die Aufträge an ihn ab. Geht ein Anstoss
+    /// verloren, findet die nächste Runde den Auftrag trotzdem — die Tabelle ist die Wahrheit.
     /// </summary>
     public async Task HoerenAsync(Func<string, string, string?, (string? Ergebnis, string? Fehler)> ausfuehren, CancellationToken stop)
     {
@@ -272,7 +276,7 @@ public sealed class Verbund : IDisposable
         {
             try
             {
-                if (_db is null || !_haupt)
+                if (_db is null)
                 {
                     if (hoer is not null) { await hoer.DisposeAsync(); hoer = null; }
                     await Task.Delay(TimeSpan.FromSeconds(2), stop);
@@ -287,7 +291,7 @@ public sealed class Verbund : IDisposable
                     await listen.ExecuteNonQueryAsync(stop);
                 }
                 Abarbeiten(ausfuehren);
-                if (DateTime.UtcNow - aufgeraeumt > TimeSpan.FromHours(1)) { Aufraeumen(); aufgeraeumt = DateTime.UtcNow; }
+                if (_haupt && DateTime.UtcNow - aufgeraeumt > TimeSpan.FromHours(1)) { Aufraeumen(); aufgeraeumt = DateTime.UtcNow; }
                 await hoer.WaitAsync(TimeSpan.FromSeconds(2), stop);
             }
             catch (OperationCanceledException) { break; }
