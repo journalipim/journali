@@ -32,3 +32,4 @@ plugins/embed/.cache/
 plugins/ocr/.cache/
 # Startprofil: es nennt die eigene Entwicklungsadresse. Nur launchSettings.example.json gehoert ins Repo.
 Journali.Server/Properties/launchSettings.json
+tools/server.log

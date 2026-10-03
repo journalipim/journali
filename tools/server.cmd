@@ -1,6 +1,6 @@
 @echo off
 rem Entwicklung auf dem PC: tools\server start | stop | restart | status | web | build
-rem start   - Server per dotnet run in eigenem Fenster "journali" (localhost:5000); das Fenster bleibt nach dem
+rem start   - Server per dotnet run in eigenem Fenster "journali" (localhost:5000), Log zusaetzlich in tools\server.log; das Fenster bleibt nach dem
 rem           Ende offen, damit man sieht, warum. Ohne Datenbank zeigt http://localhost:5000 die Einrichtung
 rem           Umgebung aus Journali.Server\Properties\launchSettings.json (dotnet run liest sie), darunter
 rem           JOURNALI_LIZENZSERVER
@@ -24,7 +24,8 @@ echo Aufruf: tools\server start ^| stop ^| restart ^| status ^| web ^| build ^| 
 exit /b 2
 
 :start
-start "journali" /D "%ROOT%" cmd /k dotnet run --project Journali.Server
+rem Die Ausgabe steht im Fenster und zugleich in tools\server.log (jeder Start beginnt die Datei neu) - so laesst sich das Log auch von aussen lesen
+start "journali" /D "%ROOT%" powershell -NoProfile -NoExit -Command "$l='%ROOT%\tools\server.log'; Set-Content $l ''; cmd /c 'dotnet run --project Journali.Server 2>&1' | ForEach-Object { $_; [IO.File]::AppendAllText($l, ($_ | Out-String)) }"
 goto warten
 
 rem Warten, bis der Server antwortet (der erste Start uebersetzt noch) — und es sagen
