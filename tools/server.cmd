@@ -25,7 +25,7 @@ exit /b 2
 
 :start
 rem Die Ausgabe steht im Fenster und zugleich in tools\server.log (jeder Start beginnt die Datei neu) - so laesst sich das Log auch von aussen lesen
-start "journali" /D "%ROOT%" powershell -NoProfile -NoExit -Command "$l='%ROOT%\tools\server.log'; Set-Content $l ''; cmd /c 'dotnet run --project Journali.Server 2>&1' | ForEach-Object { $_; [IO.File]::AppendAllText($l, ($_ | Out-String)) }"
+start "journali" /D "%ROOT%" powershell -NoProfile -NoExit -Command "[Console]::OutputEncoding=[Text.Encoding]::UTF8; $l='%ROOT%\tools\server.log'; Set-Content $l ''; cmd /c 'dotnet run --project Journali.Server 2>&1' | ForEach-Object { $_; [IO.File]::AppendAllText($l, ($_ | Out-String)) }"
 goto warten
 
 rem Warten, bis der Server antwortet (der erste Start uebersetzt noch) — und es sagen
