@@ -197,6 +197,11 @@ jobRunner.IstHaupt = () => verbund.IstHaupt;
 jobRunner.ImportAnderswo = () => verbund.ImportAnderswo;
 verbund.ImportHier = () => jobRunner.ImportHier;
 verbund.JobsHier = () => jobRunner.Laufende();
+// Arbeitsserver: Läufe, Anhalten und Abbrechen gehen als Auftrag an den Hauptserver; was dort läuft, kommt aus dessen Puls, das Log aus der Datenbank
+jobRunner.AnHaupt = (art, key, ausloeser) => verbund.Auftrag(art, key, ausloeser);
+jobRunner.AmHaupt = verbund.LaufendAmHaupt;
+jobRunner.LogFertig = verbund.ProtokollFertig;
+verbund.LogsHier = () => jobRunner.LaufendeLogs();
 builder.Services.AddSingleton(verbund);
 builder.Services.AddSingleton(new Embedder(pluginDir, LoggerFactory.Create(b => b.AddConsole()).CreateLogger("embed")));   // eine Suchfrage einbetten: Kindprozess plugins/embed/serve.mjs
 builder.Services.AddHostedService(sp => sp.GetRequiredService<JobRunner>());
@@ -457,7 +462,7 @@ BackupApi.Map(api, journal, dataDir, pluginDir);
 DatenbankApi.Map(api, ziel, dataDir, app.Logger, db);   // ⇅ B&R → Datenbank: Verbindung und Passwort (für die eigene Sicherung)   // Vollsicherung: Journal, Medien, Zugänge, Plugins — zurück in ein leeres System
 MailApi.Map(api, mailer);   // Mailserver einstellen und eine Probe senden (Einstellungen → Mail)
 LicenceKeys.Map(api, licences, new KeyRequests(db, instanz), instanz, abos);   // Schlüssel: signiert anfordern, einlösen — Reset oder Limit, an die Instanz gebunden, einmal
-JobApi.Map(api, jobRunner);   // Jobs: Definition, Läufe, Logs (Plugin tasker)
+JobApi.Map(api, jobRunner, verbund.ProtokollLesen);   // Jobs: Definition, Läufe, Logs (Plugin tasker)
 ScriptumApi.Map(api, jobRunner);   // Skripte (37): im Journal geschrieben, als Job gelaufen — der Quelltext nur für das Schreibrecht
 ConfiguratorApi.Map(api);   // Konfigurator (39): eine Auswahl gegen die Regeln im Journal prüfen — für den Shop
 TeamApi.Map(api, jobDir);   // Teams: Kostenstelle der KI — Schlüssel, Verbuchung, Führung
@@ -553,6 +558,15 @@ if (snapshotPath is not null)
         }
     });
 }
+// Der Hauptserver hört auf Aufträge der Arbeitsserver (LISTEN journali_server), ein Arbeitsserver wartet nur
+_ = Task.Run(() => verbund.HoerenAsync(jobRunner.Ausfuehren, app.Lifetime.ApplicationStopping));
+// Die Adresse, unter der die Jobs diesen Server erreichen, bevor die erste Anfrage kam: ein Hauptserver bekommt vielleicht nie eine —
+// die Oberfläche läuft auf den Arbeitsservern. Die eigene Adresse, mit localhost statt „alle Adressen“
+app.Lifetime.ApplicationStarted.Register(() =>
+{
+    if (app.Urls.FirstOrDefault() is { } eigene && jobRunner.Origin == "http://localhost:5000")
+        jobRunner.Origin = System.Text.RegularExpressions.Regex.Replace(eigene, @"//(\+|\*|0\.0\.0\.0|\[::\])(?=[:/]|$)", "//localhost");
+});
 app.Lifetime.ApplicationStopping.Register(verbund.Dispose);   // die Sperre des Hauptservers freigeben, bevor der Prozess endet
 app.Run();
 return 0;

@@ -38,6 +38,14 @@ public sealed class JobRunner : BackgroundService
     public Func<bool> IstHaupt { get; set; } = () => true;
     /// <summary>Läuft auf einem anderen Server ein Import? Dann warten die Läufe hier wie bei einem eigenen Import.</summary>
     public Func<bool> ImportAnderswo { get; set; } = () => false;
+    /// <summary>Auf einem Arbeitsserver: einen Auftrag an den Hauptserver geben (start, pause, resume, cancel) — Ergebnis oder Fehler. Null = es gibt keinen Weg dorthin.</summary>
+    public Func<string, string, string?, (string? Ergebnis, string? Fehler)>? AnHaupt { get; set; }
+    /// <summary>Auf einem Arbeitsserver: was auf dem Hauptserver gerade läuft (aus dem Puls).</summary>
+    public Func<IReadOnlyList<Laufend>> AmHaupt { get; set; } = () => [];
+    /// <summary>Das Log eines laufenden Laufs hat sich geändert / der Lauf ist zu Ende (Job, Lauf, Datei) — der Verbund schreibt es in die Datenbank.</summary>
+    public Action<string, string, string>? LogFertig { get; set; }
+
+    private Laufend? Fern(string key) => IstHaupt() ? null : AmHaupt().FirstOrDefault(l => l.Key == key);
 
     public JobRunner(Catalog catalog, string pluginDir, string jobDir, ILogger<JobRunner> log)
     {
@@ -158,13 +166,20 @@ public sealed class JobRunner : BackgroundService
         return null;
     }
 
-    public bool IsRunning(string key) { lock (_gate) return _running.ContainsKey(key); }
+    public bool IsRunning(string key) { lock (_gate) if (_running.ContainsKey(key)) return true; return Fern(key) is not null; }
 
     /// <summary>Lauf starten — sofort zurück; der Prozess läuft weiter, der Ausgang kommt ins Journal.</summary>
     public string? Start(string key, string trigger, out string? error)
     {
         error = null;
-        if (!IstHaupt()) { error = "Jobs laufen auf dem Hauptserver."; return null; }
+        // Arbeitsserver (pflegestruktur 41, Entscheidung 3): der Lauf gehört dem Hauptserver — Log und Fächer liegen dort
+        if (!IstHaupt())
+        {
+            if (AnHaupt is null) { error = "Jobs laufen auf dem Hauptserver."; return null; }
+            var (lauf, fehler) = AnHaupt("start", key, trigger);
+            error = fehler;
+            return lauf;
+        }
         lock (_gate) if (_running.ContainsKey(key)) { error = "läuft schon"; return null; }
         var job = _catalog.Lesen((_, _) => _catalog.Jobs.All.GetValueOrDefault(key));
         if (job is null) { error = "unbekannter Job"; return null; }
@@ -249,6 +264,7 @@ public sealed class JobRunner : BackgroundService
         {
             lock (_gate) { _running.Remove(key); _paused.Remove(key); _vorrang.Remove(key); }
             Auth.RevokeServiceToken(token);
+            try { log.Flush(); LogFertig?.Invoke(key, run, logPath); } catch (Exception e) { _log.LogWarning("Job {Key}: Log nicht in die Datenbank geschrieben — {Meldung}", key, e.Message); }
             var exit = 0; try { exit = p.ExitCode; } catch { }
             var bytes = 0L; try { log.Flush(); bytes = new FileInfo(logPath).Length; } catch { }
             var summary = last is { Length: > 0 } ? (last.Length > 200 ? last[..200] : last) : null;
@@ -299,6 +315,7 @@ public sealed class JobRunner : BackgroundService
     /// </summary>
     public bool Pause(string key, string grund = "von Hand")
     {
+        if (!IstHaupt() && AnHaupt is not null) return AnHaupt("pause", key, grund).Fehler is null;
         lock (_gate)
         {
             if (!_running.ContainsKey(key)) return false;
@@ -310,14 +327,15 @@ public sealed class JobRunner : BackgroundService
     /// <summary>Weiter — das macht ein Mensch, nie der Server.</summary>
     public bool Resume(string key)
     {
+        if (!IstHaupt() && AnHaupt is not null) return AnHaupt("resume", key, null).Fehler is null;
         lock (_gate) return _paused.Remove(key);
     }
 
     /// <summary>Soll dieser Lauf warten?</summary>
-    public bool IsPaused(string key) { lock (_gate) return _paused.ContainsKey(key) || VorfahrtGrund(key) is not null; }
+    public bool IsPaused(string key) { lock (_gate) if (_paused.ContainsKey(key) || VorfahrtGrund(key) is not null) return true; return Fern(key)?.Reason is not null; }
 
     /// <summary>Warum er wartet (null = er wartet nicht).</summary>
-    public string? PauseReason(string key) { lock (_gate) return _paused.GetValueOrDefault(key) ?? VorfahrtGrund(key); }
+    public string? PauseReason(string key) { lock (_gate) if ((_paused.GetValueOrDefault(key) ?? VorfahrtGrund(key)) is { } g) return g; return Fern(key)?.Reason; }
 
     /// <summary>Läufe, die ein Import sind: sie haben Vorfahrt vor allem anderen, was der Server nebenher tut (Vektoren, Ableitungen,
     /// Dokumente lesen, Erkennen). Ein Import ist die Arbeit, auf die jemand wartet, und schreibt in dieselbe Datenbank.</summary>
@@ -345,6 +363,7 @@ public sealed class JobRunner : BackgroundService
 
     public bool Cancel(string key)
     {
+        if (!IstHaupt() && AnHaupt is not null) return AnHaupt("cancel", key, null).Fehler is null;
         lock (_gate)
         {
             if (!_running.TryGetValue(key, out var r)) return false;
@@ -353,7 +372,26 @@ public sealed class JobRunner : BackgroundService
         }
     }
 
-    public string? RunningId(string key) { lock (_gate) return _running.TryGetValue(key, out var r) ? r.Run : null; }
+    public string? RunningId(string key) { lock (_gate) if (_running.TryGetValue(key, out var r)) return r.Run; return Fern(key)?.Run; }
+
+    /// <summary>
+    /// Auf dem Hauptserver: einen Auftrag eines Arbeitsservers ausführen. Für start ist das Ergebnis die Kennung des Laufs; „läuft schon“ ist kein Fehler,
+    /// wenn ein Systemjob nachziehen soll — das entscheidet der Aufrufer wie bisher.
+    /// </summary>
+    public (string? Ergebnis, string? Fehler) Ausfuehren(string art, string key, string? ausloeser)
+    {
+        switch (art)
+        {
+            case "start": { var run = Start(key, ausloeser ?? "manual", out var e); return (run, run is null ? e ?? "nicht gestartet" : null); }
+            case "pause": return Pause(key, ausloeser ?? "von Hand") ? ("ok", null) : (null, "Der Job läuft nicht.");
+            case "resume": return Resume(key) ? ("ok", null) : (null, "Der Job wartet nicht.");
+            case "cancel": return Cancel(key) ? ("ok", null) : (null, "Der Job läuft nicht.");
+            default: return (null, $"unbekannter Auftrag {art}");
+        }
+    }
+
+    /// <summary>Die Logs der laufenden Läufe (Job, Lauf, Datei) — der Takt des Verbunds schreibt sie in die Datenbank.</summary>
+    public List<(string Key, string Run, string Pfad)> LaufendeLogs() { lock (_gate) return _running.Select(kv => (kv.Key, kv.Value.Run, LogPath(kv.Key, kv.Value.Run))).ToList(); }
     public string LogPath(string key, string run) => Path.Combine(Dir, key, run + ".log");
 
     /// <summary>

@@ -88,4 +88,57 @@ public class VerbundTests
         Assert.False(runner.ImportHier);                               // gemeldet wird nur, was hier läuft
         Assert.Empty(runner.Laufende());
     }
+
+    [Fact]
+    public void Auf_einem_Arbeitsserver_gehen_Start_Anhalten_Weiter_und_Abbruch_an_den_Hauptserver()
+    {
+        var c = Katalog();
+        var auftraege = new List<string>();
+        var runner = new JobRunner(c, Dir(), Dir(), NullLogger<JobRunner>.Instance)
+        {
+            IstHaupt = () => false,
+            AnHaupt = (art, key, ausloeser) => { auftraege.Add($"{art} {key} {ausloeser}"); return art == "cancel" ? (null, "Der Job läuft nicht.") : (art == "start" ? "20261003-1200-ab12" : "ok", null); },
+            AmHaupt = () => [new JobRunner.Laufend("embed", "r7", "Import")],
+        };
+        Assert.Equal("20261003-1200-ab12", runner.Start("export", "manual", out var fehler));
+        Assert.Null(fehler);
+        Assert.True(runner.Pause("embed"));
+        Assert.True(runner.Resume("embed"));
+        Assert.False(runner.Cancel("embed"));                          // der Fehler des Hauptservers kommt zurück
+        Assert.Equal(["start export manual", "pause embed von Hand", "resume embed ", "cancel embed "], auftraege);
+        // was dort läuft, steht hier in der Jobliste
+        Assert.True(runner.IsRunning("embed"));
+        Assert.Equal("r7", runner.RunningId("embed"));
+        Assert.True(runner.IsPaused("embed"));
+        Assert.Equal("Import", runner.PauseReason("embed"));
+        Assert.False(runner.IsRunning("export"));
+    }
+
+    [Fact]
+    public void Der_Hauptserver_fuehrt_Auftraege_aus_und_nennt_den_Fehler()
+    {
+        var runner = new JobRunner(Katalog(), Dir(), Dir(), NullLogger<JobRunner>.Instance);
+        Assert.Equal((null, "unbekannter Job"), runner.Ausfuehren("start", "gibtsnicht", "manual"));
+        Assert.Equal((null, "Der Job läuft nicht."), runner.Ausfuehren("pause", "gibtsnicht", null));
+        Assert.Equal((null, "Der Job wartet nicht."), runner.Ausfuehren("resume", "gibtsnicht", null));
+        Assert.Equal((null, "unbekannter Auftrag loeschen"), runner.Ausfuehren("loeschen", "x", null));
+    }
+
+    [Fact]
+    public void Die_laufenden_Jobs_gehen_klein_geschrieben_in_die_Tabelle_und_kommen_so_zurueck()
+    {
+        var liste = new List<JobRunner.Laufend> { new("embed", "r1", null), new("derive", "r2", "Import") };
+        var json = JsonSerializer.SerializeToElement(liste, Verbund.Camel);
+        Assert.Equal("embed", json[0].GetProperty("key").GetString());
+        Assert.Equal(liste, Verbund.LaufendAus(json));
+        Assert.Empty(Verbund.LaufendAus(JsonSerializer.SerializeToElement(new { kaputt = 1 })));
+    }
+
+    [Fact]
+    public void Ohne_Datenbank_gibt_es_keinen_Hauptserver_fuer_einen_Auftrag()
+    {
+        var v = new Verbund(null, Katalog(), Dir(), "1", DateTime.UtcNow);
+        Assert.Equal((null, "Kein Hauptserver."), v.Auftrag("start", "x", "manual"));
+        Assert.Null(v.ProtokollLesen("x", "r"));
+    }
 }

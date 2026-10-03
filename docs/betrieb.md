@@ -525,6 +525,12 @@ das, und dort wird ein anderer festgelegt. Ein Import auf einem Server lässt di
 `/api` nur `/api/health`. Die Kennung eines Servers steht in `server.json` im Datenverzeichnis — wer das Datenverzeichnis kopiert, kopiert die Kennung mit; dann
 die Datei im neuen Verzeichnis löschen.
 
+Ein Job, der auf einem Arbeitsserver gestartet, angehalten, fortgesetzt oder abgebrochen wird, geht als Zeile in `server_auftrag` an den Hauptserver;
+`NOTIFY journali_server` stösst ihn an, er wartet darauf mit `LISTEN` und sieht sonst alle 2 s nach. Antwortet er nicht binnen 5 s, wird der Auftrag
+zurückgezogen; ein Auftrag, der älter als eine Minute ist, wird nicht mehr ausgeführt. Was dort läuft, steht im Puls des Hauptservers (Spalte `jobs`), das Log
+jedes Laufs (die letzten 1 MB) in `job_protokoll` — 30 Tage, die Datei beim Hauptserver bleibt. Die Adresse, unter der die Jobs ihren Server rufen, ist vor der
+ersten Anfrage die eigene (`localhost` und der Port, auf dem er hört).
+
 ## Jobs (fest eingebaut: ⏱ Jobs)
 
 Jobs laufen im Server als Kindprozesse (`JobRunner`), unabhängig vom

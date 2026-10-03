@@ -2482,3 +2482,5 @@ laufende Jobs; der eigene ist markiert. Aktionen: zum Hauptserver machen, sperre
 Journal bleibt). Eine abweichende Version ist markiert: ein neuerer Server kann Eintragstypen schreiben, die ein älterer nicht kennt.
 
 **Ohne Datenbank** (Tests, Sandbox) gibt es nur den eigenen Server, und er ist Hauptserver.
+
+**Offen:** Die wartenden Eingänge im Fach `in/` eines Jobs liegen auf der Platte des Hauptservers; ein Arbeitsserver zeigt in der Jobliste dafür 0.

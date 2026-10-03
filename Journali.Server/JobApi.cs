@@ -17,7 +17,8 @@ public static class JobApi
     /// <summary>Ein Lauf, den die Oberfläche abgibt: Plugin, Parameter, Bezeichnung — der Job entsteht dabei.</summary>
     public sealed record UebergabeBody(string? Label, string? Service, Dictionary<string, string>? Params);
 
-    public static void Map(RouteGroupBuilder api, JobRunner runner)
+    /// <param name="protokoll">Das Log eines Laufs aus der Datenbank (Job, Lauf) — für einen Arbeitsserver, bei dem die Datei nicht liegt (pflegestruktur 41).</param>
+    public static void Map(RouteGroupBuilder api, JobRunner runner, Func<string, string, string?>? protokoll = null)
     {
         // Welche Plugins können Jobs? Die mit process im Manifest — mit ihren Parametern (process.params: key, label, type, secret, default)
         api.MapGet("/jobs/plugins", (Catalog c) =>
@@ -218,9 +219,9 @@ public static class JobApi
         {
             if (!ValidKey(key) || run.Contains("..") || run.Contains('/') || run.Contains('\\')) return Results.NotFound();
             var path = runner.LogPath(key, run);
-            if (!File.Exists(path)) return Results.Text("", "text/plain; charset=utf-8");
             string text;
-            using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite)) using (var sr = new StreamReader(fs)) text = sr.ReadToEnd();
+            if (File.Exists(path)) { using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite); using var sr = new StreamReader(fs); text = sr.ReadToEnd(); }
+            else text = protokoll?.Invoke(key, run) ?? "";   // der Lauf war auf dem Hauptserver
             if (tail > 0) { var lines = text.Split('\n'); if (lines.Length > tail) text = string.Join('\n', lines[^tail..]); }
             return Results.Text(text, "text/plain; charset=utf-8");
         });
