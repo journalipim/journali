@@ -69,9 +69,25 @@ public sealed class Jobs : IProjection
     public IReadOnlyDictionary<string, JobState> All => _all;
     public const string Stream = "job:";
 
+    /// <summary>Strom der Server (pflegestruktur 41): <c>server:&lt;id&gt;</c>.</summary>
+    public const string ServerStream = "server:";
+    private string? _main;
+    private readonly HashSet<string> _blocked = new(StringComparer.Ordinal);
+    /// <summary>Der festgelegte Hauptserver (null = noch keiner) — er führt die Jobs aus.</summary>
+    public string? MainServer => _main;
+    /// <summary>Gesperrte Server.</summary>
+    public IReadOnlySet<string> BlockedServers => _blocked;
+
     public void Apply(Entry entry)
     {
         LastApplied = entry.Number;
+        if (entry.Stream.StartsWith(ServerStream, StringComparison.Ordinal))
+        {
+            var id = entry.Stream[ServerStream.Length..];
+            if (entry.Type == Types.ServerMainSet) _main = id;
+            else if (entry.Type == Types.ServerBlockSet) { if (Types.Deserialize<ServerBlockSet>(entry.Payload).Blocked) _blocked.Add(id); else _blocked.Remove(id); }
+            return;
+        }
         if (!entry.Stream.StartsWith(Stream, StringComparison.Ordinal)) return;
         var key = entry.Stream[Stream.Length..];
         switch (entry.Type)

@@ -34,6 +34,11 @@ public sealed class JobRunner : BackgroundService
     /// </summary>
     public Func<string, Task<int>>? Offen { get; set; }
 
+    /// <summary>Ist dieser Server Hauptserver (pflegestruktur 41)? Nur er hat einen Takt für Jobs und startet Läufe. Ohne Verbund immer.</summary>
+    public Func<bool> IstHaupt { get; set; } = () => true;
+    /// <summary>Läuft auf einem anderen Server ein Import? Dann warten die Läufe hier wie bei einem eigenen Import.</summary>
+    public Func<bool> ImportAnderswo { get; set; } = () => false;
+
     public JobRunner(Catalog catalog, string pluginDir, string jobDir, ILogger<JobRunner> log)
     {
         _catalog = catalog; _pluginDir = pluginDir; _log = log; Dir = jobDir;
@@ -48,8 +53,13 @@ public sealed class JobRunner : BackgroundService
     {
         while (!stop.IsCancellationRequested)
         {
-            try { Tick(); } catch (Exception e) { _log.LogError(e, "Job-Takt"); }
-            try { await Nachziehen(stop); } catch (Exception e) { _log.LogError(e, "Systemjobs"); }
+            // Nur der Hauptserver führt Jobs aus: auf einem Arbeitsserver liefen Zeitplan und Systemjobs sonst ein zweites Mal
+            if (IstHaupt())
+            {
+                try { Tick(); } catch (Exception e) { _log.LogError(e, "Job-Takt"); }
+                try { await Nachziehen(stop); } catch (Exception e) { _log.LogError(e, "Systemjobs"); }
+            }
+            else _lastMinute = Floor(DateTimeOffset.Now);   // wird er Hauptserver, holt er keine Minuten nach, in denen ein anderer zuständig war
             try { await Task.Delay(TimeSpan.FromSeconds(20), stop); } catch (OperationCanceledException) { }
         }
         lock (_gate) foreach (var (_, r) in _running) { try { r.Process.Kill(true); } catch { } }
@@ -154,6 +164,7 @@ public sealed class JobRunner : BackgroundService
     public string? Start(string key, string trigger, out string? error)
     {
         error = null;
+        if (!IstHaupt()) { error = "Jobs laufen auf dem Hauptserver."; return null; }
         lock (_gate) if (_running.ContainsKey(key)) { error = "läuft schon"; return null; }
         var job = _catalog.Lesen((_, _) => _catalog.Jobs.All.GetValueOrDefault(key));
         if (job is null) { error = "unbekannter Job"; return null; }
@@ -317,10 +328,20 @@ public sealed class JobRunner : BackgroundService
         service == "import" || (manifest.TryGetProperty("kind", out var k) && k.GetString() == "import");
 
     /// <summary>Läuft gerade ein Import?</summary>
-    public bool ImportLaeuft { get { lock (_gate) return _vorrang.Count > 0; } }
+    public bool ImportLaeuft { get { lock (_gate) return _vorrang.Count > 0 || ImportAnderswo(); } }
+
+    /// <summary>Läuft hier ein Import (nur auf diesem Server)? Das meldet der Verbund an die anderen.</summary>
+    public bool ImportHier { get { lock (_gate) return _vorrang.Count > 0; } }
+
+    /// <summary>Die laufenden Jobs dieses Servers — für die Tabelle der Server und für die Jobliste eines Arbeitsservers.</summary>
+    public List<Laufend> Laufende()
+    {
+        lock (_gate) return _running.Select(kv => new Laufend(kv.Key, kv.Value.Run, _paused.GetValueOrDefault(kv.Key) ?? VorfahrtGrund(kv.Key))).OrderBy(l => l.Key).ToList();
+    }
+    public sealed record Laufend(string Key, string Run, string? Reason);
 
     /// <summary>Wartet dieser laufende Job, weil ein Import Vorfahrt hat? Der Import selbst wartet nie darauf. Unter <c>_gate</c> aufrufen.</summary>
-    private string? VorfahrtGrund(string key) => _vorrang.Count > 0 && _running.ContainsKey(key) && !_vorrang.Contains(key) ? "Import" : null;
+    private string? VorfahrtGrund(string key) => (_vorrang.Count > 0 || ImportAnderswo()) && _running.ContainsKey(key) && !_vorrang.Contains(key) ? "Import" : null;
 
     public bool Cancel(string key)
     {

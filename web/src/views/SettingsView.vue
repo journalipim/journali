@@ -1,6 +1,7 @@
 <script setup>
 // Einstellungen: ein Reiter je Sache, sichtbar nach Recht:
-// ◐ Mein Account · ◍ Team (mit der Lizenz) · ◈ IAM (Konten, Rollen, Rechte, Teams) · ⚑ Workflows · ▨ Storage · ▩ Assets · ✉ Mail · ⇅ B&R (Sichern und Wiederherstellen).
+// ◐ Mein Account · ◍ Team (mit der Lizenz) · ◈ IAM (Konten, Rollen, Rechte, Teams) · ⚑ Workflows · ▨ Storage · ▩ Assets · ✉ Mail · ⇅ B&R (Sichern und Wiederherstellen)
+// · ⧉ Server (welche Server auf die Datenbank zugreifen, pflegestruktur 41).
 // Storage und Assets sind getrennt, weil die Ableitungsgrössen später auch ein Medienmanager pflegen darf, der an den
 // Speicher selbst nicht heranmuss.
 // Wer mit seinen Rechten und seinem Team hierher kommt, sieht, was er sehen oder ändern darf — alles andere nicht.
@@ -10,6 +11,7 @@ import MatrixPicker from '../components/MatrixPicker.vue'
 import StorageSettings from '../components/StorageSettings.vue'
 import RestoreSettings from '../components/RestoreSettings.vue'
 import DbSettings from '../components/DbSettings.vue'
+import ServerSettings from '../components/ServerSettings.vue'
 import MailSettings from '../components/MailSettings.vue'
 import TeamsSettings from '../components/TeamsSettings.vue'
 import UsersSettings from '../components/UsersSettings.vue'
@@ -20,7 +22,7 @@ import { api } from '../api.js'
 import { LANGS, browserLang } from '../i18n.js'
 import { t as t_ } from '../i18n.js'
 // Sprungmarken von aussen (#storage, #users, #mail, #backup, #teams) treffen weiter ihren Reiter
-const MARKEN = { '#storage': 'storage', '#users': 'users', '#mail': 'mail', '#backup': 'backup', '#teams': 'team', '#workflows': 'workflows', '#assets': 'assets' }
+const MARKEN = { '#storage': 'storage', '#users': 'users', '#mail': 'mail', '#backup': 'backup', '#teams': 'team', '#workflows': 'workflows', '#assets': 'assets', '#server': 'server' }
 const tab = ref(MARKEN[location.hash] ?? 'ich')
 // Wer aus der Leiste hierher springt, landet auf dem gemeinten Reiter — auch wenn die Seite schon offen ist
 const folgeMarke = () => { const t = MARKEN[location.hash]; if (t) tab.value = t }
@@ -52,6 +54,7 @@ async function save() {
       <span v-if="store.can('model') || store.can('storage')" class="tab" :class="{ on: tab === 'assets' }" @click="tab = 'assets'" :title="$t('Vorschau-Ableitungen und ihr Bestand')">{{ $t("▩ Assets") }}</span>
       <span v-if="store.can('users')" class="tab" :class="{ on: tab === 'mail' }" @click="tab = 'mail'" :title="$t('ausgehender Mailserver')">{{ $t("✉ Mail") }}</span>
       <span v-if="store.can('users')" class="tab" :class="{ on: tab === 'backup' }" @click="tab = 'backup'" :title="$t('Sichern und wiederherstellen')">⇅ B&amp;R</span>
+      <span v-if="store.can('users')" class="tab" :class="{ on: tab === 'server' }" @click="tab = 'server'" :title="$t('Server, die auf diese Datenbank zugreifen')">{{ $t("⧉ Server") }}</span>
     </div>
     <div class="scroll" v-if="tab === 'team'"><TeamsSettings /></div>
     <div class="scroll" v-else-if="tab === 'workflows'"><WorkflowSettings /></div>
@@ -59,6 +62,7 @@ async function save() {
     <div class="scroll" v-else-if="tab === 'assets'"><StorageSettings teil="assets" /></div>
     <div class="scroll" v-else-if="tab === 'mail'"><MailSettings /></div>
     <div class="scroll" v-else-if="tab === 'backup'"><DbSettings /><RestoreSettings /></div>
+    <div class="scroll" v-else-if="tab === 'server'"><ServerSettings /></div>
     <div class="scroll" v-else-if="tab === 'users'"><UsersSettings /><TeamsAdmin /></div>
 
     <div class="scroll" v-else>

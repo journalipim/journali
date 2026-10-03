@@ -113,15 +113,36 @@ catalog.LicenceDir = dataDir;
 catalog.Licences = licences;
 catalog.ZaehltAb = licences.Lic.CountFrom;   // ab wann gezählt wird
 var seeded = catalog.SeedMissing();
+// Server auf derselben Datenbank (pflegestruktur 41): Kennung, Puls, Rolle. Der erste Takt gleich hier, damit der Start weiss, ob er Hauptserver ist
+var verbund = new Verbund(db, catalog, dataDir, typeof(Program).Assembly.GetName().Version?.ToString(3), System.IO.File.GetLastWriteTimeUtc(typeof(Program).Assembly.Location));
+try { verbund.Takt(); } catch (Exception e) { Console.WriteLine($"journali: Server nicht eingetragen — {e.Message}"); }
+Console.WriteLine($"journali: Server {verbund.Host} ({verbund.Id}) — {(verbund.IstHaupt ? "Hauptserver" : "Arbeitsserver")}{(verbund.Gesperrt ? ", gesperrt" : "")}");
+_ = Task.Run(async () =>
+{
+    var war = verbund.IstHaupt; string? fehler = null;
+    while (true)
+    {
+        await Task.Delay(TimeSpan.FromSeconds(2));
+        try
+        {
+            var ist = verbund.Takt(); fehler = null;
+            if (ist != war) Console.WriteLine($"journali: dieser Server ist jetzt {(ist ? "Hauptserver" : "Arbeitsserver")}");
+            war = ist;
+        }
+        catch (Exception e) { if (e.Message != fehler) Console.WriteLine($"journali: Puls nicht geschrieben — {e.Message}"); fehler = e.Message; }   // einmal je neuem Fehler, nicht alle 2 s
+    }
+});
 // Läuft eine Lizenz (oder der Test) im Betrieb ab, gilt Kostenlos — das Init Team trägt dann dessen Limits. Stündlich
 // nachsehen; LimitsAusLizenz schreibt nur, wenn sich etwas ändert
 _ = Task.Run(async () =>
 {
     // Einmal gleich nach dem Start: sonst kennt eine frische Anlage die Tarife und Aktionen des Shops erst nach einer Stunde
-    try { await abos.AuffrischenAsync(catalog); } catch (Exception e) { Console.WriteLine($"journali: Abos nicht aufgefrischt — {e.Message}"); }
+    // Nur der Hauptserver: beide schreiben ins Journal, und zwei Server schrieben dasselbe zweimal
+    if (verbund.IstHaupt) try { await abos.AuffrischenAsync(catalog); } catch (Exception e) { Console.WriteLine($"journali: Abos nicht aufgefrischt — {e.Message}"); }
     while (true)
     {
         await Task.Delay(TimeSpan.FromHours(1));
+        if (!verbund.IstHaupt) continue;
         try { catalog.Lesen((_, _) => catalog.LimitsAusLizenz()); } catch { }
         try { await abos.AuffrischenAsync(catalog); } catch (Exception e) { Console.WriteLine($"journali: Abos nicht aufgefrischt — {e.Message}"); }
     }
@@ -172,6 +193,11 @@ var jobDir = dataDir;
 builder.Services.AddSingleton(licences);
 var jobRunner = new JobRunner(catalog, pluginDir, jobDir, LoggerFactory.Create(b => b.AddConsole()).CreateLogger<JobRunner>()) { Store = mediaStore };   // Store: Archiv der Fächer
 builder.Services.AddSingleton(jobRunner);
+jobRunner.IstHaupt = () => verbund.IstHaupt;
+jobRunner.ImportAnderswo = () => verbund.ImportAnderswo;
+verbund.ImportHier = () => jobRunner.ImportHier;
+verbund.JobsHier = () => jobRunner.Laufende();
+builder.Services.AddSingleton(verbund);
 builder.Services.AddSingleton(new Embedder(pluginDir, LoggerFactory.Create(b => b.AddConsole()).CreateLogger("embed")));   // eine Suchfrage einbetten: Kindprozess plugins/embed/serve.mjs
 builder.Services.AddHostedService(sp => sp.GetRequiredService<JobRunner>());
 
@@ -240,6 +266,17 @@ app.Use(async (ctx, next) =>
 
 // Benutzer & Rollen: ohne Benutzer offen wie bisher; mit Benutzern Sitzung oder Token noetig, X-Actor kommt aus der Sitzung
 app.UseRateLimiter();
+// Ein gesperrter Server (pflegestruktur 41) beantwortet unter /api nur noch /api/health — entsperrt wird er von einem anderen Server aus
+app.Use(async (ctx, next) =>
+{
+    if (ctx.Request.Path.StartsWithSegments("/api") && !ctx.Request.Path.StartsWithSegments("/api/health") && verbund.Gesperrt)
+    {
+        ctx.Response.StatusCode = 503;
+        await ctx.Response.WriteAsJsonAsync(ModelApi.Err("Dieser Server ist gesperrt."));
+        return;
+    }
+    await next();
+});
 app.Use(Auth.Middleware(catalog, dataDir));
 // Nach der Anmeldung: der Weg der Medien nimmt grosse Dateien an (POST /api/media, PUT /api/media/blob/…); alles andere bleibt bei der Grenze von Kestrel
 app.Use(async (ctx, next) =>
@@ -265,6 +302,7 @@ var gebautAm = System.IO.File.GetLastWriteTimeUtc(typeof(Program).Assembly.Locat
 var laufendeVersion = typeof(Program).Assembly.GetName().Version?.ToString(3);
 
 var api = app.MapGroup("/api");
+ServerApi.Map(api, verbund);
 BetriebApi.Map(api, dataDir, cachePath, Path.Combine(dataDir, $"snapshot-{connection.Host}-{connection.Port}-{connection.Database}.json"), builder.Configuration);
 Auth.Map(api, dataDir);
 if (Auth.Recover(catalog, dataDir, builder.Configuration["JOURNALI_ADMIN_PASSWORD"], builder.Configuration["JOURNALI_ADMIN_USER"]) is { } recovered) Console.WriteLine("journali: " + recovered);
@@ -284,7 +322,7 @@ api.MapGet("/health", (HttpRequest req, Catalog c) =>
     DatenbankPruefen();   // wirft bei unerreichbarer Datenbank; die Wache oben macht daraus 503
     var wer = req.HttpContext.Items["user"] as string;
     if (string.IsNullOrEmpty(wer) && Auth.Enabled(c)) wer = Auth.Resolve(req.HttpContext, c, dataDir)?.User;
-    if (Auth.Enabled(c) && string.IsNullOrEmpty(wer)) return Results.Ok(new { ok = true, abgemeldet = true, built = gebautAm, version = laufendeVersion });
+    if (Auth.Enabled(c) && string.IsNullOrEmpty(wer)) return Results.Ok(new { ok = true, abgemeldet = true, built = gebautAm, version = laufendeVersion, gesperrt = verbund.Gesperrt ? true : (bool?)null });
     return Results.Ok(new
 {
     head = c.Head,
@@ -302,6 +340,8 @@ api.MapGet("/health", (HttpRequest req, Catalog c) =>
     presence = Dort(req, c),
     // Registrierung beim Lizenzserver: null = noch nicht gefragt. Die Oberfläche fragt dann einmal (Recht users).
     registriert = c.Registriert,
+    // dieser Server (pflegestruktur 41): Rolle und Sperre — die Leiste zeigt, wenn es ein Arbeitsserver ist
+    server = new { id = verbund.Id, host = verbund.Host, haupt = verbund.IstHaupt, gesperrt = verbund.Gesperrt },
 });
 });
 
@@ -513,6 +553,7 @@ if (snapshotPath is not null)
         }
     });
 }
+app.Lifetime.ApplicationStopping.Register(verbund.Dispose);   // die Sperre des Hauptservers freigeben, bevor der Prozess endet
 app.Run();
 return 0;
 

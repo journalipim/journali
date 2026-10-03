@@ -129,6 +129,9 @@ public static class Types
     // Fächer des Taskers (docs/tasker-dateien.md): Belege je Datei — die Dateien selbst liegen nicht im Journal
     public const string JobFileConsumed = "JobFileConsumed";
     public const string JobFileWritten = "JobFileWritten";
+    // Server auf derselben Datenbank (pflegestruktur 41): Strom server:<id> — wer Hauptserver ist, wer gesperrt ist
+    public const string ServerMainSet = "ServerMainSet";
+    public const string ServerBlockSet = "ServerBlockSet";
 
     // Versionen: am Knotenstrom —
     // Zeiger auf den Journalstand, eingefrorene Belege (hash-adressiert im Medienspeicher), zurueckgezogen nur markiert
@@ -733,6 +736,10 @@ public sealed record JobRetired();
 public sealed record JobRunStarted(string Run, string Trigger);
 /// <summary>Lauf zu Ende: ok | failed | timeout | cancelled, Rückgabewert, Dauer, letzte Zeile der Ausgabe, Grösse des Logs.</summary>
 public sealed record JobRunFinished(string Run, string Status, int? Exit, double Seconds, string? Summary, long LogBytes);
+/// <summary>Dieser Server (Strom <c>server:&lt;id&gt;</c>) ist ab jetzt Hauptserver; der bisherige ist es nicht mehr. <c>Host</c>: sein Rechnername zur Zeit der Entscheidung.</summary>
+public sealed record ServerMainSet(string? Host = null);
+/// <summary>Dieser Server ist gesperrt (oder wieder frei): er beantwortet keine Anfrage unter /api mehr.</summary>
+public sealed record ServerBlockSet(bool Blocked);
 
 /// <summary>Version eines Knotens: laufende Nummer je Knoten, der Journalstand (alles bis dahin ist der Stand — auch das Modell von
 /// damals), wahlweise Kanal/Sprache, Anmerkung, Aufbewahrung in Jahren (Vorgabe 10). Belege kommen als VersionDocumentAdded dazu.</summary>

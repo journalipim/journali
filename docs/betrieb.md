@@ -517,6 +517,14 @@ spätere gilt — niemand wird gewarnt, nichts geht verloren. Ein **Stapel** (Im
 ein anderer Server dazwischenschreibt: die Nummern passen dann nicht mehr, und die Abbilder werden neu gebaut
 (`Catalog.cs`, `NeuAufbauen`) — richtig, aber bei grossem Journal teuer.
 
+**Hauptserver und Arbeitsserver** (03.10.2026, `docs/pflegestruktur.md` 41): nur ein Server führt Jobs aus — Systemjobs, Zeitplan-Jobs, Jobs von Hand — und
+frischt das Abo auf. Die anderen sind Arbeitsserver. Wer Hauptserver ist und wer gesperrt ist, steht im Journal (`ServerMainSet`, `ServerBlockSet`); Puls, Version,
+Stand und laufende Jobs stehen in der Tabelle `server` (`Verbund.cs`, Takt alle 2 s). Hauptserver ist nur, wer festgelegt ist **und** die Sperre
+`pg_try_advisory_lock` hält; ist keiner festgelegt, wird es der erste, der sie bekommt. Fällt er aus, übernimmt keiner von selbst: Einstellungen → ⧉ Server zeigt
+das, und dort wird ein anderer festgelegt. Ein Import auf einem Server lässt die Systemjobs auf dem Hauptserver warten. Ein gesperrter Server beantwortet unter
+`/api` nur `/api/health`. Die Kennung eines Servers steht in `server.json` im Datenverzeichnis — wer das Datenverzeichnis kopiert, kopiert die Kennung mit; dann
+die Datei im neuen Verzeichnis löschen.
+
 ## Jobs (fest eingebaut: ⏱ Jobs)
 
 Jobs laufen im Server als Kindprozesse (`JobRunner`), unabhängig vom

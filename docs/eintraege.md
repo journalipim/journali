@@ -416,3 +416,10 @@ Wer `users` hat, darf ohnehin alles, was `team` verlangt.
 | `JobRunStarted` | `run`, `trigger` (schedule, manual) | Lauf begonnen — Urheber `job:<key>` |
 | `JobRunFinished` | `run`, `status` (ok, failed, timeout, cancelled), `exit`, `seconds`, `summary`, `logBytes` | Lauf zu Ende; das Log liegt als Datei `jobs/<key>/<run>.log` |
 
+## Server — Strom `server:<id>` (pflegestruktur 41)
+
+| Typ | Nutzlast | Bedeutung |
+|---|---|---|
+| `ServerMainSet` | `host` (Rechnername zur Zeit der Entscheidung) | dieser Server ist Hauptserver; der bisherige ist es nicht mehr |
+| `ServerBlockSet` | `blocked` | gesperrt (true) oder wieder frei (false); ein gesperrter Server beantwortet unter `/api` nur noch `/api/health` |
+

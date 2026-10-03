@@ -234,7 +234,8 @@ Liegt `origin` mehr als ein Stück Arbeit hinter dem Rechner, ist das ein Fehler
   (Anwenderkonten, Rollen, Rechte, Teams anlegen) · ⚑ Workflows · ▨ Storage ·
   ▩ Assets (Ableitungen, Bestand — getrennt, weil das später auch ein Medienmanager
   pflegen darf) · ✉ Mail · ⇅ B&R (Sichern von Hand und zurück — jeder Tarif; als
-  Zeitplan ist es ein Job des Plugins `backup`, ab Pro) · ⚑ Workflows.
+  Zeitplan ist es ein Job des Plugins `backup`, ab Pro) · ⧉ Server (welche Server auf die Datenbank zugreifen,
+  Hauptserver und Arbeitsserver, `docs/pflegestruktur.md` 41) · ⚑ Workflows.
   **Tarife**: Kostenlos, Pro, Pro+, Enterprise, Unlimited — aus dem signierten **Tarifblatt** des Lizenzservers im
   Journal (`TarifeReceived`, `Teams.Tarife`, `Catalog.Tarife`); `Tarife.cs` ist nur das Saatgut, im Code nie
   `Tarife.Free`/`Tarife.Pro` für den Betrieb verwenden. Grenzen je Team, Plugins und Publikationsbäume nach dem
