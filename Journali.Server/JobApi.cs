@@ -221,13 +221,14 @@ public static class JobApi
             return c.With((_, _, write) => c.Jobs.All.ContainsKey(key) ? Results.Ok(EntryView.Of(write(actor, Jobs.Stream + key, Types.JobRetired, new JobRetired(), null))) : Results.NotFound());
         });
 
-        api.MapPost("/jobs/{key}/run", (string key, HttpRequest req, HttpContext ctx, Catalog c) =>
+        // ?trocken=true: derselbe Job als Trockenlauf — er schreibt nichts und meldet, wie viele Einträge er schreiben würde
+        api.MapPost("/jobs/{key}/run", (string key, HttpRequest req, HttpContext ctx, Catalog c, bool trocken = false) =>
         {
             if (Actor(req) is not { } actor) return ActorMissing();
             if (NurHaupt(PluginVon(c, key)) is { } nurHaupt) return nurHaupt;
             if (NurEigene(req, c, key) is { } fremd) return fremd;
             runner.Origin = $"{req.Scheme}://{req.Host}";
-            var run = runner.Start(key, "manual", out var error);
+            var run = runner.Start(key, trocken ? JobRunner.Trocken : "manual", out var error);
             return run is null ? Bad(error ?? "nicht gestartet") : Results.Ok(new { run });
         });
         // Einen Lauf an den Tasker abgeben. Der Job entsteht oder wird aktualisiert, gehört dem Anfragenden — auf sein Kontingent geht,
@@ -343,6 +344,11 @@ public static class JobApi
             server = runner.Ziel(j), serverName = runner.Ziel(j) is { } sv ? runner.ServerName(sv) : null, fern = !runner.Hier(j),
             // über welches Team er abgerechnet wird — gesetzt (teamGesetzt) oder über Besitzer oder Administrator
             eigen,   // gehört dem Team des Fragenden: nur dann starten, anhalten, abbrechen
+            // Warnung vor dem Kontingent (03.10.2026): kann er einen Trockenlauf, ist er ein Import, was hat sein Team noch, was schätzte der letzte Trockenlauf
+            trockenlauf = runner.Art(j).Trockenlauf, import = runner.Art(j).Import,
+            verfuegbar = runner.Verfuegbar?.Invoke(runner.TeamDes?.Invoke(j.Key)) is { } vf ? new { woche = vf.Woche, monat = vf.Monat } : null,
+            schaetzung = j.Runs.FirstOrDefault(r => r.Trigger == JobRunner.Trocken && r.Status == "ok" && r.Entries is not null) is { } sch
+                ? new { eintraege = sch.Entries, am = sch.FinishedAt, run = sch.Id } : null,
             team = runner.TeamDes?.Invoke(j.Key), teamLabel = runner.TeamDes?.Invoke(j.Key) is { } tk ? runner.TeamName?.Invoke(tk) : null, teamGesetzt = j.Team is not null,
             secrets, nextDue = j.Enabled ? JobRunner.NextDue(j.Schedule) : null,
             running = runner.RunningId(j.Key),
@@ -350,5 +356,5 @@ public static class JobApi
             runs = (all ? j.Runs : j.Runs.Take(5)).Select(Run).ToList(),
         };
     }
-    private static object Run(JobRun r) => new { r.Id, r.Trigger, r.StartedAt, r.FinishedAt, r.Status, r.Exit, r.Seconds, r.Summary, r.LogBytes, r.Actor };
+    private static object Run(JobRun r) => new { r.Id, r.Trigger, r.StartedAt, r.FinishedAt, r.Status, r.Exit, r.Seconds, r.Summary, r.LogBytes, r.Actor, r.Entries };
 }

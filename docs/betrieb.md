@@ -719,6 +719,13 @@ ohne Besitzer — die Systemjobs — auf das Team des Administrators. Bis dahin 
 **Ein Team startet nur seine eigenen Jobs** (anhalten, fortsetzen, abbrechen ebenso); ein Administrator (Recht `users`) startet alle, gezahlt wird
 weiter vom Team des Jobs. Jobs anderer Teams sieht nur, wer Anwender und Teams verwaltet.
 
+**Warnung vor dem Kontingent** (03.10.2026): ein Import fragt vor dem Start, was sein Team noch schreiben darf (Grenze ohne die 10 % Reserve, abzüglich
+des Gezählten) und was der letzte **Trockenlauf** schätzte; reicht es nicht, steht das in der Rückfrage, starten lässt er sich trotzdem. Den Trockenlauf
+stösst ≈ im Tasker an (`POST /api/jobs/{key}/run?trocken=true`): derselbe Job mit seinem Parameter `dryRun`/`dry_run`, ohne Vorfahrt vor den
+Systemjobs. Ein Prozess meldet die Zahl mit der Zeile `journali:eintraege=N`; sie steht am Lauf (`JobRunFinished.Entries`). `csv` und `excel`
+zählen ihre Befehle genau, `ixp`, `json` und `solr` höchstens (bestehende Werte, die gleich bleiben, zählen mit). Hält ein Lauf wegen des Kontingents
+an, sagt es der Tasker mit einer Meldung.
+
 **Ohne Kontingent keine Pflege**: Einträge, die zählen, weist der Server ab (403), sobald der Zähler voll ist.
 Ein **Joblauf** hört schon bei 90 % auf (`Limits.JobReserve`) — die letzten 10 % gehören der Handarbeit — und er
 **pausiert**, statt zu sterben. Fortgesetzt wird er nur von Hand: sonst nähmen wartende Jobs das neue Kontingent im

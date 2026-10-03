@@ -101,6 +101,21 @@ export async function plane({ client, umgebung, wurzeln, eltern = new Map(), ski
  * Den Plan schreiben: erst das Modell, dann die Gruppen als ein Stapel, dann je Produkt einer mit seinen Varianten.
  * Fehlgeschlagene Befehle überspringt der Server und meldet sie (doppelte eindeutige Werte — SKU, EAN).
  */
+/// Wie viele Einträge ein Lauf höchstens schreibt (Probelauf, 03.10.2026): je neuem Knoten anlegen und verknüpfen, je Wert einer. Ohne den Bestand zu
+/// lesen — bestehende Werte, die gleich bleiben, sind mitgezählt; bei 18 000 Knoten kostete das Lesen mehr als der Probelauf selbst.
+export function schaetze({ plan, umgebung, skip = DEFAULT_SKIP }) {
+  const attrMap = new Map((umgebung.modell?.attributes ?? []).map(a => [a.key, a]))
+  for (const [k, d] of plan.needs?.newAttrs ?? []) if (!attrMap.has(k)) attrMap.set(k, { key: k, ...d })
+  const itemOf = new Map(plan.items.map(i => [i.doc.id, i]))
+  const geerbt = it => { const parent = it.parentId != null ? itemOf.get(it.parentId) : null; return parent ? inheritedValues(parent.doc, attrMap) : new Map() }
+  let n = 0
+  for (const it of plan.items) {
+    if (!it.existing) n += 2
+    n += valueCommands(it.doc, it.existing?.id ?? '@x', attrMap, new Map(), skip, geerbt(it)).length
+  }
+  return n
+}
+
 export async function schreibe({ plan, umgebung, ziel = null, skip = DEFAULT_SKIP }) {
   const { api, sag } = umgebung
   const { items, needs } = plan

@@ -740,7 +740,9 @@ public sealed record JobRetired();
 /// <summary>Lauf begonnen: Kennung des Laufs und Auslöser (schedule | manual).</summary>
 public sealed record JobRunStarted(string Run, string Trigger);
 /// <summary>Lauf zu Ende: ok | failed | timeout | cancelled, Rückgabewert, Dauer, letzte Zeile der Ausgabe, Grösse des Logs.</summary>
-public sealed record JobRunFinished(string Run, string Status, int? Exit, double Seconds, string? Summary, long LogBytes);
+/// <param name="Entries">Wie viele Einträge der Lauf geschrieben hat oder — als Trockenlauf — schreiben würde, wenn der Prozess es meldet (Zeile
+/// <c>journali:eintraege=N</c>, 03.10.2026). Null = nicht gemeldet.</param>
+public sealed record JobRunFinished(string Run, string Status, int? Exit, double Seconds, string? Summary, long LogBytes, int? Entries = null);
 /// <summary>Dieser Server (Strom <c>server:&lt;id&gt;</c>) ist ab jetzt Hauptserver; der bisherige ist es nicht mehr. <c>Host</c>: sein Rechnername zur Zeit der Entscheidung.</summary>
 public sealed record ServerMainSet(string? Host = null);
 /// <summary>Dieser Server ist gesperrt (oder wieder frei): er beantwortet keine Anfrage unter /api mehr.</summary>

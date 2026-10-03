@@ -15,6 +15,8 @@ public sealed class JobRun
     public double? Seconds { get; set; }
     public string? Summary { get; set; }
     public long LogBytes { get; set; }
+    /// <summary>Geschriebene oder — beim Trockenlauf — geschätzte Einträge, wenn der Lauf sie gemeldet hat.</summary>
+    public int? Entries { get; set; }
     public string Actor { get; init; } = "";
 }
 
@@ -182,7 +184,7 @@ public sealed class Jobs : IProjection
                 var f = Types.Deserialize<JobRunFinished>(entry.Payload);
                 var run = j.Runs.FirstOrDefault(r => r.Id == f.Run);
                 if (run is null) break;
-                run.FinishedAt = entry.At; run.Status = f.Status; run.Exit = f.Exit; run.Seconds = f.Seconds; run.Summary = f.Summary; run.LogBytes = f.LogBytes;
+                run.FinishedAt = entry.At; run.Status = f.Status; run.Exit = f.Exit; run.Seconds = f.Seconds; run.Summary = f.Summary; run.LogBytes = f.LogBytes; run.Entries = f.Entries;
                 Touch(j, entry);
                 break;
             }

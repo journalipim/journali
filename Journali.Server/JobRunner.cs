@@ -44,6 +44,8 @@ public sealed class JobRunner : BackgroundService
     /// <summary>Über welches Team ein Job abgerechnet wird (Schlüssel des Jobs → Team) und wie das Team heisst — für die Jobliste.</summary>
     public Func<string, string?>? TeamDes { get; set; }
     public Func<string, string?>? TeamName { get; set; }
+    /// <summary>Was ein Joblauf dieses Teams noch schreiben darf (Woche, Monat) — für die Warnung vor einem Import.</summary>
+    public Func<string?, (int Woche, int Monat)?>? Verfuegbar { get; set; }
     /// <summary>Name eines Servers für Meldungen und die Jobliste.</summary>
     public Func<string, string> ServerName { get; set; } = id => id;
     /// <summary>Läuft auf einem anderen Server ein Import? Dann warten die Läufe hier wie bei einem eigenen Import.</summary>
@@ -56,6 +58,32 @@ public sealed class JobRunner : BackgroundService
     public Action<string, string, string>? LogFertig { get; set; }
 
     private Laufend? Fern(string key) => Anderswo().FirstOrDefault(l => l.Key == key);
+
+    /// <summary>Auslöser eines Trockenlaufs.</summary>
+    public const string Trocken = "trocken";
+    /// <summary>Die Zeile, mit der ein Prozess meldet, wie viele Einträge er schreibt oder schreiben würde: <c>journali:eintraege=12345</c>.</summary>
+    public const string EintraegeZeile = "journali:eintraege=";
+    /// <summary>Der Parameter, der einen Prozess zum Trockenlauf macht — <c>dryRun</c> oder <c>dry_run</c>; null = er kennt keinen.</summary>
+    public static string? TrockenParam(JsonElement proc) =>
+        proc.TryGetProperty("params", out var ps) && ps.ValueKind == JsonValueKind.Array
+            ? ps.EnumerateArray().Select(x => x.TryGetProperty("key", out var k) ? k.GetString() : null)
+                .FirstOrDefault(k => k is not null && k.Replace("_", "").Equals("dryrun", StringComparison.OrdinalIgnoreCase))
+            : null;
+
+    /// <summary>Was ein Job kann: Trockenlauf, und ob er ein Import ist (Vorfahrt, Warnung vor dem Kontingent). Aus dem Manifest, eine halbe Minute gemerkt.</summary>
+    public (bool Trockenlauf, bool Import) Art(JobState j)
+    {
+        Manifeste();
+        if (!_manifeste.TryGetValue(j.Plugin, out var m) || PluginApi.ProcessOf(m.Raw, j.Service) is not { } proc) return (false, false);
+        return (TrockenParam(proc) is not null, IstImport(m.Raw, j.Service));
+    }
+    private Dictionary<string, PluginApi.Manifest> _manifeste = new();
+    private DateTime _manifesteAm = DateTime.MinValue;
+    private void Manifeste()
+    {
+        if (DateTime.UtcNow - _manifesteAm < TimeSpan.FromSeconds(30)) return;
+        _manifeste = PluginApi.Scan(_pluginDir); _manifesteAm = DateTime.UtcNow;
+    }
 
     /// <summary>Ist das Plugin ein Systemjob (<c>system: true</c> im Manifest)? Die Manifeste werden für eine halbe Minute gemerkt.</summary>
     public bool IstSystemjob(string plugin)
@@ -222,9 +250,13 @@ public sealed class JobRunner : BackgroundService
         if (!PluginApi.Scan(_pluginDir).TryGetValue(job.Plugin, out var m) || PluginApi.ProcessOf(m.Raw, job.Service) is not { } proc) { error = $"Plugin {job.Plugin} hat keinen Prozess {job.Service}"; return null; }
         var run = DateTimeOffset.Now.ToString("yyyyMMdd-HHmmss") + "-" + Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(2)).ToLowerInvariant();
         var actor = "job:" + key;
+        // Trockenlauf (03.10.2026): derselbe Job, nur mit seinem Parameter „dryRun“ (oder „dry_run“) — er zählt, was er schreiben würde
+        string? trockenParam = null;
+        if (trigger == Trocken && (trockenParam = TrockenParam(proc)) is null) { error = $"Plugin {job.Plugin} kennt keinen Trockenlauf"; return null; }
         var token = Auth.IssueServiceToken(actor, job.Role);   // gilt fuer diesen Lauf (JOURNALI_TOKEN); der Prozess schickt ihn als Bearer
         var values = new Dictionary<string, string>(job.Params) { ["journali"] = Origin, ["actor"] = actor, ["job"] = key, ["run"] = run, ["token"] = token };
         foreach (var (k, v) in Secrets.Get(Dir, key)) values[k] = v;
+        if (trockenParam is not null) values[trockenParam] = "true";
         // Profil: profile:<name> (sonst config:<name>) aus den Plugin-Daten im Journal
         // füllt jeden Parameter des Manifests, den der Job nicht selbst setzt — Ziel im Baum, Teilbaum, Format, Sprachen …
         if (job.Params.TryGetValue("profile", out var profName) && profName is { Length: > 0 } && ProfileOf(state, profName) is { } profile)
@@ -260,7 +292,7 @@ public sealed class JobRunner : BackgroundService
         try { p = Process.Start(psi) ?? throw new InvalidOperationException("Prozess startet nicht"); }
         catch (Exception e) { error = $"Prozess {psi.FileName} startet nicht: {e.Message}"; return null; }
         var cts = new CancellationTokenSource();
-        var vorrang = IstImport(m.Raw, job.Service);
+        var vorrang = IstImport(m.Raw, job.Service) && trigger != Trocken;   // ein Trockenlauf schreibt nichts: er hält die Systemjobs nicht an
         lock (_gate) { _running[key] = (p, cts, run); if (vorrang) _vorrang.Add(key); }
         _catalog.With((_, _, write) => write(actor, Jobs.Stream + key, Types.JobRunStarted, new JobRunStarted(run, trigger), null));
         _ = Task.Run(() => Watch(key, job.TimeoutMinutes, run, p, cts, logPath, actor, token, plan, job));
@@ -273,7 +305,15 @@ public sealed class JobRunner : BackgroundService
         var status = "ok"; string? last = null;
         await using var log = new StreamWriter(logPath, false, new UTF8Encoding(false)) { AutoFlush = true };
         var writeLock = new object();
-        void Line(string prefix, string? s) { if (s is null) return; lock (writeLock) { log.WriteLine($"{DateTime.Now:HH:mm:ss} {prefix}{s}"); } if (prefix.Length == 0 && s.Length > 0) last = s; }
+        int? eintraege = null;
+        void Line(string prefix, string? s)
+        {
+            if (s is null) return;
+            lock (writeLock) { log.WriteLine($"{DateTime.Now:HH:mm:ss} {prefix}{s}"); }
+            // die Zahl der Einträge, die der Lauf schreibt oder schreiben würde — eine Zeile für den Tasker, nicht die letzte Zeile des Laufs
+            if (prefix.Length == 0 && s.StartsWith(EintraegeZeile, StringComparison.Ordinal) && int.TryParse(s[EintraegeZeile.Length..], out var n)) { eintraege = n; return; }
+            if (prefix.Length == 0 && s.Length > 0) last = s;
+        }
         p.OutputDataReceived += (_, e) => Line("", e.Data);
         p.ErrorDataReceived += (_, e) => Line("! ", e.Data);
         p.BeginOutputReadLine(); p.BeginErrorReadLine();
@@ -321,7 +361,7 @@ public sealed class JobRunner : BackgroundService
                 }
                 catch (Exception e) { Line("! Fächer: ", e.Message); }
             }
-            try { _catalog.With((_, _, write) => write(actor, Jobs.Stream + key, Types.JobRunFinished, new JobRunFinished(run, status, exit, Math.Round(sw.Elapsed.TotalSeconds, 1), summary, bytes), null)); }
+            try { _catalog.With((_, _, write) => write(actor, Jobs.Stream + key, Types.JobRunFinished, new JobRunFinished(run, status, exit, Math.Round(sw.Elapsed.TotalSeconds, 1), summary, bytes, eintraege), null)); }
             catch (Exception e) { _log.LogError(e, "Job {Key}: Ausgang nicht geschrieben", key); }
             p.Dispose();
         }

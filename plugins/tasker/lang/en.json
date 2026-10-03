@@ -131,5 +131,17 @@
  "Über dieses Team wird abgerechnet, was der Job schreibt.": "What the job writes is billed to this team.",
  "— mein Team —": "— my team —",
  "Team (Abrechnung)": "Team (billing)",
- "Gehört Team {0}; starten und anhalten darf ihn nur dieses Team oder ein Administrator.": "Belongs to team {0}; only that team or an administrator may start and pause it."
+ "Gehört Team {0}; starten und anhalten darf ihn nur dieses Team oder ein Administrator.": "Belongs to team {0}; only that team or an administrator may start and pause it.",
+ "Verfügbar · {0} / Woche · {1} / Monat": "Available · {0} / week · {1} / month",
+ "Trockenlauf {0} · etwa {1} Einträge": "Dry run {0} · about {1} entries",
+ "Noch kein Trockenlauf — ≈ zählt vorher, wie viele Einträge es werden": "No dry run yet — ≈ counts beforehand how many entries it will be",
+ "{0} starten": "Start {0}",
+ "▶ Starten": "▶ Start",
+ "▶ Trotzdem starten": "▶ Start anyway",
+ "Das Kontingent reicht nicht; der Lauf hält an, wenn es erschöpft ist.": "The quota is not enough; the run pauses when it is used up.",
+ "≈ {0}: Trockenlauf gestartet": "≈ {0}: dry run started",
+ "⏸ {0} angehalten: das Kontingent ist erschöpft": "⏸ {0} paused: the quota is used up",
+ "Trockenlauf: zählt, wie viele Einträge der Job schreiben würde, und schreibt nichts": "Dry run: counts how many entries the job would write, and writes nothing",
+ "Letzter Trockenlauf {0}": "Last dry run {0}",
+ "≈ {0} Einträge": "≈ {0} entries"
 }

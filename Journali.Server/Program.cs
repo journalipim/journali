@@ -217,6 +217,7 @@ verbund.JobsHier = () => jobRunner.Laufende();
 jobRunner.HierId = verbund.Id;
 jobRunner.TeamDes = key => catalog.Lesen((_, _) => Abrechnung.TeamDesJobs(catalog.Jobs, catalog.Users, key, Model.InitTeam));
 jobRunner.TeamName = key => catalog.Lesen((_, _) => catalog.Teams.Get(key)?.Label ?? key);
+jobRunner.Verfuegbar = catalog.VerfuegbarFuerJob;
 jobRunner.HauptId = verbund.Festgelegt;
 jobRunner.ServerName = verbund.NameVon;
 jobRunner.AnServer = (an, art, key, ausloeser) => verbund.Auftrag(an, art, key, ausloeser);

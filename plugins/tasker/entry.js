@@ -87,9 +87,30 @@ export function jobGesperrt(job, aktiv) {
   return !(typeof aktiv === 'function' ? aktiv(job?.plugin) : true)
 }
 
+/// Die Rückfrage vor dem Start eines Imports (03.10.2026): was das Team des Jobs noch schreiben darf, was der letzte Trockenlauf schätzte, und ob es reicht.
+/// Liefert null, wenn nicht gefragt wird (kein Import). ∞ = unbegrenzt (int.MaxValue vom Server).
+export const OHNE = 2147483647
+export function startFrage(job) {
+  if (!job?.import) return null
+  const zahl = n => n >= OHNE ? '∞' : Number(n).toLocaleString('de-DE')
+  const v = job.verfuegbar, sch = job.schaetzung
+  const rest = v ? Math.min(v.woche, v.monat) : null
+  const reicht = !(sch && rest != null && rest < OHNE && sch.eintraege > rest)
+  const list = []
+  if (v) list.push(t('Verfügbar · {0} / Woche · {1} / Monat', [zahl(v.woche), zahl(v.monat)]))
+  if (sch) list.push(t('Trockenlauf {0} · etwa {1} Einträge', [String(sch.am ?? '').slice(0, 16).replace('T', ' '), zahl(sch.eintraege)]))
+  else if (job.trockenlauf) list.push(t('Noch kein Trockenlauf — ≈ zählt vorher, wie viele Einträge es werden'))
+  return {
+    title: t('{0} starten', [job.label]), list, danger: !reicht, ok: reicht ? t('▶ Starten') : t('▶ Trotzdem starten'),
+    warn: reicht ? '' : t('Das Kontingent reicht nicht; der Lauf hält an, wenn es erschöpft ist.'),
+  }
+}
+
 /// Läuft der Job auf einem anderen Server (pflegestruktur 41)? Dann meinen seine Pfade und Fächer dessen Platte: geändert wird er dort,
 /// hier lässt er sich starten, anhalten und herholen. Die Marke nennt den Server.
 export function fremd(job) { return job?.fern === true }
+/// Ist der Lauf gerade wegen des Kontingents stehen geblieben (vorher nicht)?
+export function kontingentAngehalten(vorher, jetzt) { return !!jetzt?.running && jetzt.paused && jetzt.pauseReason === 'Kontingent' && !(vorher?.paused && vorher.pauseReason === 'Kontingent') }
 export function serverMarke(job) { return fremd(job) ? '⧉ ' + (job.serverName ?? job.server ?? '?') : '' }
 
 export function profilPflicht(profileDef) {
@@ -244,7 +265,10 @@ async function mount(root, ctx) {
   root.append(el('div', { class: 'toolbar' }, el('h1', {}, t('⏱ Jobs')), el('button', { class: 'primary', onclick: () => openEdit(st.plugin ? { plugin: st.plugin, _new: true } : null) }, '+ Job'), filterChip, el('span', { class: 'grow' }), status), list, detail)
 
   async function load() {
+    const vorher = new Map(st.jobs.map(j => [j.key, j]))
     try { [st.jobs, st.plugins] = await Promise.all([api.get('/api/jobs'), api.get('/api/jobs/plugins')]) } catch (e) { say('✗ ' + e.message); return }
+    // Hält ein Lauf an, weil das Kontingent erschöpft ist, sagt es eine Meldung — in der Liste fiele das ⏸ sonst niemandem auf
+    for (const j of st.jobs) if (kontingentAngehalten(vorher.get(j.key), j)) store.toast(t('⏸ {0} angehalten: das Kontingent ist erschöpft', [j.label]), 'error')
     st.geladen = true
     drawList()
     if (st.cur) await loadDetail(st.cur)
@@ -335,7 +359,12 @@ async function mount(root, ctx) {
     if (b) { b.disabled = true; b.textContent = '⋯' }
     try { await f() } finally { if (b) { b.disabled = false; b.textContent = alt } }
   }
-  async function run(j) { try { await api.post(`/api/jobs/${j.key}/run`); store.toast(`▶ ${j.label} gestartet`, 'ok'); st.cur = j.key; await load(); watch() } catch (e) { store.toast(e.message) } }
+  async function trocken(j) { try { await api.post(`/api/jobs/${j.key}/run?trocken=true`); store.toast(t('≈ {0}: Trockenlauf gestartet', [j.label]), 'ok'); st.cur = j.key; await load(); watch() } catch (e) { store.toast(e.message) } }
+  async function run(j) {
+    // ein Import fragt vorher: reicht das Kontingent seines Teams?
+    const frage = startFrage(j)
+    if (frage && !await dialog.confirm(frage)) return
+    try { await api.post(`/api/jobs/${j.key}/run`); store.toast(`▶ ${j.label} gestartet`, 'ok'); st.cur = j.key; await load(); watch() } catch (e) { store.toast(e.message) } }
   async function cancel(j) { try { await api.post(`/api/jobs/${j.key}/cancel`); store.toast(abbruchText(j, st.plugins).toast); await load() } catch (e) { store.toast(e.message) } }
   // Anhalten und weiter: der Lauf wartet beim nächsten Stapel, statt zu sterben
   async function pause(j) { try { await api.post(`/api/jobs/${j.key}/pause`); store.toast(t('⏸ {0} hält beim nächsten Stapel an', [j.label])); await load() } catch (e) { store.toast(e.message) } }
@@ -372,7 +401,9 @@ async function mount(root, ctx) {
       el('span', { class: 'muted mono', style: 'font-size:11px' }, (() => {
         const kennt = new Set((st.plugins.find(p => p.key === d.plugin && (p.service ?? '') === (d.service ?? ''))?.params ?? []).map(x => x.key))
         return Object.entries(d.params).filter(([k]) => !kennt.size || kennt.has(k)).map(([k, v]) => `${k}=${v}`).join(' ')
-      })()), fremd(d) ? el('span', { class: 'chip', title: t('Läuft auf Server {0}; dort wird er geändert.', [d.serverName ?? d.server ?? '']) }, serverMarke(d)) : '', d.secrets.length ? el('span', { class: 'chip', title: t('Geheimnisse liegen beim Server (jobs/secrets.json), nicht im Journal') }, `🔒 ${d.secrets.join(', ')}`) : '')
+      })()), d.trockenlauf && d.eigen !== false && !d.running ? el('button', { class: 'x trocken', title: t('Trockenlauf: zählt, wie viele Einträge der Job schreiben würde, und schreibt nichts'), onclick: ev => tut(ev, () => trocken(d)) }, '≈') : '',
+      d.schaetzung ? el('span', { class: 'muted schaetzung', title: t('Letzter Trockenlauf {0}', [String(d.schaetzung.am ?? '').slice(0, 16).replace('T', ' ')]) }, t('≈ {0} Einträge', [Number(d.schaetzung.eintraege).toLocaleString('de-DE')])) : '',
+      fremd(d) ? el('span', { class: 'chip', title: t('Läuft auf Server {0}; dort wird er geändert.', [d.serverName ?? d.server ?? '']) }, serverMarke(d)) : '', d.secrets.length ? el('span', { class: 'chip', title: t('Geheimnisse liegen beim Server (jobs/secrets.json), nicht im Journal') }, `🔒 ${d.secrets.join(', ')}`) : '')
     const runs = el('div', { style: 'width:340px;border-right:1px solid var(--line);overflow:auto' })
     const tbl = el('table', { class: 'grid', style: 'width:100%' })
     for (const r of d.runs) {

@@ -11,7 +11,7 @@
 //   JOURNALI_DRY_RUN   "true" = nur analysieren, nichts schreiben
 // Rückgabe 0 = geschrieben, 2 = nichts zu tun, 1 = Abbruch.
 import { solr, holenMitFetch } from './solr.js'
-import { plane, schreibe, planeRelationen, schreibeRelationen, ordneNeu, skipListe, rechteVon, pruefeSchreiben } from './lauf.mjs'
+import { plane, schreibe, schaetze, planeRelationen, schreibeRelationen, ordneNeu, skipListe, rechteVon, pruefeSchreiben } from './lauf.mjs'
 
 const [, , serverArg, actorArg] = process.argv
 const E = process.env
@@ -136,7 +136,12 @@ try {
 
   const plan = await plane({ client, umgebung, wurzeln, skip, pdefs, gruppen: gruppierung })
   // Probelauf und „nichts zu tun“ enden hier: der Rückgabewert allein hielt den Lauf nicht an, und er schrieb trotzdem
-  if (trocken) { sag('Probelauf — nichts geschrieben'); process.exitCode = plan.items.length ? 0 : 2 }
+  if (trocken) {
+    // höchstens so viele Einträge — der Tasker warnt damit vor dem Kontingent
+    const n = schaetze({ plan, umgebung, skip })
+    console.log(`journali:eintraege=${n}`)
+    sag(`Probelauf — nichts geschrieben · höchstens ${n} Einträge`); process.exitCode = plan.items.length ? 0 : 2
+  }
   else if (!plan.items.length) { sag('nichts zu tun'); process.exitCode = 2 }
   else {
     const { geschrieben, stapel } = await schreibe({ plan, umgebung, ziel, skip })
@@ -147,6 +152,7 @@ try {
       const rp = await planeRelationen({ client, umgebung, wurzeln })
       if (rp.cmds) ({ geschrieben: kanten } = await schreibeRelationen({ plan: rp, umgebung }))
     }
+    console.log(`journali:eintraege=${geschrieben + (kanten ?? 0)}`)
     sag(`✓ ${geschrieben} Einträge in ${stapel} Stapeln${kanten ? ` · ${kanten} Kanten` : ''}`)
     process.exitCode = geschrieben || kanten ? 0 : 2
   }

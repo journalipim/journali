@@ -119,7 +119,9 @@ export async function lauf(format) {
   }
   if (p.newAttributes?.length) console.log(`  neue Attribute: ${p.newAttributes.map(a => a.key ?? a).join(', ')}`)
 
-  if (dryRun) { console.log('Trockenlauf — nichts geschrieben'); return }
+  // Wie viele Einträge der Lauf schreibt — im Trockenlauf, was er schreiben würde. Der Tasker warnt damit vor dem Kontingent (03.10.2026)
+  console.log(`journali:eintraege=${p.commands?.length ?? 0}`)
+  if (dryRun) { console.log(`Trockenlauf — nichts geschrieben · ${p.commands?.length ?? 0} Befehle`); return }
   if (!p.commands?.length) { console.log('nichts zu schreiben'); return }
 
   // Ein Stapel: er lässt sich als Ganzes zurücknehmen

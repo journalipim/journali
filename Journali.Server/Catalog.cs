@@ -457,6 +457,29 @@ public sealed class Catalog
         return false;
     }
 
+    /// <summary>
+    /// Was ein Joblauf dieses Teams heute noch schreiben darf, je Woche und Monat (03.10.2026, Warnung vor einem Import): die Grenze des Zahlers abzüglich
+    /// der Reserve für die Handarbeit (90 %), abzüglich dessen, was seit dem Zählbeginn gezählt ist. <see cref="Core.Projections.Tarife.Ohne"/> = unbegrenzt;
+    /// null = kein Team.
+    /// </summary>
+    public (int Woche, int Monat)? VerfuegbarFuerJob(string? team) => Lesend<(int, int)?>(() =>
+    {
+        if (team is null || _teams.Get(team) is null) return null;
+        var zahler = _teams.Payer(team);
+        if (_teams.Get(zahler) is null) return null;
+        var heute = DateOnly.FromDateTime(DateTime.Now);
+        var (kw, km) = _teams.LimitAt(zahler, heute);
+        var z = _teams.Zaehlbeginn(zahler, ZaehltAb, heute);
+        var leute = Abrechnung.Urheber(_teams, _users, _jobs, zahler, Model.InitTeam);
+        int Rest(int grenze, DateOnly anfang)
+        {
+            if (grenze == Core.Projections.Tarife.Ohne) return Core.Projections.Tarife.Ohne;
+            if (grenze <= 0) return 0;
+            return Math.Max(0, Limits.FuerJob(grenze) - _usage.Sum(leute, Usage.Ab(anfang, z.Ab), heute, z.Cut));
+        }
+        return (Rest(kw, Usage.WeekStart(heute)), Rest(km, Usage.MonthStart(heute)));
+    });
+
     /// <summary>Verbrauch je Zahler, mitgeführt statt bei jedem Eintrag neu summiert — ein Import schreibt Zehntausende.</summary>
     private readonly Dictionary<string, (DateOnly Tag, int Woche, int Monat)> _stand = new();
 

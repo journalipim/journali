@@ -68,7 +68,13 @@ public static class TransferApi
                 // Trockenlauf (Job): nur zählen, was passieren würde — nichts schreiben
                 if (body.DryRun)
                 {
-                    void Count(RawNode r) { if (tree.Nodes.ContainsKey(r.Id)) s.Updated++; else if (tree.Retired.ContainsKey(r.Id)) s.Restored++; else s.Created++; foreach (var ch in r.Children ?? []) Count(ch); }
+                    // dazu höchstens so viele Einträge: je neuem Knoten einer, je Wert und Zeile einer — bestehende Werte, die gleich bleiben, zählen mit (03.10.2026)
+                    void Count(RawNode r)
+                    {
+                        if (tree.Nodes.ContainsKey(r.Id)) s.Updated++; else if (tree.Retired.ContainsKey(r.Id)) s.Restored++; else { s.Created++; s.Entries++; }
+                        s.Entries += (r.Values?.Count ?? 0) + (r.Rows?.Values.Sum(x => x.Count) ?? 0) + (r.Relations?.Count ?? 0);
+                        foreach (var ch in r.Children ?? []) Count(ch);
+                    }
                     Count(node);
                     if (rawModel is not null) s.ModelAdded = rawModel.Groups.Count(g => !model.Groups.ContainsKey(g.Key)) + rawModel.Attributes.Count(a => !model.Attributes.ContainsKey(a.Key)) + rawModel.Lists.Count(l => !model.Lists.ContainsKey(l.Key)) + rawModel.Units.Count(u => !model.Units.ContainsKey(u.Key));
                     return (s, Error: null);

@@ -158,4 +158,37 @@ public class GrenzwechselTests
         Assert.True(JobApi.DarfSteuern(c, "admin", false, "embed"));
         Assert.True(JobApi.DarfSteuern(c, "job:export", false, "export"));    // ein Lauf selbst ist nicht gemeint
     }
+
+    [Fact]
+    public void Trockenlauf_ist_der_Parameter_dryRun_oder_dry_run_und_die_Zahl_steht_am_Lauf()
+    {
+        System.Text.Json.JsonElement Proc(string json) => System.Text.Json.JsonDocument.Parse(json).RootElement;
+        Assert.Equal("dryRun", JobRunner.TrockenParam(Proc("""{"params":[{"key":"source"},{"key":"dryRun"}]}""")));
+        Assert.Equal("dry_run", JobRunner.TrockenParam(Proc("""{"params":[{"key":"dry_run"}]}""")));
+        Assert.Null(JobRunner.TrockenParam(Proc("""{"params":[{"key":"limit"}]}""")));
+        Assert.Null(JobRunner.TrockenParam(Proc("""{}""")));
+
+        var jobs = new Jobs(); long n = 0;
+        void E(string type, object payload) => jobs.Apply(new Entry(++n, Local(2026, 10, 3), "t", Jobs.Stream + "imp", type, Types.Serialize(payload)));
+        E(Types.JobDefined, new JobDefined("Import", "solr", null, null));
+        E(Types.JobRunStarted, new JobRunStarted("r1", JobRunner.Trocken));
+        E(Types.JobRunFinished, new JobRunFinished("r1", "ok", 0, 3.2, "Probelauf", 100, 1_320_000));
+        Assert.Equal((JobRunner.Trocken, 1_320_000), (jobs.All["imp"].Runs[0].Trigger, jobs.All["imp"].Runs[0].Entries));
+    }
+
+    [Fact]
+    public void Verfuegbar_fuer_einen_Job_ist_die_Grenze_ohne_Reserve_abzueglich_des_Gezaehlten()
+    {
+        var c = new Catalog(new MemoryJournal()); c.Rebuild(); c.SeedMissing();
+        c.With((_, _, w) =>
+        {
+            w("t", Teams.Stream + "de", Types.TeamDefined, new TeamDefined("DE", EntriesWeek: 1000, EntriesMonth: 5000), null);
+            w("t", Users.Stream + "u", Types.UserDefined, new UserDefined("U", null, "editor", true, "de"), null);
+            return 0;
+        });
+        Assert.Equal((900, 4500), c.VerfuegbarFuerJob("de"));                          // 90 %: der Rest gehört der Handarbeit
+        for (var i = 0; i < 100; i++) c.With((_, _, w) => w("u", "n-1", Types.AttributeSet, new AttributeSet("name", "de", null, "x" + i), null));
+        Assert.Equal((800, 4400), c.VerfuegbarFuerJob("de"));
+        Assert.Null(c.VerfuegbarFuerJob("gibtsnicht"));
+    }
 }

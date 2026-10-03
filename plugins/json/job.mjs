@@ -54,6 +54,7 @@ async function read(src) {
   console.log(`${name}: ${count} Knoten${model ? ` · Modell: ${model.groups?.length ?? 0} Gruppen, ${model.attributes?.length ?? 0} Attribute` : ''} → ${parent ?? 'Wurzel'}${profile ? ` · Profil ${profileName}` : ' · ohne Zuordnung (gleiche Keys)'}${dryRun ? ' · Trockenlauf' : ''}`)
   const r = await request('POST', '/api/nodes/import', { node, model, parent, map, dryRun })
   const line = `${r.created} neu · ${r.restored} zurückgeholt · ${r.updated} angeglichen · ${r.model} Modellteile${dryRun ? ' (würden)' : ` · ${r.entries} Einträge (Stapel ${r.batch})`}`
+  console.log(`journali:eintraege=${r.entries ?? 0}`)   // geschrieben, im Trockenlauf geschätzt — für die Warnung vor dem Kontingent
   for (const e of r.errors ?? []) console.log('✗ ' + e)
   if (r.errors?.length) { console.log(`⚠ ${line} — ${r.errors.length} Fehler`); process.exitCode = 3 }
   console.log(`✓ ${line}`)
