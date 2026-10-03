@@ -2952,7 +2952,6 @@
  "Arbeitsserver": "Work server",
  "Ein Import läuft; die Systemjobs warten.": "An import is running; the system jobs wait.",
  "Andere Version als dieser Server.": "Different version from this server.",
- "gebaut {0}": "built {0}",
  "läuft seit {0}": "running since {0}",
  "Hauptserver festlegen (Systemjobs und Zeitplan-Jobs laufen dann dort)": "Set as main server (system jobs and scheduled jobs then run there)",
  "Server sperren (beantwortet keine Anfrage mehr)": "Block server (answers no more requests)",
@@ -2973,5 +2972,10 @@
  "Der Hauptserver lässt sich nicht sperren.": "The main server cannot be blocked.",
  "Ein Server sperrt sich nicht selbst.": "A server does not block itself.",
  "Server {0} ist erreichbar.": "Server {0} is reachable.",
- "Der Hauptserver bleibt in der Liste.": "The main server stays in the list."
+ "Der Hauptserver bleibt in der Liste.": "The main server stays in the list.",
+ "Bau": "Build",
+ "Wann das laufende Programm gebaut wurde": "When the running program was built",
+ "Name ändern (leer = Rechnername)": "Change name (empty = host name)",
+ "Anderer Bau als dieser Server.": "Different build from this server.",
+ "Ein Name hat höchstens {0} Zeichen.": "A name has at most {0} characters."
 }

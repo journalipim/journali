@@ -422,4 +422,5 @@ Wer `users` hat, darf ohnehin alles, was `team` verlangt.
 |---|---|---|
 | `ServerMainSet` | `host` (Rechnername zur Zeit der Entscheidung) | dieser Server ist Hauptserver; der bisherige ist es nicht mehr |
 | `ServerBlockSet` | `blocked` | gesperrt (true) oder wieder frei (false); ein gesperrter Server beantwortet unter `/api` nur noch `/api/health` |
+| `ServerNamed` | `name` | Name in der Liste der Server; leer = wieder der Rechnername |
 

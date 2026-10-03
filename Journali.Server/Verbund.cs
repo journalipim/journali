@@ -37,6 +37,10 @@ public sealed class Verbund : IDisposable
 
     public string Id { get; }
     public string Host { get; }
+    /// <summary>Wann das laufende Programm gebaut wurde.</summary>
+    public DateTimeOffset Built => _built;
+    /// <summary>Der Name eines Servers: was im Journal steht, sonst der Rechnername.</summary>
+    public string NameVon(string id, string? host) => _catalog.Lesen((_, _) => _catalog.Jobs.ServerNames.GetValueOrDefault(id)) ?? host ?? id;
 
     /// <summary>Läuft auf diesem Server gerade ein Import? (setzt der Aufrufer, meist der JobRunner)</summary>
     public Func<bool> ImportHier { get; set; } = () => false;

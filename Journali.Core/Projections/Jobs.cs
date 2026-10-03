@@ -77,6 +77,9 @@ public sealed class Jobs : IProjection
     public string? MainServer => _main;
     /// <summary>Gesperrte Server.</summary>
     public IReadOnlySet<string> BlockedServers => _blocked;
+    private readonly Dictionary<string, string> _serverNames = new(StringComparer.Ordinal);
+    /// <summary>Namen der Server, die einen bekommen haben.</summary>
+    public IReadOnlyDictionary<string, string> ServerNames => _serverNames;
 
     public void Apply(Entry entry)
     {
@@ -85,6 +88,7 @@ public sealed class Jobs : IProjection
         {
             var id = entry.Stream[ServerStream.Length..];
             if (entry.Type == Types.ServerMainSet) _main = id;
+            else if (entry.Type == Types.ServerNamed) { if (Types.Deserialize<ServerNamed>(entry.Payload).Name is { Length: > 0 } n) _serverNames[id] = n; else _serverNames.Remove(id); }
             else if (entry.Type == Types.ServerBlockSet) { if (Types.Deserialize<ServerBlockSet>(entry.Payload).Blocked) _blocked.Add(id); else _blocked.Remove(id); }
             return;
         }

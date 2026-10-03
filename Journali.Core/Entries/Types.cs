@@ -132,6 +132,7 @@ public static class Types
     // Server auf derselben Datenbank (pflegestruktur 41): Strom server:<id> — wer Hauptserver ist, wer gesperrt ist
     public const string ServerMainSet = "ServerMainSet";
     public const string ServerBlockSet = "ServerBlockSet";
+    public const string ServerNamed = "ServerNamed";
 
     // Versionen: am Knotenstrom —
     // Zeiger auf den Journalstand, eingefrorene Belege (hash-adressiert im Medienspeicher), zurueckgezogen nur markiert
@@ -740,6 +741,8 @@ public sealed record JobRunFinished(string Run, string Status, int? Exit, double
 public sealed record ServerMainSet(string? Host = null);
 /// <summary>Dieser Server ist gesperrt (oder wieder frei): er beantwortet keine Anfrage unter /api mehr.</summary>
 public sealed record ServerBlockSet(bool Blocked);
+/// <summary>Name eines Servers in der Liste (leer = wieder der Rechnername). Im Container ist der Rechnername eine Kennung des Containers.</summary>
+public sealed record ServerNamed(string? Name);
 
 /// <summary>Version eines Knotens: laufende Nummer je Knoten, der Journalstand (alles bis dahin ist der Stand — auch das Modell von
 /// damals), wahlweise Kanal/Sprache, Anmerkung, Aufbewahrung in Jahren (Vorgabe 10). Belege kommen als VersionDocumentAdded dazu.</summary>

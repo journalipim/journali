@@ -20,20 +20,24 @@ function server(routen) {
 }
 
 const jetzt = new Date().toISOString()
-const zeile = (o) => ({ version: '0.9.0', built: jetzt, started: jetzt, puls: jetzt, head: 100, import: false, jobs: null, erreichbar: true, haupt: false, gesperrt: false, selbst: false, ...o })
+const zeile = (o) => ({ name: null, version: '0.9.0', built: jetzt, started: jetzt, puls: jetzt, head: 100, import: false, jobs: null, erreichbar: true, haupt: false, gesperrt: false, selbst: false, ...o })
 
 test('Liste: Rolle, dieser Server, Import, laufende Jobs, andere Version', async () => {
-  server({ '/api/server': { self: 'a', main: 'b', version: '0.9.0', server: [
+  server({ '/api/server': { self: 'a', main: 'b', version: '0.9.0', built: jetzt, server: [
     zeile({ id: 'a', host: 'pc', selbst: true }),
-    zeile({ id: 'b', host: 'unraid', haupt: true, import: true, jobs: [{ key: 'embed', run: 'r1', reason: 'Import' }], version: '0.8.0' }),
+    zeile({ id: 'b', host: '586a874270fb', name: 'Unraid', haupt: true, import: true, jobs: [{ key: 'embed', run: 'r1', reason: 'Import' }], version: '0.8.0', built: '2026-10-01T08:00:00Z' }),
   ] } })
   const w = mount(ServerSettings); await flushPromises()
   assert.match(w.find('h2').text(), /⧉ Server\s*· 2/)
   const [a, b] = w.findAll('tbody tr')
-  assert.match(a.text(), /pc\s*· dieser/); assert.match(a.text(), /◇ Arbeitsserver/)
+  assert.match(a.find('td.name').text(), /✎\s*· dieser/, 'ohne Namen: der Stift zum Benennen'); assert.match(a.text(), /◇ Arbeitsserver/)
+  assert.equal(b.find('td.name').text(), 'Unraid'); assert.equal(b.findAll('td')[2].text(), '586a874270fb')
+  assert.equal(b.findAll('td')[5].text(), new Date('2026-10-01T08:00:00Z').toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }), 'der Bau mit Datum und Uhrzeit')
+  assert.ok(b.find('.warn[title="Anderer Bau als dieser Server."]').exists(), 'abweichender Bau ist markiert')
+  assert.ok(!a.find('.warn[title="Anderer Bau als dieser Server."]').exists())
   assert.match(b.text(), /◆ Hauptserver/); assert.match(b.text(), /⇵/)
   assert.ok(b.find('.warn[title="Andere Version als dieser Server."]').exists(), 'abweichende Version ist markiert')
-  assert.equal(b.findAll('td')[6].attributes('title'), 'embed (Import)')
+  assert.equal(b.findAll('td')[8].attributes('title'), 'embed (Import)')
   assert.ok(!w.find('.haupt-weg').exists())
   // am Hauptserver kein ◆ und kein ⊘; am eigenen kein ⊘
   assert.deepEqual(b.findAll('.aktionen button').map(x => x.text()), [])
@@ -83,4 +87,31 @@ test('Zum Hauptserver machen und sperren fragen nach; freigeben nicht; Fehler de
     assert.deepEqual(puts, [['/api/server/b/haupt', {}], ['/api/server/b/sperre', { gesperrt: true }], ['/api/server/c/sperre', { gesperrt: false }]])
     w.unmount()
   } finally { dialog.confirm = orig }
+})
+
+test('Benennen in der Zelle: Klick, Enter speichert, Esc verwirft, leer heisst wieder der Rechnername', async () => {
+  let name = null
+  const calls = server({
+    '/api/server': () => ({ self: 'a', main: 'a', version: '0.9.0', built: jetzt, server: [zeile({ id: 'a', host: '586a874270fb', name, selbst: true, haupt: true })] }),
+    '/api/server/a/name': b => { name = b.name || null; return { id: 'a', name } },
+  })
+  const w = mount(ServerSettings, { attachTo: document.body }); await flushPromises()
+  const zelle = () => w.find('td.name')
+  await zelle().find('.benennen').trigger('click')
+  let feld = zelle().find('input')
+  assert.equal(feld.attributes('placeholder'), '586a874270fb')
+  await feld.setValue('Verworfen'); await feld.trigger('keydown', { key: 'Escape' }); await flushPromises()
+  assert.ok(!calls.some(c => c.path === '/api/server/a/name'), 'Esc schreibt nichts')
+
+  await zelle().find('.benennen').trigger('click')
+  feld = zelle().find('input')
+  await feld.setValue('  Unraid  '); await feld.trigger('keydown', { key: 'Enter' }); await flushPromises()
+  assert.equal(zelle().find('.benennen').text(), 'Unraid')
+
+  await zelle().find('.benennen').trigger('click')
+  feld = zelle().find('input')
+  await feld.setValue(''); await feld.trigger('blur'); await flushPromises()
+  assert.equal(zelle().find('.benennen').text(), '✎')
+  assert.deepEqual(calls.filter(c => c.path === '/api/server/a/name').map(c => c.body), [{ name: 'Unraid' }, { name: '' }])
+  w.unmount()
 })

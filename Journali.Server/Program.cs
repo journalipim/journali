@@ -116,7 +116,7 @@ var seeded = catalog.SeedMissing();
 // Server auf derselben Datenbank (pflegestruktur 41): Kennung, Puls, Rolle. Der erste Takt gleich hier, damit der Start weiss, ob er Hauptserver ist
 var verbund = new Verbund(db, catalog, dataDir, typeof(Program).Assembly.GetName().Version?.ToString(3), System.IO.File.GetLastWriteTimeUtc(typeof(Program).Assembly.Location));
 try { verbund.Takt(); } catch (Exception e) { Console.WriteLine($"journali: Server nicht eingetragen — {e.Message}"); }
-Console.WriteLine($"journali: Server {verbund.Host} ({verbund.Id}) — {(verbund.IstHaupt ? "Hauptserver" : "Arbeitsserver")}{(verbund.Gesperrt ? ", gesperrt" : "")}");
+Console.WriteLine($"journali: Server {verbund.NameVon(verbund.Id, verbund.Host)} ({verbund.Host}, {verbund.Id}) — {(verbund.IstHaupt ? "Hauptserver" : "Arbeitsserver")}{(verbund.Gesperrt ? ", gesperrt" : "")}");
 _ = Task.Run(async () =>
 {
     var war = verbund.IstHaupt; string? fehler = null;

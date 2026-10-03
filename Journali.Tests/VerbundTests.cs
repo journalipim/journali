@@ -141,4 +141,21 @@ public class VerbundTests
         Assert.Equal((null, "Kein Hauptserver."), v.Auftrag("start", "x", "manual"));
         Assert.Null(v.ProtokollLesen("x", "r"));
     }
+
+    [Fact]
+    public void Ein_Name_steht_im_Journal_und_in_der_Liste_leer_heisst_wieder_der_Rechnername()
+    {
+        var c = Katalog();
+        var v = new Verbund(null, c, Dir(), "1", DateTime.UtcNow, host: "586a874270fb");
+        v.Takt();
+        Assert.Equal("586a874270fb", v.NameVon(v.Id, v.Host));
+        c.With((_, _, w) => w("t", Jobs.ServerStream + v.Id, Types.ServerNamed, new ServerNamed("Unraid"), null));
+        Assert.Equal("Unraid", v.NameVon(v.Id, v.Host));
+        var z = JsonSerializer.SerializeToElement(ServerApi.Liste(v, DateTimeOffset.UtcNow))[0];
+        Assert.Equal(("Unraid", "586a874270fb"), (z.GetProperty("name").GetString(), z.GetProperty("host").GetString()));
+        c.With((_, _, w) => w("t", Jobs.ServerStream + v.Id, Types.ServerNamed, new ServerNamed(null), null));
+        Assert.Equal("586a874270fb", v.NameVon(v.Id, v.Host));
+        Assert.Equal(JsonValueKind.Null, JsonSerializer.SerializeToElement(ServerApi.Liste(v, DateTimeOffset.UtcNow))[0].GetProperty("name").ValueKind);
+        Assert.Equal(Kinds.Setup, Kinds.Of(Types.ServerNamed));
+    }
 }

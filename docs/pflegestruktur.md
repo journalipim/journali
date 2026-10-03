@@ -2477,7 +2477,7 @@ ab; was bei ihm noch läuft, läuft zu Ende.
 **Sperren.** Ein gesperrter Server beantwortet jede Anfrage unter `/api` mit 503, ausser `/api/health`, das den Zustand nennt. Er sieht die Sperre spätestens beim
 nächsten Nachziehen. Den Prozess beenden kann kein anderer Server. Der Hauptserver lässt sich nicht sperren, solange er Hauptserver ist.
 
-**Oberfläche:** Einstellungen → ⧉ Server (Recht `users`). Je Server: Rechnername, Rolle, Version und Bau, Stand des Journals, seit wann, letzter Puls, Import läuft,
+**Oberfläche:** Einstellungen → ⧉ Server (Recht `users`). Je Server: Name (in der Zelle änderbar, `ServerNamed` im Journal; im Container ist der Rechnername eine Kennung des Containers), Rechnername, Rolle, Version und Bau, Stand des Journals, seit wann, letzter Puls, Import läuft,
 laufende Jobs; der eigene ist markiert. Aktionen: zum Hauptserver machen, sperren und entsperren, einen nicht erreichbaren Server aus der Liste entfernen (die Sperre im
 Journal bleibt). Eine abweichende Version ist markiert: ein neuerer Server kann Eintragstypen schreiben, die ein älterer nicht kennt.
 

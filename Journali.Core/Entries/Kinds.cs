@@ -64,7 +64,7 @@ public static class Kinds
 
         // Einrichtung
         Types.PluginInstalled or Types.PluginEnabled or Types.PluginDisabled or Types.PluginRemoved
-            or Types.JobDefined or Types.JobRetired or Types.ServerMainSet or Types.ServerBlockSet
+            or Types.JobDefined or Types.JobRetired or Types.ServerMainSet or Types.ServerBlockSet or Types.ServerNamed
             or Types.UserDefined or Types.UserRetired or Types.RoleDefined or Types.RoleRetired or Types.KeyRedeemed or Types.EntitlementReceived or Types.TarifeReceived
             or Types.MediaPresetDefined or Types.MediaPresetRetired => Setup,
 

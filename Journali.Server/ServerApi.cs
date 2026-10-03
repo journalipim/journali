@@ -11,35 +11,50 @@ namespace Journali.Server;
 public static class ServerApi
 {
     public sealed record SperreBody(bool? Gesperrt);
+    public sealed record NameBody(string? Name);
+    /// <summary>So lang darf ein Name sein.</summary>
+    public const int NameMax = 60;
 
     /// <summary>Ein Server in der Liste: aus der Tabelle, dazu was das Journal über ihn sagt. Server, die nur im Journal vorkommen, stehen ohne Puls darin.</summary>
     public static List<object> Liste(Verbund v, DateTimeOffset jetzt)
     {
         var main = v.Festgelegt(); var gesperrt = v.Gesperrte();
+        string? Name(string id) => v.NameVon(id, null) is var n && n != id ? n : null;
         var zeilen = v.Zeilen.ToList();
         var bekannt = zeilen.Select(z => z.Id).ToHashSet();
         var liste = zeilen.Select(z => (object)new
         {
-            id = z.Id, host = z.Host, version = z.Version, built = z.Built, started = z.Started, puls = z.Puls, head = z.Head, import = z.Import, jobs = z.Jobs,
+            id = z.Id, name = Name(z.Id), host = z.Host, version = z.Version, built = z.Built, started = z.Started, puls = z.Puls, head = z.Head, import = z.Import, jobs = z.Jobs,
             erreichbar = Verbund.Erreichbar(z, jetzt), haupt = z.Id == main, gesperrt = gesperrt.Contains(z.Id), selbst = z.Id == v.Id,
         }).ToList();
         foreach (var id in gesperrt.Append(main).OfType<string>().Distinct().Where(id => !bekannt.Contains(id)))
-            liste.Add(new { id, host = id, version = (string?)null, built = (DateTimeOffset?)null, started = (DateTimeOffset?)null, puls = (DateTimeOffset?)null, head = 0L, import = false, jobs = (object?)null,
+            liste.Add(new { id, name = Name(id), host = id, version = (string?)null, built = (DateTimeOffset?)null, started = (DateTimeOffset?)null, puls = (DateTimeOffset?)null, head = 0L, import = false, jobs = (object?)null,
                 erreichbar = false, haupt = id == main, gesperrt = gesperrt.Contains(id), selbst = id == v.Id });
         return liste;
     }
 
     public static void Map(RouteGroupBuilder api, Verbund v)
     {
-        api.MapGet("/server", () => Results.Ok(new { self = v.Id, main = v.Festgelegt(), haupt = v.IstHaupt, version = typeof(ServerApi).Assembly.GetName().Version?.ToString(3), server = Liste(v, DateTimeOffset.UtcNow) }));
+        api.MapGet("/server", () => Results.Ok(new { self = v.Id, main = v.Festgelegt(), haupt = v.IstHaupt, version = typeof(ServerApi).Assembly.GetName().Version?.ToString(3), built = v.Built, server = Liste(v, DateTimeOffset.UtcNow) }));
+
+        // Benennen: im Container ist der Rechnername eine Kennung des Containers. Leer = wieder der Rechnername
+        api.MapPut("/server/{id}/name", (string id, NameBody body, HttpRequest req, Catalog c) =>
+        {
+            if (Actor(req) is not { } actor) return ActorMissing();
+            var name = string.IsNullOrWhiteSpace(body.Name) ? null : body.Name.Trim();
+            if (name is { Length: > NameMax }) return Bad("Ein Name hat höchstens {0} Zeichen.", NameMax);
+            if (v.Zeilen.All(z => z.Id != id) && v.Festgelegt() != id && !v.Gesperrte().Contains(id)) return Bad("Server {0} gibt es nicht.", id);
+            if (c.Lesen((_, _) => c.Jobs.ServerNames.GetValueOrDefault(id)) != name) c.With((_, _, write) => write(actor, Jobs.ServerStream + id, Types.ServerNamed, new ServerNamed(name), null));
+            return Results.Ok(new { id, name });
+        });
 
         // Zum Hauptserver machen: nur einen erreichbaren, nicht gesperrten — sonst liefe kein Job mehr
         api.MapPut("/server/{id}/haupt", (string id, HttpRequest req, Catalog c) =>
         {
             if (Actor(req) is not { } actor) return ActorMissing();
             if (v.Zeilen.FirstOrDefault(z => z.Id == id) is not { } z) return Bad("Server {0} gibt es nicht.", id);
-            if (!Verbund.Erreichbar(z, DateTimeOffset.UtcNow)) return Bad("Server {0} ist nicht erreichbar.", z.Host);
-            if (v.Gesperrte().Contains(id)) return Bad("Server {0} ist gesperrt.", z.Host);
+            if (!Verbund.Erreichbar(z, DateTimeOffset.UtcNow)) return Bad("Server {0} ist nicht erreichbar.", v.NameVon(id, z.Host));
+            if (v.Gesperrte().Contains(id)) return Bad("Server {0} ist gesperrt.", v.NameVon(id, z.Host));
             if (v.Festgelegt() != id) c.With((_, _, write) => write(actor, Jobs.ServerStream + id, Types.ServerMainSet, new ServerMainSet(z.Host), null));
             return Results.Ok(new { main = id });
         });
@@ -49,7 +64,7 @@ public static class ServerApi
         {
             if (Actor(req) is not { } actor) return ActorMissing();
             var sperren = body.Gesperrt ?? true;
-            var host = v.Zeilen.FirstOrDefault(z => z.Id == id)?.Host ?? id;
+            var host = v.NameVon(id, v.Zeilen.FirstOrDefault(z => z.Id == id)?.Host);
             if (sperren && v.Festgelegt() == id) return Bad("Der Hauptserver lässt sich nicht sperren.");
             if (sperren && id == v.Id) return Bad("Ein Server sperrt sich nicht selbst.");
             if (v.Zeilen.All(z => z.Id != id) && !v.Gesperrte().Contains(id)) return Bad("Server {0} gibt es nicht.", id);
@@ -62,9 +77,9 @@ public static class ServerApi
         {
             if (Actor(req) is null) return ActorMissing();
             if (v.Zeilen.FirstOrDefault(z => z.Id == id) is not { } z) return Bad("Server {0} gibt es nicht.", id);
-            if (Verbund.Erreichbar(z, DateTimeOffset.UtcNow)) return Bad("Server {0} ist erreichbar.", z.Host);
+            if (Verbund.Erreichbar(z, DateTimeOffset.UtcNow)) return Bad("Server {0} ist erreichbar.", v.NameVon(id, z.Host));
             if (v.Festgelegt() == id) return Bad("Der Hauptserver bleibt in der Liste.");
-            return v.Entfernen(id) ? Results.Ok(new { id }) : Bad("Server {0} ist erreichbar.", z.Host);
+            return v.Entfernen(id) ? Results.Ok(new { id }) : Bad("Server {0} ist erreichbar.", v.NameVon(id, z.Host));
         });
     }
 }
