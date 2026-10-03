@@ -2433,3 +2433,52 @@ eigenem Arbeitsspeicher), gibt es nicht als eigenes Merkmal: wer sie getrennt ha
 der jeweiligen Gruppe. Die Auswahl kennt dafür keine Container und keine Verschachtelung.
 
 **Tarif:** Gruppen und Zeilen gehören zum Plugin; sie brauchen keinen eigenen Eintrag im Tarifblatt.
+
+## 41. Mehrere Server auf einer Datenbank — Hauptserver und Arbeitsserver (03.10.2026, entschieden)
+
+Mehrere Server dürfen auf derselben Datenbank laufen (26.09.2026, `Catalog.Nachziehen`). Bis hierher lief dabei jeder Server alle Jobs für sich: Systemjobs und
+Zeitplan-Jobs doppelt, und ein Import auf dem einen Server hielt die Systemjobs des anderen nicht an, weil die Vorfahrt nur im Speicher des eigenen Servers galt.
+
+**Zwei Rollen.**
+
+- **Hauptserver**, genau einer: führt Systemjobs, Zeitplan-Jobs und Jobs von Hand aus, frischt das Abo beim Lizenzserver auf und gleicht die Limits ab.
+- **Arbeitsserver**, beliebig viele: bedienen Oberfläche und Schnittstelle, Pflege und Importe aus dem Browser eingeschlossen. Sie haben keinen eigenen Takt für Jobs.
+
+**Entscheidungen** (03.10.2026):
+
+1. Ein neuer Server ist Arbeitsserver. Der erste Server, der sich einträgt, wenn noch kein Hauptserver festgelegt ist, wird Hauptserver.
+2. Fällt der Hauptserver aus, übernimmt kein anderer von selbst. Systemjobs und Zeitplan-Jobs laufen dann nicht, die Serverliste zeigt das, und ein Administrator
+   bestimmt einen anderen Hauptserver. Ein automatischer Wechsel würde wieder einen Server Jobs ausführen lassen, an den niemand denkt.
+3. Ein Job, der auf einem Arbeitsserver von Hand gestartet, angehalten, fortgesetzt oder abgebrochen wird, geht als Auftrag an den Hauptserver. Logs und Fächer liegen
+   damit an einem Ort.
+4. Je Server gelten weiter: die Anmeldebremse und die Begrenzung der Anfragen. Sie schützen den eigenen Server. Das Kontingent zählt über alle Server, weil
+   `Catalog.Nachziehen` den mitgeführten Verbrauch nach fremden Einträgen verwirft.
+
+**Wo was steht.**
+
+- **Im Journal** stehen die Entscheidungen des Administrators: `ServerMainSet` (dieser Server ist Hauptserver) und `ServerBlockSet` (gesperrt oder nicht), beide im
+  Strom `server:<id>`, Art Einrichtung. Jeder Server liest sie beim Start und beim Nachziehen.
+- **In der Tabelle `server`** neben dem Journal steht der flüchtige Zustand: Kennung, Rechnername, Version und Bau, Start, letzter Puls, Stand des Journals, ob ein Import
+  läuft und welche Jobs gerade laufen. Wie `praesenz`: das ist morgen keine Tatsache mehr und gehört darum nicht ins Journal. Ein Server gilt als erreichbar, solange
+  sein Puls jünger als 30 Sekunden ist.
+- **In der Tabelle `server_auftrag`** stehen die Aufträge an den Hauptserver (Punkt 3) mit ihrem Ergebnis, **in `job_protokoll`** das Log jedes Laufs, damit ein
+  Arbeitsserver es zeigen kann.
+- **Die Kennung** eines Servers steht in `server.json` im Datenverzeichnis und entsteht beim ersten Start. Der Rechnername kann sich ändern, die Kennung nicht.
+
+**Verständigung über die Datenbank, nicht von Server zu Server.** Die Server erreichen einander oft nicht (Firewall, NAT, anderer Standort), die Datenbank erreichen
+alle. Eine direkte Verbindung bräuchte Adressen, Freigaben und eine eigene Anmeldung. Ein Auftrag steht als Zeile in `server_auftrag`; `NOTIFY journali_server`
+stösst den Hauptserver an, der auf einer eigenen Verbindung mit `LISTEN` wartet. Geht der Anstoss verloren, findet der Hauptserver den Auftrag bei der nächsten
+Abfrage (alle 2 Sekunden). Die Tabelle ist die Wahrheit, `NOTIFY` nur der Anstoss.
+
+**Nie zwei Hauptserver.** Der festgelegte Hauptserver hält zusätzlich eine Sperre in Postgres (`pg_try_advisory_lock`) auf einer eigenen Verbindung. Endet sein
+Prozess, gibt Postgres die Sperre frei. Nur wer festgelegt ist und die Sperre hält, führt Jobs aus. Wird ein anderer Server festgelegt, gibt der bisherige die Sperre
+ab; was bei ihm noch läuft, läuft zu Ende.
+
+**Sperren.** Ein gesperrter Server beantwortet jede Anfrage unter `/api` mit 503, ausser `/api/health`, das den Zustand nennt. Er sieht die Sperre spätestens beim
+nächsten Nachziehen. Den Prozess beenden kann kein anderer Server. Der Hauptserver lässt sich nicht sperren, solange er Hauptserver ist.
+
+**Oberfläche:** Einstellungen → ⧉ Server (Recht `users`). Je Server: Rechnername, Rolle, Version und Bau, Stand des Journals, seit wann, letzter Puls, Import läuft,
+laufende Jobs; der eigene ist markiert. Aktionen: zum Hauptserver machen, sperren und entsperren, einen nicht erreichbaren Server aus der Liste entfernen (die Sperre im
+Journal bleibt). Eine abweichende Version ist markiert: ein neuerer Server kann Eintragstypen schreiben, die ein älterer nicht kennt.
+
+**Ohne Datenbank** (Tests, Sandbox) gibt es nur den eigenen Server, und er ist Hauptserver.
