@@ -66,23 +66,59 @@ public static class SemanticApi
     /// </summary>
     private static (long Head, List<KnotenText> Liste) _texte = (-1, []);
 
+    private static readonly object _rechnen = new();
+
     public static List<KnotenText> KnotenTexte(Catalog c)
     {
         var head = c.Head;
         if (_texte.Head == head) return _texte.Liste;
-        var liste = Berechne(c);
-        _texte = (head, liste);
-        return liste;
+        // Nur einer rechnet; wer inzwischen wartete, findet die fertige Liste vor (Stand, Postenliste und Job fragen gleichzeitig)
+        lock (_rechnen)
+        {
+            if (_texte.Head == head) return _texte.Liste;
+            var liste = Berechne(c);
+            _texte = (head, liste);
+            return liste;
+        }
     }
 
-    private static List<KnotenText> Berechne(Catalog c) => c.Lesen((model, tree) =>
+    /// <summary>Knoten je Teil unter der Lesesperre. 02.10.2026: der Baum mit 18 600 Knoten brauchte 13 Sekunden an einem Stück, und ein Schreiber, der in dieser Zeit
+    /// wartete, hielt jeden neuen Leser an (die Gesundheitsabfrage stand 10,5 s). In Teilen kommt der Schreiber nach einem Teil dran.</summary>
+    private const int KnotenJeTeil = 100;
+
+    public static List<KnotenText> Berechne(Catalog c)
     {
-        var locs = model.Locales.Keys.OrderBy(x => x, StringComparer.Ordinal).ToList();
-        if (locs.Count == 0) locs = [model.MasterLocale ?? "de"];
-        return tree.Nodes.Values.Where(n => n.Role is Roles.Group or Roles.Product or Roles.Variant)
-            .OrderBy(n => n.Id, StringComparer.Ordinal)
-            .SelectMany(n => locs.Select(loc => { var t = NodeText.Of(model, tree, n, loc); return new KnotenText(n.Id, loc, NodeText.Hash(t), t); })).ToList();
-    });
+        var (locs, ids) = c.Lesen((model, tree) =>
+        {
+            var l = model.Locales.Keys.OrderBy(x => x, StringComparer.Ordinal).ToList();
+            if (l.Count == 0) l = [model.MasterLocale ?? "de"];
+            return (l, tree.Nodes.Values.Where(n => n.Role is Roles.Group or Roles.Product or Roles.Variant).Select(n => n.Id).Order(StringComparer.Ordinal).ToList());
+        });
+        var namen = new Dictionary<string, string>(StringComparer.Ordinal);   // Name je Knoten, einmal je Lauf
+        long nameTicks = 0, textTicks = 0;                                     // wohin die Zeit geht: Namen auflösen oder Texte bauen (steht in der Zeile „langsam:“)
+        var liste = new List<KnotenText>(ids.Count * locs.Count);
+        foreach (var teil in ids.Chunk(KnotenJeTeil))
+            c.Lesen((model, tree) =>
+            {
+                string Name(Node x)
+                {
+                    if (namen.TryGetValue(x.Id, out var l)) return l;
+                    var t0 = System.Diagnostics.Stopwatch.GetTimestamp();
+                    try { return namen[x.Id] = NodeRow.LabelOf(tree, model, x); } finally { nameTicks += System.Diagnostics.Stopwatch.GetTimestamp() - t0; }
+                }
+                var t1 = System.Diagnostics.Stopwatch.GetTimestamp();
+                foreach (var id in teil)
+                {
+                    if (!tree.Nodes.TryGetValue(id, out var n)) continue;   // inzwischen entfernt
+                    foreach (var loc in locs) { var t = NodeText.Of(model, tree, n, loc, Name); liste.Add(new KnotenText(n.Id, loc, NodeText.Hash(t), t)); }
+                }
+                textTicks += System.Diagnostics.Stopwatch.GetTimestamp() - t1;
+                return 0;
+            });
+        Teilzeit.Notiere("Namen", nameTicks * 1000 / System.Diagnostics.Stopwatch.Frequency);
+        Teilzeit.Notiere("Texte (mit Namen)", textTicks * 1000 / System.Diagnostics.Stopwatch.Frequency);
+        return liste;
+    }
 
     /// <summary>
     /// Die Frage an die Dokumente, wie sie an die KI geht: nur aus den nummerierten Auszügen, jede Aussage mit ihrer

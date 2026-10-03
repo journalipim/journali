@@ -17,11 +17,14 @@ public static partial class NodeText
     [GeneratedRegex("<[^>]+>")] private static partial Regex Tags();
     [GeneratedRegex(@"\s+")] private static partial Regex Spaces();
 
-    public static string Of(ModelCatalog model, Tree tree, Node n, string locale)
+    /// <param name="label">Wie ein Knoten heisst. Ohne Angabe wird er jedes Mal aufgelöst; wer die Texte vieler Knoten rechnet, reicht eine gemerkte Auflösung
+    /// herein: der Name hängt nicht von der Sprache ab, und die Vorfahren eines Knotens sind die seiner Nachbarn.</param>
+    public static string Of(ModelCatalog model, Tree tree, Node n, string locale, Func<Node, string>? label = null)
     {
+        label ??= x => NodeRow.LabelOf(tree, model, x);
         var sb = new StringBuilder();
-        sb.Append(NodeRow.LabelOf(tree, model, n)).Append('\n');
-        var pfad = tree.Ancestors(n).Reverse().Select(a => NodeRow.LabelOf(tree, model, a)).ToList();
+        sb.Append(label(n)).Append('\n');
+        var pfad = tree.Ancestors(n).Reverse().Select(label).ToList();
         sb.Append(Rolle(n.Role, locale));
         if (pfad.Count > 0) sb.Append(" · ").Append(string.Join(" › ", pfad));
         sb.Append('\n');
