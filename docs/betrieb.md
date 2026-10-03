@@ -704,7 +704,7 @@ weitere Team ohne Abo und Schlüssel hat nichts und rechnet über ein anderes ab
   Unlimited braucht keinen.
 - Unlimited steht in den Zahlen als `int.MaxValue` (`Tarife.Ohne`); die Oberfläche zeigt ∞.
 - **Vektoren (`embed`) gehören zum Tarif** (03.10.2026): Vorschauen (`derive`) und Bildabmessungen (`probe`) sind in jedem Tarif erlaubt
-  (`Tarife.Systemjobs`), die Vektoren nicht — Kostenlos enthält sie nicht, das Saatgut gibt sie ab Pro. Welcher Tarif sie enthält, steht im
+  (`Tarife.Systemjobs`), die Vektoren nicht — im Tarifblatt Version 11 und in den eingebauten Vorgabe-Tarifen erst ab Pro+. Welcher Tarif sie enthält, steht im
   Tarifblatt des Lizenzservers unter dem Schlüssel `embed`; ein Blatt, das ihn nicht nennt, schaltet sie ab.
 
 **Der Verbrauch lässt sich nicht zurücksetzen** — er sind die Einträge im Journal, und das Journal ist die Wahrheit.
