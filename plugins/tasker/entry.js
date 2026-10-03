@@ -24,7 +24,7 @@ export function systemRows(plugins, jobs, progress = {}) {
     const label = (globalThis.journali?.L ? globalThis.journali.L(p.label) : null) || p.label?.de || (typeof p.label === 'string' ? p.label : '') || p.key
     // Der Füllstand zeigt, was abgearbeitet ist (total − offen): was kein bekanntes Format hat, ist auch erledigt.
     const erledigt = Math.max(gelesen, total - offen)
-    rows.push({ plugin: p.key, label, progress: pr, ready: pr ? pr.ready !== false : null, total, gelesen: erledigt, offen, pct: pr && pr.ready !== false && total > 0 ? Math.round(erledigt / total * 100) : null, job: (jobs ?? []).find(j => j.plugin === p.key) ?? null })
+    rows.push({ plugin: p.key, label, steuerbar: p.steuerbar !== false, haupt: p.haupt ?? null, progress: pr, ready: pr ? pr.ready !== false : null, total, gelesen: erledigt, offen, pct: pr && pr.ready !== false && total > 0 ? Math.round(erledigt / total * 100) : null, job: (jobs ?? []).find(j => j.plugin === p.key) ?? null })
   }
   return rows
 }
@@ -50,15 +50,20 @@ export function systemBlock(rows, onRun, aktionen = {}) {
     const bar = el('div', { class: 'sysbar' }, el('div', { class: 'fill', style: `width:${r.pct ?? 0}%` }))
     // Läuft er von selbst? Eingeschaltet wird ein Systemjob vom Server angestossen — nach dem Hochladen und solange
     // etwas offen ist, bis nichts mehr offen ist. Ausgeschaltet wartet er auf ▶ (28.09.2026).
-    const schalter = j
+    // Gesteuert werden die Systemjobs nur auf dem Hauptserver (pflegestruktur 41): hier zeigt die Kachel Stand und Protokoll, die Schalter stehen dort
+    const fremd = !r.steuerbar
+    const dort = t('gesteuert auf dem Hauptserver {0}', [r.haupt ?? '—'])
+    const schalter = fremd ? (j ? el('span', { class: 'x ' + (j.enabled ? 'pos' : 'muted'), title: dort }, j.enabled ? '●' : '○') : el('span', { class: 'x leer' }))
+      : j
       ? el('button', { class: 'x ' + (j.enabled ? 'pos' : 'muted'), title: j.enabled ? t('holt auf, was offen ist — ausschalten') : t('läuft nur auf Knopfdruck — einschalten'), onclick: ev => { ev.stopPropagation(); aktionen.toggle?.(j, ev) } }, j.enabled ? '●' : '○')
       : el('span', { class: 'x leer' })
     const knoepfe = el('div', { class: 'tun' },
       schalter,
-      laeuft && j?.paused ? el('button', { class: 'x', title: t('weiter'), onclick: ev => { ev.stopPropagation(); aktionen.resume?.(j, ev) } }, '▶')
+      fremd ? el('span', { class: 'x ' + (laeuft ? 'warn' : 'leer'), title: laeuft ? (j?.paused ? t('wartet') : t('läuft')) + ' · ' + dort : dort }, laeuft ? (j?.paused ? '⏸' : '▶') : '')
+      : laeuft && j?.paused ? el('button', { class: 'x', title: t('weiter'), onclick: ev => { ev.stopPropagation(); aktionen.resume?.(j, ev) } }, '▶')
         : laeuft ? el('button', { class: 'x', title: t('anhalten (wartet beim nächsten Stapel)'), onclick: ev => { ev.stopPropagation(); aktionen.pause?.(j, ev) } }, '⏸')
         : el('button', { class: 'x', title: t('jetzt nachholen'), disabled: r.ready === false, onclick: ev => { ev.stopPropagation(); onRun?.(r.plugin, ev) } }, '▶'),
-      laeuft ? el('button', { class: 'x', title: t('anhalten bis zum nächsten Start — die offenen Posten bleiben offen'), onclick: ev => { ev.stopPropagation(); aktionen.cancel?.(j, ev) } }, '⊘') : el('span', { class: 'x leer' }),
+      laeuft && !fremd ? el('button', { class: 'x', title: t('anhalten bis zum nächsten Start — die offenen Posten bleiben offen'), onclick: ev => { ev.stopPropagation(); aktionen.cancel?.(j, ev) } }, '⊘') : el('span', { class: 'x leer' }),
       j ? el('button', { class: 'x', title: t('Lauf und Protokoll ansehen'), onclick: ev => { ev.stopPropagation(); aktionen.open?.(j, ev) } }, '☰') : el('span', { class: 'x leer' }))
     grid.append(el('div', { class: 'sys-kachel' + (laeuft ? ' laeuft' : ''), 'data-plugin': r.plugin },
       el('div', { class: 'kopf' }, el('b', {}, r.label), el('span', { class: 'mono muted' }, r.plugin)),

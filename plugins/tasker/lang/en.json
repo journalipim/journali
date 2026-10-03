@@ -123,5 +123,7 @@
  "⇣ Herholen": "⇣ Move here",
  "⇣ {0} läuft jetzt auf diesem Server": "⇣ {0} now runs on this server",
  "Eingang · auf Server {0}": "Input · on server {0}",
- "liegt auf dem Server des Jobs": "lies on the job's server"
+ "liegt auf dem Server des Jobs": "lies on the job's server",
+ "gesteuert auf dem Hauptserver {0}": "controlled on the main server {0}",
+ "wartet": "waiting"
 }

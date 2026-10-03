@@ -20,6 +20,12 @@ public static class JobApi
     /// <param name="protokoll">Das Log eines Laufs aus der Datenbank (Job, Lauf) — für einen Arbeitsserver, bei dem die Datei nicht liegt (pflegestruktur 41).</param>
     public static void Map(RouteGroupBuilder api, JobRunner runner, Func<string, string, string?>? protokoll = null)
     {
+        // Die vier Systemjobs steuert nur der Hauptserver (pflegestruktur 41): starten, anhalten, weiter, abbrechen, an und aus. Ein Arbeitsserver zeigt
+        // ihren Stand und ihr Protokoll. Das Anstossen nach dem Hochladen eines Mediums ist keine Steuerung von Hand und geht weiter an den Hauptserver.
+        IResult? NurHaupt(string? plugin) => plugin is not null && runner.IstSystemjob(plugin) && !runner.IstHaupt()
+            ? Bad("Systemjobs werden auf dem Hauptserver {0} gesteuert.", runner.HauptId() is { } h ? runner.ServerName(h) : "—") : null;
+        string? PluginVon(Catalog c, string key) => c.Lesen((_, _) => c.Jobs.All.GetValueOrDefault(key)?.Plugin);
+
         // Welche Plugins können Jobs? Die mit process im Manifest — mit ihren Parametern (process.params: key, label, type, secret, default)
         api.MapGet("/jobs/plugins", (Catalog c) =>
         {
@@ -37,6 +43,9 @@ public static class JobApi
                     files = x.Proc.TryGetProperty("files", out var fi) ? fi : (JsonElement?)null,   // Fächer-Vertrag (in/out) — der Dialog zeigt dann die Fächer
                     // Systemjob (probe, embed, derive): immer sichtbar im Tasker, mit Balken aus progress (GET, liefert offen/gelesen/total)
                     system = manifests[p.Key].Raw.TryGetProperty("system", out var sy) && sy.ValueKind == JsonValueKind.True,
+                    // steuerbar: hier lassen sich die Systemjobs starten und schalten — nur auf dem Hauptserver; haupt: sein Name für den Hinweis
+                    steuerbar = !(manifests[p.Key].Raw.TryGetProperty("system", out var sy2) && sy2.ValueKind == JsonValueKind.True) || runner.IstHaupt(),
+                    haupt = runner.HauptId() is { } hid ? runner.ServerName(hid) : null,
                     progress = manifests[p.Key].Raw.TryGetProperty("progress", out var pg) && pg.ValueKind == JsonValueKind.String ? pg.GetString() : null,
                 })).ToList());
         });
@@ -47,7 +56,8 @@ public static class JobApi
         api.MapPost("/jobs/system/{plugin}/run", (string plugin, HttpRequest req, Catalog c) =>
         {
             if (Actor(req) is not { } actor) return ActorMissing();
-            if (!Tarife.Systemjobs.Contains(plugin)) return Bad("{0} ist kein Systemjob.", plugin);
+            if (!runner.IstSystemjob(plugin)) return Bad("{0} ist kein Systemjob.", plugin);   // aus dem Manifest (system: true) — die Liste im Tarif kennt docs nicht
+            if (NurHaupt(plugin) is { } nein) return nein;
             var manifests = PluginApi.Scan(runner.PluginDir);
             if (!manifests.TryGetValue(plugin, out var m) || PluginApi.ProcessOf(m.Raw, null) is not { } proc) return Bad("Plugin {0} hat keinen Prozess.", plugin);
             var (job, on, locale) = c.Lesen((model, _) => (c.Jobs.All.Values.FirstOrDefault(j => j.Plugin == plugin && j.Enabled)?.Key,
@@ -88,6 +98,7 @@ public static class JobApi
         api.MapPut("/jobs/{key}", (string key, JobBody body, HttpRequest req, Catalog c) =>
         {
             if (Actor(req) is not { } actor) return ActorMissing();
+            if (NurHaupt(PluginVon(c, key) ?? Blank(body.Plugin)) is { } nurHaupt) return nurHaupt;
             if (!ValidKey(key)) return Bad("key: a-z, 0-9, _");
             if (body.Schedule is { Length: > 0 } s && !Cron.TryParse(s, out _)) return Bad("Zeitplan: cron mit fünf Feldern „m h tag monat wochentag“, z. B. „0 2 * * *“ = täglich 02:00.");
             // Zeitplan ab Pro; von Hand läuft ein Job in jedem Tarif
@@ -164,9 +175,10 @@ public static class JobApi
             return c.With((_, _, write) => c.Jobs.All.ContainsKey(key) ? Results.Ok(EntryView.Of(write(actor, Jobs.Stream + key, Types.JobRetired, new JobRetired(), null))) : Results.NotFound());
         });
 
-        api.MapPost("/jobs/{key}/run", (string key, HttpRequest req, HttpContext ctx) =>
+        api.MapPost("/jobs/{key}/run", (string key, HttpRequest req, HttpContext ctx, Catalog c) =>
         {
             if (Actor(req) is not { } actor) return ActorMissing();
+            if (NurHaupt(PluginVon(c, key)) is { } nurHaupt) return nurHaupt;
             runner.Origin = $"{req.Scheme}://{req.Host}";
             var run = runner.Start(key, "manual", out var error);
             return run is null ? Bad(error ?? "nicht gestartet") : Results.Ok(new { run });
@@ -199,9 +211,9 @@ public static class JobApi
         });
 
         // Anhalten und weiter: der Lauf wartet beim nächsten Stapel, statt zu sterben.
-        api.MapPost("/jobs/{key}/pause", (string key, HttpRequest req) => Actor(req) is null ? ActorMissing()
+        api.MapPost("/jobs/{key}/pause", (string key, HttpRequest req, Catalog c) => Actor(req) is null ? ActorMissing() : NurHaupt(PluginVon(c, key)) is { } nein ? nein
             : runner.Pause(key) ? Results.Ok(new { paused = true }) : Bad("Der Job läuft nicht."));
-        api.MapPost("/jobs/{key}/resume", (string key, HttpRequest req) => Actor(req) is null ? ActorMissing()
+        api.MapPost("/jobs/{key}/resume", (string key, HttpRequest req, Catalog c) => Actor(req) is null ? ActorMissing() : NurHaupt(PluginVon(c, key)) is { } nein ? nein
             : runner.Resume(key) ? Results.Ok(new { paused = false }) : Bad("Der Job wartet nicht."));
         // Was der Lauf selbst zwischen zwei Stapeln fragt — er kennt nur seinen Jobschlüssel
         api.MapGet("/jobs/{key}/signal", (string key, Catalog c) =>
@@ -213,7 +225,8 @@ public static class JobApi
             return Results.Ok(new { paused = runner.IsPaused(key), running = runner.IsRunning(key), reason = runner.PauseReason(key) });
         });
 
-        api.MapPost("/jobs/{key}/cancel", (string key, HttpRequest req) => Actor(req) is null ? ActorMissing() : runner.Cancel(key) ? Results.Ok(new { cancelled = true }) : Bad("Der Job läuft nicht."));
+        api.MapPost("/jobs/{key}/cancel", (string key, HttpRequest req, Catalog c) => Actor(req) is null ? ActorMissing() : NurHaupt(PluginVon(c, key)) is { } nein ? nein
+            : runner.Cancel(key) ? Results.Ok(new { cancelled = true }) : Bad("Der Job läuft nicht."));
 
         // Log eines Laufs: ganz oder die letzten n Zeilen — auch während er läuft
         // Fächer eines Jobs (docs/tasker-dateien.md): wartende Eingänge (Platte), verarbeitete und geschriebene (Journal), latest, Einstellungen

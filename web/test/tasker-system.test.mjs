@@ -83,3 +83,20 @@ test('der Balken zeigt, was erledigt ist — nicht nur, was etwas ergeben hat', 
   const [halb] = systemRows(plugins, [], { probe: { ready: true, total: 1000, gelesen: 100, offen: 400 } })
   assert.equal(halb.pct, 60, '600 von 1000 sind abgearbeitet')
 })
+
+// 03.10.2026: die Systemjobs steuert nur der Hauptserver — auf einem anderen Server zeigt die Kachel Stand und Protokoll, keine Schalter
+test('auf einem Arbeitsserver: kein ▶, kein ⏸, kein ⊘, an/aus nur als Zustand, ☰ bleibt', () => {
+  const PL = [{ key: 'embed', system: true, steuerbar: false, haupt: 'Unraid', label: { de: 'Einbettungen' }, progress: '/api/docs/embed' }]
+  const job = { key: 'embed', plugin: 'embed', enabled: true, running: 'r1', paused: false }
+  const gerufen = []
+  const box = systemBlock(systemRows(PL, [job], { embed: { ready: true, total: 10, gelesen: 5, offen: 5 } }), p => gerufen.push(p),
+    { pause: () => gerufen.push('pause'), cancel: () => gerufen.push('cancel'), toggle: () => gerufen.push('toggle'), open: () => gerufen.push('open') })
+  const kachel = box.querySelector('.sys-kachel')
+  const knoepfe = [...kachel.querySelectorAll('button')].map(b => b.textContent)
+  assert.deepEqual(knoepfe, ['☰'], 'nur das Protokoll ist ein Knopf')
+  const zustand = [...kachel.querySelectorAll('.tun span')].filter(s => s.textContent).map(s => [s.textContent, s.title])
+  assert.deepEqual(zustand, [['●', 'gesteuert auf dem Hauptserver Unraid'], ['▶', 'läuft · gesteuert auf dem Hauptserver Unraid']])
+  const steuerbar = systemRows([{ ...PL[0], steuerbar: true }], [job], {})[0]
+  assert.equal(steuerbar.steuerbar, true)
+  assert.equal(systemRows([{ key: 'probe', system: true }], [], {})[0].steuerbar, true, 'ohne Angabe: steuerbar (ein Server allein)')
+})

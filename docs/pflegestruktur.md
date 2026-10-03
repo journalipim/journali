@@ -2445,6 +2445,9 @@ Zeitplan-Jobs doppelt, und ein Import auf dem einen Server hielt die Systemjobs 
   gleicht die Limits ab.
 - **Arbeitsserver**, beliebig viele: bedienen Oberfläche und Schnittstelle und führen ihre eigenen Jobs aus (Entscheidung 3).
 
+**Gesteuert** werden die Systemjobs nur auf dem Hauptserver (starten, anhalten, weiter, abbrechen, an und aus). Ein Arbeitsserver zeigt ihren Stand und ihr Protokoll,
+und der Server lehnt dort jede Steuerung ab. Das Anstossen nach dem Hochladen eines Mediums ist keine Steuerung von Hand und geht weiter an den Hauptserver.
+
 **Entscheidungen** (03.10.2026):
 
 1. Ein neuer Server ist Arbeitsserver. Der erste Server, der sich einträgt, wenn noch kein Hauptserver festgelegt ist, wird Hauptserver.
