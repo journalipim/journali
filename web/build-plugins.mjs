@@ -5,7 +5,7 @@
 // für eines. Das Ergebnis entry.js liegt im Repo — auf dem Server braucht es kein Node zum Austauschen.
 import { build } from 'vite'
 import vue from '@vitejs/plugin-vue'
-import { existsSync, readdirSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { resolve, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -31,6 +31,25 @@ function shims() {
   }
 }
 
+/// Quellen eines Plugins mit LF lesen. Die Scope-Id einer .vue-Datei ist im Produktionsbau ein Hash aus Pfad und
+/// rohem Quelltext (@vitejs/plugin-vue, createDescriptor). Die .gitattributes setzen LF nur beim Auschecken; eine
+/// Datei, die ein Werkzeug unter Windows mit CRLF schreibt, behält CRLF in der Arbeitskopie, bis Git sie neu auscheckt.
+/// Ohne diese Angleichung hängt das gebaute entry.js von den Zeilenenden der Arbeitskopie ab und bricht das Siegel
+/// (configurator, 03.10.2026: CheckPanel.vue mit CRLF gebaut, data-v-a6b54beb statt data-v-d7115c5d).
+const SOURCE = /\.(vue|js|mjs|ts|css|json)$/
+function lfSources() {
+  return {
+    name: 'journali-lf-sources',
+    enforce: 'pre',
+    load(id) {
+      if (id.startsWith('\0') || id.includes('?') || !SOURCE.test(id)) return
+      const file = resolve(id)
+      if (!file.startsWith(pluginsDir) || !existsSync(file)) return
+      return readFileSync(file, 'utf8').replace(/\r\n?/g, '\n')
+    },
+  }
+}
+
 /// Stile in die JS-Datei — ein Plugin ist eine Datei
 function inlineCss() {
   return {
@@ -52,7 +71,7 @@ async function one(key) {
   if (!existsSync(entry)) return false
   await build({
     configFile: false, logLevel: 'warn', root: here, publicDir: false,   // sonst landet web/public (Logo) in jedem Plugin
-    plugins: [vue(), shims(), inlineCss()],
+    plugins: [lfSources(), vue(), shims(), inlineCss()],
     build: {
       lib: { entry, formats: ['es'], fileName: () => 'entry.js', cssFileName: 'style' },
       outDir: resolve(pluginsDir, key), emptyOutDir: false, minify: false, cssCodeSplit: false, target: 'es2022',
