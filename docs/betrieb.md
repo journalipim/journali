@@ -87,8 +87,10 @@ Regel: **ein Journal, ein Speicher.** Zwei Instanzen am selben Journal (PC und C
 Speicher — dieselbe Postgres-Datenbank oder denselben Bucket; sonst fehlen der einen die Bytes der anderen.
 
 **Einstellen** unter ⚙ Einstellungen → ▨ Storage: Treiber, Zugang — prüfen, speichern; die Einstellung
-liegt als `media.json` im Datenverzeichnis (`JOURNALI_JOBS`, neben `db.json`), nie im Journal, und geht der
-Umgebung vor. Dort auch Fehlbestand zählen und Blobs aus einem anderen Speicher herüberkopieren.
+liegt im Tresor (Stück `media`, verschlüsselt in der Datenbank; ohne Datenbank als `media.json` im Datenverzeichnis), nie im Journal, und geht der
+Umgebung vor. Seit dem 03.10.2026 gilt sie damit für alle Server auf derselben Datenbank: stellt einer um, folgen die anderen binnen 10 Sekunden.
+Eine `media.json` von früher übernimmt der Start in den Tresor, wenn dort noch keine Einstellung steht (danach `media.json.uebernommen`). Der
+Treiber „Verzeichnis“ meint auf jedem Server dessen eigene Platte — mit mehreren Servern taugt er nur mit einem gemeinsamen Netzlaufwerk. Dort auch Fehlbestand zählen und Blobs aus einem anderen Speicher herüberkopieren.
 
 **Treiber wechseln** ohne neue Ids: neue Angabe setzen, starten, dann `POST /api/media/copy {"from": "<alte Angabe>"}`
 (X-Actor) — kopiert alle Blobs, die hier fehlen, Hash-geprüft. `GET /api/media/missing` zeigt Medien ohne Bytes,
@@ -426,8 +428,8 @@ Zwei Wege, die sich nicht ersetzen.
 
 **`pg_dump`** sichert die Datenbank: Journal, abgeleitete Tabellen und — beim
 Speicher `postgres` — die Medien. Schnell, konsistent, erprobt. Er kennt aber nur
-die Datenbank: die Plugin-Verzeichnisse und `media.json` im Datenverzeichnis liegen im Dateisystem und fehlen
-(der Tresor mit den Zugängen ist dabei — er ist eine Tabelle).
+die Datenbank: die Plugin-Verzeichnisse liegen im Dateisystem und fehlen
+(der Tresor mit den Zugängen und dem Medienspeicher ist dabei — er ist eine Tabelle).
 Wer so sichert, muss das Volume mitnehmen.
 
 **Die Vollsicherung** — von Hand unter ⚙ Einstellungen → ⇅ B&R (jeder Tarif) oder als Zeitplan
@@ -438,7 +440,7 @@ Satz, der an nichts hängt — nicht an der Postgres-Version, nicht am Schema:
 |---|---|
 | `journal.ndjson.gz` | alle Einträge, je Zeile einer, mit Nummer, Zeit, Urheber |
 | `media/` | die Blobs — **nur beim Speicher `postgres`** |
-| `config/` | `auth.json`, `mail.json`, `secrets.json` aus dem Tresor, `media.json` aus dem Datenverzeichnis |
+| `config/` | `auth.json`, `mail.json`, `secrets.json`, `media.json` aus dem Tresor |
 | `plugins/` | die Plugin-Verzeichnisse ohne `node_modules` |
 | `backup.json` | Zeitpunkt, Anzahl, Art des Speichers |
 

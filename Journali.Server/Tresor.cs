@@ -23,11 +23,11 @@ public interface ITresorAblage
 
 public static class Tresor
 {
-    public const string Auth = "auth", Mail = "mail", Secrets = "secrets";
+    public const string Auth = "auth", Mail = "mail", Secrets = "secrets", Media = "media";
     /// <summary>Die Dateinamen von früher — für den Dateibetrieb, die Übernahme und die Sicherung.</summary>
     public static readonly IReadOnlyDictionary<string, string> Dateien = new Dictionary<string, string>
     {
-        [Auth] = "auth.json", [Mail] = "mail.json", [Secrets] = "secrets.json",
+        [Auth] = "auth.json", [Mail] = "mail.json", [Secrets] = "secrets.json", [Media] = "media.json",
     };
 
     private static ITresorAblage? _ablage;
@@ -35,7 +35,7 @@ public static class Tresor
     public static void Nutze(ITresorAblage? ablage) => _ablage = ablage;
     public static ITresorAblage Fuer(string dir) => _ablage ?? new DateiTresor(dir);
     public static string PfadIn(string dir, string name) => Path.Combine(dir, Dateien[name]);
-    /// <summary>Name eines Stücks zu einem Dateinamen — null, wenn die Datei nicht in den Tresor gehört (media.json).</summary>
+    /// <summary>Name eines Stücks zu einem Dateinamen — null, wenn die Datei nicht in den Tresor gehört.</summary>
     public static string? NameVon(string datei) => Dateien.FirstOrDefault(kv => kv.Value == datei).Key;
 
     /// <summary>
@@ -55,7 +55,7 @@ public static class Tresor
             ziel.Aendere(name, alt =>
             {
                 if (alt is null) { genommen = true; return inhalt; }
-                if (name == Mail) return alt;
+                if (name is Mail or Media) return alt;   // gibt es je Instanz einmal: was im Tresor steht, gilt
                 var (neu, mehr) = Ergaenze(alt, inhalt);
                 genommen = mehr;
                 return neu;

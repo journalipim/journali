@@ -23,6 +23,33 @@ public class TresorTests
     private static string Dir() { var d = Path.Combine(Path.GetTempPath(), "journali-tresor-" + Guid.NewGuid().ToString("N")); Directory.CreateDirectory(d); return d; }
 
     [Fact]
+    public void Der_Medienspeicher_kommt_in_den_Tresor_wenn_dort_keiner_steht_sonst_gilt_der_Tresor()
+    {
+        var dir = Dir(); var t = new Speicher();
+        File.WriteAllText(Path.Combine(dir, "media.json"), """{"driver":"s3","bucket":"a","secret":"geheim"}""");
+        Tresor.Uebernehmen(dir, t);
+        Assert.Contains("\"bucket\":\"a\"", t.Lies(Tresor.Media));
+        Assert.False(File.Exists(Path.Combine(dir, "media.json")));                        // die Datei ist weg — samt Schlüssel im Klartext
+        Assert.True(File.Exists(Path.Combine(dir, "media.json.uebernommen")));
+
+        // ein zweiter Server mit anderer Datei: es gilt, was im Tresor steht — ein Journal, ein Speicher
+        var dir2 = Dir();
+        File.WriteAllText(Path.Combine(dir2, "media.json"), """{"driver":"file","path":"D:/medien"}""");
+        Tresor.Uebernehmen(dir2, t);
+        Assert.Contains("\"bucket\":\"a\"", t.Lies(Tresor.Media));
+        Assert.DoesNotContain("D:/medien", t.Lies(Tresor.Media));
+    }
+
+    [Fact]
+    public void Ohne_Datenbank_liest_und_schreibt_die_Einstellung_des_Medienspeichers_weiter_media_json()
+    {
+        var dir = Dir();
+        MediaConfigFile.Save(dir, new MediaConfig("s3", Bucket: "b", Secret: "x"));
+        Assert.True(File.Exists(Path.Combine(dir, "media.json")));
+        Assert.Equal(new MediaConfig("s3", Bucket: "b", Secret: "x"), MediaConfigFile.Load(dir));
+    }
+
+    [Fact]
     public void Ohne_Datenbank_liegt_jedes_Stueck_in_seiner_Datei()
     {
         var dir = Dir();

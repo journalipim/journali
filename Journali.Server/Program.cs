@@ -171,13 +171,28 @@ builder.Services.AddSingleton(catalog);
 
 // Medien: Treiber per JOURNALI_MEDIA — postgres (Vorgabe: Tabelle media_blob neben dem Journal), Verzeichnis, s3://bucket
 // (docs/betrieb.md). Datenbank hier, Assets im Object Storage; ein Journal, ein Speicher.
-// Einstellung: media.json im Datenverzeichnis (Einstellungen → Storage), sonst die Umgebung
+// Einstellung: im Tresor (Einstellungen → Storage; eine media.json von früher übernimmt der Start), sonst die Umgebung
 var mediaStore = new SwitchableMediaStore(MediaConfigFile.Load(dataDir) ?? MediaConfig.FromEnv(builder.Configuration), db, LoggerFactory.Create(b => b.AddConsole()).CreateLogger("media"), builder.Environment.ContentRootPath);
 builder.Services.AddSingleton(db);
 builder.Services.AddSingleton(mediaStore);
 builder.Services.AddSingleton(new DocText(db));   // Text der Dokumente: abgeleitet, eigene Tabelle neben dem Journal (pflegestruktur 32)
 builder.Services.AddSingleton(new Vectors(db));   // Vektoren je Abschnitt und Knoten (pgvector): abgeleitet, gerechnet vom Plugin embed (35)
 builder.Services.AddSingleton<IMediaStore>(mediaStore);
+// Stellt ein anderer Server auf derselben Datenbank den Medienspeicher um, folgt dieser — sonst lägen Bytes mal hier, mal dort (pflegestruktur 41)
+_ = Task.Run(async () =>
+{
+    while (true)
+    {
+        await Task.Delay(TimeSpan.FromSeconds(10));
+        try
+        {
+            if (MediaConfigFile.Load(dataDir) is { } cfg && cfg != mediaStore.Config && await mediaStore.SwitchAsync(cfg, CancellationToken.None) is null)
+                Console.WriteLine($"journali: Medienspeicher umgestellt auf {cfg.Spec} (eingestellt auf einem anderen Server)");
+        }
+        catch (Exception) { }   // Datenbank kurz weg: beim nächsten Mal
+    }
+});
+
 builder.Services.AddHttpClient("media", h => { h.Timeout = TimeSpan.FromMinutes(2); h.DefaultRequestHeaders.UserAgent.ParseAdd("journali/1.0"); });   // Medien von URL holen (Import)
 
 // Plugins: plugins/<key>/plugin.json — beim Entwickeln das Verzeichnis im Repo, im Container /app/plugins (docs/pflegestruktur.md, 19)

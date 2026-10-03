@@ -379,7 +379,7 @@ public static class MediaApi
             return Results.Ok(new { result.View.Id, result.View.Sha256, result.View.Bytes, result.View.Mime, result.View.Name, existed = result.Existed });
         });
 
-        // Einstellungen → Storage: Treiber lesen (ohne Geheimnis), prüfen, speichern (media.json im Datenverzeichnis, nie im Journal)
+        // Einstellungen → Storage: Treiber lesen (ohne Geheimnis), prüfen, speichern (im Tresor, nie im Journal; die anderen Server folgen binnen 10 s)
         api.MapGet("/media/store", async (SwitchableMediaStore store, Catalog c, CancellationToken ct) =>
         {
             var total = c.Lesen((_, _) => c.Media.All.Count);

@@ -22,8 +22,7 @@ public static class BackupApi
     /// <summary>
     /// Was neben dem Journal liegt und ohne das ein wiederhergestelltes System nicht läuft: aus dem Tresor
     /// <c>auth.json</c> (Passwort-Hashes, API-Token, Sitzungen), <c>mail.json</c> (Mailserver mit Passwort) und
-    /// <c>secrets.json</c> (Geheimnisse der Jobs, Profile und Teams); aus dem Datenverzeichnis <c>media.json</c>
-    /// (Speicher-Einstellung, bei S3 mit Zugangsdaten). Wer sie mitsichert, hat Geheimnisse in der Sicherung.
+    /// <c>secrets.json</c> (Geheimnisse der Jobs, Profile und Teams) und <c>media.json</c> (Speicher-Einstellung, bei S3 mit Zugangsdaten). Wer sie mitsichert, hat Geheimnisse in der Sicherung.
     /// Wer sie weglässt, kommt in ein wiederhergestelltes System nicht hinein.
     /// </summary>
     /// <remarks>

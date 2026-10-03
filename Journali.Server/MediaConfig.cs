@@ -5,8 +5,8 @@ using Npgsql;
 namespace Journali.Server;
 
 /// <summary>
-/// Einstellung des Medienspeichers: liegt als <c>media.json</c> im Datenverzeichnis des Servers (JOURNALI_JOBS, neben secrets.json) — nie im Journal
-/// (Geheimnis), nie im Repo. Fehlt die Datei, gilt die Umgebung (JOURNALI_MEDIA …). Umschalten im Betrieb: der
+/// Einstellung des Medienspeichers: liegt im Tresor (Stück <c>media</c>, ohne Datenbank die Datei <c>media.json</c> im Datenverzeichnis) — nie im Journal
+/// (Geheimnis), nie im Repo. Alle Server auf derselben Datenbank lesen dieselbe. Fehlt sie, gilt die Umgebung (JOURNALI_MEDIA …). Umschalten im Betrieb: der
 /// <see cref="SwitchableMediaStore"/> tauscht den Treiber aus; die Blobs zieht danach der Kopierlauf.
 /// </summary>
 public sealed record MediaConfig(
@@ -32,11 +32,15 @@ public static class MediaConfigFile
 {
     private static readonly JsonSerializerOptions Json = new() { WriteIndented = true, DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull, PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
     public static string PathOf(string dir) => System.IO.Path.Combine(dir, "media.json");
+    /// <summary>
+    /// Die Einstellung aus dem Tresor (03.10.2026, pflegestruktur 41): alle Server auf derselben Datenbank brauchen denselben Speicher — „ein Journal, ein
+    /// Speicher“ —, und der Zugang zu S3 gehört nicht im Klartext in eine Datei. Ohne Datenbank ist der Tresor die Datei <c>media.json</c> wie bisher.
+    /// </summary>
     public static MediaConfig? Load(string dir)
     {
-        try { return File.Exists(PathOf(dir)) ? JsonSerializer.Deserialize<MediaConfig>(File.ReadAllText(PathOf(dir)), Json) : null; } catch { return null; }
+        try { return Tresor.Fuer(dir).Lies(Tresor.Media) is { } json ? JsonSerializer.Deserialize<MediaConfig>(json, Json) : null; } catch { return null; }
     }
-    public static void Save(string dir, MediaConfig c) { Directory.CreateDirectory(dir); File.WriteAllText(PathOf(dir), JsonSerializer.Serialize(c, Json)); }
+    public static void Save(string dir, MediaConfig c) { Directory.CreateDirectory(dir); Tresor.Fuer(dir).Aendere(Tresor.Media, _ => JsonSerializer.Serialize(c, Json)); }
 }
 
 /// <summary>Der eine Store, den die API kennt — innen austauschbar (Einstellungen → Storage → Speichern).</summary>

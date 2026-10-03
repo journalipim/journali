@@ -5,7 +5,7 @@ namespace Journali.Server;
 /// <summary>
 /// Was der Start tut, bevor es ein Journal gibt. Genau deshalb steht es <b>nicht</b> im Journal: Spiegel und
 /// Schnappschuss entscheiden, wie das Journal überhaupt gelesen wird. Die Datei liegt als <c>betrieb.json</c> im
-/// Datenverzeichnis, neben <c>media.json</c> und <c>mail.json</c>.
+/// Datenverzeichnis, neben <c>db.json</c> — je Server, anders als der Medienspeicher im Tresor.
 /// <para>Ohne Datei gilt die Umgebung (<c>JOURNALI_JOURNAL_CACHE=off</c>, <c>JOURNALI_SNAPSHOT=off</c>,
 /// <c>JOURNALI_NACHZIEHEN=&lt;Sekunden&gt;</c>) und sonst beides an und Nachziehen alle 2 s. Eine Änderung wirkt beim
 /// nächsten Start — vorher liest niemand die Datei noch einmal.</para>
