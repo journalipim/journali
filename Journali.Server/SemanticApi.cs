@@ -130,10 +130,10 @@ public static class SemanticApi
             // gut 0,3 s, und nach jedem Schreiben ins Journal rechnete der Aufruf die Texte aller Knoten neu — unter der Lesesperre, hinter der alles andere wartet.
             // Darum gilt der Stand 20 Sekunden; das Ablegen von Vektoren (PUT) verwirft ihn. Die Postenliste des Jobs (pending) rechnet immer frisch.
             if (StandAlt(m) is { } alt) return Results.Ok(alt);
-            var (chunks, embedded, nodesDone) = await vectors.StatsAsync(m, ct);
-            var known = await vectors.NodeHashesAsync(m, ct);
-            var texte = KnotenTexte(c);
-            var offeneKnoten = PendingNodes(texte, known).Count;
+            var (chunks, embedded, nodesDone) = await Teilzeit.MessenAsync("Stand", () => vectors.StatsAsync(m, ct));
+            var known = await Teilzeit.MessenAsync("Hashes", () => vectors.NodeHashesAsync(m, ct));
+            var texte = Teilzeit.Messen("Knotentexte", () => KnotenTexte(c));
+            var offeneKnoten = Teilzeit.Messen("Offene", () => PendingNodes(texte, known).Count);
             var stand = new { ready = true, reason = (string?)null, model = m, plugin = embedder.Available, pluginReason = embedder.Reason, indexError = vectors.IndexError,
                 chunks, embedded, nodes = nodesDone, nodesTotal = texte.Count, offen = (chunks - embedded) + offeneKnoten, gelesen = embedded + nodesDone, total = chunks + texte.Count };
             StandMerken(m, stand);
@@ -146,11 +146,12 @@ public static class SemanticApi
             var m = Blank(model) ?? embedder.Model;
             if (!vectors.Ready) return Results.Ok(new { ready = false, reason = vectors.Reason, model = m, chunks = Array.Empty<object>(), nodes = Array.Empty<object>(), gone = Array.Empty<string>() });
             var n = Math.Clamp(limit, 1, 1000);
-            var chunks = (await vectors.PendingChunksAsync(m, n, ct)).Select(o => new { o.Media, o.Sha256, o.Seq, text = Vectors.Passage(o.Heading, o.Body) }).ToList();
-            var known = await vectors.NodeHashesAsync(m, ct);
-            var texte = KnotenTexte(c);
-            var nodes = PendingNodes(texte, known).Take(Math.Max(0, n - chunks.Count)).ToList();
-            return Results.Ok(new { ready = true, reason = (string?)null, model = m, chunks, nodes, gone = GoneNodes(texte, known) });
+            var chunks = (await Teilzeit.MessenAsync("Abschnitte", () => vectors.PendingChunksAsync(m, n, ct))).Select(o => new { o.Media, o.Sha256, o.Seq, text = Vectors.Passage(o.Heading, o.Body) }).ToList();
+            var known = await Teilzeit.MessenAsync("Hashes", () => vectors.NodeHashesAsync(m, ct));
+            var texte = Teilzeit.Messen("Knotentexte", () => KnotenTexte(c));
+            var nodes = Teilzeit.Messen("Offene", () => PendingNodes(texte, known).Take(Math.Max(0, n - chunks.Count)).ToList());
+            var weg = Teilzeit.Messen("Entfernte", () => GoneNodes(texte, known));
+            return Results.Ok(new { ready = true, reason = (string?)null, model = m, chunks, nodes, gone = weg });
         });
 
         // Vektoren ablegen — der Job liefert, was er gerechnet hat; das Modell steht dabei

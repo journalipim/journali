@@ -44,7 +44,9 @@ public sealed class Catalog
     /// <summary>Lesen: parallel zu anderen Lesern, wartet nur, solange gerade ein Eintrag angewendet wird.</summary>
     private T Lesend<T>(Func<T> f)
     {
+        var uhr = System.Diagnostics.Stopwatch.StartNew();
         _state.EnterReadLock();
+        Teilzeit.Notiere("Lesesperre", uhr.ElapsedMilliseconds);   // Wartezeit, solange ein Eintrag angewendet wird
         try { return f(); } finally { _state.ExitReadLock(); }
     }
 
