@@ -2994,5 +2994,11 @@
  "Team {0} gibt es nicht.": "Team {0} does not exist.",
  "Einen Job einem anderen Team zuordnen darf, wer Anwender und Teams verwaltet.": "Assigning a job to another team requires the right to manage users and teams.",
  "Job {0} gehört Team {1}; starten und anhalten darf ihn nur dieses Team oder ein Administrator.": "Job {0} belongs to team {1}; only that team or an administrator may start and pause it.",
- "Job {0} gehört Team {1}; ändern darf ihn dieses Team oder, wer Anwender und Teams verwaltet.": "Job {0} belongs to team {1}; it may be changed by that team or by whoever manages users and teams."
+ "Job {0} gehört Team {1}; ändern darf ihn dieses Team oder, wer Anwender und Teams verwaltet.": "Job {0} belongs to team {1}; it may be changed by that team or by whoever manages users and teams.",
+ "{0} starten": "Start {0}",
+ "▶ Trotzdem starten": "▶ Start anyway",
+ "Verfügbar · {0} / Woche · {1} / Monat": "Available · {0} / week · {1} / month",
+ "Nötig · höchstens {0} Einträge": "Needed · at most {0} entries",
+ "Nötig · etwa {0} Einträge": "Needed · about {0} entries",
+ "Das Kontingent reicht nicht; der Lauf hält an, wenn es erschöpft ist.": "The quota is not enough; the run pauses when it is used up."
 }

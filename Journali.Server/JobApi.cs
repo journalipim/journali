@@ -55,6 +55,14 @@ public static class JobApi
             : Bad("Job {0} gehört Team {1}; ändern darf ihn dieses Team oder, wer Anwender und Teams verwaltet.", key, TeamVon(c, key) is { } t ? c.Lesen((_, _) => c.Teams.Get(t)?.Label ?? t) : "—");
 
         // Welche Plugins können Jobs? Die mit process im Manifest — mit ihren Parametern (process.params: key, label, type, secret, default)
+        // Was das eigene Team noch schreiben darf, je Woche und Monat — als Joblauf (job=true: ohne die 10 % Reserve der Handarbeit) oder von Hand.
+        // Die Oberfläche warnt damit vor einer Übergabe an den Tasker (03.10.2026). Ohne Team: null
+        api.MapGet("/jobs/verfuegbar", (HttpRequest req, Catalog c, bool job = true) =>
+        {
+            var team = Actor(req) is { } a ? c.Lesen((_, _) => c.Users.All.GetValueOrDefault(a)?.Team) : null;
+            return c.VerfuegbarFuerJob(team, job) is { } v ? Results.Ok(new { woche = v.Woche, monat = v.Monat }) : Results.Ok((object?)null);
+        });
+
         api.MapGet("/jobs/plugins", (HttpRequest req, Catalog c) =>
         {
             var manifests = PluginApi.Scan(runner.PluginDir);

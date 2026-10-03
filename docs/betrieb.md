@@ -724,7 +724,8 @@ des Gezählten) und was der letzte **Trockenlauf** schätzte; reicht es nicht, s
 stösst ≈ im Tasker an (`POST /api/jobs/{key}/run?trocken=true`): derselbe Job mit seinem Parameter `dryRun`/`dry_run`, ohne Vorfahrt vor den
 Systemjobs. Ein Prozess meldet die Zahl mit der Zeile `journali:eintraege=N`; sie steht am Lauf (`JobRunFinished.Entries`). `csv` und `excel`
 zählen ihre Befehle genau, `ixp`, `json` und `solr` höchstens (bestehende Werte, die gleich bleiben, zählen mit). Hält ein Lauf wegen des Kontingents
-an, sagt es der Tasker mit einer Meldung.
+an, sagt es der Tasker mit einer Meldung. Auch die Übergabe aus einer Plugin-Ansicht fragt, wenn es nicht reicht (`kontingent.reicht` aus `journali`,
+`GET /api/jobs/verfuegbar` für das eigene Team; Solr schätzt aus seinem Plan).
 
 **Ohne Kontingent keine Pflege**: Einträge, die zählen, weist der Server ab (403), sobald der Zähler voll ist.
 Ein **Joblauf** hört schon bei 90 % auf (`Limits.JobReserve`) — die letzten 10 % gehören der Handarbeit — und er

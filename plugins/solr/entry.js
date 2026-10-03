@@ -1,4 +1,4 @@
-(function(){const s=document.createElement('style');s.textContent="\n.x[data-v-ae864653] { border: 0; background: none; color: var(--muted); padding: 0 4px;\n}\n.x[data-v-ae864653]:hover { color: var(--neg);\n}\n.sources[data-v-ae864653] { gap: 4px;\n}\n.form[data-v-ae864653] { padding: 6px 8px; border-bottom: 1px solid var(--line); display: flex; flex-direction: column; gap: 4px;\n}\n.row[data-v-ae864653] { display: flex; gap: 4px;\n}\n.src .node[data-v-ae864653] { display: flex; align-items: center; gap: 4px; height: 24px; white-space: nowrap; padding-right: 8px; outline: none;\n}\n.src .node.on[data-v-ae864653] { background: var(--accent-soft);\n}\n.src .node.current[data-v-ae864653], .src .node[data-v-ae864653]:focus { box-shadow: inset 2px 0 0 var(--accent);\n}\n.twisty[data-v-ae864653] { width: 12px; color: var(--muted); font-size: 11px; cursor: pointer;\n}\n.icon[data-v-ae864653] { width: 16px; text-align: center;\n}\n.node.group .icon[data-v-ae864653] { color: var(--muted);\n}\n.node.product .icon[data-v-ae864653] { color: var(--accent);\n}\n.node.variant .icon[data-v-ae864653] { color: var(--warn);\n}\n.label[data-v-ae864653] { overflow: hidden; text-overflow: ellipsis;\n}\n.count[data-v-ae864653] { margin-left: auto; font-size: 11px;\n}\n.form-grid[data-v-ae864653] { width: 100%;\n}\n.form-grid td[data-v-ae864653] { white-space: normal; vertical-align: middle; height: 30px; padding: 2px 4px;\n}\n.form-grid td[data-v-ae864653]:first-child { padding-left: 8px; white-space: nowrap;\n}\n.form-grid select[data-v-ae864653] { margin-right: 8px; min-width: 220px;\n}\n.val[data-v-ae864653] { max-width: 420px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;\n}\n.section[data-v-ae864653] { padding: 10px 8px; border-top: 1px solid var(--line);\n}\n.section h2[data-v-ae864653] { font-size: 12px; margin: 0 0 6px; color: var(--muted); font-weight: 600;\n}\n";document.head.append(s)})();
+(function(){const s=document.createElement('style');s.textContent="\n.x[data-v-9b2414af] { border: 0; background: none; color: var(--muted); padding: 0 4px;\n}\n.x[data-v-9b2414af]:hover { color: var(--neg);\n}\n.sources[data-v-9b2414af] { gap: 4px;\n}\n.form[data-v-9b2414af] { padding: 6px 8px; border-bottom: 1px solid var(--line); display: flex; flex-direction: column; gap: 4px;\n}\n.row[data-v-9b2414af] { display: flex; gap: 4px;\n}\n.src .node[data-v-9b2414af] { display: flex; align-items: center; gap: 4px; height: 24px; white-space: nowrap; padding-right: 8px; outline: none;\n}\n.src .node.on[data-v-9b2414af] { background: var(--accent-soft);\n}\n.src .node.current[data-v-9b2414af], .src .node[data-v-9b2414af]:focus { box-shadow: inset 2px 0 0 var(--accent);\n}\n.twisty[data-v-9b2414af] { width: 12px; color: var(--muted); font-size: 11px; cursor: pointer;\n}\n.icon[data-v-9b2414af] { width: 16px; text-align: center;\n}\n.node.group .icon[data-v-9b2414af] { color: var(--muted);\n}\n.node.product .icon[data-v-9b2414af] { color: var(--accent);\n}\n.node.variant .icon[data-v-9b2414af] { color: var(--warn);\n}\n.label[data-v-9b2414af] { overflow: hidden; text-overflow: ellipsis;\n}\n.count[data-v-9b2414af] { margin-left: auto; font-size: 11px;\n}\n.form-grid[data-v-9b2414af] { width: 100%;\n}\n.form-grid td[data-v-9b2414af] { white-space: normal; vertical-align: middle; height: 30px; padding: 2px 4px;\n}\n.form-grid td[data-v-9b2414af]:first-child { padding-left: 8px; white-space: nowrap;\n}\n.form-grid select[data-v-9b2414af] { margin-right: 8px; min-width: 220px;\n}\n.val[data-v-9b2414af] { max-width: 420px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;\n}\n.section[data-v-9b2414af] { padding: 10px 8px; border-top: 1px solid var(--line);\n}\n.section h2[data-v-9b2414af] { font-size: 12px; margin: 0 0 6px; color: var(--muted); font-weight: 600;\n}\n";document.head.append(s)})();
 const m$1 = window.journali.vue;
 const Fragment = m$1.Fragment;
 const computed = m$1.computed;
@@ -30,6 +30,7 @@ const store = h.store;
 const tree = h.tree;
 const icon = h.icon;
 const paneWidth = h.paneWidth;
+const kontingent = h.kontingent;
 const t = h.t;
 const Splitter = h.Splitter;
 const ImportHead = h.ImportHead;
@@ -362,6 +363,43 @@ function asStrings(suffix, v) {
   const one = (x) => typeof x === "boolean" ? x ? "true" : "false" : suffix === "date" || suffix === "dateTime" ? String(x).slice(0, 10) : String(x);
   return Array.isArray(v) ? v.map(one) : one(v);
 }
+function valueCommands(doc, node, attrs, seen, skip, inherited = /* @__PURE__ */ new Map()) {
+  const lang = doc.lang || "de";
+  const cmds = [];
+  const put = (attr, value, multiple = false) => {
+    const d = attrs.get(attr);
+    if (!d) return;
+    const locale = d.perLocale ? lang : null;
+    const args = { node, attribute: attr, locale };
+    if (multiple || d.multiple) {
+      args.values = Array.isArray(value) ? value : [value];
+      if (JSON.stringify(seen.get(`${attr}|${locale ?? ""}`)) === JSON.stringify(args.values)) return;
+      if (JSON.stringify(inherited.get(`${attr}|${locale ?? ""}`)) === JSON.stringify(args.values)) return;
+    } else {
+      args.value = Array.isArray(value) ? value.join(", ") : value;
+      if (seen.get(`${attr}|${locale ?? ""}`) === args.value) return;
+      if (inherited.get(`${attr}|${locale ?? ""}`) === args.value) return;
+    }
+    cmds.push({ op: "attribute.set", args });
+  };
+  if (doc.name) put("name", doc.name);
+  if (doc.description) put("description", doc.description);
+  if (roleOf(doc) === "variant" && doc.product_number) put("sku", doc.product_number);
+  for (const { key, suffix, value } of ownValues(doc, skip)) put(key, asStrings(suffix, value), Array.isArray(value));
+  return cmds;
+}
+function inheritedValues(doc, attrs) {
+  const lang = doc.lang || "de";
+  const out = /* @__PURE__ */ new Map();
+  for (const { key, suffix, value } of ownValues(doc, DEFAULT_SKIP)) {
+    const d = attrs.get(key);
+    if (!d?.inheritable) continue;
+    const locale = d.perLocale ? lang : null;
+    const text = asStrings(suffix, value);
+    out.set(`${key}|${locale ?? ""}`, d.multiple || Array.isArray(value) ? Array.isArray(text) ? text : [text] : text);
+  }
+  return out;
+}
 const DEPTH = { group: 0, product: 1, variant: 2 };
 const ROLES = ["group", "product", "variant"];
 function docTree(docs) {
@@ -632,6 +670,21 @@ async function plane({ client, umgebung, wurzeln, eltern = /* @__PURE__ */ new M
   for (const [k, g] of needs.newGroups) sag?.(`neue Gruppe ${k} (${g.label})${g.ort ? " an " + g.ort : ""}${g.activeFrom ? " ab " + g.activeFrom : ""}: ${[...needs.newAttrs.values()].filter((a) => a.group === k).length} Attribute`);
   sag?.(`analysiert: ${items.length} Knoten (${items.filter((i) => i.existing).length} vorhanden), ${needs.newAttrs.size} neue Attribute in ${needs.newGroups.size} neuen Gruppen`);
   return { items, needs, wurzeln: wurzeln.length };
+}
+function schaetze({ plan, umgebung, skip = DEFAULT_SKIP }) {
+  const attrMap = new Map((umgebung.modell?.attributes ?? []).map((a) => [a.key, a]));
+  for (const [k, d] of plan.needs?.newAttrs ?? []) if (!attrMap.has(k)) attrMap.set(k, { key: k, ...d });
+  const itemOf = new Map(plan.items.map((i) => [i.doc.id, i]));
+  const geerbt = (it) => {
+    const parent = it.parentId != null ? itemOf.get(it.parentId) : null;
+    return parent ? inheritedValues(parent.doc, attrMap) : /* @__PURE__ */ new Map();
+  };
+  let n = 0;
+  for (const it of plan.items) {
+    if (!it.existing) n += 2;
+    n += valueCommands(it.doc, it.existing?.id ?? "@x", attrMap, /* @__PURE__ */ new Map(), skip, geerbt(it)).length;
+  }
+  return n;
 }
 async function planeRelationen({ client, umgebung, wurzeln }) {
   const { api: api2, modell, baum, sag } = umgebung;
@@ -1181,6 +1234,9 @@ const _sfc_main = {
         return;
       }
       if (!plan.value) return;
+      const { wurzeln: w0 } = gewaehlt();
+      const label = `Import (Solr) · ${w0.length} Wurzel${w0.length === 1 ? "" : "n"}`;
+      if (!await kontingent.reicht({ label, eintraege: schaetze({ plan: plan.value, umgebung, skip: skip.value }), hoechstens: true })) return;
       busy.value = t("übergebe …");
       result.value = null;
       try {
@@ -2221,7 +2277,7 @@ const _sfc_main = {
     };
   }
 };
-const View = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-ae864653"]]);
+const View = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-9b2414af"]]);
 const entry = {
   views: [{ path: "import", topic: "import", label: t("Solr"), icon: "⇩", component: View }]
 };

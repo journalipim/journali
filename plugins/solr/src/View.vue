@@ -5,10 +5,10 @@
 // Solr lesen geht über einen Zugang (der Server liest mit und meldet sich an) oder, ohne Zugang, per JSONP;
 // geschrieben wird nur über /api/model und /api/batch.
 import { ref, computed, onMounted } from 'vue'
-import { api, store, tree, icon, plugins, Splitter, ImportHead, TreePicker, paneWidth } from 'journali'
+import { api, store, tree, icon, plugins, Splitter, ImportHead, TreePicker, paneWidth, kontingent } from 'journali'
 import { useRouter } from 'vue-router'
 import { solr, holenUeber, SYSTEM, roleOf, ownValues, DEFAULT_SKIP, TYPES, REL_GROUP } from '../solr.js'
-import { plane, schreibe, planeRelationen, schreibeRelationen } from '../lauf.mjs'
+import { plane, schreibe, schaetze, planeRelationen, schreibeRelationen } from '../lauf.mjs'
 import { t as t_ } from 'journali'
 const srcW = paneWidth('import.src', 340)
 const router = useRouter()
@@ -209,6 +209,10 @@ const JOB = 'solr_import'
 async function run() {
   if (!store.actor) { store.toast(t_('👤 Name fehlt → Einstellungen')); return }
   if (!plan.value) return
+  // Reicht das Kontingent des eigenen Teams? Der Plan ist schon da: höchstens so viele Einträge (03.10.2026)
+  const { wurzeln: w0 } = gewaehlt()
+  const label = `Import (Solr) · ${w0.length} Wurzel${w0.length === 1 ? '' : 'n'}`
+  if (!await kontingent.reicht({ label, eintraege: schaetze({ plan: plan.value, umgebung, skip: skip.value }), hoechstens: true })) return
   busy.value = t_('übergebe …'); result.value = null
   try {
     const { wurzeln } = gewaehlt()
