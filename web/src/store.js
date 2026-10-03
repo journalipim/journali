@@ -1,4 +1,5 @@
 import { reactive } from 'vue'
+import { bauKurz, bauLang } from './bau.js'
 import { api } from './api.js'
 import { setLang, browserLang, L } from './i18n.js'   // Oberflächensprache (24.09.2026); L = Bezeichnung des Modells in ihr
 
@@ -159,7 +160,7 @@ export const store = reactive({
       if (h.abgemeldet === true) {
         this.head = null; this.nodes = null; this.usage = null; this.presence = []; this.tarif = null; this.registriert = null; this.model = null
         this.version = h.version ?? ''
-        if (h.built) { const d = new Date(h.built); const zz = n => String(n).padStart(2, '0'); this.build = `${zz(d.getDate())}${zz(d.getMonth() + 1)}.${zz(d.getHours())}${zz(d.getMinutes())}`; this.builtAt = d.toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) }
+        if (h.built) { this.build = bauKurz(h.built); this.builtAt = bauLang(h.built) }
         this.error = ''
         return
       }
@@ -172,12 +173,7 @@ export const store = reactive({
       this.registriert = h.registriert ?? null   // beim Lizenzserver: null = noch nicht gefragt
       // Version und Bau: kurz oben, lang im Tooltip
       this.version = h.version ?? ''
-      if (h.built) {
-        const d = new Date(h.built)
-        const zz = n => String(n).padStart(2, '0')
-        this.build = `${zz(d.getDate())}${zz(d.getMonth() + 1)}.${zz(d.getHours())}${zz(d.getMinutes())}`
-        this.builtAt = d.toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-      }
+      if (h.built) { this.build = bauKurz(h.built); this.builtAt = bauLang(h.built) }
       // der Stand des Teams — einmal je Minute, nicht bei jedem Puls: andere im Team verbrauchen auch
       if (this.auth.enabled && this.auth.user && Date.now() - (this._aiAt ?? 0) > 60000) {
         this._aiAt = Date.now()

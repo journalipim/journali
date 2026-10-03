@@ -3,6 +3,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { mount, flushPromises } from './ui.mjs'
 import { dialog } from '../src/dialog.js'
+import { bauKurz } from '../src/bau.js'
 
 const ServerSettings = (await import('../src/components/ServerSettings.vue')).default
 
@@ -32,12 +33,14 @@ test('Liste: Rolle, dieser Server, Import, laufende Jobs, andere Version', async
   const [a, b] = w.findAll('tbody tr')
   assert.match(a.find('td.name').text(), /✎\s*· dieser/, 'ohne Namen: der Stift zum Benennen'); assert.match(a.text(), /◇ Arbeitsserver/)
   assert.equal(b.find('td.name').text(), 'Unraid'); assert.equal(b.findAll('td')[2].text(), '586a874270fb')
-  assert.equal(b.findAll('td')[5].text(), new Date('2026-10-01T08:00:00Z').toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }), 'der Bau mit Datum und Uhrzeit')
-  assert.ok(b.find('.warn[title="Anderer Bau als dieser Server."]').exists(), 'abweichender Bau ist markiert')
-  assert.ok(!a.find('.warn[title="Anderer Bau als dieser Server."]').exists())
+  // Version wie in der Kopfleiste: „0.8.0 ·TTMM.hhmm“, lang im Tooltip
+  assert.equal(b.find('td.version').text(), '0.8.0 ·' + bauKurz('2026-10-01T08:00:00Z'))
+  assert.match(b.find('td.version span').attributes('title'), /gebaut \d\d\.10\.2026, \d\d:\d\d · Andere Version als dieser Server\./)
+  assert.ok(b.find('td.version .warn').exists(), 'abweichende Version und abweichender Bau sind markiert')
+  assert.ok(!a.find('td.version .warn').exists())
+  assert.equal(a.find('td.version').text(), '0.9.0 ·' + bauKurz(jetzt))
   assert.match(b.text(), /◆ Hauptserver/); assert.match(b.text(), /⇵/)
-  assert.ok(b.find('.warn[title="Andere Version als dieser Server."]').exists(), 'abweichende Version ist markiert')
-  assert.equal(b.findAll('td')[8].attributes('title'), 'embed (Import)')
+  assert.equal(b.findAll('td')[7].attributes('title'), 'embed (Import)')
   assert.ok(!w.find('.haupt-weg').exists())
   // am Hauptserver kein ◆ und kein ⊘; am eigenen kein ⊘
   assert.deepEqual(b.findAll('.aktionen button').map(x => x.text()), [])

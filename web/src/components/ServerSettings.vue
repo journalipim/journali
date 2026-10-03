@@ -6,6 +6,7 @@ import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue'
 import { api, when } from '../api.js'
 import { dialog } from '../dialog.js'
 import { t } from '../i18n.js'
+import { bauKurz, bauLang } from '../bau.js'
 
 const d = ref(null)
 const said = ref('')
@@ -23,8 +24,6 @@ const jobs = s => Array.isArray(s.jobs) ? s.jobs : []
 const andereVersion = s => s.version && d.value?.version && s.version !== d.value.version
 /// Ein anderer Bau (mehr als eine Minute auseinander): er kann Eintragstypen schreiben, die der andere nicht kennt
 const andererBau = s => s.built && d.value?.built && Math.abs(new Date(s.built) - new Date(d.value.built)) > 60000
-/// Der Bau mit Datum und Uhrzeit — beim Bau zählt der Tag, nicht nur die Uhrzeit
-const bau = iso => new Date(iso).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 /// Wie der Server in Meldungen heisst: sein Name, sonst der Rechnername
 const name = s => s.name || s.host
 
@@ -65,7 +64,7 @@ const entfernen = s => tun(() => api.del(`/api/server/${s.id}`))
     <div v-if="hauptWeg" class="neg haupt-weg" :title="$t('Systemjobs und Zeitplan-Jobs laufen erst wieder, wenn er erreichbar ist oder ein anderer Server Hauptserver wird.')">{{ $t("✗ Der Hauptserver {0} ist nicht erreichbar.", [name(hauptWeg)]) }}</div>
     <table class="grid server">
       <thead><tr>
-        <th></th><th>{{ $t("Name") }}</th><th>{{ $t("Rechner") }}</th><th>{{ $t("Rolle") }}</th><th>{{ $t("Version") }}</th><th :title="$t('Wann das laufende Programm gebaut wurde')">{{ $t("Bau") }}</th><th :title="$t('Stand des Journals auf diesem Server')">#</th>
+        <th></th><th>{{ $t("Name") }}</th><th>{{ $t("Rechner") }}</th><th>{{ $t("Rolle") }}</th><th :title="$t('Version und Bau wie in der Kopfleiste (TTMM.hhmm)')">{{ $t("Version") }}</th><th :title="$t('Stand des Journals auf diesem Server')">#</th>
         <th :title="$t('letzter Puls')">{{ $t("Puls") }}</th><th :title="$t('laufende Jobs')">{{ $t("Jobs") }}</th><th></th>
       </tr></thead>
       <tbody>
@@ -83,8 +82,8 @@ const entfernen = s => tun(() => api.del(`/api/server/${s.id}`))
             <span v-else class="muted" :title="$t('Bedient Oberfläche und Schnittstelle; Jobs gehen an den Hauptserver.')">◇ {{ $t("Arbeitsserver") }}</span>
             <span v-if="s.import" class="warn" :title="$t('Ein Import läuft; die Systemjobs warten.')"> ⇵</span>
           </td>
-          <td class="mono"><span :class="{ warn: andereVersion(s) }" :title="andereVersion(s) ? $t('Andere Version als dieser Server.') : ''">{{ s.version ?? '—' }}</span></td>
-          <td class="mono"><span :class="{ warn: andererBau(s) }" :title="andererBau(s) ? $t('Anderer Bau als dieser Server.') : ''">{{ s.built ? bau(s.built) : '—' }}</span></td>
+          <td class="mono version"><span :class="{ warn: andereVersion(s) || andererBau(s) }"
+            :title="[s.built ? $t('gebaut {0}', [bauLang(s.built)]) : '', andereVersion(s) ? $t('Andere Version als dieser Server.') : andererBau(s) ? $t('Anderer Bau als dieser Server.') : ''].filter(Boolean).join(' · ')">{{ s.version ?? '—' }}<template v-if="s.built"> ·{{ bauKurz(s.built) }}</template></span></td>
           <td class="mono">{{ s.head ? '#' + s.head : '—' }}</td>
           <td class="mono muted" :title="s.started ? $t('läuft seit {0}', [when(s.started)]) : ''">{{ s.puls ? when(s.puls) : '—' }}</td>
           <td class="mono" :title="jobs(s).map(j => j.key + (j.reason ? ' (' + j.reason + ')' : '')).join(', ')">{{ jobs(s).length || '' }}</td>

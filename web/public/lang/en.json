@@ -2973,9 +2973,9 @@
  "Ein Server sperrt sich nicht selbst.": "A server does not block itself.",
  "Server {0} ist erreichbar.": "Server {0} is reachable.",
  "Der Hauptserver bleibt in der Liste.": "The main server stays in the list.",
- "Bau": "Build",
- "Wann das laufende Programm gebaut wurde": "When the running program was built",
  "Name ändern (leer = Rechnername)": "Change name (empty = host name)",
  "Anderer Bau als dieser Server.": "Different build from this server.",
- "Ein Name hat höchstens {0} Zeichen.": "A name has at most {0} characters."
+ "Ein Name hat höchstens {0} Zeichen.": "A name has at most {0} characters.",
+ "gebaut {0}": "built {0}",
+ "Version und Bau wie in der Kopfleiste (TTMM.hhmm)": "Version and build as in the header bar (DDMM.hhmm)"
 }
