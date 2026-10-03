@@ -33,6 +33,18 @@ public class TarifPluginsTests
         Assert.Equal(["derive", "probe"], Tarife.Systemjobs.Order().ToArray());   // embed nicht mehr: ein Merkmal des Tarifs (03.10.2026)
     }
 
+    /// <summary>Der Katalog, den der Lizenzserver beim Tarifblatt zeigt, nennt genau die Plugins im Repo (03.10.2026).</summary>
+    [Fact]
+    public void Der_Plugin_Katalog_nennt_jedes_Plugin_im_Repo()
+    {
+        var dir = AppContext.BaseDirectory;
+        while (dir is not null && !Directory.Exists(Path.Combine(dir, "plugins"))) dir = Path.GetDirectoryName(dir);
+        Assert.NotNull(dir);
+        var imRepo = Directory.GetDirectories(Path.Combine(dir!, "plugins")).Where(d => File.Exists(Path.Combine(d, "plugin.json"))).Select(Path.GetFileName).Order().ToArray();
+        Assert.Equal(imRepo, Tarife.Katalog.Select(k => k.Key).Order().ToArray());
+        foreach (var t in Tarife.Saat.Alle) foreach (var p in t.Plugins ?? new HashSet<string>()) Assert.Contains(p, Tarife.Katalog.Select(k => k.Key));
+    }
+
     /// <summary>Der Einstieg bleibt, was er ist: die Tabelle und der Tasker, der ihre Jobs startet.</summary>
     [Fact]
     public void Kostenlos_enthaelt_die_Tabelle_und_den_Tasker()

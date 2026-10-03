@@ -111,6 +111,21 @@ public static class Tarife
     /// </summary>
     public static readonly IReadOnlySet<string> Systemjobs = new HashSet<string> { "derive", "probe" };
 
+    /// <summary>
+    /// Die Plugins, die mit journali kommen — Schlüssel und Name. Der Lizenzserver zeigt sie beim Bearbeiten des Tarifblatts und weist einen unbekannten
+    /// Schlüssel ab (03.10.2026: ein Tarif enthält ein Plugin über seinen Schlüssel, etwa <c>embed</c> für die Vektoren). Der Prüfstand
+    /// <c>Der_Plugin_Katalog_nennt_jedes_Plugin_im_Repo</c> hält die Liste beim Verzeichnis <c>plugins/</c>.
+    /// </summary>
+    public static readonly IReadOnlyList<(string Key, string Label)> Katalog =
+    [
+        ("backup", "Sicherung"), ("configurator", "Konfigurator"), ("csv", "CSV / TSV"), ("da", "Datenanalyse"), ("datasheet", "Datenblatt"),
+        ("derive", "Vorschauen rechnen"), ("docs", "Dokumente durchsuchbar machen"), ("dpp", "Digitaler Produktpass"), ("driver", "Zugänge"),
+        ("embed", "Einbettungen (Vektoren)"), ("empco", "Werbeaussagen (EmpCo)"), ("enrich", "Anreicherung"), ("etim", "ETIM"), ("excel", "Excel"),
+        ("exceladdin", "Excel-Add-in"), ("geo", "GEO-Texte (KI)"), ("gpc", "GPC"), ("ixp", "IXP"), ("json", "JSON"), ("ocr", "Texterkennung (OCR)"),
+        ("ooaddin", "OnlyOffice"), ("ppwr", "Verpackung (PPWR)"), ("probe", "Bildabmessungen lesen"), ("rag", "KI-Wissensbasis"), ("scriptum", "Skripte"),
+        ("solr", "Solr"), ("table", "Tabelle"), ("tasker", "Jobs"), ("xliff", "Übersetzung (XLIFF)"), ("xport", "Vorlagen"),
+    ];
+
     // Die Systemjobs stehen auch hier: das Saatgut soll dasselbe sagen wie die Ausnahme darüber.
     // Nicht hier und nicht bei Pro: scriptum — es gibt es erst ab Pro+ (Prüfstand TarifPluginsTests).
     private static readonly string[] Basis = ["table", "csv", "excel", "json", "exceladdin", "ooaddin", "derive", "probe", "tasker", "driver"];
