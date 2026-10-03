@@ -717,7 +717,9 @@ public sealed record PluginDataSet(string Name, string? Value);
 /// </summary>
 /// <param name="Server">Der Server, auf dem der Job läuft (pflegestruktur 41, 03.10.2026) — seine Pfade, Fächer und Zugänge meinen dessen Platte. Null = der Hauptserver
 /// (so stehen alle Jobs von vorher im Journal); Systemjobs laufen immer dort.</param>
-public sealed record JobDefined(string Label, string Plugin, Dictionary<string, string>? Params, string? Schedule, bool Enabled = true, int? TimeoutMinutes = null, string? Service = null, JobFiles? Files = null, string? Role = null, string? Owner = null, string? Server = null);
+/// <param name="Team">Über welches Team der Job abgerechnet wird (03.10.2026) — einen Besitzer braucht er dafür nicht. Null = über das Team des Besitzers,
+/// ohne Besitzer über das Team des Administrators (<c>Abrechnung.TeamDesJobs</c>).</param>
+public sealed record JobDefined(string Label, string Plugin, Dictionary<string, string>? Params, string? Schedule, bool Enabled = true, int? TimeoutMinutes = null, string? Service = null, JobFiles? Files = null, string? Role = null, string? Owner = null, string? Server = null, string? Team = null);
 
 /// <summary>
 /// Fächer eines Jobs (docs/tasker-dateien.md): <c>Base</c> = Verzeichnis mit in/, done/, failed/, out/ (leer = jobs/&lt;key&gt;;

@@ -35,7 +35,9 @@ public sealed class Usage : IProjection
         LastApplied = entry.Number;
         var day = DateOnly.FromDateTime(entry.At.ToLocalTime().DateTime);
         AllPerDay[day] = AllPerDay.GetValueOrDefault(day) + 1;
-        if (entry.Type == Types.KeyRedeemed)
+        // Ein Schnitt je Eintrag, der den Zählbeginn eines Teams setzen kann: ein Reset-Schlüssel, und alles, was seine Grenzen ändert
+        // (Grundkontingent, Stand vom Lizenzserver, Limit-Schlüssel) — ab ihm wird gezählt, nicht ab dem Tag
+        if (entry.Type is Types.KeyRedeemed or Types.TeamDefined or Types.EntitlementReceived && entry.Stream.StartsWith(Teams.Stream, StringComparison.Ordinal))
             Cuts[entry.Number] = new UsageCut(day, PerDayActor.TryGetValue(day, out var bisher) ? new(bisher) : new());
         if (!Kinds.Billable(entry.Kind, entry.Type)) return;
         PerDay[day] = PerDay.GetValueOrDefault(day) + 1;

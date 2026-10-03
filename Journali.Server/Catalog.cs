@@ -429,10 +429,13 @@ public sealed class Catalog
         // Ein Joblauf schreibt als job:<key> — gezählt wird beim Anwender, dem der Job gehört,
         // und er lässt der Handarbeit eine Reserve: bis 90 %, nicht bis zum letzten Eintrag.
         var vomJob = actor.StartsWith("job:", StringComparison.Ordinal);
-        if (vomJob && _jobs.All.GetValueOrDefault(actor[4..])?.Owner is { Length: > 0 } eigner) actor = eigner;
-        if (_users.All.GetValueOrDefault(actor) is not { } u) return false;
-        if (string.IsNullOrEmpty(u.Team)) return true;                      // kein Team, kein Kontingent
-        var zahlerKey = _teams.Payer(u.Team!);
+        // Jeder Job wird über ein Team abgerechnet (03.10.2026): das am Job, sonst das seines Besitzers, sonst das des Administrators
+        string? team;
+        if (vomJob) team = Abrechnung.TeamDesJobs(_jobs, _users, actor[4..], Model.InitTeam);
+        else if (_users.All.GetValueOrDefault(actor) is { } u) team = u.Team;
+        else return false;                                                  // kein Anwender und kein Job: Saatgut, „system“
+        if (string.IsNullOrEmpty(team)) return true;                        // kein Team, kein Kontingent
+        var zahlerKey = _teams.Payer(team);
         if (_teams.Get(zahlerKey) is null) return true;                    // das Team gibt es nicht mehr
         var heute = DateOnly.FromDateTime(DateTime.Now);
         var (kw, km) = _teams.LimitAt(zahlerKey, heute);                   // zugeteilt, angehoben durch einen Limit-Schlüssel
@@ -443,7 +446,7 @@ public sealed class Catalog
         {
             var ab = _teams.CountFrom(zahlerKey, ZaehltAb);                // ein Reset-Schlüssel verschiebt den Zählbeginn
             var cut = _teams.ResetCut(zahlerKey, ZaehltAb);               // … auf den Eintrag genau
-            var leute = _teams.Dependents(zahlerKey).SelectMany(x => _users.All.Values.Where(v => v.Team == x)).Select(v => v.Key).ToHashSet();
+            var leute = Abrechnung.Urheber(_teams, _users, _jobs, zahlerKey, Model.InitTeam);   // Mitglieder und Jobs der Teams dieses Zahlers
             stand = (heute, _usage.Sum(leute, Usage.Ab(Usage.WeekStart(heute), ab), heute, cut), _usage.Sum(leute, Usage.Ab(Usage.MonthStart(heute), ab), heute, cut));
         }
         var woche = vomJob ? Limits.FuerJob(kw) : kw;

@@ -125,5 +125,11 @@
  "Eingang · auf Server {0}": "Input · on server {0}",
  "liegt auf dem Server des Jobs": "lies on the job's server",
  "gesteuert auf dem Hauptserver {0}": "controlled on the main server {0}",
- "wartet": "waiting"
+ "wartet": "waiting",
+ "Abgerechnet über Team {0}": "Billed to team {0}",
+ "Abgerechnet über Team {0} (kein Team am Job: über Besitzer oder Administrator)": "Billed to team {0} (no team on the job: via owner or administrator)",
+ "Über dieses Team wird abgerechnet, was der Job schreibt.": "What the job writes is billed to this team.",
+ "— mein Team —": "— my team —",
+ "Team (Abrechnung)": "Team (billing)",
+ "Gehört Team {0}; starten und anhalten darf ihn nur dieses Team oder ein Administrator.": "Belongs to team {0}; only that team or an administrator may start and pause it."
 }

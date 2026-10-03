@@ -292,7 +292,8 @@ async function mount(root, ctx) {
       const tr = el('tr', { class: 'row' + (st.cur === j.key ? ' selected' : ''), style: 'cursor:default', onclick: () => { st.cur = j.key; drawList(); loadDetail(j.key) } },
         el('td', { class: cls, title: j.running ? t('läuft') : j.last?.status ?? t('noch nie gelaufen') }, sym),
         el('td', {}, el('b', {}, j.label), el('span', { class: 'mono muted', style: 'margin-left:6px;font-size:11px' }, j.key),
-          fremd(j) ? el('span', { class: 'muted server', style: 'margin-left:6px', title: t('Läuft auf Server {0}; dort wird er geändert.', [j.serverName ?? j.server ?? '']) }, serverMarke(j)) : ''),
+          fremd(j) ? el('span', { class: 'muted server', style: 'margin-left:6px', title: t('Läuft auf Server {0}; dort wird er geändert.', [j.serverName ?? j.server ?? '']) }, serverMarke(j)) : '',
+          j.team ? el('span', { class: 'muted team', style: 'margin-left:6px', title: j.teamGesetzt ? t('Abgerechnet über Team {0}', [j.teamLabel ?? j.team]) : t('Abgerechnet über Team {0} (kein Team am Job: über Besitzer oder Administrator)', [j.teamLabel ?? j.team]) }, '◍ ' + (j.teamLabel ?? j.team)) : ''),
         el('td', { class: zu(j) ? 'warn' : 'muted', title: zu(j) ? grund(j) : '' }, j.plugin + (j.service ? '/' + j.service : '') + (zu(j) ? ' ◇' : '')),
         el('td', { title: j.schedule && store.tarif?.schedules === false ? t('Ein Zeitplan gehört zum Tarif Pro. Von Hand läuft der Job in jedem Tarif.') : j.schedule ?? '' },
           !j.enabled ? el('span', { class: 'muted' }, '○ aus')
@@ -304,12 +305,12 @@ async function mount(root, ctx) {
         // leer — sonst rücken die Symbole je Zustand hin und her (27.09.2026: „krumm und schief angeordnet“).
         el('td', { class: 'tun' },
           // Wirkt das Plugin nicht, bleibt nur 🗑 — der Server lehnt den Rest ohnehin ab
-          zu(j) ? el('button', { class: 'x', title: grund(j), disabled: true }, '▶')
+          zu(j) || teamFremd(j) ? el('button', { class: 'x', title: zu(j) ? grund(j) : teamGrund(j), disabled: true }, j.running ? '⏸' : '▶')
             : j.running && j.paused ? el('button', { class: 'x', title: `wartet (${j.pauseReason ?? 'von Hand'}) — weiter`, onclick: ev => { ev.stopPropagation(); tut(ev, () => resume(j)) } }, '▶')
             : j.running ? el('button', { class: 'x', title: t('anhalten (wartet beim nächsten Stapel)'), onclick: ev => { ev.stopPropagation(); tut(ev, () => pause(j)) } }, '⏸')
             : el('button', { class: 'x', title: t('jetzt starten'), onclick: ev => { ev.stopPropagation(); tut(ev, () => run(j)) } }, '▶'),
-          j.running && !zu(j) ? el('button', { class: 'x', title: abbruchText(j, st.plugins).title, onclick: ev => { ev.stopPropagation(); tut(ev, () => cancel(j)) } }, '⊘') : el('span', { class: 'x leer' }),
-          el('button', { class: 'x', title: zu(j) ? grund(j) : j.enabled ? t('ausschalten (Zeitplan ruht)') : 'einschalten', disabled: zu(j), onclick: ev => { ev.stopPropagation(); if (!zu(j)) tut(ev, () => toggle(j)) } }, j.enabled ? '●' : '○'),
+          j.running && !zu(j) && !teamFremd(j) ? el('button', { class: 'x', title: abbruchText(j, st.plugins).title, onclick: ev => { ev.stopPropagation(); tut(ev, () => cancel(j)) } }, '⊘') : el('span', { class: 'x leer' }),
+          el('button', { class: 'x', title: zu(j) ? grund(j) : teamFremd(j) ? teamGrund(j) : j.enabled ? t('ausschalten (Zeitplan ruht)') : 'einschalten', disabled: zu(j) || teamFremd(j), onclick: ev => { ev.stopPropagation(); if (!zu(j) && !teamFremd(j)) tut(ev, () => toggle(j)) } }, j.enabled ? '●' : '○'),
           // Ein Job eines anderen Servers wird dort bearbeitet; an seinem Platz steht „herholen“
           fremd(j) ? el('button', { class: 'x holen', title: j.running ? t('läuft — erst danach herholen') : t('auf diesen Server holen (läuft dann hier, mit den Pfaden dieses Servers)'), disabled: !!j.running, onclick: ev => { ev.stopPropagation(); if (!j.running) tut(ev, () => holen(j)) } }, '⇣')
             : el('button', { class: 'x', title: zu(j) ? grund(j) : 'bearbeiten', disabled: zu(j), onclick: ev => { ev.stopPropagation(); if (!zu(j)) openEdit(j) } }, '✎'),
@@ -318,6 +319,9 @@ async function mount(root, ctx) {
     }
     tbl.append(tb); list.append(tbl)
   }
+  /// Ein Team startet nur seine eigenen Jobs (03.10.2026): ein Job eines anderen Teams steht nur da für den, der Anwender und Teams verwaltet — ändern ja, starten nein
+  const teamFremd = j => j.eigen === false
+  const teamGrund = j => t('Gehört Team {0}; starten und anhalten darf ihn nur dieses Team oder ein Administrator.', [j.teamLabel ?? j.team ?? ''])
   /// gesperrt, weil sein Plugin nicht wirkt — und warum: der Tarif enthält es nicht, oder es ist nicht aktiviert
   const zu = j => jobGesperrt(j, ctx.plugins?.active?.bind(ctx.plugins))
   const grund = j => (ctx.plugins?.list ?? []).find(p => p.key === j.plugin)?.allowed === false
@@ -422,6 +426,12 @@ async function mount(root, ctx) {
     if (j) pluginSel.value = `${j.plugin}|${j.service ?? ''}`
     else if (preset) { pluginSel.value = preset; if (pluginSel.value !== preset) pluginSel.value = st.plugins.find(p => svcId(p).startsWith(preset.split('|')[0] + '|')) ? svcId(st.plugins.find(p => svcId(p).startsWith(preset.split('|')[0] + '|'))) : pluginSel.value }
     const sched = scheduleAssistant(j?.schedule ?? '', () => {}, store.tarif?.schedules !== false)   // Zeitplan-Assistent statt Vorgaben-Liste
+    // Über welches Team der Job abgerechnet wird (03.10.2026). Leer = das eigene; ein fremdes wählt nur, wer Anwender und Teams verwaltet
+    const teamSel = el('select', { style: 'width:100%', title: t('Über dieses Team wird abgerechnet, was der Job schreibt.') }, el('option', { value: '' }, t('— mein Team —')))
+    api.get('/api/teams').then(ts => {
+      for (const x of ts ?? []) teamSel.append(el('option', { value: x.key }, x.label ?? x.key))
+      teamSel.value = j?.teamGesetzt ? j.team : ''
+    }).catch(() => {})
     const timeoutIn = el('input', { type: 'number', value: String(j?.timeoutMinutes ?? 60), min: '1', max: '1440', style: 'width:90px' })
     // Mit welcher Rolle der Lauf arbeitet: davon hängen seine Rechte ab (eine Sicherung braucht „Anwender und Rollen“).
     // Sichtbar nur für die Rollenverwaltung — sonst wäre ein Job ein Weg zu fremden Rechten.
@@ -634,14 +644,14 @@ async function mount(root, ctx) {
       try {
         const fi = fIn.wert(), fo = fOut.wert()
         const files = fachBox.style.display === 'none' ? null : { base: fBase.value.trim() || null, keep: fKeep.value.trim() || null, latest: fLatest.checked, archive: fArchive.checked, inZugang: fi.zugang, inPfad: fi.pfad, outZugang: fo.zugang, outPfad: fo.pfad }
-        await api.post(`/api/jobs/${key}`, { label: labelIn.value.trim() || key, plugin: pluginSel.value.split('|')[0], service: pluginSel.value.split('|')[1] || '', params, schedule, enabled: j?.enabled ?? true, timeoutMinutes: Number(timeoutIn.value) || 60, files, ...(darfRolle ? { role: rolleSel.value } : {}) }, 'PUT')
+        await api.post(`/api/jobs/${key}`, { label: labelIn.value.trim() || key, plugin: pluginSel.value.split('|')[0], service: pluginSel.value.split('|')[1] || '', params, schedule, enabled: j?.enabled ?? true, timeoutMinutes: Number(timeoutIn.value) || 60, files, ...(darfRolle ? { role: rolleSel.value } : {}), ...(teamSel.value ? { team: teamSel.value } : {}) }, 'PUT')
         store.toast(`Job „${labelIn.value || key}“ gespeichert`, 'ok'); box.remove(); st.cur = key; await load()
       } catch (e) { store.toast(e.message); saveBtn.disabled = false; saveBtn.textContent = alt }
     }
     // ---- Assistent: vier Schritte statt einer Seite, die über den Bildschirm hinauswächst ----
     const lab = text => el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, text)
     const seiten = [
-      { name: '① Was', box: el('div', {}, lab('Key'), keyIn, lab(t('Bezeichnung')), labelIn, lab('Plugin (Prozess)'), pluginSel, pluginHint) },
+      { name: '① Was', box: el('div', {}, lab('Key'), keyIn, lab(t('Bezeichnung')), labelIn, lab('Plugin (Prozess)'), pluginSel, pluginHint, lab(t('Team (Abrechnung)')), teamSel) },
       { name: t('② Womit'), box: el('div', {}, paramsBox), leer: () => !paramsBox.childElementCount },
       { name: t('③ Ablage'), box: el('div', {}, fachBox), leer: () => fachBox.style.display === 'none' },
       { name: t('④ Wann'), box: el('div', {}, lab(t('Zeitplan')), sched.el, lab('Zeitgrenze (min)'), timeoutIn, ...(darfRolle ? [lab(t('Rolle des Laufs')), rolleSel] : [])) },

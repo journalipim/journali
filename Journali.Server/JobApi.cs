@@ -12,7 +12,23 @@ namespace Journali.Server;
 public static class JobApi
 {
     public sealed record ProfileSecrets(Dictionary<string, string?>? Values);
-    public sealed record JobBody(string? Label, string? Plugin, string? Service, Dictionary<string, string>? Params, string? Schedule, bool? Enabled, int? TimeoutMinutes, Dictionary<string, string?>? Secrets, JobFiles? Files, string? Role);
+    public sealed record JobBody(string? Label, string? Plugin, string? Service, Dictionary<string, string>? Params, string? Schedule, bool? Enabled, int? TimeoutMinutes, Dictionary<string, string?>? Secrets, JobFiles? Files, string? Role, string? Team = null);
+
+    /// <summary>
+    /// Das Team, über das ein neuer oder geänderter Job abgerechnet wird (03.10.2026): das genannte — ein fremdes nur mit dem Recht users —, sonst das bisherige,
+    /// sonst das Team dessen, der ihn anlegt. Ein Systemjob bekommt keins: er geht über das Team des Administrators.
+    /// </summary>
+    private static (string? Team, IResult? Fehler) TeamFuer(Catalog c, HttpRequest req, string actor, string? gewuenscht, JobState? cur, bool systemjob)
+    {
+        var eigenes = c.Users.All.GetValueOrDefault(actor)?.Team;
+        if (Blank(gewuenscht) is { } t)
+        {
+            if (c.Teams.Get(t) is null) return (null, Bad("Team {0} gibt es nicht.", t));
+            if (t != eigenes && t != cur?.Team && !Auth.Has(req, c, Rights.Users)) return (null, Bad("Einen Job einem anderen Team zuordnen darf, wer Anwender und Teams verwaltet."));
+            return (t, null);
+        }
+        return (cur is not null ? cur.Team : systemjob ? null : eigenes, null);
+    }
 
     /// <summary>Ein Lauf, den die Oberfläche abgibt: Plugin, Parameter, Bezeichnung — der Job entsteht dabei.</summary>
     public sealed record UebergabeBody(string? Label, string? Service, Dictionary<string, string>? Params);
@@ -26,8 +42,20 @@ public static class JobApi
             ? Bad("Systemjobs werden auf dem Hauptserver {0} gesteuert.", runner.HauptId() is { } h ? runner.ServerName(h) : "—") : null;
         string? PluginVon(Catalog c, string key) => c.Lesen((_, _) => c.Jobs.All.GetValueOrDefault(key)?.Plugin);
 
+        // Ein Team startet nur seine eigenen Jobs (03.10.2026): was ein Job schreibt, geht auf das Kontingent seines Teams — ein anderes Team darf es nicht
+        // verbrauchen, und wer auf ▶ drückt, soll nicht für einen fremden Job zahlen. Das gilt für Starten, Anhalten, Weiter und Abbrechen, auch für die
+        // Systemjobs (sie gehen über das Team des Administrators). Administratoren (Recht users) steuern alle Jobs; gezahlt wird weiter vom Team des Jobs.
+        // Ohne Anwender ist alles offen; ein Lauf selbst (job:…) ist nicht gemeint.
+        string? TeamVon(Catalog c, string key) => c.Lesen((_, _) => Abrechnung.TeamDesJobs(c.Jobs, c.Users, key, Model.InitTeam));
+        bool Eigen(HttpRequest req, Catalog c, string key) => DarfSteuern(c, Actor(req), Auth.Has(req, c, Rights.Users), key);
+        IResult? NurEigene(HttpRequest req, Catalog c, string key) => Eigen(req, c, key) ? null
+            : Bad("Job {0} gehört Team {1}; starten und anhalten darf ihn nur dieses Team oder ein Administrator.", key, TeamVon(c, key) is { } t ? c.Lesen((_, _) => c.Teams.Get(t)?.Label ?? t) : "—");
+        // Ändern und Entfernen: das eigene Team — oder wer Anwender und Teams verwaltet
+        IResult? NurVerwalten(HttpRequest req, Catalog c, string key) => Eigen(req, c, key) || Auth.Has(req, c, Rights.Users) ? null
+            : Bad("Job {0} gehört Team {1}; ändern darf ihn dieses Team oder, wer Anwender und Teams verwaltet.", key, TeamVon(c, key) is { } t ? c.Lesen((_, _) => c.Teams.Get(t)?.Label ?? t) : "—");
+
         // Welche Plugins können Jobs? Die mit process im Manifest — mit ihren Parametern (process.params: key, label, type, secret, default)
-        api.MapGet("/jobs/plugins", (Catalog c) =>
+        api.MapGet("/jobs/plugins", (HttpRequest req, Catalog c) =>
         {
             var manifests = PluginApi.Scan(runner.PluginDir);
             var tarif = c.InstanzTarif;
@@ -44,7 +72,7 @@ public static class JobApi
                     // Systemjob (probe, embed, derive): immer sichtbar im Tasker, mit Balken aus progress (GET, liefert offen/gelesen/total)
                     system = manifests[p.Key].Raw.TryGetProperty("system", out var sy) && sy.ValueKind == JsonValueKind.True,
                     // steuerbar: hier lassen sich die Systemjobs starten und schalten — nur auf dem Hauptserver; haupt: sein Name für den Hinweis
-                    steuerbar = !(manifests[p.Key].Raw.TryGetProperty("system", out var sy2) && sy2.ValueKind == JsonValueKind.True) || runner.IstHaupt(),
+                    steuerbar = !(manifests[p.Key].Raw.TryGetProperty("system", out var sy2) && sy2.ValueKind == JsonValueKind.True) || (runner.IstHaupt() && Eigen(req, c, c.Jobs.All.Values.FirstOrDefault(j => j.Plugin == p.Key)?.Key ?? p.Key)),
                     haupt = runner.HauptId() is { } hid ? runner.ServerName(hid) : null,
                     progress = manifests[p.Key].Raw.TryGetProperty("progress", out var pg) && pg.ValueKind == JsonValueKind.String ? pg.GetString() : null,
                 })).ToList());
@@ -58,6 +86,7 @@ public static class JobApi
             if (Actor(req) is not { } actor) return ActorMissing();
             if (!runner.IstSystemjob(plugin)) return Bad("{0} ist kein Systemjob.", plugin);   // aus dem Manifest (system: true) — die Liste im Tarif kennt docs nicht
             if (NurHaupt(plugin) is { } nein) return nein;
+            if (c.Lesen((_, _) => c.Jobs.All.Values.FirstOrDefault(j => j.Plugin == plugin)?.Key ?? plugin) is var sk && NurEigene(req, c, sk) is { } fremd) return fremd;
             var manifests = PluginApi.Scan(runner.PluginDir);
             if (!manifests.TryGetValue(plugin, out var m) || PluginApi.ProcessOf(m.Raw, null) is not { } proc) return Bad("Plugin {0} hat keinen Prozess.", plugin);
             var (job, on, locale) = c.Lesen((model, _) => (c.Jobs.All.Values.FirstOrDefault(j => j.Plugin == plugin && j.Enabled)?.Key,
@@ -92,13 +121,27 @@ public static class JobApi
         });
         api.MapDelete("/plugins/{key}/secrets/{name}", (string key, string name, HttpRequest req) => { if (Actor(req) is null) return ActorMissing(); Secrets.Remove(runner.Dir, Secrets.ProfileKey(key, name)); return Results.Ok(new { keys = Array.Empty<string>() }); });
 
-        api.MapGet("/jobs", (Catalog c) => c.Lesen((_, _) => c.Jobs.All.Values.OrderBy(j => j.Label).Select(j => View(j, runner)).ToList()));
-        api.MapGet("/jobs/{key}", (string key, Catalog c) => c.Lesen((_, _) => c.Jobs.All.TryGetValue(key, out var j) ? Results.Ok(View(j, runner, all: true)) : Results.NotFound()));
+        // Wer mit seinem Team kommt, sieht die Jobs seines Teams — und die Systemjobs; wer Anwender und Teams verwaltet, sieht alle
+        api.MapGet("/jobs", (HttpRequest req, Catalog c) =>
+        {
+            var alle = !Auth.Enabled(c) || Auth.Has(req, c, Rights.Users);
+            var jobs = c.Lesen((_, _) => c.Jobs.All.Values.OrderBy(j => j.Label).ToList());
+            return jobs.Where(j => alle || runner.IstSystemjob(j.Plugin) || Eigen(req, c, j.Key)).Select(j => View(j, runner, eigen: Eigen(req, c, j.Key))).ToList();
+        });
+        api.MapGet("/jobs/{key}", (string key, HttpRequest req, Catalog c) =>
+        {
+            var j = c.Lesen((_, _) => c.Jobs.All.GetValueOrDefault(key));
+            if (j is null || (Auth.Enabled(c) && !Auth.Has(req, c, Rights.Users) && !runner.IstSystemjob(j.Plugin) && !Eigen(req, c, key))) return Results.NotFound();
+            return Results.Ok(View(j, runner, all: true, eigen: Eigen(req, c, key)));
+        });
 
         api.MapPut("/jobs/{key}", (string key, JobBody body, HttpRequest req, Catalog c) =>
         {
             if (Actor(req) is not { } actor) return ActorMissing();
             if (NurHaupt(PluginVon(c, key) ?? Blank(body.Plugin)) is { } nurHaupt) return nurHaupt;
+            // an und aus ist Steuern; alles andere ist Verwalten
+            var nurSchalterBody = body is { Label: null, Plugin: null, Service: null, Params: null, Schedule: null, TimeoutMinutes: null, Secrets: null, Files: null, Role: null, Team: null };
+            if (PluginVon(c, key) is not null && (nurSchalterBody ? NurEigene(req, c, key) : NurVerwalten(req, c, key)) is { } nichtDein) return nichtDein;
             if (!ValidKey(key)) return Bad("key: a-z, 0-9, _");
             if (body.Schedule is { Length: > 0 } s && !Cron.TryParse(s, out _)) return Bad("Zeitplan: cron mit fünf Feldern „m h tag monat wochentag“, z. B. „0 2 * * *“ = täglich 02:00.");
             // Zeitplan ab Pro; von Hand läuft ein Job in jedem Tarif
@@ -145,7 +188,9 @@ public static class JobApi
                     if (rolle is not null && !c.Users.Roles.ContainsKey(rolle)) return Bad("Unbekannte Rolle {0}.", rolle);
                 }
                 var server = cur is null ? (runner.IstSystemjob(plugin) ? null : runner.HierId) : cur.Server;   // ein neuer Job gehört dem Server, auf dem er entsteht
-                var def = new JobDefined(Blank(body.Label) ?? cur?.Label ?? key, plugin, prms, Blank(body.Schedule) ?? (body.Schedule is null ? cur?.Schedule : null), body.Enabled ?? cur?.Enabled ?? true, body.TimeoutMinutes ?? cur?.TimeoutMinutes, service.Length > 0 ? service : null, files, rolle, cur?.Owner ?? actor, server);
+                var (team, teamFehler) = TeamFuer(c, req, actor, body.Team, cur, runner.IstSystemjob(plugin));   // und wird über ein Team abgerechnet
+                if (teamFehler is not null) return teamFehler;
+                var def = new JobDefined(Blank(body.Label) ?? cur?.Label ?? key, plugin, prms, Blank(body.Schedule) ?? (body.Schedule is null ? cur?.Schedule : null), body.Enabled ?? cur?.Enabled ?? true, body.TimeoutMinutes ?? cur?.TimeoutMinutes, service.Length > 0 ? service : null, files, rolle, cur?.Owner ?? actor, server, team);
                 write(actor, Jobs.Stream + key, Types.JobDefined, def, null);
                 return Results.Ok(View(c.Jobs.All[key], runner));
             });
@@ -163,13 +208,14 @@ public static class JobApi
             if (runner.IsRunning(key)) return Bad("Der Job läuft.");
             if (j.Server == runner.HierId) return Results.Ok(View(j, runner));
             c.With((_, _, write) => write(actor, Jobs.Stream + key, Types.JobDefined,
-                new JobDefined(j.Label, j.Plugin, j.Params, j.Schedule, j.Enabled, j.TimeoutMinutes, j.Service.Length > 0 ? j.Service : null, j.Files, j.Role, j.Owner, runner.HierId), null));
+                new JobDefined(j.Label, j.Plugin, j.Params, j.Schedule, j.Enabled, j.TimeoutMinutes, j.Service.Length > 0 ? j.Service : null, j.Files, j.Role, j.Owner, runner.HierId, j.Team), null));
             return Results.Ok(View(c.Lesen((_, _) => c.Jobs.All[key]), runner));
         });
 
         api.MapDelete("/jobs/{key}", (string key, HttpRequest req, Catalog c) =>
         {
             if (Actor(req) is not { } actor) return ActorMissing();
+            if (NurVerwalten(req, c, key) is { } nichtDein) return nichtDein;
             if (runner.IsRunning(key)) return Bad("Der Job läuft.");
             Secrets.Remove(runner.Dir, key);
             return c.With((_, _, write) => c.Jobs.All.ContainsKey(key) ? Results.Ok(EntryView.Of(write(actor, Jobs.Stream + key, Types.JobRetired, new JobRetired(), null))) : Results.NotFound());
@@ -179,6 +225,7 @@ public static class JobApi
         {
             if (Actor(req) is not { } actor) return ActorMissing();
             if (NurHaupt(PluginVon(c, key)) is { } nurHaupt) return nurHaupt;
+            if (NurEigene(req, c, key) is { } fremd) return fremd;
             runner.Origin = $"{req.Scheme}://{req.Host}";
             var run = runner.Start(key, "manual", out var error);
             return run is null ? Bad(error ?? "nicht gestartet") : Results.Ok(new { run });
@@ -195,13 +242,15 @@ public static class JobApi
             var fehler = c.With((_, _, write) =>
             {
                 var cur = c.Jobs.All.GetValueOrDefault(key);
+                if (cur is not null && NurEigene(req, c, key) is { } fremd) return fremd;   // ein Job eines anderen Teams wird nicht übernommen
                 var p = Blank(plugin) ?? cur?.Plugin;
                 if (p is null) return Bad("plugin fehlt.");
                 if (!c.Plugins.All.TryGetValue(p, out var st) || !st.Enabled) return Bad("Plugin {0} ist nicht installiert oder aus.", p);
                 var prms = body.Params ?? cur?.Params ?? new();
                 write(actor, Jobs.Stream + key, Types.JobDefined,
                     new JobDefined(Blank(body.Label) ?? cur?.Label ?? key, p, prms, null, true, cur?.TimeoutMinutes ?? 180, cur?.Service, cur?.Files, req.HttpContext.Items["role"] as string ?? cur?.Role, actor,
-                        runner.IstSystemjob(p) ? null : runner.HierId), null);   // der Lauf gehört dem Server, an dem abgegeben wird: die Datei dazu liegt dort
+                        runner.IstSystemjob(p) ? null : runner.HierId,   // der Lauf gehört dem Server, an dem abgegeben wird: die Datei dazu liegt dort
+                        c.Users.All.GetValueOrDefault(actor)?.Team ?? cur?.Team), null);   // und geht über das Team dessen, der abgibt
                 return (IResult?)null;
             });
             if (fehler is not null) return fehler;
@@ -211,9 +260,9 @@ public static class JobApi
         });
 
         // Anhalten und weiter: der Lauf wartet beim nächsten Stapel, statt zu sterben.
-        api.MapPost("/jobs/{key}/pause", (string key, HttpRequest req, Catalog c) => Actor(req) is null ? ActorMissing() : NurHaupt(PluginVon(c, key)) is { } nein ? nein
+        api.MapPost("/jobs/{key}/pause", (string key, HttpRequest req, Catalog c) => Actor(req) is null ? ActorMissing() : NurHaupt(PluginVon(c, key)) is { } nein ? nein : NurEigene(req, c, key) is { } fremd ? fremd
             : runner.Pause(key) ? Results.Ok(new { paused = true }) : Bad("Der Job läuft nicht."));
-        api.MapPost("/jobs/{key}/resume", (string key, HttpRequest req, Catalog c) => Actor(req) is null ? ActorMissing() : NurHaupt(PluginVon(c, key)) is { } nein ? nein
+        api.MapPost("/jobs/{key}/resume", (string key, HttpRequest req, Catalog c) => Actor(req) is null ? ActorMissing() : NurHaupt(PluginVon(c, key)) is { } nein ? nein : NurEigene(req, c, key) is { } fremd ? fremd
             : runner.Resume(key) ? Results.Ok(new { paused = false }) : Bad("Der Job wartet nicht."));
         // Was der Lauf selbst zwischen zwei Stapeln fragt — er kennt nur seinen Jobschlüssel
         api.MapGet("/jobs/{key}/signal", (string key, Catalog c) =>
@@ -225,7 +274,7 @@ public static class JobApi
             return Results.Ok(new { paused = runner.IsPaused(key), running = runner.IsRunning(key), reason = runner.PauseReason(key) });
         });
 
-        api.MapPost("/jobs/{key}/cancel", (string key, HttpRequest req, Catalog c) => Actor(req) is null ? ActorMissing() : NurHaupt(PluginVon(c, key)) is { } nein ? nein
+        api.MapPost("/jobs/{key}/cancel", (string key, HttpRequest req, Catalog c) => Actor(req) is null ? ActorMissing() : NurHaupt(PluginVon(c, key)) is { } nein ? nein : NurEigene(req, c, key) is { } fremd ? fremd
             : runner.Cancel(key) ? Results.Ok(new { cancelled = true }) : Bad("Der Job läuft nicht."));
 
         // Log eines Laufs: ganz oder die letzten n Zeilen — auch während er läuft
@@ -266,6 +315,14 @@ public static class JobApi
 
     private static string? Blank(string? s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim();
 
+    /// <summary>
+    /// Darf <paramref name="actor"/> diesen Job starten, anhalten, fortsetzen und abbrechen? Ein Team nur seine eigenen; ein Administrator
+    /// (<paramref name="admin"/>: Recht users) alle. Ohne Anwender ist alles offen, und ein Lauf (<c>job:…</c>) ist nicht gemeint.
+    /// </summary>
+    public static bool DarfSteuern(Catalog c, string? actor, bool admin, string key) =>
+        !Auth.Enabled(c) || actor is null || actor.StartsWith(Jobs.Stream, StringComparison.Ordinal) || admin
+        || c.Lesen((_, _) => c.Users.All.GetValueOrDefault(actor)?.Team is { } m && Abrechnung.TeamDesJobs(c.Jobs, c.Users, key, Model.InitTeam) == m);
+
     private static List<string> SecretKeys(JsonElement proc)
     {
         var keys = new List<string>();
@@ -275,7 +332,7 @@ public static class JobApi
         return keys;
     }
 
-    private static object View(JobState j, JobRunner runner, bool all = false)
+    private static object View(JobState j, JobRunner runner, bool all = false, bool eigen = true)
     {
         var secrets = Secrets.Get(runner.Dir, j.Key).Keys.ToList();
         return new
@@ -284,6 +341,9 @@ public static class JobApi
             waiting = runner.Hier(j) ? runner.Fach.Waiting(j, null).Count : 0, consumed = j.Consumed.Count, written = j.Written.Count,
             // auf welchem Server er läuft (pflegestruktur 41); fern = nicht auf diesem — geändert wird er dort, gestartet von überall
             server = runner.Ziel(j), serverName = runner.Ziel(j) is { } sv ? runner.ServerName(sv) : null, fern = !runner.Hier(j),
+            // über welches Team er abgerechnet wird — gesetzt (teamGesetzt) oder über Besitzer oder Administrator
+            eigen,   // gehört dem Team des Fragenden: nur dann starten, anhalten, abbrechen
+            team = runner.TeamDes?.Invoke(j.Key), teamLabel = runner.TeamDes?.Invoke(j.Key) is { } tk ? runner.TeamName?.Invoke(tk) : null, teamGesetzt = j.Team is not null,
             secrets, nextDue = j.Enabled ? JobRunner.NextDue(j.Schedule) : null,
             running = runner.RunningId(j.Key),
             last = j.Last is { } l ? Run(l) : null,

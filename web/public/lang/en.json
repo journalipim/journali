@@ -2990,5 +2990,9 @@
  "Eingelöster Schlüssel: er gibt dem Team Tarif und Grenzen bis zum genannten Tag.": "Redeemed key: it gives the team a plan and limits until the given day.",
  "Grenzen": "Limits",
  "zählt nicht": "does not count",
- "Das Team hat einen Stand vom Lizenzserver; es gilt allein, was er sagt.": "The team has a status from the licence server; only what it says applies."
+ "Das Team hat einen Stand vom Lizenzserver; es gilt allein, was er sagt.": "The team has a status from the licence server; only what it says applies.",
+ "Team {0} gibt es nicht.": "Team {0} does not exist.",
+ "Einen Job einem anderen Team zuordnen darf, wer Anwender und Teams verwaltet.": "Assigning a job to another team requires the right to manage users and teams.",
+ "Job {0} gehört Team {1}; starten und anhalten darf ihn nur dieses Team oder ein Administrator.": "Job {0} belongs to team {1}; only that team or an administrator may start and pause it.",
+ "Job {0} gehört Team {1}; ändern darf ihn dieses Team oder, wer Anwender und Teams verwaltet.": "Job {0} belongs to team {1}; it may be changed by that team or by whoever manages users and teams."
 }

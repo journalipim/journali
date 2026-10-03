@@ -265,7 +265,9 @@ Liegt `origin` mehr als ein Stück Arbeit hinter dem Rechner, ist das ein Fehler
   Betrieb kosten nichts und gehen weiter. Die Sperre sitzt am **Schreibpfad**
   (`Catalog.With` → `KeinKontingentException` → 403), weil erst dort der Eintragstyp
   feststeht. Kein Kontingent hat, wer in keinem Team ist oder dessen Zahlerkette bei
-  0 endet; Jobs (`job:<key>`) und das System sind nicht gemeint.
+  0 endet. **Jeder Job zählt auf ein Team** (`JobDefined.Team`, sonst das des Besitzers, sonst das des
+  Administrators); ein Team startet nur seine eigenen Jobs, ein Administrator alle. Ändern sich die Grenzen eines Teams,
+  zählt es neu (`Teams.Zaehlbeginn`, 03.10.2026).
   **Eine Instanz hat keine Lizenz — jede gehört einem Team**: ein Abo (Shop-Schlüssel) oder ein Schlüssel zum
   Kopieren, den das Team selbst einlöst. Die Limits ergeben sich aus dem Tarif — nirgends ein Eingabefeld. Das Init
   Team hat den Test einer neuen Instanz (Test-Tarif, Testmonate ab dem ersten Eintrag), danach Kostenlos; jedes

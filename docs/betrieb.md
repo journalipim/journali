@@ -708,6 +708,17 @@ weitere Team ohne Abo und Schlüssel hat nichts und rechnet über ein anderes ab
 Was ein **Reset-Schlüssel** darf, ist einen **Anfang setzen**: das Team zählt ab dem Einlösen neu, alles davor bleibt
 stehen und zählt nicht mehr mit. Das ist auch der Weg nach einer Migration, deren Altdaten keine Pflege waren.
 
+**Ein Grenzwechsel setzt ebenfalls einen Anfang** (03.10.2026, `Teams.Zaehlbeginn`): ändern sich die Grenzen eines Teams — neues Grundkontingent, ein
+Stand vom Lizenzserver mit anderem Tarif oder entzogen, ein Limit-Schlüssel beginnt oder endet, ein Abo läuft ab —, zählt das Team ab diesem Eintrag (oder
+Tag) neu. Sonst nähme der Wechsel vom Test (Enterprise) auf Kostenlos alles mit, was vorher geschrieben wurde, und das Team stünde von heute auf morgen
+still. Gleiche Grenzen sind kein Wechsel: Pro und Pro+ zählen weiter.
+
+**Jeder Job wird über ein Team abgerechnet** (03.10.2026, `Abrechnung`): was ein Lauf schreibt (Urheber `job:<key>`), zählt auf das Team am Job
+(`JobDefined.Team`; beim Anlegen das Team dessen, der ihn anlegt oder an den Tasker abgibt). Ohne Team am Job zählt er auf das Team seines Besitzers,
+ohne Besitzer — die Systemjobs — auf das Team des Administrators. Bis dahin zählten Läufe auf niemanden: ein Import über den Tasker kostete nichts.
+**Ein Team startet nur seine eigenen Jobs** (anhalten, fortsetzen, abbrechen ebenso); ein Administrator (Recht `users`) startet alle, gezahlt wird
+weiter vom Team des Jobs. Jobs anderer Teams sieht nur, wer Anwender und Teams verwaltet.
+
 **Ohne Kontingent keine Pflege**: Einträge, die zählen, weist der Server ab (403), sobald der Zähler voll ist.
 Ein **Joblauf** hört schon bei 90 % auf (`Limits.JobReserve`) — die letzten 10 % gehören der Handarbeit — und er
 **pausiert**, statt zu sterben. Fortgesetzt wird er nur von Hand: sonst nähmen wartende Jobs das neue Kontingent im

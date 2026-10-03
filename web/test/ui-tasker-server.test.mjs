@@ -58,3 +58,23 @@ test('ein fremder Job, der läuft, lässt sich nicht herholen', async () => {
   const { root } = await oeffnen([job({ key: 'asien', label: 'Asien', fern: true, running: 'r1' })])
   assert.equal(root.querySelector('button.holen').disabled, true)
 })
+
+test('die Liste nennt das Team, über das ein Job abgerechnet wird', async () => {
+  const { root } = await oeffnen([job({ key: 'a', label: 'A', team: 'dev', teamLabel: 'Entwicklung', teamGesetzt: true }), job({ key: 'b', label: 'B', team: 'init', teamLabel: 'Init Team', teamGesetzt: false })])
+  const zeilen = [...root.querySelectorAll('tbody tr')]
+  const a = zeilen.find(z => z.textContent.includes('A')).querySelector('.team')
+  const b = zeilen.find(z => z.textContent.includes('B')).querySelector('.team')
+  assert.equal(a.textContent, '◍ Entwicklung'); assert.equal(a.title, 'Abgerechnet über Team Entwicklung')
+  assert.match(b.title, /kein Team am Job/)
+})
+
+test('ein Job eines anderen Teams: kein Starten, Anhalten, Abbrechen, an/aus — der Grund nennt das Team', async () => {
+  const { root } = await oeffnen([job({ key: 'dev', label: 'Dev', eigen: false, team: 'dev', teamLabel: 'Entwicklung', running: 'r1' })])
+  const zeile = root.querySelector('tbody tr')
+  const knoepfe = [...zeile.querySelectorAll('button')]
+  const halt = knoepfe.find(b => b.textContent === '⏸')
+  assert.equal(halt.disabled, true); assert.equal(halt.title, 'Gehört Team Entwicklung; starten und anhalten darf ihn nur dieses Team oder ein Administrator.')
+  assert.ok(!knoepfe.some(b => b.textContent === '⊘'), 'kein Abbrechen')
+  assert.equal(knoepfe.find(b => b.textContent === '●').disabled, true)
+})
+

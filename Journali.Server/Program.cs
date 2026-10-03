@@ -215,6 +215,8 @@ verbund.JobsHier = () => jobRunner.Laufende();
 // Jeder Job läuft auf seinem Server, ein Systemjob auf dem Hauptserver (pflegestruktur 41). Start, Anhalten und Abbrechen eines Jobs, der woanders
 // läuft, gehen als Auftrag dorthin; was dort läuft, kommt aus dessen Puls, das Log aus der Datenbank
 jobRunner.HierId = verbund.Id;
+jobRunner.TeamDes = key => catalog.Lesen((_, _) => Abrechnung.TeamDesJobs(catalog.Jobs, catalog.Users, key, Model.InitTeam));
+jobRunner.TeamName = key => catalog.Lesen((_, _) => catalog.Teams.Get(key)?.Label ?? key);
 jobRunner.HauptId = verbund.Festgelegt;
 jobRunner.ServerName = verbund.NameVon;
 jobRunner.AnServer = (an, art, key, ausloeser) => verbund.Auftrag(an, art, key, ausloeser);
@@ -417,12 +419,12 @@ object? Nutzung(HttpRequest req, Catalog c)
         if (TeamApi.TeamOf(c, ich) is not { } mein || c.Teams.Get(mein) is null)
             return c.ReadUsage(u => new
             {
-                week = Teil(u.Sum(new HashSet<string> { ich! }, Usage.WeekStart(today), today), 0, woche, "kein Team"),
-                month = Teil(u.Sum(new HashSet<string> { ich! }, Usage.MonthStart(today), today), 0, monat, "kein Team"),
+                week = Teil(u.Sum(c.Jobs.MitJobs([ich!]), Usage.WeekStart(today), today), 0, woche, "kein Team"),
+                month = Teil(u.Sum(c.Jobs.MitJobs([ich!]), Usage.MonthStart(today), today), 0, monat, "kein Team"),
             });
         var zahler = c.Teams.Payer(mein);
         var zt = c.Teams.Get(zahler)!;
-        var leute = c.Teams.Dependents(zahler).SelectMany(x => c.Users.All.Values.Where(v => v.Team == x)).Select(v => v.Key).ToHashSet();
+        var leute = Abrechnung.Urheber(c.Teams, c.Users, c.Jobs, zahler, Model.InitTeam);   // Mitglieder und Jobs der Teams dieses Zahlers
         var (kw, km) = c.Teams.LimitAt(zahler, today);
         var ab = c.Teams.CountFrom(zahler, catalog.ZaehltAb);
         var cut = c.Teams.ResetCut(zahler, catalog.ZaehltAb);

@@ -216,7 +216,7 @@ public static class TeamApi
                 var zahler = c.Teams.Payer(key);
                 var zt = c.Teams.Get(zahler)!;
                 // wer auf diese Rechnung geht: die Mitglieder des Zahlers und aller, die an ihm hängen
-                var leute = c.Teams.Dependents(zahler).SelectMany(x => c.Users.All.Values.Where(u => u.Team == x)).Select(u => u.Key).ToHashSet();
+                var leute = Abrechnung.Urheber(c.Teams, c.Users, c.Jobs, zahler, Model.InitTeam);   // Mitglieder und Jobs der Teams dieses Zahlers
                 var eigene = c.Users.All.Values.Where(u => u.Team == key).Select(u => u.Key).ToHashSet();
                 var heute = DateOnly.FromDateTime(DateTime.Now);
                 var (kw, km) = c.Teams.LimitAt(zahler, heute);

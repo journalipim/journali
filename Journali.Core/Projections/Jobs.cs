@@ -48,6 +48,8 @@ public sealed class JobState
     public string? Owner { get; set; }
     /// <summary>Auf welchem Server er läuft (null = auf dem Hauptserver).</summary>
     public string? Server { get; set; }
+    /// <summary>Über welches Team er abgerechnet wird, wie es im Journal steht (null = über den Besitzer oder den Administrator).</summary>
+    public string? Team { get; set; }
     public List<JobRun> Runs { get; } = new();               // jüngste zuerst, höchstens 200
     public JobFiles? Files { get; set; }                     // Fächer (docs/tasker-dateien.md); null = wie bisher, jobs/<key>
     public List<JobFile> Consumed { get; } = new();          // verarbeitete Eingänge, jüngste zuerst, höchstens 500
@@ -70,6 +72,34 @@ public sealed class Jobs : IProjection
     public long LastApplied { get; private set; }
     public IReadOnlyDictionary<string, JobState> All => _all;
     public const string Stream = "job:";
+
+    /// <summary>
+    /// Wem ein Job gehört — auch, wenn es ihn nicht mehr gibt (03.10.2026). Was ein Lauf schreibt, steht unter <c>job:&lt;key&gt;</c> im Journal und geht auf das
+    /// Kontingent seines Besitzers; ein entfernter Job darf das, was er geschrieben hat, nicht mitnehmen.
+    /// </summary>
+    private readonly Dictionary<string, string> _besitzer = new(StringComparer.Ordinal);
+    public IReadOnlyDictionary<string, string> Besitzer => _besitzer;
+
+    /// <summary>
+    /// Die Urheber, die auf diese Personen zählen: sie selbst und die Jobs, die ihnen gehören (<c>job:&lt;key&gt;</c>). Ein Job ohne Besitzer zählt auf
+    /// <paramref name="ohneBesitzer"/> — den Administrator (<see cref="Users.Verwalter"/>): jeder Job wird über ein Team abgerechnet.
+    /// </summary>
+    public HashSet<string> MitJobs(IEnumerable<string> leute, string? ohneBesitzer = null)
+    {
+        var menge = new HashSet<string>(leute, StringComparer.Ordinal);
+        foreach (var (key, owner) in _besitzer)
+            if (menge.Contains(owner.Length > 0 ? owner : ohneBesitzer ?? "")) menge.Add(Stream + key);
+        return menge;
+    }
+
+    /// <summary>Wem ein Job gehört; ohne Besitzer <paramref name="ohneBesitzer"/>.</summary>
+    public string? BesitzerVon(string key, string? ohneBesitzer) => _besitzer.TryGetValue(key, out var o) && o.Length > 0 ? o : ohneBesitzer;
+
+    /// <summary>Über welches Team ein Job abgerechnet wird, wie es im Journal steht — auch für entfernte Jobs. Null = keins genannt.</summary>
+    private readonly Dictionary<string, string> _teamJob = new(StringComparer.Ordinal);
+    public string? TeamVon(string key) => _teamJob.TryGetValue(key, out var t) && t.Length > 0 ? t : null;
+    /// <summary>Alle Jobs, die je definiert wurden — auch entfernte.</summary>
+    public IEnumerable<string> Bekannte => _besitzer.Keys;
 
     /// <summary>Strom der Server (pflegestruktur 41): <c>server:&lt;id&gt;</c>.</summary>
     public const string ServerStream = "server:";
@@ -102,11 +132,15 @@ public sealed class Jobs : IProjection
             {
                 var d = Types.Deserialize<JobDefined>(entry.Payload);
                 if (!_all.TryGetValue(key, out var j)) _all[key] = j = new JobState { Key = key };
+                if (!string.IsNullOrWhiteSpace(d.Owner)) _besitzer[key] = d.Owner.Trim();
+                else _besitzer.TryAdd(key, "");   // ohne Besitzer: zählt auf den Administrator
                 j.Label = d.Label; j.Plugin = d.Plugin; j.Service = d.Service ?? ""; j.Params = d.Params ?? new(); j.Schedule = string.IsNullOrWhiteSpace(d.Schedule) ? null : d.Schedule.Trim();
                 j.Enabled = d.Enabled; j.TimeoutMinutes = d.TimeoutMinutes is > 0 ? d.TimeoutMinutes.Value : 60;
                 j.Role = string.IsNullOrWhiteSpace(d.Role) ? null : d.Role.Trim();
                 j.Owner = string.IsNullOrWhiteSpace(d.Owner) ? null : d.Owner.Trim();
                 j.Server = string.IsNullOrWhiteSpace(d.Server) ? null : d.Server.Trim();
+                j.Team = string.IsNullOrWhiteSpace(d.Team) ? null : d.Team.Trim();
+                _teamJob[key] = j.Team ?? "";
                 j.Files = d.Files;
                 Touch(j, entry);
                 break;

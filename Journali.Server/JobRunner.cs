@@ -41,6 +41,9 @@ public sealed class JobRunner : BackgroundService
     public string? HierId { get; set; }
     /// <summary>Der festgelegte Hauptserver (null = noch keiner).</summary>
     public Func<string?> HauptId { get; set; } = () => null;
+    /// <summary>Über welches Team ein Job abgerechnet wird (Schlüssel des Jobs → Team) und wie das Team heisst — für die Jobliste.</summary>
+    public Func<string, string?>? TeamDes { get; set; }
+    public Func<string, string?>? TeamName { get; set; }
     /// <summary>Name eines Servers für Meldungen und die Jobliste.</summary>
     public Func<string, string> ServerName { get; set; } = id => id;
     /// <summary>Läuft auf einem anderen Server ein Import? Dann warten die Läufe hier wie bei einem eigenen Import.</summary>

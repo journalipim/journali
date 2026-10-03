@@ -44,6 +44,13 @@ public sealed class Users : IProjection
     /// <summary>Die Rechte einer Rolle; unbekannte Rolle = keine Rechte.</summary>
     public IReadOnlySet<string> RightsOf(string role) => _roles.TryGetValue(role, out var r) ? r.Rights : new HashSet<string>();
 
+    /// <summary>
+    /// Der Administrator, auf den alles zählt, was keinen Besitzer hat — die Systemjobs und Jobs von früher (03.10.2026: jeder Job wird über ein Team abgerechnet;
+    /// ohne Besitzer über das Team des Administrators). Ein eingeschalteter mit der Rolle admin, der aus dem Init Team zuerst, sonst nach Schlüssel.
+    /// </summary>
+    public string? Verwalter(string initTeam) => _all.Values.Where(u => u.Enabled && u.Role == "admin")
+        .OrderBy(u => u.Team == initTeam ? 0 : 1).ThenBy(u => u.Key, StringComparer.Ordinal).Select(u => u.Key).FirstOrDefault();
+
     public void Apply(Entry entry)
     {
         LastApplied = entry.Number;

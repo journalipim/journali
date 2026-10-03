@@ -271,7 +271,7 @@ public static class Auth
         if (woche <= 0 && monat <= 0) return false;
         var ab = c.Teams.CountFrom(zahler.Key, c.ZaehltAb);
         var cut = c.Teams.ResetCut(zahler.Key, c.ZaehltAb);
-        var leute = c.Teams.Dependents(c.Teams.Payer(u.Team!)).SelectMany(x => c.Users.All.Values.Where(v => v.Team == x)).Select(v => v.Key).ToHashSet();
+        var leute = Abrechnung.Urheber(c.Teams, c.Users, c.Jobs, c.Teams.Payer(u.Team!), Model.InitTeam);   // Mitglieder und Jobs der Teams dieses Zahlers
         return c.ReadUsage(usage =>
             (woche <= 0 || usage.Sum(leute, Usage.Ab(Usage.WeekStart(heute), ab), heute, cut) < woche)
             && (monat <= 0 || usage.Sum(leute, Usage.Ab(Usage.MonthStart(heute), ab), heute, cut) < monat));

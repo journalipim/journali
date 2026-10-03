@@ -32,6 +32,9 @@ public sealed class TeamState
     public DateOnly? ResetAt { get; set; }
     /// <summary>Eintrag des Resets — ab ihm wird gezählt, nicht erst ab dem nächsten Tag.</summary>
     public long? ResetNumber { get; set; }
+    /// <summary>Der letzte Eintrag, der die Grenzen dieses Teams geändert hat (Grundkontingent, Stand vom Lizenzserver, Limit-Schlüssel), und sein Tag.</summary>
+    public DateOnly? GrenzeAm { get; set; }
+    public long? GrenzeNummer { get; set; }
     /// <summary>Die eingelösten Limit-Schlüssel dieses Teams, in der Reihenfolge des Einlösens.</summary>
     public List<LimitWindow> Windows { get; } = new();
     /// <summary>Der letzte Stand seines Abos vom Lizenzserver — null ohne Abo.</summary>
@@ -184,19 +187,39 @@ public sealed class Teams : IProjection
     public LimitWindow? WindowAt(string team, DateOnly d) =>
         _all.GetValueOrDefault(team) is { } t && SchluesselZaehlen(t) ? t.Windows.Where(x => x.Gilt(d)).OrderByDescending(x => x.Number).FirstOrDefault() : null;
 
-    /// <summary>Ab wann dieses Team zählt: der spätere von Instanz-Zählbeginn und eigenem Reset.</summary>
     /// <summary>
-    /// Der Eintrag, ab dem dieses Team zählt — sein letzter Reset, sofern der nicht vor dem Zählbeginn der Instanz liegt.
-    /// Zusammen mit <see cref="CountFrom"/> an <c>Usage.Sum</c>: der Tag grenzt ab, der Eintrag schneidet den Tag.
+    /// Ab wann dieses Team zählt, und ab welchem Eintrag an diesem Tag: der späteste von Zählbeginn der Instanz, Reset-Schlüssel und <b>Grenzwechsel</b>.
+    /// <para>Grenzwechsel (03.10.2026): ändern sich die Grenzen eines Teams, zählt es neu. Sonst nähme ein Wechsel von Enterprise auf Kostenlos am Ende des
+    /// Tests alles mit, was unter Enterprise geschrieben wurde, und das Team stünde von heute auf morgen still. Gleiche Grenzen sind kein Wechsel — Pro und
+    /// Pro+ zählen weiter. Ein Wechsel kommt mit einem Eintrag (neues Grundkontingent, ein Stand vom Lizenzserver, ein Limit-Schlüssel) oder mit einem Tag
+    /// (ein Schlüssel beginnt oder endet, ein Abo läuft ab): dann zählt das Team ab diesem Tag.</para>
     /// </summary>
-    public long? ResetCut(string team, DateOnly? instanz) =>
-        _all.GetValueOrDefault(team) is { ResetAt: { } a, ResetNumber: { } n } && (instanz is not { } b || a >= b) ? n : null;
-
-    public DateOnly? CountFrom(string team, DateOnly? instanz)
+    public (DateOnly? Ab, long? Cut) Zaehlbeginn(string team, DateOnly? instanz, DateOnly? heute = null)
     {
-        var r = _all.GetValueOrDefault(team)?.ResetAt;
-        return r is { } a && (instanz is not { } b || a > b) ? a : instanz;
+        var tag = heute ?? DateOnly.FromDateTime(DateTime.Now);
+        (DateOnly? Ab, long? Cut) best = (instanz, null);
+        void Nimm(DateOnly a, long? n)
+        {
+            if (a > tag) return;
+            if (best.Ab is not { } b || a > b || (a == b && (n ?? 0) > (best.Cut ?? 0))) best = (a, n);
+        }
+        if (_all.GetValueOrDefault(team) is not { } t) return best;
+        if (t.ResetAt is { } r && (instanz is not { } i || r >= i)) Nimm(r, t.ResetNumber);
+        if (t.GrenzeAm is { } g && (instanz is not { } i2 || g >= i2)) Nimm(g, t.GrenzeNummer);
+        // Wechsel mit einem Tag, ohne Eintrag: ein Schlüssel beginnt oder endet, ein Abo ist ab einem Tag nicht mehr bezahlt oder nicht mehr bestätigt
+        var tage = new List<DateOnly>();
+        if (SchluesselZaehlen(t)) foreach (var w in t.Windows) { tage.Add(w.From); tage.Add(w.Until.AddDays(1)); }
+        if (t.Abo is { Geprueft: true } a) { tage.Add(a.PaidUntil.AddDays(1)); tage.Add(DateOnly.FromDateTime(a.ValidUntil.LocalDateTime).AddDays(1)); }
+        foreach (var d in tage.Distinct())
+            if (d <= tag && (instanz is not { } i3 || d >= i3) && LimitAt(team, d) != LimitAt(team, d.AddDays(-1))) Nimm(d, null);
+        return best;
     }
+
+    /// <summary>Der Eintrag, ab dem dieses Team am Tag von <see cref="CountFrom"/> zählt (Reset oder Grenzwechsel) — null: ab Tagesbeginn.</summary>
+    public long? ResetCut(string team, DateOnly? instanz) => Zaehlbeginn(team, instanz).Cut;
+
+    /// <summary>Ab wann dieses Team zählt: Zählbeginn der Instanz, Reset oder Grenzwechsel, der späteste.</summary>
+    public DateOnly? CountFrom(string team, DateOnly? instanz) => Zaehlbeginn(team, instanz).Ab;
 
     /// <summary>Verbrauch eines Tages (leer = nichts verbraucht).</summary>
     public UsageDay Day(string team, DateOnly day) => _usage.TryGetValue(team, out var d) && d.TryGetValue(day.ToString("yyyy-MM-dd"), out var u) ? u : new UsageDay();
@@ -240,6 +263,15 @@ public sealed class Teams : IProjection
         }
         if (!entry.Stream.StartsWith(Stream, StringComparison.Ordinal)) return;
         var key = entry.Stream[Stream.Length..];
+        // Grenzwechsel: was das Team an diesem Tag vorher durfte und nachher darf — unterscheidet es sich, zählt es ab diesem Eintrag neu
+        var grenzTag = DateOnly.FromDateTime(entry.At.ToLocalTime().DateTime);
+        var grenzeVorher = entry.Type is Types.TeamDefined or Types.EntitlementReceived or Types.KeyRedeemed && _all.ContainsKey(key) ? LimitAt(key, grenzTag) : ((int, int)?)null;
+        Anwenden(entry, key);
+        if (grenzeVorher is { } vorher && _all.GetValueOrDefault(key) is { } gt && LimitAt(key, grenzTag) != vorher) { gt.GrenzeAm = grenzTag; gt.GrenzeNummer = entry.Number; }
+    }
+
+    private void Anwenden(Entry entry, string key)
+    {
         switch (entry.Type)
         {
             case Types.TeamDefined:
