@@ -25,7 +25,8 @@ exit /b 2
 
 :start
 rem Die Ausgabe steht im Fenster und zugleich in tools\server.log (jeder Start beginnt die Datei neu) - so laesst sich das Log auch von aussen lesen
-start "journali" /D "%ROOT%" powershell -NoProfile -NoExit -Command "[Console]::OutputEncoding=[Text.Encoding]::UTF8; $l='%ROOT%\tools\server.log'; Set-Content $l ''; cmd /c 'dotnet run --project Journali.Server 2>&1' | ForEach-Object { $_; [IO.File]::AppendAllText($l, ($_ | Out-String)) }"
+rem Farbe: hinter einer Umleitung gibt .NET keine mehr aus, darum faerbt das Fenster selbst (warn: gelb, fail: und crit: rot, mit den eingerueckten Folgezeilen)
+start "journali" /D "%ROOT%" powershell -NoProfile -NoExit -Command "[Console]::OutputEncoding=[Text.Encoding]::UTF8; $l='%ROOT%\tools\server.log'; Set-Content $l ''; cmd /c 'dotnet run --project Journali.Server 2>&1' | ForEach-Object { if ($_ -match '^warn:') { $f='Yellow' } elseif ($_ -match '^(fail|crit):') { $f='Red' } elseif ($_ -match '^\S') { $f=$null }; if ($f) { Write-Host $_ -ForegroundColor $f } else { Write-Host $_ }; [IO.File]::AppendAllText($l, ($_ | Out-String)) }"
 goto warten
 
 rem Warten, bis der Server antwortet (der erste Start uebersetzt noch) — und es sagen
