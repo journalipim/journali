@@ -86,6 +86,19 @@ const aboKey = computed(() => inhalt.value ? null : eingabe.value.match(ABO)?.[0
 const was = computed(() => !inhalt.value ? (aboKey.value ? 'abo' : null) : inhalt.value.o.kind && inhalt.value.o.sig && (inhalt.value.o.request || inhalt.value.o.instance) ? 'schluessel' : null)
 // Der Stand des Abos für das oben gewählte Team
 const aboTeam = computed(() => lic.value?.abos?.find(a => a.team === props.team?.key) ?? null)
+/// Woher der Tarif kommt — als Beisatz in der Zeile Tarif (03.10.2026: „Pro“ ohne Herkunft verstand niemand)
+const herkunft = computed(() => {
+  const q = lic.value?.quelle
+  if (!q) return lic.value?.trial && !lic.value?.abgelaufen ? t_('Test') : ''
+  if (q.art === 'abo') return t_('aus dem Abo von {0} bis {1}', [q.teamLabel, q.bis])
+  if (q.art === 'schluessel') return t_('aus einem Schlüssel von {0} bis {1}', [q.teamLabel, q.bis])
+  if (q.art === 'test') return t_('Test')
+  return t_('aus der Lizenz')
+})
+/// Die Schlüssel des oben gewählten Teams, die heute gelten
+const schluessel = computed(() => (lic.value?.schluessel ?? []).filter(k => !props.team || k.team === props.team.key))
+/// Warum ein Abo nicht gilt: entzogen (der Lizenzserver sagt es) oder abgelaufen
+const aboGrund = a => a.geprueft === false ? t_('ungeprüft') : a.status === 'entzogen' ? t_('entzogen') : t_('abgelaufen')
 const knopf = computed(() =>
   was.value === 'abo' ? { text: t_('⚿ Abo verbinden · {0}', [props.team?.label ?? '']), aus: !eigenes.value || !lic.value?.lizenzserver,
       title: !lic.value?.lizenzserver ? t_('Kein Lizenzserver eingestellt') : eigenes.value ? t_('Abo für {0} verbinden', [props.team.label]) : t_('{0} rechnet über ein anderes Team ab', [props.team?.label ?? t_('Dieses Team')]) }
@@ -158,10 +171,16 @@ async function kopiere(text) {
       <!-- Eine Instanz hat keine Lizenz — jede gehört einem Team (25.09.2026): Abo und Schlüssel stehen beim Team. Übrig bleibt
            der Test einer neuen Instanz; er gehört zum Init Team und steht nur dort, solange er läuft. -->
       <tr v-if="lic?.instanzTarif" class="tarif"><td class="muted" :title="$t('Der höchste Tarif der Instanz: nach ihm richten sich Plugins und Publikationsbäume.')">{{ $t("◆ Tarif") }}</td>
-        <td>{{ lic.instanzTarif.label }}<span v-if="lic.trial && !lic.abgelaufen" class="muted">{{ ' ' + $t("· Test") }}</span></td><td></td></tr>
+        <td>{{ lic.instanzTarif.label }}<span v-if="herkunft" class="muted herkunft">{{ ' · ' + herkunft }}</span></td><td></td></tr>
       <tr v-if="aboTeam" class="abo"><td class="muted" :title="$t('Stand des Abos vom Lizenzserver, täglich aufgefrischt')">{{ $t("◆ Abo · {0}", [aboTeam.teamLabel]) }}</td>
-        <td :title="$t('zuletzt bestätigt {0}', [String(aboTeam.issued).slice(0, 16).replace('T', ' ')])">{{ aboTeam.planLabel }}<span class="muted">{{ ' · ' + $t('gültig bis {0}', [aboTeam.paidUntil]) }}</span><span v-if="!aboTeam.geprueft" class="neg" :title="$t('Ohne passende Signatur zählt der Stand nicht.')">{{ ' · ' + $t('ungeprüft') }}</span><span v-else-if="!aboTeam.gilt" class="neg">{{ ' · ' + (aboTeam.status === 'entzogen' ? $t('entzogen') : $t('abgelaufen')) }}</span></td>
+        <td :title="$t('zuletzt bestätigt {0}', [String(aboTeam.issued).slice(0, 16).replace('T', ' ')])">
+          <template v-if="aboTeam.gilt === false"><span class="neg abo-grund">{{ '✗ ' + aboGrund(aboTeam) }}</span><span class="muted">{{ ' · ' + $t('{0} bis {1}', [aboTeam.planLabel, aboTeam.paidUntil]) }}</span></template>
+          <template v-else>{{ aboTeam.planLabel }}<span class="muted">{{ ' · ' + $t('gültig bis {0}', [aboTeam.paidUntil]) }}</span></template>
+          <span v-if="!aboTeam.geprueft && aboTeam.gilt !== false" class="neg" :title="$t('Ohne passende Signatur zählt der Stand nicht.')">{{ ' · ' + $t('ungeprüft') }}</span></td>
         <td><button v-if="fuehrt && lic.lizenzserver && aboTeam.team === team?.key" class="x auffrischen" :title="$t('Stand vom Lizenzserver neu holen')" @click="auffrischen">↻</button></td></tr>
+      <tr v-for="k in schluessel" :key="k.id" class="schluessel"><td class="muted" :title="$t('Eingelöster Schlüssel: er gibt dem Team Tarif und Grenzen bis zum genannten Tag.')">{{ $t("◆ Schlüssel · {0}", [k.teamLabel]) }}</td>
+        <td :title="k.id"><span :class="{ muted: k.zaehlt === false }">{{ k.planLabel ?? $t('Grenzen') }}</span><span class="muted">{{ ' · ' + $t('{0} bis {1}', [k.from, k.until]) }}</span>
+          <span v-if="k.zaehlt === false" class="muted zaehlt-nicht" :title="$t('Das Team hat einen Stand vom Lizenzserver; es gilt allein, was er sagt.')">{{ ' · ' + $t('zählt nicht') }}</span></td><td></td></tr>
       <tr v-if="lic?.trial && lic?.geprueft && team?.primary" class="test"><td class="muted" :title="$t('Test einer neuen Instanz, ab dem ersten Eintrag im Journal')">{{ $t("◆ Test · {0}", [team.label]) }}</td>
         <td>{{ lic.tarif?.label }}<span class="muted">{{ ' · ' + $t('gültig bis {0}', [lic.validUntil]) }}</span></td><td></td></tr>
       <tr v-if="lic?.instanzTarif" class="baeume"><td class="muted" :title="$t('Publikationsbäume: vorhanden / erlaubt')">{{ $t("▣ Publikationsbäume") }}</td>

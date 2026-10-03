@@ -96,7 +96,6 @@
  "Stand": "Status",
  "Der höchste Tarif der Instanz: nach ihm richten sich Plugins und Publikationsbäume.": "The highest tier of the instance: plugins and publication trees follow it.",
  "◆ Tarif": "◆ Tier",
- "· Test": "· Trial",
  "Publikationsbäume: vorhanden / erlaubt": "Publication trees: existing / allowed",
  "▣ Publikationsbäume": "▣ Publication trees",
  "journali-Token je Woche: jede Pflege schreibt einen Eintrag ins Journal.": "journali tokens per week: every edit writes one entry to the journal.",
@@ -2981,5 +2980,15 @@
  "Job {0} läuft auf Server {1}; geändert wird er dort.": "Job {0} runs on server {1}; it is changed there.",
  "Es gibt nur diesen Server.": "There is only this server.",
  "{0} ist ein Systemjob; er läuft auf dem Hauptserver.": "{0} is a system job; it runs on the main server.",
- "Systemjobs werden auf dem Hauptserver {0} gesteuert.": "System jobs are controlled on the main server {0}."
+ "Systemjobs werden auf dem Hauptserver {0} gesteuert.": "System jobs are controlled on the main server {0}.",
+ "aus dem Abo von {0} bis {1}": "from the subscription of {0} until {1}",
+ "aus einem Schlüssel von {0} bis {1}": "from a key of {0} until {1}",
+ "aus der Lizenz": "from the licence",
+ "Test": "Test",
+ "{0} bis {1}": "{0} until {1}",
+ "◆ Schlüssel · {0}": "◆ Key · {0}",
+ "Eingelöster Schlüssel: er gibt dem Team Tarif und Grenzen bis zum genannten Tag.": "Redeemed key: it gives the team a plan and limits until the given day.",
+ "Grenzen": "Limits",
+ "zählt nicht": "does not count",
+ "Das Team hat einen Stand vom Lizenzserver; es gilt allein, was er sagt.": "The team has a status from the licence server; only what it says applies."
 }

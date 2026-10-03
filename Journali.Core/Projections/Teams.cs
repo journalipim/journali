@@ -148,7 +148,7 @@ public sealed class Teams : IProjection
     public (int Week, int Month) LimitAt(string team, DateOnly d)
     {
         if (_all.GetValueOrDefault(team) is not { } t) return (0, 0);
-        var w = t.Windows.Where(x => x.Gilt(d)).OrderByDescending(x => x.Number).FirstOrDefault();
+        var w = SchluesselZaehlen(t) ? t.Windows.Where(x => x.Gilt(d)).OrderByDescending(x => x.Number).FirstOrDefault() : null;
         var (woche, monat) = w is null ? (t.EntriesWeek, t.EntriesMonth) : (Math.Max(t.EntriesWeek, w.Week), Math.Max(t.EntriesMonth, w.Month));
         // ein Abo hebt an, solange es gilt — senkt nie
         return AboAt(team, d) is { } a ? (Math.Max(woche, a.EntriesWeek), Math.Max(monat, a.EntriesMonth)) : (woche, monat);
@@ -161,9 +161,17 @@ public sealed class Teams : IProjection
     public EntitlementReceived? AboAt(string team, DateOnly d) =>
         _all.GetValueOrDefault(team)?.Abo is { Geprueft: true } a && d <= a.PaidUntil && d <= DateOnly.FromDateTime(a.ValidUntil.LocalDateTime) ? a : null;
 
-    /// <summary>Der Tarif, den ein eingelöster Limit-Schlüssel diesem Team an dem Tag gibt — null ohne.</summary>
+    /// <summary>
+    /// Zählen die im Journal eingelösten Schlüssel dieses Teams? Nur, solange es keinen geprüften Stand vom Lizenzserver hat (03.10.2026). Hat es einen,
+    /// gilt allein, was der Lizenzserver sagt — auch wenn er das Abo entzogen hat oder es abgelaufen ist; ein Schlüssel aus dem Journal hebt es dann nicht
+    /// mehr an. Ohne Stand (eine Instanz ohne Verbindung zum Lizenzserver) sind die Schlüssel der einzige Weg und zählen wie bisher.
+    /// </summary>
+    public static bool SchluesselZaehlen(TeamState t) => t.Abo is not { Geprueft: true };
+    public bool SchluesselZaehlen(string team) => _all.GetValueOrDefault(team) is { } t && SchluesselZaehlen(t);
+
+    /// <summary>Der Tarif, den ein eingelöster Limit-Schlüssel oder das Abo diesem Team an dem Tag gibt — null ohne.</summary>
     public Tarif? TarifAt(string team, DateOnly d) =>
-        (_all.GetValueOrDefault(team)?.Windows.Where(x => x.Gilt(d)).Select(x => Tarife.Von(x.Plan)) ?? [])
+        (_all.GetValueOrDefault(team) is { } t && SchluesselZaehlen(t) ? t.Windows.Where(x => x.Gilt(d)).Select(x => Tarife.Von(x.Plan)) : [])
             .Append(AboAt(team, d) is { } a ? Tarife.Von(a.Plan) : null)
             .Where(x => x is not null)
             .Aggregate((Tarif?)null, (a, b) => a is null ? b : Projections.Tarife.Hoeher(a, b!));
@@ -174,7 +182,7 @@ public sealed class Teams : IProjection
 
     /// <summary>Der Limit-Schlüssel, der an diesem Tag gilt — für die Umrechnung beim nächsten Einlösen.</summary>
     public LimitWindow? WindowAt(string team, DateOnly d) =>
-        _all.GetValueOrDefault(team)?.Windows.Where(x => x.Gilt(d)).OrderByDescending(x => x.Number).FirstOrDefault();
+        _all.GetValueOrDefault(team) is { } t && SchluesselZaehlen(t) ? t.Windows.Where(x => x.Gilt(d)).OrderByDescending(x => x.Number).FirstOrDefault() : null;
 
     /// <summary>Ab wann dieses Team zählt: der spätere von Instanz-Zählbeginn und eigenem Reset.</summary>
     /// <summary>

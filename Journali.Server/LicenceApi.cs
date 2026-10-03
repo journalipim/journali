@@ -22,6 +22,7 @@ public static class LicenceApi
             var liste = c.Tarife;
             var lt = l.TarifIn(liste);
             var baeume = c.Read(tree => tree.PubTrees.Count());
+            var quelle = Herkunft(c, t, roh.Trial == true && !roh.Abgelaufen);
             return Results.Ok(new
             {
                 l.Plan, l.Holder, validUntil = roh.ValidUntil, entriesWeek = lt.Week, entriesMonth = lt.Month, l.CountFrom, l.AiTokensMonth, l.AiTokensDay,
@@ -31,6 +32,15 @@ public static class LicenceApi
                 tarif = new { key = lt.Key, label = lt.Label }, trial = roh.Trial == true, trialPlan = roh.TarifIn(liste).Label,
                 tarifblatt = liste.Version,
                 instanzTarif = new { key = t.Key, label = t.Label, pubTrees = t.PubTrees == Tarife.Ohne ? (int?)null : t.PubTrees },
+                // woher er kommt (03.10.2026): sonst steht „Pro“ da, ohne dass jemand sieht, warum — aus der Lizenz, dem Test, einem Abo oder einem Schlüssel
+                quelle,
+                // die Schlüssel, die heute gelten: Tarif und Grenzen, die sie einem Team geben, und bis wann
+                schluessel = c.Lesen((_, _) => c.Teams.All.Values.SelectMany(x => x.Windows.Where(w => w.Gilt(DateOnly.FromDateTime(DateTime.Now))).Select(w => new
+                {
+                    team = x.Key, teamLabel = x.Label, id = w.Key, plan = w.Plan, planLabel = w.Plan is { } pl ? liste.Von(pl)?.Label ?? pl : null,
+                    week = w.Week, month = w.Month, from = w.From, until = w.Until,
+                    zaehlt = Teams.SchluesselZaehlen(x),   // false: das Team hat einen Stand vom Lizenzserver, und der allein gilt
+                })).OrderBy(w => w.until).ToList()),
                 // Die Adresse des Shops aus dem Tarifblatt: die Oberfläche hängt Instanz und Team daran, und was gekauft
                 // wird, findet über den Lizenzserver zum Team zurück — niemand fügt danach etwas ein.
                 // Die Aktionen nur, solange sie gelten: danach steht nichts da und nichts hängt an der Adresse
@@ -51,6 +61,7 @@ public static class LicenceApi
         });
 
         // Abo verbinden: Lizenzschlüssel aus dem Shop für ein Team — Recht users, wie das Einspielen
+
         api.MapPost("/licence/abo", async (AboBody body, HttpRequest req, Catalog c, CancellationToken ct) =>
         {
             if (Actor(req) is not { } actor) return ActorMissing();
@@ -81,5 +92,25 @@ public static class LicenceApi
 
         // Eine Lizenz für die ganze Instanz wird nicht eingespielt (25.09.2026): jede gehört einem Team — Abo
         // (/licence/abo) oder Schlüssel zum Kopieren (/licence/keys). Übrig ist der Test des Init Teams (Licences).
+    }
+
+    /// <summary>
+    /// Woher der Tarif der Instanz kommt: das Abo eines Teams, ein eingelöster Schlüssel, der Test einer neuen Instanz oder die Lizenz. Gilt mehreres, nennt
+    /// es das, was den Tarif trägt — in dieser Reihenfolge, weil ein Abo bezahlt ist und ein Schlüssel ausgestellt.
+    /// </summary>
+    public static object Herkunft(Catalog c, Tarif instanz, bool test)
+    {
+        var heute = DateOnly.FromDateTime(DateTime.Now);
+        var liste = c.Tarife;
+        return c.Lesen<object>((_, _) =>
+        {
+            foreach (var t in c.Teams.All.Values)
+                if (c.Teams.AboAt(t.Key, heute) is { } a && liste.Von(a.Plan)?.Key == instanz.Key)
+                    return new { art = "abo", team = t.Key, teamLabel = t.Label, bis = (DateOnly?)a.PaidUntil };
+            foreach (var t in c.Teams.All.Values)
+                if (Teams.SchluesselZaehlen(t) && t.Windows.Where(w => w.Gilt(heute) && w.Plan is not null && liste.Von(w.Plan)?.Key == instanz.Key).OrderByDescending(w => w.Until).FirstOrDefault() is { } w)
+                    return new { art = "schluessel", team = t.Key, teamLabel = t.Label, bis = (DateOnly?)w.Until };
+            return new { art = test ? "test" : "lizenz", team = (string?)null, teamLabel = (string?)null, bis = (DateOnly?)null };
+        });
     }
 }

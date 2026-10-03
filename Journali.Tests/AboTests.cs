@@ -145,6 +145,40 @@ public class AboTests
         Assert.Equal(Tarife.Free, w.C.InstanzTarif);
     }
 
+    /// <summary>
+    /// Es gilt, was der Lizenzserver sagt (03.10.2026): hat ein Team einen geprüften Stand, hebt ein im Journal eingelöster Schlüssel es nicht mehr an —
+    /// auch nicht, wenn der Lizenzserver das Abo entzogen hat. Ohne Stand zählt der Schlüssel wie bisher.
+    /// </summary>
+    [Fact]
+    public void Mit_einem_Stand_vom_Lizenzserver_zaehlt_kein_Schluessel_aus_dem_Journal()
+    {
+        var c = new Catalog(new MemoryJournal()); c.Rebuild(); c.SeedMissing();
+        var pro = c.Tarife.Von("pro")!;
+        c.With((_, _, w) =>
+        {
+            w("t", Teams.Stream + "de", Types.TeamDefined, new TeamDefined("DE"), null);
+            w("t", Teams.Stream + "de", Types.KeyRedeemed, new KeyRedeemed("k-1", Schluessel.Limit, Heute.AddDays(-5), Heute.AddDays(20), pro.Week, pro.Month, 30, 0, "pro"), null);
+            return 0;
+        });
+        // ohne Stand: der Schlüssel hebt an
+        Assert.Equal("pro", c.With((_, _, _) => c.Teams.TarifAt("de", Heute))?.Key);
+        Assert.Equal(pro.Week, c.With((_, _, _) => c.Teams.LimitAt("de", Heute)).Week);
+
+        // der Lizenzserver hat entzogen (bezahlt bis gestern): es gilt nichts mehr — der Schlüssel auch nicht
+        c.With((_, _, w) => w("t", Teams.Stream + "de", Types.EntitlementReceived, new EntitlementReceived("i", "de", "unlimited", Tarife.Ohne, Tarife.Ohne, "entzogen",
+            Heute.AddDays(-1), Jetzt, Jetzt + Entitlement.Kulanz, "r", "sig", Geprueft: true), null));
+        Assert.Null(c.With((_, _, _) => c.Teams.TarifAt("de", Heute)));
+        Assert.Equal((0, 0), c.With((_, _, _) => c.Teams.LimitAt("de", Heute)));
+        Assert.Null(c.With((_, _, _) => c.Teams.WindowAt("de", Heute)));
+        Assert.Equal(Tarife.Free, c.InstanzTarif);
+
+        // gilt das Abo wieder, gilt sein Tarif — nicht der höhere des Schlüssels
+        c.With((_, _, w) => w("t", Teams.Stream + "de", Types.EntitlementReceived, new EntitlementReceived("i", "de", "free", 1000, 5000, "active",
+            Heute.AddDays(30), Jetzt.AddSeconds(1), Jetzt + Entitlement.Kulanz, "r2", "sig", Geprueft: true), null));
+        Assert.Equal("free", c.With((_, _, _) => c.Teams.TarifAt("de", Heute))?.Key);
+        Assert.Equal((1000, 5000), c.With((_, _, _) => c.Teams.LimitAt("de", Heute)));
+    }
+
     /// <summary>Ein Stand im Journal, der nicht als geprüft vermerkt ist (bis 25.09.2026 möglich), zählt nicht.</summary>
     [Fact]
     public void Ein_ungepruefter_Stand_zaehlt_nicht()
