@@ -1,8 +1,8 @@
 {
  "key": "configurator",
  "version": "1.0.0",
- "hash": "61e22ab2c1f4891d944ad6966fe96d6bbcdd6fa51df9703a505930518ac68980",
- "issued": "2026-10-02",
+ "hash": "d4b76c069b1f3b4136f0d1496ed4b35964cd288f774cae1919ec9a212ad459fb",
+ "issued": "2026-10-03",
  "issuer": "journali",
- "sig": "XhIyTZxonnjFRk/ncQ+GHxcx9Ytva7NJM7DTJf7TO5r+d7szdoLDyQU8knsynXq1mwvy6sX25I23Am8eFWXzWQ=="
+ "sig": "0muMeMXD8rDA8MYhWiCSSF4/WxmyXTjDgMQG/feckhUAO8wnpU7Phoq1NG5vvuvQo1Su+pbkwEgHVnZPov9bSA=="
 }
