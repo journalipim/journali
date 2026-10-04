@@ -163,11 +163,18 @@ function gewaehlt() {
   return { wurzeln: picked.map(r => r.doc.id), eltern: new Map(picked.map(r => [r.doc.id, r.parent?.doc.id ?? null])), anzahl: picked.length }
 }
 
+// Im Browser höchstens GRENZE Knoten je Analyse (04.10.2026): der Teilbaum liegt dabei mit allen Feldern im Speicher — grössere liest der Job
+const GRENZE = 20000
+async function imBrowser(wurzeln) {
+  let n = 0; for (const w of wurzeln) n += await client.zaehle(w)
+  if (n > GRENZE) throw new Error(t_('{0} Knoten, im Browser höchstens {1}.', [n, GRENZE]))
+}
 async function analyse() {
   if (!checked.value.size) { store.toast(t_('Nichts angehakt')); return }
   busy.value = 'lade …'; plan.value = null; result.value = null
   try {
     const { wurzeln, eltern, anzahl } = gewaehlt()
+    await imBrowser(wurzeln)
     const p = await plane({ client, umgebung, wurzeln, eltern, skip: skip.value, pdefs: pdefs.value })
     plan.value = { ...p, picked: anzahl }
   } catch (e) { store.toast(e.message); say(t_('Fehler:') + ' ' + e.message) }
@@ -184,6 +191,7 @@ async function analyseRelations() {
   if (!checked.value.size) { store.toast(t_('Nichts angehakt')); return }
   busy.value = 'lade …'; relPlan.value = null; relResult.value = null
   try {
+    await imBrowser(gewaehlt().wurzeln)
     relPlan.value = await planeRelationen({ client, umgebung, wurzeln: gewaehlt().wurzeln })
   } catch (e) { store.toast(e.message); say(t_('Fehler:') + ' ' + e.message) }
   finally { busy.value = '' }

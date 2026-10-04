@@ -69,5 +69,6 @@
  "Zugang": "Access",
  "Solr-Kern mit Anmeldung — eingerichtet unter ⌁ Zugänge, das Passwort bleibt beim Server": "Solr core with login — set up under ⌁ Accesses, the password stays on the server",
  "— freie Adresse, ohne Anmeldung —": "— free address, without login —",
- "URL des Solr-Kerns — mit Anmeldung nur über einen Zugang": "URL of the Solr core — with login only through an access"
+ "URL des Solr-Kerns — mit Anmeldung nur über einen Zugang": "URL of the Solr core — with login only through an access",
+ "{0} Knoten, im Browser höchstens {1}.": "{0} nodes, at most {1} in the browser."
 }

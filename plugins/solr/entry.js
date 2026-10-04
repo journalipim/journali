@@ -1,4 +1,4 @@
-(function(){const s=document.createElement('style');s.textContent="\n.x[data-v-9b2414af] { border: 0; background: none; color: var(--muted); padding: 0 4px;\n}\n.x[data-v-9b2414af]:hover { color: var(--neg);\n}\n.sources[data-v-9b2414af] { gap: 4px;\n}\n.form[data-v-9b2414af] { padding: 6px 8px; border-bottom: 1px solid var(--line); display: flex; flex-direction: column; gap: 4px;\n}\n.row[data-v-9b2414af] { display: flex; gap: 4px;\n}\n.src .node[data-v-9b2414af] { display: flex; align-items: center; gap: 4px; height: 24px; white-space: nowrap; padding-right: 8px; outline: none;\n}\n.src .node.on[data-v-9b2414af] { background: var(--accent-soft);\n}\n.src .node.current[data-v-9b2414af], .src .node[data-v-9b2414af]:focus { box-shadow: inset 2px 0 0 var(--accent);\n}\n.twisty[data-v-9b2414af] { width: 12px; color: var(--muted); font-size: 11px; cursor: pointer;\n}\n.icon[data-v-9b2414af] { width: 16px; text-align: center;\n}\n.node.group .icon[data-v-9b2414af] { color: var(--muted);\n}\n.node.product .icon[data-v-9b2414af] { color: var(--accent);\n}\n.node.variant .icon[data-v-9b2414af] { color: var(--warn);\n}\n.label[data-v-9b2414af] { overflow: hidden; text-overflow: ellipsis;\n}\n.count[data-v-9b2414af] { margin-left: auto; font-size: 11px;\n}\n.form-grid[data-v-9b2414af] { width: 100%;\n}\n.form-grid td[data-v-9b2414af] { white-space: normal; vertical-align: middle; height: 30px; padding: 2px 4px;\n}\n.form-grid td[data-v-9b2414af]:first-child { padding-left: 8px; white-space: nowrap;\n}\n.form-grid select[data-v-9b2414af] { margin-right: 8px; min-width: 220px;\n}\n.val[data-v-9b2414af] { max-width: 420px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;\n}\n.section[data-v-9b2414af] { padding: 10px 8px; border-top: 1px solid var(--line);\n}\n.section h2[data-v-9b2414af] { font-size: 12px; margin: 0 0 6px; color: var(--muted); font-weight: 600;\n}\n";document.head.append(s)})();
+(function(){const s=document.createElement('style');s.textContent="\n.x[data-v-e86d470b] { border: 0; background: none; color: var(--muted); padding: 0 4px;\n}\n.x[data-v-e86d470b]:hover { color: var(--neg);\n}\n.sources[data-v-e86d470b] { gap: 4px;\n}\n.form[data-v-e86d470b] { padding: 6px 8px; border-bottom: 1px solid var(--line); display: flex; flex-direction: column; gap: 4px;\n}\n.row[data-v-e86d470b] { display: flex; gap: 4px;\n}\n.src .node[data-v-e86d470b] { display: flex; align-items: center; gap: 4px; height: 24px; white-space: nowrap; padding-right: 8px; outline: none;\n}\n.src .node.on[data-v-e86d470b] { background: var(--accent-soft);\n}\n.src .node.current[data-v-e86d470b], .src .node[data-v-e86d470b]:focus { box-shadow: inset 2px 0 0 var(--accent);\n}\n.twisty[data-v-e86d470b] { width: 12px; color: var(--muted); font-size: 11px; cursor: pointer;\n}\n.icon[data-v-e86d470b] { width: 16px; text-align: center;\n}\n.node.group .icon[data-v-e86d470b] { color: var(--muted);\n}\n.node.product .icon[data-v-e86d470b] { color: var(--accent);\n}\n.node.variant .icon[data-v-e86d470b] { color: var(--warn);\n}\n.label[data-v-e86d470b] { overflow: hidden; text-overflow: ellipsis;\n}\n.count[data-v-e86d470b] { margin-left: auto; font-size: 11px;\n}\n.form-grid[data-v-e86d470b] { width: 100%;\n}\n.form-grid td[data-v-e86d470b] { white-space: normal; vertical-align: middle; height: 30px; padding: 2px 4px;\n}\n.form-grid td[data-v-e86d470b]:first-child { padding-left: 8px; white-space: nowrap;\n}\n.form-grid select[data-v-e86d470b] { margin-right: 8px; min-width: 220px;\n}\n.val[data-v-e86d470b] { max-width: 420px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;\n}\n.section[data-v-e86d470b] { padding: 10px 8px; border-top: 1px solid var(--line);\n}\n.section h2[data-v-e86d470b] { font-size: 12px; margin: 0 0 6px; color: var(--muted); font-weight: 600;\n}\n";document.head.append(s)})();
 const m$1 = window.journali.vue;
 const Fragment = m$1.Fragment;
 const computed = m$1.computed;
@@ -338,6 +338,8 @@ function solr(core, holen = jsonp) {
     },
     /// Ein Teilbaum vollständig (inklusive Wurzel) — main_path_id enthält die eigene Id.
     subtree: (rootId, onPage) => all(NODES, { fq: [`main_path_id:"${rootId}"`] }, onPage).then((ds) => ds.filter(isNode)),
+    /// Wie viele Baumknoten ein Teilbaum hat, ohne ihn zu laden (rows=0)
+    zaehle: async (rootId) => (await select(NODES, { fq: [`main_path_id:"${rootId}"`], rows: 0 })).response.numFound,
     /// Die Attribut-Definitionen der Quelle: remote_id → { name, section, sectionName }.
     propertyDefs: async () => {
       const defs = {};
@@ -924,6 +926,7 @@ const _hoisted_100 = {
   class: "muted"
 };
 const _hoisted_101 = { class: "section" };
+const GRENZE = 2e4;
 const JOB = "solr_import";
 const _sfc_main = {
   __name: "View",
@@ -1163,6 +1166,11 @@ const _sfc_main = {
       const picked = rows.value.filter((r) => checked.value.has(r.doc.id) && !checkedAbove(r));
       return { wurzeln: picked.map((r) => r.doc.id), eltern: new Map(picked.map((r) => [r.doc.id, r.parent?.doc.id ?? null])), anzahl: picked.length };
     }
+    async function imBrowser(wurzeln) {
+      let n = 0;
+      for (const w of wurzeln) n += await client.zaehle(w);
+      if (n > GRENZE) throw new Error(t("{0} Knoten, im Browser höchstens {1}.", [n, GRENZE]));
+    }
     async function analyse() {
       if (!checked.value.size) {
         store.toast(t("Nichts angehakt"));
@@ -1173,6 +1181,7 @@ const _sfc_main = {
       result.value = null;
       try {
         const { wurzeln, eltern, anzahl } = gewaehlt();
+        await imBrowser(wurzeln);
         const p = await plane({ client, umgebung, wurzeln, eltern, skip: skip.value, pdefs: pdefs.value });
         plan.value = { ...p, picked: anzahl };
       } catch (e) {
@@ -1196,6 +1205,7 @@ const _sfc_main = {
       relPlan.value = null;
       relResult.value = null;
       try {
+        await imBrowser(gewaehlt().wurzeln);
         relPlan.value = await planeRelationen({ client, umgebung, wurzeln: gewaehlt().wurzeln });
       } catch (e) {
         store.toast(e.message);
@@ -2277,7 +2287,7 @@ const _sfc_main = {
     };
   }
 };
-const View = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-9b2414af"]]);
+const View = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-e86d470b"]]);
 const entry = {
   views: [{ path: "import", topic: "import", label: t("Solr"), icon: "⇩", component: View }]
 };

@@ -100,6 +100,8 @@ export function solr(core, holen = jsonp) {
     },
     /// Ein Teilbaum vollständig (inklusive Wurzel) — main_path_id enthält die eigene Id.
     subtree: (rootId, onPage) => all(NODES, { fq: [`main_path_id:"${rootId}"`] }, onPage).then(ds => ds.filter(isNode)),
+    /// Wie viele Baumknoten ein Teilbaum hat, ohne ihn zu laden (rows=0)
+    zaehle: async rootId => (await select(NODES, { fq: [`main_path_id:"${rootId}"`], rows: 0 })).response.numFound,
     /// Die Attribut-Definitionen der Quelle: remote_id → { name, section, sectionName }.
     propertyDefs: async () => {
       const defs = {}
