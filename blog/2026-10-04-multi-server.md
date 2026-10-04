@@ -10,7 +10,7 @@ Ein Server war gestern. **journali läuft ab sofort auf mehreren Servern gleichz
 
 ## Ein Journal, viele Server
 
-Was ein Server ins Journal schreibt, haben alle anderen **nach wenigen Sekunden**. Keine Synchronisation von Hand, keine Exporte zwischen Standorten, kein „welcher Stand gilt denn jetzt?“. Das Journal bleibt die eine Wahrheit – jeder Server baut seine Sicht daraus, live.
+Was ein Server ins Journal schreibt, haben alle anderen **nach wenigen Sekunden**. Keine Synchronisation von Hand, keine Exporte zwischen Standorten, kein „welcher Stand gilt denn jetzt?“. Das Journal bleibt die Single Source of Truth – jeder Server baut seine Sicht daraus, live.
 
 ## Der Hauptserver hat alles im Griff
 
