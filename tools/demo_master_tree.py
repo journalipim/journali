@@ -13,12 +13,17 @@ Schreibt ausschliesslich über /api (Catalog ist der einzige Schreibpfad, Regel 
   3. Werte je Knoten (POST /api/nodes/{id}/attributes), Status (POST /api/nodes/{id}/status)
   4. Bild je Produkt: PNG mit Pillow, POST /api/media, Relation image mit inherit=true
 
-Aufruf (gegen eine frische Demo-Instanz, nie gegen die Kundendatenbank):
-  python tools/demo_master_tree.py --url http://localhost:5000 --user admin
-  Passwort aus der Umgebung JOURNALI_DEMO_PASSWORD oder --password; alternativ --token jt_…
-  Ohne Anwender (offene Instanz) reicht --actor.
+Aufruf: tools\\demo-daten.cmd (Windows, aus jedem Verzeichnis, ohne Parameter) oder python tools/demo_master_tree.py.
+  Ohne Angaben fragt das Skript: Adresse (Vorgabe http://localhost:5000), Anwender und Passwort, wenn die Instanz eine Anmeldung
+  verlangt. Alles lässt sich auch mitgeben: --url, --user, --password oder JOURNALI_DEMO_PASSWORD, --token jt_…
 
-Bricht ab, wenn unter der Wurzel schon eine Gruppe „Tannwald“ liegt — der Lauf ist einmalig.
+Jede Datenbank: das Skript legt nur an, was fehlt (Listen, Werte einer Liste, Attribute), und ändert nichts, was schon da ist. Ein
+Wert, der in dieser Datenbank nicht gesetzt werden kann, wird übersprungen und am Ende gezählt; abgebrochen wird nur, wenn die
+Anmeldung scheitert, das Kontingent aufgebraucht ist oder ein Knoten nicht angelegt werden kann. Ein zweiter Lauf knüpft an.
+
+Liegt unter der Wurzel schon eine Gruppe „Tannwald Outdoor“ (ein abgebrochener Lauf), knüpft der Lauf daran an: Gruppen und
+Produkte mit derselben Bezeichnung werden wiederverwendet, nicht doppelt angelegt. Gelten die Attributgruppen der Demo-Attribute
+(etwa die von ean oder price) auf dem Pfad nicht, hängt das Skript sie an seine Demo-Gruppe.
 
 Dazu zwei Beispiele für die Plugins (je übersprungen, wenn es sie schon gibt oder das Plugin fehlt, aus ist oder nicht zum Tarif gehört):
   5. Konfigurator: die Gruppe „Server-Konfigurator (Demo)“ mit Mainboards, Prozessoren, Arbeitsspeicher, Kühlpaste, Karten, einer
@@ -40,8 +45,12 @@ import random
 import sys
 import time
 
-import requests
-from PIL import Image, ImageDraw, ImageFont
+try:
+    import requests
+    from PIL import Image, ImageDraw, ImageFont
+except ImportError as e:
+    sys.exit(f"Es fehlt ein Python-Paket ({e.name}): python -m pip install requests pillow — tools\\demo-daten.cmd erledigt das selbst.")
+import getpass
 
 ROOT = "g-mastertree"
 BRAND = "Tannwald"
@@ -148,7 +157,9 @@ class Api:
 
     log = None   # Datei für --log: jede Anfrage mit Antwortcode
 
-    def call(self, method: str, path: str, **kw):
+    fehler: dict = {}   # weich übersprungene Anfragen: Meldung → Anzahl
+
+    def call(self, method: str, path: str, soft: bool = False, **kw):
         self.calls += 1
         if self.log:
             self.log.write(f"{method} {path} {str(kw.get('json'))[:200]}\n"); self.log.flush()
@@ -159,7 +170,18 @@ class Api:
             if r.status_code < 500:
                 break
             time.sleep(1 + attempt)
+        if r.status_code == 403 and "ontingent" in r.text:
+            sys.exit(f"Kein Kontingent mehr für Pflege im Team dieses Anwenders ({r.text[:200]}). Bis hier ist alles geschrieben; ein neuer Lauf knüpft an.")
+        if r.status_code in (401,):
+            sys.exit(f"Nicht angemeldet oder Anmeldung abgelaufen ({method} {path}).")
         if r.status_code >= 400:
+            if soft:
+                try:
+                    msg = (r.json() or {}).get("template") or (r.json() or {}).get("error") or r.text[:120]
+                except ValueError:
+                    msg = r.text[:120]
+                self.fehler[msg] = self.fehler.get(msg, 0) + 1
+                return None
             sys.exit(f"{method} {path} → {r.status_code}: {r.text[:300]}")
         return r.json() if r.content else None
 
@@ -194,7 +216,10 @@ class Api:
         if channel: body["channel"] = channel
         if values is not None: body["values"] = values
         else: body["value"] = value
-        self.post(f"/api/nodes/{node}/attributes", body)
+        self.call("POST", f"/api/nodes/{node}/attributes", soft=True, json=body)
+
+    def soft_post(self, path: str, body) -> None:
+        self.call("POST", path, soft=True, json=body)
 
 
 # ---------------------------------------------------------------- Modell
@@ -203,35 +228,123 @@ def labels(de: str, en: str) -> dict:
     return {"de": de, "en": en}
 
 
+COLORS = dict(COLOR_HEX)   # die Farben, die es in der Liste des Attributs color gibt (nach ensure_model)
+
+
 def ensure_model(api: Api) -> None:
+    """Legt an, was die Demo braucht und fehlt: Listen, fehlende Werte einer Liste, Attribute. Was es schon gibt, bleibt, wie es ist."""
     model = api.get("/api/model")
-    attrs = set((model.get("attributes") or {}).keys()) if isinstance(model.get("attributes"), dict) \
-        else {a["key"] for a in model.get("attributes") or []}
-    lists = set((model.get("lists") or {}).keys()) if isinstance(model.get("lists"), dict) \
-        else {l["key"] for l in model.get("lists") or []}
+    as_list = lambda x: x if isinstance(x, list) else list((x or {}).values())
+    attrs = {a["key"]: a for a in as_list(model.get("attributes"))}
+    lists = {l["key"]: {str(v.get("value")) for v in (l.get("values") or []) if isinstance(v, dict)} for l in as_list(model.get("lists"))}
+    groups = [g["key"] for g in as_list(model.get("groups")) if isinstance(g, dict) and g.get("key")]
+    home = "mastergroup" if "mastergroup" in groups or not groups else groups[0]
 
     def list_(key: str, de: str, en: str, values: list[tuple[str, str, str]]) -> None:
         if key not in lists:
             api.put(f"/api/model/lists/{key}", {"key": key, "label": labels(de, en)})
-        api.put(f"/api/model/lists/{key}/values",
-                [{"value": v, "label": labels(lde, len_), "order": i + 1} for i, (v, lde, len_) in enumerate(values)])
-
-    list_("size", "Grössen", "Sizes", [(k, l, l) for k, l in SIZES])
-    list_("shoe_size", "Schuhgrössen", "Shoe sizes", [(k, l, l) for k, l in SHOE_SIZES])
-    list_("capacity", "Füllmengen", "Capacities", CAPACITIES)
+            lists[key] = set()
+        fehlt = [{"value": v, "label": labels(lde, len_), "order": i + 1} for i, (v, lde, len_) in enumerate(values) if v not in lists[key]]
+        if fehlt:
+            api.call("PUT", f"/api/model/lists/{key}/values", soft=True, json=fehlt)
+            lists[key].update(x["value"] for x in fehlt)
 
     def attr(key: str, de: str, en: str, type_: str, **more) -> None:
         if key in attrs:
             return
-        api.put(f"/api/model/attributes/{key}", {"key": key, "label": labels(de, en), "type": type_, **more})
+        api.put(f"/api/model/attributes/{key}", {"key": key, "label": labels(de, en), "type": type_, "group": home, **more})
+        attrs[key] = {"key": key, "type": type_, **more}
 
-    attr("size", "Grösse", "Size", "enum", group="mastergroup", list="size")
-    attr("shoe_size", "Schuhgrösse", "Shoe size", "enum", group="mastergroup", list="shoe_size")
-    attr("capacity", "Füllmenge", "Capacity", "enum", group="mastergroup", list="capacity")
-    attr("brand", "Marke", "Brand", "text", group="mastergroup", inheritable=True)
-    attr("material", "Material", "Material", "text", group="mastergroup", axes=["locale"])
-    attr("price", "Preis (EUR)", "Price (EUR)", "decimal", group="logistics")
-    print("Modell: Listen size, shoe_size, capacity; Attribute size, shoe_size, capacity, brand, material, price")
+    list_("size", "Grössen", "Sizes", [(k, l, l) for k, l in SIZES])
+    list_("shoe_size", "Schuhgrössen", "Shoe sizes", [(k, l, l) for k, l in SHOE_SIZES])
+    list_("capacity", "Füllmengen", "Capacities", CAPACITIES)
+    attr("name", "Name", "Name", "text", axes=["locale"])
+    attr("description", "Beschreibung", "Description", "html", axes=["locale", "channel"])
+    attr("material", "Material", "Material", "text", axes=["locale"])
+    attr("weight", "Gewicht (kg)", "Weight (kg)", "decimal")
+    attr("brand", "Marke", "Brand", "text", inheritable=True)
+    attr("sku", "SKU", "SKU", "text")
+    attr("ean", "EAN", "EAN", "text")
+    attr("price", "Preis (EUR)", "Price (EUR)", "decimal")
+    attr("size", "Grösse", "Size", "enum", list="size")
+    attr("shoe_size", "Schuhgrösse", "Shoe size", "enum", list="shoe_size")
+    attr("capacity", "Füllmenge", "Capacity", "enum", list="capacity")
+
+    # Farbe: die Liste des Attributs color; fehlt das Attribut, entsteht es mit einer Liste color. Die Demo nimmt nur Farben, die die
+    # Liste kennt — fremde Listen bekommen keine Werte dazu. Kennt sie keine, kommen die Demo-Farben in die Liste.
+    if "color" not in attrs:
+        list_("color", "Farben", "Colours", [(k, k, k) for k in COLOR_HEX])
+        attr("color", "Farbe", "Colour", "enum", list="color")
+    farbliste = attrs["color"].get("list") or "color"
+    bekannt = lists.get(farbliste, set())
+    if not bekannt & set(COLOR_HEX):
+        list_(farbliste, "Farben", "Colours", [(k, k, k) for k in COLOR_HEX])
+        bekannt = lists.get(farbliste, set())
+    COLORS.clear()
+    COLORS.update({k: v for k, v in COLOR_HEX.items() if k in bekannt})
+    print(f"Modell: vorhanden oder ergänzt (Farben aus der Liste {farbliste}: {len(COLORS)})")
+
+
+# ---------------------------------------------------------------- Baum: wiederverwenden statt doppelt anlegen
+
+def wurzel() -> None:
+    """Die Wurzel des Pflegebaums (g-mastertree); gibt es sie nicht, die erste Gruppe ohne Vater."""
+    global ROOT
+    rows = API.get("/api/tree")
+    if any(n["id"] == ROOT for n in rows):
+        return
+    andere = [n for n in rows if not n.get("parent") and n.get("role") == "group"]
+    if not andere:
+        sys.exit("Kein Pflegebaum in dieser Instanz: es gibt keine Gruppe ohne Vater.")
+    ROOT = andere[0]["id"]
+    print(f"Wurzel: {andere[0].get('label')} ({ROOT})")
+
+
+API = None   # die Verbindung dieses Laufs (für wurzel)
+
+
+class Baum:
+    """Die Zeilen von /api/tree, ergänzt um das, was dieser Lauf anlegt."""
+    def __init__(self, api: Api):
+        self.api = api
+        self.rows = api.get("/api/tree")
+
+    def kind(self, parent: str, role: str, label: str) -> str | None:
+        return next((n["id"] for n in self.rows if n.get("parent") == parent and n.get("role") == role and (n.get("label") or "") == label), None)
+
+    def kinder(self, parent: str, role: str) -> list:
+        return [n for n in self.rows if n.get("parent") == parent and n.get("role") == role]
+
+    def gruppe(self, parent: str, de: str, en: str) -> str:
+        if (da := self.kind(parent, "group", de)):
+            return da
+        neu = self.api.created("/api/groups", {"parent": parent, "label": labels(de, en)})
+        self.rows.append({"id": neu, "parent": parent, "role": "group", "label": de})
+        return neu
+
+    def merke(self, id_: str, parent: str, role: str, label: str) -> None:
+        self.rows.append({"id": id_, "parent": parent, "role": role, "label": label})
+
+
+def gruppen_anhaengen(api: Api, node: str, attributes: list[str]) -> None:
+    """Hängt an node die Attributgruppen, ohne die ein Demo-Attribut auf diesem Pfad nicht gälte (je Attribut seine erste Gruppe)."""
+    model = api.get("/api/model")
+    attrs = model["attributes"] if isinstance(model["attributes"], list) else list(model["attributes"].values())
+    gruppen_von = {a["key"]: (a.get("groups") or [a.get("group")]) for a in attrs}
+    gilt = {g["key"] for g in (api.get(f"/api/nodes/{node}").get("groups") or []) if isinstance(g, dict) and g.get("key")}
+    eigen = [x for x in (next((n.get("groups") for n in api.get("/api/tree") if n["id"] == node), None) or "").split(",") if x]
+    dazu = []
+    for key in attributes:
+        gs = [g for g in gruppen_von.get(key, []) if g]
+        if gs and not any(g in gilt for g in gs) and gs[0] not in dazu:
+            dazu.append(gs[0])
+    if dazu:
+        api.put(f"/api/nodes/{node}/groups", {"groups": eigen + dazu})
+        print(f"  Attributgruppen angehängt: {', '.join(dazu)}")
+
+
+TANNWALD_ATTRS = ["name", "description", "material", "weight", "brand", "sku", "ean", "price", "size", "shoe_size", "capacity", "color"]
+SERVER_ATTRS = ["name", "sku", "ean", "price"]
 
 
 # ---------------------------------------------------------------- Bilder
@@ -341,16 +454,15 @@ def description(de_type: str, en_type: str, model: str, mat: tuple[str, str], rn
 
 def build(api: Api, out_dir: str | None, want: int) -> None:
     rnd = random.Random(SEED)
-    tree = api.get("/api/tree")
-    for n in tree:
-        if n.get("parent") == ROOT and n.get("role") == "group" and (n.get("label") or "").startswith(BRAND):
-            sys.exit(f"Unter {ROOT} liegt schon „{n['label']}“ ({n['id']}) — der Demo-Lauf ist einmalig.")
-
     ensure_model(api)
-
-    brand_group = api.created("/api/groups", {"parent": ROOT, "label": labels(f"{BRAND} Outdoor", f"{BRAND} Outdoor")})
+    baum = Baum(api)
+    wurzel()
+    da = baum.kind(ROOT, "group", f"{BRAND} Outdoor")
+    brand_group = baum.gruppe(ROOT, f"{BRAND} Outdoor", f"{BRAND} Outdoor")
+    print(f"Gruppe {BRAND} Outdoor: {brand_group}" + (" (vorhanden, der Lauf knüpft an)" if da else ""))
+    gruppen_anhaengen(api, brand_group, TANNWALD_ATTRS)
     api.set_value(brand_group, "brand", BRAND)
-    print(f"Gruppe {BRAND} Outdoor: {brand_group}")
+    skipped = 0
 
     scale = want / sum(sg[3] for group in SUBGROUPS.values() for sg in group)
     counts = {"groups": 1, "products": 0, "variants": 0, "media": 0}
@@ -358,10 +470,10 @@ def build(api: Api, out_dir: str | None, want: int) -> None:
     sku_no = 1000
 
     for top_key, (top_de, top_en) in TOPGROUPS.items():
-        top = api.created("/api/groups", {"parent": brand_group, "label": labels(top_de, top_en)})
+        top = baum.gruppe(brand_group, top_de, top_en)
         counts["groups"] += 1
         for (sg_de, sg_en, axes, n, type_de, type_en, palette, price_range, weight_range, material, shape) in SUBGROUPS[top_key]:
-            sub = api.created("/api/groups", {"parent": top, "label": labels(sg_de, sg_en)})
+            sub = baum.gruppe(top, sg_de, sg_en)
             counts["groups"] += 1
             n = max(1, round(n * scale))
             prefix = "".join(w[0] for w in sg_en.split() if w[0].isalpha()).upper()[:3]
@@ -369,7 +481,14 @@ def build(api: Api, out_dir: str | None, want: int) -> None:
                 model = MODELS[model_i % len(MODELS)] + ("" if model_i < len(MODELS) else f" {model_i // len(MODELS) + 1}")
                 model_i += 1
                 name_de, name_en = f"{model} {type_de}", f"{model} {type_en}"
-                product = api.created("/api/products", {"group": sub, "axes": axes or None})
+                # dieselben Zufallszahlen wie im ersten Lauf: auch ein übersprungenes Produkt zieht seine Beschreibung
+                if baum.kind(sub, "product", name_de):
+                    description(type_de, type_en, model, material, rnd)
+                    skipped += 1
+                    continue
+                achsen = [x for x in axes if x != "color" or colors != [None]]
+                product = api.created("/api/products", {"group": sub, "axes": achsen or None})
+                baum.merke(product, sub, "product", name_de)
                 counts["products"] += 1
                 api.set_value(product, "name", name_de, locale="de")
                 api.set_value(product, "name", name_en, locale="en")
@@ -381,10 +500,11 @@ def build(api: Api, out_dir: str | None, want: int) -> None:
                 api.set_value(product, "weight", f"{rnd.uniform(*weight_range):.2f}")
                 status = rnd.choices(["active", "draft", "discontinued"], weights=[85, 10, 5])[0]
                 if status != "draft":
-                    api.post(f"/api/nodes/{product}/status", {"status": status})
+                    api.soft_post(f"/api/nodes/{product}/status", {"status": status})
 
                 # Varianten: 1–3 Farben × 1–3 Grössen, höchstens 6
-                colors = rnd.sample(palette, rnd.randint(1, 3)) if "color" in axes else [None]
+                pal = [x for x in palette if x in COLORS] or list(COLORS)[:3]
+                colors = rnd.sample(pal, min(len(pal), rnd.randint(1, 3))) if "color" in axes and pal else [None]
                 if "size" in axes:
                     seconds = [k for k, _ in rnd.sample(SIZES[1:5], rnd.randint(1, 3))]
                 elif "shoe_size" in axes:
@@ -418,18 +538,19 @@ def build(api: Api, out_dir: str | None, want: int) -> None:
                 media = api.post("/api/media", files={"file": (f"{model.lower().replace(' ', '-')}-{shape}.png", png, "image/png")})
                 media_id = media["id"]
                 counts["media"] += 1
-                api.post(f"/api/media/{media_id}/attributes", {"attribute": "alt_text", "locale": "de", "value": f"{name_de} in {first_color}"})
-                api.post(f"/api/media/{media_id}/attributes", {"attribute": "alt_text", "locale": "en", "value": f"{name_en} in {first_color}"})
-                api.post(f"/api/media/{media_id}/attributes", {"attribute": "copyright", "value": f"{BRAND} Demo — generiert"})
-                rel = api.created("/api/relations", {"type": "image", "from": product, "to": media_id})
-                api.post(f"/api/relations/{rel}/attributes", {"attribute": "inherit", "value": "true"})
-                api.post(f"/api/relations/{rel}/attributes", {"attribute": "position", "value": "1"})
+                api.soft_post(f"/api/media/{media_id}/attributes", {"attribute": "alt_text", "locale": "de", "value": f"{name_de} in {first_color}"})
+                api.soft_post(f"/api/media/{media_id}/attributes", {"attribute": "alt_text", "locale": "en", "value": f"{name_en} in {first_color}"})
+                api.soft_post(f"/api/media/{media_id}/attributes", {"attribute": "copyright", "value": f"{BRAND} Demo — generiert"})
+                rel = api.call("POST", "/api/relations", soft=True, json={"type": "image", "from": product, "to": media_id})
+                if rel:
+                    api.soft_post(f"/api/relations/{rel['stream']}/attributes", {"attribute": "inherit", "value": "true"})
+                    api.soft_post(f"/api/relations/{rel['stream']}/attributes", {"attribute": "position", "value": "1"})
 
                 if counts["products"] % 10 == 0:
                     print(f"  {counts['products']} Produkte, {counts['variants']} Varianten, {api.calls} Aufrufe", flush=True)
 
     print(f"fertig: {counts['groups']} Gruppen, {counts['products']} Produkte, {counts['variants']} Varianten, "
-          f"{counts['media']} Bilder, {api.calls} Aufrufe")
+          f"{counts['media']} Bilder, {api.calls} Aufrufe" + (f"; {skipped} Produkte gab es schon" if skipped else ""))
     health = api.get("/api/health")
     print(f"Journal-Kopf jetzt #{health.get('head')}, Knoten {health.get('nodes')}")
 
@@ -498,25 +619,28 @@ def build_konfigurator(api: Api) -> None:
     if code != 200:
         print(f"Konfigurator übersprungen: das Plugin ist nicht da, aus oder nicht im Tarif ({code}: {antwort.get('error') if isinstance(antwort, dict) else antwort}).")
         return
-    for n in api.get("/api/tree"):
-        if n.get("parent") == ROOT and n.get("role") == "group" and (n.get("label") or "") == SERVER_GROUP:
-            print(f"Konfigurator übersprungen: unter {ROOT} liegt schon „{SERVER_GROUP}“ ({n['id']}).")
-            return
-
-    top = api.created("/api/groups", {"parent": ROOT, "label": labels(SERVER_GROUP, "Server configurator (demo)")})
+    wurzel()
+    baum = Baum(api)
+    da = baum.kind(ROOT, "group", SERVER_GROUP)
+    top = baum.gruppe(ROOT, SERVER_GROUP, "Server configurator (demo)")
+    print(f"Gruppe {SERVER_GROUP}: {top}" + (" (vorhanden, der Lauf knüpft an)" if da else ""))
+    gruppen_anhaengen(api, top, SERVER_ATTRS)
     subs = {}
     for key, de, en in SERVER_SUBGROUPS:
-        subs[key] = api.created("/api/groups", {"parent": top, "label": labels(de, en)})
-    print(f"Gruppe {SERVER_GROUP}: {top}")
+        subs[key] = baum.gruppe(top, de, en)
 
     ids: dict = {}
     parts = server_parts()
     for key, sub, de, en, sku, price, _rows in parts:
-        product = api.created("/api/products", {"group": subs[sub], "axes": None})
+        product = baum.kind(subs[sub], "product", de)
+        if not product:
+            product = api.created("/api/products", {"group": subs[sub], "axes": None})
+            baum.merke(product, subs[sub], "product", de)
         ids[key] = product
         api.set_value(product, "name", de, locale="de")
         api.set_value(product, "name", en, locale="en")
-        variant = api.created("/api/variants", {"product": product, "axisValues": {}})   # gewählt wird die Variante, ihre SKU nennt der Shop
+        varianten = baum.kinder(product, "variant")
+        variant = varianten[0]["id"] if varianten else api.created("/api/variants", {"product": product, "axisValues": {}})   # gewählt wird die Variante, ihre SKU nennt der Shop
         api.set_value(variant, "sku", sku)
         api.set_value(variant, "ean", ean13(sku))
         api.set_value(variant, "price", f"{price:.2f}")
@@ -633,19 +757,32 @@ def main() -> None:
     if a.nur_beispiele and a.ohne_beispiele:
         sys.exit("--nur-beispiele und --ohne-beispiele schliessen sich aus.")
 
-    api = Api(a.url, a.actor, a.token)
+    global API
+    url = a.url
+    while True:
+        try:
+            requests.get(url.rstrip("/") + "/api/health", timeout=10)
+            break
+        except requests.RequestException:
+            neu = input(f"{url} antwortet nicht. Adresse der Instanz (leer = abbrechen): ").strip()
+            if not neu:
+                sys.exit("Abgebrochen.")
+            url = neu if neu.startswith("http") else "http://" + neu
+    api = Api(url, a.actor, a.token)
+    API = api
     if a.log:
         api.log = open(a.log, "w", encoding="utf-8")
-    if a.user:
-        pw = a.password or os.environ.get("JOURNALI_DEMO_PASSWORD") or ""
-        if not pw:
-            sys.exit("Passwort fehlt: --password oder JOURNALI_DEMO_PASSWORD.")
-        api.login(a.user, pw)
-        api.s.headers["X-Actor"] = a.user
+    user = a.user
+    if not user and not a.token:
+        code, _ = api.probe("GET", "/api/tree")
+        if code == 401:
+            user = input("Anwender: ").strip()
+    if user:
+        pw = a.password or os.environ.get("JOURNALI_DEMO_PASSWORD") or getpass.getpass(f"Passwort für {user}: ")
+        api.login(user, pw)
+        api.s.headers["X-Actor"] = user
     health = api.get("/api/health")
-    print(f"Instanz {a.url}: Version {health.get('version')}, Journal-Kopf #{health.get('head')}, Knoten {health.get('nodes')}")
-    if (health.get("nodes") or 0) > 50:
-        print("Achtung: diese Instanz hat schon viele Knoten — für die Demo ist eine leere Datenbank gedacht.")
+    print(f"Instanz {url}: Version {health.get('version')}, Journal-Kopf #{health.get('head')}, Knoten {health.get('nodes')}")
     if a.images_dir:
         os.makedirs(a.images_dir, exist_ok=True)
     if a.nur_beispiele:
@@ -655,6 +792,11 @@ def main() -> None:
     if not a.ohne_beispiele:
         build_konfigurator(api)
         build_skript(api)
+    if api.fehler:
+        print(f"Übersprungen, weil es in dieser Datenbank nicht passt ({sum(api.fehler.values())}):")
+        for msg, n in sorted(api.fehler.items(), key=lambda x: -x[1])[:15]:
+            print(f"  {n} × {msg}")
+    print("Fertig. Ein weiterer Lauf knüpft an und legt nichts doppelt an.")
 
 
 if __name__ == "__main__":
