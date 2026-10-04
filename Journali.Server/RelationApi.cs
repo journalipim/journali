@@ -70,6 +70,30 @@ public static class RelationApi
                 };
             }) is { } v ? Results.Ok(v) : Results.NotFound());
 
+        // Medien der Nachfahren gegen die eigenen dieses Knotens (04.10.2026, „feste Bilder der Subitems durch Vererbung ersetzen“): welche
+        // Nachfahren dasselbe Medium (gleicher Typ) fest zugeordnet haben und wie viele schon erben — vorher fragte die Oberfläche je Nachfahre.
+        api.MapGet("/nodes/{id}/media-below", (string id, HttpRequest req, Catalog c) =>
+            c.Lesen((model, tree) =>
+            {
+                if (!tree.Nodes.ContainsKey(id)) return Results.NotFound();
+                var s = Auth.Sicht(req);
+                var mediaTypes = model.RelationTypes.Values.Where(t => t.To is not null && t.To.Contains(Roles.Media)).Select(t => t.Key).ToHashSet();
+                static bool Flag(Relation r, string key) => r.Values.TryGetValue(new Axis(key, null, null), out var v) && v == "true";
+                var mine = c.Relations.From(id).Where(r => mediaTypes.Contains(r.Type)).Select(r => $"{r.Type}|{r.To}").ToHashSet();
+                var below = 0; var already = 0; var retire = new List<object>();
+                foreach (var d in tree.DescendantsDeepestFirst(id).Reverse())
+                {
+                    if (!tree.Visible(d, s.Role, s.Admin)) continue;
+                    below++;
+                    var dup = c.Relations.From(d.Id).Where(r => mediaTypes.Contains(r.Type) && !Flag(r, "stop") && mine.Contains($"{r.Type}|{r.To}")).OrderBy(r => r.LastNumber).ToList();
+                    if (dup.Count > 0)
+                        foreach (var r in dup)
+                            retire.Add(new { node = new { d.Id, label = NodeRow.LabelOf(tree, model, d) }, relation = r.Id, medium = RelationView.Of(tree, model, c.Media, r, "out", c.Workflows).Other.Label });
+                    else if (Inherited(tree, model, c, d.Id, false, s).Count > 0) already++;
+                }
+                return Results.Ok(new { below, already, retire });
+            }));
+
         // Die Relationen eines Teilbaums, ausgewertet — für den JSON-Export als Baum oder Liste (30.09.2026): je Knoten ausgehend ("out") und eingehend
         // ("in", mit der Bezeichnung der Gegenrichtung), das andere Ende mit Id und Name, die Werte je Attribut mit der Einheit des Attributs.
         // Medien-Zuordnungen fehlen (sie gehören zur Bibliothek); ein Ende, das es nicht mehr gibt, auch.

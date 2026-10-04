@@ -649,29 +649,21 @@ async function inheritToSubitems() {
   const own = mediaRels.value; if (!own.length) return
   inheriting.value = t_('lese Subitems …')
   try {
-    const below = []; const walk = id => { for (const k of tree.kids(id)) { below.push(k); walk(k.id) } }; walk(props.id)
-    const mine = new Map(own.map(r => [`${r.type}|${r.other.id}`, r]))
-    const retire = [], already = []; let i = 0
-    for (const k of below) {
-      inheriting.value = `lese … ${++i}/${below.length}`
-      const rk = await api.get(`/api/nodes/${encodeURIComponent(k.id)}/relations`)
-      const media = (rk.out ?? []).filter(r => isMediaType(r.type) && relValueRaw(r, 'stop') !== 'true')
-      const dup = media.filter(r => mine.has(`${r.type}|${r.other.id}`))
-      if (dup.length) retire.push(...dup.map(r => ({ node: k, rel: r })))
-      else if ((rk.inherited ?? []).length) already.push(k)
-    }
+    // eine Anfrage: der Server vergleicht die Medien der Nachfahren mit den eigenen (04.10.2026 — vorher je Nachfahre eine)
+    const m = await api.get(`/api/nodes/${encodeURIComponent(props.id)}/media-below`)
+    const retire = m.retire.map(x => ({ node: { id: x.node.id, label: x.node.label }, rel: { id: x.relation, other: { label: x.medium } } }))
     const toInherit = own.filter(r => relValueRaw(r, 'inherit') !== 'true'), alreadyOn = own.length - toInherit.length
     // Der Dialog sagt, was ist — auch wenn nichts zu tun bleibt
     const list = [
       ...(alreadyOn ? [t_('{0} {1} hier schon auf „vererben“', [alreadyOn, alreadyOn === 1 ? t_('Medium ist') : t_('Medien sind')])] : []),
-      ...(already.length ? [t_('{0} Subitems erben bereits', [already.length])] : []),
+      ...(m.already ? [t_('{0} Subitems erben bereits', [m.already])] : []),
       ...retire.slice(0, 6).map(x => t_('lösen: {0} · {1}', [x.node.label, x.rel.other.label])), ...(retire.length > 6 ? [t_('… und {0} weitere', [retire.length - 6])] : [])]
     const nothing = !toInherit.length && !retire.length
     const ok = await dialog.confirm({
-      title: t_('Medien an {0} Subitems vererben?', [below.length]),
+      title: t_('Medien an {0} Subitems vererben?', [m.below]),
       // zwei Dinge, getrennt gesagt. Rot nur, wo etwas gelöst wird.
       warn: nothing ? t_('nichts zu tun') : retire.length ? t_('{0} feste {1} an Subitems werden gelöst (sie erben dann)', [retire.length, retire.length === 1 ? t_('Zuordnung') : t_('Zuordnungen')]) : '',
-      list, text: nothing ? '' : t_('{0} {1} von hier {2} auf „vererben“ gesetzt — {3} Subitems zeigen {4} danach als geerbt (gestrichelt).{5}', [toInherit.length, toInherit.length === 1 ? t_('Medium') : t_('Medien'), toInherit.length === 1 ? 'wird' : 'werden', below.length, toInherit.length === 1 ? 'es' : 'sie', retire.length ? '' : ' ' + t_('Keine feste Zuordnung an Subitems ist betroffen.')]), ok: nothing ? 'OK' : t_('↓ Vererben') })
+      list, text: nothing ? '' : t_('{0} {1} von hier {2} auf „vererben“ gesetzt — {3} Subitems zeigen {4} danach als geerbt (gestrichelt).{5}', [toInherit.length, toInherit.length === 1 ? t_('Medium') : t_('Medien'), toInherit.length === 1 ? 'wird' : 'werden', m.below, toInherit.length === 1 ? 'es' : 'sie', retire.length ? '' : ' ' + t_('Keine feste Zuordnung an Subitems ist betroffen.')]), ok: nothing ? 'OK' : t_('↓ Vererben') })
     if (!ok || nothing) return
     const commands = [...toInherit.map(r => ({ op: 'relation.attribute.set', args: { relation: r.id, attribute: 'inherit', value: 'true' } })), ...retire.map(x => ({ op: 'relation.retire', args: { relation: x.rel.id } }))]
     const res = await api.batchChunked(commands, { label: t_('Vererbung'), continueOnError: true })
