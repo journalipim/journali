@@ -1,7 +1,7 @@
 @echo off
 rem Dateien der Webseite (site\) hochladen: tools\site publish | check
 rem Seit 04.10.2026 laeuft die Seite mit WordPress: Startseite, Impressum und Datenschutz kommen ueber tools\blog.mjs als Seiten dorthin. Hochgeladen
-rem werden nur noch die Logos — eine index.html, impressum.html oder datenschutz.html in der Wurzel verdeckte die Seiten von WordPress.
+rem werden nur noch die Logos - eine index.html, impressum.html oder datenschutz.html in der Wurzel verdeckte die Seiten von WordPress.
 rem publish - laedt die Logos aus site\ per WinSCP in die gespeicherte Sitzung "journali" (Zugang liegt in WinSCP, nie im Repo);
 rem           nur Neues/Geaendertes, nichts wird auf dem Server geloescht
 rem check   - zeigt, was publish hochladen wuerde (Trockenlauf)
