@@ -103,12 +103,23 @@ const grouped = computed(() => {
   return keys.map(k => ({ key: k, items: map.get(k) }))
 })
 
+// Seiten zu SEITE (04.10.2026, vorher 2 000 auf einmal); die Gesamtzahl steht in den Facetten
+const SEITE = 300
 async function load() {
   try {
-    items.value = await api.get(`/api/media?limit=2000&sort=${sort.value}&desc=${desc.value}&${filterQuery()}`)
+    items.value = await api.get(`/api/media?limit=${SEITE}&sort=${sort.value}&desc=${desc.value}&${filterQuery()}`)
     if (cur.value && !items.value.some(m => m.id === cur.value)) cur.value = null
   } catch (e) { store.toast(e.message) }
   await loadFacets()
+}
+const weitere = computed(() => Math.max(0, (facets.value?.total ?? 0) - items.value.length))
+const mehrLaedt = ref(false)
+async function mehr() {
+  mehrLaedt.value = true
+  try {
+    const neu = await api.get(`/api/media?limit=${SEITE}&skip=${items.value.length}&sort=${sort.value}&desc=${desc.value}&${filterQuery()}`)
+    const da = new Set(items.value.map(m => m.id)); items.value = [...items.value, ...neu.filter(m => !da.has(m.id))]
+  } catch (e) { store.toast(e.message) } finally { mehrLaedt.value = false }
 }
 onMounted(async () => { await loadFolders(); await load() })
 let t = null
@@ -396,7 +407,7 @@ const oeffnen = m => { if (store.can('download')) window.open(dateiLink(m), '_bl
   <Splitter v-model="foldersW" :min="140" :max="500" />
 
   <div class="pane" :style="`width:${listW}px;flex:none`" @dragover.prevent="!dragKind && (dragOver = true)" @dragleave="dragOver = false" @drop.prevent="onDrop" :class="{ over: dragOver }">
-    <div class="toolbar"><h1>▨ {{ folderTitle }}</h1><span class="muted">{{ items.length }}</span><span v-if="sel.size > 1" class="chip" :title="$t('Auswahl — Esc löst sie; Strg+A wählt alle')">{{ $t("{0} gewählt", [sel.size]) }}</span><span class="grow" /><span v-if="busy" class="muted">{{ busy }}</span></div>
+    <div class="toolbar"><h1>▨ {{ folderTitle }}</h1><span class="muted">{{ weitere ? $t('{0} von {1}', [items.length, facets.total]) : items.length }}</span><span v-if="sel.size > 1" class="chip" :title="$t('Auswahl — Esc löst sie; Strg+A wählt alle')">{{ $t("{0} gewählt", [sel.size]) }}</span><span class="grow" /><span v-if="busy" class="muted">{{ busy }}</span></div>
     <div class="toolbar" style="gap:4px">
       <input v-model="q" type="search" :placeholder="$t('🔍 Name, Id, Werte')" style="flex:1;min-width:0" @input="search" />
       <select v-model="sort" :title="$t('Sortierung — nur die Anzeige')"><option v-for="[k, l] in SORTS" :key="k" :value="k">{{ l }}</option></select>
@@ -434,6 +445,7 @@ const oeffnen = m => { if (store.can('download')) window.open(dateiLink(m), '_bl
           </div>
         </div>
       </template>
+      <button v-if="weitere" class="mehr" :disabled="mehrLaedt" :title="$t('Die nächsten Assets laden')" @click="mehr">▼ {{ $t('weitere {0}', [Math.min(SEITE, weitere)]) }}</button>
       <div v-if="!items.length" class="empty">{{ folder === 'all' ? $t('Noch nichts — Dateien hierher ziehen oder ⇧ hochladen.') : $t('Hier liegt nichts — Kacheln aus „Alle“ hierher ziehen oder ⇧ hochladen.') }}</div>
     </div>
   </div>
@@ -582,6 +594,7 @@ const oeffnen = m => { if (store.can('download')) window.open(dateiLink(m), '_bl
 .wf .wf-note { font-size: 12px; max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .facets { flex-wrap: wrap; gap: 4px; padding-top: 0; }
 .facets .chip { cursor: pointer; }
+.mehr { display: block; margin: 8px auto; }
 .facets .chip.on { background: var(--accent-soft); border-color: var(--accent); }
 .sug { padding: 2px 4px 6px; }
 .sug .chip { cursor: pointer; margin-right: 4px; }

@@ -103,11 +103,25 @@ public static class MediaApi
         m.Derived.Where(d => presets.TryGetValue(d.Key, out var p) && p.Fingerprint == d.Value.Fingerprint)
             .OrderBy(d => Math.Max(d.Value.Width, d.Value.Height)).Select(d => presets[d.Key]).FirstOrDefault();
 
+    /// <summary>So viele Stichwörter nennen die Facetten höchstens (die häufigsten)</summary>
+    public const int StichwortFacetten = 60;
+
+    /// <summary>Eine Seite der sortierten Liste: ab <paramref name="skip"/> höchstens <paramref name="limit"/> (1 bis 5 000)</summary>
+    public static IEnumerable<T> Seite<T>(IEnumerable<T> sortiert, int skip, int limit) => sortiert.Skip(Math.Max(0, skip)).Take(Math.Clamp(limit, 1, 5000));
+
+    /// <summary>Die häufigsten <see cref="StichwortFacetten"/> Stichwörter und dazu die gewählten (Komma-Liste), häufigste zuerst</summary>
+    public static IEnumerable<KeyValuePair<string, int>> HaeufigsteStichworte(Dictionary<string, int> zaehlung, string? gewaehlt)
+    {
+        var wahl = (gewaehlt ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries).ToHashSet(StringComparer.Ordinal);
+        return zaehlung.OrderByDescending(kv => kv.Value).ThenBy(kv => kv.Key, StringComparer.Ordinal).Where((kv, i) => i < StichwortFacetten || wahl.Contains(kv.Key));
+    }
+
     public static void Map(RouteGroupBuilder api)
     {
         // Liste, neueste zuerst; q sucht in Name und Werten
         // Bibliothek: folder = Ordner-Id | "-" (ohne Ordner) | leer (alle); deep = mit Unterordnern; sort = recent | name | size | used | date; desc
-        api.MapGet("/media", (HttpRequest req, Catalog c, string? q = null, int limit = 200, string? folder = null, bool deep = false, string? sort = null, bool? desc = null,
+        // skip (04.10.2026): die Bibliothek lädt seitenweise — die Gesamtzahl nennen die Facetten (total)
+        api.MapGet("/media", (HttpRequest req, Catalog c, string? q = null, int limit = 200, int skip = 0, string? folder = null, bool deep = false, string? sort = null, bool? desc = null,
             int minW = 0, int minH = 0, string? plugin = null, DateTimeOffset? from = null, DateTimeOffset? to = null, string? keyword = null, bool superseded = false, string? valid = null, string? state = null) =>
             c.Lesen((model, tree) =>
             {
@@ -127,7 +141,7 @@ public static class MediaApi
                 var sorted = sort == "name"
                     ? (down ? rows.OrderByDescending(x => x.m.Name, StringComparer.OrdinalIgnoreCase) : rows.OrderBy(x => x.m.Name, StringComparer.OrdinalIgnoreCase))
                     : (down ? rows.OrderByDescending(key).ThenBy(x => x.m.Name, StringComparer.OrdinalIgnoreCase) : rows.OrderBy(key).ThenBy(x => x.m.Name, StringComparer.OrdinalIgnoreCase));
-                return sorted.Take(Math.Clamp(limit, 1, 5000)).Select(x => MediaView.Of(x.m, x.used, MediaWorkflowApi.States(c, x.m))).ToList();
+                return Seite(sorted, skip, limit).Select(x => MediaView.Of(x.m, x.used, MediaWorkflowApi.States(c, x.m))).ToList();
             }));
 
         // Facetten: wonach sich filtern lässt, mit Anzahl. Gezählt wird über denselben Filter wie die Liste —
@@ -150,8 +164,10 @@ public static class MediaApi
                     },
                     herkunft = alle.GroupBy(m => m.Source?.Plugin ?? "-").OrderByDescending(g => g.Count()).ThenBy(g => g.Key, StringComparer.Ordinal)
                         .Select(g => new { key = g.Key, n = g.Count() }).ToList(),
-                    stichworte = stichwort.OrderByDescending(kv => kv.Value).ThenBy(kv => kv.Key, StringComparer.Ordinal)
+                    // die häufigsten 60 und die gewählten (04.10.2026) — eine Bibliothek mit tausenden Stichwörtern war eine Zeile mit tausenden Chips
+                    stichworte = HaeufigsteStichworte(stichwort, keyword)
                         .Select(kv => new { key = kv.Key, label = liste?.Values.GetValueOrDefault(kv.Key)?.Label, n = kv.Value }).ToList(),
+                    stichworteMehr = Math.Max(0, stichwort.Count - StichwortFacetten),
                     ohneStichwort = alle.Count(m => !Stichworte(m).Any()),
                     abgelaufen = alle.Count(m => m.Abgelaufen(DateOnly.FromDateTime(DateTime.Now))),
                     // Zustände je Workflow, der für Assets gilt — Schlüssel "workflow:zustand" für den Filter
