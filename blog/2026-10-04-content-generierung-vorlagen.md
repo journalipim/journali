@@ -2,7 +2,7 @@
 title: Content-Generierung mit Vorlagen – eine Vorlage an der Produktgruppe, ein fertiger Text an jedem Produkt
 excerpt: Vorlagen setzen Produkttexte aus euren Attributen zusammen – regelbasiert, in jeder Sprache, ganz ohne KI. Ändert sich ein Wert, ist der Text beim nächsten Öffnen schon neu.
 slug: content-generierung-vorlagen
-tags: [Content, Vorlagen, Formeln, Mehrsprachigkeit]
+tags: [Content, Mehrsprachigkeit, Datenpflege]
 categories: [Entwicklung]
 wp: 76
 ---

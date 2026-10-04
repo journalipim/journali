@@ -2,7 +2,7 @@
 title: ETIM in journali – von der Klasse bis zum gültigen BMEcat
 excerpt: journali holt die ETIM-Freigabe ins Journal, schlägt die passende Klasse vor, ordnet ETIM-Attribute euren eigenen Attributen zu und liefert BMEcat nach ETIM-Guideline 5.0 – geprüft gegen das XSD.
 slug: etim-klassifikation
-tags: [ETIM, BMEcat, Klassifikation, Export]
+tags: [Klassifikation, ETIM, BMEcat, Import & Export]
 categories: [Entwicklung]
 wp: 42
 ---

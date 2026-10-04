@@ -2,7 +2,7 @@
 title: Datenqualität, die mitwächst – jede Regel gilt für jeden neuen Knoten und für den Bestand
 excerpt: In journali stehen die Regeln im Modell – Pflicht je Kanal und Sprache, Muster, Zahlen, Listen, eindeutige Kennungen. Wächst das Modell, wächst die Prüfung mit, auch für die Daten, die schon da sind.
 slug: datenqualitaet-die-mitwaechst
-tags: [Datenqualität, Freigabe, Modell]
+tags: [Datenqualität, Workflow, Compliance]
 categories: [Entwicklung]
 wp: 72
 ---

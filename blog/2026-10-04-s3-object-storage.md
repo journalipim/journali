@@ -2,7 +2,7 @@
 title: S3 Object Storage ready – eure Medien liegen, wo ihr wollt
 excerpt: Bilder und Dokumente in PostgreSQL, im Dateisystem oder in jedem S3-kompatiblen Speicher – umgestellt in den Einstellungen, umgezogen per Kopierlauf, und keine einzige Id ändert sich.
 slug: s3-object-storage
-tags: [Medien, Storage, Betrieb]
+tags: [Medien, S3, Betrieb]
 categories: [Entwicklung]
 wp: 49
 ---

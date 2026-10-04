@@ -2,7 +2,7 @@
 title: Durchstarten vom ersten Moment an – journali mit Docker Compose und PostgreSQL
 excerpt: Zwei Befehle, ein Browserfenster, ein Einrichtungscode – und ihr pflegt Produktdaten. journali kommt als Docker-Paket mit PostgreSQL und bringt mit, was ihr am ersten Tag braucht.
 slug: durchstarten
-tags: [Betrieb, Docker, PostgreSQL, Installation]
+tags: [Betrieb, Docker, PostgreSQL]
 categories: [Entwicklung]
 wp: 74
 ---

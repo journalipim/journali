@@ -2,7 +2,7 @@
 title: Der Datenblatt-Designer – Seite wie gedruckt, Werte direkt aus euren Produktdaten
 excerpt: Bausteine per Drag & Drop auf die Seite ziehen, sofort mit echten Werten sehen, in jeder Sprache eures Modells – und auf Wunsch die Datenblätter eines ganzen Teilbaums auf einmal als Job.
 slug: datenblatt-designer
-tags: [Datenblatt, Designer, Jobs, Versionen]
+tags: [Datenblatt, Versionen, Jobs, Mehrsprachigkeit]
 categories: [Entwicklung]
 wp: 39
 ---

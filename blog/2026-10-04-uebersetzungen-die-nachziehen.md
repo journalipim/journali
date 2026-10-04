@@ -2,7 +2,7 @@
 title: Übersetzungen, die nachziehen – jede Sprache geht ihren eigenen Weg
 excerpt: journali weiß je Sprache, was übersetzt ist, was fehlt und was nach einer Änderung am Grundtext nachzuziehen ist – mit eigenem Workflow-Zustand je Sprache und XLIFF hin und zurück.
 slug: uebersetzungen-die-nachziehen
-tags: [Übersetzung, Workflow, XLIFF]
+tags: [Übersetzung, Mehrsprachigkeit, Workflow, XLIFF]
 categories: [Entwicklung]
 wp: 47
 ---

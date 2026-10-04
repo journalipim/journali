@@ -2,7 +2,7 @@
 title: Verpackungsdaten im Griff – journali prüft eure Produkte gegen die PPWR
 excerpt: Material, Rezyklat, Recyclingfähigkeit, Leerraum, Stoffgrenzen, Kennzeichnung, Register – das Plugin Verpackung (PPWR) zeigt für jeden Teilbaum, welche Verpackungsdaten fehlen, und hilft, sie zu füllen.
 slug: verpackungsverordnung-ppwr
-tags: [PPWR, Verpackung, Datenqualität, KI]
+tags: [Compliance, PPWR, Datenqualität, KI]
 categories: [Entwicklung]
 wp: 48
 ---

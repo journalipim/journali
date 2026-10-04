@@ -2,7 +2,7 @@
 title: Integration – journali spricht mit eurer Tabelle, euren Quellsystemen und euren Skripten
 excerpt: Pflegen direkt in Excel oder OnlyOffice, Quellsysteme und Solr-Kerne als Plugins, JSON per Job und eine REST-Schnittstelle, die sich selbst beschreibt – journali ist offen nach allen Seiten.
 slug: integration
-tags: [Integration, Schnittstelle, Import, Jobs]
+tags: [Integration, REST API, Excel, Import & Export]
 categories: [Entwicklung]
 wp: 75
 ---

@@ -2,7 +2,7 @@
 // nachgebauten WordPress-Server, nicht gegen die Seite.
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { kopfLesen, kopfSetzen, inline, bloecke, seitenBlock, cssUnter, abschnitt, htmlBloecke, wp, entwurf, zugang, seite, hash } from '../../tools/blog.mjs'
+import { kopfLesen, kopfSetzen, inline, bloecke, seitenBlock, cssUnter, abschnitt, htmlBloecke, wp, entwurf, zugang, seite, hash, schlagwoerter } from '../../tools/blog.mjs'
 
 test('Kopf lesen und setzen — der Rest der Datei bleibt', () => {
   const t = '---\r\ntitle: Multi-Server\r\ntags: [Betrieb, Lizenz]\r\n---\r\nText\r\n'
@@ -71,8 +71,13 @@ function wordpress() {
     rufe.push({ methode: o.method, pfad, auth: o.headers.Authorization, body })
     const ok = j => ({ ok: true, status: 200, text: async () => JSON.stringify(j) })
     let m
-    if (o.method === 'GET' && pfad.startsWith('tags?')) return ok(tags)
-    if (o.method === 'POST' && pfad === 'tags') { const t = { id: ++n, name: body.name }; tags.push(t); return ok(t) }
+    // wie WordPress: Namen maskiert gespeichert, gesucht wird im maskierten Namen, ein doppelter Name wird abgewiesen
+    if (o.method === 'GET' && pfad.startsWith('tags?')) { const q = decodeURIComponent(pfad.match(/search=([^&]*)/)?.[1] ?? '').toLowerCase(); return ok(tags.filter(t => t.name.toLowerCase().includes(q))) }
+    if (o.method === 'POST' && pfad === 'tags') {
+      const name = body.name.replace(/&/g, '&amp;')
+      if (tags.some(t => t.name === name)) return { ok: false, status: 400, text: async () => JSON.stringify({ message: 'term_exists' }) }
+      const t = { id: ++n, name }; tags.push(t); return ok(t)
+    }
     if (o.method === 'POST' && pfad === 'posts') { const p = { id: ++n, status: body.status, link: `https://blog.test/?p=${n}`, ...body }; posts.set(p.id, p); return ok(p) }
     if ((m = pfad.match(/^posts\/(\d+)/))) {
       const p = posts.get(+m[1])
@@ -138,4 +143,22 @@ test('Seite aktualisieren nur, wenn sie in WordPress unverändert ist', async ()
   seiten.get(a.id).content.raw = 'in WordPress bearbeitet'
   await assert.rejects(seite(api, b.stand, { inhalt: 'drei' }), /was changed in WordPress — not overwritten/)
   assert.equal(seiten.get(a.id).content.raw, 'in WordPress bearbeitet')
+})
+
+test('Schlagwörter setzen ändert nur Schlagwörter — auch an einem veröffentlichten Beitrag, der Inhalt bleibt', async () => {
+  const w = wordpress(); const z = { url: 'https://blog.test', user: 'u', password: 'p' }
+  const api = wp(z, w.f)
+  const r = await entwurf(api, z, '---\ntitle: T\ntags: [Alt]\n---\nText.\n')
+  const p = w.posts.get(r.id); p.status = 'publish'; p.content = 'in WordPress bearbeitet'
+  await schlagwoerter(api, r.text.replace('tags: [Alt]', 'tags: [KI, Betrieb]'))
+  assert.deepEqual(p.tags, w.tags.filter(t => ['KI', 'Betrieb'].includes(t.name)).map(t => t.id))
+  assert.equal(p.content, 'in WordPress bearbeitet')
+  assert.equal(p.status, 'publish')
+  const letzter = w.rufe.at(-1)
+  assert.deepEqual(Object.keys(letzter.body), ['tags'], 'nur die Schlagwörter gehen hinaus')
+  await assert.rejects(schlagwoerter(api, '---\ntitle: T\ntags: [KI]\n---\n'), /wp missing/)
+  // ein Name mit & findet den vorhandenen Begriff wieder, obwohl WordPress ihn maskiert speichert und im maskierten Namen sucht
+  await schlagwoerter(api, r.text.replace('tags: [Alt]', 'tags: [Import & Export]'))
+  await schlagwoerter(api, r.text.replace('tags: [Alt]', 'tags: [Import & Export]'))
+  assert.equal(w.tags.filter(t => t.name === 'Import &amp; Export').length, 1)
 })

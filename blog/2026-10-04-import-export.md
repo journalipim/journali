@@ -2,7 +2,7 @@
 title: Rein, raus, wieder rein – Import und Export in journali
 excerpt: CSV, Excel, JSON und die Zwischenablage: Der Datenmapper schlägt die Zuordnung vor, ein Plan zeigt vor dem Schreiben, was neu und was geändert ist, und der JSON-Export bringt Daten samt Modell vollständig zurück.
 slug: import-export
-tags: [Import, Export, Excel, Jobs]
+tags: [Import & Export, Excel, Jobs]
 categories: [Entwicklung]
 wp: 71
 ---

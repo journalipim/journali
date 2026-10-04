@@ -2,7 +2,7 @@
 title: KI in journali – euer Schlüssel, euer Anbieter, euer letztes Wort
 excerpt: journali bindet die KI eures Teams an – Anbieter nach Wahl, Schlüssel sicher beim Server, jede Anfrage gezählt. Und vieles läuft ganz ohne KI-Anbieter, direkt auf eurem Server.
 slug: ki-in-journali
-tags: [KI, Datenqualität, Übersetzung, Einbettungen]
+tags: [KI, Datenqualität, Übersetzung, Suche]
 categories: [Entwicklung]
 wp: 45
 ---

@@ -2,7 +2,7 @@
 title: Multi-Server ist da – ein Journal, so viele Server, wie ihr braucht
 excerpt: Ein Server war gestern. journali verteilt sich ab sofort auf mehrere Server – alle auf demselben Journal, alle nach wenigen Sekunden auf demselben Stand.
 slug: multi-server
-tags: [Betrieb, Server, Lizenz]
+tags: [Betrieb, Architektur, PostgreSQL]
 categories: [Entwicklung]
 wp: 26
 ---

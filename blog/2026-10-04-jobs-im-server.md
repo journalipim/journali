@@ -2,7 +2,7 @@
 title: Jobs im Server – Importe, Exporte und Sicherungen laufen auch ohne offenes Browserfenster
 excerpt: In journali laufen Importe, Exporte, Sicherungen, Datenblätter und eigene Skripte als Jobs auf dem Server – nach Zeitplan oder auf Knopfdruck, mit Log, Zeitgrenze und Trockenlauf.
 slug: jobs-im-server
-tags: [Jobs, Automatisierung, Betrieb]
+tags: [Jobs, Betrieb, Import & Export]
 categories: [Entwicklung]
 wp: 73
 ---

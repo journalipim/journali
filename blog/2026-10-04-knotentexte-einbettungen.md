@@ -2,7 +2,7 @@
 title: Suche nach Sinn – journali findet, was ihr meint, nicht nur, was ihr tippt
 excerpt: Jeder Produktknoten bekommt seinen eigenen Vektor. Damit findet journali Produkte und Dokumente nach Bedeutung – lokal gerechnet, ohne Schlüssel, ohne Anbieter. Und seit heute rasend schnell.
 slug: suche-nach-sinn
-tags: [KI, Suche, Einbettungen]
+tags: [KI, Suche, Mehrsprachigkeit]
 categories: [Entwicklung]
 wp: 34
 ---

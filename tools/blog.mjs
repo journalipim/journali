@@ -13,6 +13,7 @@
 //                                                 Ein zweiter Aufruf aktualisiert die Seite — nur, wenn sie in WordPress seit dem letzten Aufruf unverändert ist
 //                                                 (Nummer und Hash je Datei und Abschnitt in wp-seiten.json neben der Datei)
 //   node tools/blog.mjs css site/index.html       das CSS der Seite nach site/wordpress.css, jede Regel unter .jx — der Inhalt kommt einmal ins CSS-Plugin
+//   node tools/blog.mjs tags blog/<datei>.md      nur Schlagwörter und Kategorien aus dem Kopf übernehmen — der Inhalt bleibt, auch veröffentlicht
 //   node tools/blog.mjs drafts                    die Entwürfe auflisten
 //
 // Zugang: ein Anwendungspasswort aus WordPress (Benutzer → Profil → Anwendungspasswörter), nie im Repo. Er steht in
@@ -266,7 +267,9 @@ export function wp(z, f = globalThis.fetch) {
 async function begriffe(api, art, namen) {
   const ids = []
   for (const name of [].concat(namen ?? []).filter(Boolean)) {
-    const da = (await api('GET', `${art}?search=${encodeURIComponent(name)}&per_page=100`)).find(t => t.name.toLowerCase() === name.toLowerCase())
+    // WordPress liefert Namen maskiert („Import &amp; Export“) — verglichen wird der Klartext
+    const klar = n => n.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#0?39;/g, "'").toLowerCase()
+    const da = (await api('GET', `${art}?search=${encodeURIComponent(name.split(/[&<>"']/)[0].trim() || name)}&per_page=100`)).find(t => klar(t.name) === klar(name))   // gesucht wird ohne Sonderzeichen: WordPress sucht im maskierten Namen
     ids.push(da ? da.id : (await api('POST', art, { name })).id)
   }
   return ids
@@ -292,6 +295,16 @@ export async function entwurf(api, z, text, { ersetzen = false } = {}) {
   return { id: p.id, link: p.link, edit: `${z.url}/wp-admin/post.php?post=${p.id}&action=edit`, text: kopf.wp ? text : kopfSetzen(text, 'wp', p.id) }
 }
 
+/// Nur Schlagwörter und Kategorien eines Beitrags setzen (04.10.2026) — der Inhalt bleibt, wie er in WordPress ist, auch bei einem veröffentlichten Beitrag
+export async function schlagwoerter(api, text) {
+  const { kopf } = kopfLesen(text)
+  if (!kopf.wp) throw new Error('wp missing in the front matter — the post does not exist yet')
+  const felder = { tags: await begriffe(api, 'tags', kopf.tags), categories: await begriffe(api, 'categories', kopf.categories) }
+  if (!felder.categories.length) delete felder.categories
+  const p = await api('POST', `posts/${kopf.wp}`, felder)
+  return { id: p.id, tags: felder.tags }
+}
+
 async function main(argv) {
   const [befehl, datei, ...rest] = argv
   if (befehl === 'css' && datei) {   // braucht keinen Zugang
@@ -302,8 +315,8 @@ async function main(argv) {
     console.log(`written: ${ziel} — its content goes into the CSS plugin once`)
     return
   }
-  if (!['check', 'draft', 'page', 'drafts'].includes(befehl) || (['draft', 'page'].includes(befehl) && !datei)) {
-    console.log('usage: node tools/blog.mjs check | draft <file.md> [--replace] | page <file.html> [--blocks] [--section <id>] [--title <t>] [--slug <s>] [--id <n>] | css <file.html> | drafts')
+  if (!['check', 'draft', 'page', 'drafts', 'tags'].includes(befehl) || (['draft', 'page', 'tags'].includes(befehl) && !datei)) {
+    console.log('usage: node tools/blog.mjs check | draft <file.md> [--replace] | tags <file.md> | page <file.html> [--blocks] [--section <id>] [--title <t>] [--slug <s>] [--id <n>] | css <file.html> | drafts')
     process.exitCode = 2
     return
   }
@@ -311,6 +324,9 @@ async function main(argv) {
   if (befehl === 'check') {
     const ich = await api('GET', 'users/me?context=edit')
     console.log(`ok: ${z.url} as ${ich.slug} (${(ich.roles ?? []).join(', ')})`)
+  } else if (befehl === 'tags') {
+    const r = await schlagwoerter(api, fs.readFileSync(datei, 'utf8'))
+    console.log(`tags ${r.id}: ${r.tags.length}`)
   } else if (befehl === 'draft') {
     const text = fs.readFileSync(datei, 'utf8')
     const r = await entwurf(api, z, text, { ersetzen: rest.includes('--replace') })

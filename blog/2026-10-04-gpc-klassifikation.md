@@ -2,7 +2,7 @@
 title: GPC in journali – vom Brick zu fertigen Attributen mit einem Klick
 excerpt: journali liest die GS1-Produktklassifikation ein, hilft euch beim Finden des passenden Bricks und legt beim Zuweisen gleich alle Attribute der Klasse an – direkt am Produkt.
 slug: gpc-klassifikation
-tags: [Klassifikation, GS1, GPC]
+tags: [Klassifikation, GS1 GPC, KI]
 categories: [Entwicklung]
 wp: 44
 ---

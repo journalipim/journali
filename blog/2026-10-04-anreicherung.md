@@ -2,7 +2,7 @@
 title: Anreicherung – journali findet die Lücken in euren Produktdaten und füllt sie
 excerpt: Leere Attribute auf einen Blick, Vorschläge mit Quelle und Sicherheit, übernommen mit einem Klick – und jeder Wert weiß im Journal, woher er kommt.
 slug: anreicherung
-tags: [KI, Datenqualität, Anreicherung]
+tags: [KI, Datenqualität, Datenpflege]
 categories: [Entwicklung]
 wp: 38
 ---

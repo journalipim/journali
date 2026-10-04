@@ -2,7 +2,7 @@
 title: Pflege wie in einer Tabelle – klicken, tippen, Enter, nächste Zelle
 excerpt: In journali pflegt ihr Produktdaten direkt in der Zelle, mit der Tastatur durch die Liste und ganze Bereiche auf einmal im eigenen Fenster – und jede Änderung steht sofort im Journal.
 slug: pflege-wie-in-einer-tabelle
-tags: [Datenpflege, Tabelle, Journal]
+tags: [Datenpflege, Journal, Excel]
 categories: [Entwicklung]
 wp: 70
 ---

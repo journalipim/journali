@@ -2,7 +2,7 @@
 title: EmpCo-Check – journali findet heikle Werbeaussagen in euren Produkttexten
 excerpt: Seit dem 27. September 2026 ist die Richtlinie (EU) 2024/825 anzuwenden. journali liest jeden Produkttext in jeder Sprache, zeigt die Formulierungen, die unzulässig oder belegpflichtig sein können, und lässt euch sie direkt beheben.
 slug: empco-werbeaussagen
-tags: [Datenanalyse, EmpCo, Greenwashing]
+tags: [Compliance, EmpCo, Datenqualität, Mehrsprachigkeit]
 categories: [Entwicklung]
 wp: 41
 ---

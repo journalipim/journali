@@ -2,7 +2,7 @@
 title: Versionen – journali hält fest, was nach draußen ging
 excerpt: Eine Version ist ein Zeiger auf den Journalstand eines Produkts plus die eingefrorenen Dokumente, die damit hinausgingen – unveränderlich, hash-adressiert, mit Aufbewahrungsfrist.
 slug: versionen
-tags: [Versionen, Freigabe, Datenblatt]
+tags: [Versionen, Datenblatt, Journal]
 categories: [Entwicklung]
 wp: 69
 ---
