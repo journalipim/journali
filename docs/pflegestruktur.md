@@ -1103,10 +1103,12 @@ KI zitiert".
 Prozess, spricht nur über `/api`, nie in den Serverprozess hinein. Start über
 den Tasker oder direkt vom Assistenten (stdio). Zwei Betriebsarten:
 
-- **stdio** — der Assistent startet den Prozess selbst (Claude Desktop, IDE).
-  Zugang über `JOURNALI_TOKEN` (API-Token des Benutzers) und `JOURNALI`-URL.
-- **HTTP/SSE** — ein laufender Dienst im Container für Assistenten, die nicht
-  selbst starten können; dieselbe Tokenprüfung, ein Port mehr.
+- **stdio** — der Assistent startet den Prozess selbst, auf dem Rechner der Person.
+  Zugang über `JOURNALI_TOKEN` (API-Token des Benutzers) und `JOURNALI`-URL aus der
+  Umgebung des Prozesses — so sieht es die Spezifikation für stdio vor.
+- **Streamable HTTP** — ein laufender Dienst im Container für Assistenten, die nicht
+  selbst starten können; Anmeldung nach OAuth 2.1 (unten), ein Port mehr. Die frühere
+  Form „HTTP+SSE“ gilt in der Spezifikation als veraltet (04.10.2026, Fassung 2026-07-28).
 
 **Die Werkzeuge** (jedes eine dünne Schicht über einem vorhandenen Endpunkt):
 
@@ -1140,7 +1142,7 @@ OnlyOffice, Skripte). Heute legt jeder Benutzer seine Token selbst an
 
 | Teil | was dazukommt |
 |---|---|
-| `TokenRec` | `+ maxPerMinute`, `+ maxPerDay`, `+ maxRows` (grösste Antwort), `+ scope` (nur lesen / auch schreiben), `+ expires` |
+| `TokenRec` | `+ maxPerMinute`, `+ maxPerDay`, `+ maxRows` (grösste Antwort), `+ scope` (nur lesen / auch schreiben), `+ expires`, `+ audience` (`api` oder `mcp` — für wen das Token ausgestellt ist) |
 | Vergabe | ein Administrator legt Token für einen Benutzer an und setzt die Grenzen; der Anwender kann seine eigenen weiter anlegen, aber nur innerhalb der Grenzen seiner Rolle |
 | Zählung | je Token ein Fenster im Arbeitsspeicher (Minute, Tag), Überschreitung → `429` mit der Zeit bis zur Freigabe; nichts davon ins Journal, es ist Betrieb |
 | Anzeige | in den Einstellungen je Token: Grenze, Verbrauch heute, letzter Zugriff — und ein Knopf, der es sofort sperrt |
@@ -1160,11 +1162,16 @@ Server mit dem Journal bleibt innen. Daraus folgt die Bauform:
   sein.
 - **Kein Zugang ausser HTTP.** Keine Datenbank, kein Medienspeicher, kein
   Datenverzeichnis — was der Dienst nicht hat, kann ihm niemand abnehmen.
-- **Keine eigenen Rechte.** Der Container hat **kein** Dienstkonto. Der
-  Assistent schickt das Token des Benutzers, der Dienst reicht es unverändert
-  an `/api` weiter. Damit sieht ein Angreifer, der den Container übernimmt,
-  genau das, was das jeweils mitgebrachte Token ohnehin sehen dürfte — und
-  nach dem Sperren des Tokens nichts mehr.
+- **Keine eigenen Rechte, kein Weiterreichen** (04.10.2026, nach der Spezifikation). Der Container hat
+  **kein** Dienstkonto mit eigenen Rechten. Er nimmt nur Token an, die für ihn ausgestellt sind
+  (`audience: mcp`), und reicht sie **nicht** an `/api` weiter — die Spezifikation verbietet einem
+  MCP-Server mit Anmeldung über HTTP, fremde Token anzunehmen oder durchzureichen. Für jeden Aufruf an
+  `/api` tauscht er das vorgelegte Token gegen ein kurzlebiges Token **derselben Person** mit
+  `audience: api` (Token-Austausch nach RFC 8693, gültig wenige Minuten, nur im Speicher). journali
+  prüft beim Tausch, dass das MCP-Token gilt und nicht gesperrt ist. Damit sieht ein Angreifer, der den
+  Container übernimmt, nur, was die gerade vorgelegten Token ohnehin sehen dürften — und nach dem
+  Sperren eines Tokens nichts mehr, weil auch der Tausch dann scheitert. Im Journal steht als Akteur
+  die Person, nicht der Dienst.
 - **Nichts liegen lassen.** Keine Token auf Platte, Protokoll ohne Werte (nur
   Werkzeug, Dauer, Ergebnisgrösse).
 - **Cache: nur was weder Rechte noch Aktualität berührt**. Gegen einen Datencache sprechen drei Dinge: zwei Anwender
@@ -1182,12 +1189,15 @@ Server mit dem Journal bleibt innen. Daraus folgt die Bauform:
 
   Nie zwischengespeichert werden Knotenwerte, Tabellen, Versionen und
   Suchergebnisse.
-- **Transport HTTP/SSE**, TLS am Reverse Proxy davor. Die Mengenbegrenzung
+- **Transport Streamable HTTP**, TLS am Reverse Proxy davor. Die Mengenbegrenzung
   macht der Server am Token (siehe oben); der Dienst zählt nur gleichzeitige
   Verbindungen, damit ein Assistent ihn nicht allein belegt.
 
-**Offen bleibt** nur, ob später eine bequemere Anmeldung als „Token kopieren"
-kommt (OAuth).
+**Anmeldung über HTTP** (04.10.2026): Die Spezifikation stützt die Anmeldung über HTTP auf OAuth 2.1 —
+der Assistent holt sich ein Token für den MCP-Dienst (`audience: mcp`), der Dienst prüft es und tauscht
+es für `/api` (oben). Über stdio bleibt es beim API-Token aus der Umgebung. **Offen bleibt**, ob journali
+selbst die Rolle des Autorisierungsservers übernimmt (Anmeldung, Zustimmung, Ausgabe und Sperre der
+MCP-Token in den Einstellungen) oder ein vorhandener Identitätsdienst davor steht.
 
 **Der Vektorindex** (semantische Suche über `pgvector`) ist der zweite Schritt
 und nur dort nötig, wo jemand unscharf sucht („welche Klebstoffe halten
