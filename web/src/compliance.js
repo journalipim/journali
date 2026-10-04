@@ -240,13 +240,29 @@ async function suggestScopes(catalog, rootRow, scopes, have) {
 // Ebene wählen: der Pfad von der Wurzel bis zum Knoten als Chips —
 // je Ebene Produkte darunter, Untergruppen, Knoten mit anderem Wert (≠). Empfehlung: die höchste Ebene ohne Untergruppen und ohne
 // Widerspruch. Liefert die gewählte Zeile oder null. attr/wanted: welches Attribut und welcher Wert gesetzt werden soll (für ≠).
-async function pickLevel(row, title, { attr = null, wanted = null } = {}) {
+export async function pickLevel(row, title, { attr = null, wanted = null } = {}) {
   const chain = [...tree.ancestors(row.id), row]
   const vals = new Map()
-  if (attr && store.model.attributes.some(a => a.key === attr)) { try { const t = await api.get(`/api/nodes/${encodeURIComponent(chain[0].id)}/table?deep=true&self=true&attributes=${encodeURIComponent(attr)}`); for (const r of t.rows ?? []) vals.set(r.row.id, String(r.values?.[attr]?.value ?? '')) } catch { } }
-  const under = id => { const out = []; const walk = x => { for (const k of tree.kids(x)) { if (k.role !== 'group') out.push(k); walk(k.id) } }; walk(id); return out }
+  // Nur die Knoten mit eigenem Wert (04.10.2026) — vorher die Tabelle des ganzen Baums ab der Wurzel für eine Spalte
+  if (attr && store.model.attributes.some(a => a.key === attr)) { try { const t = await api.get(`/api/values/${encodeURIComponent(attr)}?root=${encodeURIComponent(chain[0].id)}`); for (const v of t.values ?? []) vals.set(v.id, String(v.value ?? '')) } catch { } }
   const conflicts = v => { if (!wanted) return false; const list = v.split(',').map(s => s.trim()).filter(Boolean); return list.length > 0 && !list.includes(wanted) }
-  const out = chain.map(n => { const ns = n.role === 'group' ? under(n.id) : [n, ...under(n.id)]; return { node: n, products: ns.filter(x => x.role === 'product').length || ns.length, groups: n.role === 'group' ? tree.kids(n.id).filter(k => k.role === 'group').length : 0, other: ns.filter(x => conflicts(vals.get(x.id) ?? '')).length } })
+  // Zählen in einem Durchgang von den tiefsten Knoten aufwärts: Produkte, Nicht-Gruppen und Abweichungen darunter (vorher je Pfadknoten den
+  // Teilbaum neu gelaufen). Ohne Rekursion — ein Pfad mit tausenden Ebenen sprengt sonst den Stapel.
+  const breite = [chain[0]]; for (let i = 0; i < breite.length; i++) for (const k of tree.kids(breite[i].id)) breite.push(k)
+  const zahl = new Map()
+  for (let i = breite.length - 1; i >= 0; i--) {
+    const z = { products: 0, nodes: 0, other: 0 }
+    for (const k of tree.kids(breite[i].id)) {
+      const u = zahl.get(k.id); z.products += u.products; z.nodes += u.nodes; z.other += u.other
+      if (k.role !== 'group') { z.nodes++; if (k.role === 'product') z.products++; if (conflicts(vals.get(k.id) ?? '')) z.other++ }
+    }
+    zahl.set(breite[i].id, z)
+  }
+  const out = chain.map(n => {
+    const z = zahl.get(n.id) ?? { products: 0, nodes: 0, other: 0 }; const selbst = n.role !== 'group'
+    const products = z.products + (selbst && n.role === 'product' ? 1 : 0), nodes = z.nodes + (selbst ? 1 : 0)
+    return { node: n, products: products || nodes, groups: n.role === 'group' ? tree.kids(n.id).filter(k => k.role === 'group').length : 0, other: z.other + (selbst && conflicts(vals.get(n.id) ?? '') ? 1 : 0) }
+  })
   let rec = out.length - 1; for (let i = 0; i < out.length; i++) if (out[i].other === 0 && out[i].products > 0 && out[i].groups === 0) { rec = i; break }
   return new Promise(resolve => {
     const overlay = el('div', { style: 'position:fixed;inset:0;background:rgba(0,0,0,.45);display:grid;place-items:center;z-index:30' })

@@ -88,6 +88,25 @@ test('Produkt mit Varianten: leer am Produkt, aber alle Varianten belegt → ↓
   const p = res.nodes.find(n => n.row.id === 'p-1'); assert.ok(p.mustOk >= 1)   // ↓ zählt als erfüllt in der Pflicht-Quote
 })
 
+test('↓ über mehrere Ebenen: der obere Knoten ist belegt, wenn alle Blätter darunter belegt sind — ein leeres Blatt irgendwo darunter genügt dagegen', () => {
+  const g = { id: 'g-1', role: 'product', label: 'G', parent: null }   // GTIN gilt nicht an Gruppen — darum ein Produkt mit Produkten darunter
+  const p2 = { id: 'p-2', role: 'product', label: 'P2', parent: 'g-1' }
+  const v2 = { id: 'v-2', role: 'variant', label: 'V2', parent: 'p-2' }
+  const baum = ean2 => [{ row: g, values: V({}) }, ...rows(null, { product: { ean: null } }), { row: p2, values: V({}) }, { row: v2, values: V({ ean: ean2 }) }]
+  assert.equal(st(run(baum('4000000000013')), 'g-1', 'gtin'), 'below')
+  const leer = run(baum(null))
+  assert.equal(st(leer, 'g-1', 'gtin'), 'empty')
+  assert.equal(st(leer, 'p-1', 'gtin'), 'below')
+  assert.equal(st(leer, 'p-2', 'gtin'), 'empty')
+})
+
+test('tiefer Baum (2 500 Ebenen): ↓ wird je Knoten einmal gerechnet, nicht je Datenpunkt alle Blätter neu gesammelt', () => {
+  const r = []; for (let i = 0; i < 2500; i++) r.push({ row: { id: 'k' + i, role: i === 2499 ? 'variant' : 'product', label: 'K' + i, parent: i ? 'k' + (i - 1) : null }, values: V(i === 2499 ? { ean: '4000000000013' } : {}) })
+  const t0 = Date.now(); const res = run(r)
+  assert.equal(st(res, 'k0', 'gtin'), 'below')
+  assert.ok(Date.now() - t0 < 500, `${Date.now() - t0} ms`)
+})
+
 test('Gruppe fehlt am Pfad (⊘): nur dann „anhängen“ vorschlagen, wenn ⊘ bleibt und die Gruppe wirklich an keinem Knoten des Pfads hängt', () => {
   const r = rows(null, { variant: { ean: null } }); r[1].inactive = ['ean']
   const notOnPath = run(r, { onPath: () => false })
