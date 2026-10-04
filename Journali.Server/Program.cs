@@ -69,9 +69,10 @@ if (lastTick > 0) Progress(rebuilt, journal.Head, true);   // der Allerletzte be
 // Er kostet Sekunden (340 MB); ihn zu verpassen kostet beim nächsten Start nur, den Rest aus dem Journal anzuwenden (~18 µs je Eintrag).
 const int SchnappschussAb = 10_000;
 var SchnappschussAlter = TimeSpan.FromDays(1);
-// Gab es beim Start keinen brauchbaren Schnappschuss (neue Version des Kerns, erster Start), zählt der Start als Ausgangspunkt: gemessen dauerte der Start
-// ohne Schnappschuss 3 bis 8 s, das Schreiben eines neuen 10 s unter der Lesesperre — bei jeder Änderung am Kern.
-var schnappschussStand = snapshotAt > 0 ? snapshotAt : catalog.Head;
+// Gab es beim Start keinen brauchbaren Schnappschuss (neue Version des Kerns, erster Start, Datei gelöscht), wird nach dem Start einer geschrieben, sobald
+// das Journal mindestens SchnappschussAb Einträge hat (04.10.2026). Davor zählte der Start als Ausgangspunkt: ein Server, der öfter als täglich neu startet
+// und keine 10 000 neuen Einträge sieht, schrieb nie einen — jeder Start las 1,4 Mio. Einträge aus dem Spiegel (11 s).
+var schnappschussStand = snapshotAt > 0 ? snapshotAt : catalog.Head >= SchnappschussAb ? 0 : catalog.Head;
 var schnappschussZeit = snapshotAt > 0 && snapshotPath is not null && File.Exists(snapshotPath) ? File.GetLastWriteTimeUtc(snapshotPath) : DateTime.UtcNow;
 bool SchnappschussFaellig(long kopf) => kopf - schnappschussStand >= SchnappschussAb || (kopf > schnappschussStand && DateTime.UtcNow - schnappschussZeit >= SchnappschussAlter);
 void WriteSnapshot(string why)
