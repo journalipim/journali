@@ -1106,3 +1106,13 @@ test('bei einem Textbaustein ist die Überschrift der Anker — der Abschnittste
   assert.equal(pdf.props('quote'), 'Funkentstörung', 'die Überschrift, nicht der lange Abschnittstext')
   assert.equal(pdf.props('value'), null, 'kein langer Abschnittstext als Fundstelle')
 })
+
+test('ohne KI: ein langes Dokument (30 000 Zeilen) — jede Zeile wird einmal zerlegt, der Wert am Ende wird gefunden', async () => {
+  const fueller = Array.from({ length: 30000 }, (_, i) => `Prüfpunkt ${i} der Serienfertigung  Ergebnis ${i % 97} in Ordnung  Messmittel ${i % 13}`).join('\n')
+  const text = { ready: true, state: 'text', chunks: [{ seq: 0, page: 1, heading: null, body: fueller }, { seq: 1, page: 2, heading: null, body: 'Leistung  35 W' }] }
+  const t0 = performance.now()
+  const { w } = await dialog({ tabellen: { ready: true, state: 'text', tables: [] }, text })
+  const p = w.vm.zeilenWerte.find(r => r.attribute === 'power')
+  assert.deepEqual([p?.converted, p?.page], ['35', 2])
+  assert.ok(performance.now() - t0 < 4000, `${Math.round(performance.now() - t0)} ms`)
+})

@@ -398,13 +398,31 @@ const kvZeile = z => {
   const m = s.match(KV_ZEILE); return m ? { key: m[1].trim().replace(/:$/, ''), value: m[2].trim() } : null
 }
 /// Wie gut ein Zeilenschlüssel ein Attribut trifft: gleich 1, beginnt damit 0,85, Synonym des Mappers 1, sonst Ähnlichkeit
-function trifft(def, key) {
-  const k = norm(key), master = model.value.masterLocale ?? 'de'
-  const namen = [def.key, def.label?.[master], ...Object.values(def.label ?? {}), ...(SYNONYMS[def.key] ?? [])].filter(Boolean).map(norm)
+// Die Namen eines Attributs einmal normalisiert (04.10.2026) — trifft läuft je Attribut über jede Zeile und Zelle des Dokuments
+const namenCache = new WeakMap()
+function namenVon(def) {
+  let n = namenCache.get(def)
+  if (!n) { const master = model.value.masterLocale ?? 'de'; n = [...new Set([def.key, def.label?.[master], ...Object.values(def.label ?? {}), ...(SYNONYMS[def.key] ?? [])].filter(Boolean).map(norm))]; namenCache.set(def, n) }
+  return n
+}
+/// Wie trifft, für einen schon normalisierten Schlüssel. schwelle: ein Name, der sie nach der Länge nicht erreichen kann, wird nicht gerechnet —
+/// similarity ist höchstens das Längenverhältnis (enthalten) oder der Anteil gemeinsamer Bigramme (Dice)
+function trifftNorm(def, k, schwelle = 0) {
   let best = 0
-  for (const n of namen) { const sc = k === n ? 1 : k.startsWith(n + ' ') || k.startsWith(n) && k.length <= n.length + 3 ? 0.85 : similarity(k, n); if (sc > best) best = sc }
+  for (const n of namenVon(def)) {
+    if (k === n) return 1
+    let sc
+    if (k.startsWith(n + ' ') || k.startsWith(n) && k.length <= n.length + 3) sc = 0.85
+    else {
+      const lo = Math.min(k.length, n.length), hi = Math.max(k.length, n.length)
+      if (schwelle && Math.max(lo / hi * 0.9 + 0.1, 2 * (lo - 1) / (lo + hi - 2)) < schwelle) continue
+      sc = similarity(k, n)
+    }
+    if (sc > best) best = sc
+  }
   return best
 }
+function trifft(def, key) { return trifftNorm(def, norm(key)) }
 /// Die Zahl in einem Wert: „pro Stk.  0,105 kg“ → 0,105 — für ein Zahlenattribut zählt nur sie. Null, wenn keine da ist
 const ZAHL = /[+-]?\d+(?:[.,]\d+)?/
 function zahlIn(value, def) {
@@ -452,13 +470,14 @@ const TYP_SPALTE = ['typ', 'type', 'bezeichnung', 'modell', 'model']
 /// der Spalte „Typ“ einer Tabelle — die Typenbezeichnung eines Datenblatts. Die erste Überschrift war es nicht: die hiess „Gewicht“
 function kandidatenFuer(def, alle) {
   const out = []
+  const name = istKennung(def, 'name')
   for (const [i, x] of alle.entries()) {
-    if (x.kv) { const sc = trifft(def, x.kv.key); if (sc >= 0.72) out.push({ kv: x.kv, page: x.page, sc }) }
-    const c = zellen(x.z)
+    if (x.kv) { const sc = trifftNorm(def, x.kn, 0.72); if (sc >= 0.72) out.push({ kv: x.kv, page: x.page, sc }) }
+    const c = x.c
     if (c.length >= 2) {
       let werte = null
       c.forEach((zelle, j) => {
-        const sc = trifft(def, zelle); const typ = istKennung(def, 'name') && TYP_SPALTE.includes(norm(zelle))
+        const sc = trifftNorm(def, x.cn[j], 0.72); const typ = name && TYP_SPALTE.includes(x.cn[j])
         if (sc < 0.72 && !typ) return
         werte ??= wertzeileNach(alle, i, c.length)
         if (werte?.[j]) out.push({ kv: { key: zelle, value: werte[j] }, page: x.page, sc: typ ? 0.85 : sc * 0.9 })
@@ -473,10 +492,15 @@ function kandidatenFuer(def, alle) {
 async function ausZeilen(id, chunks) {
   const liste = attributeHier.value.filter(a => a.type !== 'html')
   if (!liste.length || !chunks?.length) return
-  const alle = chunks.flatMap(c => String(c.body ?? '').split(/\r?\n/).map(z => z.trim()).filter(Boolean).map(z => ({ z, kv: kvZeile(z), page: c.page ?? null })))
+  // je Zeile einmal: Schlüssel/Wert, Zellen und ihre normalisierte Form — nicht je Attribut neu
+  const alle = chunks.flatMap(c => String(c.body ?? '').split(/\r?\n/).map(z => z.trim()).filter(Boolean).map(z => {
+    const kv = kvZeile(z), cz = zellen(z)
+    return { z, kv, kn: kv ? norm(kv.key) : null, c: cz, cn: cz.map(norm), page: c.page ?? null }
+  }))
   const neu = []; const offen = []
   const suchen = []
-  for (const def of liste) {
+  for (const [ai, def] of liste.entries()) {
+    if (ai % 8 === 7) await new Promise(r => setTimeout(r, 0))   // den Browser zwischendurch frei geben: ein langes Datenblatt hat tausende Zeilen
     // die Kandidaten nach Treffer sortiert — der erste, der einen Wert ergibt, zählt: „Gewicht  pro Stk.“ trifft
     // genauso gut wie „Gewicht  pro Stk.  0,105 kg“, hat aber keine Zahl
     let z = null
