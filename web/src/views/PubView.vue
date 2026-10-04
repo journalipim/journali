@@ -69,13 +69,18 @@ const unplaced = computed(() => {
 const showUnplaced = ref(false)
 // Auflösung der Regeln je Rubrik (Server, im Baum des Stands); neu nach jedem Laden des Baums
 const ruleResults = ref({})
+// Je acht gleichzeitig statt nacheinander, und entprellt: ein neuer Baum kommt während eines Imports oft (04.10.2026)
 async function loadRules() {
-  const out = {}
-  const walk = async r => { if (r.rules?.length) { try { out[r.id] = await api.get(`/api/rubrics/${encodeURIComponent(r.id)}/rules/expand`) } catch { } } for (const k of tree.kids(r.id)) await walk(k) }
-  if (current.value) await walk(current.value)
+  const out = {}; const mit = []
+  const walk = r => { if (r.rules?.length) mit.push(r.id); for (const k of tree.kids(r.id)) walk(k) }
+  if (current.value) walk(current.value)
+  for (let i = 0; i < mit.length; i += 8)
+    await Promise.all(mit.slice(i, i + 8).map(async id => { try { out[id] = await api.get(`/api/rubrics/${encodeURIComponent(id)}/rules/expand`) } catch { } }))
   ruleResults.value = out
 }
-watch([current, () => tree.rows], loadRules, { immediate: true })
+const entprellt = (fn, ms = 500) => { let t = null; return () => { clearTimeout(t); t = setTimeout(fn, ms) } }
+watch(current, loadRules, { immediate: true })
+watch(() => tree.rows, entprellt(loadRules))
 const attrLabel = k => L(store.model?.attributes?.find(a => a.key === k)?.label) || k
 function ruleLabel(rule) {
   const under = rule.under ? tree.byId.get(rule.under)?.label ?? rule.under : t_('überall')
@@ -109,8 +114,10 @@ async function removeRule(rubricId, rule) {
 }
 // Ausleitung: je Produkt im Baum ausgeleitet oder zurückgehalten, mit Grund — Freigabe für den Kanal, Markt in den Verkaufsländern (Server: Publication.cs)
 const exp = ref(null); const showExport = ref(false); const expOnly = ref('out')
-async function loadExport() { if (!current.value) { exp.value = null; return } try { exp.value = await api.get(`/api/pub/${encodeURIComponent(current.value.id)}/export`) } catch (e) { exp.value = null } }
-watch([current, () => tree.rows], loadExport, { immediate: true })
+// Ohne die Zeilen, solange die Ausleitung zugeklappt ist (nur die Zahlen); aufgeklappt mit allen Zeilen
+async function loadExport() { if (!current.value) { exp.value = null; return } try { exp.value = await api.get(`/api/pub/${encodeURIComponent(current.value.id)}/export${showExport.value ? '' : '?rows=false'}`) } catch (e) { exp.value = null } }
+watch([current, showExport], loadExport, { immediate: true })
+watch(() => tree.rows, entprellt(loadExport))
 const expRows = computed(() => !exp.value ? [] : exp.value.rows.filter(r => expOnly.value === 'all' || (expOnly.value === 'in') === r.in))
 // Links der Pflegebaum:
 // Gruppen und Produkte, aufklappbar, ziehbar; ✓ = in diesem Publikationsbaum schon enthalten (selbst oder über einen Vorfahren als Verweis)

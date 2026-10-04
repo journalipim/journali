@@ -186,17 +186,21 @@ public static class TreeApi
         // Publikationsbäume: Wurzel = Baum eines Kanals (× Markt), Rubriken darunter, Pflegeknoten per Verweis
         api.MapGet("/pub", (Catalog c) => c.Lesen((model, tree) => tree.PubTrees.Select(n => new { n.Id, n.Channel, n.Market, label = NodeRow.LabelOf(tree, model, n), rubrics = CountRubrics(tree, n), placed = CountPlaced(tree, n) }).ToList()));
         // Ausleitung: je Produkt im Baum drin/draussen mit Grund — Freigabe für den Kanal, Markt in den Verkaufsländern (Publication.cs)
-        api.MapGet("/pub/{id}/export", (string id, Catalog c, string? locale = null) => c.Lesen((model, tree) =>
+        // rows=false (04.10.2026): nur die Zahlen — die Ansicht braucht die Zeilen erst, wenn jemand die Ausleitung aufklappt
+        api.MapGet("/pub/{id}/export", (string id, Catalog c, string? locale = null, bool rows = true) => c.Lesen((model, tree) =>
         {
             if (!tree.Nodes.TryGetValue(id, out var root) || root.Role != Roles.Rubric || root.Parent is not null) return Results.NotFound();
-            var rows = Publication.Export(tree, model, root, locale, c.AsOf).Select(r => new
+            var mitZeilen = rows;
+            var alle = Publication.Export(tree, model, root, locale, c.AsOf).ToList();
+            if (!mitZeilen) return Results.Ok(new { tree = new { root.Id, root.Channel, root.Market, root.Stand, label = NodeRow.LabelOf(tree, model, root) }, locale, @in = alle.Count(r => r.In), @out = alle.Count(r => !r.In), rows = Array.Empty<object>() });
+            var zeilen = alle.Select(r => new
             {
                 path = r.Rubrics.Select(x => new { x.Id, x.Role, label = x.Label, x.Rule }).ToList(),
                 product = new { r.Product.Id, label = NodeRow.LabelOf(tree, model, r.Product), keys = tree.KeysOf(model, r.Product) },
                 r.In, r.Why, r.Stand, r.Rule,
                 variants = r.Variants.Select(v => new { v.Variant.Id, label = NodeRow.LabelOf(tree, model, v.Variant), keys = tree.KeysOf(model, v.Variant), v.Verdict.In, v.Verdict.Why }).ToList(),
             }).ToList();
-            return Results.Ok(new { tree = new { root.Id, root.Channel, root.Market, root.Stand, label = NodeRow.LabelOf(tree, model, root) }, locale, @in = rows.Count(r => r.In), @out = rows.Count(r => !r.In), rows });
+            return Results.Ok(new { tree = new { root.Id, root.Channel, root.Market, root.Stand, label = NodeRow.LabelOf(tree, model, root) }, locale, @in = zeilen.Count(r => r.In), @out = zeilen.Count(r => !r.In), rows = zeilen });
         }));
         api.MapPost("/rubrics", (RubricCreated b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.CreateRubric(x, b.Parent, b.Label, b.Name, b.Channel, b.Market)));
         api.MapPut("/rubrics/{id}/tree", (string id, PubTreeSet b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.SetPubTree(x, id, b.Channel, b.Market)));
