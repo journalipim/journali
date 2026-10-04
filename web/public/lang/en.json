@@ -3009,5 +3009,7 @@
  "Gilt für die ganze Instanz, gleich über welches Team gekauft.": "Applies to the whole instance, whichever team bought it.",
  "◆ Zusatz Multi-Server": "◆ Add-on multi-server",
  "+{0} Server": "+{0} servers",
- "{0} erlaubt": "{0} allowed"
+ "{0} erlaubt": "{0} allowed",
+ "Auf dieser Datenbank dürfen {0} Server laufen. Dieser Server führt keine Jobs aus und arbeitet wieder, sobald die Lizenz einen weiteren erlaubt.": "{0} server(s) may run on this database. This server runs no jobs and works again as soon as the licence allows another one.",
+ "Die Sperre gilt, bis ein Administrator sie unter Einstellungen → Server aufhebt.": "The block applies until an administrator lifts it under Settings → Server."
 }

@@ -14,6 +14,7 @@ import { istAbgemeldet } from './abgemeldet.js'
 import UsageMini from './components/UsageMini.vue'
 import HelpButton from './components/HelpButton.vue'
 import HelpPanel from './components/HelpPanel.vue'
+import ServerSperre from './components/ServerSperre.vue'
 import { t as t_ } from './i18n.js'
 
 /// Volumen in KB, MB, GB — journali misst Bytes, nichts anderes
@@ -93,7 +94,9 @@ function railDrop(target) {
 </script>
 
 <template>
-  <div class="shell" :class="{ popup: route.query.popup }">
+  <!-- Ohne Lizenz oder gesperrt beantwortet der Server nur /api/health: dann nur dieser Zustand, sonst nichts -->
+  <ServerSperre v-if="store.serverSperre" />
+  <div v-else class="shell" :class="{ popup: route.query.popup }">
     <!-- Fortschritt eines laufenden Stapels: dünner Balken ganz oben, dazu Zahl — sichtbar in jeder Ansicht -->
     <div v-if="store.progress" class="progress" :title="$t('{0} … {1} von {2} — Fenster offen lassen', [store.progress.text, store.progress.done, store.progress.total])">
       <div class="bar" :style="`width:${Math.round(store.progress.done / Math.max(1, store.progress.total) * 100)}%`" />

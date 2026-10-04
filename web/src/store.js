@@ -65,6 +65,8 @@ export const store = reactive({
   presence: [],
   nodes: 0,
   usage: null,
+  /// Dieser Server beantwortet nur /api/health: 'lizenz' (über die erlaubte Zahl von Servern hinaus), 'gesperrt' — sonst null. Die Oberfläche zeigt dann nur das
+  serverSperre: null,
   version: '',      // Version des Servers — steht oben in der Leiste
   build: '',        // Bau kurz: TTMM.hhmm
   builtAt: '',      // dasselbe lang, für den Tooltip
@@ -156,6 +158,12 @@ export const store = reactive({
     try {
       const h = await api.get('/api/health' + (this.ort ? `?ort=${encodeURIComponent(this.ort)}` : ''))
       this.online = true
+      // Ohne Lizenz oder gesperrt: nur dieser Zustand. Wird der Server wieder frei, gilt die Anmeldung von vorher wieder — sie neu fragen
+      const sperreVorher = this.serverSperre
+      const s = h.server ?? h
+      this.serverSperre = s.ohneLizenz ? 'lizenz' : s.gesperrt ? 'gesperrt' : null
+      if (h.server?.erlaubt) this.erlaubteServer = h.server.erlaubt
+      if (sperreVorher && !this.serverSperre) this.loadAuth()
       // Ohne Sitzung kommt nur Version und Bau (abgemeldet: true, kein Journalstand): nichts von einer früheren Anmeldung bleibt stehen, und das Modell wird nicht geholt (401)
       if (h.abgemeldet === true) {
         this.head = null; this.nodes = null; this.usage = null; this.presence = []; this.tarif = null; this.registriert = null; this.model = null
