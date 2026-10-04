@@ -15,7 +15,7 @@ Der Server startet jeden Job als **Kindprozess** – nie im Serverprozess selbst
 Als Job läuft unter anderem:
 
 - **Import und Export** für CSV, Excel und JSON
-- **Import aus IXP und Solr**
+- **Import aus Solr**
 - **Export nach Vorlage** und Übersetzung per XLIFF
 - **Datenblätter** für einen ganzen Teilbaum
 - die **Sicherung** des ganzen Systems
@@ -33,7 +33,7 @@ Jeder Lauf steht im Journal: Start, Ende, Dauer und Ergebnis – **ok, mit Warnu
 
 - **Zeitgrenze** je Job, Vorgabe 60 Minuten. Ist sie erreicht, bricht journali den Lauf ab und schreibt das ins Log.
 - **Abbrechen** geht jederzeit per Klick.
-- **Trockenlauf**: Ein Import aus CSV, Excel, JSON oder IXP zählt vorher, wie viele Einträge er schreiben würde – **und schreibt nichts**. Dazu seht ihr, was euer Team in dieser Woche und diesem Monat noch schreiben darf.
+- **Trockenlauf**: Ein Import aus CSV, Excel oder JSON zählt vorher, wie viele Einträge er schreiben würde – **und schreibt nichts**. Dazu seht ihr, was euer Team in dieser Woche und diesem Monat noch schreiben darf.
 
 ## Fächer: in/ rein, out/ raus
 

@@ -19,13 +19,13 @@ Ihr arbeitet am liebsten in der Tabelle? Dann bleibt ihr dort. Das **Excel-Add-i
 
 Geerbte Werte erscheinen kursiv. Die Mappe dürft ihr zwischendurch speichern und später weiterpflegen – der Stand beim Laden liegt in der Datei. Das Add-in läuft in Excel für Windows und Excel im Web, das Plugin in den OnlyOffice Desktop Editors und in OnlyOffice Docs.
 
-## Quellsysteme und Suchindizes als Plugins
+## Daten aus Solr übernehmen
 
-Eure Daten liegen heute in einem anderen System? **IXP** und **Solr** holen sie herüber – als Plugins, die nur über die Schnittstelle schreiben.
+Eure Daten liegen heute in einem Solr-Index? Das Plugin **Solr** holt sie herüber – und schreibt dabei nur über die Schnittstelle.
 
 - **Den fremden Baum sehen**: aufklappen, Knoten anschauen, Teilbäume anhaken, Ziel wählen.
-- **Erst analysieren, dann schreiben** – oder im Trockenlauf nur zählen.
-- **Der zweite Lauf aktualisiert**: Jeder Knoten kennt seine externe Kennung. Beim nächsten Import entstehen keine Dubletten; Solr schreibt dabei nur die Werte, die sich unterscheiden.
+- **Erst analysieren, dann schreiben** – im Trockenlauf schreibt es gar nichts.
+- **Der zweite Lauf aktualisiert**: Jeder Knoten kennt seine externe Kennung. Beim nächsten Import entstehen keine Dubletten, und es schreibt nur die Werte, die sich unterscheiden.
 - **Große Bestände?** Derselbe Ablauf läuft als Job auf dem Server – unabhängig von einem offenen Browserfenster. Solr bringt auf Wunsch auch die Relationen mit.
 
 ## JSON per Job – vom Laufwerk oder per HTTP
@@ -37,7 +37,7 @@ Der **JSON-Import** spielt Rohdaten als Job ein: aus einer Datei, aus der neuest
 Adresse, Anmeldung, Passwort – das gebt ihr **einmal** ein, unter ⌁ Zugänge. Danach fragt ein Plugin einfach nach einem Zugang seiner Art.
 
 - **Dateien liefern** das Dateisystem des Servers, **WebDAV** und **FTP** – jeweils mit eigenem Dateibrowser. Die Fächer eines Jobs dürfen dort liegen: Vor dem Lauf holt journali den Eingang ab, danach legt es die Ausgabe dort ab. Eine Datei, die schon verarbeitet wurde, erkennt journali am Inhalt und spielt sie nicht noch einmal ein.
-- **Anmeldungen** sind IXP und Solr.
+- **Anmeldungen**, etwa für Solr.
 
 **Das Geheimnis bleibt beim Server.** Es steht nicht im Journal und geht nie an den Browser – die Oberfläche kennt nur den Namen des Zugangs. Liest eine Ansicht die Quelle, meldet sich der Server dort an und reicht die Antwort weiter. Die Anmeldedaten selbst bekommt nur ein Job-Prozess auf dem Server.
 

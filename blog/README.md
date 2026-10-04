@@ -68,6 +68,9 @@ sondern „durchstarten vom ersten Moment an“.
 **Kein Startdatum des Projekts** (Datum des ersten Commits, „seit wenigen Wochen“): es wirkt wie schnell zusammengebaut. Zahlen wie Commits und
 Tests stehen ohne Zeitraum.
 
+**Nicht öffentlich** (04.10.2026): das Plugin und die Schnittstelle **IXP** — eine interne Schnittstelle. Sie kommt in keinem Beitrag und
+auf keiner Seite vor.
+
 **Keine Platzhalter für Screenshots** — die setzt ein, wer den Entwurf in WordPress fertig macht, an der Stelle, die er für richtig hält.
 
 Wie überall im Projekt: kein Name, kein Zitat, keine Beschreibung, wer sich etwas gewünscht hat; fremde Produkte nicht als Vergleich.
