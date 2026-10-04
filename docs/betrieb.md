@@ -93,9 +93,9 @@ Eine `media.json` von früher übernimmt der Start in den Tresor, wenn dort noch
 Treiber „Verzeichnis“ meint auf jedem Server dessen eigene Platte — mit mehreren Servern taugt er nur mit einem gemeinsamen Netzlaufwerk. Dort auch Fehlbestand zählen und Blobs aus einem anderen Speicher herüberkopieren.
 
 **Treiber wechseln** ohne neue Ids: neue Angabe setzen, starten, dann `POST /api/media/copy {"from": "<alte Angabe>"}`
-(X-Actor) — kopiert alle Blobs, die hier fehlen, Hash-geprüft. `GET /api/media/missing` zeigt Medien ohne Bytes,
-`GET /api/media/store` den aktiven Treiber. Vorschauen (`sha.thumb`, WebP 256 px) rechnet der erste Betrachter im
-Browser und legt sie im selben Store ab (`PUT /api/media/{id}/thumb`); der Server braucht kein Bildpaket.
+(X-Actor) — kopiert alle Blobs, die hier fehlen, Hash-geprüft: passt der SHA-256 der Bytes nicht zum Namen, wird der Blob nicht übernommen
+und als fehlgeschlagen gezählt. `GET /api/media/missing` zeigt Medien ohne Bytes, `GET /api/media/store` den aktiven Treiber. Vorschauen
+(`sha.<preset>`) rechnet der Systemjob des Plugins `derive` nach jedem Hochladen und legt sie im selben Store ab; der Server braucht kein Bildpaket.
 
 Die Bytes liegen ausserhalb der Datenbank (docs/pflegestruktur.md, 20):
 Verzeichnis aus `JOURNALI_MEDIA`, Vorgabe `media/` neben dem Programm (beim

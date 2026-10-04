@@ -532,7 +532,7 @@ virtueller Ordner.
 Zwei Schichten. Erst **Vorlagen** (Attributtyp `template`): der Wert am Knoten
 ist die Vorlage, je Sprache, wenn so definiert; das Ergebnis baut der Server
 beim Lesen wie bei der Formel (`Template.cs`), sichtbar in Knoten, Tabelle,
-Export, Suche. Syntax für Redakteure, nicht Techniker: `{key}` (geerbt zählt,
+Vorlagen-Export und KI-Wissensbasis (nicht im Tabellenexport, nicht in der Suche; 04.10.2026). Syntax für Redakteure, nicht Techniker: `{key}` (geerbt zählt,
 Werteliste als Label, Sprache der Spalte), Zusätze `{weight|1|unit}` (Einheit,
 Nachkommastellen in der Sprache, upper/lower/capitalize/plain), optionale
 Abschnitte `[, {ram} GB RAM]`, die ganz wegfallen, wenn darin etwas leer ist —
@@ -862,7 +862,7 @@ Export-Konfiguration im Klassifikations-Plugin („welche Klassen, ab welcher St
   selbst, im Repo liegen keine GPC-Daten (`sample.json` ist erfunden). Attribute und Werte haben in allen Bricks dieselben
   Codes; nur die Auswahl der Werte je Brick ist verschieden — sie stehen einmal im Wörterbuch, am Brick nur die Codes
   (die ganze Veröffentlichung sind rund 5,5 MB im Journal, ein Datensatz je Segment). Jedes GPC-Attribut wird ein Listenattribut
-  `gpc<code>` mit der Vereinigung seiner Werte, das in den Gruppen aller Bricks steht, die es führen (`gpc_<brick>`). Die Werte
+  `gpc<code>` mit der Vereinigung seiner Werte, das in den Gruppen aller Bricks steht, die es führen (`class_gpc_<brick>`). Die Werte
   eines Bricks erzwingt die Liste nicht — sie ist die Vereinigung über alle Bricks. eCl@ss folgt nur, wenn ein Kunde es verlangt
   und die Datei liefert: der Einbau in eine Software ist laut ECLASS kostenpflichtig.
 - **Bedient wird beim Gegenstand, nicht im Plugin**. Neuer Beitragspunkt **`nodeBands`**: ein Plugin zeichnet je Knoten ein Band in

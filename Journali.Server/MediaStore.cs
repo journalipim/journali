@@ -14,7 +14,7 @@ namespace Journali.Server;
 /// Der Treiber ist Konfiguration, nicht Bauzeit:
 /// <c>JOURNALI_MEDIA</c> = <c>postgres</c> (Vorgabe — Tabelle <c>media_blob</c> neben dem Journal, ein Paket = lauffähig),
 /// ein Verzeichnis, oder <c>s3://bucket</c> (Garage, MinIO, AWS, R2, Hetzner …). Ein Journal, ein Speicher — wer wechselt,
-/// kopiert einmal herüber (POST /api/media/copy). Einstellung: media.json (Einstellungen → Storage) oder die Umgebung.
+/// kopiert einmal herüber (POST /api/media/copy). Einstellung: im Tresor (Einstellungen → Storage, für alle Server) oder die Umgebung.
 /// Schlüssel: der Hash, oder Hash + Suffix für Abgeleitetes (<c>.thumb</c> = Vorschau). Der Server berührt Bytes nur beim
 /// Hochladen und Ausliefern.
 /// </summary>
@@ -82,14 +82,23 @@ public static partial class MediaStores
         await foreach (var key in from.KeysAsync(ct))
         {
             if (await to.ExistsAsync(key, ct)) { skipped++; continue; }
+            string? tmp = null;
             try
             {
-                await using var src = await from.OpenAsync(key, ct);
-                if (src is null) { failed++; continue; }
-                await to.PutAsync(key, src, ct); copied++;
+                await using (var src = await from.OpenAsync(key, ct))
+                {
+                    if (src is null) { failed++; continue; }
+                    // Hash-geprüft (04.10.2026): ein Blob heisst nach seinem SHA-256 — stimmt er nicht, ist die Quelle beschädigt und wird nicht übernommen.
+                    // Abgeleitetes (Hash + Suffix) hat eigene Bytes und wird kopiert, wie es ist.
+                    (tmp, var sha, _) = await SpoolAsync(src, ct);
+                    if (!key.Contains('.') && sha != key) { failed++; say?.Invoke($"✗ {key}: Hash {sha}"); continue; }
+                }
+                await using (var ok = File.OpenRead(tmp)) await to.PutAsync(key, ok, ct);
+                copied++;
                 say?.Invoke(key);
             }
             catch (Exception e) { failed++; say?.Invoke($"✗ {key}: {e.Message}"); }
+            finally { if (tmp is not null) try { File.Delete(tmp); } catch (IOException) { } }
         }
         return (copied, skipped, failed);
     }

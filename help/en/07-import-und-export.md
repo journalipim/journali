@@ -31,7 +31,7 @@ The JSON export writes a subtree as raw data, optionally with the model part, so
 
 ## External sources
 
-The plugins IXP and Solr read a foreign tree, show it for selection, map properties to attributes and write a subtree with media and relations. Credentials are kept on the profile on the server, never in the journal.
+The plugins IXP and Solr read a foreign tree, show it for selection, map properties to attributes and write a subtree. IXP fetches the media of the source and attaches them; Solr skips media and relations for now. Credentials are kept on the profile on the server, never in the journal.
 
 ## As a job
 

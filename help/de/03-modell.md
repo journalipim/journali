@@ -65,7 +65,7 @@ Eine Tabelle hat n Zeilen, jede aus den **Spalten** des Attributs. Jede Spalte i
 
 ### Formel
 
-Der Wert am Knoten ist ein kleines Skript, das beim Lesen läuft; sein Ergebnis ist der Wert. Das Skript steht wie jeder Wert am Knoten, wird vererbt, wenn das Attribut vererbbar ist, und gilt je Sprache, wenn das Attribut sprachabhängig ist. Das Ergebnis erscheint in der Knotenansicht, in der Tabelle, im Export und in der Suche; ein leeres Ergebnis heißt: kein Wert.
+Der Wert am Knoten ist ein kleines Skript, das beim Lesen läuft; sein Ergebnis ist der Wert. Das Skript steht wie jeder Wert am Knoten, wird vererbt, wenn das Attribut vererbbar ist, und gilt je Sprache, wenn das Attribut sprachabhängig ist. Das Ergebnis erscheint in der Knotenansicht, in der Tabelle, im Vorlagen-Export und in der KI-Wissensbasis; der Tabellenexport lässt es aus, weil er wieder eingelesen wird, und die Suche liest es nicht. Ein leeres Ergebnis heißt: kein Wert.
 
 ```
 h = $height
@@ -92,9 +92,9 @@ Der Wert am Knoten ist ein Textbaustein mit Platzhaltern; der Server baut daraus
 ```
 
 - `{schlüssel}` ist der Wert eines Attributs; ein geerbter Wert zählt, eine Liste zeigt ihre Bezeichnung in der Sprache der Spalte.
-- Zusätze mit `|`, beliebig verkettet: `|unit` hängt die Einheit an, `|0`, `|1`, `|2` setzen die Nachkommastellen, `|upper`, `|lower` und `|capitalize` ändern die Schreibung, `|plain` nimmt HTML-Tags weg.
+- Zusätze mit `|`, beliebig verkettet: `|unit` hängt die Einheit an, `|0` bis `|6` setzen die Nachkommastellen, `|upper`, `|lower` und `|capitalize` ändern die Schreibung, `|plain` nimmt HTML-Tags weg.
 - `[ … ]` ist ein optionaler Abschnitt: Ist darin ein Platzhalter leer, entfällt der ganze Abschnitt, und es bleibt kein „, GB RAM“ stehen. Abschnitte dürfen ineinander liegen.
-- `\{`, `\[` und `\\` stehen für die Zeichen selbst. Zeilenumbrüche bleiben, doppelte Leerzeichen werden zu einem. Ein leeres Ergebnis heißt: kein Wert.
+- `\{`, `\[`, `\]` und `\\` stehen für die Zeichen selbst. Zeilenumbrüche bleiben, doppelte Leerzeichen werden zu einem. Ein leeres Ergebnis heißt: kein Wert.
 
 Im Editor zeigt `{` die Attribute, `|` die Zusätze, und die Vorschau am Knoten erscheint beim Tippen.
 

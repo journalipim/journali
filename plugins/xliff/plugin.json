@@ -1,12 +1,12 @@
 {
   "key": "xliff",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "label": {
     "de": "Übersetzung (XLIFF)",
     "en": "Translation (XLIFF)"
   },
   "description": {
-    "de": "Übersetzungsmanagement: je Sprachrichtung die Einheiten (Knoten × Textattribut × Kanal) — fehlend, veraltet (Quelle seither geändert), fertig; Ziele direkt eintragen, mit der KI vorübersetzen, XLIFF 2.0 für Agentur und CAT-Werkzeug exportieren und zurücklesen (nur bei unveränderter Quelle). Als Job: Export in das Fach out/, Import aus in/.",
+    "de": "Übersetzungsmanagement: je Sprachrichtung die Einheiten (Knoten × Textattribut × Kanal) — fehlend, veraltet (Quelle seither geändert), fertig; Ziele direkt eintragen, mit der KI vorübersetzen, XLIFF 2.0 für Agentur und CAT-Werkzeug exportieren und zurücklesen (ein Ziel, das inzwischen von Hand geändert wurde, wird nicht überschrieben; ist die Quelle seither weitergezogen, bleibt die Einheit offen). Als Job: Export in das Fach out/, Import aus in/.",
     "en": "Translation management: units per language pair (node × text attribute × channel) — missing, stale, done; edit targets, AI pre-translation, XLIFF 2.0 export/import for agencies and CAT tools. As a job via the tasker trays."
   },
   "kind": "tool",

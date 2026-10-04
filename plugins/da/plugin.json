@@ -1,12 +1,12 @@
 {
   "key": "da",
-  "version": "1.6.1",
+  "version": "1.6.2",
   "label": {
     "de": "Datenanalyse",
     "en": "Data analysis"
   },
   "description": {
-    "de": "Basis-Plugin der Gruppe Datenanalyse. Grundfunktion: Datenqualität — prüft einen Teilbaum gegen Regeln (Pflicht, Muster, Zahlen, Listenwerte, Leerzeichen, leeres HTML, SKU doppelt, Übersetzung fehlt/gleich, Formel ohne Ergebnis) und listet die Funde mit Sprung zum Knoten. Weitere Prüfungen liefern Plugins über checks (dpp, ppwr; requires: da).",
+    "de": "Basis-Plugin der Gruppe Datenanalyse. Grundfunktion: Datenqualität — prüft einen Teilbaum gegen Regeln (Pflicht, Muster, Zahlen, Listenwerte, Leerzeichen, leeres HTML, SKU doppelt, Übersetzung fehlt/gleich, Formel ohne Ergebnis) und listet die Funde mit Sprung zum Knoten. Weitere Prüfungen liefern Plugins über checks (geo, etim, empco); DPP und PPWR bringen eigene Ansichten in der Datenanalyse mit (requires: da).",
     "en": "Base plugin of the analysis group. Base function: data quality — checks a subtree against rules and lists findings with a link to the node. Other plugins add checks."
   },
   "kind": "quality",

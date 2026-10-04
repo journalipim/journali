@@ -32,7 +32,8 @@ export async function facts(nodeId, locale) {
   for (const d of model.attributes) {
     if (['rows', 'template', 'html'].includes(d.type)) continue
     const loc = d.perLocale ? locale : ''
-    let v = d.type === 'formula' ? n.computed.find(c => c.attribute === d.key)?.value ?? null : look(own, d.key, loc)
+    // Vorlagen bleiben draussen: sie sind aus denselben Fakten gebaut. Eine Formel je Sprache in der Sprache des Textes
+    let v = d.type === 'formula' ? n.computed.find(c => c.attribute === d.key && (c.locale ?? null) === (d.perLocale ? locale : null) && !c.row)?.value ?? null : look(own, d.key, loc)
     if (v == null && d.inheritable) for (const m of anc) { v = look(m, d.key, loc); if (v != null) break }
     if (v == null || v === '') continue
     // Listenwerte als Wort, nicht als Code: Bezeichnung in der Sprache,

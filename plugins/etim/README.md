@@ -13,8 +13,8 @@ erlaubten Werten, alles mit Übersetzungen (`de-DE`, `EN`, …).
 ## Was das Plugin macht
 
 1. **Freigabe lesen** — die IXF-Datei wird im Browser gelesen (`core.mjs: parseIxf`, ohne DOM,
-   Regex über den Text; auch grosse Dateien) und bleibt dort. Ins Journal geht nur `release`
-   (Name, Nummer, Datum, Zählung).
+   Regex über den Text; auch grosse Dateien). Ins Journal gehen `release` (Name, Nummer, Datum, Zählung) und alle Klassen der
+   Freigabe in den Sprachen des Modells; danach braucht niemand mehr die Datei (Stand 04.10.2026).
 2. **Klassen übernehmen** — Suche nach Code, Name, Synonym; `+` legt `class:<EC>` als
    Datensatz an: Name, Gruppe, Version, alle ETIM-Attribute mit Typ, Einheit (Code, Abkürzung,
    Name) und Werten (EV-Code, Namen). Alles aufgelöst — Job, Prüfung und Export brauchen die

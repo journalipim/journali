@@ -29,4 +29,4 @@ Ein Wert kann je **Sprache** und je **Kanal** verschieden sein. Der Stern ist de
 
 ## Wo etwas liegt
 
-Alles Fachliche steht im Journal in der Datenbank. Bilder und Dokumente liegen im Assetspeicher, wahlweise in der Datenbank, in einem Verzeichnis oder in einem S3-kompatiblen Speicher. Passwörter, Token, Mail- und Speichereinstellungen liegen in Dateien neben dem Server, nie im Journal.
+Alles Fachliche steht im Journal in der Datenbank. Bilder und Dokumente liegen im Assetspeicher, wahlweise in der Datenbank, in einem Verzeichnis oder in einem S3-kompatiblen Speicher. Passwörter, Token, Mail- und Speichereinstellungen liegen verschlüsselt im Tresor in der Datenbank, ohne Datenbank in Dateien beim Server — nie im Journal.

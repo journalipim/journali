@@ -36,7 +36,7 @@ export function systemRows(plugins, jobs, progress = {}) {
 /// Je Kachel: was erledigt ist, was offen ist, und starten / anhalten / weiter — dieselben Knöpfe wie bei einem Job.
 export function systemBlock(rows, onRun, aktionen = {}) {
   const box = el('div', { class: 'sysjobs' })
-  box.append(el('div', { class: 'muted sys-kopf', title: t('Systemjobs laufen in jedem Tarif. Eingeschaltet holen sie von selbst auf, was offen ist — ohne Zeitplan und ohne Knopfdruck.') }, t('⚙ Systemjobs')))
+  box.append(el('div', { class: 'muted sys-kopf', title: t('Vorschauen und Bildabmessungen laufen in jedem Tarif, die übrigen Systemjobs, wenn der Tarif ihr Plugin enthält. Eingeschaltet holen sie von selbst auf, was offen ist — ohne Zeitplan und ohne Knopfdruck.') }, t('⚙ Systemjobs')))
   const grid = el('div', { class: 'sys-grid' })
   for (const r of rows) {
     const j = r.job

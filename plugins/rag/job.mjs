@@ -51,10 +51,12 @@ const api = { get: async p => { const r = await fetch(server + p, { headers }); 
     for (const locale of locs) {
       const facts = []
       for (const d of model.attributes) {
-        if (['rows', 'template'].includes(d.type)) continue
+        if (d.type === 'rows') continue
         const loc = d.perLocale ? locale : ''
-        let v = d.type === 'formula' ? node.computed.find(c => c.attribute === d.key && (c.locale ?? null) === (d.perLocale ? locale : null))?.value ?? null : look(own, d.key, loc)
-        if (v == null && d.inheritable) for (const m of anc) { v = look(m, d.key, loc); if (v != null) break }
+        // Formel und Vorlage mit ihrem Ergebnis (04.10.2026: Vorlagen fehlten ganz)
+        const gerechnet = d.type === 'formula' || d.type === 'template'
+        let v = gerechnet ? node.computed.find(c => c.attribute === d.key && (c.locale ?? null) === (d.perLocale ? locale : null) && !c.row)?.value ?? null : look(own, d.key, loc)
+        if (v == null && !gerechnet && d.inheritable) for (const m of anc) { v = look(m, d.key, loc); if (v != null) break }
         if (v == null || v === '') continue
         if (d.type === 'enum') { const list = model.lists.find(x => x.key === d.list); v = String(v).split(',').map(x => list?.values.find(y => y.value === x.trim())?.label?.[locale] ?? x.trim()).join(', ') }
         if (d.type === 'html') v = String(v).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()

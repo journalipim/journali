@@ -242,7 +242,7 @@
  "journali": "journali",
  "Key": "Key",
  "GK…": "GK…",
- "Liegt nur in media.json beim Server, nie im Journal.": "Kept only in media.json on the server, never in the journal.",
+ "Liegt verschlüsselt im Tresor beim Server, nie im Journal und nie im Browser.": "Kept encrypted in the vault on the server, never in the journal and never in the browser.",
  "Secret": "Secret",
  "Region": "Region",
  "garage": "garage",

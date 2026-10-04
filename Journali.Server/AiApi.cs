@@ -130,7 +130,8 @@ public static class AiApi
         return (Feld("input_tokens") + Feld("cache_creation_input_tokens") + Feld("cache_read_input_tokens"), Feld("output_tokens"));
     }
 
-    private static async Task<(string Text, List<object> Sources, long BytesIn, long BytesOut)> Call(string provider, string key, string model, string? system, string user, int maxTokens, bool web, int maxSearches, CancellationToken ct)
+    /// <summary>Ein Aufruf beim Anbieter: Text und Quellen, die gemessenen Bytes hin und zurück, die gemeldeten Tokenzahlen.</summary>
+    public static async Task<(string Text, List<object> Sources, long BytesIn, long BytesOut, int TokensIn, int TokensOut)> Call(string provider, string key, string model, string? system, string user, int maxTokens, bool web, int maxSearches, CancellationToken ct)
     {
         using var req = new HttpRequestMessage();
         object body;
@@ -205,7 +206,8 @@ public static class AiApi
                 tout = us.TryGetProperty("output_tokens", out var o) ? o.GetInt32() : 0;
             }
         }
-        return (text.ToString(), sources, tin, tout);
+        // 04.10.2026: zurück gingen hier die Tokenzahlen als Bytes — das Austauschvolumen zeigte Token statt gemessener Bytes
+        return (text.ToString(), sources, bytesIn, bytesOut, tin, tout);
     }
 
     public static void Map(RouteGroupBuilder api, string jobsDir)
@@ -283,10 +285,10 @@ public static class AiApi
         if (provider == Lokal && model == "") return (Bad("Das lokale Modell hat kein Modell geladen."), "", [], "", "", "", "");
         try
         {
-            var (text, sources, hin, zurueck) = await Call(provider, key, model, system, frage, maxTokens, web, Math.Max(1, maxSearches), ct);
+            var (text, sources, hin, zurueck, tokenHin, tokenZurueck) = await Call(provider, key, model, system, frage, maxTokens, web, Math.Max(1, maxSearches), ct);
             var heute = DateOnly.FromDateTime(DateTime.Today);
             c.With((_, _, write) => write(actor, Teams.UsageStream + zahler, Types.AiUsed,
-                new AiUsed(provider, model, actor, 0, 0, 1, heute.ToString("yyyy-MM-dd"), team == zahler ? null : team, hin, zurueck, purpose), null));
+                new AiUsed(provider, model, actor, tokenHin, tokenZurueck, 1, heute.ToString("yyyy-MM-dd"), team == zahler ? null : team, hin, zurueck, purpose), null));
             return (null, text, sources, team, zahler, provider, model);
         }
         catch (Exception e) { return (Bad(e.Message), "", [], "", "", "", ""); }

@@ -122,7 +122,7 @@ onMounted(() => { load(); loadStats(); ladeBetrieb() })
         <tr><td class="muted" :title="$t('Garage: 3900 ist die S3-API.')">{{ $t("Endpoint") }}</td><td><input v-model="cfg.endpoint" type="text" style="width:100%" :placeholder="$t('http://garage:3900')" /></td><td></td></tr>
         <tr><td class="muted">{{ $t("Bucket") }}</td><td><input v-model="cfg.bucket" type="text" style="width:100%" :placeholder="$t('journali')" /></td><td></td></tr>
         <tr><td class="muted">{{ $t("Key") }}</td><td><input v-model="cfg.key" type="text" style="width:100%" :placeholder="$t('GK…')" autocomplete="off" /></td><td></td></tr>
-        <tr><td class="muted" :title="$t('Liegt nur in media.json beim Server, nie im Journal.')">{{ $t("Secret") }}</td><td><input v-model="cfg.secret" type="password" style="width:100%" autocomplete="new-password" /></td><td></td></tr>
+        <tr><td class="muted" :title="$t('Liegt verschlüsselt im Tresor beim Server, nie im Journal und nie im Browser.')">{{ $t("Secret") }}</td><td><input v-model="cfg.secret" type="password" style="width:100%" autocomplete="new-password" /></td><td></td></tr>
         <tr><td class="muted">{{ $t("Region") }}</td><td class="row" style="gap:10px"><input v-model="cfg.region" type="text" style="width:160px" :placeholder="$t('garage')" /><label><input type="checkbox" v-model="cfg.pathStyle" />{{ ' ' + $t("Pfad-Stil (endpoint/bucket/…)") }}</label></td><td></td></tr>
       </template>
       <tr><td></td><td class="row"><button @click="check">{{ $t("Prüfen") }}</button><button class="primary" @click="save">{{ $t("Speichern") }}</button><span :class="String(probe || busy || '').startsWith('✗') ? 'fehler' : 'muted'" style="font-size:12px">{{ probe || busy }}</span></td><td></td></tr>
@@ -211,7 +211,7 @@ onMounted(() => { load(); loadStats(); ladeBetrieb() })
         <tr><td class="muted">{{ $t("Endpoint") }}</td><td><input v-model="copyFrom.endpoint" type="text" style="width:100%" /></td></tr>
         <tr><td class="muted">{{ $t("Bucket") }}</td><td><input v-model="copyFrom.bucket" type="text" style="width:100%" /></td></tr>
         <tr><td class="muted">{{ $t("Key") }}</td><td><input v-model="copyFrom.key" type="text" style="width:100%" autocomplete="off" /></td></tr>
-        <tr><td class="muted" :title="$t('Liegt nur in media.json beim Server, nie im Journal.')">{{ $t("Secret") }}</td><td><input v-model="copyFrom.secret" type="password" style="width:100%" autocomplete="new-password" /></td></tr>
+        <tr><td class="muted" :title="$t('Liegt verschlüsselt im Tresor beim Server, nie im Journal und nie im Browser.')">{{ $t("Secret") }}</td><td><input v-model="copyFrom.secret" type="password" style="width:100%" autocomplete="new-password" /></td></tr>
         <tr><td class="muted">{{ $t("Region") }}</td><td><input v-model="copyFrom.region" type="text" style="width:160px" /></td></tr>
       </template>
       <tr><td></td><td class="row"><button class="primary" :disabled="!!kopierBusy" @click="copy">{{ $t("⇥ Kopieren") }}</button>

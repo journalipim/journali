@@ -65,7 +65,7 @@ A table has n rows, each made of the **columns** of the attribute. Every column 
 
 ### Formula
 
-The value at the node is a small script that runs when the value is read; its result is the value. The script is kept like any value at the node, is inherited if the attribute is inheritable, and applies per language if the attribute is language-dependent. The result appears in the node view, in the table, in the export and in the search; an empty result means: no value.
+The value at the node is a small script that runs when the value is read; its result is the value. The script is kept like any value at the node, is inherited if the attribute is inheritable, and applies per language if the attribute is language-dependent. The result appears in the node view, in the table, in the template export and in the AI knowledge base; the table export leaves it out because it is read back in, and the search does not read it. An empty result means: no value.
 
 ```
 h = $height
@@ -92,9 +92,9 @@ The value at the node is a text block with placeholders; the server builds the t
 ```
 
 - `{key}` is the value of an attribute; an inherited value counts, and a list shows its label in the language of the column.
-- Modifiers with `|`, chained as you like: `|unit` appends the unit, `|0`, `|1`, `|2` set the decimals, `|upper`, `|lower` and `|capitalize` change the case, `|plain` removes HTML tags.
+- Modifiers with `|`, chained as you like: `|unit` appends the unit, `|0` to `|6` set the decimals, `|upper`, `|lower` and `|capitalize` change the case, `|plain` removes HTML tags.
 - `[ … ]` is an optional section: if a placeholder inside is empty, the whole section is dropped, so no stray ", GB RAM" remains. Sections may be nested.
-- `\{`, `\[` and `\\` stand for the characters themselves. Line breaks are kept, double spaces become one. An empty result means: no value.
+- `\{`, `\[`, `\]` and `\\` stand for the characters themselves. Line breaks are kept, double spaces become one. An empty result means: no value.
 
 In the editor `{` shows the attributes, `|` the modifiers, and the preview at the node appears while you type.
 

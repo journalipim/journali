@@ -29,4 +29,4 @@ A value can differ per **language** and per **channel**. The star is the value w
 
 ## Where things live
 
-Everything factual is in the journal in the database. Images and documents live in the asset store, in the database, in a directory or in an S3-compatible store. Passwords, tokens, mail and storage settings are kept in files next to the server, never in the journal.
+Everything factual is in the journal in the database. Images and documents live in the asset store, in the database, in a directory or in an S3-compatible store. Passwords, tokens, mail and storage settings are kept encrypted in the vault in the database, without a database in files at the server — never in the journal.

@@ -321,7 +321,7 @@ public sealed class Tree : IProjection
             : Resolve(model, node, key, d.PerLocale ? locale : null, null).Value;
         if (raw is null) return Entries.Formula.Value.None;
         if (d.Type is AttributeTypes.Integer or AttributeTypes.Decimal && decimal.TryParse(raw, System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out var n)) return Entries.Formula.Value.Of(n);
-        if (d.Type == AttributeTypes.Enum && model.Lists.TryGetValue(d.List ?? "", out var list) && list.Values.TryGetValue(raw, out var lv) && lv.Label.GetValueOrDefault(locale ?? "de") is { Length: > 0 } label) return Entries.Formula.Value.Of(label);
+        if (d.Type == AttributeTypes.Enum && model.Lists.TryGetValue(d.List ?? "", out var list) && list.Values.TryGetValue(raw, out var lv) && lv.Label.GetValueOrDefault(locale ?? MasterLocale ?? "de") is { Length: > 0 } label) return Entries.Formula.Value.Of(label);
         return Entries.Formula.Value.Of(raw);
     }
 

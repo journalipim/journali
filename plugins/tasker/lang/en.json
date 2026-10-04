@@ -34,7 +34,7 @@
  "Rechte des Laufs; leer = editor": "Rights of the run; empty = editor",
  "Rolle des Laufs": "Role of the run",
  "Stunden, zur Minute": "Hours, at minute",
- "Systemjobs laufen in jedem Tarif. Eingeschaltet holen sie von selbst auf, was offen ist — ohne Zeitplan und ohne Knopfdruck.": "System jobs run in every plan. Switched on they catch up on what is pending by themselves — no schedule, no button.",
+ "Vorschauen und Bildabmessungen laufen in jedem Tarif, die übrigen Systemjobs, wenn der Tarif ihr Plugin enthält. Eingeschaltet holen sie von selbst auf, was offen ist — ohne Zeitplan und ohne Knopfdruck.": "Previews and image dimensions run in every plan, the other system jobs when the plan includes their plugin. Switched on they catch up on what is pending by themselves — no schedule, no button.",
  "Tage": "Days",
  "Verarbeitet · {0}": "Processed · {0}",
  "Verzeichnis auf dem Server": "Directory on the server",

@@ -61,6 +61,34 @@ public class AiLokalTests
         Assert.Equal(16384, AiApi.LokalKontext(500000, 4000));      // darueber wird abgeschnitten, nicht der Speicher gesprengt
     }
 
+    /// <summary>Das Austauschvolumen sind die gemessenen Bytes, nicht die Tokenzahlen (04.10.2026: Call gab die Tokenzahlen als Bytes zurück).</summary>
+    [Fact]
+    public async Task Ein_Aufruf_misst_die_Bytes_hin_und_zurueck_und_nennt_die_Token_daneben()
+    {
+        using var dienst = new System.Net.HttpListener();
+        var frei = new System.Net.Sockets.TcpListener(System.Net.IPAddress.Loopback, 0); frei.Start();   // einen freien Port vom System
+        var port = ((System.Net.IPEndPoint)frei.LocalEndpoint).Port; frei.Stop();
+        dienst.Prefixes.Add($"http://127.0.0.1:{port}/");
+        dienst.Start();
+        const string antwort = "{\"message\":{\"content\":\"Größe 42\"},\"prompt_eval_count\":120,\"eval_count\":45}";
+        long anfrageBytes = 0;
+        var bedient = Task.Run(async () =>
+        {
+            var k = await dienst.GetContextAsync();
+            using (var ms = new MemoryStream()) { await k.Request.InputStream.CopyToAsync(ms); anfrageBytes = ms.Length; }
+            var b = System.Text.Encoding.UTF8.GetBytes(antwort);
+            k.Response.ContentType = "application/json";
+            await k.Response.OutputStream.WriteAsync(b);
+            k.Response.Close();
+        });
+        var r = await AiApi.Call("lokal", $"http://127.0.0.1:{port}", "m", "System", "Frage mit Umlaut ä", 100, false, 1, CancellationToken.None);
+        await bedient;
+        Assert.Equal("Größe 42", r.Text);
+        Assert.Equal(anfrageBytes, r.BytesIn);                                        // was über die Leitung ging
+        Assert.Equal(System.Text.Encoding.UTF8.GetByteCount(antwort), r.BytesOut);
+        Assert.Equal((120, 45), (r.TokensIn, r.TokensOut));                         // daneben, was der Anbieter meldet
+    }
+
     [Fact]
     public void Eingang_und_Ausgang_aus_der_Antwort()
     {

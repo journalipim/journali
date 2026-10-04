@@ -4,9 +4,9 @@
 // Kein Anbieter ist im Code bevorzugt: Texte sagen „KI“; wo es auf den Anbieter ankommt, zählt ai.active() auf,
 // welche eingerichtet sind, und ai.label() nennt den gewählten mit Modell.
 //
-// Zwei Wege: liegt am Team ein Schlüssel, fragt der Server (POST /api/ai/ask) — der Schlüssel bleibt
-// dort, jeder Aufruf wird beim zahlenden Team gezählt, Grenzen greifen, und auch Jobs können KI. Wer seinen eigenen Vertrag
-// benutzen will, trägt hier einen Schlüssel ein: dann fragt der Browser wieder direkt, es zählt niemand mit, und er zahlt selbst.
+// Ein Weg: der Server fragt (POST /api/ai/ask) mit dem Schlüssel des zahlenden Teams — der Schlüssel bleibt dort, jeder Aufruf
+// wird beim Team gezählt (gemessene Bytes hin und zurück), Grenzen greifen, und auch Jobs können KI. Einen Weg, auf dem der
+// Browser selbst beim Anbieter fragt, gibt es seit dem 23.09.2026 nicht mehr.
 import { reactive } from 'vue'
 import { api } from './api.js'
 import { t as t_ } from './i18n.js'

@@ -16,7 +16,7 @@ namespace Journali.Core.Entries;
 /// - <c>{key}</c>: Wert des Attributs am Knoten — geerbt zählt, Text in der Sprache der Spalte,
 ///   Werteliste zeigt ihr Label, Formel/Vorlage ihr Ergebnis.
 /// - Zusätze mit <c>|</c>, beliebig verkettet: <c>|unit</c> hängt die Einheit an (kg, cm),
-///   <c>|0</c> <c>|1</c> <c>|2</c> Nachkommastellen in der Sprache (de 1,5), <c>|upper</c> <c>|lower</c>
+///   <c>|0</c> bis <c>|6</c> Nachkommastellen in der Sprache (de 1,5), <c>|upper</c> <c>|lower</c>
 ///   <c>|capitalize</c>, <c>|plain</c> nimmt HTML-Tags weg.
 /// - <c>[ … ]</c>: der Abschnitt fällt ganz weg, wenn darin ein Platzhalter leer ist — so bleibt kein
 ///   „, GB RAM“ übrig. Abschnitte dürfen ineinander liegen.

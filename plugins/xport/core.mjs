@@ -96,8 +96,10 @@ export async function contextOf(env, id, { locale, mapping = {}, depth = 0, with
   const val = (d, row = '') => {
     const loc = d.perLocale ? locale : ''
     const o = look(own, d.key, loc, row)
-    let v = d.type === 'formula' ? n.computed?.find(c => c.attribute === d.key && (c.locale ?? null) === (d.perLocale ? locale : null))?.value ?? null : (o ? pick(o) : null)
-    if (v == null && d.inheritable && !row) for (const m of anc) { const x = look(m, d.key, loc); if (x) { v = pick(x); break } }
+    // Formel und Vorlage: das Ergebnis, nicht der Ausdruck (04.10.2026: eine Vorlage ging als Vorlagentext hinaus)
+    const gerechnet = d.type === 'formula' || d.type === 'template'
+    let v = gerechnet ? n.computed?.find(c => c.attribute === d.key && (c.locale ?? null) === (d.perLocale ? locale : null) && !c.row)?.value ?? null : (o ? pick(o) : null)
+    if (v == null && !gerechnet && d.inheritable && !row) for (const m of anc) { const x = look(m, d.key, loc); if (x) { v = pick(x); break } }
     if (v != null && d.type === 'enum') { const list = model.lists.find(x => x.key === d.list); v = String(v).split(',').map(x => list?.values.find(y => y.value === x.trim())?.label?.[locale] ?? x.trim()).join(', ') }
     return v
   }

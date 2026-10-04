@@ -31,7 +31,7 @@ Der JSON-Export schreibt einen Teilbaum als Rohdaten, wahlweise mit dem Modellte
 
 ## Externe Quellen
 
-Die Plugins IXP und Solr lesen einen fremden Baum, zeigen ihn zur Auswahl, ordnen Eigenschaften den Attributen zu und schreiben einen Teilbaum mit Medien und Relationen. Zugangsdaten liegen am Profil beim Server, nie im Journal.
+Die Plugins IXP und Solr lesen einen fremden Baum, zeigen ihn zur Auswahl, ordnen Eigenschaften den Attributen zu und schreiben einen Teilbaum. IXP holt dabei die Medien der Quelle und hängt sie an; Solr übergeht Medien und Relationen noch. Zugangsdaten liegen am Profil beim Server, nie im Journal.
 
 ## Als Job
 
