@@ -84,6 +84,8 @@ public sealed class Verbund : IDisposable
     public bool OhneLizenz => _ohneLizenz;
     /// <summary>Wie viele Server erlaubt sind (aus dem letzten Takt).</summary>
     public int Erlaubt { get; private set; } = 1;
+    /// <summary>Wie viele erreichbare Server über die erlaubte Zahl hinaus laufen (aus dem letzten Takt) — dann frischt der Hauptserver die Abos öfter auf.</summary>
+    public int OhneLizenzAnzahl { get; private set; }
     public bool Lizenziert(string id) => _db is null || _lizenziert.Contains(id);
 
     /// <summary>
@@ -176,6 +178,7 @@ public sealed class Verbund : IDisposable
         Erlaubt = _catalog.ErlaubteServer;
         var rang = Rangfolge(zeilen, Festgelegt(), Gesperrte(), jetzt);
         _lizenziert = rang.Take(Erlaubt).ToHashSet();
+        OhneLizenzAnzahl = rang.Count - _lizenziert.Count;
         var ohne = !_lizenziert.Contains(Id) && !Gesperrt;
         if (ohne != _ohneLizenz) Console.WriteLine(ohne ? $"journali: für einen weiteren Server fehlt die Lizenz (erlaubt: {Erlaubt}) — dieser Server beantwortet nur /api/health" : "journali: dieser Server hat wieder eine Lizenz");
         _ohneLizenz = ohne;

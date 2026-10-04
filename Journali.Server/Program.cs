@@ -12,6 +12,11 @@ using static Journali.Server.ModelApi;
 // nach wwwroot) daneben. Regel: kein Schreibpfad am Catalog vorbei.
 
 var builder = WebApplication.CreateBuilder(args);
+// Die erste Zeile: welche Version startet — Bau wie in der Kopfleiste (TTMM.hhmm, Ortszeit des Servers)
+{
+    var gebaut = System.IO.File.GetLastWriteTimeUtc(typeof(Program).Assembly.Location).ToLocalTime();
+    Console.WriteLine($"journali {typeof(Program).Assembly.GetName().Version?.ToString(3)} · Bau {gebaut:ddMM.HHmm} ({gebaut:dd.MM.yyyy HH:mm} {gebaut:zzz})");
+}
 
 // Datenverzeichnis (JOURNALI_JOBS): Jobs, Medien-Einstellung, die Verbindung zur Datenbank (db.json) — und der lokale
 // Spiegel des Journals. Im Paket ein Volume, beim Entwickeln jobs/ neben dem Server; jeder Server hat seins.
@@ -137,15 +142,23 @@ _ = Task.Run(async () =>
 // nachsehen; LimitsAusLizenz schreibt nur, wenn sich etwas ändert
 _ = Task.Run(async () =>
 {
-    // Einmal gleich nach dem Start: sonst kennt eine frische Anlage die Tarife und Aktionen des Shops erst nach einer Stunde
-    // Nur der Hauptserver: beide schreiben ins Journal, und zwei Server schrieben dasselbe zweimal
-    if (verbund.IstHaupt) try { await abos.AuffrischenAsync(catalog); } catch (Exception e) { Console.WriteLine($"journali: Abos nicht aufgefrischt — {e.Message}"); }
+    // Nur der Hauptserver fragt: alle schreiben ins Journal, und zwei Server schrieben dasselbe zweimal. Er fragt
+    //  - sobald er Hauptserver ist — nach dem Start und nach einer Übernahme (04.10.2026: sonst galt nach der Übernahme bis zu einer Stunde der alte Stand),
+    //  - danach stündlich,
+    //  - alle 5 Minuten, solange ein Server ohne Lizenz läuft: der fragt selbst nicht, und ein eben gekaufter Zusatz Multi-Server soll ihn freigeben.
+    var letzte = DateTime.MinValue; var warHaupt = false;
     while (true)
     {
-        await Task.Delay(TimeSpan.FromHours(1));
-        if (!verbund.IstHaupt) continue;
-        try { catalog.Lesen((_, _) => catalog.LimitsAusLizenz()); } catch { }
-        try { await abos.AuffrischenAsync(catalog); } catch (Exception e) { Console.WriteLine($"journali: Abos nicht aufgefrischt — {e.Message}"); }
+        var haupt = verbund.IstHaupt;
+        var seit = DateTime.UtcNow - letzte;
+        if (haupt && (!warHaupt || seit >= TimeSpan.FromHours(1) || (verbund.OhneLizenzAnzahl > 0 && seit >= TimeSpan.FromMinutes(5))))
+        {
+            letzte = DateTime.UtcNow;
+            try { catalog.Lesen((_, _) => catalog.LimitsAusLizenz()); } catch { }
+            try { await abos.AuffrischenAsync(catalog); } catch (Exception e) { Console.WriteLine($"journali: Abos nicht aufgefrischt — {e.Message}"); }
+        }
+        warHaupt = haupt;
+        await Task.Delay(TimeSpan.FromSeconds(10));
     }
 });
 
