@@ -4,6 +4,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { mount, flushPromises } from './ui.mjs'
+import { api } from '../src/api.js'
 
 const MediaThumb = (await import('../src/components/MediaThumb.vue')).default
 
@@ -24,10 +25,26 @@ test('PDF ohne Vorschau: Symbol statt Fehler, der Browser rechnet nichts', async
   assert.equal(geholt, 0, 'nichts hochgeladen — das Rechnen macht der Job')
 })
 
-test('Bild ohne Vorschau: der Browser versucht es selbst', async () => {
-  const w = mount(MediaThumb, { props: { id: 'm-jpg', self: true } })
-  await w.find('img').trigger('error')
-  await flushPromises()
-  // make() läuft los (new Image() scheitert im Prüfstand) — entscheidend ist: es bleibt beim Bild-Weg, kein ▤
-  assert.notEqual(w.text().trim(), '▤')
+test('kleines Bild ohne Vorschau: der Browser versucht es selbst', async () => {
+  const orig = api.get
+  api.get = async p => p === '/api/media/m-jpg' ? { mime: 'image/jpeg', bytes: 400_000 } : orig(p)
+  try {
+    const w = mount(MediaThumb, { props: { id: 'm-jpg', self: true } })
+    await w.find('img').trigger('error')
+    await flushPromises()
+    // make() läuft los (new Image() scheitert im Prüfstand) — entscheidend ist: es bleibt beim Bild-Weg, kein ▤
+    assert.notEqual(w.text().trim(), '▤')
+  } finally { api.get = orig }
+})
+
+test('grosses Bild ohne Vorschau: der Browser rechnet nicht, die Kachel wartet auf den Job (04.10.2026)', async () => {
+  const orig = api.get
+  api.get = async p => p === '/api/media/m-tif' ? { mime: 'image/tiff', bytes: 60_000_000 } : orig(p)
+  try {
+    const w = mount(MediaThumb, { props: { id: 'm-tif', self: true } })
+    await w.find('img').trigger('error')
+    for (let i = 0; i < 4; i++) await flushPromises()
+    assert.equal(w.text().trim(), '▤')
+    assert.match(w.find('div').attributes('title') ?? '', /Vorschauen rechnen/)
+  } finally { api.get = orig }
 })

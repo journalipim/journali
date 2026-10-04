@@ -98,6 +98,11 @@ public static class MediaApi
     private static MediaConfig Unmask(MediaConfig body, MediaConfig current) =>
         body.Secret is null || body.Secret.StartsWith("••") ? body with { Secret = current.Secret } : body;
 
+    /// <summary>Die kleinste Ableitung eines Mediums, die zu ihrem Preset passt (gleicher Fingerabdruck) — Ersatz für eine fehlende Vorschau.</summary>
+    public static MediaPreset? KleinsteAbleitung(Medium m, IReadOnlyDictionary<string, MediaPreset> presets) =>
+        m.Derived.Where(d => presets.TryGetValue(d.Key, out var p) && p.Fingerprint == d.Value.Fingerprint)
+            .OrderBy(d => Math.Max(d.Value.Width, d.Value.Height)).Select(d => presets[d.Key]).FirstOrDefault();
+
     public static void Map(RouteGroupBuilder api)
     {
         // Liste, neueste zuerst; q sucht in Name und Werten
@@ -235,15 +240,18 @@ public static class MediaApi
             return Results.File(stream, m.Mime, enableRangeProcessing: true);
         });
 
-        // Vorschau: Schlüssel sha.thumb im Store; rechnet der erste Betrachter (MediaThumb.vue) und legt sie per PUT ab.
+        // Vorschau: Schlüssel sha.thumb im Store; gibt es sie nicht, die kleinste Ableitung, die der Job derive gerechnet hat (04.10.2026) —
+        // sonst rechnet der Browser sie aus dem Original (MediaThumb.vue), aber nur bei kleinen Bildern.
         api.MapGet("/media/{id}/thumb", async (string id, Catalog c, IMediaStore store, HttpResponse res, CancellationToken ct) =>
         {
-            var m = c.Lesen((_, _) => c.Media.All.GetValueOrDefault(id));
+            var (m, ersatz) = c.Lesen((_, _) => { var x = c.Media.All.GetValueOrDefault(id); return (x, x is null ? null : KleinsteAbleitung(x, c.Media.Presets)); });
             if (m is null) return Results.NotFound();
             var stream = await store.OpenAsync(m.Sha256 + ".thumb", ct);
+            var mime = "image/webp";
+            if (stream is null && ersatz is { } e) { stream = await store.OpenAsync(m.Sha256 + "." + e.Key, ct); mime = e.Mime; }
             if (stream is null) return Results.NotFound();
             res.Headers.CacheControl = "public, max-age=31536000, immutable";
-            return Results.File(stream, "image/webp");
+            return Results.File(stream, mime);
         });
         api.MapPut("/media/{id}/thumb", async (string id, HttpRequest req, Catalog c, IMediaStore store, CancellationToken ct) =>
         {
