@@ -31,13 +31,28 @@ const ofSystem = a => a.group === groupKey() || String(a.group ?? '').startsWith
 // release = die aktuelle Version (Zuweisen, Prüfen, Export). Alte Datensätze class:<EC> ohne Version zählen zur Version der damaligen Freigabe.
 // Mit der ganzen Freigabe im Journal (5 640 Klassen, 17 000 ETIM-Attribute) heisst „übernommen“ nicht mehr „in Gebrauch“: Attribute, Zuordnung und
 // Datenanalyse richten sich nach den Klassen, die im Baum zugewiesen sind (used); die Freigabe ist der Suchpool.
-const cache = { classes: new Map(), settings: { ...DEFAULTS }, map: {}, mapping: {}, loaded: null, version: null, releaseKey: null, release: null, versions: [], used: new Set(), usedBy: new Map(), classOf: new Map() }   // classOf: Knoten → { code, own } (auch geerbt) — fürs Baummenü
+const cache = { classes: new Map(), settings: { ...DEFAULTS }, map: {}, mapping: {}, loaded: null, version: null, releaseKey: null, release: null, versions: [], used: new Set(), usedBy: new Map(), ownClass: new Map(), pool: false }   // ownClass: Knoten → Code der eigenen Klasse (klasseVon rechnet die geerbte dazu); pool: die ganze Freigabe ist geladen
+// Wo eine Klasse zugewiesen ist: GET /api/values/{klassenattribut} — nur die eigenen Werte (Id, Wert, Name, Rolle). Vorher kam der ganze Baum noch
+// einmal und je Wurzel eine Tabelle (rund 15 MB je Abruf, bei jedem Seitenaufruf, 04.10.2026). Die geerbte Klasse rechnet klasseVon über den Baum.
 async function loadUsed() {
   try {
-    const key = cache.settings.classAttr; const rows = await (await fetch('/api/tree')).json(); const used = new Set(); const by = new Map(); const classOf = new Map()
-    for (const r of rows.filter(r => !r.parent && r.role !== 'rubric')) { const t = await (await fetch(`/api/nodes/${encodeURIComponent(r.id)}/table?deep=true&attributes=${encodeURIComponent(key)}`)).json(); for (const row of t.rows ?? []) { const v = row.values?.[key]; const c = String(v?.value ?? '').trim().toUpperCase(); if (!c) continue; used.add(c); classOf.set(row.row.id, { code: c, own: !!v.own }); if (v.own) { if (!by.has(c)) by.set(c, []); by.get(c).push({ id: row.row.id, label: row.row.label, role: row.row.role }) } } }
-    cache.used = used; cache.usedBy = by; cache.classOf = classOf
+    const key = cache.settings.classAttr
+    const r = await (await fetch(`/api/values/${encodeURIComponent(key)}`)).json()
+    const used = new Set(); const by = new Map(); const own = new Map()
+    for (const x of r.values ?? []) {
+      const c = String(x.value ?? '').trim().toUpperCase(); if (!c) continue
+      used.add(c); own.set(x.id, c)
+      if (!by.has(c)) by.set(c, []); by.get(c).push({ id: x.id, label: x.label, role: x.role })
+    }
+    cache.used = used; cache.usedBy = by; cache.ownClass = own
   } catch { }
+}
+/// Die Klasse an einem Knoten: die eigene, sonst die des nächsten Vorfahren (Baum der Oberfläche) — { code, own } oder null
+function klasseVon(id) {
+  const own = cache.ownClass.get(id); if (own) return { code: own, own: true }
+  const byId = globalThis.journali?.tree?.byId
+  for (let p = byId?.get(id)?.parent; p; p = byId.get(p)?.parent) { const c = cache.ownClass.get(p); if (c) return { code: c, own: false } }
+  return null
 }
 /// Klassen in Gebrauch: die im Baum zugewiesenen; ohne Zuweisung und bei kleinem Bestand (von Hand übernommen) alle
 const usedClasses = () => { const out = [...cache.used].map(c => cache.classes.get(c)).filter(Boolean); return out.length || cache.classes.size > 50 ? out : [...cache.classes.values()] }
@@ -90,13 +105,27 @@ async function loadCache() {
     const cur = current ? cache.versions.find(v => v.key === releaseKey(current)) ?? cache.versions.find(v => v.version === String(current.version ?? current.number ?? '')) : null
     const use = cur ?? cache.versions[0] ?? null
     cache.releaseKey = use?.key ?? null; cache.version = use?.version ?? null; cache.release = use
-    cache.classes = new Map()
-    if (cache.releaseKey != null) {
-      const all = await (await fetch(`/api/plugins/etim/data?values=true&prefix=${encodeURIComponent('class:' + cache.releaseKey + ':')}`)).json()
-      for (const c of Object.values(all)) cache.classes.set(c.code, c)
-      if (use?.legacy) { const old = await (await fetch('/api/plugins/etim/data?values=true&prefix=class%3A')).json(); for (const [n, c] of Object.entries(old)) if (/^class:[^:]+$/.test(n) && !cache.classes.has(c.code)) cache.classes.set(c.code, c) }
-    }
+    cache.classes = new Map(); cache.pool = false
     await loadUsed()
+    if (cache.releaseKey != null) {
+      // Nur die Klassen in Gebrauch, einzeln (wenige); die ganze Freigabe (5 640 Klassen, gemessen 74 MB) lädt ensurePool, wenn jemand sucht
+      // oder zuweist. Sind keine zugewiesen und nur wenige übernommen (von Hand), kommen alle — wie bisher.
+      const imBestand = names.filter(n => n.startsWith(`class:${cache.releaseKey}:`)).length
+      if (!cache.used.size && imBestand <= 50) { await ensurePool(); return }
+      const codes = [...cache.used]
+      for (let i = 0; i < codes.length; i += 8)
+        await Promise.all(codes.slice(i, i + 8).map(async code => { const k = await get(`class:${cache.releaseKey}:${code}`) ?? (use?.legacy ? await get(`class:${code}`) : null); if (k) cache.classes.set(k.code, k) }))
+    }
+  } catch { }
+}
+/// Die ganze Freigabe in den Speicher — erst, wenn jemand sucht, zuweist oder Attribute anlegt (Ansicht ⌗ ETIM, Klassendialog)
+async function ensurePool() {
+  if (cache.pool || cache.releaseKey == null) return
+  try {
+    const all = await (await fetch(`/api/plugins/etim/data?values=true&prefix=${encodeURIComponent('class:' + cache.releaseKey + ':')}`)).json()
+    for (const c of Object.values(all)) cache.classes.set(c.code, c)
+    if (cache.release?.legacy) { const old = await (await fetch('/api/plugins/etim/data?values=true&prefix=class%3A')).json(); for (const [n, c] of Object.entries(old)) if (/^class:[^:]+$/.test(n) && !cache.classes.has(c.code)) cache.classes.set(c.code, c) }
+    cache.pool = true
   } catch { }
 }
 cache.loaded = loadCache()
@@ -247,6 +276,7 @@ export async function etimGate(pctx, rules = null) { await cache.loaded; return 
 async function classDialog(nodeId, ctx, onDone = null) {
   const { api, store, tree } = ctx
   await cache.loaded; if (!tree.loaded) await tree.load()
+  await ensurePool()   // suchen und durchsehen braucht die ganze Freigabe
   const model = () => store.model
   const locale = model().masterLocale ?? 'de'
   const row = tree.byId.get(nodeId); if (!row) return
@@ -281,7 +311,7 @@ async function classDialog(nodeId, ctx, onDone = null) {
   const belowOf = id => { const out = []; const walk = x => { for (const k of tree.kids(x)) { if (k.role !== 'group') out.push(k); walk(k.id) } }; walk(id); return out }
   const levelInfo = chain.map(n => {
     const below = n.id === nodeId && row.role !== 'group' ? [row, ...belowOf(n.id)] : belowOf(n.id)
-    const own = below.filter(x => cache.classOf.get(x.id)?.own).length
+    const own = below.filter(x => klasseVon(x.id)?.own).length
     return { node: n, products: below.length, groups: tree.kids(n.id).filter(k => k.role === 'group').length, own }
   })
   let rec = levelInfo.length - 1
@@ -294,7 +324,7 @@ async function classDialog(nodeId, ctx, onDone = null) {
     const at = tree.byId.get(target) ?? row
     const missing = c.features.filter(f => !ops.hasAttr(attrKeyOf(f.code)))
     const under = (() => { const out = []; const walk = x => { for (const k of tree.kids(x)) { if (k.role !== 'group') out.push(k); walk(k.id) } }; walk(at.id); return out })()
-    const others = under.filter(n => { const v = cache.classOf.get(n.id); return v && v.code !== code && v.own }).length
+    const others = under.filter(n => { const v = klasseVon(n.id); return v && v.code !== code && v.own }).length
     body.innerHTML = ''
     body.append(
       el('div', { style: 'font-size:14px;margin:6px 0' }, el('b', {}, `${code} ${nameOf(c.name, locale)}`), ` → ${ICON[at.role] ?? ''} ${at.label}`),
@@ -511,7 +541,7 @@ async function bandMount({ head, body: bodyEl }, nodeId, ctx) {
   async function render() {
     if (gone) return
     head.textContent = ''; line.innerHTML = ''; table.innerHTML = ''; found.innerHTML = ''
-    if (!cache.classes.size) { head.textContent = t_('· keine ETIM-Version im Journal'); line.append(el('button', { class: 'x', onclick: () => ctx.go?.('/p/etim/etim') }, t_('⇩ ETIM holen …'))); return }
+    if (cache.releaseKey == null) { head.textContent = t_('· keine ETIM-Version im Journal'); line.append(el('button', { class: 'x', onclick: () => ctx.go?.('/p/etim/etim') }, t_('⇩ ETIM holen …'))); return }
     head.textContent = '· …'
     let S; try { S = await stageData(ctx, nodeId, locale) } catch (e) { head.textContent = '· ✗ ' + e.message; return }
     if (gone || !S) return
@@ -607,6 +637,7 @@ async function mount(root, ctx) {
   const { api, store, tree } = ctx
   if (!tree.loaded) await tree.load()
   await cache.loaded
+  await ensurePool()   // die Ansicht sucht in der ganzen Freigabe und legt Attribute an
   const model = () => store.model
   const locale = model().masterLocale ?? 'de'
   const params = new URLSearchParams(location.search); const assignParam = params.get('assign'); const classParam = params.get('class'); const backNode = params.get('node'); const efParam = (params.get('ef') ?? '').toUpperCase(); if (assignParam || classParam) history.replaceState(null, '', location.pathname)
@@ -1027,7 +1058,7 @@ async function install(ctx) {
 }
 
 /// Die Klasse, die an einer Zeile gilt (eigen oder geerbt) — aus dem Cache, den das Plugin ohnehin führt
-function classOfRow(row) { const v = cache.classOf?.get(row?.id); return v ? cache.classes.get(v.code) ?? null : null }
+function classOfRow(row) { const v = klasseVon(row?.id); return v ? cache.classes.get(v.code) ?? null : null }
 /// Alle Nachfahren — falls der Baum kein below() mitbringt
 export default {
   install,
@@ -1040,8 +1071,8 @@ export default {
   ],
   nodeActions: [
     // die zugewiesene Klasse (auch geerbt) als eigener Punkt: Klick → Knotenansicht, direkt in der Attributgruppe (Reiter oder Liste)
-    { label: row => { const c = cache.classOf.get(row.id); return c ? `${c.code} ${nameOf(cache.classes.get(c.code)?.name, 'de') || ''}`.trim() : null }, hint: row => { const c = cache.classOf.get(row.id); return c ? (c.own ? t_('Klasse hier · ETIM-Attribute pflegen') : t_('Klasse geerbt · ETIM-Attribute pflegen')) : '' }, icon: '⌗', topic: 'classification', roles: ['group', 'product', 'variant'], run(id, ctx) { return ctx.go?.(`/tree/${encodeURIComponent(id)}?group=${encodeURIComponent(groupKey())}`) } },
-    { label: row => cache.classOf.get(row.id) ? t_('ETIM-Klasse ändern (+)') : t_('ETIM-Klasse (+)'), hint: t_('Klasse wählen — Vorschlag, Umfeld, Suche'), icon: '⌗', topic: 'classification', roles: ['group', 'product'], run(id, ctx) { return classDialog(id, ctx) } },   // (+): auch zum Zufügen
+    { label: row => { const c = klasseVon(row.id); return c ? `${c.code} ${nameOf(cache.classes.get(c.code)?.name, 'de') || ''}`.trim() : null }, hint: row => { const c = klasseVon(row.id); return c ? (c.own ? t_('Klasse hier · ETIM-Attribute pflegen') : t_('Klasse geerbt · ETIM-Attribute pflegen')) : '' }, icon: '⌗', topic: 'classification', roles: ['group', 'product', 'variant'], run(id, ctx) { return ctx.go?.(`/tree/${encodeURIComponent(id)}?group=${encodeURIComponent(groupKey())}`) } },
+    { label: row => klasseVon(row.id) ? t_('ETIM-Klasse ändern (+)') : t_('ETIM-Klasse (+)'), hint: t_('Klasse wählen — Vorschlag, Umfeld, Suche'), icon: '⌗', topic: 'classification', roles: ['group', 'product'], run(id, ctx) { return classDialog(id, ctx) } },   // (+): auch zum Zufügen
   ],
   checks,
   featuresOf: etimFeatures,

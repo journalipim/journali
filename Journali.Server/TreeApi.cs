@@ -122,6 +122,26 @@ public static class TreeApi
             return UsedAttributes(tree, id, role, admin) is { } u ? Results.Ok(new { attributes = u.Attributes, nodes = u.Nodes }) : Results.NotFound();
         }));
 
+        // Die eigenen Werte eines Attributs (ohne Sprache, Kanal, Zeile): je Knoten Id, Wert, Name, Rolle — nur, wo der Wert am Knoten selbst steht.
+        // Für Plugins, die wissen müssen, wo etwas zugewiesen ist (Klasse eines Klassifikationssystems), ohne den ganzen Baum als Tabelle zu laden
+        // (04.10.2026: vorher je Wurzel /table?deep=true — bei 19 500 Knoten rund 15 MB je Abruf). root begrenzt auf einen Teilbaum.
+        api.MapGet("/values/{attribute}", (string attribute, HttpRequest req, Catalog c, string? root = null) => c.Lesen((model, tree) =>
+        {
+            var (role, admin) = Auth.Sicht(req);
+            IEnumerable<Node> nodes = tree.Nodes.Values;
+            if (root is not null)
+            {
+                if (!tree.Nodes.TryGetValue(root, out var r)) return Results.NotFound();
+                nodes = tree.DescendantsDeepestFirst(root).Prepend(r);
+            }
+            var values = nodes.Where(n => tree.Visible(n, role, admin))
+                .Select(n => (n, v: n.Own(attribute, null, null)))
+                .Where(x => !string.IsNullOrEmpty(x.v))
+                .Select(x => new { id = x.n.Id, value = x.v, label = NodeRow.LabelOf(tree, model, x.n), role = x.n.Role })
+                .ToList();
+            return Results.Ok(new { attribute, values });
+        }));
+
         // Sichtbar für Rollen (27.09.2026): ab hier abwärts; leer = für alle
         api.MapPut("/nodes/{id}/roles", (string id, RolesBody b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.RestrictNode(x, id, b.Roles)));
 

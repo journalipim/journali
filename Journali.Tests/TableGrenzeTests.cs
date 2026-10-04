@@ -158,4 +158,19 @@ public class TableGrenzeTests
         var ctx = new Microsoft.AspNetCore.Http.DefaultHttpContext(); ctx.Request.Method = "POST"; ctx.Request.Path = "/api/nodes/x/table";
         Assert.Equal(Rights.Read, Auth.Needed(ctx.Request));
     }
+
+    [Fact]
+    public async Task Values_nennt_die_eigenen_Werte_eines_Attributs_mit_Name_und_Rolle_auch_in_einem_Teilbaum()
+    {
+        await using var w = await Welt.Neu();
+        var (_, alle) = await w.Get("/api/values/farbe");
+        var werte = alle.GetProperty("values").EnumerateArray().ToDictionary(x => x.GetProperty("id").GetString()!, x => x.GetProperty("value").GetString());
+        Assert.Equal(2, werte.Count);
+        Assert.Equal("rot", werte[w.Ids["p1"]]); Assert.Equal("blau", werte[w.Ids["p3"]]);
+        Assert.Equal("product", alle.GetProperty("values")[0].GetProperty("role").GetString());
+        var (_, teil) = await w.Get($"/api/values/farbe?root={w.Ids["p3"]}");
+        Assert.Single(teil.GetProperty("values").EnumerateArray());
+        var (status, _) = await w.Get("/api/values/farbe?root=gibtsnicht");
+        Assert.Equal(HttpStatusCode.NotFound, status);
+    }
 }
