@@ -32,6 +32,38 @@ public static class WorkflowApi
         runner.Start(job, "workflow", out _);
     }
 
+    /// <summary>Meine Aufgaben: Knoten, an denen meine Rolle (oder ich) jetzt einen Schritt gehen darf — die ältesten zuerst, höchstens limit (1 bis 2 000).</summary>
+    public static List<object> Aufgaben(Catalog c, ModelCatalog model, Tree tree, string? role, string? user, string? workflow, string? state, int limit)
+    {
+        // leere Parameter = alle
+        if (string.IsNullOrWhiteSpace(workflow)) workflow = null; if (string.IsNullOrWhiteSpace(state)) state = null;
+        // erst sammeln, dann nach Alter ordnen und kürzen (04.10.2026): vorher brach das limit nur die Schleife der Sprachen ab, die Knoten liefen weiter,
+        // und gekürzt wurde vor dem Ordnen — nicht die ältesten kamen, sondern die ersten
+        limit = Math.Clamp(limit, 1, 2000);
+        var out_ = new List<(DateTimeOffset? Since, Func<object> Row)>();
+        foreach (var wf in c.Workflows.All.Values.Where(w => workflow is null || w.Key == workflow))
+        {
+            foreach (var n in tree.Nodes.Values.Where(wf.AppliesTo))
+            {
+                // je Sprache eine Aufgabe, wo es einen eigenen Sprachzustand gibt; sonst wie bisher eine je Knoten
+                var slots = wf.PerLocale ? c.Workflows.LocalesAt(n.Id, wf).OrderBy(l => l).Select(l => (string?)l).DefaultIfEmpty(null).ToList() : [null];
+                foreach (var loc in slots)
+                {
+                    var (st, _) = c.Workflows.StateOf(n.Id, wf, x => tree.Nodes.GetValueOrDefault(x)?.Parent, loc);
+                    if (state is not null && st != state) continue;
+                    if (wf.State(st)?.Final == true && state is null) continue;
+                    var nw = c.Workflows.Of(n.Id).GetValueOrDefault(Workflows.Slot(wf.Key, loc));
+                    if (state is null && nw is null) continue;   // nie angefasst: keine Aufgabe (sonst wäre jeder Knoten eine)
+                    var allowed = Commands.Allowed(c.Workflows, wf, n.Id, role, null, tree, loc).ToList();
+                    if (allowed.Count == 0) continue;
+                    if (nw?.Assigned is { } a && user is not null && a != user && state is null) continue;   // jemand anderem zugewiesen
+                    out_.Add((nw?.At, () => new { node = n.Id, label = NodeRow.LabelOf(tree, model, n), n.Role, workflow = wf.Key, workflowLabel = wf.Label, locale = loc, state = st, stateLabel = wf.State(st)?.Label, color = wf.State(st)?.Color, since = nw?.At, actor = nw?.Actor, note = nw?.Note, assigned = nw?.Assigned, roles = wf.Transitions.Where(t => t.From == st).SelectMany(t => t.Roles ?? []).Distinct().ToList(), transitions = allowed.Select(t => new { t.Key, t.Label, t.NoteRequired, t.Effects }).ToList() }));
+                }
+            }
+        }
+        return out_.OrderBy(o => o.Since ?? DateTimeOffset.MaxValue).Take(limit).Select(o => o.Row()).ToList();
+    }
+
     public static void Map(RouteGroupBuilder api, JobRunner runner)
     {
         api.MapGet("/workflows", (Catalog c) => c.Lesen((_, tree) => c.Workflows.All.Values.OrderBy(w => w.Key).Select(w => View(c, tree, w)).ToList()));
@@ -41,34 +73,7 @@ public static class WorkflowApi
 
         // Meine Aufgaben: Knoten, an denen meine Rolle (oder ich) jetzt einen Schritt gehen darf — nach Alter im Zustand
         api.MapGet("/workflows/tasks", (HttpRequest req, Catalog c, string? workflow = null, string? state = null, int limit = 500) => c.Lesen((model, tree) =>
-        {
-            var role = req.HttpContext.Items["role"] as string; var user = req.HttpContext.Items["user"] as string;
-            // leere Parameter = alle
-            if (string.IsNullOrWhiteSpace(workflow)) workflow = null; if (string.IsNullOrWhiteSpace(state)) state = null;
-            var out_ = new List<(DateTimeOffset? Since, object Row)>();
-            foreach (var wf in c.Workflows.All.Values.Where(w => workflow is null || w.Key == workflow))
-            {
-                foreach (var n in tree.Nodes.Values.Where(wf.AppliesTo))
-                {
-                    // je Sprache eine Aufgabe, wo es einen eigenen Sprachzustand gibt; sonst wie bisher eine je Knoten
-                    var slots = wf.PerLocale ? c.Workflows.LocalesAt(n.Id, wf).OrderBy(l => l).Select(l => (string?)l).DefaultIfEmpty(null).ToList() : [null];
-                    foreach (var loc in slots)
-                    {
-                        var (st, _) = c.Workflows.StateOf(n.Id, wf, x => tree.Nodes.GetValueOrDefault(x)?.Parent, loc);
-                        if (state is not null && st != state) continue;
-                        if (wf.State(st)?.Final == true && state is null) continue;
-                        var nw = c.Workflows.Of(n.Id).GetValueOrDefault(Workflows.Slot(wf.Key, loc));
-                        if (state is null && nw is null) continue;   // nie angefasst: keine Aufgabe (sonst wäre jeder Knoten eine)
-                        var allowed = Commands.Allowed(c.Workflows, wf, n.Id, role, null, tree, loc).ToList();
-                        if (allowed.Count == 0) continue;
-                        if (nw?.Assigned is { } a && user is not null && a != user && state is null) continue;   // jemand anderem zugewiesen
-                        out_.Add((nw?.At, new { node = n.Id, label = NodeRow.LabelOf(tree, model, n), n.Role, workflow = wf.Key, workflowLabel = wf.Label, locale = loc, state = st, stateLabel = wf.State(st)?.Label, color = wf.State(st)?.Color, since = nw?.At, actor = nw?.Actor, note = nw?.Note, assigned = nw?.Assigned, roles = wf.Transitions.Where(t => t.From == st).SelectMany(t => t.Roles ?? []).Distinct().ToList(), transitions = allowed.Select(t => new { t.Key, t.Label, t.NoteRequired, t.Effects }).ToList() }));
-                        if (out_.Count >= limit) break;
-                    }
-                }
-            }
-            return Results.Ok(out_.OrderBy(o => o.Since ?? DateTimeOffset.MaxValue).Select(o => o.Row).ToList());
-        }));
+            Results.Ok(Aufgaben(c, model, tree, req.HttpContext.Items["role"] as string, req.HttpContext.Items["user"] as string, workflow, state, limit))));
 
         // Am Knoten: je geltendem Workflow Zustand, Verlaufskopf, erlaubte Übergänge für meine Rolle
         api.MapGet("/nodes/{id}/workflow", (string id, HttpRequest req, Catalog c) => c.Lesen((model, tree) =>
