@@ -19,6 +19,15 @@ Aufruf (gegen eine frische Demo-Instanz, nie gegen die Kundendatenbank):
   Ohne Anwender (offene Instanz) reicht --actor.
 
 Bricht ab, wenn unter der Wurzel schon eine Gruppe „Tannwald“ liegt — der Lauf ist einmalig.
+
+Dazu zwei Beispiele für die Plugins (je übersprungen, wenn es sie schon gibt oder das Plugin fehlt, aus ist oder nicht zum Tarif gehört):
+  5. Konfigurator: die Gruppe „Server-Konfigurator (Demo)“ mit Mainboards, Prozessoren, Arbeitsspeicher, Kühlpaste, Karten, einer
+     Grafikkarte und einem Netzteil; Konfiguratorgruppen (group:…), die Zeilen der Teile (member:…) und der Konfigurator „server“
+     (def:server) mit Regeln und einer Grenze — als Plugin-Daten von configurator. Am Ende fragt das Skript den Endpunkt einmal.
+  6. Skript: „Konfiguratorgruppen: Mitglieder je Gruppe“ (scriptum), freigegeben für das Recht „read“.
+
+  --nur-beispiele      nur 5 und 6 (der Tannwald-Teil läuft schon); legt das Modell nur an, was die Beispiele brauchen
+  --ohne-beispiele     nur 1 bis 4
 """
 from __future__ import annotations
 
@@ -153,6 +162,17 @@ class Api:
         if r.status_code >= 400:
             sys.exit(f"{method} {path} → {r.status_code}: {r.text[:300]}")
         return r.json() if r.content else None
+
+    def probe(self, method: str, path: str, **kw):
+        """Wie call, aber ohne Abbruch: (Statuscode, Antwort). Für Fragen, deren Nein eine Antwort ist."""
+        self.calls += 1
+        r = self.s.request(method, self.url + path, timeout=120, **kw)
+        if self.log:
+            self.log.write(f"{method} {path} {str(kw.get('json'))[:200]}\n  -> {r.status_code} {r.text[:300]}\n"); self.log.flush()
+        try:
+            return r.status_code, (r.json() if r.content else None)
+        except ValueError:
+            return r.status_code, r.text
 
     def get(self, path: str):
         return self.call("GET", path)
@@ -414,7 +434,190 @@ def build(api: Api, out_dir: str | None, want: int) -> None:
     print(f"Journal-Kopf jetzt #{health.get('head')}, Knoten {health.get('nodes')}")
 
 
+# ---------------------------------------------------------------- Beispiel: Konfigurator
+
+SERVER_GROUP = "Server-Konfigurator (Demo)"
+SERVER_SUBGROUPS = [
+    ("mainboards", "Mainboards", "Mainboards"), ("cpus", "Prozessoren", "Processors"), ("ram", "Arbeitsspeicher", "Memory"),
+    ("cooling", "Kühlung", "Cooling"), ("cards", "Erweiterungskarten", "Expansion cards"), ("gpus", "Grafikkarten", "Graphics cards"),
+    ("psus", "Netzteile", "Power supplies"),
+]
+# Die Konfiguratorgruppen: Schlüssel → (Bezeichnung, alle Werte gleich)
+SERVER_GROUPS = {
+    "cpu_sockel": ("CPU-Sockel", False),
+    "pci": ("PCI-Steckplätze", False),
+    "kuehlpaste": ("Kühlpaste", False),
+    "cpu_typ": ("Nur ein CPU-Typ", True),
+    "ram": ("RAM-Kapazität (GB)", False),
+}
+
+
+def server_parts() -> list:
+    """(Schlüssel, Untergruppe, Name de, Name en, SKU, Preis, Zeilen als Funktion der Ids) — erfundene Teile, keine echten Produkte."""
+    def cpu(typ: str, mit_basis: bool):
+        def rows(ids):
+            r = [{"group": "cpu_sockel", "consumes": 1}, {"group": "kuehlpaste", "consumes": 1}, {"group": "cpu_typ", "value": typ}]
+            if mit_basis:   # mit diesem Mainboard stellt die CPU zwei PCI-Steckplätze bereit
+                r.append({"group": "pci", "provides": 2, "when": {"kind": "has", "selector": {"node": ids["mb_basis"]}, "value": 1}})
+            return r
+        return rows
+
+    parts = [
+        ("mb_basis", "mainboards", "Basis 2S Mainboard", "Basis 2S mainboard", "SRV-MB-BASIS2S", 389,
+         lambda ids: [{"group": "cpu_sockel", "provides": 2}, {"group": "pci", "provides": 4},
+                      {"group": "ram", "min": 2, "max": 2, "values": ["8", "32"]}]),
+        ("mb_maxi", "mainboards", "Maxi 4S Mainboard", "Maxi 4S mainboard", "SRV-MB-MAXI4S", 899,
+         lambda ids: [{"group": "cpu_sockel", "provides": 4}, {"group": "pci", "provides": 6},
+                      {"group": "ram", "min": 4, "max": 8, "values": ["16", "32", "64"]}]),
+        ("cpu_silber", "cpus", "Nordkern Silber 16 Prozessor", "Nordkern Silver 16 processor", "SRV-CPU-S16", 420, cpu("silber-cpu", True)),
+        ("cpu_gold", "cpus", "Nordkern Gold 32 Prozessor", "Nordkern Gold 32 processor", "SRV-CPU-G32", 1190, cpu("gold-cpu", False)),
+    ]
+    for gb, preis in ((2, 19), (4, 29), (8, 45), (16, 79), (32, 149), (64, 289)):
+        parts.append((f"ram_{gb}", "ram", f"RAM-Baustein {gb} GB", f"RAM module {gb} GB", f"SRV-RAM-{gb}", preis,
+                      lambda ids, gb=gb: [{"group": "ram", "value": str(gb)}]))
+    parts += [
+        ("paste", "cooling", "Wärmeleitpaste, 4er-Set", "Thermal paste, set of 4", "SRV-PASTE-4", 12,
+         lambda ids: [{"group": "kuehlpaste", "provides": 4}]),
+        ("karte_exp", "cards", "PCIe-Erweiterung", "PCIe expansion", "SRV-PCI-EXP", 89,
+         lambda ids: [{"group": "pci", "consumes": 1, "provides": 3}]),   # braucht einen Steckplatz, stellt drei bereit
+        ("karte_net", "cards", "Netzwerkkarte 10G", "Network card 10G", "SRV-NIC-10G", 149,
+         lambda ids: [{"group": "pci", "consumes": 1}]),
+        ("gpu", "gpus", "Compute-Karte 24 GB", "Compute card 24 GB", "SRV-GPU-24", 1790,
+         lambda ids: [{"group": "pci", "consumes": 1}]),
+        ("psu", "psus", "Netzteil 1200 W", "Power supply 1200 W", "SRV-PSU-1200", 239, lambda ids: []),
+    ]
+    return parts
+
+
+def plugin_data(api: Api, name: str, body) -> None:
+    api.put(f"/api/plugins/configurator/data/{name}", body)
+
+
+def build_konfigurator(api: Api) -> None:
+    code, antwort = api.probe("GET", "/api/configurator")
+    if code != 200:
+        print(f"Konfigurator übersprungen: das Plugin ist nicht da, aus oder nicht im Tarif ({code}: {antwort.get('error') if isinstance(antwort, dict) else antwort}).")
+        return
+    for n in api.get("/api/tree"):
+        if n.get("parent") == ROOT and n.get("role") == "group" and (n.get("label") or "") == SERVER_GROUP:
+            print(f"Konfigurator übersprungen: unter {ROOT} liegt schon „{SERVER_GROUP}“ ({n['id']}).")
+            return
+
+    top = api.created("/api/groups", {"parent": ROOT, "label": labels(SERVER_GROUP, "Server configurator (demo)")})
+    subs = {}
+    for key, de, en in SERVER_SUBGROUPS:
+        subs[key] = api.created("/api/groups", {"parent": top, "label": labels(de, en)})
+    print(f"Gruppe {SERVER_GROUP}: {top}")
+
+    ids: dict = {}
+    parts = server_parts()
+    for key, sub, de, en, sku, price, _rows in parts:
+        product = api.created("/api/products", {"group": subs[sub], "axes": None})
+        ids[key] = product
+        api.set_value(product, "name", de, locale="de")
+        api.set_value(product, "name", en, locale="en")
+        variant = api.created("/api/variants", {"product": product, "axisValues": {}})   # gewählt wird die Variante, ihre SKU nennt der Shop
+        api.set_value(variant, "sku", sku)
+        api.set_value(variant, "ean", ean13(sku))
+        api.set_value(variant, "price", f"{price:.2f}")
+    print(f"  {len(parts)} Teile")
+
+    for key, (label, equal) in SERVER_GROUPS.items():
+        body: dict = {"label": label}
+        if equal:
+            body["equal"] = True
+        plugin_data(api, f"group:{key}", body)
+    for key, _sub, _de, _en, _sku, _price, rows in parts:
+        zeilen = rows(ids)
+        if zeilen:
+            plugin_data(api, f"member:{ids[key]}", {"rows": zeilen})   # am Produkt: die Variante nimmt die Zeilen ihres Produkts
+
+    definition = {
+        "label": "Server", "root": top,
+        "rules": [
+            {"id": "mb-max", "text": "Höchstens ein Mainboard", "then": {"kind": "limits", "selector": {"node": subs["mainboards"]}, "max": 1}},
+            {"id": "gpu-psu", "text": "Eine Compute-Karte braucht ein Netzteil",
+             "if": {"kind": "has", "selector": {"node": subs["gpus"]}, "value": 1},
+             "then": {"kind": "requires", "selector": {"node": subs["psus"]}, "min": 1}},
+        ],
+        "limits": [{"group": "ram", "max": 8}],
+    }
+    plugin_data(api, "def:server", definition)
+    print("  Konfigurator „server“ mit 2 Regeln, 1 Grenze und 5 Gruppen")
+
+    # Probe: Mainboard Basis, eine Silber-CPU, Kühlpaste, zwei Bausteine mit 8 GB — das muss gehen
+    auswahl = [{"id": "SRV-MB-BASIS2S"}, {"id": "SRV-CPU-S16"}, {"id": "SRV-PASTE-4"}, {"id": "SRV-RAM-8", "amount": 2}]
+    code, r = api.probe("POST", "/api/configurator/server/check", json={"selection": auswahl})
+    if code == 200:
+        print(f"  Probe: zulässig {r.get('valid')}, vollständig {r.get('complete')}")
+        if not (r.get("valid") and r.get("complete")):
+            print(f"  Achtung, die Probe geht nicht auf: {r.get('violations')} {r.get('missing')}")
+    else:
+        print(f"  Probe nicht möglich ({code}): {r}")
+
+
+# ---------------------------------------------------------------- Beispiel: Skript
+
+SCRIPT_KEY = "konfiguratorgruppen"
+SCRIPT_SOURCE = """export const meta = {
+  label: 'Konfiguratorgruppen: Mitglieder je Gruppe',
+  params: [
+    { key: 'filter', label: 'Teil des Gruppenschlüssels', type: 'text', default: '' },
+    { key: 'mindestens', label: 'Mindestens so viele Mitglieder', type: 'number', default: '0' },
+  ],
+}
+
+// Liest die Konfiguratorgruppen und zählt je Gruppe die Mitglieder und die Teile, die ihr eine Vorgabe machen.
+export default async (ctx) => {
+  const antwort = await ctx.api.get('/api/configurator-groups')
+  const filter = String(ctx.params.filter || '').toLowerCase()
+  const mindestens = Number(ctx.params.mindestens) || 0
+  const gibtVor = {}
+  for (const teil of antwort.parts || [])
+    for (const z of teil.rows || [])
+      if (z.min != null || z.max != null || (z.values || []).length) gibtVor[z.group] = (gibtVor[z.group] || 0) + 1
+  const zeilen = (antwort.groups || [])
+    .filter((g) => g.key.toLowerCase().includes(filter) && g.members >= mindestens)
+    .map((g) => [g.key, g.label || '', g.equal ? 'ja' : 'nein', g.members, gibtVor[g.key] || 0])
+  if (!zeilen.length) return ctx.out.text('Keine Gruppe gefunden.')
+  return ctx.out.table(['Gruppe', 'Bezeichnung', 'Gleiche Werte', 'Mitglieder', 'Vorgaben'], zeilen)
+}
+"""
+
+
+def build_skript(api: Api) -> None:
+    code, liste = api.probe("GET", "/api/scriptum/scripts")
+    if code != 200:
+        print(f"Skript übersprungen: das Plugin ist nicht da, aus oder nicht im Tarif ({code}).")
+        return
+    if any(x.get("key") == SCRIPT_KEY for x in liste or []):
+        print(f"Skript übersprungen: „{SCRIPT_KEY}“ gibt es schon.")
+        return
+    body = {
+        "label": "Konfiguratorgruppen: Mitglieder je Gruppe", "role": "reader", "run": "read", "source": SCRIPT_SOURCE,
+        "note": "Beispiel: liest die Konfiguratorgruppen über die Schnittstelle und zeigt sie als Tabelle.",
+        "params": [
+            {"key": "filter", "label": "Teil des Gruppenschlüssels", "type": "text", "default": ""},
+            {"key": "mindestens", "label": "Mindestens so viele Mitglieder", "type": "number", "default": "0"},
+        ],
+    }
+    code, antwort = api.probe("PUT", f"/api/scriptum/scripts/{SCRIPT_KEY}", json=body)
+    if code == 400 and "Rolle" in str(antwort):   # die Rolle „reader“ gibt es in dieser Instanz nicht: das Skript läuft dann mit der Vorgabe
+        body.pop("role")
+        code, antwort = api.probe("PUT", f"/api/scriptum/scripts/{SCRIPT_KEY}", json=body)
+    if code != 200:
+        print(f"Skript nicht angelegt ({code}): {antwort}")
+        return
+    print(f"Skript „{SCRIPT_KEY}“ angelegt (freigegeben für das Recht „read“); ausführen unter Werkzeuge → Skripte")
+
+
 def main() -> None:
+    # Die Konsole unter Windows schreibt sonst in cp1252 und bricht an Zeichen wie „→“ ab
+    for strom in (sys.stdout, sys.stderr):
+        try:
+            strom.reconfigure(encoding="utf-8", errors="replace")
+        except (AttributeError, ValueError):
+            pass
     p = argparse.ArgumentParser(description="Demo-MasterTree für journali anlegen (erfundene Marke Tannwald).")
     p.add_argument("--url", default="http://localhost:5000")
     p.add_argument("--user", help="Anwender für die Anmeldung (Passwort aus JOURNALI_DEMO_PASSWORD oder --password)")
@@ -424,7 +627,11 @@ def main() -> None:
     p.add_argument("--products", type=int, default=200, help="ungefähre Anzahl Produkte (Vorgabe 200)")
     p.add_argument("--images-dir", help="generierte PNGs zusätzlich hier ablegen")
     p.add_argument("--log", help="jede Anfrage mit Antwort in diese Datei schreiben")
+    p.add_argument("--nur-beispiele", action="store_true", help="nur das Konfigurator-Beispiel und das Beispielskript (der Tannwald-Teil läuft schon)")
+    p.add_argument("--ohne-beispiele", action="store_true", help="nur den Tannwald-Teil")
     a = p.parse_args()
+    if a.nur_beispiele and a.ohne_beispiele:
+        sys.exit("--nur-beispiele und --ohne-beispiele schliessen sich aus.")
 
     api = Api(a.url, a.actor, a.token)
     if a.log:
@@ -441,7 +648,13 @@ def main() -> None:
         print("Achtung: diese Instanz hat schon viele Knoten — für die Demo ist eine leere Datenbank gedacht.")
     if a.images_dir:
         os.makedirs(a.images_dir, exist_ok=True)
-    build(api, a.images_dir, a.products)
+    if a.nur_beispiele:
+        ensure_model(api)   # die Beispiele brauchen price (und die Listen daneben)
+    else:
+        build(api, a.images_dir, a.products)
+    if not a.ohne_beispiele:
+        build_konfigurator(api)
+        build_skript(api)
 
 
 if __name__ == "__main__":
