@@ -12,10 +12,10 @@ using static Journali.Server.ModelApi;
 // nach wwwroot) daneben. Regel: kein Schreibpfad am Catalog vorbei.
 
 var builder = WebApplication.CreateBuilder(args);
-// Die erste Zeile: welche Version startet — Bau wie in der Kopfleiste (TTMM.hhmm, Ortszeit des Servers)
+// Die erste Zeile: welche Version startet — Build wie in der Kopfleiste (TTMM.hhmm, Ortszeit des Servers)
 {
     var gebaut = System.IO.File.GetLastWriteTimeUtc(typeof(Program).Assembly.Location).ToLocalTime();
-    Console.WriteLine($"journali {typeof(Program).Assembly.GetName().Version?.ToString(3)} · Bau {gebaut:ddMM.HHmm} ({gebaut:dd.MM.yyyy HH:mm} {gebaut:zzz})");
+    Console.WriteLine($"journali {typeof(Program).Assembly.GetName().Version?.ToString(3)} · Build {gebaut:ddMM.HHmm} ({gebaut:dd.MM.yyyy HH:mm} {gebaut:zzz})");
 }
 
 // Datenverzeichnis (JOURNALI_JOBS): Jobs, Medien-Einstellung, die Verbindung zur Datenbank (db.json) — und der lokale

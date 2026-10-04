@@ -64,7 +64,7 @@ const entfernen = s => tun(() => api.del(`/api/server/${s.id}`))
     <div v-if="hauptWeg" class="neg haupt-weg" :title="$t('Systemjobs und Zeitplan-Jobs laufen erst wieder, wenn er erreichbar ist oder ein anderer Server Hauptserver wird.')">{{ $t("✗ Der Hauptserver {0} ist nicht erreichbar.", [name(hauptWeg)]) }}</div>
     <table class="grid server">
       <thead><tr>
-        <th></th><th>{{ $t("Name") }}</th><th>{{ $t("Rechner") }}</th><th>{{ $t("Rolle") }}</th><th :title="$t('Version und Bau wie in der Kopfleiste (TTMM.hhmm)')">{{ $t("Version") }}</th><th :title="$t('Stand des Journals auf diesem Server')">#</th>
+        <th></th><th>{{ $t("Name") }}</th><th>{{ $t("Rechner") }}</th><th>{{ $t("Rolle") }}</th><th :title="$t('Version und Build wie in der Kopfleiste (TTMM.hhmm)')">{{ $t("Version") }}</th><th :title="$t('Stand des Journals auf diesem Server')">#</th>
         <th :title="$t('letzter Puls')">{{ $t("Puls") }}</th><th :title="$t('laufende Jobs')">{{ $t("Jobs") }}</th><th></th>
       </tr></thead>
       <tbody>
@@ -84,7 +84,7 @@ const entfernen = s => tun(() => api.del(`/api/server/${s.id}`))
             <span v-if="s.import" class="warn" :title="$t('Ein Import läuft; die Systemjobs warten.')"> ⇵</span>
           </td>
           <td class="mono version"><span :class="{ warn: andereVersion(s) || andererBau(s) }"
-            :title="[s.built ? $t('gebaut {0}', [bauLang(s.built)]) : '', andereVersion(s) ? $t('Andere Version als dieser Server.') : andererBau(s) ? $t('Anderer Bau als dieser Server.') : ''].filter(Boolean).join(' · ')">{{ s.version ?? '—' }}<template v-if="s.built"> ·{{ bauKurz(s.built) }}</template></span></td>
+            :title="[s.built ? $t('gebaut {0}', [bauLang(s.built)]) : '', andereVersion(s) ? $t('Andere Version als dieser Server.') : andererBau(s) ? $t('Anderer Build als dieser Server.') : ''].filter(Boolean).join(' · ')">{{ s.version ?? '—' }}<template v-if="s.built"> ·{{ bauKurz(s.built) }}</template></span></td>
           <td class="mono">{{ s.head ? '#' + s.head : '—' }}</td>
           <td class="mono muted" :title="s.started ? $t('läuft seit {0}', [when(s.started)]) : ''">{{ s.puls ? when(s.puls) : '—' }}</td>
           <td class="mono" :title="jobs(s).map(j => j.key + (j.reason ? ' (' + j.reason + ')' : '')).join(', ')">{{ jobs(s).length || '' }}</td>
