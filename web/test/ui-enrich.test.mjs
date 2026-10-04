@@ -99,3 +99,33 @@ test('enrich: Suchknopf ist aktiv, wenn Attribute gewählt und KI verfügbar', a
     assert.ok(!startBtn.hasAttribute('disabled'), 'Suchknopf ist aktiv (nicht deaktiviert)')
   } finally { api.get = get }
 })
+
+// 04.10.2026: je Knoten ein KI-Aufruf — ab zehn fragt die Anreicherung vor dem Start, und ⏹ hält den Lauf an
+test('enrich: 15 Knoten — erst die Rückfrage mit der Zahl; abgelehnt kein Aufruf, angehalten keine weiteren', async () => {
+  const get = api.get
+  const zeilen = Array.from({ length: 15 }, (_, i) => ({ row: { id: 'p' + i, label: 'P' + i, role: 'product' }, values: { farbe: { value: null }, gewicht: { value: '1' } } }))
+  api.get = async p => String(p).includes('/table') ? { columns: [{ key: 'farbe', type: 'text' }, { key: 'gewicht', type: 'number' }], rows: zeilen, total: 15 } : []
+  const lauf = async (antwort, anhaltenNach = null) => {
+    const gefragt = []; let aufrufe = 0, root = document.createElement('div')
+    const ai = { available: () => true, label: () => 'Test', lastSources: [], ask: async () => {
+      aufrufe++
+      if (anhaltenNach && aufrufe === anhaltenNach) [...root.querySelectorAll('button')].find(b => b.textContent.includes('Anhalten')).click()
+      return {}
+    } }
+    const enrich = (await import('../../plugins/enrich/entry.js')).default
+    await enrich.views[0].mount(root, { api, store, tree, ai, dialog: { confirm: async o => { gefragt.push(o); return antwort } }, treePicker() {} })
+    ;[...root.querySelectorAll('.view-chip')].find(c => /Farbe/.test(c.textContent)).dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    ;[...root.querySelectorAll('.view-chip')].find(c => c.textContent.includes('KI') && !c.textContent.includes('Web'))?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    ;[...root.querySelectorAll('button.primary')].find(b => b.textContent.includes('Suche starten')).click()
+    for (let i = 0; i < 40; i++) await new Promise(r => setTimeout(r, 0))
+    return { gefragt, aufrufe }
+  }
+  try {
+    const nein = await lauf(false)
+    assert.equal(nein.gefragt.length, 1)
+    assert.match(nein.gefragt[0].title, /15 KI-Aufrufe starten/)
+    assert.equal(nein.aufrufe, 0, 'abgelehnt: kein Aufruf')
+    const halt = await lauf(true, 3)
+    assert.equal(halt.aufrufe, 3, 'nach ⏹ kein weiterer Aufruf')
+  } finally { api.get = get }
+})

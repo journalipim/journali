@@ -3,6 +3,7 @@
 const L = l => globalThis.journali?.L ? globalThis.journali.L(l) : (l?.de ?? Object.values(l ?? {})[0] ?? '')
 const t = (k, p) => globalThis.journali?.t ? globalThis.journali.t(k, p) : String(k).replace(/\{(\w+)\}/g, (m, i) => p?.[i] ?? m)
 const GRENZE = 2000   // so viele Knoten bearbeitet die Anreicherung auf einmal (je Knoten ein KI-Aufruf)
+const RUECKFRAGE = 10   // ab so vielen KI-Aufrufen fragt die Anreicherung vor dem Start
 function el(tag, attrs = {}, ...kids) { const e = document.createElement(tag); for (const [k, v] of Object.entries(attrs)) { if (v == null) continue; if (k === 'style') e.style.cssText = v; else if (k.startsWith('on')) e.addEventListener(k.slice(2), v); else if (k === 'class') e.className = v; else e.setAttribute(k, v) } for (const c of kids.flat()) if (c != null) e.append(c.nodeType ? c : String(c)); return e }
 
 async function mount(root, ctx) {
@@ -151,19 +152,21 @@ async function mount(root, ctx) {
   // 4. Zuordnen: gewählte Attribute → konkrete Knoten, die den Wert brauchen
   function zuordnen() {
     const arbeit = []
+    // Zeilen und Attribute als Map (04.10.2026) — vorher je Knoten und Spalte eine Suche über alle
+    const zeilen = new Map(st.rows.map(x => [x.row.id, x])), defs = new Map(model.attributes.map(a => [a.key, a]))
     for (const key of st.gewaehlt) {
       const nodeIds = st.leere.get(key) || []
-      const def = model.attributes.find(a => a.key === key)
+      const def = defs.get(key)
       if (!def) continue
       for (const nodeId of nodeIds) {
-        const r = st.rows.find(x => x.row.id === nodeId)
+        const r = zeilen.get(nodeId)
         if (!r) continue
         // Kontext: alle vorhandenen Werte dieses Knotens
         const kontext = []
         for (const col of st.columns) {
           const v = r.values?.[col.key]
           if (!v || v.value == null || v.value === '') continue
-          const d = model.attributes.find(a => a.key === col.key)
+          const d = defs.get(col.key)
           kontext.push({ key: col.key, label: d ? lbl(d) : col.key, value: String(v.values ? v.values.join(', ') : v.value).replace(/<[^>]+>/g, ' ').slice(0, 300) })
         }
         arbeit.push({ nodeId, nodeLabel: r.row.label, nodeRole: r.row.role, nodeKeys: r.row.keys, attrKey: key, attrLabel: lbl(def), attrDef: def, kontext })
@@ -197,8 +200,13 @@ async function mount(root, ctx) {
       if (!nachKnoten.has(a.nodeId)) nachKnoten.set(a.nodeId, { ...a, fehlend: [] })
       nachKnoten.get(a.nodeId).fehlend.push(a)
     }
+    // je Knoten ein KI-Aufruf: ab RUECKFRAGE Aufrufen erst fragen, und ⏹ hält den Lauf an (04.10.2026)
+    if (nachKnoten.size >= RUECKFRAGE && !await dialog.confirm({ title: t('{0} KI-Aufrufe starten?', [nachKnoten.size]), warn: t('je Knoten ein Aufruf{0}', [web ? ' ' + t('mit Websuche') : '']), ok: t('Starten') })) { st.laufend = false; drawAuswahl(); return }
+    let angehalten = false
+    body.append(el('button', { class: 'x', onclick: e => { angehalten = true; e.target.disabled = true } }, t('⏹ Anhalten')))
     let fertig = 0
     for (const [nodeId, kn] of nachKnoten) {
+      if (angehalten) break
       fertig++
       fortschritt.textContent = t('{0}/{1}: {2} …', [fertig, nachKnoten.size, kn.nodeLabel])
       const known = kn.kontext.map(k => `${k.label}: ${k.value}`).join('\n')
