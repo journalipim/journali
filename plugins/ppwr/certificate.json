@@ -1,8 +1,8 @@
 {
  "key": "ppwr",
- "version": "1.0.0",
- "hash": "783329343f14c3f65192124f221e00d0849da91492b2f9b4af1b1ad49d22e111",
- "issued": "2026-10-01",
+ "version": "1.0.1",
+ "hash": "baa4af58791c14572192ff2e865db6339fa330760de5c9d8de02b736838d6e7f",
+ "issued": "2026-10-04",
  "issuer": "journali",
- "sig": "blVju7/h3fB1bL+puLLXTswZH0F3bsJGw8Fj7duKN4NeFiHgRgCOJsmCcpCui3Qorlz5OClawD0hYZ6hD1FDOw=="
+ "sig": "tE/t+/QIOtVrObigZiNDO5BEx+gadegBlt0IzEbwYboIVxVD68WqFdKb+/ri7UJNtOVgoiRWJ7WYQeFd2RaFpw=="
 }

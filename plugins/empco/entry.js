@@ -46,7 +46,7 @@ const catalog = {
     {
       id: "generic",
       severity: "error",
-      ref: "Anhang I Nr. 2a / Art. 6 Abs. 2 lit. d",
+      ref: "Anhang I Nr. 4a",
       label: "Allgemeine Umweltaussage ohne Beleg",
       hint: "Pauschale Umweltaussagen sind verboten, wenn keine anerkannte hervorragende Umweltleistung nachgewiesen wird. Konkret machen: was, wie viel, womit belegt.",
       terms: ["umweltfreundlich", "umweltschonend", "umweltverträglich", "ökologisch", "öko", "grün", "naturfreundlich", "klimafreundlich", "klimaschonend", "nachhaltig", "natürlich", "sanft zur umwelt", "eco-friendly", "environmentally friendly", "green", "eco", "sustainable", "natural", "climate-friendly", "gentle on the environment"]
@@ -62,7 +62,7 @@ const catalog = {
     {
       id: "future",
       severity: "warn",
-      ref: "Anhang I Nr. 4b",
+      ref: "Art. 6 Abs. 2 Buchst. d",
       label: "Zukünftige Umweltleistung ohne Plan",
       hint: "Versprechen künftiger Umweltleistung („bis 2030 klimaneutral“) nur mit klaren, veröffentlichten, überprüfbaren Verpflichtungen und unabhängiger Überwachung.",
       pattern: "\\b(bis|ab|until|by)\\s+20[2-5]\\d\\b.{0,60}\\b(klima|co2|co₂|emission|carbon|neutral|net zero|nachhaltig|sustainab)"
@@ -70,7 +70,7 @@ const catalog = {
     {
       id: "label",
       severity: "warn",
-      ref: "Anhang I Nr. 2b / Art. 2 lit. r",
+      ref: "Anhang I Nr. 2a / Art. 2 Buchst. q, r",
       label: "Nachhaltigkeitssiegel ohne Zertifizierung",
       hint: "Nachhaltigkeitssiegel nur, wenn sie auf einem Zertifizierungssystem beruhen oder von Behörden stammen. Herkunft des Siegels prüfen und nennen.",
       terms: ["siegel", "zertifiziert nachhaltig", "geprüft nachhaltig", "eco-label", "öko-label", "umweltzeichen", "green label", "sustainability label", "award"]
@@ -78,7 +78,7 @@ const catalog = {
     {
       id: "partial",
       severity: "warn",
-      ref: "Anhang I Nr. 4a",
+      ref: "Anhang I Nr. 4b",
       label: "Aussage über das ganze Produkt, die nur einen Teil betrifft",
       hint: "Eine Umweltaussage über das gesamte Produkt oder Unternehmen, die nur einen Aspekt betrifft, ist verboten — Bezug klar machen (Verpackung? Anteil?).",
       terms: ["100 % recycelt", "100% recycelt", "100 % recycled", "100% recycled", "vollständig recycelbar", "fully recyclable", "komplett nachhaltig", "rundum nachhaltig"]
@@ -94,7 +94,7 @@ const catalog = {
     {
       id: "durability",
       severity: "warn",
-      ref: "Anhang I Nr. 23d / Art. 6",
+      ref: "Anhang I Nr. 23g (UWG Anhang Nr. 23d Buchst. d)",
       label: "Haltbarkeitsaussage ohne Nachweis",
       hint: "Aussagen zur Haltbarkeit („langlebig“, „hält ewig“) brauchen Belege; gewerbliche Haltbarkeitsgarantien müssen Bedingungen nennen.",
       terms: ["langlebig", "hält ewig", "unverwüstlich", "lebenslang", "für die ewigkeit", "long-lasting", "lasts forever", "indestructible", "lifetime"]
@@ -102,7 +102,7 @@ const catalog = {
     {
       id: "comparative",
       severity: "warn",
-      ref: "Art. 6 Abs. 2 lit. b / Anhang I Nr. 4a",
+      ref: "Art. 6 Abs. 1 / Anhang I Nr. 4a",
       label: "Vergleichende Umweltaussage ohne Bezug",
       hint: "„umweltfreundlicher“, „grüner als“ braucht den Vergleichsgegenstand, die Methode und den Zeitraum.",
       pattern: "\\b(umweltfreundlicher|grüner|nachhaltiger|klimafreundlicher|sauberer|greener|more sustainable|cleaner|more eco)\\b"

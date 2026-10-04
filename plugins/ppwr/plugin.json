@@ -1,13 +1,13 @@
 {
   "key": "ppwr",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "label": {
     "de": "Verpackung (PPWR)",
     "en": "Packaging (PPWR)"
   },
   "description": {
-    "de": "Prüft Verpackungsdaten gegen die Verpackungsverordnung (EU) 2025/40: Material und Bestandteile, Rezyklat, Recyclingfähigkeitsklasse, Mehrweg, Leerraum, Stoffgrenzen (Pb+Cd+Hg+Cr(VI) ≤ 100 mg/kg), Kennzeichnung, Register. Zuordnung, fehlende Attribute anlegen, Teilbaum prüfen, Vorschläge regelbasiert oder mit die KI.",
-    "en": "Prüft Verpackungsdaten gegen die Verpackungsverordnung (EU) 2025/40: Material und Bestandteile, Rezyklat, Recyclingfähigkeitsklasse, Mehrweg, Leerraum, Stoffgrenzen (Pb+Cd+Hg+Cr(VI) ≤ 100 mg/kg), Kennzeichnung, Register. Zuordnung, fehlende Attribute anlegen, Teilbaum prüfen, Vorschläge regelbasiert oder mit die KI."
+    "de": "Prüft Verpackungsdaten gegen die Verpackungsverordnung (EU) 2025/40: Material und Bestandteile, Rezyklat, Recyclingfähigkeitsklasse, Mehrweg, Leerraum, Stoffgrenzen (Pb+Cd+Hg+Cr(VI) ≤ 100 mg/kg), Kennzeichnung, Register. Zuordnung, fehlende Attribute anlegen, Teilbaum prüfen, Vorschläge regelbasiert oder von der KI.",
+    "en": "Checks packaging data against the Packaging Regulation (EU) 2025/40: material and components, recycled content, recyclability grade, reuse, empty space, substance limits (Pb+Cd+Hg+Cr(VI) ≤ 100 mg/kg), labelling, register. Mapping, create missing attributes, check a subtree, suggestions rule-based or from the AI."
   },
   "kind": "quality",
   "runs": "browser",

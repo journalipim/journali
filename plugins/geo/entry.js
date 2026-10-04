@@ -58,8 +58,9 @@ async function facts(ctx, id, locale) {
 }
 
 function jsonLd(f, locale) {
-  const props = f.rows.filter(r => !['sku', 'name'].includes(r.key)).slice(0, 40).map(r => ({ '@type': 'PropertyValue', name: r.label, value: r.value + (r.unit ? ' ' + r.unit : '') }))
-  return { '@context': 'https://schema.org', '@type': t('Product'), name: f.name, sku: f.sku || undefined, category: f.path || undefined, inLanguage: locale, additionalProperty: props }
+  // Schema.org (04.10.2026): die Einheit gehört in unitText, nicht in den Wert; inLanguage kennt Product nicht (nur CreativeWork)
+  const props = f.rows.filter(r => !['sku', 'name'].includes(r.key)).slice(0, 40).map(r => ({ '@type': 'PropertyValue', name: r.label, value: r.value, ...(r.unit ? { unitText: r.unit } : {}) }))
+  return { '@context': 'https://schema.org', '@type': t('Product'), name: f.name, sku: f.sku || undefined, category: f.path || undefined, additionalProperty: props }
 }
 
 async function mount(root, ctx) {
@@ -146,14 +147,14 @@ const descriptive = (c, v) => (c.type === 'text' || c.type === 'html') && v && (
 const words = s => s.split(/\s+/).filter(Boolean).length
 const checks = [
   { key: 'short', label: t('GEO: Beschreibung zu kurz'), severity: 'info',
-    run({ values, columns }) { return columns.filter(c => descriptive(c, values[c.key]?.value) && words(strip(values[c.key].value)) < 30).map(c => ({ attribute: c.key, message: t('{0} Wörter — KI-Antworten zitieren ab ~30 Wörtern mit Fakten', [words(strip(values[c.key].value))]) })) } },
+    run({ values, columns }) { return columns.filter(c => descriptive(c, values[c.key]?.value) && words(strip(values[c.key].value)) < 30).map(c => ({ attribute: c.key, message: t('{0} Wörter, weniger als 30', [words(strip(values[c.key].value))]) })) } },
   { key: 'definition', label: t('GEO: kein Definitionssatz'), severity: 'warn',
     run({ row, values, columns }) {
       const name = strip(row.label ?? row.name ?? '').toLowerCase()
       return columns.filter(c => descriptive(c, values[c.key]?.value)).filter(c => { const first = strip(values[c.key].value).split(/(?<=[.!?])\s/)[0].toLowerCase(); return !/\b(ist ein|ist eine|is a|is an|sind|are)\b/.test(first) && !(name && first.includes(name.slice(0, 12))) })
-        .map(c => ({ attribute: c.key, message: t('erster Satz nennt weder das Produkt noch „… ist ein …“ — genau den zitieren KI-Antworten') })) } },
+        .map(c => ({ attribute: c.key, message: t('erster Satz nennt weder das Produkt noch „… ist ein …“') })) } },
   { key: 'superlatives', label: t('GEO: Superlative statt Fakten'), severity: 'warn',
-    run({ values, columns }) { return columns.filter(c => descriptive(c, values[c.key]?.value) && SUPER.test(strip(values[c.key].value))).map(c => ({ attribute: c.key, message: t('„{0}“ — Werbewörter werden nicht zitiert, Zahlen schon', [strip(values[c.key].value).match(SUPER)[0]]) })) } },
+    run({ values, columns }) { return columns.filter(c => descriptive(c, values[c.key]?.value) && SUPER.test(strip(values[c.key].value))).map(c => ({ attribute: c.key, message: t('„{0}“ — Werbewort statt Angabe', [strip(values[c.key].value).match(SUPER)[0]]) })) } },
   { key: 'nofacts', label: t('GEO: keine konkreten Angaben'), severity: 'info',
     run({ values, columns }) { return columns.filter(c => descriptive(c, values[c.key]?.value) && !/\d/.test(strip(values[c.key].value))).map(c => ({ attribute: c.key, message: t('keine Zahl, kein Maß, keine Einheit im Text') })) } },
   { key: 'sameasname', label: 'GEO: Text = Name', severity: 'warn',

@@ -2,6 +2,8 @@
 // in Deutschland über das UWG). Öffentliche Quellen, keine Rechtsberatung: die Regeln erkennen heuristisch Formulierungen,
 // die nach der Richtlinie unzulässig oder belegpflichtig sind. Jede Regel nennt ihren Anker im Anhang I der UGP-Richtlinie
 // 2005/29/EG (neue Nummern 2a, 4a, 4b, 4c …) bzw. Art. 6/7. Ergänzen ist erwünscht — Katalog ist Daten, kein Code.
+// Anker am amtlichen Text geprüft am 04.10.2026: 2a Siegel, 4a allgemeine Umweltaussage, 4b Teil für das Ganze, 4c Kompensation,
+// 23g Haltbarkeit (im UWG Anhang Nr. 23d Buchst. d), Art. 6 Abs. 2 Buchst. d Zukunftsaussagen.
 export default {
   key: 'empco', label: 'EmpCo — Greenwashing (EU 2024/825)', icon: '♻',
   sources: [
@@ -10,7 +12,7 @@ export default {
   ],
   // Begriffe je Sprache — Wortgrenzen, Gross/Klein egal
   rules: [
-    { id: 'generic', severity: 'error', ref: 'Anhang I Nr. 2a / Art. 6 Abs. 2 lit. d',
+    { id: 'generic', severity: 'error', ref: 'Anhang I Nr. 4a',
       label: 'Allgemeine Umweltaussage ohne Beleg',
       hint: 'Pauschale Umweltaussagen sind verboten, wenn keine anerkannte hervorragende Umweltleistung nachgewiesen wird. Konkret machen: was, wie viel, womit belegt.',
       terms: ['umweltfreundlich', 'umweltschonend', 'umweltverträglich', 'ökologisch', 'öko', 'grün', 'naturfreundlich', 'klimafreundlich', 'klimaschonend', 'nachhaltig', 'natürlich', 'sanft zur umwelt', 'eco-friendly', 'environmentally friendly', 'green', 'eco', 'sustainable', 'natural', 'climate-friendly', 'gentle on the environment'] },
@@ -18,15 +20,15 @@ export default {
       label: 'Klimaneutral / CO₂-Ausgleich',
       hint: 'Aussagen, ein Produkt habe eine neutrale, reduzierte oder positive Klimawirkung aufgrund von Kompensation, sind verboten. Nur echte Reduktion mit Nachweis nennen.',
       terms: ['klimaneutral', 'co2-neutral', 'co₂-neutral', 'co2 neutral', 'klimapositiv', 'kohlenstoffneutral', 'netto-null', 'net zero', 'carbon neutral', 'climate neutral', 'climate positive', 'carbon negative', 'co2-kompensiert', 'klimakompensiert', 'offset'] },
-    { id: 'future', severity: 'warn', ref: 'Anhang I Nr. 4b',
+    { id: 'future', severity: 'warn', ref: 'Art. 6 Abs. 2 Buchst. d',
       label: 'Zukünftige Umweltleistung ohne Plan',
       hint: 'Versprechen künftiger Umweltleistung („bis 2030 klimaneutral“) nur mit klaren, veröffentlichten, überprüfbaren Verpflichtungen und unabhängiger Überwachung.',
       pattern: '\\b(bis|ab|until|by)\\s+20[2-5]\\d\\b.{0,60}\\b(klima|co2|co₂|emission|carbon|neutral|net zero|nachhaltig|sustainab)' },
-    { id: 'label', severity: 'warn', ref: 'Anhang I Nr. 2b / Art. 2 lit. r',
+    { id: 'label', severity: 'warn', ref: 'Anhang I Nr. 2a / Art. 2 Buchst. q, r',
       label: 'Nachhaltigkeitssiegel ohne Zertifizierung',
       hint: 'Nachhaltigkeitssiegel nur, wenn sie auf einem Zertifizierungssystem beruhen oder von Behörden stammen. Herkunft des Siegels prüfen und nennen.',
       terms: ['siegel', 'zertifiziert nachhaltig', 'geprüft nachhaltig', 'eco-label', 'öko-label', 'umweltzeichen', 'green label', 'sustainability label', 'award'] },
-    { id: 'partial', severity: 'warn', ref: 'Anhang I Nr. 4a',
+    { id: 'partial', severity: 'warn', ref: 'Anhang I Nr. 4b',
       label: 'Aussage über das ganze Produkt, die nur einen Teil betrifft',
       hint: 'Eine Umweltaussage über das gesamte Produkt oder Unternehmen, die nur einen Aspekt betrifft, ist verboten — Bezug klar machen (Verpackung? Anteil?).',
       terms: ['100 % recycelt', '100% recycelt', '100 % recycled', '100% recycled', 'vollständig recycelbar', 'fully recyclable', 'komplett nachhaltig', 'rundum nachhaltig'] },
@@ -34,11 +36,11 @@ export default {
       label: 'Recycelbar / biologisch abbaubar — Bedingungen nennen',
       hint: 'Recycelbarkeit und Abbaubarkeit gelten nur unter Bedingungen (Sammelsystem, Industriekompost). Ohne Angabe irreführend — Bedingung und Anteil ergänzen.',
       terms: ['recycelbar', 'recyclingfähig', 'wiederverwertbar', 'biologisch abbaubar', 'kompostierbar', 'recyclable', 'biodegradable', 'compostable'] },
-    { id: 'durability', severity: 'warn', ref: 'Anhang I Nr. 23d / Art. 6',
+    { id: 'durability', severity: 'warn', ref: 'Anhang I Nr. 23g (UWG Anhang Nr. 23d Buchst. d)',
       label: 'Haltbarkeitsaussage ohne Nachweis',
       hint: 'Aussagen zur Haltbarkeit („langlebig“, „hält ewig“) brauchen Belege; gewerbliche Haltbarkeitsgarantien müssen Bedingungen nennen.',
       terms: ['langlebig', 'hält ewig', 'unverwüstlich', 'lebenslang', 'für die ewigkeit', 'long-lasting', 'lasts forever', 'indestructible', 'lifetime'] },
-    { id: 'comparative', severity: 'warn', ref: 'Art. 6 Abs. 2 lit. b / Anhang I Nr. 4a',
+    { id: 'comparative', severity: 'warn', ref: 'Art. 6 Abs. 1 / Anhang I Nr. 4a',
       label: 'Vergleichende Umweltaussage ohne Bezug',
       hint: '„umweltfreundlicher“, „grüner als“ braucht den Vergleichsgegenstand, die Methode und den Zeitraum.',
       pattern: '\\b(umweltfreundlicher|grüner|nachhaltiger|klimafreundlicher|sauberer|greener|more sustainable|cleaner|more eco)\\b' },

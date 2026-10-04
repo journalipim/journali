@@ -1,13 +1,13 @@
 {
   "key": "dpp",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "label": {
     "de": "Digitaler Produktpass",
     "en": "Digital Product Passport"
   },
   "description": {
-    "de": "Prüft Produkte gegen die Datenpunkte des Digitalen Produktpasses (ESPR 2024/1781, Anhang III; Batteriepass 2023/1542): Zuordnung Datenpunkt → Attribut (Best Guess, im Journal gemerkt), fehlende Attribute anlegen, Teilbaum prüfen (erfüllt/leer/fraglich je Knoten), Vorschläge regelbasiert — und mit die KI, wenn ein Schlüssel in den Einstellungen steht.",
-    "en": "Prüft Produkte gegen die Datenpunkte des Digitalen Produktpasses (ESPR 2024/1781, Anhang III; Batteriepass 2023/1542): Zuordnung Datenpunkt → Attribut (Best Guess, im Journal gemerkt), fehlende Attribute anlegen, Teilbaum prüfen (erfüllt/leer/fraglich je Knoten), Vorschläge regelbasiert — und mit die KI, wenn ein Schlüssel in den Einstellungen steht."
+    "de": "Prüft Produkte gegen die Datenpunkte des Digitalen Produktpasses (ESPR 2024/1781, Anhang III; Batteriepass 2023/1542): Zuordnung Datenpunkt → Attribut (Best Guess, im Journal gemerkt), fehlende Attribute anlegen, Teilbaum prüfen (erfüllt/leer/fraglich je Knoten), Vorschläge regelbasiert — und von der KI, wenn ein Schlüssel in den Einstellungen steht.",
+    "en": "Checks products against the data points of the Digital Product Passport (ESPR 2024/1781, Annex III; battery passport 2023/1542): mapping data point → attribute (best guess, remembered in the journal), create missing attributes, check a subtree (fulfilled/empty/questionable per node), rule-based suggestions — and from the AI when a key is set in the settings."
   },
   "kind": "quality",
   "runs": "browser",

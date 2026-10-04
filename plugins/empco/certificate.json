@@ -1,8 +1,8 @@
 {
  "key": "empco",
- "version": "1.0.0",
- "hash": "ff31f01ef803f15b7efeb16e64539254630edb428bff42ceacbd1fce682ece01",
- "issued": "2026-10-03",
+ "version": "1.0.1",
+ "hash": "a00f6d37e8074fca934942da8531e770e87b52df532f3f0c2ef245178ca81fae",
+ "issued": "2026-10-04",
  "issuer": "journali",
- "sig": "tGG9IZoiS+O6YdiAXzPO+8iZgEJONmC4av65mM3K6cFGhNCU8++B7l5UBL0HuQ2aHEdfNSaF0HG4qtjQWnksVg=="
+ "sig": "dxT3nxh3x+Vslyd0ytC9Byv4KZJuutfT6IFjIJeOOkEA+ghR9h6ksyBkYPV2EiH8Ey88Qq6eci+SaMAlmlZWqg=="
 }
