@@ -40,3 +40,13 @@ test('Teilbaum wie bisher: Pflegegruppen als Kataloggruppen; die Sperre nennt de
   assert.deepEqual(cx.products.map(p => p.id), ['p-1', 'p-2']); assert.equal(cx.products[0].parentId, 'g-1')
   await assert.rejects(build({ api, model, tree, gate: async p => p.id === 'p-2' ? 'Vollständigkeit 0 % unter 60 %' : null }, { root: 'g-1', role: 'product', locale: 'de' }), /Laptop B \(B\): Vollständigkeit 0 %/)
 })
+
+test('im Browser höchstens max Knoten: mehr wird abgelehnt, die Vorschau (limit) bleibt möglich (04.10.2026)', async () => {
+  const rows = [{ id: 'g', role: 'group', label: 'G', parent: null }, ...Array.from({ length: 5 }, (_, i) => ({ id: `p-${i}`, role: 'product', label: `P${i}`, parent: 'g' }))]
+  const t = { rows, byId: new Map(rows.map(r => [r.id, r])), kids: id => rows.filter(r => (r.parent ?? '') === (id ?? '')) }
+  const a = { get: async p => p.startsWith('/api/nodes/') ? { id: p.split('/')[3], values: [], ancestors: [], computed: [], axisValues: {} } : [] }
+  const m = { attributes: [], groups: [], lists: [], locales: [{ code: 'de' }] }
+  await assert.rejects(build({ api: a, model: m, tree: t }, { root: 'g', role: 'product', locale: 'de', max: 3 }), /5 Knoten, höchstens 3/)
+  const vorschau = await build({ api: a, model: m, tree: t }, { root: 'g', role: 'product', locale: 'de', max: 3, limit: 2 })
+  assert.equal(vorschau.count, 2)
+})

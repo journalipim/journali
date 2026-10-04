@@ -136,7 +136,8 @@ export function needs(template) {
 /// pub: Id eines Publikationsbaums — dann kommen die Produkte
 /// aus seiner Ausleitung (GET /api/pub/{id}/export: nur ausgeleitete, mit Rubrikenpfad), die Rubriken werden die Kataloggruppen,
 /// parentId/path je Produkt zeigen auf die Rubrik statt auf den Pflegebaum. Ohne pub wie bisher: Teilbaum des Pflegebaums (root).
-export async function build(env, { root, pub = null, role = 'product', locale, mapping = {}, vars = {}, features = [], limit = 0, say }) {
+// max: höchstens so viele Knoten (Browser, 04.10.2026: je Knoten drei Anfragen nacheinander und alle Kontexte im Speicher — grössere Exporte macht der Job)
+export async function build(env, { root, pub = null, role = 'product', locale, mapping = {}, vars = {}, features = [], limit = 0, max = 0, say }) {
   env = { ...env, features }
   const { tree, api } = env
   const under = id => { for (let p = tree.byId.get(id)?.parent; p; p = tree.byId.get(p)?.parent) if (p === root) return true; return false }
@@ -156,6 +157,7 @@ export async function build(env, { root, pub = null, role = 'product', locale, m
     for (const g of byId.values()) if (g.parent && byId.has(g.parent) && !byId.get(g.parent).children.some(c => c.id === g.id)) byId.get(g.parent).children.push({ id: g.id, name: g.name })
     pubGroups = [...byId.values()].map(g => ({ ...g, type: !g.parent ? 'root' : g.children.length ? 'node' : 'leaf' }))
   } else targets = tree.rows.filter(r => (root ? r.id === root || under(r.id) : true) && (role === 'all' || r.role === role))
+  if (max > 0 && limit === 0 && targets.length > max) throw new Error(`${targets.length} Knoten, höchstens ${max} im Browser — grössere Exporte macht der Job „Vorlagen-Export“`)
   if (limit > 0) targets = targets.slice(0, limit)
   const products = []; const failed = []
   for (const [i, r] of targets.entries()) {

@@ -138,12 +138,12 @@ async function mount(root, ctx) {
     st.template = tplBox.value; if (!st.template.trim()) { store.toast(t_('Vorlage fehlt')); return }
     busy = true
     try {
-      const env = { api, model, tree: { rows: tree.rows, byId: tree.byId, kids: id => tree.rows.filter(r => (r.parent ?? '') === (id ?? '')) }, server: location.origin }
+      const env = { api, model, tree: { rows: tree.rows, byId: tree.byId, kids: id => tree.kids(id) }, server: location.origin }
       const etim = st.etim !== false && ctx.plugins.active('etim') ? ctx.use('etim') : null   // ETIM-Attribute aus der ETIM-Klasse am Knoten
       if (etim?.featuresOf) env.featuresOf = pctx => etim.featuresOf(pctx, st.rules)   // Regeln der Ausleitung aus dem Profil
       if (etim?.gate && /\{#features\}/.test(st.template)) env.gate = pctx => etim.gate(pctx, st.rules)   // Vorlage braucht ETIM-Attribute → Analyse muss bestehen
       const t0 = performance.now()
-      const cx = await build(env, { root: st.root, pub: st.pub || null, role: st.role, locale: st.locale, mapping: st.mapping, vars: st.vars, features: st.features, limit: all ? 0 : 3, say: m => say(m) })
+      const cx = await build(env, { root: st.root, pub: st.pub || null, role: st.role, locale: st.locale, mapping: st.mapping, vars: st.vars, features: st.features, limit: all ? 0 : 3, max: 1000, say: m => say(m) })
       const out = render(st.template, cx, st.mode, st.locale)
       const ms = Math.round(performance.now() - t0)
       const gaps = cx.stats ? `${cx.stats.classified ? ` · ETIM Ø ${cx.stats.completeness} % (${cx.stats.classified} klassifiziert)` : ''}${cx.stats.held ? ` · ${cx.stats.held} zurückgehalten` : ''}${cx.stats.unknown ? ` · ${cx.stats.unknown} ETIM-Attribute leer (UN)` : ''}${cx.stats.bad ? ` · ⚠ ${cx.stats.bad} Werte passen nicht (als UN)` : ''}` : ''
