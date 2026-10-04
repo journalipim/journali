@@ -45,5 +45,6 @@
  "Sicherheit {0} %": "Confidence {0} %",
  "✓ {0} Werte geschrieben": "✓ {0} values written",
  "Anreichern": "Enrich",
- "Fehlende Attributwerte finden — aus KI, Websuche oder manuell — und übernehmen": "Find missing attribute values — via AI, web search or manually — and apply"
+ "Fehlende Attributwerte finden — aus KI, Websuche oder manuell — und übernehmen": "Find missing attribute values — via AI, web search or manually — and apply",
+ "{0} Knoten im Teilbaum, höchstens {1}.": "{0} nodes in the subtree, at most {1}."
 }

@@ -66,7 +66,8 @@ export async function nodeWorkbook(nodeId, withData) {
   let data = []
   if (withData) {
     const locales = store.model.locales.map(l => l.code); const byLocale = new Map(); let nodes = []
-    for (const l of locales) { const t = await api.get(`/api/nodes/${encodeURIComponent(nodeId)}/table?locale=${l}&role=${childRole}`); nodes = t.rows; byLocale.set(l, new Map(t.rows.map(r => [r.row.id, r.values]))) }
+    // seitenweise (04.10.2026): eine Gruppe mit tausenden Kindern × hunderten Spalten überschreitet die Grenze des Servers
+    for (const l of locales) { const m = new Map(); const all = []; for (let skip = 0; skip != null;) { const t = await api.get(`/api/nodes/${encodeURIComponent(nodeId)}/table?locale=${l}&role=${childRole}&take=1000&skip=${skip}`); for (const r of t.rows) { all.push(r); m.set(r.row.id, r.values) } skip = t.next != null && t.next > skip ? t.next : null } nodes = all; byLocale.set(l, m) }
     data = nodes.map(r => columns.map(c => c.key === 'id' ? r.row.id : c.key.startsWith('axis:') ? r.row.axisValues?.[c.attr] ?? '' : (byLocale.get(c.locale ?? locales[0])?.get(r.row.id)?.[c.attr]?.value ?? '')))
   }
   const lg = legend(columns)

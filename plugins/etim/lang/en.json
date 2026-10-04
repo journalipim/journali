@@ -150,8 +150,6 @@
  "· {0} nicht in Version {1}": "· {0} not in version {1}",
  "lege Attribute an …": "creating attributes …",
  "{0} Attribute angelegt · Klassenattribut {1} mit {2} Klassen": "{0} attributes created · class attribute {1} with {2} classes",
- "prüfe …": "checking …",
- "{0} Befunde in {1} Knoten": "{0} findings in {1} nodes",
  "Probe: ein Wert, wie er im Attribut steht": "Sample: a value as it is in the attribute",
  "✗ passt nicht zu {0}": "✗ does not fit {0}",
  "enthält": "contains",

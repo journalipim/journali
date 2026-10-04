@@ -1,4 +1,4 @@
-(function(){const s=document.createElement('style');s.textContent="\n.bench[data-v-15658930] { padding: 10px 12px;\n}\n.pfad[data-v-15658930] { font-size: 12px; display: flex; flex-wrap: wrap; gap: 4px;\n}\n.knoten[data-v-15658930] { margin: 4px 0; font-size: 15px; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap;\n}\n.knoten a[data-v-15658930] { color: var(--text); text-decoration: none;\n}\n.knoten a[data-v-15658930]:hover { color: var(--accent);\n}\n.feld[data-v-15658930] { font-size: 12px; font-weight: 400;\n}\n.erben[data-v-15658930] { font-size: 12px; margin: 0 0 6px;\n}\n.regel[data-v-15658930] { margin: 6px 0;\n}\n.hint[data-v-15658930] { font-size: 12px; color: var(--muted);\n}\n.wert[data-v-15658930] { background: var(--pane); border: 1px solid var(--line); border-radius: 4px; padding: 6px 8px; margin: 8px 0 6px; font-size: 13px; white-space: pre-wrap; max-height: 120px; overflow: auto;\n}\n.feldtext[data-v-15658930] { width: 100%; font-family: inherit;\n}\n.knoepfe[data-v-15658930] { display: flex; gap: 6px; margin: 6px 0;\n}\n.ausnahme[data-v-15658930] { display: flex; gap: 6px; align-items: center; margin: 10px 0;\n}\n.grund[data-v-15658930] { flex: 1; min-width: 120px;\n}\n.weitere[data-v-15658930] { display: flex; flex-wrap: wrap; gap: 4px; align-items: center;\n}\n.chip[data-v-15658930] { border: 1px solid var(--line); background: var(--pane); border-radius: 10px; padding: 0 8px; cursor: pointer; color: var(--text);\n}\n.x[data-v-15658930] { border: 0; background: none; color: var(--muted); cursor: pointer;\n}\n.x[data-v-15658930]:hover { color: var(--accent);\n}\n\n.term[data-v-bf2351b5] { padding: 10px 12px;\n}\n.term h3[data-v-bf2351b5] { margin: 0 0 4px; font-size: 15px;\n}\n.regel[data-v-bf2351b5] { font-size: 12px; margin: 0 0 8px;\n}\n.ersatz[data-v-bf2351b5] { display: flex; gap: 6px; margin: 0 0 8px;\n}\n.ersatz input[data-v-bf2351b5] { flex: 1;\n}\n.vorschau td[data-v-bf2351b5] { vertical-align: top;\n}\n.snip[data-v-bf2351b5] { font-size: 12px;\n}\n.feld[data-v-bf2351b5] { font-size: 11px;\n}\n.aus[data-v-bf2351b5] { opacity: .45;\n}\nmark.neu[data-v-bf2351b5] { background: color-mix(in srgb, var(--pos) 35%, transparent);\n}\n\n.empco[data-v-f153f32f] { display: flex; flex-direction: column; min-height: 0;\n}\n.wurzel[data-v-f153f32f] { position: relative;\n}\n.knoten[data-v-f153f32f] { border: 1px solid var(--line); background: var(--pane); color: var(--text); padding: 2px 8px; border-radius: 3px; cursor: pointer;\n}\n.picker[data-v-f153f32f] { position: absolute; left: 0; top: 30px; z-index: 6; width: 380px; padding: 6px; background: var(--pane); border: 1px solid var(--line);\n}\n.katalog[data-v-f153f32f] { padding: 4px 12px; border-bottom: 1px solid var(--line);\n}\n.katalog summary[data-v-f153f32f] { cursor: pointer;\n}\n.quellen[data-v-f153f32f] { font-size: 12px; margin: 4px 0; display: flex; gap: 10px;\n}\n.klein[data-v-f153f32f] { font-size: 11px;\n}\n.leiste[data-v-f153f32f] { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; padding: 6px 12px; border-bottom: 1px solid var(--line);\n}\n.chip[data-v-f153f32f] { border: 1px solid var(--line); background: var(--pane); color: var(--text); border-radius: 12px; padding: 1px 10px; cursor: pointer; font-size: 12px;\n}\n.chip.on[data-v-f153f32f] { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 18%, var(--pane));\n}\n.suche[data-v-f153f32f] { width: 180px;\n}\n.arbeit[data-v-f153f32f] { display: flex; flex: 1; min-height: 0;\n}\n.liste[data-v-f153f32f] { width: 48%; min-width: 360px; overflow: auto; border-right: 1px solid var(--line);\n}\n.flaeche[data-v-f153f32f] { flex: 1; overflow: auto;\n}\ntr[data-v-f153f32f] { cursor: pointer;\n}\ntr.cur[data-v-f153f32f] { background: color-mix(in srgb, var(--accent) 16%, transparent);\n}\ntr.aus[data-v-f153f32f] { opacity: .5;\n}\n.kn[data-v-f153f32f] { white-space: nowrap; max-width: 220px; overflow: hidden; text-overflow: ellipsis;\n}\n.feld[data-v-f153f32f] { white-space: nowrap;\n}\n.snip[data-v-f153f32f] { font-size: 12px;\n}\n.hinweis[data-v-f153f32f] { padding: 6px 12px;\n}\n.empty[data-v-f153f32f] { padding: 24px;\n}\n";document.head.append(s)})();
+(function(){const s=document.createElement('style');s.textContent="\n.bench[data-v-15658930] { padding: 10px 12px;\n}\n.pfad[data-v-15658930] { font-size: 12px; display: flex; flex-wrap: wrap; gap: 4px;\n}\n.knoten[data-v-15658930] { margin: 4px 0; font-size: 15px; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap;\n}\n.knoten a[data-v-15658930] { color: var(--text); text-decoration: none;\n}\n.knoten a[data-v-15658930]:hover { color: var(--accent);\n}\n.feld[data-v-15658930] { font-size: 12px; font-weight: 400;\n}\n.erben[data-v-15658930] { font-size: 12px; margin: 0 0 6px;\n}\n.regel[data-v-15658930] { margin: 6px 0;\n}\n.hint[data-v-15658930] { font-size: 12px; color: var(--muted);\n}\n.wert[data-v-15658930] { background: var(--pane); border: 1px solid var(--line); border-radius: 4px; padding: 6px 8px; margin: 8px 0 6px; font-size: 13px; white-space: pre-wrap; max-height: 120px; overflow: auto;\n}\n.feldtext[data-v-15658930] { width: 100%; font-family: inherit;\n}\n.knoepfe[data-v-15658930] { display: flex; gap: 6px; margin: 6px 0;\n}\n.ausnahme[data-v-15658930] { display: flex; gap: 6px; align-items: center; margin: 10px 0;\n}\n.grund[data-v-15658930] { flex: 1; min-width: 120px;\n}\n.weitere[data-v-15658930] { display: flex; flex-wrap: wrap; gap: 4px; align-items: center;\n}\n.chip[data-v-15658930] { border: 1px solid var(--line); background: var(--pane); border-radius: 10px; padding: 0 8px; cursor: pointer; color: var(--text);\n}\n.x[data-v-15658930] { border: 0; background: none; color: var(--muted); cursor: pointer;\n}\n.x[data-v-15658930]:hover { color: var(--accent);\n}\n\n.term[data-v-bf2351b5] { padding: 10px 12px;\n}\n.term h3[data-v-bf2351b5] { margin: 0 0 4px; font-size: 15px;\n}\n.regel[data-v-bf2351b5] { font-size: 12px; margin: 0 0 8px;\n}\n.ersatz[data-v-bf2351b5] { display: flex; gap: 6px; margin: 0 0 8px;\n}\n.ersatz input[data-v-bf2351b5] { flex: 1;\n}\n.vorschau td[data-v-bf2351b5] { vertical-align: top;\n}\n.snip[data-v-bf2351b5] { font-size: 12px;\n}\n.feld[data-v-bf2351b5] { font-size: 11px;\n}\n.aus[data-v-bf2351b5] { opacity: .45;\n}\nmark.neu[data-v-bf2351b5] { background: color-mix(in srgb, var(--pos) 35%, transparent);\n}\n\n.empco[data-v-8ecf7adc] { display: flex; flex-direction: column; min-height: 0;\n}\n.wurzel[data-v-8ecf7adc] { position: relative;\n}\n.knoten[data-v-8ecf7adc] { border: 1px solid var(--line); background: var(--pane); color: var(--text); padding: 2px 8px; border-radius: 3px; cursor: pointer;\n}\n.picker[data-v-8ecf7adc] { position: absolute; left: 0; top: 30px; z-index: 6; width: 380px; padding: 6px; background: var(--pane); border: 1px solid var(--line);\n}\n.katalog[data-v-8ecf7adc] { padding: 4px 12px; border-bottom: 1px solid var(--line);\n}\n.katalog summary[data-v-8ecf7adc] { cursor: pointer;\n}\n.quellen[data-v-8ecf7adc] { font-size: 12px; margin: 4px 0; display: flex; gap: 10px;\n}\n.klein[data-v-8ecf7adc] { font-size: 11px;\n}\n.leiste[data-v-8ecf7adc] { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; padding: 6px 12px; border-bottom: 1px solid var(--line);\n}\n.chip[data-v-8ecf7adc] { border: 1px solid var(--line); background: var(--pane); color: var(--text); border-radius: 12px; padding: 1px 10px; cursor: pointer; font-size: 12px;\n}\n.chip.on[data-v-8ecf7adc] { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 18%, var(--pane));\n}\n.suche[data-v-8ecf7adc] { width: 180px;\n}\n.arbeit[data-v-8ecf7adc] { display: flex; flex: 1; min-height: 0;\n}\n.liste[data-v-8ecf7adc] { width: 48%; min-width: 360px; overflow: auto; border-right: 1px solid var(--line);\n}\n.flaeche[data-v-8ecf7adc] { flex: 1; overflow: auto;\n}\ntr[data-v-8ecf7adc] { cursor: pointer;\n}\ntr.cur[data-v-8ecf7adc] { background: color-mix(in srgb, var(--accent) 16%, transparent);\n}\ntr.aus[data-v-8ecf7adc] { opacity: .5;\n}\n.kn[data-v-8ecf7adc] { white-space: nowrap; max-width: 220px; overflow: hidden; text-overflow: ellipsis;\n}\n.feld[data-v-8ecf7adc] { white-space: nowrap;\n}\n.snip[data-v-8ecf7adc] { font-size: 12px;\n}\n.hinweis[data-v-8ecf7adc] { padding: 6px 12px;\n}\n.empty[data-v-8ecf7adc] { padding: 24px;\n}\n";document.head.append(s)})();
 const m = window.journali.vue;
 const Fragment = m.Fragment;
 const computed = m.computed;
@@ -137,18 +137,18 @@ const hash = (s) => {
 };
 const textHash = (raw) => hash(strip(raw));
 const findingKey = (f) => [f.node.id, f.attribute, f.locale, f.rule, f.term.toLowerCase()].join("|");
-function collect(tables, locales) {
+function rawFindings(t2, locale) {
   const findings = [];
-  for (let i = 0; i < locales.length; i++) {
-    const t2 = tables[i];
-    for (const r of t2.rows) {
-      const columns = t2.columns.filter((x) => !(r.inactive ?? []).includes(x.key));
-      for (const c of checks) for (const f of c.run({ values: r.values, columns })) {
-        const v = r.values[f.attribute];
-        findings.push({ ...f, rule: c.key, severity: c.severity, locale: locales[i], node: r.row, raw: v?.value ?? "", from: v?.from ?? null, heirs: [] });
-      }
+  for (const r of t2.rows) {
+    const columns = t2.columns.filter((x) => !(r.inactive ?? []).includes(x.key));
+    for (const c of checks) for (const f of c.run({ values: r.values, columns })) {
+      const v = r.values[f.attribute];
+      findings.push({ ...f, rule: c.key, severity: c.severity, locale, node: r.row, raw: v?.value ?? "", from: v?.from ?? null, heirs: [] });
     }
   }
+  return findings;
+}
+function merge(findings) {
   const byKey = new Map(findings.filter((f) => !f.from).map((f) => [findingKey(f), f]));
   const out = [];
   for (const f of findings) {
@@ -905,12 +905,21 @@ const _sfc_main = {
       busy.value = true;
       try {
         const locales = store.model.locales.map((l) => l.code);
-        status.value = t("lese {0} Sprachen …", [locales.length]);
-        const tables = await Promise.all(locales.map((l) => api.get(`/api/nodes/${encodeURIComponent(root.value)}/table?deep=true&locale=${l}`)));
-        const list = collect(tables, locales);
+        const roh = [];
+        let knoten = 0;
+        for (const l of locales) {
+          for (let skip = 0; skip != null; ) {
+            const tab = await api.get(`/api/nodes/${encodeURIComponent(root.value)}/table?deep=true&types=text,html&locale=${l}&take=500&skip=${skip}`);
+            roh.push(...rawFindings(tab, l));
+            if (l === locales[0]) knoten += tab.rows.length;
+            status.value = t("prüfe {0}: {1} von {2} …", [l, Math.min(skip + tab.rows.length, tab.total ?? 0), tab.total ?? 0]);
+            skip = tab.next != null && tab.next > skip ? tab.next : null;
+          }
+        }
+        const list = merge(roh);
         memory.ignoredMap = await api.get("/api/plugins/empco/data?prefix=ignore%3A&values=true").catch(() => ({})) ?? {};
         memory.root = root.value;
-        memory.result = { findings: list, nodes: tables[0]?.rows.length ?? 0 };
+        memory.result = { findings: list, nodes: knoten };
         memory.sel = null;
         status.value = "";
         await nextTick();
@@ -1510,7 +1519,7 @@ const _sfc_main = {
     };
   }
 };
-const View = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-f153f32f"]]);
+const View = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-8ecf7adc"]]);
 const entry = {
   views: [{ path: "check", label: catalog.label, icon: catalog.icon, topic: "analysis", hint: t("Greenwashing-Kritikalität von Produkttexten nach Richtlinie (EU) 2024/825 — Kriterienkatalog, Prüfung je Teilbaum, Regeln in der Datenqualität"), component: View }],
   nodeActions: [{ label: t("EmpCo prüfen"), icon: catalog.icon, topic: "analysis", roles: ["group", "product"], run(id, ctx) {

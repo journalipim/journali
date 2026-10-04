@@ -2,10 +2,22 @@
 // dpp, ppwr hängen daran (requires: ["da"]) und liefern Regeln über checks. Prüft einen Teilbaum gegen Regeln und zeigt die Befunde als Liste (Schwere, Knoten,
 // Attribut, Meldung) mit Sprung zum Knoten. Eingebaute Regeln unten; weitere Regeln liefern Plugins über `checks`
 // (ctx.checks). Welche Regeln laufen, steht im Journal (ctx.data „settings“ unter plugin:dq).
-// Quelle: GET /api/nodes/{id}/table?deep=true — alle Nachfahren mit aufgelösten Werten, je Sprache ein Aufruf.
+// Quelle: GET /api/nodes/{id}/table?deep=true — alle Nachfahren mit aufgelösten Werten, seitenweise (take/skip) und je Seite alle Sprachen;
+// geprüft wird Seite für Seite, nichts wird gesammelt (ein Zweig mit 17 782 Zeilen × 783 Spalten waren in einem Stück 1 GB, 04.10.2026).
 
 const t_ = (k, p) => globalThis.journali?.t ? globalThis.journali.t(k, p) : String(k).replace(/\{(\w+)\}/g, (m, i) => p?.[i] ?? m)   // Oberflächensprache: spät gebunden, im Test ohne Fenster ladbar
 const skuOf = row => row.keys?.sku ?? row.sku ?? null
+/// Wie oft jede SKU im Teilbaum vorkommt — einmal je Prüfung gezählt, nicht je Variante (vorher n², bei 15 000 Varianten 300 Mio. Vergleiche)
+const skuZaehlung = new WeakMap()
+const skuZaehler = all => { let m = skuZaehlung.get(all); if (!m) { m = new Map(); for (const r of all) { const k = skuOf(r.row); if (k) m.set(k, (m.get(k) ?? 0) + 1) } skuZaehlung.set(all, m) } return m }
+/// Der Teilbaum aus dem Baum der Oberfläche: { row } je Knoten (für Regeln, die über alle Knoten schauen, etwa die SKU)
+function teilbaum(tree, rootId) {
+  const kinder = new Map(); for (const r of tree?.rows ?? []) { if (!kinder.has(r.parent)) kinder.set(r.parent, []); kinder.get(r.parent).push(r) }
+  const out = []; const wurzel = (tree?.rows ?? []).find(r => r.id === rootId); const stapel = wurzel ? [wurzel] : []
+  while (stapel.length) { const r = stapel.pop(); out.push({ row: r }); for (const k of kinder.get(r.id) ?? []) stapel.push(k) }
+  return out
+}
+const SEITE = 500   // Zeilen je Abruf und Sprache
 
 const RULES = [
   { key: 'required', label: t_('Pflichtattribut fehlt'), severity: 'error',
@@ -22,7 +34,7 @@ const RULES = [
     run({ values, columns }) { return columns.filter(c => c.type === 'html' && values[c.key]?.own && values[c.key].value && !values[c.key].value.replace(/<[^>]+>|&nbsp;|\s/g, '')).map(c => ({ attribute: c.key, message: t_('nur Tags, kein Text') })) } },
   { key: 'sku', label: t_('SKU fehlt / doppelt'), severity: 'error',
     // Die SKU steht in row.keys (eindeutige Kennungen je Zeile, Tree.KeysOf), nicht als row.sku — sonst „Variante ohne SKU“ bei jeder Variante (24.09.2026)
-    run({ row, all }) { if (row.role !== 'variant') return []; const sku = skuOf(row); if (!sku) return [{ attribute: 'sku', message: t_('Variante ohne SKU') }]; const n = all.filter(r => skuOf(r.row) === sku).length; return n > 1 ? [{ attribute: 'sku', message: `SKU ${sku} ${n}× vergeben` }] : [] } },
+    run({ row, all }) { if (row.role !== 'variant') return []; const sku = skuOf(row); if (!sku) return [{ attribute: 'sku', message: t_('Variante ohne SKU') }]; const n = skuZaehler(all).get(sku) ?? 0; return n > 1 ? [{ attribute: 'sku', message: `SKU ${sku} ${n}× vergeben` }] : [] } },
   { key: 'untranslated', label: t_('Übersetzung fehlt / gleich wie Master'), severity: 'warn',
     run({ values, columns, locale, master, byLocale, row }) { if (locale === master) return []; const out = []; for (const c of columns) { if (!c.perLocale || c.type !== 'text' && c.type !== 'html') continue; const m = byLocale.get(master)?.get(row.id)?.[c.key]?.value; const v = values[c.key]?.value; if (m && !v) out.push({ attribute: c.key, message: `${locale}: fehlt (${master} hat „${String(m).slice(0, 40)}“)` }); else if (m && v && m === v && String(m).length > 3) out.push({ attribute: c.key, message: t_('{0} gleich wie {1}', [locale, master]) }) } return out } },
   { key: 'formula', label: t_('Formel/Vorlage ohne Ergebnis'), severity: 'warn',
@@ -37,23 +49,31 @@ async function check(ctx, rootId, rules, say) {
   const { api, store } = ctx; const model = store.model
   const master = model.masterLocale ?? model.locales[0]?.code ?? 'de'
   const locales = model.locales.map(l => l.code)
-  const byLocale = new Map(); let columns = [], all = []
-  say(t_('lese {0} Sprachen …', [locales.length]))
-  // Sprachen parallel: der Server rechnet je Anfrage nur einen Teilbaum, das Netz wartet nicht auf sich selbst.
-  const tables = await Promise.all(locales.map(l => api.get(`/api/nodes/${encodeURIComponent(rootId)}/table?deep=true&self=true&locale=${l}`)))
-  for (let i = 0; i < locales.length; i++) {
-    const l = locales[i]; const t = tables[i]
-    columns = t.columns; all = t.rows
-    byLocale.set(l, new Map(t.rows.map(r => [r.row.id, r.values])))
-  }
+  const all = teilbaum(ctx.tree, rootId)   // alle Knoten des Teilbaums, ohne Werte — für Regeln, die über den Teilbaum schauen
+  let columns = [], nodes = 0
   const findings = []
   const extra = (ctx.checks ?? []).map(c => ({ key: `${c.key}:${c.check}`, label: c.label, severity: c.severity ?? 'warn', run: c.run, needs: c.needs ?? [] }))
   // Eine Regel kann Daten anfordern, die die Tabelle nicht trägt: relations = die Relationen des Teilbaums, je Knoten ({ knotenId: [{ type, direction, other: { id, label } }] }).
   // Geholt wird nur, wenn eine gewählte Regel sie braucht, und einmal je Prüfung.
   const gebraucht = new Set([...RULES, ...extra].filter(r => rules.has(r.key)).flatMap(r => r.needs ?? []))
   const relations = gebraucht.has('relations') ? await api.get(`/api/nodes/${encodeURIComponent(rootId)}/relations/tree?deep=true`).catch(() => ({})) : undefined
-  for (const l of locales) for (const r of all) {
-    const values = byLocale.get(l).get(r.row.id)
+  // Seite für Seite: je Seite alle Sprachen, nacheinander (nicht parallel — jede Sprache ist eine ganze Seite), dann prüfen und verwerfen
+  for (let skip = 0; skip != null;) {
+    const byLocale = new Map(); let page = []; let next = null
+    for (const l of locales) {
+      const t = await api.get(`/api/nodes/${encodeURIComponent(rootId)}/table?deep=true&self=true&locale=${l}&take=${SEITE}&skip=${skip}`)
+      if (l === locales[0]) { columns = t.columns; page = t.rows; next = t.next ?? null; say(t_('prüfe {0} von {1} …', [Math.min(skip + page.length, t.total ?? page.length), t.total ?? page.length])) }
+      byLocale.set(l, new Map(t.rows.map(r => [r.row.id, r.values])))
+    }
+    nodes += page.length
+    pruefen(page, byLocale)
+    skip = next != null && next > skip ? next : null
+  }
+  return { findings, nodes, columns: columns.length }
+
+  function pruefen(page, byLocale) {
+  for (const l of locales) for (const r of page) {
+    const values = byLocale.get(l).get(r.row.id) ?? {}
     const cols = columns.filter(c => !(r.inactive ?? []).includes(c.key))   // nur, was an diesem Knoten gilt
     for (const rule of [...RULES, ...extra]) {
       if (!rules.has(rule.key)) continue
@@ -63,7 +83,7 @@ async function check(ctx, rootId, rules, say) {
       for (const f of out) findings.push({ rule: rule.key, label: rule.label, severity: f.severity ?? rule.severity, locale: l, node: r.row, attribute: f.attribute, message: f.message })
     }
   }
-  return { findings, nodes: all.length, columns: columns.length }
+  }
 }
 
 const bezeichnung = l => typeof l === 'string' ? l : (globalThis.journali?.L ? globalThis.journali.L(l) : l?.de ?? Object.values(l ?? {})[0] ?? '')
@@ -73,7 +93,7 @@ const URTEIL = { 'erfüllt': ['✓', 'pos'], 'auffällig': ['⚠', 'warn'], 'unk
 async function regelAnalyse({ ctx, node, locale, gruppen, befunde, box, say }) {
   const { api, ai } = ctx
   say(t_('lese Daten …'))
-  const tab = await api.get(`/api/nodes/${encodeURIComponent(node)}/table?self=true&locale=${locale}`)
+  const tab = await api.get(`/api/nodes/${encodeURIComponent(node)}/table?self=true&children=false&locale=${locale}`)
   const zeile = (tab.rows ?? []).find(r => r.row.id === node)
   if (!zeile) throw new Error(t_('Knoten nicht gefunden'))
   const werte = (tab.columns ?? []).filter(c => String(zeile.values?.[c.key]?.value ?? '').trim() !== '')
@@ -209,4 +229,5 @@ export default {
   views: [{ path: 'check', topic: 'analysis', label: t_('Datenqualität'), icon: '✓', hint: t_('Regeln: Pflicht, Muster, Zahlen, Listen, Leerzeichen, leeres HTML, SKU, Übersetzung, Formel — plus Prüfregeln der Plugins'), mount }],
   nodeActions: [{ topic: 'analysis', roles: ['group', 'product'], icon: '✓', label: (r, below) => t_('Datenqualität: {0} prüfen', [below]), run: (id, ctx) => ctx.go(`/p/da/check?node=${encodeURIComponent(id)}`) }],
   rules: RULES,
+  check,   // für Tests: die Prüfung ohne Ansicht
 }

@@ -53,7 +53,7 @@ async function loadSource() {
   sourceRows.value = []
   const src = node.value?.source; if (!props.pub || !src) return
   try {
-    const per = await Promise.all(columns.value.map(c => api.get(`/api/nodes/${encodeURIComponent(src)}/table?self=true${pubStand.value ? '&at=' + pubStand.value.stand : ''}&locale=${c.locale ?? ''}&channel=${c.channel ?? ''}`).then(t => t.rows.find(r => r.row.id === src)).catch(() => null)))
+    const per = await Promise.all(columns.value.map(c => api.get(`/api/nodes/${encodeURIComponent(src)}/table?self=true&children=false${pubStand.value ? '&at=' + pubStand.value.stand : ''}&locale=${c.locale ?? ''}&channel=${c.channel ?? ''}`).then(t => t.rows.find(r => r.row.id === src)).catch(() => null)))
     const cols = per.find(Boolean)?.values ? Object.keys(per.find(Boolean).values) : []
     const defs = cols.map(k => model.value.attributes.find(a => a.key === k)).filter(a => a && !['rows', 'formula', 'template'].includes(a.type))
     sourceRows.value = defs.map(def => ({ def, cells: columns.value.map((c, i) => { const v = per[i]?.values?.[def.key]; return v && (!c.locale || def.perLocale) && (!c.channel || def.perChannel) ? v.value ?? '' : null }) }))
@@ -115,7 +115,7 @@ async function loadFrozen() {
   frozen.value = null
   const s = pubStand.value; if (!s || !props.pub || node.value?.role === 'rubric') return
   try {
-    const per = await Promise.all(columns.value.map(c => api.get(`/api/nodes/${encodeURIComponent(props.id)}/table?self=true&at=${s.stand}&locale=${c.locale ?? ''}&channel=${c.channel ?? ''}`).then(t => t.rows.find(r => r.row.id === props.id)).catch(() => null)))
+    const per = await Promise.all(columns.value.map(c => api.get(`/api/nodes/${encodeURIComponent(props.id)}/table?self=true&children=false&at=${s.stand}&locale=${c.locale ?? ''}&channel=${c.channel ?? ''}`).then(t => t.rows.find(r => r.row.id === props.id)).catch(() => null)))
     const m = new Map()
     columns.value.forEach((c, i) => { for (const [k, v] of Object.entries(per[i]?.values ?? {})) m.set(`${k}|${c.locale ?? ''}|${c.channel ?? ''}`, v.value ?? '') })
     frozen.value = m

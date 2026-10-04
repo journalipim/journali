@@ -247,7 +247,7 @@ async function analyse() {
         existing.set(r.row.id, cur)
       }
       // Wurzelknoten selbst (ohne Elternteil) einzeln
-      if (pid === '#root') for (const id of ids) { const t2 = await api.get(`/api/nodes/${encodeURIComponent(id)}/table?self=true&attributes=${encodeURIComponent(keys.join(','))}${loc ? '&locale=' + loc : ''}`); for (const r of t2.rows) { if (r.row.id !== id) continue; const cur = existing.get(id) ?? {}; for (const [k, v] of Object.entries(r.values)) if (v.value != null) { cur[`${k}|${loc}`] = v.value; cur[`${k}|${loc}#own`] = v.own }; existing.set(id, cur) } }
+      if (pid === '#root') for (const id of ids) { const t2 = await api.get(`/api/nodes/${encodeURIComponent(id)}/table?self=true&children=false&attributes=${encodeURIComponent(keys.join(','))}${loc ? '&locale=' + loc : ''}`); for (const r of t2.rows) { if (r.row.id !== id) continue; const cur = existing.get(id) ?? {}; for (const [k, v] of Object.entries(r.values)) if (v.value != null) { cur[`${k}|${loc}`] = v.value; cur[`${k}|${loc}#own`] = v.own }; existing.set(id, cur) } }
     }
     planned.value = makePlan({ columns: source.value.columns, rows: source.value.rows, mapping: mapping.value.map(m => ({ ...m })), model: model.value, tree, target: target.value, role: role.value || null, existing, external: external.value || null })
     if (source.value.relationenBlatt) {

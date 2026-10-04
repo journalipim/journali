@@ -479,10 +479,13 @@ async function stageData(ctx, nodeId, locale = 'de') {
   const codes = new Set([at.current, ...(seen.rows ?? []).map(r => String(r.values?.[key]?.value ?? '').toUpperCase()).filter(c => /^EC\d{6}$/.test(c))])
   const featsByCode = new Map(); for (const c of codes) { const cc = cache.classes.get(c); if (cc) featsByCode.set(c, featsOf(cc)) }
   const keys = [...new Set([key, ...[...featsByCode.values()].flat().filter(x => x.has).map(x => x.key)])]
-  const q = `attributes=${encodeURIComponent(keys.join(','))}`
-  const tbl = await api.get(`/api/nodes/${encodeURIComponent(nodeId)}/table?deep=true&${q}`)
-  let rows = (tbl.rows ?? []).filter(r => r.row.role !== 'group')
-  if (row.role !== 'group') { const me = await api.get(`/api/nodes/${encodeURIComponent(nodeId)}/table?self=true&${q}`).catch(() => null); const mine = me?.rows?.find(r => r.row.id === nodeId); if (mine) rows = [mine, ...rows.filter(r => r.row.id !== nodeId)] }
+  // Die Merkmale aller Klassen im Teilbaum: oft hunderte Spalten — darum als POST (Spalten im Rumpf, die Adresse wäre zu lang) und seitenweise
+  // (sonst über die Grenze des Servers von 1 Mio. Zellen, 04.10.2026)
+  const tabelle = (extra, skip) => api.post(`/api/nodes/${encodeURIComponent(nodeId)}/table`, { attributes: keys, ...extra, take: 1000, skip })
+  const tbl = { rows: [], columns: [] }
+  for (let skip = 0; skip != null;) { const t = await tabelle({ deep: true }, skip); tbl.columns = t.columns ?? tbl.columns; tbl.rows.push(...(t.rows ?? [])); skip = t.next != null && t.next > skip ? t.next : null }
+  let rows = tbl.rows.filter(r => r.row.role !== 'group')
+  if (row.role !== 'group') { const me = await tabelle({ self: true, children: false }, 0).catch(() => null); const mine = me?.rows?.find(r => r.row.id === nodeId); if (mine) rows = [mine, ...rows.filter(r => r.row.id !== nodeId)] }
   stage.other = rows.filter(r => { const v = String(r.values?.[key]?.value ?? '').toUpperCase(); return v && v !== at.current }).length
   stage.products = rows.filter(r => String(r.values?.[key]?.value ?? '').toUpperCase() === at.current)
   // Zahlen und Befunde aus einer Rechnung (core: audit) — die Tabelle je Klasse und die Liste der Befunde belegen dieselben Zahlen
@@ -765,15 +768,7 @@ async function mount(root, ctx) {
     })
   }
 
-  // ── Prüfung eines Teilbaums mit denselben Regeln wie die Datenqualität
-  async function check() {
-    await busy(t_('prüfe …'), async () => {
-      const t = await api.get(`/api/nodes/${encodeURIComponent(st.root)}/table?deep=true&locale=${locale}`)
-      const findings = []
-      for (const r of t.rows) for (const f of checkNode({ values: r.values, columns: t.columns.filter(x => !(r.inactive ?? []).includes(x.key)), classes: cache.classes, cfg: cfg(locale) })) findings.push({ ...f, node: r.row })
-      st.result = { findings, nodes: t.rows.length }; say(t_('{0} Befunde in {1} Knoten', [findings.length, t.rows.length])); draw()
-    })
-  }
+  // (Die Prüfung eines Teilbaums lief hier über die ganze Tabelle — ungenutzt seit der Stufe „Daten“ der Übersicht, darum entfernt, 04.10.2026)
 
   // ── ƒ an der Zuordnung: Kette wie im Datenmapper — Probe zeigt, was am ETIM-Attribut ankommt
   function stepsDialog(f) {

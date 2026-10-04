@@ -9,7 +9,6 @@
  "Knoten": "Node",
  "Vorher": "Before",
  "Nachher": "After",
- "lese {0} Sprachen …": "reading {0} languages …",
  "✓ gespeichert": "✓ saved",
  "Als Ausnahme gemerkt": "Kept as an exception",
  "„{0}“ in {1} Feldern ersetzen?": "Replace “{0}” in {1} fields?",
@@ -55,5 +54,6 @@
  "aufheben": "revoke",
  "Begründung (optional)": "Reason (optional)",
  "Kein Fehlalarm: der Befund bleibt aus der Liste, solange der Text so bleibt": "Not a real finding: it stays out of the list as long as the text stays as it is",
- "Weitere Befunde im Feld": "More findings in the field"
+ "Weitere Befunde im Feld": "More findings in the field",
+ "prüfe {0}: {1} von {2} …": "checking {0}: {1} of {2} …"
 }

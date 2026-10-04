@@ -13,6 +13,7 @@ import { dialog } from './dialog.js'
 import { ai } from './ai.js'
 import { norm, similarity } from './mapper.js'
 import { analyze, einrichtungsBedarf, berechneterTyp } from './compliance-core.js'
+import { tablePages } from './tablePages.js'
 import { gruppenVon } from './gruppen.js'
 import { treePicker } from './treePicker.js'
 import { t as t_, i18n } from './i18n.js'
@@ -54,7 +55,11 @@ export async function check(catalog, mapping, rootId, say = () => {}) {
   const scopeAttr = catalog.groups.some(g => g.scope) ? `${catalog.key}_scope` : null
   const keys = [...new Set([...Object.values(mapping).map(m => m.to).filter(Boolean), ...(scopeAttr && model.attributes.some(a => a.key === scopeAttr) ? [scopeAttr] : [])])]
   say('lese …')
-  const t = await api.get(`/api/nodes/${encodeURIComponent(rootId)}/table?deep=true&self=true&locale=${locale}${keys.length ? '&attributes=' + encodeURIComponent(keys.join(',')) : ''}`)
+  // Nur die zugeordneten Spalten, seitenweise (04.10.2026): ohne Zuordnung gibt es nichts zu lesen — die Zeilen kommen dann aus dem Baum;
+  // die ganze Tabelle eines grossen Zweigs (alle Spalten) waren 1 GB JSON
+  const t = keys.length
+    ? await tablePages(api, `/api/nodes/${encodeURIComponent(rootId)}/table?deep=true&self=true&locale=${locale}&attributes=${encodeURIComponent(keys.join(','))}`, { onPage: null })
+    : { node: tree.byId.get(rootId) ?? null, rows: [tree.byId.get(rootId), ...unterhalb(rootId)].filter(Boolean).map(r => ({ row: r, values: {}, inactive: [] })) }
   const root = t.node
   // Wurzel als erste Zeile, aufgelöst wie die Nachfahren — geerbt zählt.
   // Älterer Server ohne self: wie bisher nur die eigenen Werte der Wurzel (Listenwerte stehen dort in values, nicht value)
@@ -64,6 +69,9 @@ export async function check(catalog, mapping, rootId, say = () => {}) {
   const onPath = (id, g) => [tree.byId.get(id), ...tree.ancestors(id)].some(x => (x?.groups ?? '').split(',').includes(g))
   return analyze({ catalog, mapping, model, rows, locale, scopeAttr, onPath })
 }
+
+/// Alle Knoten unter id aus dem Baum der Oberfläche (ohne Werte)
+function unterhalb(id) { const out = []; const stapel = [...tree.kids(id)]; while (stapel.length) { const k = stapel.pop(); out.push(k); stapel.push(...tree.kids(k.id)) } return out }
 
 // ---- 3 Vorschläge
 // Regelbasiert: aus vorhandenen Werten ableiten (Katalog: item.derive(values, row, model) → Wert oder null)

@@ -437,9 +437,10 @@ export async function mountDesigner(root, ctx) {
   async function reload() {
     if (!st.node) { drawPalette(); draw(); return }
     try {
-      const [d, t, n] = await Promise.all([dataOf(ctx, st.node, st.locale), api.get(`/api/nodes/${encodeURIComponent(st.node)}/table?deep=true&locale=${st.locale}`), api.get(`/api/nodes/${encodeURIComponent(st.node)}`)])
+      const [d, t, n] = await Promise.all([dataOf(ctx, st.node, st.locale), api.get(`/api/nodes/${encodeURIComponent(st.node)}/table?deep=true&locale=${st.locale}&take=1`), api.get(`/api/nodes/${encodeURIComponent(st.node)}`)])
       d.types = Object.fromEntries(model.attributes.map(a => [a.key, a.type])); d.locale = st.locale; d.cache = {}
-      // Palette: die Attribute, die AM KNOTEN gelten (seine aktiven Gruppen) — plus alles, was an den Nachfahren vorkommt (table?deep).
+      // Palette: die Attribute, die AM KNOTEN gelten (seine aktiven Gruppen) — plus alles, was an den Nachfahren vorkommt (table?deep; take=1:
+      // die Spalten gelten für alle Nachfahren, die Zeilen braucht die Palette nicht — die ganze Tabelle einer Gruppe waren hunderte MB)
       // Nur die Nachfahren zu nehmen liess an einer Variante (kein Kind) die Palette leer
       const own = (n.groups ?? []).filter(g => g.active).flatMap(g => g.attributes).map(k => model.attributes.find(a => a.key === k)).filter(Boolean)
       const seen = new Set(); const cols = []

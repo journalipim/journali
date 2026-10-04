@@ -12,16 +12,25 @@ export const findingKey = f => [f.node.id, f.attribute, f.locale, f.rule, f.term
 /// ist der in der Prüfung, hat er den Befund; die erbenden Knoten stehen dort als `heirs`, nicht noch einmal als eigene Zeile.
 export function collect(tables, locales) {
   const findings = []
-  for (let i = 0; i < locales.length; i++) {
-    const t = tables[i]
-    for (const r of t.rows) {
-      const columns = t.columns.filter(x => !(r.inactive ?? []).includes(x.key))
-      for (const c of checks) for (const f of c.run({ values: r.values, columns })) {
-        const v = r.values[f.attribute]
-        findings.push({ ...f, rule: c.key, severity: c.severity, locale: locales[i], node: r.row, raw: v?.value ?? '', from: v?.from ?? null, heirs: [] })
-      }
+  for (let i = 0; i < locales.length; i++) findings.push(...rawFindings(tables[i], locales[i]))
+  return merge(findings)
+}
+
+/// Die Befunde einer Tabelle (oder einer Seite davon) in einer Sprache — noch nicht zusammengefasst
+export function rawFindings(t, locale) {
+  const findings = []
+  for (const r of t.rows) {
+    const columns = t.columns.filter(x => !(r.inactive ?? []).includes(x.key))
+    for (const c of checks) for (const f of c.run({ values: r.values, columns })) {
+      const v = r.values[f.attribute]
+      findings.push({ ...f, rule: c.key, severity: c.severity, locale, node: r.row, raw: v?.value ?? '', from: v?.from ?? null, heirs: [] })
     }
   }
+  return findings
+}
+
+/// Geerbtes zusammenfassen: ein Befund an einem geerbten Wert geht an den Knoten, von dem der Wert kommt (als heirs)
+export function merge(findings) {
   const byKey = new Map(findings.filter(f => !f.from).map(f => [findingKey(f), f]))
   const out = []
   for (const f of findings) {

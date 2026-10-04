@@ -12,6 +12,59 @@ namespace Journali.Server;
 public static class TreeApi
 {
     public sealed record RolesBody(string[]? Roles);
+    /// <summary>Die Abfrage einer Tabelle (GET: aus den Parametern, POST: aus dem Rumpf).</summary>
+    public sealed record TableQuery(string? Role = null, string[]? Attributes = null, string? Locale = null, string? Channel = null, bool Deep = false, bool Self = false,
+        long? At = null, int? Take = null, int Skip = 0, bool Children = true, bool Sparse = false, string? Types = null);
+
+    static IResult Tabelle(Catalog c, string id, TableQuery q)
+    {
+        var (role, wanted, locale, channel, deep, self, at, take, skip, children, sparse, types) = (q.Role, q.Attributes, q.Locale, q.Channel, q.Deep, q.Self, q.At, q.Take, q.Skip, q.Children, q.Sparse, q.Types);
+        return             c.Lesen((liveModel, liveTree) =>
+            {
+                var (model, tree) = at is { } n ? c.AsOf(n) : (liveModel, liveTree);   // at: der Stand von damals
+                if (!tree.Nodes.TryGetValue(id, out var root)) return Results.NotFound();
+                var nodes = !children ? [] : (deep ? tree.DescendantsDeepestFirst(id).Reverse() : tree.Children(id)).Where(n => role is null || n.Role == role).ToList();
+                if (self) nodes.Insert(0, root);
+                var cols = wanted is { Length: > 0 }
+                    ? wanted.Distinct().Select(k => model.Attributes.GetValueOrDefault(k)).Where(a => a is not null).Select(a => a!).ToList()
+                    : SpaltenVon(model, tree, nodes, $"{at ?? tree.LastApplied}|{id}|{role}|{deep}|{self}|{children}");
+                if (types?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) is { Length: > 0 } typen)
+                    cols = cols.Where(a => typen.Contains(a.Type, StringComparer.OrdinalIgnoreCase)).ToList();
+                var total = nodes.Count;
+                var breite = Math.Max(1, cols.Count);
+                if (take is null && (long)total * breite > MaxCells)
+                    return Bad("Tabelle zu gross: {0} Zeilen × {1} Spalten, höchstens {2} Zellen je Abruf.", total, cols.Count, MaxCells);
+                skip = Math.Max(0, skip);
+                var seite = Math.Clamp(take ?? total, 0, Math.Max(1, MaxCells / breite));
+                var page = nodes.Skip(skip).Take(seite).ToList();
+                var rows = page.Select(n =>
+                {
+                    var aktiv = sparse ? null : CompletenessRules.ActiveAttributes(tree, model, n).Select(x => x.Key).ToHashSet();   // einmal je Knoten, nicht je Spalte
+                    var values = new Dictionary<string, object>(StringComparer.Ordinal);
+                    foreach (var a in cols)
+                    {
+                        var (v, from) = tree.Resolve(model, n, a.Key, a.PerLocale ? locale : null, a.PerChannel ? channel : null);
+                        // Formel/Vorlage: das Ergebnis zeigen, nicht das Skript — die Spalte ist in der Tabelle ohnehin gesperrt
+                        if (a.IsComputed) v = tree.Compute(model, n, a, locale);
+                        // Beleg am Wert (auch ohne Wert: „angefragt bei … bis …“)
+                        var source = SourceView.Of(n, new Axis(a.Key, a.PerLocale ? locale : null, a.PerChannel ? channel : null));
+                        if (sparse && v is null && source is null) continue;
+                        values[a.Key] = new { value = v, own = from is not null && from.Id == n.Id, from = from is not null && from.Id != n.Id ? from.Id : null, source };
+                    }
+                    return new
+                    {
+                        row = NodeRow.Of(tree, model, n),
+                        // Spalten, die an diesem Knoten nicht gelten (Gruppe erst ab tieferer Rolle, Attribut nicht erlaubt) —
+                        // bei deep ist die Spaltenliste die Vereinigung über alle Knoten (Datenqualität); bei sparse weggelassen
+                        inactive = aktiv is null ? null : cols.Where(a => !aktiv.Contains(a.Key)).Select(a => a.Key).ToList(),
+                        values,
+                    };
+                }).ToList();
+                var next = skip + page.Count < total ? skip + page.Count : (int?)null;
+                return Results.Ok(new { node = NodeRow.Of(tree, model, root), columns = cols.Select(a => new { a.Key, a.Type, a.Label, a.Unit, a.PerLocale, a.Required, a.List, a.Inheritable, a.Multiple, a.Pattern, computed = a.IsComputed }).ToList(), rows, total, skip, next });
+            });
+    }
+
     /// <summary>Die Attribute mit eigenen Werten im Teilbaum (Knoten und Nachfahren, die die Rolle sieht), sortiert, und die Zahl der Knoten;
     /// null, wenn es den Knoten nicht gibt. Werte in Zeilen zählen mit ihrer Spalte, ein Zeilenattribut mit Zeilen zählt selbst.</summary>
     public static (List<string> Attributes, int Nodes)? UsedAttributes(Tree tree, string id, string? role, bool admin)
@@ -30,6 +83,29 @@ public static class TreeApi
             if (tree.Visible(d, role, admin)) { Add(d); nodes++; }
         return (used.OrderBy(x => x, StringComparer.Ordinal).ToList(), nodes);
     }
+
+    /// <summary>Höchstens so viele Zellen (Zeilen × Spalten) liefert /table je Abruf — rund 70 MB JSON.</summary>
+    public static int MaxCells { get; set; } = 1_000_000;
+
+    /// <summary>
+    /// Die Spalten einer Tabelle ohne attributes: alle Attribute, die an einem der Knoten gelten. Bei tausenden Knoten kostet das, und
+    /// wer seitenweise liest, fragt dieselbe Liste für jede Seite — darum je Stand des Journals und Abfrage gemerkt (die letzten 16).
+    /// </summary>
+    static List<AttributeDefinition> SpaltenVon(ModelCatalog model, Tree tree, List<Node> nodes, string schluessel)
+    {
+        lock (SpaltenCache)
+        {
+            if (SpaltenCache.FirstOrDefault(x => x.Key == schluessel) is { Key: not null } da) return da.Value;
+        }
+        var cols = nodes.SelectMany(n => CompletenessRules.ActiveAttributes(tree, model, n)).DistinctBy(a => a.Key).ToList();
+        lock (SpaltenCache)
+        {
+            SpaltenCache.Insert(0, new(schluessel, cols));
+            if (SpaltenCache.Count > 16) SpaltenCache.RemoveAt(SpaltenCache.Count - 1);
+        }
+        return cols;
+    }
+    static readonly List<KeyValuePair<string, List<AttributeDefinition>>> SpaltenCache = [];
 
     public static void Map(RouteGroupBuilder api)
     {
@@ -57,39 +133,20 @@ public static class TreeApi
         // Nachfahren — als Zeilen, die Attribute als Spalten, Werte wie in der Knotenansicht aufgelöst (geerbt zählt,
         // own sagt, ob der Wert am Knoten selbst steht). role filtert die Zeilen; attributes (a,b,c) die Spalten,
         // sonst alle Attribute, die an der Rolle der Zeilen gelten. locale/channel = die Achse; ohne = Grundwert.
-        // self: der Knoten selbst als erste Zeile, aufgelöst wie die Nachfahren — geerbt zählt
-        api.MapGet("/nodes/{id}/table", (string id, Catalog c, string? role = null, string? attributes = null, string? locale = null, string? channel = null, bool deep = false, bool self = false, long? at = null) =>
-            c.Lesen((liveModel, liveTree) =>
-            {
-                var (model, tree) = at is { } n ? c.AsOf(n) : (liveModel, liveTree);   // at: der Stand von damals
-                if (!tree.Nodes.TryGetValue(id, out var root)) return Results.NotFound();
-                var nodes = (deep ? tree.DescendantsDeepestFirst(id).Reverse() : tree.Children(id)).Where(n => role is null || n.Role == role).ToList();
-                if (self) nodes.Insert(0, root);
-                var wanted = attributes?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-                var cols = wanted is { Length: > 0 }
-                    ? wanted.Distinct().Select(k => model.Attributes.GetValueOrDefault(k)).Where(a => a is not null).Select(a => a!).ToList()
-                    : nodes.SelectMany(n => CompletenessRules.ActiveAttributes(tree, model, n)).DistinctBy(a => a.Key).ToList();
-                var rows = nodes.Select(n =>
-                {
-                var aktiv = CompletenessRules.ActiveAttributes(tree, model, n).Select(x => x.Key).ToHashSet();   // einmal je Knoten, nicht je Spalte
-                return new
-                {
-                    row = NodeRow.Of(tree, model, n),
-                    // Spalten, die an diesem Knoten nicht gelten (Gruppe erst ab tieferer Rolle, Attribut nicht erlaubt) —
-                    // bei deep ist die Spaltenliste die Vereinigung über alle Knoten (Datenqualität)
-                    inactive = cols.Where(a => !aktiv.Contains(a.Key)).Select(a => a.Key).ToList(),
-                    values = cols.ToDictionary(a => a.Key, a =>
-                    {
-                        var (v, from) = tree.Resolve(model, n, a.Key, a.PerLocale ? locale : null, a.PerChannel ? channel : null);
-                        // Formel/Vorlage: das Ergebnis zeigen, nicht das Skript — die Spalte ist in der Tabelle ohnehin gesperrt
-                        if (a.IsComputed) v = tree.Compute(model, n, a, locale);
-                        // Beleg am Wert (auch ohne Wert: „angefragt bei … bis …“)
-                        return new { value = v, own = from is not null && from.Id == n.Id, from = from is not null && from.Id != n.Id ? from.Id : null, source = SourceView.Of(n, new Axis(a.Key, a.PerLocale ? locale : null, a.PerChannel ? channel : null)) };
-                    }),
-                };
-                }).ToList();
-                return Results.Ok(new { node = NodeRow.Of(tree, model, root), columns = cols.Select(a => new { a.Key, a.Type, a.Label, a.Unit, a.PerLocale, a.Required, a.List, a.Inheritable, a.Multiple, a.Pattern, computed = a.IsComputed }).ToList(), rows });
-            }));
+        // self: der Knoten selbst als erste Zeile, aufgelöst wie die Nachfahren — geerbt zählt; children=false: nur er.
+        // Grösse (04.10.2026): ein Zweig mit 17 782 Zeilen × 783 Spalten waren 1 GB JSON, und der Browser stürzte ab. Darum:
+        //   take/skip  — Seiten; die Antwort nennt total und next (null auf der letzten Seite). take wird so geklemmt, dass eine Seite
+        //                höchstens MaxCells Zellen hat.
+        //   ohne take  — mehr als MaxCells Zellen lehnt der Server mit Meldung ab, statt sie zu schicken.
+        //   sparse     — nur Zellen mit Wert oder Beleg, ohne die Liste der inaktiven Spalten (Export, Prüfungen).
+        //   types      — nur Spalten dieser Typen (text,html): wer nur Texte prüft, braucht die übrigen nicht, und die Adresse bleibt kurz.
+        api.MapGet("/nodes/{id}/table", (string id, Catalog c, string? role = null, string? attributes = null, string? locale = null, string? channel = null, bool deep = false, bool self = false,
+            long? at = null, int? take = null, int skip = 0, bool children = true, bool sparse = false, string? types = null) =>
+            Tabelle(c, id, new TableQuery(role, attributes?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries), locale, channel, deep, self, at, take, skip, children, sparse, types)));
+        // Dieselbe Tabelle als POST: die Spaltenliste im Rumpf — hunderte Attribute (alle Merkmale der Klassen eines Teilbaums) passen nicht in die
+        // Adresse (über rund 8 KB lehnt der Webserver sie ab). Ändert nichts; das Recht ist lesen (Auth.Needed).
+        api.MapPost("/nodes/{id}/table", (string id, TableQuery q, Catalog c) => Tabelle(c, id, q));
+
 
         // Suche über Label, SKU, Id und Werte; liefert Zeilen mit Fundstelle.
         api.MapGet("/search", (string q, HttpRequest req, Catalog c, int limit = 200) =>

@@ -2,6 +2,7 @@
 // Ablauf: Knoten+Unterknoten laden → leere Attribute erkennen → Anwender wählt aus → Recherche (KI+Web, nur KI, manuell) → Ergebnis → Übernahme
 const L = l => globalThis.journali?.L ? globalThis.journali.L(l) : (l?.de ?? Object.values(l ?? {})[0] ?? '')
 const t = (k, p) => globalThis.journali?.t ? globalThis.journali.t(k, p) : String(k).replace(/\{(\w+)\}/g, (m, i) => p?.[i] ?? m)
+const GRENZE = 2000   // so viele Knoten bearbeitet die Anreicherung auf einmal (je Knoten ein KI-Aufruf)
 function el(tag, attrs = {}, ...kids) { const e = document.createElement(tag); for (const [k, v] of Object.entries(attrs)) { if (v == null) continue; if (k === 'style') e.style.cssText = v; else if (k.startsWith('on')) e.addEventListener(k.slice(2), v); else if (k === 'class') e.className = v; else e.setAttribute(k, v) } for (const c of kids.flat()) if (c != null) e.append(c.nodeType ? c : String(c)); return e }
 
 async function mount(root, ctx) {
@@ -55,9 +56,22 @@ async function mount(root, ctx) {
     if (!st.rootId) { body.append(el('div', { class: 'empty' }, t('Einen Knoten auswählen'))); return }
     body.append(el('div', { class: 'muted' }, t('Teilbaum wird geladen …')))
     try {
-      const tbl = await api.get(`/api/nodes/${encodeURIComponent(st.rootId)}/table?deep=true&self=true&locale=${encodeURIComponent(locale)}`)
-      st.columns = tbl.columns || []
-      st.rows = tbl.rows || []
+      // Seitenweise (04.10.2026); ein Teilbaum über GRENZE Knoten wird abgelehnt — angereichert wird je Knoten mit einem KI-Aufruf,
+      // und die ganze Tabelle eines grossen Zweigs waren in einem Stück 1 GB JSON
+      const url = `/api/nodes/${encodeURIComponent(st.rootId)}/table?deep=true&self=true&locale=${encodeURIComponent(locale)}`
+      const erste = await api.get(`${url}&take=500&skip=0`)
+      if ((erste.total ?? 0) > GRENZE) {
+        st.rows = []; body.innerHTML = ''; drawToolbar()
+        body.append(el('div', { class: 'neg' }, t('{0} Knoten im Teilbaum, höchstens {1}.', [erste.total, GRENZE])))
+        return
+      }
+      st.columns = erste.columns || []
+      st.rows = [...(erste.rows || [])]
+      for (let skip = erste.next; skip != null;) {
+        const seite = await api.get(`${url}&take=500&skip=${skip}`)
+        st.rows.push(...(seite.rows || []))
+        skip = seite.next != null && seite.next > skip ? seite.next : null
+      }
       st.leere = new Map()
       st.gewaehlt = new Set()
       st.ergebnis = []

@@ -5,7 +5,7 @@
 import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { api, store, tree, dialog, TreePicker, L, t } from 'journali'
 import { catalog, checks } from './checks.js'
-import { collect, findingKey, targetId, snippet, filter, byTerm, countsByRule, ignored, ignoreName, textHash } from './befunde.js'
+import { rawFindings, merge, findingKey, targetId, snippet, filter, byTerm, countsByRule, ignored, ignoreName, textHash } from './befunde.js'
 import { memory, forget } from './memory.js'
 import Workbench from './Workbench.vue'
 import TermPanel from './TermPanel.vue'
@@ -47,13 +47,22 @@ async function run() {
   busy.value = true
   try {
     const locales = store.model.locales.map(l => l.code)
-    status.value = t('lese {0} Sprachen …', [locales.length])
-    // Sprachen parallel holen: der Server rechnet je Anfrage nur einen Teilbaum, das Netz wartet nicht auf sich selbst.
-    const tables = await Promise.all(locales.map(l => api.get(`/api/nodes/${encodeURIComponent(root.value)}/table?deep=true&locale=${l}`)))
-    const list = collect(tables, locales)
+    // Nur Text- und HTML-Spalten, seitenweise und je Sprache nacheinander (04.10.2026): die ganze Tabelle eines grossen Zweigs waren
+    // 1 GB JSON je Sprache, und alle Sprachen kamen gleichzeitig. Je Seite werden die Befunde gebildet, die Seite selbst wird verworfen.
+    const roh = []; let knoten = 0
+    for (const l of locales) {
+      for (let skip = 0; skip != null;) {
+        const tab = await api.get(`/api/nodes/${encodeURIComponent(root.value)}/table?deep=true&types=text,html&locale=${l}&take=500&skip=${skip}`)
+        roh.push(...rawFindings(tab, l))
+        if (l === locales[0]) knoten += tab.rows.length
+        status.value = t('prüfe {0}: {1} von {2} …', [l, Math.min(skip + tab.rows.length, tab.total ?? 0), tab.total ?? 0])
+        skip = tab.next != null && tab.next > skip ? tab.next : null
+      }
+    }
+    const list = merge(roh)
     memory.ignoredMap = await api.get('/api/plugins/empco/data?prefix=ignore%3A&values=true').catch(() => ({})) ?? {}
     memory.root = root.value
-    memory.result = { findings: list, nodes: tables[0]?.rows.length ?? 0 }
+    memory.result = { findings: list, nodes: knoten }
     memory.sel = null
     status.value = ''
     await nextTick(); selectFirst()

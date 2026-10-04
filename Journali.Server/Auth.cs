@@ -217,6 +217,7 @@ public static class Auth
         if (path == "/api/classification/readiness" || path == "/api/classification/systems" || path == "/api/classification/protected") return Rights.Read;   // fragt nur, schreibt nichts
         if (path == "/api/classification/retire") return Rights.Plugins;   // die Objekte eines Plugins zurückziehen darf, wer es ausschalten darf — und das Plugin muss dafür aus sein
         if (path.StartsWith("/api/configurator/") && path.EndsWith("/check")) return Rights.Read;   // eine Auswahl prüfen ändert nichts: ein POST, der nur liest
+        if (path.StartsWith("/api/nodes/") && path.EndsWith("/table")) return Rights.Read;   // die Tabelle als POST (Spalten im Rumpf): liest nur
         if (read) return Rights.Read;
         if (path.StartsWith("/api/model/lists/") && (path.Contains("/values/") || path.EndsWith("/values")) && method == "PUT") return Rights.Write;   // Listenwert(e) zufügen ist Pflege
         if (path.StartsWith("/api/model")) return Rights.Model;

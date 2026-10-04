@@ -9,20 +9,34 @@
 export async function build(env, { root, role = '', locales, ownOnly = false, viewKey = '', channel = '', only = null, extra = [], at = null, relations = false, say }) {
   const { api, model } = env
   const byLocale = new Map(); let cols = [], nodes = []
+  // Mit Sicht: nur ihre Attribute vom Server holen (vorher kamen alle Spalten und die Sicht filterte danach)
+  const v = model.views.find(x => x.key === viewKey)
+  const sichtAttr = v ? [...new Set([...v.items.flatMap(it => it.order ?? []), ...v.items.flatMap(it => it.group ? model.groups.find(g => g.key === it.group)?.attributes ?? [] : [])])] : []
+  // Seitenweise und knapp (sparse: nur Zellen mit Wert) — ein Zweig mit 17 782 Zeilen × 783 Spalten waren in einem Stück 1 GB JSON (04.10.2026)
   for (const l of locales) {
     say?.(`lese ${l} …`)
-    const t = await api.get(`/api/nodes/${encodeURIComponent(root)}/table?deep=true&locale=${l}${channel ? '&channel=' + encodeURIComponent(channel) : ''}${role ? '&role=' + role : ''}${at ? '&at=' + at : ''}`)
-    cols = t.columns; nodes = only ? t.rows.filter(r => only.has(r.row.id)) : t.rows; byLocale.set(l, new Map(t.rows.map(r => [r.row.id, r.values])))
+    const url = `/api/nodes/${encodeURIComponent(root)}/table?deep=true&sparse=true&locale=${l}${channel ? '&channel=' + encodeURIComponent(channel) : ''}${role ? '&role=' + role : ''}${at ? '&at=' + at : ''}${sichtAttr.length && sichtAttr.length <= 300 ? '&attributes=' + encodeURIComponent(sichtAttr.join(',')) : ''}`
+    const werte = new Map(); const zeilen = []
+    let skip = 0
+    for (;;) {
+      const t = await api.get(`${url}&take=1000&skip=${skip}`)
+      cols = t.columns
+      for (const r of t.rows) { if (only && !only.has(r.row.id)) continue; werte.set(r.row.id, r.values); zeilen.push(r) }
+      if (t.next == null || t.next <= skip) break
+      skip = t.next
+      say?.(`lese ${l} … ${skip}/${t.total}`)
+    }
+    nodes = zeilen; byLocale.set(l, werte)
   }
   // Spalten der Sicht, sonst alle; Formeln, Vorlagen und Zeilenattribute bleiben draussen (kein Rückweg)
-  const v = model.views.find(x => x.key === viewKey)
   if (v) { const order = v.items.flatMap(it => it.order ?? []); const groups = new Map(model.groups.map(g => [g.key, g.attributes])); const wanted = new Set([...order, ...v.items.flatMap(it => it.group ? groups.get(it.group) ?? [] : [])]); cols = cols.filter(c => wanted.has(c.key)).sort((a, b) => (order.indexOf(a.key) + 1 || 999) - (order.indexOf(b.key) + 1 || 999)) }
   cols = cols.filter(c => c.type !== 'rows' && !c.computed)
   cols = [...cols.filter(c => c.unique), ...cols.filter(c => !c.unique)]   // Schlüssel (eindeutig) zuerst — sie finden beim Import den Knoten wieder
   const axes = [...new Set(nodes.flatMap(r => Object.keys(r.row.axisValues ?? {})))]
   // journali_root: die Wurzel des Baums — Id + Wurzel macht die Zeile über Datenbanken hinweg eineindeutig; der Import prüft beides
   let rootId = root
-  try { const all = await api.get('/api/tree'); const byId = new Map((Array.isArray(all) ? all : all.rows ?? []).map(r => [r.id, r])); for (let p = byId.get(root)?.parent; p; p = byId.get(p)?.parent) rootId = p } catch {}
+  // die Wurzel aus dem Pfad des Knotens (vorher der ganze Baum, nur dafür); ancestors stehen vom Vater aufwärts, die Wurzel ist die letzte
+  try { const n = await api.get(`/api/nodes/${encodeURIComponent(root)}`); const anc = n.ancestors ?? []; if (anc.length) rootId = anc[anc.length - 1].id } catch {}
   // eigene Spalten: journali_<feld>_<wurzel> — die Wurzel steckt im Spaltenkopf. Sichtbar und vorne, nicht ausgeblendet („sonst sieht der
   // Anwender nicht mal, was er tut“ — kopierte Zeilen nehmen die Id mit) und nicht ganz rechts („bei 180 Spalten kommt er da nie hin“); der Kommentar am Kopf erklärt es
   // die Ausweg (21.09.): nur die Id-Spalte sichtbar — sie erklärt, was der Anwender tut; parent, role, status ausgeblendet (Kopieren ändert sie nicht)
