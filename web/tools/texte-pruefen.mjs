@@ -42,7 +42,11 @@ export function quellSchluessel() {
 export function pluginDateien(key) {
   const d = path.join(PLUGINS, key); const out = []
   if (fs.existsSync(path.join(d, 'src'))) { out.push(...walk(path.join(d, 'src'))); if (fs.existsSync(path.join(d, 'core.mjs'))) out.push(path.join(d, 'core.mjs')) }   // core.mjs: Logik, die Ansicht und Test teilen
-  else if (fs.existsSync(path.join(d, 'entry.js'))) out.push(path.join(d, 'entry.js'))
+  else if (fs.existsSync(path.join(d, 'entry.js'))) {
+    out.push(path.join(d, 'entry.js'))
+    // was entry.js aus dem eigenen Verzeichnis lädt, läuft ebenfalls im Browser (json: manager.js, export.js)
+    for (const m of fs.readFileSync(path.join(d, 'entry.js'), 'utf8').matchAll(/from '\.\/([\w.-]+\.js)'/g)) { const f = path.join(d, m[1]); if (fs.existsSync(f) && !out.includes(f)) out.push(f) }
+  }
   if (fs.existsSync(path.join(d, 'browser.js'))) out.push(path.join(d, 'browser.js'))
   return out
 }

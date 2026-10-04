@@ -53,6 +53,7 @@ async function laden() {
 async function merken() { try { recent.value = await recentFiles.list(RECENT) } catch { recent.value = [] } }
 async function datei(file, handle = null) {
   fehler.value = ''; gelesen.value = null
+  if (file.size > 300 * 1048576) { fehler.value = t_('{0}: {1} MB, im Browser höchstens {2} MB.', [file.name, (file.size / 1048576).toFixed(0), 300]); return }
   busy.value = t_('lese {0} …', [file.name])
   try {
     let buf = new Uint8Array(await file.arrayBuffer())

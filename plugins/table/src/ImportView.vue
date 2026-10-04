@@ -86,7 +86,9 @@ async function reloadFile() {
     try { await takeFile(await fileHandle.value.getFile(), true); store.toast(t_('{0}: neu gelesen', [source.value?.name]), 'ok') } catch (err) { store.toast(err.message) }
   } else document.querySelector('#table-file-input')?.click()
 }
+const MAX_MB = 50   // grösser liest der Browser keine Tabelle (Datei, Zellen und Plan liegen sonst mehrfach im Speicher, 04.10.2026) — dafür der Import-Job
 async function takeFile(file, keepSheet = false) {
+  if (file.size > MAX_MB * 1048576) { store.toast(t_('{0}: {1} MB, im Browser höchstens {2} MB.', [file.name, (file.size / 1048576).toFixed(0), MAX_MB])); return }
   // Rohdaten-JSON (Knotenbaum { model, node } oder Knoten mit id/role/values) gehört in den JSON-Import, nicht in die Tabelle
   if (/\.json$/i.test(file.name)) {
     try { const j = JSON.parse(await file.text()); const n = j?.node ?? j; if (n && !Array.isArray(n) && n.id && n.role && Array.isArray(n.values)) { store.toast(t_('Knotenbaum erkannt → JSON-Import'), 'ok'); store.pendingImport = { file, parent: target.value || null }; router.push('/p/json/import'); return } } catch { /* dann wie eine Tabelle */ }

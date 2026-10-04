@@ -268,5 +268,6 @@
  "Die {0} Attribute kommen in die Gruppen ihrer Klassen, die Bedingung entfällt, und jeder Knoten mit einer Klasse bekommt deren Gruppe": "The {0} attributes move into the groups of their classes, the condition goes away, and each node with a class gets its group",
  "✓ {0} Gruppen, {1} Attribute, {2} Knoten umgestellt": "✓ {0} groups, {1} attributes, {2} nodes converted",
  "⌗ auf Klassengruppen umstellen": "⌗ convert to class groups",
- "Das Plugin legt die Attributgruppe {0} mit dem Attribut {1} an und hängt die Gruppe an die Wurzeln. Ohne sie arbeitet es nicht, und solange es an ist, lassen sie sich nicht zurückziehen.": "The plugin creates attribute group {0} with attribute {1} and attaches the group to the roots. It does not work without them, and while it is on they cannot be withdrawn."
+ "Das Plugin legt die Attributgruppe {0} mit dem Attribut {1} an und hängt die Gruppe an die Wurzeln. Ohne sie arbeitet es nicht, und solange es an ist, lassen sie sich nicht zurückziehen.": "The plugin creates attribute group {0} with attribute {1} and attaches the group to the roots. It does not work without them, and while it is on they cannot be withdrawn.",
+ "{0}: {1} MB, im Browser höchstens {2} MB.": "{0}: {1} MB, at most {2} MB in the browser."
 }

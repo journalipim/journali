@@ -1,4 +1,4 @@
-(function(){const s=document.createElement('style');s.textContent="\n.klasse[data-v-09f8f74a] { display: flex; flex-direction: column; flex: 1; min-height: 0; font-size: 13px;\n}\n.klasse.modal[data-v-09f8f74a] { width: min(820px, 94vw); max-height: 88vh; background: var(--pane); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 12px 32px rgba(0,0,0,.4);\n}\n.kopf[data-v-09f8f74a], .fuss[data-v-09f8f74a] { padding: 8px 12px;\n}\n.fuss[data-v-09f8f74a] { border-top: 1px solid var(--line);\n}\n.koerper[data-v-09f8f74a] { padding: 8px 12px; flex: 1;\n}\n.zeile[data-v-09f8f74a] { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 3px 0;\n}\n.attr[data-v-09f8f74a] { color: var(--muted); min-width: 64px;\n}\n.kl[data-v-09f8f74a] { font-size: 12px; padding: 2px 0;\n}\n.drop[data-v-09f8f74a] { display: inline-block; padding: 2px 10px; border: 1px dashed var(--line); border-radius: 6px; cursor: pointer;\n}\n.drop.over[data-v-09f8f74a] { outline: 2px dashed var(--accent); outline-offset: -2px;\n}\n.recent[data-v-09f8f74a] { display: inline-flex; gap: 4px; flex-wrap: wrap;\n}\n.recent .chip[data-v-09f8f74a] { cursor: pointer;\n}\n.recent .chip.dim[data-v-09f8f74a] { opacity: .55; cursor: default;\n}\nbutton.on[data-v-09f8f74a] { background: var(--accent-soft);\n}\n.suche[data-v-09f8f74a] { width: 100%; margin: 6px 0; box-sizing: border-box;\n}\n.liste[data-v-09f8f74a] { max-height: 300px; overflow: auto; border: 1px solid var(--line); border-radius: 6px;\n}\n.pick[data-v-09f8f74a] { cursor: pointer; padding: 1px 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;\n}\n.pick[data-v-09f8f74a]:hover { background: var(--hover);\n}\n.pick.current[data-v-09f8f74a] { background: var(--accent-soft);\n}\n.ein[data-v-09f8f74a] { padding-left: 16px;\n}\n.caret[data-v-09f8f74a] { display: inline-block; width: 14px; color: var(--muted);\n}\n.brick[data-v-09f8f74a] { margin-top: 8px; padding: 6px 8px; border: 1px solid var(--accent); border-radius: 6px;\n}\n";document.head.append(s)})();
+(function(){const s=document.createElement('style');s.textContent="\n.klasse[data-v-681ef238] { display: flex; flex-direction: column; flex: 1; min-height: 0; font-size: 13px;\n}\n.klasse.modal[data-v-681ef238] { width: min(820px, 94vw); max-height: 88vh; background: var(--pane); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 12px 32px rgba(0,0,0,.4);\n}\n.kopf[data-v-681ef238], .fuss[data-v-681ef238] { padding: 8px 12px;\n}\n.fuss[data-v-681ef238] { border-top: 1px solid var(--line);\n}\n.koerper[data-v-681ef238] { padding: 8px 12px; flex: 1;\n}\n.zeile[data-v-681ef238] { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 3px 0;\n}\n.attr[data-v-681ef238] { color: var(--muted); min-width: 64px;\n}\n.kl[data-v-681ef238] { font-size: 12px; padding: 2px 0;\n}\n.drop[data-v-681ef238] { display: inline-block; padding: 2px 10px; border: 1px dashed var(--line); border-radius: 6px; cursor: pointer;\n}\n.drop.over[data-v-681ef238] { outline: 2px dashed var(--accent); outline-offset: -2px;\n}\n.recent[data-v-681ef238] { display: inline-flex; gap: 4px; flex-wrap: wrap;\n}\n.recent .chip[data-v-681ef238] { cursor: pointer;\n}\n.recent .chip.dim[data-v-681ef238] { opacity: .55; cursor: default;\n}\nbutton.on[data-v-681ef238] { background: var(--accent-soft);\n}\n.suche[data-v-681ef238] { width: 100%; margin: 6px 0; box-sizing: border-box;\n}\n.liste[data-v-681ef238] { max-height: 300px; overflow: auto; border: 1px solid var(--line); border-radius: 6px;\n}\n.pick[data-v-681ef238] { cursor: pointer; padding: 1px 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;\n}\n.pick[data-v-681ef238]:hover { background: var(--hover);\n}\n.pick.current[data-v-681ef238] { background: var(--accent-soft);\n}\n.ein[data-v-681ef238] { padding-left: 16px;\n}\n.caret[data-v-681ef238] { display: inline-block; width: 14px; color: var(--muted);\n}\n.brick[data-v-681ef238] { margin-top: 8px; padding: 6px 8px; border: 1px solid var(--accent); border-radius: 6px;\n}\n";document.head.append(s)})();
 const m$1 = window.journali.vue;
 const Fragment = m$1.Fragment;
 const computed = m$1.computed;
@@ -450,6 +450,10 @@ const _sfc_main$2 = {
     async function datei(file, handle = null) {
       fehler.value = "";
       gelesen.value = null;
+      if (file.size > 300 * 1048576) {
+        fehler.value = t("{0}: {1} MB, im Browser höchstens {2} MB.", [file.name, (file.size / 1048576).toFixed(0), 300]);
+        return;
+      }
       busy.value = t("lese {0} …", [file.name]);
       try {
         let buf = new Uint8Array(await file.arrayBuffer());
@@ -1384,7 +1388,7 @@ ${liste}`,
     };
   }
 };
-const Klasse = /* @__PURE__ */ _export_sfc(_sfc_main$2, [["__scopeId", "data-v-09f8f74a"]]);
+const Klasse = /* @__PURE__ */ _export_sfc(_sfc_main$2, [["__scopeId", "data-v-681ef238"]]);
 const _hoisted_1$1 = {
   class: "pane",
   style: { "flex": "1" }

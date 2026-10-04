@@ -4,6 +4,7 @@
 
 function el(tag, attrs = {}, ...kids) { const e = document.createElement(tag); for (const [k, v] of Object.entries(attrs)) { if (k === 'style') e.style.cssText = v; else if (k.startsWith('on')) e.addEventListener(k.slice(2), v); else if (k === 'html') e.innerHTML = v; else e.setAttribute(k, v) } for (const k of kids) e.append(k); return e }
 const ICON = { group: '▣', product: '▦', variant: '◆' }
+const t = (k, p) => globalThis.journali?.t ? globalThis.journali.t(k, p) : String(k).replace(/\{(\w+)\}/g, (m, i) => p?.[i] ?? m)
 const norm = s => String(s ?? '').toLowerCase().replace(/[^a-z0-9äöüß]+/g, '')
 const TYPE_SYM = { text: 'Aa', html: '‹›', integer: '12', decimal: '1.5', boolean: '☑', date: '📅', enum: '☰', rows: '≣', formula: 'ƒ', template: '{}' }
 
@@ -76,6 +77,7 @@ export async function mountManager(root, ctx) {
   if (store.pendingImport?.file) { const p = store.pendingImport; store.pendingImport = null; await analyse(p.file, p.parent) }
 
   async function analyse(file, presetParent = null) {
+    if (file.size > 200 * 1048576) { store.toast(t('{0}: {1} MB, im Browser höchstens {2} MB.', [file.name, (file.size / 1048576).toFixed(0), 200])); return }   // 04.10.2026
     // .json.gz (Sicherung mit Kompression): im Browser entpacken
     let j; try { const text = /\.gz$/i.test(file.name) ? await new Response(file.stream().pipeThrough(new DecompressionStream('gzip'))).text() : await file.text(); j = JSON.parse(text) } catch { store.toast('keine gültige JSON-Datei (oder .gz nicht lesbar)'); return }
     const node = j?.node ?? j, m = j?.model ?? { groups: [], attributes: [], lists: [], units: [] }

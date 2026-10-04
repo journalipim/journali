@@ -658,6 +658,8 @@ async function mount(root, ctx) {
   const file = el('input', { type: 'file', accept: '.xml,.ixf,.zip', style: 'display:none' })
   file.addEventListener('change', async () => {
     const f = file.files?.[0]; if (!f) return
+    // Datei, entpackte Bytes und Text liegen gleichzeitig im Speicher; über rund 500 MB scheitert schon das Dekodieren (04.10.2026)
+    if (f.size > 300 * 1048576) { say(t_('{0}: {1} MB, im Browser höchstens {2} MB.', [f.name, (f.size / 1048576).toFixed(0), 300])); return }
     await busy(`lese ${f.name} (${(f.size / 1048576).toFixed(1)} MB) …`, async () => {
       const t0 = performance.now()
       // Zip direkt lesen: die Freigaben kommen als Zip — die grösste .xml/.ixf darin zählt
