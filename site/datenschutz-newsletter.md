@@ -3,6 +3,8 @@
 Einzufügen in die Seite „Datenschutzerklärung“ hinter „Kontaktformular“. Keine Rechtsberatung — vor dem Veröffentlichen prüfen,
 ob die Angaben zu den Einstellungen in MailPoet passen. Zwei Stellen haben Varianten: **[A]/[B] Versand** und **[C]/[D] Auswertung**.
 
+**Eingesetzt am 04.10.2026** in die Seite „Datenschutzerklärung“ mit **[A]** (Versand über den Hoster) und **[C]** (ohne Auswertung); unbestätigte Anmeldungen löscht MailPoet nach 30 Tagen (so eingestellt).
+
 ---
 
 ### Benachrichtigung über neue Beiträge (Newsletter)
