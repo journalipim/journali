@@ -143,10 +143,11 @@ _ = Task.Run(async () =>
 // nachsehen; LimitsAusLizenz schreibt nur, wenn sich etwas ändert
 _ = Task.Run(async () =>
 {
-    // Nur der Hauptserver fragt: alle schreiben ins Journal, und zwei Server schrieben dasselbe zweimal. Er fragt
+    // Der Hauptserver fragt (von den lizenzierten nur er: alle schreiben ins Journal, und zwei Server schrieben dasselbe zweimal):
     //  - sobald er Hauptserver ist — nach dem Start und nach einer Übernahme (04.10.2026: sonst galt nach der Übernahme bis zu einer Stunde der alte Stand),
     //  - danach stündlich,
-    //  - alle 5 Minuten, solange ein Server ohne Lizenz läuft: der fragt selbst nicht, und ein eben gekaufter Zusatz Multi-Server soll ihn freigeben.
+    //  - alle 5 Minuten, solange ein Server ohne Lizenz läuft: ein eben gekaufter Zusatz Multi-Server soll ihn freigeben.
+    // Ein Server ohne Lizenz fragt dazu selbst, unten.
     var letzte = DateTime.MinValue; var warHaupt = false;
     while (true)
     {
@@ -154,11 +155,14 @@ _ = Task.Run(async () =>
         var seit = DateTime.UtcNow - letzte;
         // eben Hauptserver geworden oder ein Server ohne Lizenz: jeden Stand neu fragen, auch einen jungen — stündlich nur die, die älter als 20 h sind
         var sofort = !warHaupt || (verbund.OhneLizenzAnzahl > 0 && seit >= TimeSpan.FromMinutes(5));
-        if (haupt && (sofort || seit >= TimeSpan.FromHours(1)))
+        // Ein Server ohne Lizenz fragt selbst (04.10.2026): gleich nach dem Start und dann alle 5 Minuten — er hängt nicht davon ab, dass der Hauptserver einen
+        // eben gekauften oder eingetragenen Zusatz Multi-Server kennt. Was er bekommt, steht im Journal; erlaubt es ihn, arbeitet er beim nächsten Takt.
+        var selbst = !haupt && verbund.OhneLizenz && (letzte == DateTime.MinValue || seit >= TimeSpan.FromMinutes(5));
+        if ((haupt && (sofort || seit >= TimeSpan.FromHours(1))) || selbst)
         {
             letzte = DateTime.UtcNow;
             try { catalog.Lesen((_, _) => catalog.LimitsAusLizenz()); } catch { }
-            try { await abos.AuffrischenAsync(catalog, sofort: sofort); } catch (Exception e) { Console.WriteLine($"journali: subscriptions not refreshed — {e.Message}"); }
+            try { await abos.AuffrischenAsync(catalog, sofort: sofort || selbst); } catch (Exception e) { Console.WriteLine($"journali: subscriptions not refreshed — {e.Message}"); }
         }
         warHaupt = haupt;
         await Task.Delay(TimeSpan.FromSeconds(10));
