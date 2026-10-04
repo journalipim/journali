@@ -57,5 +57,10 @@ eigenes CSS.
 
 ## Inhalt
 
+**Ein Beitrag ist Werbung, kein Handbuch** (04.10.2026): er zeigt, was ein Feature bringt, mit Begeisterung — kurze Abschnitte, Überschriften mit
+Aussage, das Wichtigste fett, am Ende ein Verweis auf die Seite. Angesprochen wird mit „ihr“ wie auf der Startseite. Jede Aussage stimmt trotzdem:
+nichts, was journali nicht kann. Die sachliche Beschreibung steht in `docs/` und in der Hilfe.
+
+**Keine Platzhalter für Screenshots** — die setzt ein, wer den Entwurf in WordPress fertig macht, an der Stelle, die er für richtig hält.
+
 Wie überall im Projekt: kein Name, kein Zitat, keine Beschreibung, wer sich etwas gewünscht hat; fremde Produkte nicht als Vergleich.
-Sachliches Deutsch, ohne Bilder.

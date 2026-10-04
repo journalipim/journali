@@ -1,64 +1,42 @@
 ---
-title: Mehrere Server auf einer Datenbank
-excerpt: journali läuft jetzt mit mehreren Servern auf derselben Datenbank — ein Hauptserver für die Systemjobs, Arbeitsserver für Oberfläche, Schnittstelle und eigene Jobs.
+title: Multi-Server ist da – ein Journal, so viele Server, wie ihr braucht
+excerpt: Ein Server war gestern. journali verteilt sich ab sofort auf mehrere Server – alle auf demselben Journal, alle nach wenigen Sekunden auf demselben Stand.
 slug: multi-server
 tags: [Betrieb, Server, Lizenz]
 categories: [Entwicklung]
 wp: 26
 ---
-Eine journali-Instanz besteht aus einer Datenbank mit dem Journal und einem Server, der die Abbilder im Speicher hält und Oberfläche und Schnittstelle bedient. Ab sofort dürfen mehrere Server auf dieselbe Datenbank zugreifen: etwa einer im Rechenzentrum und einer am Standort eines Teams, oder ein zweiter, der große Importe übernimmt, ohne die Oberfläche der anderen zu bremsen.
+Ein Server war gestern. **journali läuft ab sofort auf mehreren Servern gleichzeitig** – alle auf derselben Datenbank, alle auf demselben Journal. Der große Import läuft in der Zentrale, das Team am anderen Standort arbeitet auf seinem eigenen Server vor Ort, und niemand bremst niemanden aus.
 
-## Hauptserver und Arbeitsserver
+## Ein Journal, viele Server
 
-Jeder Server hat eine von zwei Rollen.
+Was ein Server ins Journal schreibt, haben alle anderen **nach wenigen Sekunden**. Keine Synchronisation von Hand, keine Exporte zwischen Standorten, kein „welcher Stand gilt denn jetzt?“. Das Journal bleibt die eine Wahrheit – jeder Server baut seine Sicht daraus, live.
 
-- **Hauptserver**, genau einer: führt die Systemjobs aus (Vorschauen der Medien, Text aus Dokumenten, Einbettungen, Bildabmessungen), frischt die Lizenz auf und gleicht die Limits ab.
-- **Arbeitsserver**, so viele die Lizenz erlaubt: bedienen Oberfläche und Schnittstelle und führen ihre eigenen Jobs aus.
+## Der Hauptserver hat alles im Griff
 
-Ein Job gehört dem Server, auf dem er angelegt wurde. Dort laufen sein Zeitplan und der Start von Hand, mit den Verzeichnissen, Fächern und Zugängen dieses Servers — ein Pfad meint immer die Platte, auf der der Job läuft. Starten, anhalten und abbrechen lässt sich ein Job von jedem Server aus; der Auftrag geht an seinen Server. Geändert wird er nur dort.
+Ein Server ist **Hauptserver**. Er rechnet die Vorschauen eurer Bilder, macht Dokumente durchsuchbar, erzeugt die Vektoren für die Suche nach Sinn und liest Bildabmessungen – genau einmal, nicht doppelt auf jedem Server.
 
-## Verständigung über die Datenbank
+Und zwei Hauptserver? **Gibt es nicht.** Eine Sperre direkt in PostgreSQL sorgt dafür. Fällt der Hauptserver weg, gibt die Datenbank die Sperre sofort frei.
 
-Die Server sprechen nicht direkt miteinander. Oft erreichen sie einander gar nicht (Firewall, anderer Standort), die Datenbank erreichen dagegen alle. Ein Auftrag an einen anderen Server steht deshalb als Zeile in einer Tabelle, und ein Signal der Datenbank stößt den Empfänger an. Geht das Signal verloren, findet er den Auftrag bei der nächsten Abfrage zwei Sekunden später.
+## Jeder Server bringt seine Jobs mit
 
-Was ein Server ins Journal schreibt, liest jeder andere nach wenigen Sekunden nach. Das Journal bleibt die eine Wahrheit; jeder Server baut seine Abbilder daraus.
+Ein Job gehört dem Server, auf dem ihr ihn anlegt – mit dessen Verzeichnissen, Fächern und Zugängen. Der Export landet also genau dort, wo das Team ihn braucht. **Starten, anhalten, abbrechen geht trotzdem von jedem Server aus.** Ein Klick, und der Auftrag läuft auf dem richtigen Rechner.
 
-Dass es nie zwei Hauptserver gibt, sichert eine Sperre in PostgreSQL: Nur wer als Hauptserver festgelegt ist und die Sperre hält, führt Systemjobs aus. Endet sein Prozess, gibt die Datenbank die Sperre frei.
+## Keine Ports, keine Tunnel, kein VPN
 
-## Einstellungen → Server
+Die Server müssen einander nicht erreichen. **Sie verständigen sich ausschließlich über die Datenbank** – die erreichen sie ohnehin. Firewall, anderer Standort, Container hinter NAT: alles kein Thema.
 
-Der Reiter **⧉ Server** listet alle Server der Datenbank: Name, Rechner, Rolle, Version und Build, Stand des Journals, letzter Puls, laufende Jobs und ob gerade ein Import läuft. Ein Administrator legt dort den Hauptserver fest, gibt einem Server einen Namen, sperrt einen Server oder entfernt einen, der nicht mehr erreichbar ist. Eine abweichende Version ist markiert: Ein neuerer Server kann Einträge schreiben, die ein älterer noch nicht kennt.
+## Alles im Blick: ⧉ Server
 
-![Screenshot: Einstellungen → Server mit Hauptserver und Arbeitsserver]()
+Unter Einstellungen → ⧉ Server seht ihr jeden Server auf einen Blick: Name, Rolle, Version und Build, Stand des Journals, letzter Puls, laufende Jobs, laufender Import. Hauptserver festlegen, Server benennen, sperren, aufräumen – alles mit einem Klick. Läuft irgendwo eine andere Version, seht ihr das sofort.
 
-Den Reiter gibt es erst, wenn die Lizenz mehr als einen Server erlaubt.
+## Lizenz: so einfach wie möglich
 
-## Wie viele Server laufen dürfen
+- **Unlimited**: beliebig viele Server, ohne Wenn und Aber.
+- **Zusatz Multi-Server**: weitere Server zu jedem Tarif dazu – zu Pro, zu Pro+, sogar zu Kostenlos. Er gilt für die ganze Instanz, egal über welches Team ihr ihn kauft.
 
-- **Unlimited** erlaubt beliebig viele Server.
-- **Jeder andere Tarif** erlaubt einen Server.
-- Der **Zusatz Multi-Server** gibt weitere Server dazu. Er ist ein eigenes Produkt im Shop und lässt sich mit jedem Tarif kombinieren, auch mit Kostenlos. Er gilt für die ganze Instanz, gleich über welches Team er gekauft wurde.
+Und wenn mal ein Server mehr startet, als die Lizenz erlaubt? Dann passiert nichts Schlimmes: Er meldet sich an, wartet und fragt alle fünf Minuten selbst beim Lizenzserver nach. **Ist der Zusatz gekauft, legt er los – ohne Neustart.** Der festgelegte Hauptserver hat dabei immer Vorrang, auch wenn er als Letzter hochfährt.
 
-Unter ⚿ Lizenz steht der Zusatz als eigene Zeile, mit der Zahl der zusätzlichen und der erlaubten Server.
+## Und jetzt?
 
-![Screenshot: Lizenz mit der Zeile Zusatz Multi-Server]()
-
-## Ein Server zu viel
-
-Startet ein Server über die erlaubte Zahl hinaus, trägt er sich ein, führt aber keine Jobs aus und beantwortet keine Anfrage außer der nach seinem Zustand. Die Oberfläche zeigt dann nur eine Seite mit diesem Zustand — keine Anmeldung, keine Ansicht.
-
-![Screenshot: Seite eines Servers ohne Lizenz]()
-
-Welcher Server läuft, regelt eine feste Reihenfolge: zuerst der festgelegte Hauptserver, auch wenn er später startet als ein Arbeitsserver, danach die übrigen in der Reihenfolge ihres Starts.
-
-Ein Server ohne Lizenz fragt den Lizenzserver selbst, gleich nach dem Start und danach alle fünf Minuten. Ist inzwischen ein Zusatz Multi-Server gekauft, arbeitet er beim nächsten Takt — ohne Neustart.
-
-Ist nur ein Server erlaubt und läuft der festgelegte Hauptserver nicht, vertritt ihn der laufende Server. Festgelegt bleibt der Hauptserver aus den Einstellungen; sobald mehrere Server erlaubt sind, ist er wieder Hauptserver.
-
-Auch die Einrichtung prüft das: Laufen auf einer Datenbank schon so viele Server, wie die Lizenz erlaubt, speichert der Einrichtungsdialog eines weiteren Servers die Verbindung nicht und nennt den Server, der dort läuft.
-
-## Was für alle gleich ist
-
-Der Medienspeicher ist für alle Server derselbe; seine Einstellung steht im Tresor der Datenbank. Das Kontingent zählt über alle Server. Je Server gelten nur die Schutzmaßnahmen des eigenen Prozesses, etwa die Begrenzung der Anmeldeversuche.
-
-Noch offen: Eingänge, die im Fach eines Jobs auf einem anderen Server warten, zeigt die Oberfläche als „auf Server …“, nicht als Dateiliste.
+journali ist noch in Entwicklung – Multi-Server steckt ab sofort drin. Hier entsteht etwas ganz Großes, und ihr könnt dabei sein: [Bleibt dran](/#kontakt).
