@@ -43,9 +43,9 @@ async function preview(batch, stream) {
   const k = batch ?? stream; if (previews[k]) return
   if (!batch) { previews[k] = t('stellt 1 Knoten wieder her: {0}', [stream]); return }
   try {
-    const p = await api.get(`/api/batches/${encodeURIComponent(batch)}/preview`)
+    const p = await api.get(`/api/batches/${encodeURIComponent(batch)}/preview?take=15`)   // der Tooltip zeigt 15 — der Server rechnet nur diese
     const lines = p.steps.slice(0, 15).map(s => `${s.kind === 'NodeRestored' ? '↩' : '←'} ${labelOf(s.stream)}: ${s.what}`)
-    previews[k] = t('Rückgängig (Stapel {0}, {1}): {2} Schritte', [batch, p.actor, p.steps.length]) + (p.skipped.length ? t(', {0} nicht rückgängig-fähig', [p.skipped.length]) : '') + '\n' + lines.join('\n') + (p.steps.length > 15 ? `\n… und ${p.steps.length - 15} weitere` : '')
+    previews[k] = t('Rückgängig (Stapel {0}, {1}): {2} Schritte', [batch, p.actor, p.more ? `${p.steps.length}+ (${p.entries} Einträge)` : p.steps.length]) + (p.skipped.length ? t(', {0} nicht rückgängig-fähig', [p.skipped.length]) : '') + '\n' + lines.join('\n') + (p.steps.length > 15 ? `\n… und ${p.steps.length - 15} weitere` : '')
   } catch (err) { previews[k] = err.message }
 }
 const labelOf = id => tree.byId.get(id)?.label ?? id

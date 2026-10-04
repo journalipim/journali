@@ -311,11 +311,11 @@ public static class TreeApi
                 : Results.Ok(new { undone = result.Done, failed = result.Failed, skipped = result.Skipped, batch = undo });
         });
         // Vorschau fürs Mouseover: was würde Rückgängig tun? Schritte in Worten, Urheber, Übersprungenes
-        api.MapGet("/batches/{batch}/preview", (string batch, IJournal j, Catalog c) =>
+        api.MapGet("/batches/{batch}/preview", (string batch, IJournal j, Catalog c, int? take = null) =>
             c.Lesen((model, tree) =>
             {
-                var plan = Undo.Of(j, model, tree, batch);
-                return Results.Ok(new { plan.Entries, plan.Actor, plan.At, steps = plan.Steps.Select(s => new { s.Stream, s.Kind, s.What }).ToList(), plan.Skipped });
+                var plan = Undo.Of(j, model, tree, batch, take is { } t ? Math.Clamp(t, 1, 1000) : null);
+                return Results.Ok(new { plan.Entries, plan.Actor, plan.At, steps = plan.Steps.Select(s => new { s.Stream, s.Kind, s.What }).ToList(), plan.Skipped, plan.More });
             }));
         api.MapPost("/nodes/{id}/duplicate", (string id, HttpRequest req, Catalog c, bool deep = false) =>
         {

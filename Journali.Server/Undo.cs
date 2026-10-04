@@ -15,17 +15,25 @@ namespace Journali.Server;
 public static class Undo
 {
     public sealed record Step(string Stream, string Kind, string What, string? Payload = null);
-    public sealed record Plan(List<Step> Steps, List<string> Skipped, string? Actor, DateTimeOffset? At, int Entries);
+    /// <param name="More">Mit take: es gäbe weitere Schritte (die Vorschau zeigt nur die ersten).</param>
+    public sealed record Plan(List<Step> Steps, List<string> Skipped, string? Actor, DateTimeOffset? At, int Entries, bool More = false);
 
     /// <summary>Was Rückgängig tun würde — für die Vorschau und für den Lauf selbst.</summary>
-    public static Plan Of(IJournal journal, ModelCatalog model, Tree tree, string batch)
+    /// <remarks>take (Vorschau, 04.10.2026): nur die ersten so viele Schritte — je Schritt liest der Plan den Strom des Knotens, und ein Import-Stapel hat
+    /// zehntausende; der Tooltip zeigt ohnehin nur die ersten.</remarks>
+    public static Plan Of(IJournal journal, ModelCatalog model, Tree tree, string batch, int? take = null)
     {
         var entries = journal.ReadBatch(batch).OrderBy(e => e.Number).ToList();
         var steps = new List<Step>();
         var skipped = new List<string>();
         var seen = new HashSet<string>();   // Strom|Typ|Achse — der erste Eintrag zählt
-        foreach (var e in entries) Fuer(journal, model, tree, e, seen, steps, skipped);
-        return new Plan(steps, skipped, entries.FirstOrDefault()?.Actor, entries.FirstOrDefault()?.At, entries.Count);
+        var more = false;
+        foreach (var e in entries)
+        {
+            if (take is { } t && steps.Count >= t) { more = true; break; }
+            Fuer(journal, model, tree, e, seen, steps, skipped);
+        }
+        return new Plan(steps, skipped, entries.FirstOrDefault()?.Actor, entries.FirstOrDefault()?.At, entries.Count, more);
     }
 
     /// <summary>
