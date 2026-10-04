@@ -130,7 +130,7 @@ public static class ScriptumApi
             return Results.Ok(new
             {
                 job, run, laeuft = lauf is not null && lauf.Status is null, status = lauf?.Status, exit = lauf?.Exit, sekunden = lauf?.Seconds,
-                ergebnis = Ergebnis(text), log = Protokoll(text),
+                ergebnis = Ergebnis(text), log = LogLesen.Letzte(Protokoll(text), 2000),   // die Ansicht fragt während des Laufs alle paar Sekunden
             });
         });
 
@@ -182,17 +182,8 @@ public static class ScriptumApi
         catch (JsonException) { return null; }   // ein unlesbarer Eintrag darf die Liste nicht sprengen
     }
 
-    private static string Log(string pfad)
-    {
-        if (!File.Exists(pfad)) return "";
-        try
-        {
-            using var fs = new FileStream(pfad, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-            using var sr = new StreamReader(fs);
-            return sr.ReadToEnd();
-        }
-        catch (IOException) { return ""; }
-    }
+    // Das Ende des Logs (höchstens LogLesen.Max): das Ergebnis ist die letzte Zeile mit der Marke
+    private static string Log(string pfad) => LogLesen.Ende(pfad);
 
     /// <summary>
     /// Das Ergebnis aus der Ausgabe eines Laufs: die letzte Zeile mit der Marke. Das Log trägt vor jeder Zeile die

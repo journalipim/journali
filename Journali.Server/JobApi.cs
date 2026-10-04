@@ -314,10 +314,9 @@ public static class JobApi
         {
             if (!ValidKey(key) || run.Contains("..") || run.Contains('/') || run.Contains('\\')) return Results.NotFound();
             var path = runner.LogPath(key, run);
-            string text;
-            if (File.Exists(path)) { using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite); using var sr = new StreamReader(fs); text = sr.ReadToEnd(); }
-            else text = protokoll?.Invoke(key, run) ?? "";   // der Lauf war auf dem Hauptserver
-            if (tail > 0) { var lines = text.Split('\n'); if (lines.Length > tail) text = string.Join('\n', lines[^tail..]); }
+            // nur das Ende der Datei (04.10.2026): vorher die ganze Datei für die letzten 400 Zeilen
+            var text = File.Exists(path) ? LogLesen.Ende(path, tail)
+                : (protokoll?.Invoke(key, run) ?? "") is var fern && tail > 0 ? LogLesen.Letzte(fern, tail) : fern;   // der Lauf war auf dem Hauptserver
             return Results.Text(text, "text/plain; charset=utf-8");
         });
     }
