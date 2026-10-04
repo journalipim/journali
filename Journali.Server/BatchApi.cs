@@ -77,6 +77,8 @@ public static class BatchApi
                             "media.attribute.set" => Commands.SetMediumAttribute(ctx, a.Id("media") ?? "", a.Str("attribute"), a.Str("locale"), a.Str("channel"), a.Str("value"), a.Strings("values")),
                             "media.external.link" => Commands.LinkMediumExternal(ctx, a.Id("media") ?? "", a.Str("system"), a.Str("id")),
                             "media.retire" => Commands.RetireMedium(ctx, a.Id("media") ?? ""),
+                            "media.file" => Commands.FileMedium(ctx, a.Id("media") ?? "", a.Str("folder")),   // in einen Ordner (leer = ohne Ordner), 04.10.2026
+                            "rubric.place" => Commands.Place(ctx, a.Id("rubric") ?? "", a.Node()),           // in eine Rubrik hängen, 04.10.2026
                             "relation.external.link" => Commands.LinkRelationExternal(ctx, a.Id("relation") ?? "", a.Str("system"), a.Str("id")),
                             _ => Outcome.Bad("Unbekannter Befehl: {0}", cmd.Op),
                         };

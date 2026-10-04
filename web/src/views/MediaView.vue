@@ -167,8 +167,8 @@ function dropOn(target, e) {
 async function fileMedia(ids, target) {
   const todo = ids.filter(id => (items.value.find(m => m.id === id)?.folder ?? null) !== target)
   if (!todo.length) { store.toast(t_('liegt schon dort')); return }
-  let n = 0
-  for (const id of todo) { busy.value = `verschiebe … ${++n}/${todo.length}`; try { await api.post(`/api/media/${id}/folder`, { folder: target }, 'PUT') } catch (e) { store.toast(e.message) } }
+  // ein Stapel statt einer Anfrage je Medium (04.10.2026)
+  try { const r = await api.batchChunked(todo.map(id => ({ op: 'media.file', args: { media: id, folder: target } })), { label: t_('verschiebe'), continueOnError: true }); if (r.errors?.length) store.toast(t_('{0} Fehler', [r.errors.length])) } catch (e) { store.toast(e.message) }
   busy.value = ''; sel.value = new Set()   // Auswahl danach leer — sonst bleibt „1 gewählt“ stehen
   await store.poll(true); await loadFolders(); await load()
   store.toast(`${todo.length} ${todo.length === 1 ? 'Medium' : 'Medien'} → ${target ? pathOf(target).map(f => f.name).join(' › ') : 'ohne Ordner'}`, 'ok')
@@ -232,7 +232,7 @@ async function retire(m) {
   const ids = sel.value.size > 1 && sel.value.has(m.id) ? [...sel.value] : [m.id]
   const used = ids.reduce((n, id) => n + (items.value.find(x => x.id === id)?.used ?? 0), 0)
   if (!await dialog.confirm({ title: ids.length > 1 ? t_('{0} Medien zurückziehen?', [ids.length]) : t_('{0} zurückziehen?', [m.name]), text: used ? t_('Hängen an {0} Knoten', [used]) : '', ok: t_('🗑 Zurückziehen'), danger: true })) return
-  for (const id of ids) { try { await api.del(`/api/media/${id}`) } catch (e) { store.toast(e.message) } }
+  try { const r = await api.batchChunked(ids.map(id => ({ op: 'media.retire', args: { media: id } })), { label: t_('🗑 Zurückziehen'), continueOnError: true }); if (r.errors?.length) store.toast(t_('{0} Fehler', [r.errors.length])) } catch (e) { store.toast(e.message) }
   cur.value = null; sel.value = new Set(); await store.poll(true); await loadFolders(); await load()
 }
 const kb = b => b < 1024 ? `${b} B` : b < 1048576 ? `${(b / 1024).toFixed(0)} kB` : `${(b / 1048576).toFixed(1)} MB`

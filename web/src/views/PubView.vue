@@ -176,7 +176,8 @@ async function namePlace(row) {
 async function unplace(rubricId, nodeId) { await run(() => api.del(`/api/rubrics/${encodeURIComponent(rubricId)}/place/${encodeURIComponent(nodeId)}`)) }
 async function placeUnplaced(ids) {
   if (!selRubric.value) { store.toast(t_('erst eine Rubrik wählen (links anklicken)')); return }
-  await run(async () => { for (const id of ids) await post(`/api/rubrics/${encodeURIComponent(selRubric.value.id)}/place`, { node: id }) })
+  // ein Stapel statt einer Anfrage je Knoten (04.10.2026)
+  await run(async () => { const r = await api.batchChunked(ids.map(id => ({ op: 'rubric.place', args: { rubric: selRubric.value.id, node: id } })), { label: t_('einhängen'), continueOnError: true }); if (r.errors?.length) store.toast(t_('{0} Fehler', [r.errors.length])) })
 }
 
 function contextMenu(e, row) {

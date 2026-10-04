@@ -124,6 +124,8 @@ test('Zurückziehen fragt nach und trifft die ganze Auswahl', async () => {
 
   assert.equal(gefragt.length, 1)
   assert.match(gefragt[0].title, /2 Medien zurückziehen/)
-  const weg = rufe.filter(r => r.methode === 'DELETE').map(r => r.pfad)
-  assert.deepEqual(weg.map(p => p.split('/').pop()).sort(), ['m1', 'm3'])
+  // ein Stapel statt eines DELETE je Medium (04.10.2026)
+  const weg = rufe.filter(r => /\/api\/batch/.test(r.pfad)).flatMap(r => r.rumpf.commands)
+  assert.deepEqual(weg.map(c => [c.op, c.args.media]).sort(), [['media.retire', 'm1'], ['media.retire', 'm3']])
+  assert.equal(rufe.filter(r => r.methode === 'DELETE').length, 0)
 })

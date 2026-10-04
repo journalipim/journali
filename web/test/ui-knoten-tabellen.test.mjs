@@ -939,7 +939,8 @@ test('Rechtsklick: „Zuordnung lösen“ löst die Auswahl, nicht nur die eine 
   const e = eintrag(/^2 Zuordnungen lösen/)
   assert.ok(e, `da sind: ${menu.items.map(i => i.label).join(' | ')}`); assert.equal(e.danger, true)
   await e.action(); await flushPromises()
-  assert.deepEqual(rufe.filter(r => r.methode === 'DELETE').map(r => r.pfad.split('/').at(-1)), ['r1', 'r3'])
+  // ein Stapel statt eines DELETE je Zuordnung (04.10.2026)
+  assert.deepEqual(rufe.filter(r => /\/api\/batch/.test(r.pfad)).flatMap(r => r.rumpf.commands).map(c => [c.op, c.args.relation]), [['relation.retire', 'r1'], ['relation.retire', 'r3']])
   menu.close()
 })
 

@@ -3016,5 +3016,8 @@
  "weitere {0}": "{0} more",
  "Die nächsten Zeilen laden": "Load the next rows",
  "Die nächsten Zeilen zeigen": "Show the next rows",
- "Die nächsten Assets laden": "Load the next assets"
+ "Die nächsten Assets laden": "Load the next assets",
+ "verschiebe": "moving",
+ "einhängen": "placing",
+ "{0} Fehler": "{0} errors"
 }

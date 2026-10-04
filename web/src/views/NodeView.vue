@@ -755,7 +755,7 @@ function mediaMenu(e, r) {
     pickedMedia.value.size ? { label: t_('Auswahl aufheben ({0})', [pickedMedia.value.size]), icon: '☐', key: 'Escape', hint: 'Esc', action: () => { pickedMedia.value = new Set() } } : null,
     { sep: true },
     { label: sel.length > 1 ? t_('{0} Zuordnungen lösen', [sel.length]) : t_('Zuordnung lösen'), icon: '×', key: 'Delete', danger: true, hint: t_('das Medium bleibt in der Bibliothek'),
-      action: async () => { for (const x of sel) await retireRel(x); pickedMedia.value = new Set() } },
+      action: async () => { if (sel.length === 1) await retireRel(sel[0]); else await command(() => api.batchChunked(sel.map(x => ({ op: 'relation.retire', args: { relation: x.id } })), { label: t_('Zuordnung lösen'), continueOnError: true })); pickedMedia.value = new Set() } },
   ])
 }
 
