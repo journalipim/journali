@@ -201,4 +201,54 @@ public class VerbundTests
         Assert.Equal(JsonValueKind.Null, JsonSerializer.SerializeToElement(ServerApi.Liste(v, DateTimeOffset.UtcNow))[0].GetProperty("name").ValueKind);
         Assert.Equal(Kinds.Setup, Kinds.Of(Types.ServerNamed));
     }
+
+    [Fact]
+    public void Rangfolge_der_Hauptserver_zuerst_auch_wenn_er_spaeter_startet_dann_nach_dem_Start_gesperrte_und_ferne_zaehlen_nicht()
+    {
+        var jetzt = DateTimeOffset.UtcNow;
+        Verbund.Zeile Z(string id, int vorMinuten, int pulsVorSek = 1) => new(id, id, "1", null, jetzt.AddMinutes(-vorMinuten), jetzt.AddSeconds(-pulsVorSek), 1, false, null);
+        var zeilen = new[] { Z("arbeit", 60), Z("haupt", 1), Z("dritter", 30), Z("aus", 90, pulsVorSek: 120), Z("gesperrt", 100) };
+        var rang = Verbund.Rangfolge(zeilen, "haupt", new HashSet<string> { "gesperrt" }, jetzt);
+        Assert.Equal(["haupt", "arbeit", "dritter"], rang);                   // bei einer erlaubten Zahl von 1 läuft nur der Hauptserver
+        Assert.Equal(["arbeit", "dritter"], Verbund.Rangfolge(zeilen, null, new HashSet<string> { "gesperrt" }, jetzt).Where(x => x != "haupt").ToList());
+    }
+
+    [Fact]
+    public void Erlaubte_Server_aus_dem_Tarif_und_dem_Zusatz_eines_Abos()
+    {
+        var c = Katalog();
+        Assert.Equal(1, c.ErlaubteServer);                                     // ohne Lizenz und Abo: Kostenlos, ein Server
+        c.With((_, _, w) => w("t", Teams.Stream + "init", Types.EntitlementReceived, new EntitlementReceived("i", "init", "pro", 50_000, 250_000, "active",
+            DateOnly.FromDateTime(DateTime.Now).AddDays(30), DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddDays(7), "r", "s", Geprueft: true, Server: 2), null));
+        Assert.Equal(3, c.ErlaubteServer);                                     // Pro: einer, dazu der Zusatz „Multi-Server“ mit zwei
+        c.With((_, _, w) => w("t", Teams.Stream + "init", Types.EntitlementReceived, new EntitlementReceived("i", "init", "unlimited", Tarife.Ohne, Tarife.Ohne, "active",
+            DateOnly.FromDateTime(DateTime.Now).AddDays(30), DateTimeOffset.UtcNow.AddSeconds(1), DateTimeOffset.UtcNow.AddDays(7), "r2", "s", Geprueft: true), null));
+        Assert.Equal(Tarife.Ohne, c.ErlaubteServer);                           // Unlimited: beliebig viele
+    }
+
+    [Fact]
+    public void Ein_Tarifblatt_ohne_Angabe_gibt_Unlimited_beliebig_viele_Server_und_jedem_anderen_einen()
+    {
+        var blatt = new Journali.Core.Licensing.TarifblattInhalt(11, DateTimeOffset.UtcNow, "enterprise", 3, [
+            new("free", "Kostenlos", 0, 10_000, 50_000, 1), new("enterprise", "Enterprise", 3, 200_000, 1_000_000, Tarife.Ohne),
+            new("unlimited", "Unlimited", 4, Tarife.Ohne, Tarife.Ohne, Tarife.Ohne), new("multi", "Multi", 5, 1, 1, 1, Server: 4)]);
+        var liste = Tarifliste.Aus(blatt);
+        Assert.Equal((1, 1, Tarife.Ohne, 4), (liste.Von("free")!.Server, liste.Von("enterprise")!.Server, liste.Von("unlimited")!.Server, liste.Von("multi")!.Server));
+        Assert.Contains("mindestens ein Server", (blatt with { Tarife = [.. blatt.Tarife, new("x", "X", 6, 1, 1, 1, Server: 0)] }).Fehler());
+    }
+
+    [Fact]
+    public void Ein_Stand_ohne_Zusatz_nennt_server_nicht_im_signierten_Text()
+    {
+        var e = new Journali.Core.Licensing.Entitlement("i", "t", "pro", 1, 1, "active", new DateOnly(2026, 10, 24), DateTimeOffset.UnixEpoch, DateTimeOffset.UnixEpoch, "r");
+        Assert.DoesNotContain("server", e.Rumpf);                              // Instanzen von davor rechnen dieselbe Signatur
+        Assert.Contains("\"server\":2", (e with { Server = 2 }).Rumpf);
+    }
+
+    [Fact]
+    public void Ein_Server_ohne_Lizenz_oder_gesperrt_fuehrt_keinen_Auftrag_aus()
+    {
+        var runner = new JobRunner(Katalog(), Dir(), Dir(), NullLogger<JobRunner>.Instance) { Aktiv = () => false };
+        Assert.Equal((null, "Dieser Server führt keine Jobs aus (gesperrt oder ohne Lizenz)."), runner.Ausfuehren("start", "x", "manual"));
+    }
 }

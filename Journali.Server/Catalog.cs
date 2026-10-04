@@ -77,6 +77,17 @@ public sealed class Catalog
         return _teams.HoechsterTarif(heute) is { } t ? Core.Projections.Tarife.Hoeher(lizenz, t) : lizenz;
     }
 
+    /// <summary>
+    /// Wie viele Server auf dieser Datenbank laufen dürfen (04.10.2026): was der Tarif der Instanz erlaubt (Unlimited beliebig viele, sonst einen), dazu die
+    /// zusätzlichen Server aus geltenden Abos (Zusatz „Multi-Server“). <see cref="Core.Projections.Tarife.Ohne"/> = beliebig viele.
+    /// </summary>
+    public int ErlaubteServer => Lesend(() =>
+    {
+        var t = TarifOhneSperre();
+        if (t.Server >= Core.Projections.Tarife.Ohne) return Core.Projections.Tarife.Ohne;
+        return (int)Math.Min(Core.Projections.Tarife.Ohne, (long)Math.Max(1, t.Server) + _teams.ServerZusatz(DateOnly.FromDateTime(DateTime.Now)));
+    });
+
     /// <summary>Die geltenden Tarife: aus dem Tarifblatt im Journal, sonst das Saatgut.</summary>
     public Tarifliste Tarife => Lesend(() => _teams.Tarife);
     /// <summary>Der Tarif der Lizenz dieser Instanz (ohne Schlüssel und Abos) — seine Grenzen trägt das Init Team.</summary>

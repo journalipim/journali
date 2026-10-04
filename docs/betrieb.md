@@ -527,6 +527,10 @@ das, und dort wird ein anderer festgelegt. Ein Import auf einem Server lässt di
 `/api` nur `/api/health`. Die Kennung eines Servers steht in `server.json` im Datenverzeichnis — wer das Datenverzeichnis kopiert, kopiert die Kennung mit; dann
 die Datei im neuen Verzeichnis löschen.
 
+**Wie viele Server laufen dürfen** (04.10.2026): ein Server, mit Unlimited beliebig viele, mit dem Zusatz „Multi-Server“ aus einem Abo entsprechend mehr
+(`Catalog.ErlaubteServer`). Ein Server über dieser Zahl antwortet unter `/api` mit 503 und führt keine Jobs aus; der Hauptserver hat Vorfahrt. Mit nur
+einem erlaubten Server übernimmt der laufende die Rolle des Hauptservers, wenn der festgelegte nicht läuft. ⧉ Server zeigt „⊘ ohne Lizenz“.
+
 Ein Job, der auf einem anderen Server gestartet, angehalten, fortgesetzt oder abgebrochen wird, geht als Zeile in `server_auftrag` (Spalte `an`) an seinen Server;
 `NOTIFY journali_server` stösst ihn an, jeder Server wartet darauf mit `LISTEN` und sieht sonst alle 2 s nach. Antwortet er nicht binnen 5 s, wird der Auftrag
 zurückgezogen; ein Auftrag, der älter als eine Minute ist, wird nicht mehr ausgeführt. Was dort läuft, steht im Puls des Servers (Spalte `jobs`), das Log

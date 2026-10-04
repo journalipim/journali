@@ -60,7 +60,7 @@ const entfernen = s => tun(() => api.del(`/api/server/${s.id}`))
 
 <template>
   <div class="section" v-if="d">
-    <h2 :title="$t('Server, die auf diese Datenbank zugreifen. Der Hauptserver führt die Jobs aus, die Arbeitsserver bedienen Oberfläche und Schnittstelle.')">{{ $t("⧉ Server") + ' ' }}<span class="muted">· {{ liste.length }}</span></h2>
+    <h2 :title="$t('Server, die auf diese Datenbank zugreifen. Der Hauptserver führt die Jobs aus, die Arbeitsserver bedienen Oberfläche und Schnittstelle.')">{{ $t("⧉ Server") + ' ' }}<span class="muted" :title="$t('erreichbar und erlaubt · {0} erlaubt', [d.erlaubt >= 2147483647 ? '∞' : d.erlaubt ?? 1])">· {{ liste.length }}</span></h2>
     <div v-if="hauptWeg" class="neg haupt-weg" :title="$t('Systemjobs und Zeitplan-Jobs laufen erst wieder, wenn er erreichbar ist oder ein anderer Server Hauptserver wird.')">{{ $t("✗ Der Hauptserver {0} ist nicht erreichbar.", [name(hauptWeg)]) }}</div>
     <table class="grid server">
       <thead><tr>
@@ -78,6 +78,7 @@ const entfernen = s => tun(() => api.del(`/api/server/${s.id}`))
           <td class="mono muted" :title="s.id">{{ s.host }}</td>
           <td class="rolle">
             <span v-if="s.gesperrt" class="neg" :title="$t('Beantwortet keine Anfrage unter /api.')">⊘ {{ $t("gesperrt") }}</span>
+            <span v-else-if="s.lizenziert === false" class="neg ohne-lizenz" :title="$t('Mehr Server, als die Lizenz erlaubt ({0}); dieser beantwortet keine Anfrage unter /api. Der Hauptserver hat Vorfahrt.', [d.erlaubt ?? 1])">⊘ {{ $t("ohne Lizenz") }}</span>
             <span v-else-if="s.haupt" :title="$t('Führt Systemjobs, Zeitplan-Jobs und Jobs von Hand aus.')">◆ {{ $t("Hauptserver") }}</span>
             <span v-else class="muted" :title="$t('Bedient Oberfläche und Schnittstelle; Jobs gehen an den Hauptserver.')">◇ {{ $t("Arbeitsserver") }}</span>
             <span v-if="s.import" class="warn" :title="$t('Ein Import läuft; die Systemjobs warten.')"> ⇵</span>

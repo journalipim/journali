@@ -26,16 +26,17 @@ public static class ServerApi
         {
             id = z.Id, name = Name(z.Id), host = z.Host, version = z.Version, built = z.Built, started = z.Started, puls = z.Puls, head = z.Head, import = z.Import, jobs = z.Jobs,
             erreichbar = Verbund.Erreichbar(z, jetzt), haupt = z.Id == main, gesperrt = gesperrt.Contains(z.Id), selbst = z.Id == v.Id,
+            lizenziert = !Verbund.Erreichbar(z, jetzt) || gesperrt.Contains(z.Id) || v.Lizenziert(z.Id),   // false: läuft über die erlaubte Zahl hinaus
         }).ToList();
         foreach (var id in gesperrt.Append(main).OfType<string>().Distinct().Where(id => !bekannt.Contains(id)))
             liste.Add(new { id, name = Name(id), host = id, version = (string?)null, built = (DateTimeOffset?)null, started = (DateTimeOffset?)null, puls = (DateTimeOffset?)null, head = 0L, import = false, jobs = (object?)null,
-                erreichbar = false, haupt = id == main, gesperrt = gesperrt.Contains(id), selbst = id == v.Id });
+                erreichbar = false, haupt = id == main, gesperrt = gesperrt.Contains(id), selbst = id == v.Id, lizenziert = true });
         return liste;
     }
 
     public static void Map(RouteGroupBuilder api, Verbund v)
     {
-        api.MapGet("/server", () => Results.Ok(new { self = v.Id, main = v.Festgelegt(), haupt = v.IstHaupt, version = typeof(ServerApi).Assembly.GetName().Version?.ToString(3), built = v.Built, server = Liste(v, DateTimeOffset.UtcNow) }));
+        api.MapGet("/server", () => Results.Ok(new { self = v.Id, main = v.Festgelegt(), haupt = v.IstHaupt, version = typeof(ServerApi).Assembly.GetName().Version?.ToString(3), built = v.Built, erlaubt = v.Erlaubt, server = Liste(v, DateTimeOffset.UtcNow) }));
 
         // Benennen: im Container ist der Rechnername eine Kennung des Containers. Leer = wieder der Rechnername
         api.MapPut("/server/{id}/name", (string id, NameBody body, HttpRequest req, Catalog c) =>

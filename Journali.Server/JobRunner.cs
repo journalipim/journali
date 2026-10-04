@@ -35,6 +35,8 @@ public sealed class JobRunner : BackgroundService
     public Func<string, Task<int>>? Offen { get; set; }
 
     // ---- Mehrere Server (pflegestruktur 41): der Hauptserver führt die Systemjobs aus, jeder andere Job läuft auf seinem Server ----
+    /// <summary>Darf dieser Server Jobs ausführen? Nicht, wenn er gesperrt ist oder über die erlaubte Zahl der Server hinaus läuft (04.10.2026).</summary>
+    public Func<bool> Aktiv { get; set; } = () => true;
     /// <summary>Ist dieser Server Hauptserver? Nur er führt Systemjobs aus. Ohne Verbund immer.</summary>
     public Func<bool> IstHaupt { get; set; } = () => true;
     /// <summary>Die Kennung dieses Servers — null ohne Verbund: dann läuft alles hier.</summary>
@@ -130,8 +132,12 @@ public sealed class JobRunner : BackgroundService
         while (!stop.IsCancellationRequested)
         {
             // Der Zeitplan nimmt nur die Jobs dieses Servers; die Systemjobs zieht nur der Hauptserver nach — auf zwei Servern liefen sie sonst doppelt
-            try { Tick(); } catch (Exception e) { _log.LogError(e, "Job-Takt"); }
-            if (IstHaupt()) try { await Nachziehen(stop); } catch (Exception e) { _log.LogError(e, "Systemjobs"); }
+            if (Aktiv())
+            {
+                try { Tick(); } catch (Exception e) { _log.LogError(e, "Job-Takt"); }
+                if (IstHaupt()) try { await Nachziehen(stop); } catch (Exception e) { _log.LogError(e, "Systemjobs"); }
+            }
+            else _lastMinute = Floor(DateTimeOffset.Now);   // keine verpassten Minuten nachholen, wenn er wieder darf
             try { await Task.Delay(TimeSpan.FromSeconds(20), stop); } catch (OperationCanceledException) { }
         }
         lock (_gate) foreach (var (_, r) in _running) { try { r.Process.Kill(true); } catch { } }
@@ -454,6 +460,7 @@ public sealed class JobRunner : BackgroundService
     /// </summary>
     public (string? Ergebnis, string? Fehler) Ausfuehren(string art, string key, string? ausloeser)
     {
+        if (!Aktiv()) return (null, "Dieser Server führt keine Jobs aus (gesperrt oder ohne Lizenz).");
         switch (art)
         {
             case "start": { var run = Start(key, ausloeser ?? "manual", weitergeben: false, out var e); return (run, run is null ? e ?? "nicht gestartet" : null); }

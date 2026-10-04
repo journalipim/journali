@@ -1,7 +1,8 @@
 namespace Journali.Core.Projections;
 
 /// <summary>Ein Tarif: Grenzen je Woche und Monat, wie viele Publikationsbäume, welche Plugins (null = alle).</summary>
-public sealed record Tarif(string Key, string Label, int Rang, int Week, int Month, int PubTrees, IReadOnlySet<string>? Plugins)
+/// <param name="Server">Wie viele Server auf einer Datenbank laufen dürfen (04.10.2026); <see cref="Tarife.Ohne"/> = beliebig viele.</param>
+public sealed record Tarif(string Key, string Label, int Rang, int Week, int Month, int PubTrees, IReadOnlySet<string>? Plugins, int Server = 1)
 {
     /// <summary>Enthält dieser Tarif das Plugin? Ein Systemjob (<see cref="Tarife.Systemjobs"/>) immer.</summary>
     public bool Erlaubt(string plugin) => Tarife.Systemjobs.Contains(plugin) || Plugins is null || Plugins.Contains(plugin);
@@ -62,13 +63,15 @@ public sealed class Tarifliste
 
     /// <summary>Aus dem Inhalt eines (geprüften) Tarifblatts.</summary>
     public static Tarifliste Aus(Licensing.TarifblattInhalt b) =>
-        new(b.Version, b.Tarife.Select(z => new Tarif(z.Key, z.Label, z.Rang, z.Week, z.Month, z.PubTrees, z.Plugins is null ? null : new HashSet<string>(z.Plugins))),
+        new(b.Version, b.Tarife.Select(z => new Tarif(z.Key, z.Label, z.Rang, z.Week, z.Month, z.PubTrees, z.Plugins is null ? null : new HashSet<string>(z.Plugins),
+                // ohne Angabe (Blätter von davor): ein unbegrenzter Tarif beliebig viele Server, jeder andere einen
+                z.Server ?? (z.Week == Tarife.Ohne && z.Month == Tarife.Ohne ? Tarife.Ohne : 1))),
             b.TestTarif, b.TestMonate, b.Kauf, b.Rabatte);
 
     /// <summary>Als Inhalt eines Tarifblatts — so legt der Lizenzserver seine erste Version aus dem Saatgut an.</summary>
     public Licensing.TarifblattInhalt AlsBlatt(long version, DateTimeOffset ausgestellt) =>
         new(version, ausgestellt, Test.Key, TestMonate,
-            [.. Alle.Select(t => new Licensing.TarifZeile(t.Key, t.Label, t.Rang, t.Week, t.Month, t.PubTrees, t.Plugins?.Order().ToArray()))], Kauf, Rabatte.Count == 0 ? null : [.. Rabatte]);
+            [.. Alle.Select(t => new Licensing.TarifZeile(t.Key, t.Label, t.Rang, t.Week, t.Month, t.PubTrees, t.Plugins?.Order().ToArray(), t.Server))], Kauf, Rabatte.Count == 0 ? null : [.. Rabatte]);
 }
 
 /// <summary>
@@ -135,7 +138,7 @@ public static class Tarife
         new HashSet<string>([.. Basis, "datasheet", "xliff", "xport", "etim", "da", "backup", "configurator"]));   // wie im Tarifblatt Version 11 (03.10.2026)
     public static readonly Tarif ProPlus = new("proplus", "Pro+", 2, 50_000, 250_000, 5, null);
     public static readonly Tarif Enterprise = new("enterprise", "Enterprise", 3, 200_000, 1_000_000, Ohne, null);
-    public static readonly Tarif Unlimited = new("unlimited", "Unlimited", 4, Ohne, Ohne, Ohne, null);
+    public static readonly Tarif Unlimited = new("unlimited", "Unlimited", 4, Ohne, Ohne, Ohne, null, Server: Ohne);   // mehrere Server auf einer Datenbank: nur Unlimited (04.10.2026)
 
     /// <summary>Das Saatgut: gilt, solange kein Tarifblatt im Journal steht.</summary>
     public static readonly Tarifliste Saat = new(0, [Free, Pro, ProPlus, Enterprise, Unlimited], EnterpriseKey, 3);

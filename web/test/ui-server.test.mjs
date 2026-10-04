@@ -118,3 +118,16 @@ test('Benennen in der Zelle: Klick, Enter speichert, Esc verwirft, leer heisst w
   assert.deepEqual(calls.filter(c => c.path === '/api/server/a/name').map(c => c.body), [{ name: 'Unraid' }, { name: '' }])
   w.unmount()
 })
+
+test('ohne Lizenz: ein Server über der erlaubten Zahl steht rot da, der Hauptserver nicht', async () => {
+  server({ '/api/server': { self: 'a', main: 'b', erlaubt: 1, version: '0.9.0', built: jetzt, server: [
+    zeile({ id: 'b', host: 'unraid', haupt: true, lizenziert: true }),
+    zeile({ id: 'a', host: 'pc', selbst: true, lizenziert: false }),
+  ] } })
+  const w = mount(ServerSettings); await flushPromises()
+  const [haupt, pc] = w.findAll('tbody tr')
+  assert.ok(!haupt.find('.ohne-lizenz').exists())
+  assert.equal(pc.find('.ohne-lizenz').text(), '⊘ ohne Lizenz')
+  assert.match(pc.find('.ohne-lizenz').attributes('title'), /erlaubt \(1\).*Vorfahrt/)
+  w.unmount()
+})

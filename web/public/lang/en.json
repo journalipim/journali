@@ -3000,5 +3000,9 @@
  "Verfügbar · {0} / Woche · {1} / Monat": "Available · {0} / week · {1} / month",
  "Nötig · höchstens {0} Einträge": "Needed · at most {0} entries",
  "Nötig · etwa {0} Einträge": "Needed · about {0} entries",
- "Das Kontingent reicht nicht; der Lauf hält an, wenn es erschöpft ist.": "The quota is not enough; the run pauses when it is used up."
+ "Das Kontingent reicht nicht; der Lauf hält an, wenn es erschöpft ist.": "The quota is not enough; the run pauses when it is used up.",
+ "Für einen weiteren Server fehlt die Lizenz.": "A further server has no licence.",
+ "erreichbar und erlaubt · {0} erlaubt": "reachable and allowed · {0} allowed",
+ "ohne Lizenz": "no licence",
+ "Mehr Server, als die Lizenz erlaubt ({0}); dieser beantwortet keine Anfrage unter /api. Der Hauptserver hat Vorfahrt.": "More servers than the licence allows ({0}); this one answers no request under /api. The main server has priority."
 }

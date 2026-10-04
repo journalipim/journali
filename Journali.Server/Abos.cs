@@ -82,7 +82,7 @@ public sealed class Abos(Instanz instanz, string jobsDir, HttpClient http, Func<
         // erst das Tarifblatt: der Stand nennt einen Tarif, den das Blatt vielleicht erst einführt
         c.NimmTarifblatt(e.Blatt, actor);
         var stand = new EntitlementReceived(e.Instance, e.Team, e.Plan, e.EntriesWeek, e.EntriesMonth, e.Status ?? "", e.PaidUntil.Value,
-            e.Issued.Value, e.ValidUntil.Value, e.Request, e.Sig, true);
+            e.Issued.Value, e.ValidUntil.Value, e.Request, e.Sig, true, e.Server);
         c.With((_, _, write) => write(actor, Teams.Stream + team, Types.EntitlementReceived, stand, null));
         if (key.Length > 0) Secrets.Set(jobsDir, SecretKey(team), new() { ["key"] = key });
         return (stand, null);

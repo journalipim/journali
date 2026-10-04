@@ -116,7 +116,7 @@ var seeded = catalog.SeedMissing();
 // Server auf derselben Datenbank (pflegestruktur 41): Kennung, Puls, Rolle. Der erste Takt gleich hier, damit der Start weiss, ob er Hauptserver ist
 var verbund = new Verbund(db, catalog, dataDir, typeof(Program).Assembly.GetName().Version?.ToString(3), System.IO.File.GetLastWriteTimeUtc(typeof(Program).Assembly.Location));
 try { verbund.Takt(); } catch (Exception e) { Console.WriteLine($"journali: Server nicht eingetragen — {e.Message}"); }
-Console.WriteLine($"journali: Server {verbund.NameVon(verbund.Id, verbund.Host)} ({verbund.Host}, {verbund.Id}) — {(verbund.IstHaupt ? "Hauptserver" : "Arbeitsserver")}{(verbund.Gesperrt ? ", gesperrt" : "")}");
+Console.WriteLine($"journali: Server {verbund.NameVon(verbund.Id, verbund.Host)} ({verbund.Host}, {verbund.Id}) — {(verbund.IstHaupt ? "Hauptserver" : "Arbeitsserver")}{(verbund.Gesperrt ? ", gesperrt" : "")}{(verbund.OhneLizenz ? $", ohne Lizenz (erlaubt: {verbund.Erlaubt} Server)" : "")}");
 _ = Task.Run(async () =>
 {
     var war = verbund.IstHaupt; string? fehler = null;
@@ -209,6 +209,7 @@ builder.Services.AddSingleton(licences);
 var jobRunner = new JobRunner(catalog, pluginDir, jobDir, LoggerFactory.Create(b => b.AddConsole()).CreateLogger<JobRunner>()) { Store = mediaStore };   // Store: Archiv der Fächer
 builder.Services.AddSingleton(jobRunner);
 jobRunner.IstHaupt = () => verbund.IstHaupt;
+jobRunner.Aktiv = () => !verbund.Gesperrt && !verbund.OhneLizenz;   // ein gesperrter Server und einer ohne Lizenz führen keine Jobs aus
 jobRunner.ImportAnderswo = () => verbund.ImportAnderswo;
 verbund.ImportHier = () => jobRunner.ImportHier;
 verbund.JobsHier = () => jobRunner.Laufende();
@@ -296,10 +297,11 @@ app.UseRateLimiter();
 // Ein gesperrter Server (pflegestruktur 41) beantwortet unter /api nur noch /api/health — entsperrt wird er von einem anderen Server aus
 app.Use(async (ctx, next) =>
 {
-    if (ctx.Request.Path.StartsWithSegments("/api") && !ctx.Request.Path.StartsWithSegments("/api/health") && verbund.Gesperrt)
+    if (ctx.Request.Path.StartsWithSegments("/api") && !ctx.Request.Path.StartsWithSegments("/api/health") && (verbund.Gesperrt || verbund.OhneLizenz))
     {
         ctx.Response.StatusCode = 503;
-        await ctx.Response.WriteAsJsonAsync(ModelApi.Err("Dieser Server ist gesperrt."));
+        // mehr Server, als die Lizenz erlaubt (04.10.2026): dieser antwortet nicht — der Hauptserver hat Vorfahrt
+        await ctx.Response.WriteAsJsonAsync(verbund.Gesperrt ? ModelApi.Err("Dieser Server ist gesperrt.") : ModelApi.Err("Für einen weiteren Server fehlt die Lizenz."));
         return;
     }
     await next();
@@ -349,7 +351,7 @@ api.MapGet("/health", (HttpRequest req, Catalog c) =>
     DatenbankPruefen();   // wirft bei unerreichbarer Datenbank; die Wache oben macht daraus 503
     var wer = req.HttpContext.Items["user"] as string;
     if (string.IsNullOrEmpty(wer) && Auth.Enabled(c)) wer = Auth.Resolve(req.HttpContext, c, dataDir)?.User;
-    if (Auth.Enabled(c) && string.IsNullOrEmpty(wer)) return Results.Ok(new { ok = true, abgemeldet = true, built = gebautAm, version = laufendeVersion, gesperrt = verbund.Gesperrt ? true : (bool?)null });
+    if (Auth.Enabled(c) && string.IsNullOrEmpty(wer)) return Results.Ok(new { ok = true, abgemeldet = true, built = gebautAm, version = laufendeVersion, gesperrt = verbund.Gesperrt ? true : (bool?)null, ohneLizenz = verbund.OhneLizenz ? true : (bool?)null });
     return Results.Ok(new
 {
     head = c.Head,
@@ -368,7 +370,7 @@ api.MapGet("/health", (HttpRequest req, Catalog c) =>
     // Registrierung beim Lizenzserver: null = noch nicht gefragt. Die Oberfläche fragt dann einmal (Recht users).
     registriert = c.Registriert,
     // dieser Server (pflegestruktur 41): Rolle und Sperre — die Leiste zeigt, wenn es ein Arbeitsserver ist
-    server = new { id = verbund.Id, host = verbund.Host, haupt = verbund.IstHaupt, gesperrt = verbund.Gesperrt },
+    server = new { id = verbund.Id, host = verbund.Host, haupt = verbund.IstHaupt, gesperrt = verbund.Gesperrt, ohneLizenz = verbund.OhneLizenz },
 });
 });
 

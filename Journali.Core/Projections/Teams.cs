@@ -179,6 +179,9 @@ public sealed class Teams : IProjection
             .Where(x => x is not null)
             .Aggregate((Tarif?)null, (a, b) => a is null ? b : Projections.Tarife.Hoeher(a, b!));
 
+    /// <summary>Zusätzliche Server, die geltende Abos der Instanz an dem Tag geben (Zusatz „Multi-Server“, 04.10.2026).</summary>
+    public int ServerZusatz(DateOnly d) => _all.Keys.Sum(k => AboAt(k, d)?.Server ?? 0);
+
     /// <summary>Der höchste Tarif, den an dem Tag irgendein Team per Schlüssel hat — er gilt für die ganze Instanz.</summary>
     public Tarif? HoechsterTarif(DateOnly d) =>
         _all.Keys.Select(k => TarifAt(k, d)).Where(x => x is not null).Aggregate((Tarif?)null, (a, b) => a is null ? b : Projections.Tarife.Hoeher(a, b!));

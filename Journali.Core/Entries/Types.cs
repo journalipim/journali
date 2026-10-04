@@ -797,7 +797,7 @@ public sealed record KeyRedeemed(string Id, string Kind, DateOnly From, DateOnly
 /// jede Antwort ist ein Eintrag — so lassen sich Grenzen und Tarif jederzeit aus dem Journal neu aufbauen.
 /// </summary>
 public sealed record EntitlementReceived(string Instance, string Team, string Plan, int EntriesWeek, int EntriesMonth, string Status,
-    DateOnly PaidUntil, DateTimeOffset Issued, DateTimeOffset ValidUntil, string Request, string? Sig = null, bool Geprueft = false);
+    DateOnly PaidUntil, DateTimeOffset Issued, DateTimeOffset ValidUntil, string Request, string? Sig = null, bool Geprueft = false, int? Server = null);   // Server: zusätzliche Server (Multi-Server)
 
 /// <summary>
 /// Ein Tarifblatt des Lizenzservers (25.09.2026): <paramref name="Blatt"/> ist der Text, so wie er signiert wurde,

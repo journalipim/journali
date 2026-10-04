@@ -76,6 +76,23 @@ public sealed class Verbund : IDisposable
     public bool IstHaupt => _haupt;
     /// <summary>Ist dieser Server gesperrt?</summary>
     public bool Gesperrt => _catalog.Lesen((_, _) => _catalog.Jobs.BlockedServers.Contains(Id));
+
+    // ---- Mehrere Server nur mit Lizenz (04.10.2026): Unlimited oder der Zusatz „Multi-Server“ ---------------------------------------------------
+    private volatile bool _ohneLizenz;
+    private IReadOnlySet<string> _lizenziert = new HashSet<string>();
+    /// <summary>Läuft dieser Server über die erlaubte Zahl hinaus? Dann beantwortet er unter /api nur /api/health und führt keine Jobs aus.</summary>
+    public bool OhneLizenz => _ohneLizenz;
+    /// <summary>Wie viele Server erlaubt sind (aus dem letzten Takt).</summary>
+    public int Erlaubt { get; private set; } = 1;
+    public bool Lizenziert(string id) => _db is null || _lizenziert.Contains(id);
+
+    /// <summary>
+    /// Die Rangfolge der erreichbaren, nicht gesperrten Server: der festgelegte Hauptserver zuerst — er hat Vorfahrt, auch wenn er nach einem Arbeitsserver
+    /// startet —, dann nach dem Start, der früheste zuerst. Die ersten <paramref name="erlaubt"/> laufen, die übrigen sind ohne Lizenz.
+    /// </summary>
+    public static List<string> Rangfolge(IEnumerable<Zeile> zeilen, string? main, IReadOnlySet<string> gesperrt, DateTimeOffset jetzt) =>
+        zeilen.Where(z => Erreichbar(z, jetzt) && !gesperrt.Contains(z.Id))
+            .OrderBy(z => z.Id == main ? 0 : 1).ThenBy(z => z.Started).ThenBy(z => z.Id, StringComparer.Ordinal).Select(z => z.Id).ToList();
     /// <summary>Läuft auf einem anderen erreichbaren Server ein Import? Aus dem letzten Puls, ohne Anfrage an die Datenbank.</summary>
     public bool ImportAnderswo => _importAnderswo;
 
@@ -150,6 +167,12 @@ public sealed class Verbund : IDisposable
         var jetzt = DateTimeOffset.UtcNow;
         _zeilen = zeilen;
         _importAnderswo = zeilen.Any(z => z.Id != Id && z.Import && Erreichbar(z, jetzt));
+        Erlaubt = _catalog.ErlaubteServer;
+        var rang = Rangfolge(zeilen, Festgelegt(), Gesperrte(), jetzt);
+        _lizenziert = rang.Take(Erlaubt).ToHashSet();
+        var ohne = !_lizenziert.Contains(Id) && !Gesperrt;
+        if (ohne != _ohneLizenz) Console.WriteLine(ohne ? $"journali: für einen weiteren Server fehlt die Lizenz (erlaubt: {Erlaubt}) — dieser Server beantwortet nur /api/health" : "journali: dieser Server hat wieder eine Lizenz");
+        _ohneLizenz = ohne;
         _haupt = RolleKlaeren();
         // jeder Server schreibt die Logs seiner Läufe — so liest man sie von jedem Server aus
         foreach (var (job, run, pfad) in LogsHier())
@@ -365,10 +388,16 @@ public sealed class Verbund : IDisposable
     private bool RolleKlaeren()
     {
         var main = Festgelegt();
-        if (Gesperrt || (main is not null && main != Id)) { SperreAbgeben(); return false; }
+        // Ist nur ein Server erlaubt, ist der laufende der Hauptserver (04.10.2026): läuft der festgelegte nicht, übernimmt dieser — läuft er, hat er den
+        // Platz, und dieser ist ohne Lizenz (oben). Mit mehreren erlaubten Servern wechselt der Hauptserver nie von selbst (Entscheidung 2).
+        var uebernehmen = Erlaubt == 1 && main is not null && main != Id;
+        // ein gesperrter Server oder einer ohne Lizenz wird nicht Hauptserver — auch nicht, wenn noch keiner festgelegt ist
+        if (Gesperrt || _ohneLizenz || (main is not null && main != Id && !uebernehmen)) { SperreAbgeben(); return false; }
         if (!SperreHalten()) return false;
         if (main is null)
             _catalog.With((_, _, write) => _catalog.Jobs.MainServer is null ? write("system", Jobs.ServerStream + Id, Types.ServerMainSet, new ServerMainSet(Host), null) : null);
+        else if (uebernehmen)   // die Sperre ist frei: der bisherige Hauptserver läuft nicht
+            _catalog.With((_, _, write) => _catalog.Jobs.MainServer != Id ? write("system", Jobs.ServerStream + Id, Types.ServerMainSet, new ServerMainSet(Host), null) : null);
         return Festgelegt() == Id;
     }
 

@@ -123,7 +123,9 @@ public sealed record RabattZeile(string Code, string Text, DateOnly? Bis = null)
 }
 
 /// <summary>Ein Tarif, wie ihn das Tarifblatt nennt. <see cref="Plugins"/> null = alle.</summary>
-public sealed record TarifZeile(string Key, string Label, int Rang, int Week, int Month, int PubTrees, string[]? Plugins = null);
+/// <param name="Server">Wie viele Server auf einer Datenbank laufen dürfen (04.10.2026, pflegestruktur 41). Null = wie bisher: ein unbegrenzter Tarif
+/// (Woche und Monat ohne Grenze) beliebig viele, jeder andere einen.</param>
+public sealed record TarifZeile(string Key, string Label, int Rang, int Week, int Month, int PubTrees, string[]? Plugins = null, int? Server = null);
 
 /// <summary>
 /// Was im Tarifblatt steht: alle Tarife mit Grenzen, Publikationsbäumen und Plugins, dazu welcher Tarif wie viele Monate
@@ -152,6 +154,7 @@ public sealed record TarifblattInhalt(long Version, DateTimeOffset Ausgestellt, 
             if (string.IsNullOrWhiteSpace(z.Key) || z.Key != z.Key.Trim().ToLowerInvariant()) return $"Tarif „{z.Key}“: Schlüssel klein, ohne Leerzeichen.";
             if (string.IsNullOrWhiteSpace(z.Label)) return $"Tarif {z.Key}: Name fehlt.";
             if (z.Week < 0 || z.Month < 0 || z.PubTrees < 0 || z.Rang < 0) return $"Tarif {z.Key}: Werte ab 0.";
+            if (z.Server is < 1) return $"Tarif {z.Key}: mindestens ein Server.";
         }
         if (Tarife.Select(z => z.Key).Distinct().Count() != Tarife.Length) return "Ein Tarif steht doppelt.";
         if (Tarife.Select(z => z.Rang).Distinct().Count() != Tarife.Length) return "Zwei Tarife haben denselben Rang.";
@@ -289,7 +292,10 @@ public sealed record Entitlement(
     string? Request = null,
     string? Sig = null,
     /// <summary>Das Tarifblatt des Lizenzservers (null bei Ständen von davor).</summary>
-    Tarifblatt? Blatt = null)
+    Tarifblatt? Blatt = null,
+    /// <summary>Zusätzliche Server auf derselben Datenbank, die dieses Abo der Instanz gibt (04.10.2026, Zusatz „Multi-Server“). Null = keine — und nicht
+    /// im Rumpf: so bleiben Stände ohne Zusatz für Instanzen von davor lesbar und ihre Signatur gleich. Hinter <c>Blatt</c>, damit die Reihenfolge bleibt.</summary>
+    int? Server = null)
 {
     /// <summary>So lange gilt ein Stand ohne Verbindung zum Lizenzserver.</summary>
     public static readonly TimeSpan Kulanz = TimeSpan.FromDays(7);
