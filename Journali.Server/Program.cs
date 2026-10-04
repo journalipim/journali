@@ -370,7 +370,8 @@ api.MapGet("/health", (HttpRequest req, Catalog c) =>
     // Registrierung beim Lizenzserver: null = noch nicht gefragt. Die Oberfläche fragt dann einmal (Recht users).
     registriert = c.Registriert,
     // dieser Server (pflegestruktur 41): Rolle und Sperre — die Leiste zeigt, wenn es ein Arbeitsserver ist
-    server = new { id = verbund.Id, host = verbund.Host, haupt = verbund.IstHaupt, gesperrt = verbund.Gesperrt, ohneLizenz = verbund.OhneLizenz },
+    // erlaubt: wie viele Server laufen dürfen — erst ab zweien gibt es in den Einstellungen den Reiter ⧉ Server
+    server = new { id = verbund.Id, host = verbund.Host, haupt = verbund.IstHaupt, gesperrt = verbund.Gesperrt, ohneLizenz = verbund.OhneLizenz, erlaubt = verbund.Erlaubt },
 });
 });
 

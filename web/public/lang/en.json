@@ -3005,5 +3005,9 @@
  "erreichbar und erlaubt · {0} erlaubt": "reachable and allowed · {0} allowed",
  "ohne Lizenz": "no licence",
  "Mehr Server, als die Lizenz erlaubt ({0}); dieser beantwortet keine Anfrage unter /api. Der Hauptserver hat Vorfahrt.": "More servers than the licence allows ({0}); this one answers no request under /api. The main server has priority.",
- "Auf dieser Datenbank läuft schon {0}; für einen weiteren Server fehlt die Lizenz.": "{0} already runs on this database; a further server has no licence."
+ "Auf dieser Datenbank läuft schon {0}; für einen weiteren Server fehlt die Lizenz.": "{0} already runs on this database; a further server has no licence.",
+ "Gilt für die ganze Instanz, gleich über welches Team gekauft.": "Applies to the whole instance, whichever team bought it.",
+ "◆ Zusatz Multi-Server": "◆ Add-on multi-server",
+ "+{0} Server": "+{0} servers",
+ "{0} erlaubt": "{0} allowed"
 }

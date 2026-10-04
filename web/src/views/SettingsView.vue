@@ -1,7 +1,7 @@
 <script setup>
 // Einstellungen: ein Reiter je Sache, sichtbar nach Recht:
 // ◐ Mein Account · ◍ Team (mit der Lizenz) · ◈ IAM (Konten, Rollen, Rechte, Teams) · ⚑ Workflows · ▨ Storage · ▩ Assets · ✉ Mail · ⇅ B&R (Sichern und Wiederherstellen)
-// · ⧉ Server (welche Server auf die Datenbank zugreifen, pflegestruktur 41).
+// · ⧉ Server (welche Server auf die Datenbank zugreifen, pflegestruktur 41) — nur, wenn mehr als ein Server laufen darf (Unlimited oder Zusatz Multi-Server).
 // Storage und Assets sind getrennt, weil die Ableitungsgrössen später auch ein Medienmanager pflegen darf, der an den
 // Speicher selbst nicht heranmuss.
 // Wer mit seinen Rechten und seinem Team hierher kommt, sieht, was er sehen oder ändern darf — alles andere nicht.
@@ -54,7 +54,7 @@ async function save() {
       <span v-if="store.can('model') || store.can('storage')" class="tab" :class="{ on: tab === 'assets' }" @click="tab = 'assets'" :title="$t('Vorschau-Ableitungen und ihr Bestand')">{{ $t("▩ Assets") }}</span>
       <span v-if="store.can('users')" class="tab" :class="{ on: tab === 'mail' }" @click="tab = 'mail'" :title="$t('ausgehender Mailserver')">{{ $t("✉ Mail") }}</span>
       <span v-if="store.can('users')" class="tab" :class="{ on: tab === 'backup' }" @click="tab = 'backup'" :title="$t('Sichern und wiederherstellen')">⇅ B&amp;R</span>
-      <span v-if="store.can('users')" class="tab" :class="{ on: tab === 'server' }" @click="tab = 'server'" :title="$t('Server, die auf diese Datenbank zugreifen')">{{ $t("⧉ Server") }}</span>
+      <span v-if="store.can('users') && (store.erlaubteServer ?? 1) > 1" class="tab" :class="{ on: tab === 'server' }" @click="tab = 'server'" :title="$t('Server, die auf diese Datenbank zugreifen')">{{ $t("⧉ Server") }}</span>
     </div>
     <div class="scroll" v-if="tab === 'team'"><TeamsSettings /></div>
     <div class="scroll" v-else-if="tab === 'workflows'"><WorkflowSettings /></div>

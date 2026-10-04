@@ -47,6 +47,8 @@ public static class LicenceApi
                 kauf = liste.Kauf,
                 rabatte = liste.RabatteAm(DateOnly.FromDateTime(DateTime.Now)).Select(r => new { r.Code, r.Text, r.Bis }).ToList(),
                 pubTrees = baeume,
+                // Server auf dieser Datenbank (04.10.2026): wie viele erlaubt sind, und wie viele davon der Zusatz Multi-Server gibt
+                erlaubteServer = c.ErlaubteServer, serverZusatz = c.Lesen((_, _) => c.Teams.ServerZusatz(DateOnly.FromDateTime(DateTime.Now))),
                 // die Abos der Teams: letzter Stand vom Lizenzserver, und ob er heute gilt
                 lizenzserver = abos.Eingestellt, registriert = c.Registriert,
                 // Der Weg von Hand steht nur da, wenn der Lizenzserver ihn dieser Instanz freigegeben hat (26.09.2026)

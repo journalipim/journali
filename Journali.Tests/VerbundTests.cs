@@ -221,6 +221,11 @@ public class VerbundTests
         c.With((_, _, w) => w("t", Teams.Stream + "init", Types.EntitlementReceived, new EntitlementReceived("i", "init", "pro", 50_000, 250_000, "active",
             DateOnly.FromDateTime(DateTime.Now).AddDays(30), DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddDays(7), "r", "s", Geprueft: true, Server: 2), null));
         Assert.Equal(3, c.ErlaubteServer);                                     // Pro: einer, dazu der Zusatz „Multi-Server“ mit zwei
+        // derselbe Zusatz steht im Stand eines zweiten Teams (er gilt für die Instanz): das Höchste zählt, nicht die Summe
+        c.With((_, _, w) => { w("t", Teams.Stream + "de", Types.TeamDefined, new TeamDefined("DE"), null);
+            return w("t", Teams.Stream + "de", Types.EntitlementReceived, new EntitlementReceived("i", "de", "free", 1, 1, "multiserver",
+                DateOnly.FromDateTime(DateTime.Now).AddDays(30), DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddDays(7), "r3", "s", Geprueft: true, Server: 2), null); });
+        Assert.Equal(3, c.ErlaubteServer);
         c.With((_, _, w) => w("t", Teams.Stream + "init", Types.EntitlementReceived, new EntitlementReceived("i", "init", "unlimited", Tarife.Ohne, Tarife.Ohne, "active",
             DateOnly.FromDateTime(DateTime.Now).AddDays(30), DateTimeOffset.UtcNow.AddSeconds(1), DateTimeOffset.UtcNow.AddDays(7), "r2", "s", Geprueft: true), null));
         Assert.Equal(Tarife.Ohne, c.ErlaubteServer);                           // Unlimited: beliebig viele

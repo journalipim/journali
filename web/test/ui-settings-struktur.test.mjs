@@ -32,8 +32,14 @@ test('ein Leser sieht sich und sein Team — sonst nichts', async () => {
 })
 
 test('der Administrator sieht die Bestandteile einzeln, nicht als Sammelseite', async () => {
-  const w = await sicht(['read', 'users', 'storage', 'model', 'team'])
+  store.erlaubteServer = 1
+  let w = await sicht(['read', 'users', 'storage', 'model', 'team'])
+  assert.deepEqual(reiter(w), ['◐ Mein Account', '◍ Team', '◈ IAM', '⚑ Workflows', '▨ Storage', '▩ Assets', '✉ Mail', '⇅ B&R'], 'ein Server: kein Reiter ⧉ Server')
+  await ruhe(); w.unmount()
+  store.erlaubteServer = 3   // Unlimited oder der Zusatz Multi-Server
+  w = await sicht(['read', 'users', 'storage', 'model', 'team'])
   assert.deepEqual(reiter(w), ['◐ Mein Account', '◍ Team', '◈ IAM', '⚑ Workflows', '▨ Storage', '▩ Assets', '✉ Mail', '⇅ B&R', '⧉ Server'])
+  store.erlaubteServer = 1
   assert.ok(!reiter(w).some(r => /Anlage/.test(r)), 'die Sammelseite gibt es nicht mehr')
   await ruhe(); w.unmount()
 })

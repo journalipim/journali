@@ -178,6 +178,8 @@ async function kopiere(text) {
           <template v-else>{{ aboTeam.planLabel }}<span class="muted">{{ ' · ' + $t('gültig bis {0}', [aboTeam.paidUntil]) }}</span></template>
           <span v-if="!aboTeam.geprueft && aboTeam.gilt !== false" class="neg" :title="$t('Ohne passende Signatur zählt der Stand nicht.')">{{ ' · ' + $t('ungeprüft') }}</span></td>
         <td><button v-if="fuehrt && lic.lizenzserver && aboTeam.team === team?.key" class="x auffrischen" :title="$t('Stand vom Lizenzserver neu holen')" @click="auffrischen">↻</button></td></tr>
+      <tr v-if="lic?.serverZusatz > 0" class="zusatz-server"><td class="muted" :title="$t('Gilt für die ganze Instanz, gleich über welches Team gekauft.')">{{ $t("◆ Zusatz Multi-Server") }}</td>
+        <td>{{ $t('+{0} Server', [lic.serverZusatz]) }}<span class="muted">{{ ' · ' + $t('{0} erlaubt', [lic.erlaubteServer >= 2147483647 ? '∞' : lic.erlaubteServer]) }}</span></td><td></td></tr>
       <tr v-for="k in schluessel" :key="k.id" class="schluessel"><td class="muted" :title="$t('Eingelöster Schlüssel: er gibt dem Team Tarif und Grenzen bis zum genannten Tag.')">{{ $t("◆ Schlüssel · {0}", [k.teamLabel]) }}</td>
         <td :title="k.id"><span :class="{ muted: k.zaehlt === false }">{{ k.planLabel ?? $t('Grenzen') }}</span><span class="muted">{{ ' · ' + $t('{0} bis {1}', [k.from, k.until]) }}</span>
           <span v-if="k.zaehlt === false" class="muted zaehlt-nicht" :title="$t('Das Team hat einen Stand vom Lizenzserver; es gilt allein, was er sagt.')">{{ ' · ' + $t('zählt nicht') }}</span></td><td></td></tr>

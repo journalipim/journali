@@ -2500,6 +2500,12 @@ nicht erreichbare zählen nicht. Wer über die Zahl hinaus läuft, startet, trä
 weiteren Server fehlt die Lizenz.“), führt keine Jobs aus und wird nie Hauptserver; wird ein Platz frei, arbeitet er ohne Neustart. Ist nur ein Server
 erlaubt, ist der laufende der Hauptserver: läuft der festgelegte nicht, übernimmt der gestartete von selbst.
 
+**Multi-Server ist ein eigenes Produkt** (04.10.2026, entschieden): im Shop kein Teil einer Tarif-Variante — sonst müssten sich die Varianten vervielfachen —,
+sondern ein Zusatz mit eigenen Varianten. Er gilt für die ganze Instanz, nicht für ein Team. Der Lizenzserver unterscheidet die Varianten (Tarif oder
+„Zusatz Multi-Server · N Server“), nimmt den Tarif eines Teams nur aus einer Tarif-Aktivierung — ein Zusatz verdrängt sie nie — und nennt in jedem Stand
+der Instanz die Summe ihrer geltenden Zusätze; journali nimmt davon das Höchste, nicht die Summe der Stände. Ohne Tarif-Kauf gibt der Zusatz den kostenlosen
+Tarif mit den Servern. Den Reiter ⧉ Server gibt es erst, wenn mehr als ein Server laufen darf.
+
 **Der Medienspeicher** ist für alle Server derselbe — er steht im Tresor, nicht mehr je Server in `media.json` (03.10.2026): ein Journal, ein Speicher.
 
 **Offen:** Die wartenden Eingänge im Fach `in/` eines Jobs liegen auf der Platte seines Servers; die anderen zeigen dafür „auf Server …“, nicht die Dateien.

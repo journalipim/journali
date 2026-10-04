@@ -179,8 +179,11 @@ public sealed class Teams : IProjection
             .Where(x => x is not null)
             .Aggregate((Tarif?)null, (a, b) => a is null ? b : Projections.Tarife.Hoeher(a, b!));
 
-    /// <summary>Zusätzliche Server, die geltende Abos der Instanz an dem Tag geben (Zusatz „Multi-Server“, 04.10.2026).</summary>
-    public int ServerZusatz(DateOnly d) => _all.Keys.Sum(k => AboAt(k, d)?.Server ?? 0);
+    /// <summary>
+    /// Zusätzliche Server der Instanz an dem Tag (Zusatz „Multi-Server“, 04.10.2026). Der Zusatz gilt für die ganze Instanz: der Lizenzserver nennt in jedem
+    /// Stand der Instanz dieselbe Zahl — darum das Höchste der geltenden Stände, nicht die Summe.
+    /// </summary>
+    public int ServerZusatz(DateOnly d) => _all.Keys.Select(k => AboAt(k, d)?.Server ?? 0).DefaultIfEmpty(0).Max();
 
     /// <summary>Der höchste Tarif, den an dem Tag irgendein Team per Schlüssel hat — er gilt für die ganze Instanz.</summary>
     public Tarif? HoechsterTarif(DateOnly d) =>

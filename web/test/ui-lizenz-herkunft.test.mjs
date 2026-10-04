@@ -48,3 +48,15 @@ test('Tarif aus einem Schlüssel oder einem Abo nennt Team und Tag', async () =>
   assert.ok(!w.find('tr.abo .abo-grund').exists())
   w.unmount()
 })
+
+test('Zusatz Multi-Server: eine Zeile für die Instanz, mit der erlaubten Zahl', async () => {
+  server({ ...basis, instanzTarif: { key: 'pro', label: 'Pro', pubTrees: 5 }, quelle: { art: 'abo', team: 'init', teamLabel: 'Init Team', bis: '2026-10-24' },
+    abos: [], schluessel: [], serverZusatz: 2, erlaubteServer: 3 })
+  let w = mount(LicenceSettings, { props: { team: INIT } }); await flushPromises()
+  assert.match(w.find('tr.zusatz-server').text(), /Zusatz Multi-Server\s*\+2 Server\s*· 3 erlaubt/)
+  w.unmount()
+  server({ ...basis, instanzTarif: { key: 'pro', label: 'Pro', pubTrees: 5 }, quelle: { art: 'lizenz' }, abos: [], schluessel: [], serverZusatz: 0, erlaubteServer: 1 })
+  w = mount(LicenceSettings, { props: { team: INIT } }); await flushPromises()
+  assert.ok(!w.find('tr.zusatz-server').exists())
+  w.unmount()
+})

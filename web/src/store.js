@@ -171,6 +171,7 @@ export const store = reactive({
       this.presence = h.presence ?? []   // wer sonst noch dort ist, wo dieser Anwender steht
       this.tarif = h.tarif ?? null   // Tarif der Instanz: was die Oberfläche überhaupt anbietet
       this.registriert = h.registriert ?? null   // beim Lizenzserver: null = noch nicht gefragt
+      this.erlaubteServer = h.server?.erlaubt ?? 1   // Server auf dieser Datenbank: ab zweien gibt es den Reiter ⧉ Server
       // Version und Bau: kurz oben, lang im Tooltip
       this.version = h.version ?? ''
       if (h.built) { this.build = bauKurz(h.built); this.builtAt = bauLang(h.built) }
