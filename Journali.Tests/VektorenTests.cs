@@ -118,7 +118,10 @@ public class VektorenTests
         var c = new Catalog(new MemoryJournal()); c.Rebuild(); c.SeedMissing();
         var texte = SemanticApi.KnotenTexte(c);
         Assert.Equal(["de", "en"], texte.Where(t => t.Node == Model.RootNode).Select(t => t.Locale).Order());
-        Assert.StartsWith("MasterTree\nProduct group", texte.Single(t => t.Node == Model.RootNode && t.Locale == "en").Text);
+        Assert.Null(texte[0].Text);                       // für alle Knoten nur der Hash
+        var wurzel = SemanticApi.MitText(c, texte.Where(t => t.Node == Model.RootNode && t.Locale == "en")).Single();
+        Assert.StartsWith("MasterTree\nProduct group", wurzel.Text);
+        Assert.Equal(texte.Single(t => t.Node == Model.RootNode && t.Locale == "en").Hash, wurzel.Hash);   // derselbe Hash wie in der Liste
     }
 
     [Fact]

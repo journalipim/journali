@@ -19,8 +19,9 @@ public static class SemanticApi
     public sealed record ChunkIn(string Media, string Sha256, int Seq, float[] Vector);
     public sealed record NodeIn(string Node, string Locale, string Hash, float[] Vector);
     public sealed record EmbedBody(string? Model, List<ChunkIn>? Chunks, List<NodeIn>? Nodes, List<string>? Gone);
-    /// <summary>Der Text eines Knotens mit seinem Hash — was der Job einbettet.</summary>
-    public sealed record KnotenText(string Node, string Locale, string Hash, string Text);
+    /// <summary>Ein Knoten in einer Sprache mit dem Hash seines Textes — den Text selbst (was der Job einbettet) tragen nur die Posten einer Runde
+    /// (<see cref="MitText"/>); für alle Knoten gemerkt waren es 158 MB.</summary>
+    public sealed record KnotenText(string Node, string Locale, string Hash, string? Text = null);
     /// <summary>Ein Auszug für die Antwort: Dokument, Abschnitt, Seite, Überschrift, der Text.</summary>
     public sealed record Auszug(string Media, int Seq, int? Page, string? Heading, string Body);
 
@@ -64,35 +65,88 @@ public static class SemanticApi
     /// dauernd an derselben Liste und hielt dabei die Lesesperre, hinter der jeder Schreibvorgang wartet. Solange kein
     /// Eintrag dazukommt, ändert sich kein Text — der Stand des Journals ist darum der ganze Schlüssel.
     /// </summary>
-    private static (long Head, List<KnotenText> Liste) _texte = (-1, []);
+    private static (Catalog? Von, long Head, List<KnotenText> Liste) _texte = (null, -1, []);
 
     private static readonly object _rechnen = new();
+
+    /// <summary>
+    /// Ströme des Modells: ein Eintrag dort kann jeden Text ändern (Bezeichnung eines Attributs, eines Listenwerts, eine Einheit, die Sprachen) — dann wird
+    /// alles neu gerechnet. Ein Strom ohne Doppelpunkt ist ein Knoten; alle übrigen (Jobs, Teams, Server …) ändern keinen Text.
+    /// </summary>
+    public static readonly string[] ModellStroeme = [Model.LocaleStream, Model.AttributeStream, Model.ListStream, Model.FamilyStream, Model.UnitStream,
+        Model.TermStream, Model.GroupStream, "settings:"];
+
+    /// <summary>Ab so vielen neuen Einträgen wird alles neu gerechnet: die Liste der betroffenen Knoten zu lesen, kostete dann mehr.</summary>
+    private const int NachrechnenBis = 20_000;
 
     public static List<KnotenText> KnotenTexte(Catalog c)
     {
         var head = c.Head;
-        if (_texte.Head == head) return _texte.Liste;
+        if (ReferenceEquals(_texte.Von, c) && _texte.Head == head) return _texte.Liste;
         // Nur einer rechnet; wer inzwischen wartete, findet die fertige Liste vor (Stand, Postenliste und Job fragen gleichzeitig)
         lock (_rechnen)
         {
-            if (_texte.Head == head) return _texte.Liste;
-            var liste = Berechne(c);
-            _texte = (head, liste);
+            var alt = _texte;
+            if (ReferenceEquals(alt.Von, c) && alt.Head == head) return alt.Liste;
+            // Nachrechnen statt neu rechnen (04.10.2026): nur die Knoten, auf deren Strom seither ein Eintrag kam, mit ihren Nachkommen — ihr Pfad und ihr
+            // Name hängen an ihm. Vorher rechnete jeder neue Journalstand alle 37 000 Texte neu.
+            var betroffen = ReferenceEquals(alt.Von, c) && alt.Head >= 0 ? Betroffen(c, alt.Head, head) : null;
+            var liste = betroffen is null ? Berechne(c) : Nachrechnen(c, alt.Liste, betroffen);
+            _texte = (c, head, liste);
             return liste;
         }
+    }
+
+    /// <summary>Die Knoten, auf deren Strom nach <paramref name="von"/> bis <paramref name="bis"/> ein Eintrag kam — null, wenn alles neu zu rechnen ist
+    /// (ein Eintrag im Modell, zu viele Einträge).</summary>
+    public static HashSet<string>? Betroffen(Catalog c, long von, long bis)
+    {
+        var knoten = new HashSet<string>(StringComparer.Ordinal);
+        var n = 0;
+        foreach (var e in c.EintraegeNach(von))
+        {
+            if (e.Number > bis) break;
+            if (++n > NachrechnenBis) return null;
+            if (!e.Stream.Contains(':')) knoten.Add(e.Stream);
+            else if (ModellStroeme.Any(p => e.Stream.StartsWith(p, StringComparison.Ordinal))) return null;
+        }
+        return knoten;
+    }
+
+    private static List<KnotenText> Nachrechnen(Catalog c, List<KnotenText> alt, HashSet<string> betroffen)
+    {
+        if (betroffen.Count == 0) return alt;
+        // mit den Nachkommen; wer nicht mehr da ist, fällt heraus
+        var neu = c.Lesen((_, tree) =>
+        {
+            var alle = new HashSet<string>(betroffen, StringComparer.Ordinal);
+            foreach (var id in betroffen) foreach (var d in tree.DescendantsDeepestFirst(id)) alle.Add(d.Id);
+            return alle;
+        });
+        var frisch = Berechne(c, neu);
+        return alt.Where(t => !neu.Contains(t.Node)).Concat(frisch)
+            .OrderBy(t => t.Node, StringComparer.Ordinal).ThenBy(t => t.Locale, StringComparer.Ordinal).ToList();
     }
 
     /// <summary>Knoten je Teil unter der Lesesperre. 02.10.2026: der Baum mit 18 600 Knoten brauchte 13 Sekunden an einem Stück, und ein Schreiber, der in dieser Zeit
     /// wartete, hielt jeden neuen Leser an (die Gesundheitsabfrage stand 10,5 s). In Teilen kommt der Schreiber nach einem Teil dran.</summary>
     private const int KnotenJeTeil = 100;
 
-    public static List<KnotenText> Berechne(Catalog c)
+    /// <summary>Die Posten mit ihrem Text — für die Runde des Jobs. Der Hash kommt aus demselben Text: hat sich der Knoten seit der Liste geändert,
+    /// passt er trotzdem zum Text, den der Job einbettet.</summary>
+    public static List<KnotenText> MitText(Catalog c, IEnumerable<KnotenText> posten) => c.Lesen((model, tree) => posten
+        .Select(p => tree.Nodes.TryGetValue(p.Node, out var n) ? NodeText.Of(model, tree, n, p.Locale) is var t ? p with { Hash = NodeText.Hash(t), Text = t } : p : null)
+        .OfType<KnotenText>().ToList());
+
+    /// <param name="nur">Nur diese Knoten (zum Nachrechnen) — ohne Angabe alle.</param>
+    public static List<KnotenText> Berechne(Catalog c, IReadOnlySet<string>? nur = null)
     {
         var (locs, ids) = c.Lesen((model, tree) =>
         {
             var l = model.Locales.Keys.OrderBy(x => x, StringComparer.Ordinal).ToList();
             if (l.Count == 0) l = [model.MasterLocale ?? "de"];
-            return (l, tree.Nodes.Values.Where(n => n.Role is Roles.Group or Roles.Product or Roles.Variant).Select(n => n.Id).Order(StringComparer.Ordinal).ToList());
+            var knoten = nur is null ? tree.Nodes.Values : nur.Select(id => tree.Nodes.GetValueOrDefault(id)).OfType<Node>();
+            return (l, knoten.Where(n => n.Role is Roles.Group or Roles.Product or Roles.Variant).Select(n => n.Id).Order(StringComparer.Ordinal).ToList());
         });
         var namen = new Dictionary<string, string>(StringComparer.Ordinal);   // Name je Knoten, einmal je Lauf
         long nameTicks = 0, textTicks = 0;                                     // wohin die Zeit geht: Namen auflösen oder Texte bauen (steht in der Zeile „langsam:“)
@@ -110,7 +164,7 @@ public static class SemanticApi
                 foreach (var id in teil)
                 {
                     if (!tree.Nodes.TryGetValue(id, out var n)) continue;   // inzwischen entfernt
-                    foreach (var loc in locs) { var t = NodeText.Of(model, tree, n, loc, Name); liste.Add(new KnotenText(n.Id, loc, NodeText.Hash(t), t)); }
+                    foreach (var loc in locs) liste.Add(new KnotenText(n.Id, loc, NodeText.HashOf(model, tree, n, loc, Name)));
                 }
                 textTicks += System.Diagnostics.Stopwatch.GetTimestamp() - t1;
                 return 0;
@@ -185,7 +239,7 @@ public static class SemanticApi
             var chunks = (await Teilzeit.MessenAsync("chunks", () => vectors.PendingChunksAsync(m, n, ct))).Select(o => new { o.Media, o.Sha256, o.Seq, text = Vectors.Passage(o.Heading, o.Body) }).ToList();
             var known = await Teilzeit.MessenAsync("hashes", () => vectors.NodeHashesAsync(m, ct));
             var texte = Teilzeit.Messen("node texts", () => KnotenTexte(c));
-            var nodes = Teilzeit.Messen("pending", () => PendingNodes(texte, known).Take(Math.Max(0, n - chunks.Count)).ToList());
+            var nodes = Teilzeit.Messen("pending", () => MitText(c, PendingNodes(texte, known).Take(Math.Max(0, n - chunks.Count))));
             var weg = Teilzeit.Messen("removed", () => GoneNodes(texte, known));
             return Results.Ok(new { ready = true, reason = (string?)null, model = m, chunks, nodes, gone = weg });
         });

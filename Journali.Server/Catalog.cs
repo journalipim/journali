@@ -59,6 +59,10 @@ public sealed class Catalog
 
     public Catalog(IJournal journal) => _journal = journal;
 
+    /// <summary>Die Einträge nach <paramref name="nummer"/> — zum Nachrechnen eines gemerkten Standes (Knotentexte der Einbettungen). Ohne Sperre: das Journal
+    /// ändert geschriebene Einträge nie.</summary>
+    public IEnumerable<Entry> EintraegeNach(long nummer) => _journal.ReadAfter(nummer);
+
     /// <summary>Wo die Lizenz liegt — das Saatgut holt die Limits des Init Teams von dort (null = Testbetrieb).</summary>
     public string? LicenceDir { get; set; }
     /// <summary>Woher die Lizenz kommt (Datenbank oder Datei) — gesetzt beim Start, vor dem Saatgut.</summary>
