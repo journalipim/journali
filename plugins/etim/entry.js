@@ -145,8 +145,10 @@ function modelOps(ctx) {
   const classSpec = c => ({ code: c.code, name: c.name, section: c.group ? (nameOf(c.group.name, locale) || c.group.code) : null })
   const TYPES = { Numeric: 'decimal', Logical: 'boolean', Range: 'text', Alphanumeric: 'enum' }
   const RANGE = '^\\s*-?[\\d.,]+(\\s*(-|\\.\\.|…)\\s*-?[\\d.,]+)?\\s*$'
-  const featureSpec = f => {
-    const classes = [...cache.classes.values()].filter(c => c.features.some(x => x.code === f.code)).map(c => c.code)   // Bedingung: alle Klassen, die es führen
+  /// Merkmal → Klassen, die es führen: einmal je Anlage gerechnet (04.10.2026) — vorher je Merkmal über alle Klassen und ihre Merkmale
+  const merkmalIndex = () => { const idx = new Map(); for (const c of cache.classes.values()) for (const x of c.features) { if (!idx.has(x.code)) idx.set(x.code, []); idx.get(x.code).push(c.code) } return idx }
+  const featureSpec = (f, idx = merkmalIndex()) => {
+    const classes = [...new Set(idx.get(f.code) ?? [])]   // Bedingung: alle Klassen, die es führen
     const spec = { key: f.code.toLowerCase(), name: f.name, type: TYPES[f.type] ?? 'text', classes, target: attrKeyOf(f.code) }
     if (f.type === 'Numeric' && f.unit) spec.unit = { code: f.unit.code, abbr: f.unit.abbr, name: f.unit.name }
     if (f.type === 'Range') { spec.pattern = RANGE; spec.patternHint = `von - bis${f.unit ? ' in ' + (nameOf(f.unit.abbr, locale) || f.unit.code) : ''}` }
@@ -180,7 +182,7 @@ function modelOps(ctx) {
     return [...codes].map(code => classSpec(cache.classes.get(code)))
   }
   async function ensure({ groupOnly = false, features = [], classes = null } = {}) {
-    return adopt(await api.post('/api/classification/ensure', { system: system(), groupOnly, classes: groupOnly ? [] : classesToSend(), features: features.map(featureSpec), classGroups: groupOnly ? [] : groupClasses(features, classes) }))
+    return adopt(await api.post('/api/classification/ensure', { system: system(), groupOnly, classes: groupOnly ? [] : classesToSend(), features: (idx => features.map(f => featureSpec(f, idx)))(merkmalIndex()), classGroups: groupOnly ? [] : groupClasses(features, classes) }))
   }
   const ensureGroup = async () => (await ensure({ groupOnly: true })).group
   const ensureClassAttr = async () => (await ensure()).classAttr
@@ -189,7 +191,7 @@ function modelOps(ctx) {
   const createFeature = async (f, classes = null) => { await createFeatures([f], classes); return f.code.toLowerCase() }
   /// Klasse zuweisen: Modell, Gruppe an den Pfad des Knotens, Klasse an den Knoten — und ob sie danach pflegbar ist
   async function assign(nodeId, cls, { withFeatures = true } = {}) {
-    return adopt(await api.post('/api/classification/assign', { node: nodeId, class: cls.code, system: system(), classes: classesToSend(cls), features: withFeatures ? cls.features.map(featureSpec) : [] }))
+    return adopt(await api.post('/api/classification/assign', { node: nodeId, class: cls.code, system: system(), classes: classesToSend(cls), features: withFeatures ? (idx => cls.features.map(f => featureSpec(f, idx)))(merkmalIndex()) : [] }))
   }
   // Attributsicht je Klasse: ein Reiter am Knoten mit genau den
   // Attributen dieser Klasse, in der Reihenfolge der Klasse — je Rolle eine Sicht (eine Sicht gilt für einen Knotentyp).
@@ -880,7 +882,8 @@ async function mount(root, ctx) {
           say2(t_('Gruppe …')); await api.del(`/api/model/groups/${encodeURIComponent(groupKey())}`).catch(() => {})
         }
         if (oMap.cb.checked) for (const n of ['map', 'mapping', 'settings']) await ctx.data.del(n).catch(() => {})
-        if (oLib.cb.checked) { let i = 0; for (const n of lib) { if (++i % 200 === 0) say2(t_('Bibliothek {0}/{1} …', [i, lib.length])); await ctx.data.del(n).catch(() => {}) } }
+        // Bibliothek in Stapeln zu 2 000 (null = weg) statt einer Anfrage je Datensatz (04.10.2026)
+        if (oLib.cb.checked) for (let i = 0; i < lib.length; i += 2000) { say2(t_('Bibliothek {0}/{1} …', [Math.min(i + 2000, lib.length), lib.length])); await api.post('/api/plugins/etim/data', Object.fromEntries(lib.slice(i, i + 2000).map(n => [n, null])), 'PUT') }
         await store.poll(true); await tree.load?.()
         cache.settings = { ...DEFAULTS }; cache.map = {}; cache.mapping = {}
         await loadCache()

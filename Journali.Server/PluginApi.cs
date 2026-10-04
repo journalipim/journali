@@ -182,7 +182,8 @@ public static class PluginApi
             return c.With((_, _, write) => Unveraendert(c, key, name, value.Length == 0 ? null : value) ? Results.Ok(new { unchanged = true })
                 : Results.Ok(EntryView.Of(write(actor, Plugins.Stream + key, Types.PluginDataSet, new PluginDataSet(name, value.Length == 0 ? null : value), null))));
         });
-        // Sammel-PUT: { name: wert, … } — alle in einem Stapel (etim: eine ganze Freigabe, tausende Klassen)
+        // Sammel-PUT: { name: wert, … } — alle in einem Stapel (etim: eine ganze Freigabe, tausende Klassen). null = weg (04.10.2026: das
+        // Zurücksetzen einer Bibliothek war vorher ein DELETE je Datensatz)
         api.MapPut("/plugins/{key}/data", async (string key, HttpRequest req, Catalog c, CancellationToken ct) =>
         {
             if (Actor(req) is not { } actor) return ActorMissing();
@@ -194,9 +195,10 @@ public static class PluginApi
             if (items is null || items.Count == 0) return Bad("Leer.");
             if (items.Keys.Any(n => n.Length is 0 or > 120 || n.Any(ch => ch is '/' or '\\'))) return Bad("Name ungültig.");
             var batch = Guid.NewGuid().ToString("N")[..12];
-            var neu = items.Where(kv => !Unveraendert(c, key, kv.Key, kv.Value.GetRawText())).ToList();
+            static string? Roh(JsonElement v) => v.ValueKind == JsonValueKind.Null ? null : v.GetRawText();
+            var neu = items.Where(kv => !Unveraendert(c, key, kv.Key, Roh(kv.Value))).ToList();
             if (neu.Count == 0) return Results.Ok(new { count = 0, unchanged = items.Count });
-            var entries = c.WriteMany(actor, neu.Select(kv => (Plugins.Stream + key, Types.PluginDataSet, (object)new PluginDataSet(kv.Key, kv.Value.GetRawText()))).ToList(), batch);
+            var entries = c.WriteMany(actor, neu.Select(kv => (Plugins.Stream + key, Types.PluginDataSet, (object)new PluginDataSet(kv.Key, Roh(kv.Value)))).ToList(), batch);
             return Results.Ok(new { count = entries.Count, unchanged = items.Count - neu.Count, batch, last = EntryView.Of(entries[^1]) });
         });
         api.MapDelete("/plugins/{key}/data/{name}", (string key, string name, HttpRequest req, Catalog c) =>

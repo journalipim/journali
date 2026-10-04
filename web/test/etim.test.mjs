@@ -126,3 +126,13 @@ test('readiness: was zum Pflegen einer Klasse an einem Knoten fehlt', async () =
   assert.equal(r.ready, false); assert.deepEqual(r.missing.map(f => f.code), ['EF000007'])
   assert.equal(readiness({ cls, map, hasAttr: none }).missing.length, cls.features.length)
 })
+
+test('checkNode: dieselbe Spaltenliste, die zwischen zwei Prüfungen wächst, zählt mit der neuen Spalte (Seiten einer Tabelle)', () => {
+  const columns = [{ key: 'etim_class' }]
+  const classes = new Map([[cls.code, cls]])
+  const cfg = { classAttr: 'etim_class', map, locale: 'de' }
+  const values = { etim_class: { value: 'EC004718' }, farbe: { value: 'Lila' } }
+  assert.ok(!checkNode({ values, columns, classes, cfg }).some(f => f.attribute === 'farbe'))
+  columns.push({ key: 'farbe' })
+  assert.ok(checkNode({ values, columns, classes, cfg }).some(f => f.attribute === 'farbe' && /passt nicht/.test(f.message)))
+})

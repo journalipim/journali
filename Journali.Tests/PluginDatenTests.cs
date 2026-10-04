@@ -1,7 +1,11 @@
+using System.Text;
 using Journali.Core.Entries;
 using Journali.Core.Journal;
 using Journali.Core.Projections;
 using Journali.Server;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Journali.Tests;
 
@@ -35,5 +39,25 @@ public class PluginDatenTests
         Assert.False(PluginApi.Unveraendert(c, "p", "a", null));
         Setze(c, "a", null);
         Assert.True(PluginApi.Unveraendert(c, "p", "a", null));
+    }
+
+    [Fact]
+    public async Task Sammel_PUT_mit_null_nimmt_Datensaetze_zurueck()
+    {
+        // Zurücksetzen einer Bibliothek (04.10.2026): tausende Datensätze in einem Stapel statt einem DELETE je Datensatz
+        var journal = new MemoryJournal();
+        var c = new Catalog(journal); c.Rebuild(); c.SeedMissing();
+        Setze(c, "class:a", "{}"); Setze(c, "class:b", "{}"); Setze(c, "bleibt", "{}");
+        var bld = WebApplication.CreateBuilder(); bld.WebHost.UseUrls("http://127.0.0.1:0"); bld.Services.AddSingleton(c); bld.Services.AddSingleton<IJournal>(journal);
+        await using var app = bld.Build();
+        app.Use(async (ctx, next) => { ctx.Request.Headers["X-Actor"] = "u"; await next(); });
+        PluginApi.Map(app.MapGroup("/api"), Path.GetTempPath());
+        await app.StartAsync();
+        using var http = new HttpClient();
+        var res = await http.PutAsync(app.Urls.First() + "/api/plugins/p/data", new StringContent("{\"class:a\":null,\"class:b\":null,\"gibtsnicht\":null}", Encoding.UTF8, "application/json"));
+        var text = await res.Content.ReadAsStringAsync();
+        Assert.True(res.IsSuccessStatusCode, text);
+        Assert.Equal(["bleibt"], c.Lesen((_, _) => c.Plugins.All["p"].Data.Keys.ToList()));
+        Assert.Contains("\"count\":2", text);
     }
 }

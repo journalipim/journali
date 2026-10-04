@@ -270,9 +270,15 @@ const pct = (a, b) => b ? Math.round(a * 1000 / b) / 10 : 0
 
 /// Prüfung eines Knotens (Datenqualität): values = { key: { value } } wie /table; classes = Map EC → Datensatz
 /// inactive: Attribute, die es im Modell gibt, die an diesem Knoten aber nicht gelten (aus /table je Zeile) — dann sagt der Fund das
+// Die Spalten als Menge, je Spaltenliste einmal — die Prüfung läuft je Knoten mit derselben Liste (04.10.2026: vorher columns.some je Merkmal)
+const spaltenMengen = new WeakMap()
+// (neu gebaut, wenn die Liste gewachsen ist — Seiten einer Tabelle hängen Spalten an)
+const spaltenVon = columns => { let m = spaltenMengen.get(columns); if (!m || m.n !== columns.length) spaltenMengen.set(columns, m = { n: columns.length, set: new Set(columns.map(c => c.key)) }); return m.set }
+
 export function checkNode({ values, columns, classes, cfg, inactive = [] }) {
   const out = []
-  const col = columns.find(c => c.key === cfg.classAttr); if (!col) return out
+  const spalten = spaltenVon(columns)
+  if (!spalten.has(cfg.classAttr)) return out
   const code = String(values[cfg.classAttr]?.value ?? '').trim().toUpperCase()
   if (!code) return cfg.requireClass ? [{ attribute: cfg.classAttr, message: 'keine ETIM-Klasse', severity: 'info' }] : out
   const cls = classes.get(code)
@@ -280,14 +286,14 @@ export function checkNode({ values, columns, classes, cfg, inactive = [] }) {
   let filled = 0
   for (const f of cls.features) {
     const { key, steps } = mapEntry(cfg.map, f.code)
-    if (!columns.some(c => c.key === key)) continue
+    if (!spalten.has(key)) continue
     const r = resolveValue(f, throughSteps(steps, values[key]?.value))
     if (r === null) out.push({ attribute: key, go: 'node', message: `${f.code} ${nameOf(f.name, cfg.locale)}: „${values[key]?.value}“ passt nicht (${f.type}${f.type === 'Alphanumeric' ? ': ' + f.values.slice(0, 6).map(v => nameOf(v.name, cfg.locale)).join(', ') + (f.values.length > 6 ? ' …' : '') : ''})`, severity: 'warn' })
     else if (!r.unknown) filled++
   }
   // Zusammenfassung je Knoten: gefüllt = ein Wert, den das ETIM-Attribut lesen kann; ohne Spalte = kein
   // Attribut im Modell oder es gilt an diesem Knoten nicht (Gruppe nicht am Pfad, Rolle) — mit Namen, damit man weiss, welche
-  const noCol = cls.features.filter(f => !columns.some(c => c.key === mapEntry(cfg.map, f.code).key))
+  const noCol = cls.features.filter(f => !spalten.has(mapEntry(cfg.map, f.code).key))
   const mapped = cls.features.length - noCol.length
   // je ETIM-Attribut ein Fund, Feld = das ETIM-Attribut (EF-Code) — beanstandet ist aus ETIM-Sicht das EF, das sich nicht füllen lässt
   const notHere = noCol.filter(f => inactive.includes(mapEntry(cfg.map, f.code).key)), noAttr = noCol.filter(f => !inactive.includes(mapEntry(cfg.map, f.code).key))
