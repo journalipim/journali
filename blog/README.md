@@ -61,6 +61,10 @@ eigenes CSS.
 Aussage, das Wichtigste fett, am Ende ein Verweis auf die Seite. Angesprochen wird mit „ihr“ wie auf der Startseite. Jede Aussage stimmt trotzdem:
 nichts, was journali nicht kann. Die sachliche Beschreibung steht in `docs/` und in der Hilfe.
 
+**Wortwahl wörtlich prüfen**: eine Überschrift wird im Alltagssinn gelesen. Nicht „Das Journal ist die Wahrheit“, sondern „Single Source of
+Truth“; nicht „Belege“ (Kassenquittung), sondern eingefrorene Dokumente; nicht „mitlaufen“, sondern „mitwachsen“; nicht „ein Paket, das läuft“,
+sondern „durchstarten vom ersten Moment an“.
+
 **Keine Platzhalter für Screenshots** — die setzt ein, wer den Entwurf in WordPress fertig macht, an der Stelle, die er für richtig hält.
 
 Wie überall im Projekt: kein Name, kein Zitat, keine Beschreibung, wer sich etwas gewünscht hat; fremde Produkte nicht als Vergleich.

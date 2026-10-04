@@ -102,7 +102,7 @@ footer a { color:var(--muted); margin:0 8px; }
     <p class="def">journali ist ein PIM-System, in dem jede Änderung ein Eintrag im Journal ist — nachvollziehbar, wiederherstellbar, nie gelöscht.</p>
     <ul class="facts">
       <li><b>≡</b>Journal statt Datenbank-Update</li>
-      <li><b>⎘</b>Versionen mit eingefrorenen Belegen</li>
+      <li><b>⎘</b>Versionen mit eingefrorenen Dokumenten</li>
       <li><b>⌁</b>Plugins ohne neues Deployment</li>
     </ul>
     <div class="actions"><a class="cta" href="#problem">Die Idee entdecken ↓</a><a class="cta alt" href="#kontakt">Stand der Entwicklung</a></div>
@@ -121,7 +121,7 @@ footer a { color:var(--muted); margin:0 8px; }
   <div class="two">
     <div>
       <p class="kicker">Das Fundament</p>
-      <h2>Die Wahrheit ist <span class="grad">der Eintrag.</span></h2>
+      <h2>Single Source of Truth: <span class="grad">der Eintrag.</span></h2>
       <p>Werte, Namen, Zuordnungen, Freigaben – und sogar das Datenmodell – werden im Journal festgehalten. Damit bleibt nicht nur sichtbar, was heute gilt, sondern auch, wie es dazu kam.</p>
     </div>
     <ol class="journal" aria-label="Beispiel: Einträge im Journal">
@@ -138,14 +138,14 @@ footer a { color:var(--muted); margin:0 8px; }
   <p class="kicker">Einblicke</p>
   <h2>Mehr als eine <span class="grad">Änderungshistorie.</span></h2>
   <div class="grid">
-    <div class="card"><h3>≡ Das Journal ist die Wahrheit</h3><p>Jeder Wert, jeder Name, jede Zuordnung, jede Freigabe — ein Eintrag. Das Datenmodell (Sprachen, Kanäle, Attribute, Einheiten, Wertelisten) steht ebenfalls im Journal, nie im Code. Der Stand von jedem Zeitpunkt lässt sich mit der heutigen Software wieder herstellen.</p></div>
-    <div class="card"><h3>⎘ Versionen mit Belegen</h3><p>Eine Freigabe erzeugt eine Version: ein Zeiger auf den Journalstand plus die Dokumente, die nach draußen gingen. Unveränderlich, hash-adressiert, mit Aufbewahrungsfrist. Zurückrollen auf eine frühere Version ist ein Schritt vorwärts, kein Löschen.</p></div>
+    <div class="card"><h3>≡ Single Source of Truth</h3><p>Jeder Wert, jeder Name, jede Zuordnung, jede Freigabe — ein Eintrag. Das Datenmodell (Sprachen, Kanäle, Attribute, Einheiten, Wertelisten) steht ebenfalls im Journal, nie im Code. Der Stand von jedem Zeitpunkt lässt sich mit der heutigen Software wieder herstellen.</p></div>
+    <div class="card"><h3>⎘ Versionen mit eingefrorenen Dokumenten</h3><p>Eine Freigabe erzeugt eine Version: ein Zeiger auf den Journalstand plus die Dokumente, die nach draußen gingen. Unveränderlich, hash-adressiert, mit Aufbewahrungsfrist. Zurückrollen auf eine frühere Version ist ein Schritt vorwärts, kein Löschen.</p></div>
     <div class="card"><h3>⊞ Pflege wie in einer Tabelle</h3><p>Inline-Bearbeitung in der Zelle, Tastatur durch die Liste, Massenbearbeitung Excel-ähnlich im eigenen Fenster: Bereich ziehen, ausfüllen, aus der Zwischenablage einfügen. Das Journal läuft live daneben mit.</p></div>
     <div class="card"><h3>⇩ Import und Export ohne Schmerzen</h3><p>CSV, Excel, JSON, Zwischenablage — der Datenmapper schlägt die Zuordnung vor, ein Plan zeigt vorher, was passiert. Der JSON-Export ist vollständig wiederherstellbar: exportieren, löschen, importieren — identisch.</p></div>
     <div class="card"><h3>▤ Datenblätter aus den Daten</h3><p>WYSIWYG-Designer: Abschnitte in 1–4 Spalten, Attributgruppen, Bilder, Vergleichs- und Datentabellen. Ein Layout je Rolle oder benannt — als Vorschau, als Job für ganze Teilbäume, als Beleg zur Version. <a class="mehr" href="/?p=39">Mehr dazu →</a></p></div>
-    <div class="card"><h3>✓ Datenqualität, die mitläuft</h3><p>Regeln für Pflichtfelder, Muster, Zahlen, Listenwerte, Übersetzungen, Formeln. Prüfungen für den Digitalen Produktpass (ESPR) und Verpackung (PPWR) als Plugins. Freigabe setzt Vollständigkeit voraus.</p></div>
+    <div class="card"><h3>✓ Datenqualität, die mitwächst</h3><p>Regeln für Pflichtfelder, Muster, Zahlen, Listenwerte, Übersetzungen, Formeln. Prüfungen für den Digitalen Produktpass (ESPR) und Verpackung (PPWR) als Plugins. Freigabe setzt Vollständigkeit voraus.</p></div>
     <div class="card"><h3>⏱ Jobs im Server, nicht im Browser</h3><p>Importe, Sicherungen, Exporte, Datenblätter laufen als geplante Jobs — Zeitplan wie im Terminplaner oder als cron — mit Logs, unabhängig von einem offenen Browserfenster.</p></div>
-    <div class="card"><h3>▨ Ein Paket, das läuft</h3><p>Docker Compose mit PostgreSQL — fertig. Medien wahlweise in Postgres, im Dateisystem oder in S3-kompatiblem Object Storage; der Wechsel ist ein Kopierlauf. Plugins liegen als Verzeichnis daneben und werden ohne neues Image ausgetauscht. <a class="mehr" href="/?p=26">Mehrere Server →</a></p></div>
+    <div class="card"><h3>▨ Durchstarten vom ersten Moment an</h3><p>Docker Compose mit PostgreSQL — fertig. Medien wahlweise in Postgres, im Dateisystem oder in S3-kompatiblem Object Storage; der Wechsel ist ein Kopierlauf. Plugins liegen als Verzeichnis daneben und werden ohne neues Image ausgetauscht. <a class="mehr" href="/?p=26">Mehrere Server →</a></p></div>
   </div>
 </section>
 
