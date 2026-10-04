@@ -275,13 +275,25 @@ async function begriffe(api, art, namen) {
   return ids
 }
 
+/// Das Veröffentlichungsdatum aus dem Kopf (`date: 2026-10-07` oder `date: 2026-10-07 14:30`) als Zeit der Seite, wie WordPress sie nimmt (ohne Zone):
+/// ein Datum ohne Uhrzeit gilt für 09:00. Ein Entwurf mit Datum bleibt Entwurf; wer ihn in WordPress veröffentlicht, veröffentlicht ihn zu diesem Datum
+/// (liegt es in der Zukunft, wird er geplant). Etwas anderes als ein Datum ist ein Fehler.
+export function wpDatum(wert) {
+  const m = String(wert ?? '').trim().match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2}))?$/)
+  if (!m) throw new Error(`date "${wert}" is not a date (YYYY-MM-DD or YYYY-MM-DD HH:MM)`)
+  const [, j, mo, t, h = '09', mi = '00'] = m
+  const d = new Date(Date.UTC(+j, +mo - 1, +t, +h, +mi))
+  if (d.getUTCFullYear() !== +j || d.getUTCMonth() !== +mo - 1 || d.getUTCDate() !== +t || +h > 23 || +mi > 59) throw new Error(`date "${wert}" does not exist`)
+  return `${j}-${mo}-${t}T${h}:${mi}:00`
+}
+
 /// Einen Beitrag als Entwurf anlegen — oder, mit ersetzen, einen Entwurf neu schreiben. Liefert { id, link, edit, text } (text: die Datei mit wp: im Kopf)
 export async function entwurf(api, z, text, { ersetzen = false } = {}) {
   const { kopf, rumpf } = kopfLesen(text)
   if (!kopf.title) throw new Error('title missing in the front matter')
   const beitrag = {
     title: kopf.title, content: bloecke(rumpf), status: 'draft',
-    ...(kopf.excerpt ? { excerpt: kopf.excerpt } : {}), ...(kopf.slug ? { slug: kopf.slug } : {}),
+    ...(kopf.excerpt ? { excerpt: kopf.excerpt } : {}), ...(kopf.slug ? { slug: kopf.slug } : {}), ...(kopf.date ? { date: wpDatum(kopf.date) } : {}),
     tags: await begriffe(api, 'tags', kopf.tags), categories: await begriffe(api, 'categories', kopf.categories),
   }
   if (!beitrag.categories.length) delete beitrag.categories

@@ -2,7 +2,7 @@
 // nachgebauten WordPress-Server, nicht gegen die Seite.
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { kopfLesen, kopfSetzen, inline, bloecke, seitenBlock, cssUnter, abschnitt, htmlBloecke, wp, entwurf, zugang, seite, hash, schlagwoerter } from '../../tools/blog.mjs'
+import { kopfLesen, kopfSetzen, inline, bloecke, seitenBlock, cssUnter, abschnitt, htmlBloecke, wp, entwurf, zugang, seite, hash, schlagwoerter, wpDatum } from '../../tools/blog.mjs'
 
 test('Kopf lesen und setzen — der Rest der Datei bleibt', () => {
   const t = '---\r\ntitle: Multi-Server\r\ntags: [Betrieb, Lizenz]\r\n---\r\nText\r\n'
@@ -110,6 +110,23 @@ test('Entwurf anlegen: Blöcke, Schlagwörter (fehlende neu), Nummer zurück in 
   assert.match(w.posts.get(r.id).content, /Neuer Text\./)
   w.posts.get(r.id).status = 'publish'
   await assert.rejects(entwurf(api, z, r.text, { ersetzen: true }), /is publish — not changed/)
+})
+
+test('Veröffentlichungsdatum: aus dem Kopf als Zeit der Seite, ein Datum gilt für 09:00, ein Entwurf bleibt Entwurf', async () => {
+  assert.equal(wpDatum('2026-10-07'), '2026-10-07T09:00:00')
+  assert.equal(wpDatum('2026-10-07 14:30'), '2026-10-07T14:30:00')
+  assert.equal(wpDatum(' 2026-12-31T23:59 '), '2026-12-31T23:59:00')
+  for (const falsch of ['', 'morgen', '07.10.2026', '2026-02-30', '2026-13-01', '2026-10-07 25:00']) assert.throws(() => wpDatum(falsch), /date/, falsch)
+
+  const w = wordpress(); const z = { url: 'https://blog.test', user: 'u', password: 'ab cd' }
+  const api = wp(z, w.f)
+  const r = await entwurf(api, z, '---\ntitle: Mit Datum\ndate: 2026-10-10\n---\nText.\n')
+  const p = w.posts.get(r.id)
+  assert.equal(p.status, 'draft'); assert.equal(p.date, '2026-10-10T09:00:00')
+  assert.match(r.text, /\ndate: 2026-10-10\n/, 'das Datum bleibt in der Datei')
+  const ohne = await entwurf(api, z, '---\ntitle: Ohne Datum\n---\nText.\n')
+  assert.equal('date' in w.posts.get(ohne.id), false, 'ohne Datum schickt das Werkzeug keines: WordPress nimmt den Tag der Veröffentlichung')
+  await assert.rejects(entwurf(api, z, '---\ntitle: Falsch\ndate: bald\n---\nText.\n'), /not a date/)
 })
 
 test('Ein Abschnitt als Blöcke: ab der Überschrift 2 mit der id bis vor die nächste, ihr Text wird der Titel', () => {

@@ -33,6 +33,8 @@ Text mit **fett**, *kursiv*, `Code` und [Verweis](https://journali.de).
 ![Screenshot: Reiter Server mit zwei Servern]()
 ```
 
+- `date: 2026-10-07` (optional, auch `2026-10-07 14:30`) setzt das Veröffentlichungsdatum: Ein Datum ohne Uhrzeit gilt für 09:00. Der Beitrag bleibt Entwurf; wer ihn in WordPress
+  veröffentlicht, veröffentlicht ihn zu diesem Datum, liegt es in der Zukunft, ist er geplant. Ohne `date` gilt der Tag der Veröffentlichung.
 - `# ` und `## ` werden Überschrift 2 (der Titel ist Überschrift 1), `### ` Überschrift 3.
 - Listen, nummerierte Listen, Code (```), Zitate (`>`), Trennlinie (`---`) und Tabellen werden Blöcke des Editors.
 - `![Screenshot: …]()` ohne Adresse wird ein leerer Bildblock; darüber steht kursiv, was hinein soll. Den Hinweis löscht, wer das Bild einsetzt.
