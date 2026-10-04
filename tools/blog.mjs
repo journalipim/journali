@@ -7,6 +7,9 @@
 //   node tools/blog.mjs draft <datei> --replace   einen Entwurf neu schreiben — was in WordPress daran geändert wurde, ist dann weg
 //   node tools/blog.mjs page site/index.html      eine HTML-Seite als Entwurfsseite: der Inhalt von <main> in <div class="jx">, in einem Block
 //                                                 „Individuelles HTML“ — ohne eigenes CSS, das steht einmal im CSS-Plugin
+//   node tools/blog.mjs page <datei.html> --blocks [--section <id>] [--title <t>] [--slug <s>]
+//                                                 als Blöcke des Editors (Überschriften, Absätze, Listen) — zum Ändern in WordPress; --section nimmt den
+//                                                 Abschnitt ab der Überschrift 2 mit dieser id bis zur nächsten, ihr Text wird der Titel
 //   node tools/blog.mjs css site/index.html       das CSS der Seite nach site/wordpress.css, jede Regel unter .jx — der Inhalt kommt einmal ins CSS-Plugin
 //   node tools/blog.mjs drafts                    die Entwürfe auflisten
 //
@@ -149,6 +152,33 @@ export const RAHMEN = 'jx'
 /// Eine HTML-Seite als ein Block „Individuelles HTML“: der Inhalt von main (sonst body) in <div class="jx"><div class="inhalt"> — ein zweites <main> gehört
 /// nicht in die Seite des Themes, die Regeln für main gelten darum für .inhalt —, dazu JSON-LD. Kopf und Fuß der Seite
 /// fallen weg — die bringt das Theme —, ebenso eigenes CSS (steht im CSS-Plugin) und Skripte. Relative Adressen gelten ab der Wurzel der Seite.
+/// Ein Abschnitt einer HTML-Datei: ab der Überschrift 2 mit dieser id bis vor die nächste Überschrift 2 — ohne die Überschrift selbst, ihr Text ist der Titel
+export function abschnitt(html, id) {
+  const start = html.search(new RegExp(`<h2[^>]*\\bid="${id}"[^>]*>`, 'i'))
+  if (start < 0) throw new Error(`no <h2 id="${id}">`)
+  const kopf = html.slice(start).match(/^<h2[^>]*>([\s\S]*?)<\/h2>/i)
+  const rest = html.slice(start + kopf[0].length)
+  const ende = rest.search(/<h2\b/i)
+  return { titel: kopf[1].replace(/<[^>]+>/g, '').trim(), html: ende < 0 ? rest : rest.slice(0, ende) }
+}
+
+/// Einfaches HTML in Blöcke des Editors: Überschriften, Absätze, Listen. Inline-HTML (Verweise, fett) bleibt, wie es ist; anderes (Skripte, Verweis
+/// „zurück“ außerhalb eines Absatzes) fällt weg.
+export function htmlBloecke(html) {
+  const out = []
+  const body = html.match(/<body[^>]*>([\s\S]*)<\/body>/i)?.[1] ?? html
+  for (const m of body.matchAll(/<(h[1-6]|p|ul|ol)\b[^>]*>([\s\S]*?)<\/\1>/gi)) {
+    const tag = m[1].toLowerCase(), innen = m[2].trim()
+    if (tag[0] === 'h') out.push(ueberschrift(Math.max(2, +tag[1]), innen))
+    else if (tag === 'p') { if (innen) out.push(absatz(innen)) }
+    else {
+      const li = [...innen.matchAll(/<li\b[^>]*>([\s\S]*?)<\/li>/gi)].map(x => `<!-- wp:list-item -->\n<li>${x[1].trim()}</li>\n<!-- /wp:list-item -->`).join('\n')
+      out.push(`<!-- wp:list${tag === 'ol' ? ' {"ordered":true}' : ''} -->\n<${tag} class="wp-block-list">${li}</${tag}>\n<!-- /wp:list -->`)
+    }
+  }
+  return out.join('\n\n')
+}
+
 export function seitenBlock(html) {
   const titel = html.match(/<title>([\s\S]*?)<\/title>/i)?.[1]?.trim() ?? 'Seite'
   const ld = [...html.matchAll(/<script type="application\/ld\+json">[\s\S]*?<\/script>/gi)].map(m => m[0]).join('\n')
@@ -252,7 +282,7 @@ async function main(argv) {
     return
   }
   if (!['check', 'draft', 'page', 'drafts'].includes(befehl) || (['draft', 'page'].includes(befehl) && !datei)) {
-    console.log('usage: node tools/blog.mjs check | draft <file.md> [--replace] | page <file.html> | css <file.html> | drafts')
+    console.log('usage: node tools/blog.mjs check | draft <file.md> [--replace] | page <file.html> [--blocks] [--section <id>] [--title <t>] [--slug <s>] | css <file.html> | drafts')
     process.exitCode = 2
     return
   }
@@ -266,8 +296,14 @@ async function main(argv) {
     if (r.text !== text) fs.writeFileSync(datei, r.text)
     console.log(`draft ${r.id}: ${r.edit}`)
   } else if (befehl === 'page') {
-    const { titel, inhalt } = seitenBlock(fs.readFileSync(datei, 'utf8'))
-    const p = await api('POST', 'pages', { title: titel, content: inhalt, status: 'draft' })
+    const opt = n => { const i = rest.indexOf(n); return i >= 0 ? rest[i + 1] : undefined }
+    const html = fs.readFileSync(datei, 'utf8')
+    let titel, inhalt
+    if (rest.includes('--blocks')) {
+      const teil = opt('--section') ? abschnitt(html, opt('--section')) : { titel: html.match(/<title>([\s\S]*?)<\/title>/i)?.[1]?.trim() ?? 'Seite', html }
+      titel = teil.titel; inhalt = htmlBloecke(teil.html)
+    } else ({ titel, inhalt } = seitenBlock(html))
+    const p = await api('POST', 'pages', { title: opt('--title') ?? titel, content: inhalt, status: 'draft', ...(opt('--slug') ? { slug: opt('--slug') } : {}) })
     console.log(`page draft ${p.id}: ${z.url}/wp-admin/post.php?post=${p.id}&action=edit`)
   } else {
     for (const p of await api('GET', 'posts?status=draft&context=edit&per_page=50')) console.log(`${p.id}  ${p.modified}  ${p.title.raw}`)

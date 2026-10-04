@@ -2,7 +2,7 @@
 // nachgebauten WordPress-Server, nicht gegen die Seite.
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { kopfLesen, kopfSetzen, inline, bloecke, seitenBlock, cssUnter, wp, entwurf, zugang } from '../../tools/blog.mjs'
+import { kopfLesen, kopfSetzen, inline, bloecke, seitenBlock, cssUnter, abschnitt, htmlBloecke, wp, entwurf, zugang } from '../../tools/blog.mjs'
 
 test('Kopf lesen und setzen — der Rest der Datei bleibt', () => {
   const t = '---\r\ntitle: Multi-Server\r\ntags: [Betrieb, Lizenz]\r\n---\r\nText\r\n'
@@ -105,4 +105,19 @@ test('Entwurf anlegen: Blöcke, Schlagwörter (fehlende neu), Nummer zurück in 
   assert.match(w.posts.get(r.id).content, /Neuer Text\./)
   w.posts.get(r.id).status = 'publish'
   await assert.rejects(entwurf(api, z, r.text, { ersetzen: true }), /is publish — not changed/)
+})
+
+test('Ein Abschnitt als Blöcke: ab der Überschrift 2 mit der id bis vor die nächste, ihr Text wird der Titel', () => {
+  const html = '<body><h1>Rechtliches</h1><h2 id="impressum">Impressum</h2><p>Angebot von</p><p>Kontakt: <a href="mailto:a@b.de">a@b.de</a></p><h3>Haftung</h3><p></p>'
+    + '<ul><li>eins</li><li>zwei</li></ul><h2 id="datenschutz">Informationen zum Datenschutz</h2><p>Text</p><a class="back" href="index.html">zurück</a></body>'
+  const a = abschnitt(html, 'impressum')
+  assert.equal(a.titel, 'Impressum')
+  const b = htmlBloecke(a.html)
+  assert.equal(b, '<!-- wp:paragraph -->\n<p>Angebot von</p>\n<!-- /wp:paragraph -->\n\n<!-- wp:paragraph -->\n<p>Kontakt: <a href="mailto:a@b.de">a@b.de</a></p>\n<!-- /wp:paragraph -->\n\n'
+    + '<!-- wp:heading {"level":3} -->\n<h3 class="wp-block-heading">Haftung</h3>\n<!-- /wp:heading -->\n\n'
+    + '<!-- wp:list -->\n<ul class="wp-block-list"><!-- wp:list-item -->\n<li>eins</li>\n<!-- /wp:list-item -->\n<!-- wp:list-item -->\n<li>zwei</li>\n<!-- /wp:list-item --></ul>\n<!-- /wp:list -->')
+  const d = abschnitt(html, 'datenschutz')
+  assert.equal(d.titel, 'Informationen zum Datenschutz')
+  assert.equal(htmlBloecke(d.html), '<!-- wp:paragraph -->\n<p>Text</p>\n<!-- /wp:paragraph -->', 'der Verweis zurück fällt weg')
+  assert.throws(() => abschnitt(html, 'gibtsnicht'), /no <h2 id="gibtsnicht">/)
 })
