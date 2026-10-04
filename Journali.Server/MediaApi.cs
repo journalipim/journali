@@ -335,9 +335,10 @@ public static class MediaApi
         api.MapGet("/media/missing", async (Catalog c, IMediaStore store, CancellationToken ct) =>
         {
             var all = c.Lesen((_, _) => c.Media.All.Values.Select(m => (m.Id, m.Sha256, m.Name)).ToList());
-            var missing = new List<object>();
-            foreach (var (mid, sha, name) in all) if (!await store.ExistsAsync(sha, ct)) missing.Add(new { id = mid, sha256 = sha, name });
-            return Results.Ok(new { total = all.Count, missing });
+            // count: alle fehlenden; missing: höchstens 200 davon (04.10.2026 — nach einem Wechsel des Speichers fehlen sonst zehntausende in einer Antwort)
+            var missing = new List<object>(); var count = 0;
+            foreach (var (mid, sha, name) in all) if (!await store.ExistsAsync(sha, ct) && ++count <= 200) missing.Add(new { id = mid, sha256 = sha, name });
+            return Results.Ok(new { total = all.Count, count, missing });
         });
         // Kopierlauf zwischen Treibern: alles aus `from` (Angabe wie JOURNALI_MEDIA), was hier fehlt
         api.MapPost("/media/copy", async (CopyRequest body, HttpRequest req, SwitchableMediaStore store, CancellationToken ct) =>

@@ -68,6 +68,16 @@ test('der Fehlbestand spricht von Assets', async () => {
   await ruhe(); w.unmount()
 })
 
+// 04.10.2026: der Server nennt alle fehlenden (count), die Liste nur die ersten 200 — die Zahl kommt aus count
+test('der Fehlbestand zählt alle, auch wenn die Liste gekürzt ist', async () => {
+  const liste = Array.from({ length: 200 }, (_, i) => ({ id: 'm' + i, sha256: 'x', name: `bild${i}.jpg` }))
+  server({ missing: { total: 50000, count: 30000, missing: liste } }); store.auth = { known: true, enabled: true, user: 'u1', role: 'admin', rights: ['read', 'model', 'storage'] }
+  const w = mount(StorageSettings, { props: { teil: 'assets' } }); await ruhe()
+  await w.findAll('button').find(b => b.text() === 'Fehlbestand zählen').trigger('click'); await ruhe()
+  assert.match(w.text().replace(/\s+/g, ' '), /30000 von 50000 Assets fehlen/)
+  await ruhe(); w.unmount()
+})
+
 test('B&R: sichern und wiederherstellen — gesichert wird erst auf Knopfdruck', async () => {
   // bis 23.09.2026 stand hier nur der Weg zurück; seit 24.09.2026 wird wieder von Hand gesichert (Tarif Kostenlos hat keinen Tasker)
   const calls = server(); store.auth = { known: true, enabled: true, user: 'u1', role: 'admin', rights: ['read', 'users', 'storage'] }

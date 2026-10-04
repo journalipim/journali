@@ -5,7 +5,7 @@ defineProps({ teil: { type: String, default: 'speicher' } })
 // Einstellungen → Storage: Treiber des Assetspeichers — Postgres,
 // Verzeichnis, S3 (Garage, MinIO, AWS, R2 …); prüfen, speichern (media.json beim
 // Server, nie im Journal), Fehlbestand sehen, Blobs von einem anderen Speicher herüberkopieren.
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { api } from '../api.js'
 import { store } from '../store.js'
 import { dialog } from '../dialog.js'
@@ -20,6 +20,7 @@ const probe = ref(''); const busy = ref('')
 const zaehlBusy = ref('')   // Fehlbestand zählen
 const kopierBusy = ref('')  // Assetmigration
 const missing = ref(null)
+const fehlen = computed(() => missing.value?.count ?? missing.value?.missing.length ?? 0)   // alle fehlenden; die Liste nennt höchstens 200
 const stats = ref(null)      // was im Speicher liegt: Zahl, Grösse, Arten
 const betrieb = ref(null)    // Spiegel und Schnappschuss: Schalter und Dateigrössen
 const n = x => (x ?? 0).toLocaleString('de-DE')
@@ -195,7 +196,7 @@ onMounted(() => { load(); loadStats(); ladeBetrieb() })
     <div class="row" style="gap:8px;align-items:center">
       <button :disabled="!!zaehlBusy" @click="findMissing">{{ $t("Fehlbestand zählen") }}</button>
       <span v-if="zaehlBusy" class="muted" style="font-size:12px">{{ zaehlBusy }}</span>
-      <span v-else-if="missing" :class="missing.missing.length ? 'neg' : 'pos'">{{ missing.missing.length ? $t('✗ {0} von {1} Assets fehlen im Speicher', [missing.missing.length, missing.total]) : $t('✓ alle {0} Assets vorhanden', [missing.total]) }}</span>
+      <span v-else-if="missing" :class="fehlen ? 'neg' : 'pos'">{{ fehlen ? $t('✗ {0} von {1} Assets fehlen im Speicher', [fehlen, missing.total]) : $t('✓ alle {0} Assets vorhanden', [missing.total]) }}</span>
     </div>
     <div v-if="missing?.missing.length" class="muted" style="font-size:12px;margin-top:4px;max-height:120px;overflow:auto">{{ missing.missing.slice(0, 50).map(m => m.name).join(' · ') }}{{ missing.missing.length > 50 ? ' …' : '' }}</div>
   </div>

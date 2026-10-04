@@ -149,3 +149,9 @@ test('der Editor bietet die Beispiele als Vorlagen (＋ Beispiel gehört in den 
   assert.ok(ed.exists(), 'der Editor ist offen')
   assert.equal(ed.props('templates').length, beispiele.length, 'alle Beispiele stehen im Editor als Vorlagen zur Wahl')
 })
+
+test('ein langer Lauf wird erst oft, dann seltener gefragt (0,7 s, ab 15 s alle 2 s, ab 1 min alle 5 s)', async () => {
+  const { abstand } = await import('../../plugins/scriptum/abfrage.mjs')
+  assert.deepEqual([0, 14999, 15000, 59999, 60000, 3600000].map(t => abstand(0, t)), [700, 700, 2000, 2000, 5000, 5000])
+  assert.equal(abstand(undefined, 123), 700, 'ohne Start: wie am Anfang')
+})

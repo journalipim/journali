@@ -1,4 +1,4 @@
-(function(){const s=document.createElement('style');s.textContent="\n.zeile[data-v-42438318] { display: flex; align-items: center; gap: 6px; height: 26px; padding: 0 8px; cursor: pointer; white-space: nowrap;\n}\n.zeile.on[data-v-42438318] { background: var(--accent-soft);\n}\n.zeile .lbl[data-v-42438318] { overflow: hidden; text-overflow: ellipsis; flex: 1;\n}\n.form[data-v-42438318] { width: 100%; border-bottom: 1px solid var(--line);\n}\n.form td[data-v-42438318] { height: 30px; vertical-align: middle; white-space: normal; padding: 2px 4px;\n}\n.form td.attr[data-v-42438318] { color: var(--muted); white-space: nowrap; padding-left: 8px;\n}\n.section[data-v-42438318] { padding: 10px 8px; border-top: 1px solid var(--line);\n}\n.section h2[data-v-42438318] { font-size: 12px; margin: 0 0 6px; color: var(--muted); font-weight: 600; display: flex; align-items: center; gap: 6px;\n}\n.tabelle[data-v-42438318] { width: auto;\n}\n.text[data-v-42438318], .log[data-v-42438318] { font-family: ui-monospace, Consolas, monospace; font-size: 12px; white-space: pre-wrap; margin: 4px 0 0;\n}\n.log[data-v-42438318] { color: var(--muted); border-top: 1px solid var(--line); padding-top: 6px; margin-top: 8px;\n}\n.datei[data-v-42438318] { display: flex; gap: 6px; align-items: center;\n}\n";document.head.append(s)})();
+(function(){const s=document.createElement('style');s.textContent="\n.zeile[data-v-f65bc931] { display: flex; align-items: center; gap: 6px; height: 26px; padding: 0 8px; cursor: pointer; white-space: nowrap;\n}\n.zeile.on[data-v-f65bc931] { background: var(--accent-soft);\n}\n.zeile .lbl[data-v-f65bc931] { overflow: hidden; text-overflow: ellipsis; flex: 1;\n}\n.form[data-v-f65bc931] { width: 100%; border-bottom: 1px solid var(--line);\n}\n.form td[data-v-f65bc931] { height: 30px; vertical-align: middle; white-space: normal; padding: 2px 4px;\n}\n.form td.attr[data-v-f65bc931] { color: var(--muted); white-space: nowrap; padding-left: 8px;\n}\n.section[data-v-f65bc931] { padding: 10px 8px; border-top: 1px solid var(--line);\n}\n.section h2[data-v-f65bc931] { font-size: 12px; margin: 0 0 6px; color: var(--muted); font-weight: 600; display: flex; align-items: center; gap: 6px;\n}\n.tabelle[data-v-f65bc931] { width: auto;\n}\n.text[data-v-f65bc931], .log[data-v-f65bc931] { font-family: ui-monospace, Consolas, monospace; font-size: 12px; white-space: pre-wrap; margin: 4px 0 0;\n}\n.log[data-v-f65bc931] { color: var(--muted); border-top: 1px solid var(--line); padding-top: 6px; margin-top: 8px;\n}\n.datei[data-v-f65bc931] { display: flex; gap: 6px; align-items: center;\n}\n";document.head.append(s)})();
 const m = window.journali.vue;
 const Fragment = m.Fragment;
 const computed = m.computed;
@@ -23,6 +23,10 @@ const vModelSelect = m.vModelSelect;
 const vModelText = m.vModelText;
 const withDirectives = m.withDirectives;
 const withKeys = m.withKeys;
+const abstand = (seit, jetzt = Date.now()) => {
+  const t2 = jetzt - (seit ?? jetzt);
+  return t2 < 15e3 ? 700 : t2 < 6e4 ? 2e3 : 5e3;
+};
 const h = window.journali;
 const api = h.api;
 const store = h.store;
@@ -715,7 +719,7 @@ const _sfc_main = {
       lauf.value = null;
       try {
         const r = await api.post(`/api/scriptum/scripts/${encodeURIComponent(cur.value.key)}/run`, { params: Object.fromEntries(Object.entries(werte.value).map(([k, v]) => [k, String(v ?? "")])) });
-        lauf.value = { job: r.job, run: r.run, laeuft: true };
+        lauf.value = { job: r.job, run: r.run, laeuft: true, seit: Date.now() };
         busy.value = t("läuft …");
         frage();
       } catch (e) {
@@ -736,7 +740,7 @@ const _sfc_main = {
           busy.value = "";
           store.toast(e.message);
         }
-      }, 700);
+      }, abstand(lauf.value?.seit));
     }
     const ergebnis = computed(() => lauf.value?.ergebnis ?? null);
     const dateiLink = computed(() => ergebnis.value?.file ? `${store.server}/api/scriptum/runs/${lauf.value.job}/${lauf.value.run}/file?name=${encodeURIComponent(ergebnis.value.file)}` : null);
@@ -1270,7 +1274,7 @@ const _sfc_main = {
     };
   }
 };
-const View = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-42438318"]]);
+const View = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-f65bc931"]]);
 refresh();
 const entry = {
   views: [{ path: "skripte", topic: "tools", label: t("Skripte"), icon: "λ", hint: t("Auswertungen und Übergaben, die hier geschrieben werden: Tabelle, Text oder Datei — von Hand oder als Job"), component: View }],

@@ -1,8 +1,8 @@
 {
  "key": "scriptum",
  "version": "1.0.0",
- "hash": "71d9705e57cc55e6141ef4e2a9210c92532c07a768ddd1d79e8aa01b50d518a1",
- "issued": "2026-10-01",
+ "hash": "0ead043efefd45dd9e4ae696efa0743e29b38cd9574cac4a5f6273c6c25ee778",
+ "issued": "2026-10-04",
  "issuer": "journali",
- "sig": "s/IqAjovO8iMhzk8XdFJFhG+lUXpwsVQMcGdgAX5qiUSoYliFhFNNBSNfJkrvbTKrf2f7fU5ret5Qm4finGmyA=="
+ "sig": "hffj6s7u52YxFHA3XST2fv1mAGUUIF1eFRYaLOWNJXMUoHknQYDtwvQ2o/2AM5IOPCdOqPksxHr1KWDDWvSGdA=="
 }

@@ -6,6 +6,7 @@
 // Gelaufen wird als Job: ▶ startet den Lauf (POST /api/scriptum/scripts/<key>/run) und fragt dann nach Stand und
 // Ergebnis. Das Ergebnis ist eine Tabelle, ein Text oder eine Datei im Fach out/ des Laufs.
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { abstand } from '../abfrage.mjs'   // erst oft, dann seltener fragen
 import { api, store, plugins, Splitter, ScriptEditor, paneWidth } from 'journali'
 import { t as t_ } from 'journali'
 import { kopfLesen, paramsAus } from '../kopf.mjs'
@@ -105,7 +106,7 @@ async function ausfuehren() {
   busy.value = t_('startet …'); lauf.value = null
   try {
     const r = await api.post(`/api/scriptum/scripts/${encodeURIComponent(cur.value.key)}/run`, { params: Object.fromEntries(Object.entries(werte.value).map(([k, v]) => [k, String(v ?? '')])) })
-    lauf.value = { job: r.job, run: r.run, laeuft: true }
+    lauf.value = { job: r.job, run: r.run, laeuft: true, seit: Date.now() }
     busy.value = t_('läuft …')
     frage()
   } catch (e) { busy.value = ''; store.toast(e.message) }
@@ -120,7 +121,7 @@ function frage() {
       if (r.laeuft) return frage()
       busy.value = ''
     } catch (e) { busy.value = ''; store.toast(e.message) }
-  }, 700)
+  }, abstand(lauf.value?.seit))
 }
 const ergebnis = computed(() => lauf.value?.ergebnis ?? null)
 const dateiLink = computed(() => ergebnis.value?.file
