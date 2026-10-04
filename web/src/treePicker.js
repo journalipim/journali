@@ -14,10 +14,20 @@ export function treePicker(container, { value = null, values = [], roles = ['gro
   const above = id => { for (const a of tree.ancestors(id)) if (picked.has(a.id)) return true; return false }
   const box = document.createElement('div'); box.className = 'picker tp'; box.style.cssText = `max-height:${height}px;overflow:auto`
   const search = document.createElement('input'); search.type = 'search'; search.placeholder = '🔍 filtern'; search.style.cssText = 'width:100%;margin-bottom:4px'
-  search.addEventListener('input', () => { q = search.value.trim().toLowerCase(); if (q) for (const r of tree.rows) if (matches(r)) for (const a of tree.ancestors(r.id)) open.add(a.id); draw() })
+  // Einmal je Eingabe: die Treffer und ihre Vorfahren (vorher prüfte visible() je gezeigter Zeile alle Knoten samt Vorfahren — bei 19 500 Knoten
+  // hing der Dialog bei jedem Tastendruck, 04.10.2026); entprellt
+  let sichtbar = new Set(), warte = null
+  search.addEventListener('input', () => {
+    clearTimeout(warte)
+    warte = setTimeout(() => {
+      q = search.value.trim().toLowerCase(); sichtbar = new Set()
+      if (q) for (const r of tree.rows) if (matches(r)) { sichtbar.add(r.id); for (const a of tree.ancestors(r.id)) { open.add(a.id); sichtbar.add(a.id) } }
+      draw()
+    }, 150)
+  })
   const wrap = document.createElement('div'); wrap.append(search, box); container.append(wrap)
   const matches = r => q && (r.label.toLowerCase().includes(q) || tree.keyHit(r, q))
-  const visible = r => !q || matches(r) || tree.rows.some(x => matches(x) && tree.ancestors(x.id).some(a => a.id === r.id))
+  const visible = r => !q || sichtbar.has(r.id)
   // Aufklappen bis zum Gewaehlten — im Mehrfachmodus bis zu jedem Angehakten. Ohne das stand die Wurzelliste da,
   // und der per Rechtsklick vorbelegte Knoten war nirgends zu sehen (28.09.2026)
   function reveal() {
