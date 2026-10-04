@@ -395,10 +395,31 @@ function enabled(def, col, block) {
   return block.active && !def.hereLocked && !def.whenLocked && (!col.locale || def.perLocale) && (!col.channel || def.perChannel)
     && (!col.channel || !def.channels || def.channels.includes(col.channel))
 }
-function listOptions(def) { return (model.value.lists.find(l => l.key === def.list)?.values ?? []).map(v => v.value) }
-function listLabel(def) { const vals = model.value.lists.find(l => l.key === def.list)?.values ?? []; const first = store.viewLocales?.[0]; return v => { const l = vals.find(x => x.value === v)?.label; return l?.[first] || l?.[master.value] || l?.de || l?.en || Object.values(l ?? {}).find(Boolean) || v } }
+// Je Werteliste einmal (04.10.2026): Werte, Nachschlagen und die Funktionen für Bezeichnung und Gruppe — vorher je Zelle bei jedem Zeichnen neu,
+// und jedes Nachschlagen lief über die ganze Liste (eine Klassenliste hat tausende Werte, die Auswahl fragt je Wert). Das Modell kommt bei jeder
+// Änderung als neues Objekt vom Server, darum hängt der Index an der Liste selbst.
+const listenByKey = computed(() => new Map((model.value?.lists ?? []).map(l => [l.key, l])))
+const listenIndex = new WeakMap()
+function listIndex(key) {
+  const list = listenByKey.value.get(key); if (!list) return null
+  let x = listenIndex.get(list)
+  if (!x) {
+    const byValue = new Map(); for (const v of list.values ?? []) if (!byValue.has(v.value)) byValue.set(v.value, v)
+    listenIndex.set(list, x = { list, options: (list.values ?? []).map(v => v.value), byValue, labels: new Map(), group: null })
+  }
+  return x
+}
+const OHNE_LISTE = []
+function listOptions(def) { return listIndex(def.list)?.options ?? OHNE_LISTE }
+function listLabel(def) {
+  const x = listIndex(def.list); if (!x) return v => v
+  const first = store.viewLocales?.[0], m = master.value, k = `${first}|${m}`
+  let f = x.labels.get(k)
+  if (!f) x.labels.set(k, f = v => { const l = x.byValue.get(v)?.label; return l?.[first] || l?.[m] || l?.de || l?.en || Object.values(l ?? {}).find(Boolean) || v })
+  return f
+}
 // Gruppe eines Listenwerts (Spalte „group“ der Werteliste, z. B. ETIM-Klassengruppe) — zum Blättern in grossen Listen
-function listGroup(def) { const list = model.value.lists.find(l => l.key === def.list); if (!(list?.columns ?? []).includes('group')) return null; const vals = list.values ?? []; return v => vals.find(x => x.value === v)?.extra?.group ?? null }
+function listGroup(def) { const x = listIndex(def.list); if (!(x?.list.columns ?? []).includes('group')) return null; return x.group ??= v => x.byValue.get(v)?.extra?.group ?? null }
 function released(channel, locale) { return node.value?.releases.some(r => r.channel === channel && r.locale === locale) ?? false }
 // Freigabe über den Fallback-Kanal (Sortiment geerbt): nicht eigen, gilt aber — ◌ mit Herkunft
 function releasedVia(channel, locale) { return node.value?.releasedVia?.find(r => r.channel === channel && r.locale === locale)?.via ?? null }
@@ -902,7 +923,8 @@ function toggleRelease(channel, locale) {
   const q = `channel=${encodeURIComponent(channel)}` + (locale ? `&locale=${encodeURIComponent(locale)}` : '')
   command(() => released(channel, locale) ? api.del(`${nodeUrl()}/releases?${q}`) : api.post(`${nodeUrl()}/releases`, { channel, locale }))
 }
-function countBelow(id) { let n = 0; for (const k of tree.kids(id)) n += 1 + countBelow(k.id); return n }
+// Knoten darunter: einmal je Baum gezählt, ohne Rekursion (04.10.2026 — vorher bei jedem Zeichnen des Kopfs der ganze Teilbaum)
+const knotenDarunter = computed(() => { void tree.rows; let n = 0; const stapel = [props.id]; while (stapel.length) for (const k of tree.kids(stapel.pop())) { n++; stapel.push(k.id) } return n })
 async function retire() {
   const kids = node.value.children
   // immer fragen — eigener Dialog statt window.confirm
@@ -958,7 +980,7 @@ function cellMenu(e, def, col, block) {
       <button class="x" @click="undo" :disabled="!history.length && !ausJournal?.possible"
         :title="history.length ? stepTitle(history[history.length - 1], $t('↶ Rückgängig'), history.length, $t('Strg+Z')) : (ausJournal?.possible ? $t('{0} (Strg+Z)', [ausJournal.what]) : $t('nichts rückgängig zu machen'))">↶<span v-if="history.length" class="muted"> {{ history.length }}</span></button>
       <button class="x" @click="redo" :disabled="!redoStack.length" :title="stepTitle(redoStack[redoStack.length - 1], $t('↷ Wiederholen'), redoStack.length, $t('Strg+Y'), true)">↷<span v-if="redoStack.length" class="muted"> {{ redoStack.length }}</span></button>
-      <button class="x" @click="retire" :title="node.children ? $t('mit {0} Knoten darunter zurückziehen (Entf im Baum)', [countBelow(id)]) : $t('Knoten zurückziehen (Entf im Baum)')">🗑</button>
+      <button class="x" @click="retire" :title="node.children ? $t('mit {0} Knoten darunter zurückziehen (Entf im Baum)', [knotenDarunter]) : $t('Knoten zurückziehen (Entf im Baum)')">🗑</button>
     </div>
     <div class="toolbar meta muted">
       <span class="mono">{{ node.id }}</span>
