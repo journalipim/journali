@@ -81,7 +81,9 @@ async function load() {
   if (mode === 'products') { q.set('role', 'product'); q.set('deep', 'true') }
   try {
     $('load').disabled = true; log('lade …')
-    const t = await api(`/api/nodes/${picked.id}/table?${q}`)
+    // seitenweise (04.10.2026): alle Varianten einer grossen Gruppe in einem Stück waren hunderte MB — der Server lehnt das jetzt ab
+    const t = { rows: [], columns: [] }
+    for (let skip = 0; skip != null;) { const s = await api(`/api/nodes/${picked.id}/table?${q}&take=1000&skip=${skip}`); t.columns = s.columns ?? t.columns; t.node = s.node; t.rows.push(...(s.rows ?? [])); log(`lade … ${t.rows.length}/${s.total ?? t.rows.length}`); skip = s.next != null && s.next > skip ? s.next : null }
     let cols = t.columns.filter(c => !['rows', 'formula', 'template'].includes(c.type))
     const view = (model.views ?? []).find(v => v.key === $('view').value)
     if (view) {

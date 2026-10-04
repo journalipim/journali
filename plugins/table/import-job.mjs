@@ -96,11 +96,15 @@ export async function lauf(format) {
   if (target && attrKeys.length) {
     const locales = [...new Set(mapping.map(m => m.locale).filter(Boolean))]
     for (const loc of locales.length ? locales : [model.masterLocale ?? 'de']) {
-      const t = await api.get(`/api/nodes/${encodeURIComponent(target.id)}/table?deep=true&attributes=${encodeURIComponent(attrKeys.join(','))}&locale=${encodeURIComponent(loc)}`)
-      for (const r of t.rows) {
-        const cur = existing.get(r.row.id) ?? {}
-        for (const [k, v] of Object.entries(r.values)) if (v.value != null) { cur[`${k}|${loc}`] = v.value; cur[`${k}|${loc}#own`] = v.own }
-        existing.set(r.row.id, cur)
+      // seitenweise und knapp (sparse: nur Zellen mit Wert) — ein grosser Zweig überschreitet sonst die Grenze des Servers (04.10.2026)
+      for (let skip = 0; skip != null;) {
+        const t = await api.get(`/api/nodes/${encodeURIComponent(target.id)}/table?deep=true&sparse=true&attributes=${encodeURIComponent(attrKeys.join(','))}&locale=${encodeURIComponent(loc)}&take=2000&skip=${skip}`)
+        for (const r of t.rows) {
+          const cur = existing.get(r.row.id) ?? {}
+          for (const [k, v] of Object.entries(r.values)) if (v.value != null) { cur[`${k}|${loc}`] = v.value; cur[`${k}|${loc}#own`] = v.own }
+          existing.set(r.row.id, cur)
+        }
+        skip = t.next != null && t.next > skip ? t.next : null
       }
     }
   }

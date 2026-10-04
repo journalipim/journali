@@ -35,21 +35,45 @@ const roleLabel = { group: t_('Gruppen'), product: t_('Produkte'), variant: t_('
 const childRole = computed(() => props.role || (data.value?.rows[0]?.row.role ?? (data.value?.node.role === 'product' ? 'variant' : 'product')))
 const views = computed(() => (model.value?.views ?? []).filter(v => v.level === childRole.value))
 
-async function load() {
+// Seitenweise (04.10.2026): „Alle Varianten darunter“ an einer grossen Gruppe waren 12 000 Zeilen × 783 Spalten, rund 700 MB — der Browser
+// stürzte ab. Geladen werden SEITE Zeilen, „weitere“ holt die nächsten; nach dem Speichern so viele wie vorher.
+const SEITE = 200
+const total = ref(0)
+const next = ref(null)
+const query = () => {
+  const q = new URLSearchParams({ locale: locale.value })
+  if (props.role) q.set('role', props.role)
+  if (props.deep === '1') q.set('deep', 'true')
+  if (props.attrs) q.set('attributes', props.attrs)
+  return `/api/nodes/${encodeURIComponent(props.id)}/table?${q}`
+}
+async function seiten(skip, bis) {
+  const out = []; let t = null
+  while (skip != null && out.length < bis) {
+    t = await api.get(`${query()}&take=${Math.min(SEITE, bis - out.length)}&skip=${skip}`)
+    out.push(...(t.rows ?? []))
+    skip = t.next != null && t.next > skip ? t.next : null
+  }
+  return { t, rows: out, next: skip }
+}
+async function more() {
+  if (next.value == null || busy.value) return
+  busy.value = 'lade …'
+  try { const r = await seiten(next.value, SEITE); data.value.rows.push(...r.rows); next.value = r.next } catch (e) { store.toast(e.message) } finally { busy.value = '' }
+}
+async function load(anzahl = Math.max(SEITE, data.value?.rows?.length ?? 0)) {
   busy.value = 'lade …'
   try {
-    const q = new URLSearchParams({ locale: locale.value })
-    if (props.role) q.set('role', props.role)
-    if (props.deep === '1') q.set('deep', 'true')
-    if (props.attrs) q.set('attributes', props.attrs)
-    data.value = await api.get(`/api/nodes/${encodeURIComponent(props.id)}/table?${q}`)
+    const r = await seiten(0, anzahl)
+    data.value = { ...r.t, rows: r.rows }
+    total.value = r.t?.total ?? r.rows.length; next.value = r.next
     dirty.value = new Map()
     if (popup) document.title = `⊞ ${data.value.node.label} · journali`
   } catch (e) { store.toast(e.message) } finally { busy.value = '' }
 }
-watch(() => [props.id, props.role, props.deep], load)
-watch(locale, load)
-onMounted(async () => { if (!tree.loaded) await tree.load(); load() })
+watch(() => [props.id, props.role, props.deep], () => load(SEITE))
+watch(locale, () => load())
+onMounted(async () => { if (!tree.loaded) await tree.load(); load(SEITE) })
 
 // Spalten: nach Sicht geordnet (und beschränkt), sonst alle in Gruppenreihenfolge des Modells; Achsen der Variante sind fest
 // Feste Spalten sind virtuelle Spalten in derselben Liste:
@@ -437,7 +461,13 @@ function write(r, c0, text) {
 }
 const textOf = (r, c) => shown(r, c) ?? inherited(r, c) ?? ''
 // Ergänzungsvorschläge einer Spalte: die Werte, die es in der Spalte schon gibt — nur Text, nicht bei langem Text
-const suggestionsOf = c => { const seen = new Set(); for (const r of rows.value) { const v = String(textOf(r, c) ?? '').trim(); if (v && v.length <= 80 && !v.includes('\n')) seen.add(v) } return [...seen].sort((a, b) => a.localeCompare(b, 'de')) }
+// Einmal je Spalte gerechnet, nicht je Zelle (vorher Zeilen² × Spalten bei jedem Zeichnen); neu, wenn sich Zeilen oder Änderungen ändern
+const vorschlaege = computed(() => { void rows.value.length; void dirty.value.size; return new Map() })
+const suggestionsOf = c => {
+  const cache = vorschlaege.value; if (cache.has(c.key)) return cache.get(c.key)
+  const seen = new Set(); for (const r of rows.value) { const v = String(textOf(r, c) ?? '').trim(); if (v && v.length <= 80 && !v.includes('\n')) seen.add(v) }
+  const list = [...seen].sort((a, b) => a.localeCompare(b, 'de')); cache.set(c.key, list); return list
+}
 // Strg+D: oberste Zelle des Bereichs in alle darunter; bei einer Zelle: die Zelle darüber hinein
 function fillDown() {
   const s = sel.value; if (!s) return
@@ -592,7 +622,8 @@ const labelOf = c => v => { const l = listOf(c)?.values.find(x => x.value === v)
     <div class="toolbar path">
       <router-link v-for="a in tree.ancestors(id)" :key="a.id" :to="`/tree/${a.id}`" class="crumb">{{ icon(a.role) }} {{ a.label }} ›</router-link>
       <router-link :to="`/tree/${id}`" class="crumb">{{ icon(data.node.role) }} {{ data.node.label }}</router-link>
-      <h1>⊞ {{ deep === '1' ? $t('Alle') + ' ' + (roleLabel[childRole] ?? childRole) + ' darunter' : $t('Subitems') }} <span class="muted">· {{ rows.length }}</span></h1>
+      <h1>⊞ {{ deep === '1' ? $t('Alle') + ' ' + (roleLabel[childRole] ?? childRole) + ' darunter' : $t('Subitems') }} <span class="muted">· {{ total > rows.length ? $t('{0} von {1}', [rows.length, total]) : rows.length }}</span></h1>
+      <button v-if="next != null" class="mehr" :disabled="!!busy" :title="$t('Die nächsten Zeilen laden')" @click="more">▼ {{ $t('weitere {0}', [Math.min(200, total - rows.length)]) }}</button>
       <span class="grow" />
       <span v-if="busy" class="muted">{{ busy }}</span>
       <span v-if="dirty.size" class="chip dirty" :title="$t('{0} geänderte Zellen — Strg+S speichert', [dirty.size])">✎ {{ dirty.size }}</span>
