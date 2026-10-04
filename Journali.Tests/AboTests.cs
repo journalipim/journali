@@ -344,11 +344,15 @@ public class AboTests
         var w = new Welt();
         await w.Abos.VerbindenAsync(w.C, "de", Key, "taloan");
         Assert.Equal(0, await w.Abos.AuffrischenAsync(w.C));                   // gerade erst geholt
+        // sofort (neuer Hauptserver, ein Server ohne Lizenz): auch ein junger Stand wird neu gefragt — der Lizenzserver kennt vielleicht einen neuen Zusatz
+        w.Server.Plan = "proplus";
+        Assert.Equal(1, await w.Abos.AuffrischenAsync(w.C, sofort: true));
+        Assert.Equal("proplus", w.C.With((_, _, _) => w.C.Teams.Get("de")!.Abo!.Plan));
         w.Uhr.Jetzt = Jetzt + Abos.Auffrischen + TimeSpan.FromMinutes(1);
         w.Server.Plan = "pro";                                                  // im Shop gewechselt
         Assert.Equal(1, await w.Abos.AuffrischenAsync(w.C));
         Assert.Equal("pro", w.C.With((_, _, _) => w.C.Teams.Get("de")!.Abo!.Plan));
-        Assert.Equal(2, w.Server.Anfragen);
+        Assert.Equal(3, w.Server.Anfragen);
     }
 
     /// <summary>Nach einem Eingriff in der Verwaltung des Lizenzservers: sofort neu fragen, mit dem gemerkten Schlüssel.</summary>

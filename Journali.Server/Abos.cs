@@ -155,8 +155,12 @@ public sealed class Abos(Instanz instanz, string jobsDir, HttpClient http, Func<
         return null;
     }
 
-    /// <summary>Alle Teams mit Abo, deren Stand älter als <see cref="Auffrischen"/> ist, neu fragen. Liefert, wie viele es waren.</summary>
-    public async Task<int> AuffrischenAsync(Catalog c, CancellationToken ct = default)
+    /// <summary>
+    /// Alle Teams mit Abo, deren Stand älter als <see cref="Auffrischen"/> ist, neu fragen — mit <paramref name="sofort"/> jedes, gleich wie alt sein Stand ist
+    /// (04.10.2026: nach dem Wechsel des Hauptservers und solange ein Server ohne Lizenz läuft; ein Stand von vor einer Stunde kennt einen eben eingetragenen
+    /// Zusatz Multi-Server nicht). Liefert, wie viele es waren.
+    /// </summary>
+    public async Task<int> AuffrischenAsync(Catalog c, CancellationToken ct = default, bool sofort = false)
     {
         if (!Eingestellt) return 0;
         // Das Tarifblatt zuerst, auch ohne Abo — aber nur, wenn die Anlage registriert ist oder ohnehin ein Abo hat:
@@ -168,7 +172,7 @@ public sealed class Abos(Instanz instanz, string jobsDir, HttpClient http, Func<
         var n = 0;
         foreach (var (team, zuletzt) in teams)
         {
-            if (zuletzt is { } z && Jetzt - z < Auffrischen) continue;
+            if (!sofort && zuletzt is { } z && Jetzt - z < Auffrischen) continue;
             var key = Secrets.Get(jobsDir, SecretKey(team)).GetValueOrDefault("key");
             // Ohne Schlüssel nur die Teams, die schon einen Stand haben: ihr Kauf liegt beim Lizenzserver
             if (string.IsNullOrWhiteSpace(key) && zuletzt is null) continue;

@@ -152,11 +152,13 @@ _ = Task.Run(async () =>
     {
         var haupt = verbund.IstHaupt;
         var seit = DateTime.UtcNow - letzte;
-        if (haupt && (!warHaupt || seit >= TimeSpan.FromHours(1) || (verbund.OhneLizenzAnzahl > 0 && seit >= TimeSpan.FromMinutes(5))))
+        // eben Hauptserver geworden oder ein Server ohne Lizenz: jeden Stand neu fragen, auch einen jungen — stündlich nur die, die älter als 20 h sind
+        var sofort = !warHaupt || (verbund.OhneLizenzAnzahl > 0 && seit >= TimeSpan.FromMinutes(5));
+        if (haupt && (sofort || seit >= TimeSpan.FromHours(1)))
         {
             letzte = DateTime.UtcNow;
             try { catalog.Lesen((_, _) => catalog.LimitsAusLizenz()); } catch { }
-            try { await abos.AuffrischenAsync(catalog); } catch (Exception e) { Console.WriteLine($"journali: subscriptions not refreshed — {e.Message}"); }
+            try { await abos.AuffrischenAsync(catalog, sofort: sofort); } catch (Exception e) { Console.WriteLine($"journali: subscriptions not refreshed — {e.Message}"); }
         }
         warHaupt = haupt;
         await Task.Delay(TimeSpan.FromSeconds(10));
