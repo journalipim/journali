@@ -2498,7 +2498,8 @@ Unlimited beliebig viele, jeder andere Tarif einen) zusammen mit dem Zusatz „M
 Laufen mehr, gilt eine Rangfolge: der festgelegte Hauptserver zuerst — auch wenn er nach einem Arbeitsserver startet —, dann nach dem Start; gesperrte und
 nicht erreichbare zählen nicht. Wer über die Zahl hinaus läuft, startet, trägt sich ein und beantwortet unter `/api` nur `/api/health` (503 „Für einen
 weiteren Server fehlt die Lizenz.“), führt keine Jobs aus und wird nie Hauptserver; wird ein Platz frei, arbeitet er ohne Neustart. Ist nur ein Server
-erlaubt, ist der laufende der Hauptserver: läuft der festgelegte nicht, übernimmt der gestartete von selbst.
+erlaubt, ist der laufende der Hauptserver: läuft der festgelegte nicht, vertritt ihn der gestartete von selbst. Die Vertretung steht nicht im
+Journal — festgelegt bleibt der Hauptserver aus den Einstellungen, und sobald Multi-Server bekannt ist, ist er es wieder.
 
 **Multi-Server ist ein eigenes Produkt** (04.10.2026, entschieden): im Shop kein Teil einer Tarif-Variante — sonst müssten sich die Varianten vervielfachen —,
 sondern ein Zusatz mit eigenen Varianten. Er gilt für die ganze Instanz, nicht für ein Team. Der Lizenzserver unterscheidet die Varianten (Tarif oder

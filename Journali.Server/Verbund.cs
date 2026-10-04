@@ -421,17 +421,18 @@ public sealed class Verbund : IDisposable
     private bool RolleKlaeren()
     {
         var main = Festgelegt();
-        // Ist nur ein Server erlaubt, ist der laufende der Hauptserver (04.10.2026): läuft der festgelegte nicht, übernimmt dieser — läuft er, hat er den
-        // Platz, und dieser ist ohne Lizenz (oben). Mit mehreren erlaubten Servern wechselt der Hauptserver nie von selbst (Entscheidung 2).
+        // Ist nur ein Server erlaubt, ist der laufende der Hauptserver (04.10.2026): läuft der festgelegte nicht, vertritt ihn dieser — läuft er, hat er den
+        // Platz, und dieser ist ohne Lizenz (oben). Die Vertretung steht nicht im Journal: festgelegt bleibt der Hauptserver aus den Einstellungen. Wird
+        // Multi-Server bekannt, ist er wieder der Hauptserver und nicht der, der zuerst gestartet ist. Mit mehreren erlaubten Servern wechselt der
+        // Hauptserver nie von selbst (Entscheidung 2).
         var uebernehmen = Erlaubt == 1 && main is not null && main != Id;
         // ein gesperrter Server oder einer ohne Lizenz wird nicht Hauptserver — auch nicht, wenn noch keiner festgelegt ist
         if (Gesperrt || _ohneLizenz || (main is not null && main != Id && !uebernehmen)) { SperreAbgeben(); return false; }
         if (!SperreHalten()) return false;
         if (main is null)
             _catalog.With((_, _, write) => _catalog.Jobs.MainServer is null ? write("system", Jobs.ServerStream + Id, Types.ServerMainSet, new ServerMainSet(Host), null) : null);
-        else if (uebernehmen)   // die Sperre ist frei: der bisherige Hauptserver läuft nicht
-            _catalog.With((_, _, write) => _catalog.Jobs.MainServer != Id ? write("system", Jobs.ServerStream + Id, Types.ServerMainSet, new ServerMainSet(Host), null) : null);
-        return Festgelegt() == Id;
+        // die Sperre ist frei: der festgelegte läuft nicht — dieser vertritt ihn, ohne Eintrag
+        return uebernehmen || Festgelegt() == Id;
     }
 
     /// <summary>Hält dieser Server die Sperre (oder bekommt er sie jetzt)? Eine abgebrochene Verbindung zählt als verloren.</summary>
