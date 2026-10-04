@@ -1,7 +1,7 @@
 // Baumauswahl (04.10.2026): die Suche rechnet die Treffer und ihre Vorfahren einmal je Eingabe (entprellt) — vorher je gezeigter Zeile über alle Knoten.
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import './ui.mjs'
+import { win } from './ui.mjs'
 import { tree } from '../src/tree.js'
 import { treePicker } from '../src/treePicker.js'
 
@@ -13,7 +13,7 @@ test('die Suche zeigt Treffer mit ihrem Pfad und sonst nichts', async () => {
   const box = document.createElement('div'); document.body.append(box)
   treePicker(box, { roles: ['group', 'product'] })
   const feld = box.querySelector('input[type=search]')
-  feld.value = 'schneider'; feld.dispatchEvent(new Event('input'))
+  feld.value = 'schneider'; feld.dispatchEvent(new win.Event('input'))
   await new Promise(r => setTimeout(r, 200))
   const text = box.textContent
   assert.ok(text.includes('Seitenschneider') && text.includes('Zangen') && text.includes('Werkzeug'), text)
