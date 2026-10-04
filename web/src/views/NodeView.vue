@@ -455,7 +455,7 @@ async function load(fremd = false) {
     node.value = await api.get(`/api/nodes/${encodeURIComponent(props.id)}`)
     rels.value = await api.get(`/api/nodes/${encodeURIComponent(props.id)}/relations`)
     api.get(`/api/nodes/${encodeURIComponent(props.id)}/workflow`).then(w => { workflows.value = w }).catch(() => { workflows.value = [] })
-    entries.value = (await api.get(`/api/streams/${encodeURIComponent(props.id)}`)).reverse()
+    entries.value = (await api.get(`/api/streams/${encodeURIComponent(props.id)}?limit=500`)).reverse()   // die neuesten 500
     ladeAusJournal()
     if (vorher) frischMerken(vorher)
   } catch (e) {
@@ -478,7 +478,9 @@ function onKey(e) {
 }
 onMounted(() => window.addEventListener('keydown', onKey))
 onUnmounted(() => window.removeEventListener('keydown', onKey))
-watch(() => store.head, h => { if (h > (entries.value[0]?.number ?? 0)) load(true) })
+// Neu laden, wenn sich am Knoten oder an einem Vorfahren etwas geändert hat (lastNumber im Baum) — nicht bei jedem Eintrag irgendwo (04.10.2026)
+const pfadStand = computed(() => Math.max(0, ...[tree.byId?.get(props.id), ...tree.ancestors(props.id)].map(r => r?.lastNumber ?? 0)))
+watch(pfadStand, n => { if (n > (entries.value[0]?.number ?? 0)) load(true) })
 
 // ---- Befehle
 async function command(fn, rethrow = false) {
@@ -830,8 +832,10 @@ async function wfEffect(eff) {
 // Verlauf eines Workflows am Knoten: jeder Schritt mit Zeit, Wer, Schritt, Zustand, Notiz — aus dem Journalstrom des Knotens
 async function wfHistory(w) {
   const label = k => L(w.states?.find(s => s.key === k)?.label) || k
-  let src = entries.value; let title = t_('Verlauf „{0}“ · {1}', [L(w.label) || w.workflow, shownLabel.value])
-  if (w.inheritedFrom) { try { src = (await api.get(`/api/streams/${encodeURIComponent(w.inheritedFrom.id)}`)).reverse(); title = t_('Verlauf „{0}“ · geerbt von „{1}“', [L(w.label) || w.workflow, w.inheritedFrom.label]) } catch { src = [] } }
+  const typen = 'WorkflowStateSet,WorkflowAssigned'   // nur die Schritte — der Strom eines Knotens kann tausende Einträge haben
+  let src = []; try { src = (await api.get(`/api/streams/${encodeURIComponent(props.id)}?types=${typen}`)).reverse() } catch { src = entries.value }
+  let title = t_('Verlauf „{0}“ · {1}', [L(w.label) || w.workflow, shownLabel.value])
+  if (w.inheritedFrom) { try { src = (await api.get(`/api/streams/${encodeURIComponent(w.inheritedFrom.id)}?types=${typen}`)).reverse(); title = t_('Verlauf „{0}“ · geerbt von „{1}“', [L(w.label) || w.workflow, w.inheritedFrom.label]) } catch { src = [] } }
   // nach Datum gruppiert: Datumszeile, darunter die Schritte mit Uhrzeit
   const list = src.filter(e => (e.type === 'WorkflowStateSet' || e.type === 'WorkflowAssigned') && e.payload?.workflow === w.workflow)
   const rows = []; let day = null

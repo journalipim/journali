@@ -33,6 +33,8 @@ public sealed class Term
 public sealed class ModelCatalog : IProjection
 {
     public long LastApplied { get; private set; }
+    /// <summary>Die Nummer des letzten Eintrags, der das Modell geändert hat (04.10.2026) — die Oberfläche lädt das Modell nur dann neu, nicht bei jedem Eintrag.</summary>
+    public long Changed { get; private set; }
 
     public Dictionary<string, LocaleDefinition> Locales { get; } = new();
     /// <summary>Die Mastersprache (settings:master_locale); null, bis gesät.</summary>
@@ -252,7 +254,10 @@ public sealed class ModelCatalog : IProjection
             case Types.TermRetired when entry.Stream.StartsWith(Model.TermStream, StringComparison.Ordinal):
                 Terms.Remove(entry.Stream[Model.TermStream.Length..]);
                 break;
+            default:
+                return;   // kein Eintrag des Modells
         }
+        Changed = entry.Number;
     }
 
     private ValueList List(string key)

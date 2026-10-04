@@ -63,4 +63,13 @@ export const tree = reactive({
   },
 })
 
-watch(() => store.head, () => tree.load())
+// Neue Stände: höchstens alle FREMD_MS neu laden (04.10.2026) — der ganze Baum sind bei 19 500 Knoten rund 11 MB, und während eines Imports
+// kam alle 3 s ein neuer Stand. Eigene Aktionen rufen tree.load() selbst und sofort.
+const FREMD_MS = 10000
+let zuletzt = 0, geplant = null
+const laden = tree.load.bind(tree)
+tree.load = async (...a) => { zuletzt = Date.now(); clearTimeout(geplant); geplant = null; return laden(...a) }
+watch(() => store.head, () => {
+  if (geplant) return
+  geplant = setTimeout(() => { geplant = null; tree.load() }, Math.max(0, FREMD_MS - (Date.now() - zuletzt)))
+})

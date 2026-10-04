@@ -376,6 +376,7 @@ api.MapGet("/health", (HttpRequest req, Catalog c) =>
     return Results.Ok(new
 {
     head = c.Head,
+    modelAt = c.ReadModel(m => m.Changed),   // letzte Änderung am Modell: die Oberfläche lädt es nur dann neu
     nodes = c.Read(t => t.Nodes.Count),
     // Nutzung für die Statusleiste: Woche und Monat, mehr steht in den Einstellungen.
     // Wessen Nutzung: „die beiden kleinen Balken oben sollen dem Anwender anzeigen, was für ein
@@ -572,7 +573,13 @@ api.MapGet("/journal/{number:long}", (long number, IJournal j) =>
         ? Results.Ok(EntryView.Of(e))
         : Results.NotFound());
 
-api.MapGet("/streams/{stream}", (string stream, IJournal j) => j.ReadStream(stream).Select(EntryView.Of));
+// limit: nur die neuesten so viele (die Knotenansicht: 500 — ein oft bearbeiteter Knoten hat tausende Einträge); types: nur diese Typen (Workflow-Verlauf)
+api.MapGet("/streams/{stream}", (string stream, IJournal j, int? limit = null, string? types = null) =>
+{
+    var typen = types?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToHashSet(StringComparer.Ordinal);
+    var alle = j.ReadStream(stream).Where(e => typen is null || typen.Contains(e.Type));
+    return (limit is { } n && n > 0 ? alle.TakeLast(n) : alle).Select(EntryView.Of);
+});
 
 // ---- Oberfläche: web/ gebaut nach wwwroot, alles Unbekannte an index.html ----
 

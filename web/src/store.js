@@ -189,8 +189,11 @@ export const store = reactive({
         import('./ai.js').then(({ ai }) => ai.loadState()).catch(() => {})
       }
       this.error = ''
-      // Modell-Änderungen kommen durch dasselbe Journal — bei neuem Stand nachladen.
-      if (!this.model || changed || force) this.model = await api.get('/api/model')
+      // Modell-Änderungen kommen durch dasselbe Journal — nachladen, wenn sich das Modell geändert hat (modelAt, 04.10.2026: vorher bei jedem Eintrag
+      // irgendwo, in jedem Tab, mehrere MB); ein älterer Server ohne modelAt: bei jedem neuen Stand wie bisher
+      const modellNeu = h.modelAt == null ? changed : h.modelAt !== this.modelAt
+      this.modelAt = h.modelAt ?? null
+      if (!this.model || modellNeu || force) this.model = await api.get('/api/model')
     } catch (e) {
       this.online = false
       this.error = e.message
