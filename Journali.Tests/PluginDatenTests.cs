@@ -59,5 +59,9 @@ public class PluginDatenTests
         Assert.True(res.IsSuccessStatusCode, text);
         Assert.Equal(["bleibt"], c.Lesen((_, _) => c.Plugins.All["p"].Data.Keys.ToList()));
         Assert.Contains("\"count\":2", text);
+        // der Stand: die Nummer des letzten Eintrags im Strom des Plugins
+        var stand = await http.GetStringAsync(app.Urls.First() + "/api/plugins/p/stand");
+        Assert.Contains("\"lastNumber\":" + c.Lesen((_, _) => c.Plugins.All["p"].LastNumber), stand);
+        Assert.Contains("\"lastNumber\":0", await http.GetStringAsync(app.Urls.First() + "/api/plugins/gibtsnicht/stand"));
     }
 }

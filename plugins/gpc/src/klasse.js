@@ -22,3 +22,14 @@ export async function klasseAm(api, nodeId, classAttr) {
 
 /// Gilt die Gruppe an diesem Knoten (eigen oder von oben)? `node` ist die Antwort von /api/nodes/{id}.
 export const gruppeGilt = (node, group) => (node?.groups ?? []).some(g => g.key === group && g.active !== false)
+
+/// Die Daten des Klassendialogs (alle Bricks, Wörterbuch), solange der Stand des Plugins gleich ist (04.10.2026): der Dialog öffnet je Knoten,
+/// und die Daten sind mehrere MB. stand = lastNumber aus /api/plugins/gpc/stand.
+export const vorrat = { stand: null, all: null }
+export async function datenLesen(api) {
+  const stand = (await api.get('/api/plugins/gpc/stand').catch(() => null))?.lastNumber ?? null
+  if (stand != null && vorrat.stand === stand && vorrat.all) return vorrat.all
+  const all = await api.get('/api/plugins/gpc/data?values=true')
+  vorrat.stand = stand; vorrat.all = stand != null ? all : null
+  return all
+}

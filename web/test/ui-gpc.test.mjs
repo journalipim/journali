@@ -16,20 +16,22 @@ const BAUM = [
   { id: 'p2', parent: 'g1', label: 'Tischlampe', role: 'product' },
 ]
 
-function server({ assign = {}, migrate = null, node = { values: [], ancestors: [] }, tabelle = { rows: [] } } = {}) {
+function server({ assign = {}, migrate = null, node = { values: [], ancestors: [] }, tabelle = { rows: [] }, werte = [], stand = null } = {}) {
   const daten = {}; const calls = []
   globalThis.fetch = async (url, opts = {}) => {
     const path = String(url).replace(/^https?:\/\/[^/]+/, '').split('?')[0]
     const method = opts.method ?? 'GET'
     const body = opts.body ? JSON.parse(opts.body) : null
-    calls.push({ path, method, body })
+    calls.push({ path, method, body, url: String(url) })
     let out = {}
-    if (path === '/api/plugins/gpc/data' && method === 'GET') out = daten
+    if (path === '/api/plugins/gpc/stand') out = stand == null ? {} : { lastNumber: stand() }
+    else if (path === '/api/plugins/gpc/data' && method === 'GET') out = daten
     else if (path === '/api/plugins/gpc/data' && method === 'PUT') Object.assign(daten, body)
     else if (path.startsWith('/api/plugins/gpc/data/') && method === 'PUT') daten[decodeURIComponent(path.split('/').pop())] = body
     else if (path === '/api/classification/assign') out = { group: 'class_gpc', classAttr: 'class_gpc', attributes: 2, groupAttached: true, readiness: { ready: true, groupExists: true, groupOn: true, missing: [] }, ...assign }
     else if (path === '/api/classification/migrate') out = body.dryRun ? (migrate ?? { groups: 0, attributes: 0, nodes: 0 }) : { groups: 2, attributes: 5, nodes: 3 }
     else if (path.endsWith('/table')) out = tabelle
+    else if (path.startsWith('/api/values/')) out = { values: werte }
     else if (path.startsWith('/api/nodes/')) out = node
     return { ok: true, status: 200, text: async () => JSON.stringify(out) }
   }
@@ -128,14 +130,17 @@ test('der Knoten steht schon da — mit der Klasse, die dort gilt, eigen oder ge
 })
 
 test('Umfeld: die Klassen der Geschwister und der Knoten darunter, die häufigste zuerst, ein Klick wählt sie', async () => {
-  // derselbe Stellvertreter antwortet auf beide Fragen (Geschwister, darunter): jede Klasse zählt zweimal
+  // Geschwister aus der Tabelle des Elternknotens, darunter nur die eigenen Werte (/api/values) — keine tiefe Tabelle
   const tabelle = { rows: [
     { row: { id: 'p2' }, values: { class_gpc: { value: '19900002', own: true } } },
     { row: { id: 'p3' }, values: { class_gpc: { value: '19900002', own: true } } },
     { row: { id: 'p4' }, values: { class_gpc: { value: '19900001', own: true } } },
     { row: { id: 'p1' }, values: { class_gpc: { value: '19900003', own: true } } },
   ] }
-  const { w } = await mitDaten('p1', { tabelle })
+  const werte = [{ id: 'v1', value: '19900002' }, { id: 'v2', value: '19900002' }, { id: 'v3', value: '19900001' }, { id: 'p1', value: '19900003' }]
+  const { w, calls } = await mitDaten('p1', { tabelle, werte })
+  assert.ok(!calls.some(c => /deep=true/.test(c.url)), 'keine Tabelle des Teilbaums')
+  assert.ok(calls.some(c => c.path === '/api/values/class_gpc' && /root=p1/.test(c.url)))
   const zeilen = w.findAll('.pick').filter(p => /im Umfeld/.test(p.text()))
   assert.deepEqual(zeilen.map(z => z.text().replace(/\s+/g, ' ')), ['19900002 Sample Cables · 4 im Umfeld', '19900001 Sample Lamps · 2 im Umfeld'])
   await zeilen[0].trigger('click')
@@ -243,4 +248,17 @@ test('ohne Bestand der früheren Bauart steht keine Umstellung da', async () => 
   server()
   const w = await dialog('p1')
   assert.doesNotMatch(w.text(), /früheren Bauart/)
+})
+
+test('die Daten des Dialogs bleiben vorrätig, solange der Stand des Plugins gleich ist', async () => {
+  let n = 7
+  const { calls } = server({ stand: () => n })
+  const { vorrat } = await import('../../plugins/gpc/src/klasse.js')
+  vorrat.stand = null; vorrat.all = null
+  const lesen = () => calls.filter(c => c.path === '/api/plugins/gpc/data' && c.method === 'GET').length
+  ;(await dialog('p1')).unmount(); assert.equal(lesen(), 1)
+  ;(await dialog('p1')).unmount(); assert.equal(lesen(), 1, 'derselbe Stand: nicht neu gelesen')
+  n = 8
+  ;(await dialog('p1')).unmount(); assert.equal(lesen(), 2, 'neuer Stand: neu gelesen')
+  vorrat.stand = null; vorrat.all = null
 })

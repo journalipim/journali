@@ -1,4 +1,4 @@
-(function(){const s=document.createElement('style');s.textContent="\n.klasse[data-v-681ef238] { display: flex; flex-direction: column; flex: 1; min-height: 0; font-size: 13px;\n}\n.klasse.modal[data-v-681ef238] { width: min(820px, 94vw); max-height: 88vh; background: var(--pane); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 12px 32px rgba(0,0,0,.4);\n}\n.kopf[data-v-681ef238], .fuss[data-v-681ef238] { padding: 8px 12px;\n}\n.fuss[data-v-681ef238] { border-top: 1px solid var(--line);\n}\n.koerper[data-v-681ef238] { padding: 8px 12px; flex: 1;\n}\n.zeile[data-v-681ef238] { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 3px 0;\n}\n.attr[data-v-681ef238] { color: var(--muted); min-width: 64px;\n}\n.kl[data-v-681ef238] { font-size: 12px; padding: 2px 0;\n}\n.drop[data-v-681ef238] { display: inline-block; padding: 2px 10px; border: 1px dashed var(--line); border-radius: 6px; cursor: pointer;\n}\n.drop.over[data-v-681ef238] { outline: 2px dashed var(--accent); outline-offset: -2px;\n}\n.recent[data-v-681ef238] { display: inline-flex; gap: 4px; flex-wrap: wrap;\n}\n.recent .chip[data-v-681ef238] { cursor: pointer;\n}\n.recent .chip.dim[data-v-681ef238] { opacity: .55; cursor: default;\n}\nbutton.on[data-v-681ef238] { background: var(--accent-soft);\n}\n.suche[data-v-681ef238] { width: 100%; margin: 6px 0; box-sizing: border-box;\n}\n.liste[data-v-681ef238] { max-height: 300px; overflow: auto; border: 1px solid var(--line); border-radius: 6px;\n}\n.pick[data-v-681ef238] { cursor: pointer; padding: 1px 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;\n}\n.pick[data-v-681ef238]:hover { background: var(--hover);\n}\n.pick.current[data-v-681ef238] { background: var(--accent-soft);\n}\n.ein[data-v-681ef238] { padding-left: 16px;\n}\n.caret[data-v-681ef238] { display: inline-block; width: 14px; color: var(--muted);\n}\n.brick[data-v-681ef238] { margin-top: 8px; padding: 6px 8px; border: 1px solid var(--accent); border-radius: 6px;\n}\n";document.head.append(s)})();
+(function(){const s=document.createElement('style');s.textContent="\n.klasse[data-v-5b1d5773] { display: flex; flex-direction: column; flex: 1; min-height: 0; font-size: 13px;\n}\n.klasse.modal[data-v-5b1d5773] { width: min(820px, 94vw); max-height: 88vh; background: var(--pane); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 12px 32px rgba(0,0,0,.4);\n}\n.kopf[data-v-5b1d5773], .fuss[data-v-5b1d5773] { padding: 8px 12px;\n}\n.fuss[data-v-5b1d5773] { border-top: 1px solid var(--line);\n}\n.koerper[data-v-5b1d5773] { padding: 8px 12px; flex: 1;\n}\n.zeile[data-v-5b1d5773] { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 3px 0;\n}\n.attr[data-v-5b1d5773] { color: var(--muted); min-width: 64px;\n}\n.kl[data-v-5b1d5773] { font-size: 12px; padding: 2px 0;\n}\n.drop[data-v-5b1d5773] { display: inline-block; padding: 2px 10px; border: 1px dashed var(--line); border-radius: 6px; cursor: pointer;\n}\n.drop.over[data-v-5b1d5773] { outline: 2px dashed var(--accent); outline-offset: -2px;\n}\n.recent[data-v-5b1d5773] { display: inline-flex; gap: 4px; flex-wrap: wrap;\n}\n.recent .chip[data-v-5b1d5773] { cursor: pointer;\n}\n.recent .chip.dim[data-v-5b1d5773] { opacity: .55; cursor: default;\n}\nbutton.on[data-v-5b1d5773] { background: var(--accent-soft);\n}\n.suche[data-v-5b1d5773] { width: 100%; margin: 6px 0; box-sizing: border-box;\n}\n.liste[data-v-5b1d5773] { max-height: 300px; overflow: auto; border: 1px solid var(--line); border-radius: 6px;\n}\n.pick[data-v-5b1d5773] { cursor: pointer; padding: 1px 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;\n}\n.pick[data-v-5b1d5773]:hover { background: var(--hover);\n}\n.pick.current[data-v-5b1d5773] { background: var(--accent-soft);\n}\n.ein[data-v-5b1d5773] { padding-left: 16px;\n}\n.caret[data-v-5b1d5773] { display: inline-block; width: 14px; color: var(--muted);\n}\n.brick[data-v-5b1d5773] { margin-top: 8px; padding: 6px 8px; border: 1px solid var(--accent); border-radius: 6px;\n}\n";document.head.append(s)})();
 const m$1 = window.journali.vue;
 const Fragment = m$1.Fragment;
 const computed = m$1.computed;
@@ -246,6 +246,15 @@ async function klasseAm(api2, nodeId, classAttr2) {
   return { node: n, code: null, geerbt: false };
 }
 const gruppeGilt = (node, group) => (node?.groups ?? []).some((g) => g.key === group && g.active !== false);
+const vorrat = { stand: null, all: null };
+async function datenLesen(api2) {
+  const stand = (await api2.get("/api/plugins/gpc/stand").catch(() => null))?.lastNumber ?? null;
+  if (stand != null && vorrat.stand === stand && vorrat.all) return vorrat.all;
+  const all = await api2.get("/api/plugins/gpc/data?values=true");
+  vorrat.stand = stand;
+  vorrat.all = stand != null ? all : null;
+  return all;
+}
 const _export_sfc = (sfc, props) => {
   const target = sfc.__vccOpts || sfc;
   for (const [key, val] of props) {
@@ -427,7 +436,7 @@ const _sfc_main$2 = {
     async function laden() {
       busy.value = t("lese …");
       try {
-        const all = await api.get("/api/plugins/gpc/data?values=true");
+        const all = await datenLesen(api);
         gespeichert.value = all;
         release.value = all.release ?? null;
         settings.value = all.settings ?? {};
@@ -572,18 +581,20 @@ const _sfc_main$2 = {
       const row = zielZeile.value;
       if (!row || !hatDaten.value) return;
       const key = schl.value.classAttr, zaehle = /* @__PURE__ */ new Map();
-      const lies = async (url) => {
-        try {
-          const t2 = await api.get(url);
-          for (const r of t2.rows ?? []) {
-            const c = String(r.values?.[key]?.value ?? "").trim();
-            if (c && r.row?.id !== row.id) zaehle.set(c, (zaehle.get(c) ?? 0) + 1);
-          }
-        } catch {
-        }
+      const zaehl = (id, wert) => {
+        const c = String(wert ?? "").trim();
+        if (c && id !== row.id) zaehle.set(c, (zaehle.get(c) ?? 0) + 1);
       };
-      if (row.parent) await lies(`/api/nodes/${encodeURIComponent(row.parent)}/table?attributes=${encodeURIComponent(key)}`);
-      await lies(`/api/nodes/${encodeURIComponent(row.id)}/table?deep=true&attributes=${encodeURIComponent(key)}`);
+      if (row.parent) try {
+        const t2 = await api.get(`/api/nodes/${encodeURIComponent(row.parent)}/table?attributes=${encodeURIComponent(key)}`);
+        for (const r of t2.rows ?? []) zaehl(r.row?.id, r.values?.[key]?.value);
+      } catch {
+      }
+      try {
+        const t2 = await api.get(`/api/values/${encodeURIComponent(key)}?root=${encodeURIComponent(row.id)}`);
+        for (const v of t2.values ?? []) zaehl(v.id, v.value);
+      } catch {
+      }
       umfeld.value = [...zaehle].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, 5).map(([code, n]) => ({ code, n }));
     }
     const kiBereit = computed(() => !!ai?.available?.());
@@ -1388,7 +1399,7 @@ ${liste}`,
     };
   }
 };
-const Klasse = /* @__PURE__ */ _export_sfc(_sfc_main$2, [["__scopeId", "data-v-681ef238"]]);
+const Klasse = /* @__PURE__ */ _export_sfc(_sfc_main$2, [["__scopeId", "data-v-5b1d5773"]]);
 const _hoisted_1$1 = {
   class: "pane",
   style: { "flex": "1" }

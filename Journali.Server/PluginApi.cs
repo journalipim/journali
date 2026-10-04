@@ -167,6 +167,10 @@ public static class PluginApi
                 foreach (var n in names) { if (sb.Length > 1) sb.Append(','); sb.Append(JsonSerializer.Serialize(n)).Append(':').Append(data[n]); }
                 return Results.Text(sb.Append('}').ToString(), "application/json");
             }));
+        // Der Stand der Plugin-Daten (04.10.2026): die Nummer des letzten Eintrags im Strom — ein Plugin, das grosse Daten vorrätig hält
+        // (gpc: alle Bricks), fragt hier, ob sie noch gelten, statt sie neu zu laden
+        api.MapGet("/plugins/{key}/stand", (string key, Catalog c) =>
+            c.Lesen((_, _) => Results.Ok(new { lastNumber = c.Plugins.All.TryGetValue(key, out var p) ? p.LastNumber : 0 })));
         api.MapGet("/plugins/{key}/data/{name}", (string key, string name, Catalog c) =>
             c.Lesen((_, _) => c.Plugins.All.TryGetValue(key, out var p) && p.Data.TryGetValue(name, out var v)
                 ? Results.Text(v, "application/json") : Results.NotFound()));

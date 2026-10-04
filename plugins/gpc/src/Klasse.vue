@@ -10,7 +10,7 @@ import {
   isZip, jsonInZip, inflateInBrowser, parseGpc, toRecords, searchBricks, brickText, pathText, titleOf,
   featureSpecs, classesByAttribute, classSpec, systemSpec,
 } from '../core.mjs'
-import { schluessel, klasseAm } from './klasse.js'
+import { schluessel, klasseAm, datenLesen } from './klasse.js'
 
 const props = defineProps({ node: { type: String, default: '' }, modal: Boolean })
 const emit = defineEmits(['close', 'done'])
@@ -39,7 +39,7 @@ const schl = computed(() => schluessel(settings.value))
 async function laden() {
   busy.value = t_('lese …')
   try {
-    const all = await api.get('/api/plugins/gpc/data?values=true')
+    const all = await datenLesen(api)
     gespeichert.value = all
     release.value = all.release ?? null
     settings.value = all.settings ?? {}
@@ -139,14 +139,11 @@ async function umfeldLesen() {
   const row = zielZeile.value
   if (!row || !hatDaten.value) return
   const key = schl.value.classAttr, zaehle = new Map()
-  const lies = async url => {
-    try {
-      const t = await api.get(url)
-      for (const r of t.rows ?? []) { const c = String(r.values?.[key]?.value ?? '').trim(); if (c && r.row?.id !== row.id) zaehle.set(c, (zaehle.get(c) ?? 0) + 1) }
-    } catch { /* ohne Klassenattribut gibt es kein Umfeld */ }
-  }
-  if (row.parent) await lies(`/api/nodes/${encodeURIComponent(row.parent)}/table?attributes=${encodeURIComponent(key)}`)
-  await lies(`/api/nodes/${encodeURIComponent(row.id)}/table?deep=true&attributes=${encodeURIComponent(key)}`)
+  const zaehl = (id, wert) => { const c = String(wert ?? '').trim(); if (c && id !== row.id) zaehle.set(c, (zaehle.get(c) ?? 0) + 1) }
+  // Geschwister: die Kinder des Elternknotens mit ihrer geltenden Klasse
+  if (row.parent) try { const t = await api.get(`/api/nodes/${encodeURIComponent(row.parent)}/table?attributes=${encodeURIComponent(key)}`); for (const r of t.rows ?? []) zaehl(r.row?.id, r.values?.[key]?.value) } catch { /* ohne Klassenattribut gibt es kein Umfeld */ }
+  // Darunter: nur die Knoten mit eigener Klasse (04.10.2026) — vorher die Tabelle des ganzen Teilbaums
+  try { const t = await api.get(`/api/values/${encodeURIComponent(key)}?root=${encodeURIComponent(row.id)}`); for (const v of t.values ?? []) zaehl(v.id, v.value) } catch { }
   umfeld.value = [...zaehle].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, 5).map(([code, n]) => ({ code, n }))
 }
 
