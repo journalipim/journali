@@ -562,8 +562,10 @@ api.MapPost("/journal", (AppendRequest r, Catalog c) =>
 
 // Delta: alles nach Nummer `after`, höchstens `limit` Stück — der Abnehmer
 // merkt sich die letzte Nummer und fragt wieder.
-api.MapGet("/journal", (IJournal j, long after = 0, int limit = 1000) =>
-    j.ReadAfter(after).Take(Math.Clamp(limit, 1, 10_000)).Select(EntryView.Of));
+// brief=true (Oberfläche): eine Nutzlast über 4 KB kommt gekürzt — Plugin-Daten sind bis 4 MB je Eintrag, und die Journal-Ansicht braucht
+// nur, was sie beschreibt (04.10.2026). Der ganze Eintrag: /journal/{nummer}.
+api.MapGet("/journal", (IJournal j, long after = 0, int limit = 1000, bool brief = false) =>
+    j.ReadAfter(after).Take(Math.Clamp(limit, 1, 10_000)).Select(e => EntryView.Gekuerzt(e, brief ? EntryView.BriefBytes : null)));
 
 api.MapGet("/journal/{number:long}", (long number, IJournal j) =>
     j.ReadAfter(number - 1).FirstOrDefault() is { } e && e.Number == number
@@ -626,6 +628,11 @@ sealed record AppendRequest(string Actor, string Stream, string Type, JsonElemen
 /// </summary>
 sealed record EntryView(long Number, DateTimeOffset At, string Actor, string Stream, string Type, JsonElement Payload, string? Batch, string Kind)
 {
-    public static EntryView Of(Entry e) =>
-        new(e.Number, e.At, e.Actor, e.Stream, e.Type, JsonDocument.Parse(e.Payload).RootElement.Clone(), e.Batch, e.Kind ?? Kinds.Of(e.Type));   // alte Einträge ohne Spalte: aus dem Typ
+    public const int BriefBytes = 4096;
+
+    public static EntryView Of(Entry e) => Gekuerzt(e, null);
+
+    /// <summary>Mit <paramref name="max"/> kommt eine längere Nutzlast gekürzt (JournalBrief).</summary>
+    public static EntryView Gekuerzt(Entry e, int? max) =>
+        new(e.Number, e.At, e.Actor, e.Stream, e.Type, JournalBrief.Payload(e.Payload, max), e.Batch, e.Kind ?? Kinds.Of(e.Type));   // alte Einträge ohne Spalte: aus dem Typ
 }

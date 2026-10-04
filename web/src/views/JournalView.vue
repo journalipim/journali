@@ -14,6 +14,7 @@ const filter = ref(String(route.query.q ?? ''))
 watch(() => route.query.q, q => { if (q != null) filter.value = String(q) })
 let pulling = null   // laufende Abfrage — Einhängen und erster Serverstand kommen fast gleichzeitig
 const CHUNK = 5000
+const MAX = 20000   // so viele Einträge hält die Ansicht höchstens — ein Import mit 100 000 Einträgen bei offenem Journal liess sie sonst wachsen, bis der Tab abstürzte
 const oldest = computed(() => entries.value.length ? entries.value[entries.value.length - 1].number : null)
 const loadingOlder = ref(false)
 
@@ -22,9 +23,11 @@ async function pull() {
   pulling = (async () => {
     try {
       let after = entries.value[0]?.number ?? 0
-      if (!entries.value.length) { const head = store.head || (await api.get('/api/health')).head || 0; after = Math.max(0, head - CHUNK) }   // erst die neuesten
-      const fresh = (await api.get(`/api/journal?after=${after}&limit=10000`)).filter(e => e.number > after)
-      if (fresh.length) entries.value = [...fresh.reverse(), ...entries.value]
+      const head = store.head || (await api.get('/api/health')).head || 0
+      // erst die neuesten; liegt seit dem letzten Stand mehr als ein Stück dazwischen, beginnt die Ansicht neu bei den neuesten
+      if (!entries.value.length || head - after > CHUNK) { entries.value = []; after = Math.max(0, head - CHUNK) }
+      const fresh = (await api.get(`/api/journal?after=${after}&limit=${CHUNK}&brief=true`)).filter(e => e.number > after)
+      if (fresh.length) { const all = [...fresh.reverse(), ...entries.value]; entries.value = all.length > MAX ? all.slice(0, MAX) : all }
     } catch (e) { store.toast(e.message) }
     finally { pulling = null }
   })()
@@ -33,9 +36,9 @@ async function pull() {
 onMounted(pull)
 // ältere Einträge: das Stück vor dem ältesten bekannten
 async function older() {
-  if (loadingOlder.value || !oldest.value || oldest.value <= 1) return
+  if (loadingOlder.value || !oldest.value || oldest.value <= 1 || entries.value.length >= MAX) return   // höchstens MAX Einträge, auch beim Blättern
   loadingOlder.value = true
-  try { const from = Math.max(0, oldest.value - 1 - CHUNK); const more = (await api.get(`/api/journal?after=${from}&limit=${CHUNK}`)).filter(e => e.number < oldest.value); entries.value = [...entries.value, ...more.reverse()] }
+  try { const from = Math.max(0, oldest.value - 1 - CHUNK); const more = (await api.get(`/api/journal?after=${from}&limit=${CHUNK}&brief=true`)).filter(e => e.number < oldest.value); entries.value = [...entries.value, ...more.reverse()] }
   catch (e) { store.toast(e.message) } finally { loadingOlder.value = false }
 }
 watch(() => store.head, pull)
@@ -54,6 +57,11 @@ const shown = computed(() => {
       || e.actor.toLowerCase().includes(f) || describe(e).toLowerCase().includes(f)))
 })
 const kindCount = k => entries.value.filter(e => e.kind === k).length
+// Gezeichnet werden ZEIGE Zeilen, „weitere“ die nächsten — 20 000 Tabellenzeilen auf einmal sind für den Browser zu viel
+const ZEIGE = 1000
+const zeige = ref(ZEIGE)
+watch([filter, kinds], () => { zeige.value = ZEIGE })
+const sichtbar = computed(() => shown.value.slice(0, zeige.value))
 </script>
 
 <template>
@@ -66,8 +74,9 @@ const kindCount = k => entries.value.filter(e => e.kind === k).length
       <span class="grow" />
       <span class="muted mono">#{{ store.head }}</span>
     </div>
-    <div class="scroll"><EntryList :entries="shown" show-stream />
-      <div v-if="oldest && oldest > 1" class="chips" style="padding:8px"><button class="x" :disabled="loadingOlder" @click="older" :title="$t('die nächsten älteren Einträge laden')">{{ $t("⇣ ältere{0}", [loadingOlder ? ' …' : ` (vor #${oldest})`]) }}</button></div>
+    <div class="scroll"><EntryList :entries="sichtbar" show-stream />
+      <div v-if="shown.length > sichtbar.length" class="chips" style="padding:8px"><button class="x weitere" @click="zeige += ZEIGE" :title="$t('Die nächsten Zeilen zeigen')">▼ {{ $t('weitere {0}', [Math.min(ZEIGE, shown.length - sichtbar.length)]) }}</button></div>
+      <div v-if="oldest && oldest > 1" class="chips" style="padding:8px"><button class="x" :disabled="loadingOlder || entries.length >= MAX" @click="older" :title="$t('die nächsten älteren Einträge laden')">{{ $t("⇣ ältere{0}", [loadingOlder ? ' …' : ` (vor #${oldest})`]) }}</button></div>
     </div>
   </div>
 </template>

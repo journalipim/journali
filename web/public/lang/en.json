@@ -3014,5 +3014,6 @@
  "Die Sperre gilt, bis ein Administrator sie unter Einstellungen → Server aufhebt.": "The block applies until an administrator lifts it under Settings → Server.",
  "Tabelle zu gross: {0} Zeilen × {1} Spalten, höchstens {2} Zellen je Abruf.": "Table too large: {0} rows × {1} columns, at most {2} cells per request.",
  "weitere {0}": "{0} more",
- "Die nächsten Zeilen laden": "Load the next rows"
+ "Die nächsten Zeilen laden": "Load the next rows",
+ "Die nächsten Zeilen zeigen": "Show the next rows"
 }
