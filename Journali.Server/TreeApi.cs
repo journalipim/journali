@@ -12,12 +12,39 @@ namespace Journali.Server;
 public static class TreeApi
 {
     public sealed record RolesBody(string[]? Roles);
+    /// <summary>Die Attribute mit eigenen Werten im Teilbaum (Knoten und Nachfahren, die die Rolle sieht), sortiert, und die Zahl der Knoten;
+    /// null, wenn es den Knoten nicht gibt. Werte in Zeilen zählen mit ihrer Spalte, ein Zeilenattribut mit Zeilen zählt selbst.</summary>
+    public static (List<string> Attributes, int Nodes)? UsedAttributes(Tree tree, string id, string? role, bool admin)
+    {
+        if (!tree.Nodes.TryGetValue(id, out var root)) return null;
+        var used = new HashSet<string>(StringComparer.Ordinal);
+        void Add(Node n)
+        {
+            foreach (var a in n.Values.Keys) used.Add(a.Attribute);
+            foreach (var a in n.Lists.Keys) used.Add(a.Attribute);
+            foreach (var (k, rows) in n.Rows) if (rows.Count > 0) used.Add(k);
+        }
+        Add(root);
+        var nodes = 1;
+        foreach (var d in tree.DescendantsDeepestFirst(id))
+            if (tree.Visible(d, role, admin)) { Add(d); nodes++; }
+        return (used.OrderBy(x => x, StringComparer.Ordinal).ToList(), nodes);
+    }
+
     public static void Map(RouteGroupBuilder api)
     {
         // ---- Lesen -----------------------------------------------------------
 
         // Der Baum in der Sicht der Rolle: Knoten, die sie nicht sieht (NodeRestricted am Pfad), fehlen samt allem darunter
         api.MapGet("/tree", (HttpRequest req, Catalog c) => c.Lesen((model, tree) => { var s = Auth.Sicht(req); return tree.Nodes.Values.Where(n => tree.Visible(n, s.Role, s.Admin)).Select(n => NodeRow.Of(tree, model, n)).ToList(); }));
+
+        // Welche Attribute im Teilbaum eigene Werte haben (Knoten und alle Nachfahren, die der Aufrufer sieht) — nur die Schlüssel. Für die
+        // Prüfung vor dem Umhängen: die ganze Tabelle eines grossen Zweigs (zehntausende Zeilen, hunderte Spalten) ist für den Browser zu gross.
+        api.MapGet("/nodes/{id}/used-attributes", (string id, HttpRequest req, Catalog c) => c.Lesen((_, tree) =>
+        {
+            var (role, admin) = Auth.Sicht(req);
+            return UsedAttributes(tree, id, role, admin) is { } u ? Results.Ok(new { attributes = u.Attributes, nodes = u.Nodes }) : Results.NotFound();
+        }));
 
         // Sichtbar für Rollen (27.09.2026): ab hier abwärts; leer = für alle
         api.MapPut("/nodes/{id}/roles", (string id, RolesBody b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.RestrictNode(x, id, b.Roles)));

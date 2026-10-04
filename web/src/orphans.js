@@ -18,14 +18,10 @@ export async function groupsAt(targetId) {
 export async function neededByNode(nodeId, model) {
   // n:m: ein Wert ist erst verwaist, wenn KEINE Gruppe seines Attributs am Ziel gilt (29.09.2026)
   const groupsOf = new Map(model.attributes.map(a => [a.key, gruppenVon(a)]))
-  const used = new Set()
+  // Welche Attribute im Teilbaum Werte haben, sagt der Server — nur die Schlüssel. Die ganze Tabelle eines grossen Zweigs
+  // (/table?deep=true: 17 782 Zeilen × 783 Spalten waren 1 GB JSON) brachte den Browser zum Absturz (04.10.2026).
   const n = await api.get(`/api/nodes/${encodeURIComponent(nodeId)}`)
-  for (const v of n.values ?? []) used.add(v.attribute)
-  for (const k of Object.keys(n.rows ?? {})) used.add(k)
-  try {
-    const t = await api.get(`/api/nodes/${encodeURIComponent(nodeId)}/table?deep=true`)
-    for (const r of t.rows) for (const [k, v] of Object.entries(r.values)) if (v.own) used.add(k)
-  } catch {}
+  const used = new Set((await api.get(`/api/nodes/${encodeURIComponent(nodeId)}/used-attributes`))?.attributes ?? [])
   const need = new Map()
   for (const a of used) { const gs = groupsOf.get(a) ?? []; if (!gs.length) continue; for (const g of gs) { if (!need.has(g)) need.set(g, []); need.get(g).push(a) } }
   return { need, own: new Set(n.attachedGroups ?? []) }
