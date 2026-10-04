@@ -52,7 +52,8 @@ public static class RelationApi
     {
         // export=true: die Sicht der Ausleitung — ein Medium, das heute nicht gilt (Frist) oder nicht freigegeben ist
         // (Medien-Workflow), fehlt in out und inherited. Die Erzeuger (xport, rag, Datenblatt) fragen so; die Pflege sieht alles.
-        api.MapGet("/nodes/{id}/relations", (string id, HttpRequest req, Catalog c, bool export = false) =>
+        // inTake (04.10.2026): auf ein Zubehörteil können tausende Relationen zeigen — mit inTake kommen die ersten und inTotal
+        api.MapGet("/nodes/{id}/relations", (string id, HttpRequest req, Catalog c, bool export = false, int? inTake = null) =>
             c.Lesen((model, tree) =>
             {
                 if (!tree.Nodes.ContainsKey(id)) return null;
@@ -63,7 +64,8 @@ public static class RelationApi
                 return new
                 {
                     @out = c.Relations.From(id).OrderBy(r => r.Type).ThenBy(r => r.LastNumber).Select(r => RelationView.Of(tree, model, c.Media, r, "out", c.Workflows)).Where(v => Sichtbar(v) && (!export || RelationView.Ausleitbar(v.Other))).ToList(),
-                    @in = c.Relations.To(id).OrderBy(r => r.Type).ThenBy(r => r.LastNumber).Select(r => RelationView.Of(tree, model, c.Media, r, "in", c.Workflows)).Where(Sichtbar).ToList(),
+                    @in = c.Relations.To(id).OrderBy(r => r.Type).ThenBy(r => r.LastNumber).Select(r => RelationView.Of(tree, model, c.Media, r, "in", c.Workflows)).Where(Sichtbar).Take(inTake is { } t ? Math.Clamp(t, 1, 5000) : int.MaxValue).ToList(),
+                    inTotal = c.Relations.To(id).Count(),
                     inherited = Inherited(tree, model, c, id, export, s),
                 };
             }) is { } v ? Results.Ok(v) : Results.NotFound());

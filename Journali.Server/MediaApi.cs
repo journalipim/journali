@@ -222,11 +222,16 @@ public static class MediaApi
         // Verwendungsnachweis: an welchen Knoten dieses Asset hängt. Dieselbe Form wie die Relationen eines Knotens
         // (RelationView, Richtung „in“) — das andere Ende ist dann der Knoten. Ein Stopp (stop=true) ist keine
         // Verwendung, sondern eine Sperre; er steht mit in der Liste und die Oberfläche kennzeichnet ihn.
-        api.MapGet("/media/{id}/usage", (string id, HttpRequest req, Catalog c) =>
-            c.Lesen((model, tree) => c.Media.All.ContainsKey(id)
-                ? c.Relations.To(id).Where(r => !tree.Nodes.TryGetValue(r.From, out var nn) || tree.Visible(nn, Auth.Sicht(req).Role, Auth.Sicht(req).Admin))   // Knoten, die die Rolle nicht sieht, nennt der Nachweis nicht
-                    .OrderBy(r => r.Type).ThenBy(r => r.LastNumber).Select(r => RelationView.Of(tree, model, c.Media, r, "in", c.Workflows)).ToList()
-                : null) is { } v ? Results.Ok(v) : Results.NotFound());
+        // take (04.10.2026): ein Logo an allen Knoten wären zehntausende Zeilen — mit take kommen die ersten und die Gesamtzahl ({ items, total })
+        api.MapGet("/media/{id}/usage", (string id, HttpRequest req, Catalog c, int? take = null) =>
+            c.Lesen((model, tree) =>
+            {
+                if (!c.Media.All.ContainsKey(id)) return Results.NotFound();
+                var alle = c.Relations.To(id).Where(r => !tree.Nodes.TryGetValue(r.From, out var nn) || tree.Visible(nn, Auth.Sicht(req).Role, Auth.Sicht(req).Admin))   // Knoten, die die Rolle nicht sieht, nennt der Nachweis nicht
+                    .OrderBy(r => r.Type).ThenBy(r => r.LastNumber).ToList();
+                if (take is not { } t) return Results.Ok(alle.Select(r => RelationView.Of(tree, model, c.Media, r, "in", c.Workflows)).ToList());
+                return Results.Ok(new { items = alle.Take(Math.Clamp(t, 1, 5000)).Select(r => RelationView.Of(tree, model, c.Media, r, "in", c.Workflows)).ToList(), total = alle.Count });
+            }));
 
         api.MapGet("/media/{id}/file", async (string id, Catalog c, IMediaStore store, HttpResponse res, CancellationToken ct) =>
         {

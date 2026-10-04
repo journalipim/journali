@@ -453,7 +453,7 @@ async function load(fremd = false) {
   const vorher = fremd ? new Map(ownAt.value) : null
   try {
     node.value = await api.get(`/api/nodes/${encodeURIComponent(props.id)}`)
-    rels.value = await api.get(`/api/nodes/${encodeURIComponent(props.id)}/relations`)
+    rels.value = await api.get(`/api/nodes/${encodeURIComponent(props.id)}/relations?inTake=200`)   // eingehend höchstens 200, inTotal nennt alle
     api.get(`/api/nodes/${encodeURIComponent(props.id)}/workflow`).then(w => { workflows.value = w }).catch(() => { workflows.value = [] })
     entries.value = (await api.get(`/api/streams/${encodeURIComponent(props.id)}?limit=500`)).reverse()   // die neuesten 500
     ladeAusJournal()
@@ -599,7 +599,7 @@ const relBlocks = computed(() => {
   for (const r of rels.value.in ?? []) { if (!out.has(r.type)) out.set(r.type, { type: r.type, out: [], in: [] }); out.get(r.type).in.push(r) }
   return [...out.values()].sort((a, b) => a.type.localeCompare(b.type))
 })
-const relCount = computed(() => (rels.value.out?.length ?? 0) + (rels.value.in?.length ?? 0))
+const relCount = computed(() => (rels.value.out?.length ?? 0) + (rels.value.inTotal ?? rels.value.in?.length ?? 0))   // eingehend: alle, auch wenn nur 200 geladen sind
 // zurück in den Publikationsbaum, aus dem wir gekommen sind: der Weg steht im Store
 function backToPub() { const b = store.pubBack; store.pubBack = null; if (b) router.push(b.path) }
 /// Die Sprachen der Sicht — die erste trägt Bezeichnungen und einspaltige Zellen (Zeilen, Relationen)

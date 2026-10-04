@@ -341,13 +341,14 @@ function toggleState(k) { state.value = state.value === k ? '' : k; return load(
 // ---- Verwendungsnachweis: an welchen Knoten dieses Asset hängt
 const router = useRouter()
 const usage = ref([])
+const usageTotal = ref(0)   // alle Verwendungen — gezeigt werden höchstens 500
 const ICON = { group: '▣', product: '▦', variant: '◆', rubric: '❖' }
 /// Ein Stopp ist keine Verwendung, sondern eine Sperre an diesem Knoten und allem darunter.
 const istStopp = r => (r.values ?? []).some(v => v.attribute === 'stop' && v.value === 'true')
 async function loadUsage() {
   usage.value = []
   if (!cur.value) return
-  try { usage.value = await api.get(`/api/media/${cur.value}/usage`) } catch (e) { store.toast(e.message) }
+  try { const r = await api.get(`/api/media/${cur.value}/usage?take=500`); usage.value = r.items ?? r; usageTotal.value = r.total ?? usage.value.length } catch (e) { store.toast(e.message) }
 }
 watch(cur, loadUsage, { immediate: true })
 /// Zum Knoten springen — der Baum öffnet ihn.
@@ -509,7 +510,7 @@ const oeffnen = m => { if (store.can('download')) window.open(dateiLink(m), '_bl
           <span v-if="w.note" class="muted wf-note" :title="w.note">✎ {{ w.note }}</span>
         </div>
       </template>
-      <h2 class="use-h">{{ $t("⇄ Verwendung") + ' ' }}<span class="muted">{{ '· ' + usage.length }}</span></h2>
+      <h2 class="use-h">{{ $t("⇄ Verwendung") + ' ' }}<span class="muted">{{ '· ' + (usageTotal > usage.length ? $t('{0} von {1}', [usage.length, usageTotal]) : usage.length) }}</span></h2>
       <div v-if="!usage.length" class="empty" style="padding:8px">{{ $t("An keinem Knoten") }}</div>
       <div v-else class="uses">
         <div v-for="r in usage" :key="r.id" class="use" :class="{ stopp: istStopp(r) }" @click="springe(r)"

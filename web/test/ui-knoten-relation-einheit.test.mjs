@@ -42,7 +42,7 @@ async function ansicht() {
   globalThis.fetch = async (url, opt = {}) => {
     const pfad = String(url); const methode = opt.method ?? 'GET'
     rufe.push({ pfad, methode, rumpf: typeof opt.body === 'string' ? JSON.parse(opt.body) : opt.body })
-    const antwort = /\/nodes\/p1$/.test(pfad) ? knoten : /\/nodes\/p1\/relations$/.test(pfad) ? RELATIONEN : /\/api\/model/.test(pfad) ? MODELL
+    const antwort = /\/nodes\/p1$/.test(pfad) ? knoten : /\/nodes\/p1\/relations(\?|$)/.test(pfad) ? RELATIONEN : /\/api\/model/.test(pfad) ? MODELL
       : /\/api\/streams\//.test(pfad) || /\/workflow$/.test(pfad) || /\/api\/plugins/.test(pfad) || /\/api\/jobs/.test(pfad) ? [] : {}
     return { ok: true, status: 200, text: async () => JSON.stringify(antwort), json: async () => antwort }
   }
