@@ -240,7 +240,7 @@ builder.Services.ConfigureHttpJsonOptions(o =>
 builder.Services.AddCors(o => o.AddDefaultPolicy(p => p.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod()));
 
 var app = builder.Build();
-app.Logger.LogInformation("Abbilder aus {Count} Einträgen gebaut, Stand #{Head}, Saatgut {Seeded}, Medien: {Media}, Plugins unter {Plugins} ({Auto} neu installiert)", rebuilt, catalog.Head, seeded, mediaStore.Kind, pluginDir, autoInstalled);
+app.Logger.LogInformation("Abbilder aus {Count} Einträgen gebaut, Stand #{Head}, aus Vorgaben angelegt {Seeded}, Medien: {Media}, Plugins unter {Plugins} ({Auto} neu installiert)", rebuilt, catalog.Head, seeded, mediaStore.Kind, pluginDir, autoInstalled);
 
 // Langsame Anfragen stehen in der Konsole: Pfad und Dauer. Wer eine Wartezeit meldet, sieht dort, welche Anfrage sie verursacht hat.
 app.Use(async (ctx, next) =>

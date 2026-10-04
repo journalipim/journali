@@ -25,7 +25,7 @@ Wertelisten liefern die erlaubten Werte für Attribute vom Typ Liste. Ein Eintra
 
 ## 4. Der Baum
 
-Der Pflegebaum beginnt mit einer Wurzel, an der die Attributgruppen des Saatguts hängen. Darunter entstehen Produktgruppen, Produkte und Varianten, von Hand über ＋ im Baum oder per Import.
+Der Pflegebaum beginnt mit einer Wurzel, an der die eingebauten Attributgruppen hängen. Darunter entstehen Produktgruppen, Produkte und Varianten, von Hand über ＋ im Baum oder per Import.
 
 ## 5. Import
 

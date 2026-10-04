@@ -118,7 +118,7 @@ Einen Text aus mehreren Attributen zusammenzusetzen ist Sache der Vorlage. Zu re
 
 ## Attributgruppen
 
-Eine Gruppe bündelt Attribute und hängt an einem Knoten des Baums; von dort gilt sie nach unten. **Aktiv ab** legt fest, ab welchem Knotentyp Werte erfasst werden: darüber ist die Gruppe sichtbar, aber gesperrt. Beispiel aus dem Saatgut: Logistik mit SKU und EAN ist ab Variante aktiv.
+Eine Gruppe bündelt Attribute und hängt an einem Knoten des Baums; von dort gilt sie nach unten. **Aktiv ab** legt fest, ab welchem Knotentyp Werte erfasst werden: darüber ist die Gruppe sichtbar, aber gesperrt. Beispiel aus den eingebauten Vorgaben: Logistik mit SKU und EAN ist ab Variante aktiv.
 
 Eine Gruppe kann an mehreren Knoten hängen. Hängt sie an einem Vorfahren, ist ein zweites Anhängen darunter überflüssig; die Knotenansicht zeigt das an.
 

@@ -2,7 +2,7 @@
 
 Ein Workflow ist der Bearbeitungszustand über den Daten: Zustände, Übergänge zwischen ihnen, wer einen Schritt gehen darf, ob eine Notiz Pflicht ist und was der Schritt bewirkt.
 
-## Saatgut
+## Eingebaute Vorgaben
 
 Zwei Workflows sind vorbelegt:
 

@@ -18,7 +18,7 @@ Die Knöpfe über dem Baum legen eine Gruppe, ein Produkt oder eine Variante unt
 
 ## Der Name
 
-Der Baum zeigt je Knoten einen Namen. Er kommt aus dem Attribut, das am Pfad das ★ trägt, im Saatgut ist das der Name an der Wurzel. Wer eine andere Benennung braucht, setzt das ★ tiefer im Baum auf ein anderes Attribut oder gibt einem Knoten per Rechtsklick einen festen Namen. Eine Variante ohne eigenen Namen heisst nach Kennung und Achsenwerten.
+Der Baum zeigt je Knoten einen Namen. Er kommt aus dem Attribut, das am Pfad das ★ trägt, in den eingebauten Vorgaben ist das der Name an der Wurzel. Wer eine andere Benennung braucht, setzt das ★ tiefer im Baum auf ein anderes Attribut oder gibt einem Knoten per Rechtsklick einen festen Namen. Eine Variante ohne eigenen Namen heisst nach Kennung und Achsenwerten.
 
 ## Vererbung
 
