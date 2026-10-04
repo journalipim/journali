@@ -84,8 +84,8 @@ public sealed class Tarifliste
 /// (Vorschaubilder) und Export, ein Publikationsbaum; Jobs nur von Hand, ein Zeitplan gehört zu Pro. Ableitungen und Export
 /// laufen als Job — der Tasker ist darum dabei, startet aber nur Jobs erlaubter Plugins; gesichert wird von Hand
 /// (Einstellungen → B&amp;R), die Sicherung als Job gehört zu Pro.</item>
-/// <item><b>Pro</b> — 50 000 / 250 000, dazu Datenblatt, Übersetzung (XLIFF), BMEcat (Export nach Vorlage), ETIM, GPC,
-/// Tasker; fünf Publikationsbäume. ETIM braucht Datenanalyse und Export nach Vorlage, der Tasker bringt die Sicherung
+/// <item><b>Pro</b> — 50 000 / 250 000, dazu Datenblatt, Übersetzung (XLIFF), BMEcat (Export nach Vorlage), ETIM, Konfigurator,
+/// Tasker; fünf Publikationsbäume (GPC und Vektoren ab Pro+, Tarifblatt Version 11). ETIM braucht Datenanalyse und Export nach Vorlage, der Tasker bringt die Sicherung
 /// als Job mit — die kommen mit.</item>
 /// <item><b>Pro+</b> — Pro mit allen Plugins; damit auch <c>scriptum</c> (29.09.2026): ein Skript läuft als Prozess
 /// auf dem Server, und wer eines schreibt, kann alles, was der Serverbenutzer kann — das gehört zu den Tarifen, die

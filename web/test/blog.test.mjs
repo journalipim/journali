@@ -2,7 +2,7 @@
 // nachgebauten WordPress-Server, nicht gegen die Seite.
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { kopfLesen, kopfSetzen, inline, bloecke, seitenBlock, cssUnter, abschnitt, htmlBloecke, wp, entwurf, zugang } from '../../tools/blog.mjs'
+import { kopfLesen, kopfSetzen, inline, bloecke, seitenBlock, cssUnter, abschnitt, htmlBloecke, wp, entwurf, zugang, seite, hash } from '../../tools/blog.mjs'
 
 test('Kopf lesen und setzen — der Rest der Datei bleibt', () => {
   const t = '---\r\ntitle: Multi-Server\r\ntags: [Betrieb, Lizenz]\r\n---\r\nText\r\n'
@@ -120,4 +120,22 @@ test('Ein Abschnitt als Blöcke: ab der Überschrift 2 mit der id bis vor die n�
   assert.equal(d.titel, 'Informationen zum Datenschutz')
   assert.equal(htmlBloecke(d.html), '<!-- wp:paragraph -->\n<p>Text</p>\n<!-- /wp:paragraph -->', 'der Verweis zurück fällt weg')
   assert.throws(() => abschnitt(html, 'gibtsnicht'), /no <h2 id="gibtsnicht">/)
+})
+
+test('Seite aktualisieren nur, wenn sie in WordPress unverändert ist', async () => {
+  const seiten = new Map(); let n = 0
+  const api = async (methode, pfad, body) => {
+    let m
+    if (methode === 'POST' && pfad === 'pages') { const p = { id: ++n, content: { raw: body.content }, status: body.status }; seiten.set(p.id, p); return p }
+    if ((m = pfad.match(/^pages\/(\d+)/))) { const p = seiten.get(+m[1]); if (methode === 'POST') p.content.raw = body.content; return p }
+    throw new Error(pfad)
+  }
+  const a = await seite(api, undefined, { titel: 'Start', inhalt: 'eins' })
+  assert.equal(a.neu, true); assert.equal(a.stand.hash, hash('eins'))
+  const b = await seite(api, a.stand, { inhalt: 'zwei' })
+  assert.equal(seiten.get(a.id).content.raw, 'zwei'); assert.equal(b.stand.hash, hash('zwei'))
+  assert.equal((await seite(api, b.stand, { inhalt: 'zwei' })).unveraendert, true)
+  seiten.get(a.id).content.raw = 'in WordPress bearbeitet'
+  await assert.rejects(seite(api, b.stand, { inhalt: 'drei' }), /was changed in WordPress — not overwritten/)
+  assert.equal(seiten.get(a.id).content.raw, 'in WordPress bearbeitet')
 })

@@ -10,12 +10,15 @@
 //   node tools/blog.mjs page <datei.html> --blocks [--section <id>] [--title <t>] [--slug <s>]
 //                                                 als Blöcke des Editors (Überschriften, Absätze, Listen) — zum Ändern in WordPress; --section nimmt den
 //                                                 Abschnitt ab der Überschrift 2 mit dieser id bis zur nächsten, ihr Text wird der Titel
+//                                                 Ein zweiter Aufruf aktualisiert die Seite — nur, wenn sie in WordPress seit dem letzten Aufruf unverändert ist
+//                                                 (Nummer und Hash je Datei und Abschnitt in wp-seiten.json neben der Datei)
 //   node tools/blog.mjs css site/index.html       das CSS der Seite nach site/wordpress.css, jede Regel unter .jx — der Inhalt kommt einmal ins CSS-Plugin
 //   node tools/blog.mjs drafts                    die Entwürfe auflisten
 //
 // Zugang: ein Anwendungspasswort aus WordPress (Benutzer → Profil → Anwendungspasswörter), nie im Repo. Er steht in
 // %USERPROFILE%\.journali\wordpress.json — { "url": "https://…", "user": "…", "password": "xxxx xxxx …" } — oder in den Umgebungsvariablen
 // JOURNALI_WP_URL, JOURNALI_WP_USER, JOURNALI_WP_PASSWORD (sie gehen vor).
+import crypto from 'node:crypto'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
@@ -215,6 +218,24 @@ export function cssUnter(css, rahmen = '.' + RAHMEN) {
   return out.trim()
 }
 
+// ---------------------------------------------------------------- Stand der Seiten: welche Seite aus welcher Datei, mit welchem Inhalt
+
+export const hash = s => crypto.createHash('sha256').update(s.replace(/\r\n/g, '\n')).digest('hex').slice(0, 16)
+
+/// Eine Seite anlegen oder aktualisieren. Aktualisiert wird nur, wenn ihr Inhalt in WordPress noch der ist, den das Werkzeug zuletzt geschrieben hat —
+/// sonst wurde sie dort bearbeitet, und das Werkzeug überschriebe es. Liefert { id, neu, stand } (stand: der neue Eintrag für wp-seiten.json).
+export async function seite(api, eintrag, { titel, inhalt, slug }) {
+  if (eintrag?.id) {
+    const da = await api('GET', `pages/${eintrag.id}?context=edit`)
+    if (hash(da.content.raw) !== eintrag.hash) throw new Error(`page ${eintrag.id} was changed in WordPress — not overwritten`)
+    if (hash(inhalt) === eintrag.hash) return { id: eintrag.id, neu: false, unveraendert: true, stand: eintrag }
+    const p = await api('POST', `pages/${eintrag.id}`, { content: inhalt })
+    return { id: p.id, neu: false, stand: { id: p.id, hash: hash(p.content?.raw ?? inhalt) } }
+  }
+  const p = await api('POST', 'pages', { title: titel, content: inhalt, status: 'draft', ...(slug ? { slug } : {}) })
+  return { id: p.id, neu: true, stand: { id: p.id, hash: hash(p.content?.raw ?? inhalt) } }
+}
+
 // ---------------------------------------------------------------- WordPress
 
 export function zugang(env = process.env, home = os.homedir()) {
@@ -282,7 +303,7 @@ async function main(argv) {
     return
   }
   if (!['check', 'draft', 'page', 'drafts'].includes(befehl) || (['draft', 'page'].includes(befehl) && !datei)) {
-    console.log('usage: node tools/blog.mjs check | draft <file.md> [--replace] | page <file.html> [--blocks] [--section <id>] [--title <t>] [--slug <s>] | css <file.html> | drafts')
+    console.log('usage: node tools/blog.mjs check | draft <file.md> [--replace] | page <file.html> [--blocks] [--section <id>] [--title <t>] [--slug <s>] [--id <n>] | css <file.html> | drafts')
     process.exitCode = 2
     return
   }
@@ -303,8 +324,19 @@ async function main(argv) {
       const teil = opt('--section') ? abschnitt(html, opt('--section')) : { titel: html.match(/<title>([\s\S]*?)<\/title>/i)?.[1]?.trim() ?? 'Seite', html }
       titel = teil.titel; inhalt = htmlBloecke(teil.html)
     } else ({ titel, inhalt } = seitenBlock(html))
-    const p = await api('POST', 'pages', { title: opt('--title') ?? titel, content: inhalt, status: 'draft', ...(opt('--slug') ? { slug: opt('--slug') } : {}) })
-    console.log(`page draft ${p.id}: ${z.url}/wp-admin/post.php?post=${p.id}&action=edit`)
+    const standDatei = path.join(path.dirname(datei), 'wp-seiten.json')
+    let stand = {}; try { stand = JSON.parse(fs.readFileSync(standDatei, 'utf8')) } catch { }
+    const schluessel = path.basename(datei) + (opt('--section') ? '#' + opt('--section') : '')
+    // eine Seite von davor übernehmen — nur, wenn sie der Datei entspricht: sonst überschriebe das Werkzeug, was in WordPress an ihr geändert wurde
+    if (rest.includes('--id')) {
+      const roh = (await api('GET', `pages/${opt('--id')}?context=edit`)).content.raw
+      if (hash(roh) !== hash(inhalt)) throw new Error(`page ${opt('--id')} differs from ${schluessel} — not taken over, nothing written`)
+      stand[schluessel] = { id: +opt('--id'), hash: hash(roh) }
+    }
+    const r = await seite(api, stand[schluessel], { titel: opt('--title') ?? titel, inhalt, slug: opt('--slug') })
+    stand[schluessel] = r.stand
+    fs.writeFileSync(standDatei, JSON.stringify(stand, null, 2) + '\n')
+    console.log(`${r.neu ? 'page draft' : r.unveraendert ? 'page unchanged' : 'page updated'} ${r.id}: ${z.url}/wp-admin/post.php?post=${r.id}&action=edit`)
   } else {
     for (const p of await api('GET', 'posts?status=draft&context=edit&per_page=50')) console.log(`${p.id}  ${p.modified}  ${p.title.raw}`)
   }
