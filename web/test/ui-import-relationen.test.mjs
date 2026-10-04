@@ -81,3 +81,23 @@ test('eine Datei ohne Relationenblatt rechnet wie bisher', async () => {
   assert.equal(w.vm.planned.stats.relations, undefined)
   assert.equal(w.vm.planned.commands.some(c => c.op.startsWith('relation.')), false)
 })
+
+test('Bestand beim Import ins selbe System: die gefundenen Knoten in einer Anfrage, nicht die Kinder je Elternteil', async () => {
+  const baum = [{ id: 'g1', parent: null, label: 'Mittel', role: 'group', keys: {} }, { id: 'p1', parent: 'g1', label: 'Tablette', role: 'product', keys: {} }, { id: 'p2', parent: 'g1', label: 'Vitamin C', role: 'product', keys: {} }]
+  const w = await welt()
+  tree.rows = baum; tree.byId = new Map(baum.map(r => [r.id, r])); tree.kids = id => baum.filter(r => r.parent === id)
+  const ohne = structuredClone(DATEI); ohne.sheets.pop()
+  w.vm.setSource(ohne)
+  w.vm.pickTarget(tree.byId.get('g1'))
+  await w.vm.$nextTick()
+  const get = api.get, post = api.post, gefragt = []
+  api.get = async p => { gefragt.push(['GET', p]); return {} }
+  api.post = async (p, body) => { gefragt.push(['POST', p, body]); return { rows: [{ row: { id: 'p1' }, values: { name: { value: 'Tablette', own: true } } }] } }
+  try { await w.vm.analyse() } finally { api.get = get; api.post = post }
+  const tabellen = gefragt.filter(g => /\/table/.test(g[1]))
+  assert.equal(tabellen.length, 1, JSON.stringify(gefragt))
+  assert.equal(tabellen[0][0], 'POST')
+  assert.deepEqual([...tabellen[0][2].nodes].sort(), ['p1', 'p2'])
+  assert.deepEqual(tabellen[0][2].attributes, ['name'])
+  assert.equal(w.vm.planned.stats.unchanged >= 1, true, 'Tablette ist unverändert')
+})

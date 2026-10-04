@@ -159,6 +159,19 @@ public class TableGrenzeTests
         Assert.Equal(Rights.Read, Auth.Needed(ctx.Request));
     }
 
+    // Import (04.10.2026): genau die gefundenen Knoten, wo immer sie stehen — nicht die Tabelle aller Kinder je Elternteil
+    [Fact]
+    public async Task Mit_Nodes_kommen_genau_diese_Knoten_unbekannte_fehlen()
+    {
+        await using var w = await Welt.Neu();
+        var rumpf = "{\"attributes\":[\"farbe\"],\"nodes\":[\"" + w.Ids["p3"] + "\",\"gibtsnicht\",\"" + w.Ids["p1"] + "\",\"" + w.Ids["g"] + "\"],\"sparse\":true,\"take\":10}";
+        var res = await w.Http.PostAsync(w.Url + $"/api/nodes/{w.Ids["p5"]}/table", new StringContent(rumpf, Encoding.UTF8, "application/json"));
+        var t = JsonDocument.Parse(await res.Content.ReadAsStringAsync()).RootElement;
+        Assert.Equal([w.Ids["p3"], w.Ids["p1"], w.Ids["g"]], t.GetProperty("rows").EnumerateArray().Select(r => r.GetProperty("row").GetProperty("id").GetString()).ToArray());
+        Assert.Equal(["blau", "rot"], t.GetProperty("rows").EnumerateArray().Take(2).Select(r => r.GetProperty("values").GetProperty("farbe").GetProperty("value").GetString()).ToArray());
+        Assert.Equal(3, t.GetProperty("total").GetInt32());
+    }
+
     [Fact]
     public async Task Values_nennt_die_eigenen_Werte_eines_Attributs_mit_Name_und_Rolle_auch_in_einem_Teilbaum()
     {

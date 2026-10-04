@@ -225,31 +225,29 @@ async function analyse() {
     const keys = [...new Set(mapping.value.filter(m => m.target === 'attr').map(m => m.attribute))]
     const locs = [...new Set(mapping.value.filter(m => m.target === 'attr').map(m => m.locale ?? ''))]
     const existing = new Map()
-    // Bestand nur für die Zeilen holen, die es schon gibt: gefunden über Id, externe Kennung oder ein eindeutiges Attribut; je Elternteil ein Aufruf (die Subitems als Tabelle), je Sprache
+    // Bestand nur für die Zeilen holen, die es schon gibt: gefunden über Id, externe Kennung oder ein eindeutiges Attribut
     const iId = mapping.value.findIndex(m => m.target === 'id'), iExt = mapping.value.findIndex(m => m.target === 'external')
     const keyCols = mapping.value.map((m, i) => m.target === 'attr' && uniqueKeys.value.has(m.attribute) && !m.locale ? i : -1).filter(i => i >= 0)
     const byKey = new Map(); for (const r of tree.rows) for (const [k, v] of Object.entries(r.keys ?? {})) byKey.set(k + '\u0001' + String(v).trim(), r)
     const byExt = new Map(external.value ? tree.rows.filter(r => r.external?.[external.value]).map(r => [String(r.external[external.value]), r]) : [])
-    const parents = new Map()   // Elternteil → Ids der gefundenen Knoten darunter
+    const gefunden = new Set()   // Ids der Knoten, die die Datei trifft
     for (const row of source.value.rows) {
       const id = String(row[iId] ?? '').trim(), ext = String(row[iExt] ?? '').trim()
       const viaKey = keyCols.map(i => byKey.get(mapping.value[i].attribute + '\u0001' + String(row[i] ?? '').trim())).find(Boolean)   // über jedes eindeutige Attribut
       const n = (iId >= 0 && id && tree.byId.get(id)) || (iExt >= 0 && ext && byExt.get(ext)) || viaKey || null
-      if (n) { const key = n.parent ?? '#root'; if (!parents.has(key)) parents.set(key, new Set()); parents.get(key).add(n.id) }
+      if (n) gefunden.add(n.id)
     }
-    let done = 0
-    for (const [pid, ids] of parents) for (const loc of locs) {
-      busy.value = t_('vergleiche mit dem Bestand … {0}/{1}', [++done, parents.size * locs.length])
-      const url = pid === '#root' ? null : `/api/nodes/${encodeURIComponent(pid)}/table?attributes=${encodeURIComponent(keys.join(','))}${loc ? '&locale=' + loc : ''}`
-      const t = url ? await api.get(url) : { rows: [] }
-      for (const r of t.rows) {
-        if (!ids.has(r.row.id)) continue
+    // genau die gefundenen Knoten, je 2 000 und Sprache eine Anfrage (04.10.2026 — vorher je Elternteil die Tabelle aller Kinder, je Sprache)
+    const ids = [...gefunden], SEITE = 2000
+    let done = 0; const runden = Math.ceil(ids.length / SEITE) * locs.length
+    if (keys.length) for (let i = 0; i < ids.length; i += SEITE) for (const loc of locs) {
+      busy.value = t_('vergleiche mit dem Bestand … {0}/{1}', [++done, runden])
+      const t = await api.post(`/api/nodes/${encodeURIComponent(ids[i])}/table`, { attributes: keys, locale: loc || null, nodes: ids.slice(i, i + SEITE), sparse: true, take: SEITE })
+      for (const r of t.rows ?? []) {
         const cur = existing.get(r.row.id) ?? {}
         for (const [k, v] of Object.entries(r.values)) if (v.value != null) { cur[`${k}|${loc}`] = v.value; cur[`${k}|${loc}#own`] = v.own }
         existing.set(r.row.id, cur)
       }
-      // Wurzelknoten selbst (ohne Elternteil) einzeln
-      if (pid === '#root') for (const id of ids) { const t2 = await api.get(`/api/nodes/${encodeURIComponent(id)}/table?self=true&children=false&attributes=${encodeURIComponent(keys.join(','))}${loc ? '&locale=' + loc : ''}`); for (const r of t2.rows) { if (r.row.id !== id) continue; const cur = existing.get(id) ?? {}; for (const [k, v] of Object.entries(r.values)) if (v.value != null) { cur[`${k}|${loc}`] = v.value; cur[`${k}|${loc}#own`] = v.own }; existing.set(id, cur) } }
     }
     planned.value = makePlan({ columns: source.value.columns, rows: source.value.rows, mapping: mapping.value.map(m => ({ ...m })), model: model.value, tree, target: target.value, role: role.value || null, existing, external: external.value || null })
     if (source.value.relationenBlatt) {

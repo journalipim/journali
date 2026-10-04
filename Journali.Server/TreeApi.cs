@@ -14,7 +14,7 @@ public static class TreeApi
     public sealed record RolesBody(string[]? Roles);
     /// <summary>Die Abfrage einer Tabelle (GET: aus den Parametern, POST: aus dem Rumpf).</summary>
     public sealed record TableQuery(string? Role = null, string[]? Attributes = null, string? Locale = null, string? Channel = null, bool Deep = false, bool Self = false,
-        long? At = null, int? Take = null, int Skip = 0, bool Children = true, bool Sparse = false, string? Types = null);
+        long? At = null, int? Take = null, int Skip = 0, bool Children = true, bool Sparse = false, string? Types = null, string[]? Nodes = null);
 
     static IResult Tabelle(Catalog c, string id, TableQuery q)
     {
@@ -23,11 +23,14 @@ public static class TreeApi
             {
                 var (model, tree) = at is { } n ? c.AsOf(n) : (liveModel, liveTree);   // at: der Stand von damals
                 if (!tree.Nodes.TryGetValue(id, out var root)) return Results.NotFound();
-                var nodes = !children ? [] : (deep ? tree.DescendantsDeepestFirst(id).Reverse() : tree.Children(id)).Where(n => role is null || n.Role == role).ToList();
-                if (self) nodes.Insert(0, root);
+                // Nodes (04.10.2026): genau diese Knoten, wo immer sie stehen — der Import vergleicht so die gefundenen Zeilen mit dem Bestand,
+                // statt je Elternteil die Tabelle aller Kinder zu holen. Unbekannte fehlen; deep, children und self gelten dann nicht.
+                var nodes = q.Nodes is { } liste ? liste.Distinct().Select(x => tree.Nodes.GetValueOrDefault(x)).OfType<Node>().Where(n => role is null || n.Role == role).ToList()
+                    : !children ? [] : (deep ? tree.DescendantsDeepestFirst(id).Reverse() : tree.Children(id)).Where(n => role is null || n.Role == role).ToList();
+                if (self && q.Nodes is null) nodes.Insert(0, root);
                 var cols = wanted is { Length: > 0 }
                     ? wanted.Distinct().Select(k => model.Attributes.GetValueOrDefault(k)).Where(a => a is not null).Select(a => a!).ToList()
-                    : SpaltenVon(model, tree, nodes, $"{at ?? tree.LastApplied}|{id}|{role}|{deep}|{self}|{children}");
+                    : SpaltenVon(model, tree, nodes, $"{at ?? tree.LastApplied}|{id}|{role}|{deep}|{self}|{children}" + (q.Nodes is null ? "" : "|" + string.Join(",", q.Nodes).GetHashCode()));
                 if (types?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) is { Length: > 0 } typen)
                     cols = cols.Where(a => typen.Contains(a.Type, StringComparer.OrdinalIgnoreCase)).ToList();
                 var total = nodes.Count;
