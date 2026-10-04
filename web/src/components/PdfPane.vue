@@ -4,6 +4,9 @@
 // Glyph-Positionen, dieselben Koordinaten wie beim Lesen (Plugin docs). WELCHE Stücke der Kasten umfasst, sagt
 // pdf-locate (rein, geprüft). pdf.js wird verzögert geladen; im Test ist die Komponente gestubbt, es lädt also nie.
 // Zoom (30.09.2026): CSS-Transform auf dem Inhalt, nicht neu rendern — schnell, der Zoomlevel bleibt beim Attributwechsel.
+// Speicher (04.10.2026): vorher wurde jede Seite auf eine eigene Zeichenfläche gezeichnet und nie freigegeben — ein Katalog mit 800 Seiten
+// brauchte über 1 GB. Gezeichnet werden nur Seiten nahe dem sichtbaren Bereich (IntersectionObserver), ferne geben ihre Fläche frei;
+// die Textlage einer Seite kommt erst, wenn sie gebraucht wird (Markierung, Suche).
 import { ref, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { t as t_ } from '../i18n.js'
 import { findeSpanne, findeAlleSpannen, kastenAus } from '../pdf-locate.js'
@@ -24,6 +27,8 @@ const behaelter = ref(null)
 const zoom = ref(1)             // 1 = an die Spaltenbreite angepasst; > 1 vergrössert
 const tech = new Map()          // num -> { page, viewport, scale, pdfjs, items } — nicht reaktiv (keine pdf.js-Objekte proxen)
 const canvasRefs = {}
+const gezeichnet = new Set()     // Seiten, deren Fläche gerade ein Bild trägt
+let beobachter = null
 let pdfDoc = null
 let laufId = 0
 let basisBreite = 400           // die Breite, auf die das PDF bei zoom=1 passt
@@ -43,7 +48,8 @@ async function ladePdfjs() {
 
 async function ladeDoc(id) {
   const meins = ++laufId
-  seiten.value = []; marke.value = null; fehler.value = ''; tech.clear()
+  seiten.value = []; marke.value = null; fehler.value = ''; tech.clear(); gezeichnet.clear()
+  beobachter?.disconnect(); beobachter = null
   for (const k of Object.keys(canvasRefs)) delete canvasRefs[k]
   if (pdfDoc) { try { pdfDoc.destroy() } catch { /* egal */ } pdfDoc = null }
   if (!id) return
@@ -63,14 +69,14 @@ async function ladeDoc(id) {
       const eins = page.getViewport({ scale: 1 })
       const scale = Math.max(0.2, Math.min(2, basisBreite / eins.width))
       const viewport = page.getViewport({ scale })
-      tech.set(n, { page, viewport, scale, pdfjs, items: [] })
+      tech.set(n, { page, viewport, scale, pdfjs, items: null })
       masse.push({ num: n, width: Math.round(viewport.width), height: Math.round(viewport.height) })
     }
     if (meins !== laufId) return
     seiten.value = masse
     await nextTick()
-    for (const m of masse) { if (meins !== laufId) return; await zeichne(m.num) }
-    if (meins === laufId) springen()
+    beobachten(meins)
+    if (meins === laufId) await springen()
   } catch (e) {
     if (meins === laufId) fehler.value = t_('PDF konnte nicht geladen werden')
   } finally {
@@ -78,28 +84,59 @@ async function ladeDoc(id) {
   }
 }
 
+/// Seiten nahe dem sichtbaren Bereich zeichnen, ferne freigeben. Ohne IntersectionObserver (Test, alter Browser): die ersten drei.
+function beobachten(meins) {
+  const Beob = globalThis.IntersectionObserver
+  if (!Beob || !behaelter.value) { for (const s of seiten.value.slice(0, 3)) zeichne(s.num); return }
+  beobachter = new Beob(eintraege => {
+    if (meins !== laufId) return
+    for (const e of eintraege) {
+      const num = Number(e.target.dataset.num)
+      if (e.isIntersecting) zeichne(num); else freigeben(num)
+    }
+  }, { root: behaelter.value, rootMargin: '1200px 0px' })
+  for (const el of behaelter.value.querySelectorAll('.seite[data-num]')) beobachter.observe(el)
+}
+
 async function zeichne(num) {
   const t = tech.get(num), canvas = canvasRefs[num]
-  if (!t || !canvas) return
+  if (!t || !canvas || gezeichnet.has(num)) return
+  gezeichnet.add(num)
   canvas.width = t.viewport.width; canvas.height = t.viewport.height
   const ctx = canvas.getContext('2d'); if (!ctx) return
-  await t.page.render({ canvasContext: ctx, viewport: t.viewport }).promise
+  try { await t.page.render({ canvasContext: ctx, viewport: t.viewport }).promise } catch { gezeichnet.delete(num) }
+}
+
+/// Die Fläche einer fernen Seite freigeben — der Platz bleibt (die Masse stehen am Element), das Bild kommt beim Zurückscrollen neu
+function freigeben(num) {
+  const canvas = canvasRefs[num]
+  if (!canvas || !gezeichnet.has(num)) return
+  canvas.width = 0; canvas.height = 0
+  gezeichnet.delete(num)
+}
+
+/// Die Textlage einer Seite, einmal geholt und gemerkt (sie ist klein gegen das Bild)
+async function textVon(num) {
+  const t = tech.get(num)
+  if (!t) return []
+  if (t.items) return t.items
   const tc = await t.page.getTextContent()
   t.items = tc.items.filter(i => i && i.str != null).map(i => {
     const tx = t.pdfjs.Util.transform(t.viewport.transform, i.transform)
     const hoehe = Math.hypot(tx[2], tx[3]) || (i.height || 0) * t.scale
     return { str: i.str, left: tx[4], top: tx[5] - hoehe, width: (i.width || 0) * t.scale, height: hoehe }
   })
+  return t.items
 }
 
 /// Zur Fundstelle springen: die Markierung soll vollständig im sichtbaren Bereich liegen. Ist sie bei der aktuellen
 /// Zoomstufe grösser als der sichtbare Bereich, wird der Zoom so weit verkleinert, dass sie hineinpasst (30.09.2026).
-function springen() {
+async function springen() {
   try {
     if (!seiten.value.length) return
     const ziel = Number(props.page)
     const num = seiten.value.some(s => s.num === ziel) ? ziel : seiten.value[0].num
-    markiere(num)
+    await markiere(num)
     nextTick(() => {
       const box = behaelter.value
       if (!box) return
@@ -126,12 +163,13 @@ function springen() {
   } catch { /* die Ansicht darf nie den Dialog stören */ }
 }
 
-function markiere(num) {
+async function markiere(num) {
   marke.value = null
-  const t = tech.get(num)
   const text = props.quote || props.value
-  if (!t || !t.items.length || !text) return
-  const k = kastenAus(t.items, findeSpanne(t.items, text))
+  if (!tech.get(num) || !text) return
+  const items = await textVon(num)
+  if (!items.length) return
+  const k = kastenAus(items, findeSpanne(items, text))
   if (k) marke.value = { page: num, ...k }
 }
 
@@ -159,15 +197,18 @@ function zoomen(delta) {
 }
 function onWheel(e) { if (e.ctrlKey) { e.preventDefault(); zoomen(e.deltaY < 0 ? 0.2 : -0.2) } }
 
-function suchen() {
+async function suchen() {
   treffer.value = []; trefferNr.value = -1
   const s = suchtext.value
   if (!s || s.length < 2) return
   const alle = []
-  for (const [num, t] of tech) {
-    if (!t.items.length) continue
-    for (const spanne of findeAlleSpannen(t.items, s)) {
-      const k = kastenAus(t.items, spanne)
+  const lauf = laufId
+  for (const [num] of tech) {
+    const items = await textVon(num)   // je Seite einmal geholt, dann gemerkt
+    if (lauf !== laufId || s !== suchtext.value) return
+    if (!items.length) continue
+    for (const spanne of findeAlleSpannen(items, s)) {
+      const k = kastenAus(items, spanne)
       if (k) alle.push({ page: num, ...k })
     }
   }
@@ -197,7 +238,7 @@ watch(suchtext, () => { clearTimeout(suchTimer); suchTimer = setTimeout(suchen, 
 watch(() => props.doc, id => { zoom.value = 1; suchtext.value = ''; treffer.value = []; trefferNr.value = -1; ladeDoc(id) })
 watch(() => [props.page, props.quote, props.value], () => springen())
 onMounted(() => ladeDoc(props.doc))
-onBeforeUnmount(() => { laufId++; if (pdfDoc) { try { pdfDoc.destroy() } catch { /* egal */ } } })
+onBeforeUnmount(() => { laufId++; beobachter?.disconnect(); if (pdfDoc) { try { pdfDoc.destroy() } catch { /* egal */ } } })
 </script>
 
 <template>
@@ -222,7 +263,7 @@ onBeforeUnmount(() => { laufId++; if (pdfDoc) { try { pdfDoc.destroy() } catch {
       <div v-else-if="fehler" class="hinweis neg">{{ fehler }} · <a :href="`/api/media/${doc}/file`" target="_blank" rel="noopener">{{ $t("öffnen") }}</a></div>
       <div v-else-if="!doc" class="hinweis muted">{{ $t("Kein Dokument") }}</div>
       <div class="pdf-content" :style="{ transform: `scale(${zoom})`, transformOrigin: 'top center', width: zoom !== 1 ? basisBreite + 'px' : undefined }">
-        <div v-for="s in seiten" :key="s.num" class="seite" :style="{ width: s.width + 'px', height: s.height + 'px' }">
+        <div v-for="s in seiten" :key="s.num" class="seite" :data-num="s.num" :style="{ width: s.width + 'px', height: s.height + 'px' }">
           <canvas :ref="el => setCanvas(s.num, el)" />
           <div v-if="marke && marke.page === s.num" class="marke" :style="{ left: marke.left + 'px', top: marke.top + 'px', width: marke.width + 'px', height: marke.height + 'px' }" />
           <template v-for="(t, ti) in (treffer.filter(t => t.page === s.num))" :key="'s' + ti">
