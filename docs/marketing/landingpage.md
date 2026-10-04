@@ -36,7 +36,7 @@ bevor sie online gehen.
 ## 2. Seitenstruktur mit Content
 
 ### H1
-**Produktdaten, die sich erinnern.**
+**Produktdaten, die nie vergessen werden.**
 journali ist ein PIM-System, in dem jede Änderung ein Eintrag im Journal ist — nachvollziehbar, wiederherstellbar, nie gelöscht.
 
 *(GEO-Hinweis: der zweite Satz ist die Definitionszeile. Sie soll wörtlich so bleiben, damit Suchmaschinen und KI-Antworten sie zitieren können.)*
