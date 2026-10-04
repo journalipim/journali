@@ -1,3 +1,5 @@
+using System.IO.Compression;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using Journali.Core.Entries;
 using Journali.Core.Projections;
@@ -39,10 +41,30 @@ public static class TransferApi
     public sealed record ImportMap(Dictionary<string, string>? Attributes = null, Dictionary<string, string>? Groups = null, string? Prefix = null);
     public sealed record ImportBody(RawNode Node, string? Parent = null, RawModel? Model = null, ImportMap? Map = null, bool DryRun = false);
 
+    /// <summary>Ein Dateiname aus einer Bezeichnung: nur Buchstaben, Ziffern, Punkt, Strich und Unterstrich</summary>
+    public static string DateiName(string label) => System.Text.RegularExpressions.Regex.Replace(label, @"[^\w.-]+", "_").Trim('_') is { Length: > 0 } x ? x : "export";
+
     public static void Map(RouteGroupBuilder api)
     {
         api.MapGet("/nodes/{id}/export", (string id, Catalog c, bool deep = true) =>
             c.Lesen((model, tree) => tree.Nodes.TryGetValue(id, out var n) ? Results.Ok(new RawExport(UsedModel(model, tree, n, deep, c.Relations), Raw(tree, n, deep, c.Relations))) : Results.NotFound()));
+
+        // Dieselben Rohdaten als Datei (04.10.2026): der Browser speichert sie, ohne sie zu lesen — vorher holte er den ganzen Teilbaum
+        // als JSON und machte daraus noch einmal eine Zeichenkette (bei grossen Zweigen hunderte MB). gzip=true: .json.gz.
+        api.MapGet("/nodes/{id}/export/file", async (string id, Catalog c, HttpResponse res, bool deep = true, bool gzip = false, CancellationToken ct = default) =>
+        {
+            var (export, name) = c.Lesen((model, tree) => tree.Nodes.TryGetValue(id, out var n)
+                ? (new RawExport(UsedModel(model, tree, n, deep, c.Relations), Raw(tree, n, deep, c.Relations)), NodeRow.LabelOf(tree, model, n))
+                : (null, null));
+            if (export is null) return Results.NotFound();
+            var datei = DateiName(name ?? id) + "-rohdaten.json" + (gzip ? ".gz" : "");
+            res.ContentType = gzip ? "application/gzip" : "application/json";
+            res.Headers.ContentDisposition = $"attachment; filename=\"{datei}\"";
+            var ziel = gzip ? new GZipStream(res.Body, CompressionLevel.Fastest, leaveOpen: true) : res.Body;
+            await JsonSerializer.SerializeAsync(ziel, export, new JsonSerializerOptions(JsonSerializerDefaults.Web) { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull }, ct);
+            if (gzip) await ziel.DisposeAsync();
+            return Results.Empty;
+        });
 
         api.MapPost("/nodes/import", (ImportBody body, HttpRequest req, Catalog c) =>
             Actor(req) is not { } actor ? ActorMissing() : Einspielen(c, actor, body));

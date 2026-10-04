@@ -39,7 +39,7 @@ public class TableGrenzeTests
             var b = WebApplication.CreateBuilder(); b.WebHost.UseUrls("http://127.0.0.1:0"); b.Services.AddSingleton(c); b.Services.AddSingleton<IJournal>(journal);
             w.App = b.Build();
             w.App.Use(async (ctx, next) => { ctx.Request.Headers["X-Actor"] = "u"; await next(); });
-            BatchApi.Map(w.App.MapGroup("/api")); TreeApi.Map(w.App.MapGroup("/api"));
+            BatchApi.Map(w.App.MapGroup("/api")); TreeApi.Map(w.App.MapGroup("/api")); TransferApi.Map(w.App.MapGroup("/api"));
             await w.App.StartAsync();
             // eine Gruppe mit fünf Produkten; farbe nur an zweien
             var cmds = new List<string> { """{"op":"group.create","ref":"g","args":{"name":"Zweig"}}""", """{"op":"groups.attach","args":{"node":"@g","groups":["mastergroup"]}}""" };
@@ -172,5 +172,21 @@ public class TableGrenzeTests
         Assert.Single(teil.GetProperty("values").EnumerateArray());
         var (status, _) = await w.Get("/api/values/farbe?root=gibtsnicht");
         Assert.Equal(HttpStatusCode.NotFound, status);
+    }
+
+    [Fact]
+    public async Task Rohdaten_kommen_als_Datei_auch_gezippt()
+    {
+        await using var w = await Welt.Neu();
+        var r = await w.Http.GetAsync(w.Url + $"/api/nodes/{w.Ids["g"]}/export/file");
+        Assert.Equal(HttpStatusCode.OK, r.StatusCode);
+        Assert.Contains("attachment", r.Content.Headers.ContentDisposition?.ToString() ?? r.Headers.ToString() + r.Content.Headers.ToString());
+        Assert.Contains("Zweig-rohdaten.json", r.Content.Headers.ContentDisposition?.ToString() ?? "");
+        var j = JsonDocument.Parse(await r.Content.ReadAsStringAsync()).RootElement;
+        Assert.Equal(5, j.GetProperty("node").GetProperty("children").GetArrayLength());
+        var gz = await w.Http.GetAsync(w.Url + $"/api/nodes/{w.Ids["g"]}/export/file?gzip=true");
+        await using var unzip = new System.IO.Compression.GZipStream(await gz.Content.ReadAsStreamAsync(), System.IO.Compression.CompressionMode.Decompress);
+        var j2 = await JsonDocument.ParseAsync(unzip);
+        Assert.Equal(5, j2.RootElement.GetProperty("node").GetProperty("children").GetArrayLength());
     }
 }

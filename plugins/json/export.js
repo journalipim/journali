@@ -7,6 +7,9 @@ const ICON = { group: '▣', product: '▦', variant: '◆' }
 const countNodes = n => { let c = 1; for (const k of n.children ?? []) c += countNodes(k); return c }
 
 export async function rawOf(ctx, id) { return ctx.api.get(`/api/nodes/${encodeURIComponent(id)}/export?deep=true`) }
+/// Rohdaten als Datei vom Server — der Browser speichert sie, ohne sie zu lesen (grosse Zweige waren im Fenster hunderte MB, 04.10.2026)
+export function rawDownload(id, gzip = false) { const a = document.createElement('a'); a.href = `/api/nodes/${encodeURIComponent(id)}/export/file?deep=true${gzip ? '&gzip=true' : ''}`; a.download = ''; a.click() }
+const GRENZE = 5000   // so viele Knoten wertet der Browser höchstens aus (Baum, Liste) — mehr: der Job „JSON-Export“
 export function rawName(ctx, id) { return `${ctx.tree.byId.get(id)?.label ?? id}-rohdaten`.replace(/[^\w.-]+/g, '_') + '.json' }
 
 export async function mountExport(root, ctx) {
@@ -39,11 +42,15 @@ export async function mountExport(root, ctx) {
     try {
       const label = tree.byId.get(st.root)?.label ?? 'export'
       let text, name, count
+      const unter = (() => { let n = 0; const stapel = [st.root]; while (stapel.length) { const id = stapel.pop(); n++; for (const k of tree.kids(id)) stapel.push(k.id) } return n })()
       if (st.format === 'raw') {
-        const raw = await rawOf(ctx, st.root); count = countNodes(raw.node); text = JSON.stringify(raw, null, 1); name = rawName(ctx, st.root)
-        say(`${count} Knoten roh · Modell: ${raw.model.groups.length} Gruppen, ${raw.model.attributes.length} Attribute, ${raw.model.lists.length} Listen, ${raw.model.units.length} Einheiten`)
+        // Vorschau: nur der Knoten selbst; herunterladen: die Datei kommt direkt vom Server
+        if (downloadIt) { rawDownload(st.root, st.gzip); store.toast(`⇪ ${unter} Knoten als JSON`, 'ok'); return }
+        const raw = await ctx.api.get(`/api/nodes/${encodeURIComponent(st.root)}/export?deep=false`); count = unter; text = JSON.stringify(raw, null, 1); name = rawName(ctx, st.root)
+        say(`${count} Knoten roh · Vorschau: der gewählte Knoten`)
       } else {
         if (!st.locales.length) { store.toast('mindestens eine Sprache'); return }
+        if (unter > GRENZE) { say(`✗ ${unter} Knoten, höchstens ${GRENZE} — grössere Teilbäume exportiert der Job „JSON-Export“`); return }
         const ex = ctx.use('table')?.tableExport; if (!ex) throw new Error('Basis-Plugin table fehlt')
         const t = await ex.build({ root: st.root, role: '', locales: st.locales, ownOnly: st.ownOnly, viewKey: '', relations: true, say })
         count = t.count; text = st.format === 'tree' ? ex.toJsonTree(t, st.root) : ex.toJson(t); name = `${label}-${st.format === 'tree' ? 'baum' : 'liste'}-${st.locales.join('-')}`.replace(/[^\w.-]+/g, '_') + '.json'

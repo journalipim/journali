@@ -1,9 +1,8 @@
 // Plugin json: Liste von Objekten als Tabelle; Objekte werden flach (a.b.c), Listen von Skalaren kommagetrennt.
 // Dazu: der JSON-Import-Manager (manager.js) für Knotenbäume im Rohdaten-Format — analysieren, Modell zuordnen, Ziel, einspielen.
 import { mountManager } from './manager.js'
-import { mountExport, rawOf, rawName } from './export.js'
+import { mountExport, rawDownload } from './export.js'
 const t = (k, p) => globalThis.journali?.t ? globalThis.journali.t(k, p) : String(k).replace(/\{(\w+)\}/g, (m, i) => p?.[i] ?? m)   // Oberflächensprache: spät gebunden, im Test ohne Fenster ladbar
-const download = (blob, name) => { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000) }
 export default {
   views: [
     { path: 'import', label: 'JSON-Import', icon: '⇩', topic: 'import', mount: mountManager },
@@ -12,7 +11,7 @@ export default {
   nodeActions: [
     // topic: die Art „io“ ist Import und Export zugleich und nennt kein Thema — ohne topic stand der Eintrag
     // unter ⌁ Werkzeuge statt unter ⇪ Export (28.09.2026)
-    { topic: 'export', label: (r, below) => t('JSON: Rohdaten sichern (mit {0})', [below]), icon: '⇪', roles: ['group', 'product', 'variant'], async run(nodeId, ctx) { try { const raw = await rawOf(ctx, nodeId); download(new Blob([JSON.stringify(raw, null, 1)], { type: 'application/json' }), rawName(ctx, nodeId)) } catch (e) { ctx.store.toast(e.message) } } },
+    { topic: 'export', label: (r, below) => t('JSON: Rohdaten sichern (mit {0})', [below]), icon: '⇪', roles: ['group', 'product', 'variant'], run(nodeId) { rawDownload(nodeId) } },   // die Datei kommt direkt vom Server
   ],
   importers: [{
     key: 'json', label: 'JSON', accept: ['.json', '.jsonl', '.ndjson'],
