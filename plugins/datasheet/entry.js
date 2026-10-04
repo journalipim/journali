@@ -148,9 +148,18 @@ export async function dataOf(ctx, id, locale, depth = 0) {
   const row = ctx.tree.byId.get(id)
   const out = { id, role: n.role, name: row?.label ?? n.name ?? id, sku: attr.sku ?? row?.sku ?? '', status: n.status, listen, today: new Date().toLocaleDateString(locale === 'de' ? 'de-DE' : 'en-GB'), attr, label, unit, groups, images, image: images[0]?.url ?? null, axes, variants: [] }
   // Subitems: am Produkt die Varianten, an der Gruppe die Produkte — für Datentabelle und Vergleich; Varianten heissen weiter variants
-  if (depth === 0) { const kids = ctx.tree.kids(id); out.children = await Promise.all(kids.map(k => dataOf(ctx, k.id, locale, 1))); out.variants = out.children.filter(c => c.role === 'variant') }
+  // Höchstens KINDER Subitems, je acht gleichzeitig (04.10.2026): vorher alle auf einmal — an einer Gruppe mit tausenden Produkten je zwei Anfragen
+  // und je Kind alle Attribute im Speicher. childrenTotal sagt, wie viele es wären.
+  if (depth === 0) {
+    const kids = ctx.tree.kids(id); out.childrenTotal = kids.length; out.children = []
+    const teil = kids.slice(0, KINDER)
+    for (let i = 0; i < teil.length; i += 8) out.children.push(...await Promise.all(teil.slice(i, i + 8).map(k => dataOf(ctx, k.id, locale, 1))))
+    out.variants = out.children.filter(c => c.role === 'variant')
+  }
   return out
 }
+
+const KINDER = 500   // so viele Subitems trägt ein Datenblatt höchstens (Datentabelle, Vergleich)
 
 // ---- Vorlagen im Journal
 const T = 'template:'

@@ -48,3 +48,18 @@ test('mehrwertig: die Werte stehen einzeln in listen — ein Komma im Wert trenn
   assert.deepEqual(d.listen.weight, ['0.1'], 'ein einzelner Wert ist eine Liste mit einem Eintrag')
   assert.deepEqual(d.listen.summe, ['42'])
 })
+
+test('eine Gruppe mit vielen Subitems: höchstens 500 im Blatt, je acht gleichzeitig geladen (04.10.2026)', async () => {
+  const kinder = Array.from({ length: 600 }, (_, i) => ({ id: `k${i}`, role: 'product', label: `K${i}`, parent: 'g' }))
+  const byId = new Map([['g', { id: 'g', role: 'group', label: 'G', parent: null }], ...kinder.map(k => [k.id, k])])
+  let gleichzeitig = 0, hoechstens = 0
+  const ctx = { store: { model: MODEL }, tree: { byId, ancestors: () => [], kids: id => id === 'g' ? kinder : [] },
+    api: { get: async url => {
+      gleichzeitig++; hoechstens = Math.max(hoechstens, gleichzeitig); await new Promise(r => setTimeout(r, 1)); gleichzeitig--
+      if (/\/relations$/.test(url)) return { out: [] }
+      const id = url.split('/')[3]; return { ...KNOTEN, id, role: id === 'g' ? 'group' : 'product', values: [], computed: [] }
+    } } }
+  const d = await dataOf(ctx, 'g', 'de')
+  assert.equal(d.children.length, 500); assert.equal(d.childrenTotal, 600)
+  assert.ok(hoechstens <= 16, `gleichzeitig ${hoechstens}`)   // je Kind zwei Anfragen, acht Kinder zugleich
+})
