@@ -65,6 +65,9 @@ nichts, was journali nicht kann. Die sachliche Beschreibung steht in `docs/` und
 Truth“; nicht „Belege“ (Kassenquittung), sondern eingefrorene Dokumente; nicht „mitlaufen“, sondern „mitwachsen“; nicht „ein Paket, das läuft“,
 sondern „durchstarten vom ersten Moment an“.
 
+**Kein Startdatum des Projekts** (Datum des ersten Commits, „seit wenigen Wochen“): es wirkt wie schnell zusammengebaut. Zahlen wie Commits und
+Tests stehen ohne Zeitraum.
+
 **Keine Platzhalter für Screenshots** — die setzt ein, wer den Entwurf in WordPress fertig macht, an der Stelle, die er für richtig hält.
 
 Wie überall im Projekt: kein Name, kein Zitat, keine Beschreibung, wer sich etwas gewünscht hat; fremde Produkte nicht als Vergleich.
