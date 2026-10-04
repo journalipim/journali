@@ -4,7 +4,7 @@
 //   node tools/plugin-cert.mjs keys                      Schlüsselpaar erzeugen (privat als PEM-Datei, öffentlich als Base64 auf stdout)
 //   node tools/plugin-cert.mjs sign <key…> [--ignore p]  certificate.json schreiben; ohne <key>: alle Plugins, die schon eines haben
 //   node tools/plugin-cert.mjs verify [<key…>]           Siegel prüfen (Rückgabe 1, wenn eines gebrochen ist)
-//   node tools/plugin-cert.mjs catalog <ziel>            catalog.json und ein Zip je zertifiziertem Plugin nach <ziel> schreiben
+//   node tools/plugin-cert.mjs catalog <ziel>            catalog.json und ein Zip je zertifiziertem Plugin nach <ziel> schreiben — ohne Plugins mit "intern": true
 //
 // Privater Schlüssel: JOURNALI_PLUGIN_SIGNING_KEY (Pfad zur PEM-Datei), sonst ~/.journali/plugin-signing.pem.
 // Öffentlicher Schlüssel zum Prüfen: JOURNALI_PLUGIN_KEY (Base64 SubjectPublicKeyInfo), sonst der eingebaute in PluginSeal.cs.
@@ -130,6 +130,8 @@ function main(argv) {
     for (const k of certified()) {
       const r = verifyPlugin(k); if (!r.ok) { console.log(`✗ ${k} — ${r.reason}, nicht im Katalog`); continue }
       const m = JSON.parse(readFileSync(join(PLUGINS, k, 'plugin.json'), 'utf8'))
+      // intern (04.10.2026): eine Schnittstelle, die nicht öffentlich ist — kein Paket, kein Eintrag im öffentlichen Katalog
+      if (m.intern) { console.log(`– ${k} intern, nicht im Katalog`); continue }
       const zip = `${k}-${r.cert.version}.zip`
       // Zip mit dem Verzeichnis als Wurzel — der Server prüft das Siegel im entpackten Verzeichnis
       const entries = [...files(join(PLUGINS, k), r.cert.ignore ?? []), CERT].map(f => `${k}/${f}`)
