@@ -163,7 +163,7 @@ public sealed class Abos(Instanz instanz, string jobsDir, HttpClient http, Func<
         // wer nicht registriert ist, schickt nichts hinaus (26.09.2026).
         var darf = c.Registriert == true || c.Lesen((_, _) => c.Teams.All.Values.Any(x => x.Abo is not null));
         if (darf && (_blattGeholt is not { } zuvor || Jetzt - zuvor >= Auffrischen))
-            if (await TarifblattAsync(c, ct) is { } fehler) Console.WriteLine($"journali: Tarifblatt nicht geholt — {fehler}");
+            if (await TarifblattAsync(c, ct) is { } fehler) Console.WriteLine($"journali: tariff sheet not fetched — {fehler}");
         var teams = c.Lesen((_, _) => c.Teams.All.Values.Select(t => (t.Key, t.Abo?.Issued)).ToList());
         var n = 0;
         foreach (var (team, zuletzt) in teams)
@@ -174,7 +174,7 @@ public sealed class Abos(Instanz instanz, string jobsDir, HttpClient http, Func<
             if (string.IsNullOrWhiteSpace(key) && zuletzt is null) continue;
             var (_, fehler) = await VerbindenAsync(c, team, key, "system", ct);
             if (fehler is null) n++;
-            else Console.WriteLine($"journali: Abo {team} nicht aufgefrischt — {fehler}");
+            else Console.WriteLine($"journali: subscription of {team} not refreshed — {fehler}");
         }
         return n;
     }

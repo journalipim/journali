@@ -1,7 +1,7 @@
 @echo off
 rem Entwicklung auf dem PC: tools\server start | stop | restart | status | web | build
 rem start   - Server per dotnet run in eigenem Fenster "journali" (localhost:5000), Log zusaetzlich in tools\server.log; das Fenster bleibt nach dem
-rem           Ende offen, damit man sieht, warum. Ohne Datenbank zeigt http://localhost:5000 die Einrichtung
+rem           Ende offen, damit man sieht, warum. Die Ausgaben sind englisch wie die Konsole des Servers. Ohne Datenbank zeigt http://localhost:5000 die Einrichtung
 rem           Umgebung aus Journali.Server\Properties\launchSettings.json (dotnet run liest sie), darunter
 rem           JOURNALI_LIZENZSERVER
 rem stop    - beendet Journali.Server.exe
@@ -20,28 +20,28 @@ if "%~1"=="status"  goto status
 if "%~1"=="web"     goto web
 if "%~1"=="build"   goto build
 if "%~1"=="plugins" goto plugins
-echo Aufruf: tools\server start ^| stop ^| restart ^| status ^| web ^| build ^| plugins [key]
+echo usage: tools\server start ^| stop ^| restart ^| status ^| web ^| build ^| plugins [key]
 exit /b 2
 
 :start
 rem Die Ausgabe steht im Fenster und zugleich in tools\server.log (jeder Start beginnt die Datei neu) - so laesst sich das Log auch von aussen lesen
 rem Farbe: hinter einer Umleitung gibt .NET keine mehr aus, darum faerbt das Fenster selbst (warn: gelb, fail: und crit: rot, mit den eingerueckten Folgezeilen); rot auch die Zeilen des Servers zu einer fehlenden Lizenz oder Sperre
-start "journali" /D "%ROOT%" powershell -NoProfile -NoExit -Command "[Console]::OutputEncoding=[Text.Encoding]::UTF8; $l='%ROOT%\tools\server.log'; Set-Content $l ''; cmd /c 'dotnet run --project Journali.Server 2>&1' | ForEach-Object { if ($_ -match '^warn:') { $f='Yellow' } elseif ($_ -match '^(fail|crit):') { $f='Red' } elseif ($_ -match '^\S') { $f=$null }; $g = if ($_ -match '^journali: .*(fehlt die Lizenz|ohne Lizenz|, gesperrt)') { 'Red' } else { $f }; if ($g) { Write-Host $_ -ForegroundColor $g } else { Write-Host $_ }; [IO.File]::AppendAllText($l, ($_ | Out-String)) }"
+start "journali" /D "%ROOT%" powershell -NoProfile -NoExit -Command "[Console]::OutputEncoding=[Text.Encoding]::UTF8; $l='%ROOT%\tools\server.log'; Set-Content $l ''; cmd /c 'dotnet run --project Journali.Server 2>&1' | ForEach-Object { if ($_ -match '^warn:') { $f='Yellow' } elseif ($_ -match '^(fail|crit):') { $f='Red' } elseif ($_ -match '^\S') { $f=$null }; $g = if ($_ -match '^journali: .*(no licence|unlicensed|, blocked)') { 'Red' } else { $f }; if ($g) { Write-Host $_ -ForegroundColor $g } else { Write-Host $_ }; [IO.File]::AppendAllText($l, ($_ | Out-String)) }"
 goto warten
 
 rem Warten, bis der Server antwortet (der erste Start uebersetzt noch) — und es sagen
 :warten
-echo Server startet ...
+echo server starting ...
 for /l %%i in (1,1,90) do (
-  curl -s -m 2 localhost:5000/api/health 2>nul | findstr /c:"\"setup\"" >nul && (echo wartet auf die Einrichtung der Datenbank - http://localhost:5000, Code im Fenster "journali" & exit /b 0)
-  curl -sf -m 2 -o nul localhost:5000/api/health && (echo laeuft - http://localhost:5000 & exit /b 0)
+  curl -s -m 2 localhost:5000/api/health 2>nul | findstr /c:"\"setup\"" >nul && (echo waiting for the database setup - http://localhost:5000, code in the window "journali" & exit /b 0)
+  curl -sf -m 2 -o nul localhost:5000/api/health && (echo running - http://localhost:5000 & exit /b 0)
   ping -n 2 127.0.0.1 >nul
 )
-echo kam nicht hoch - siehe Fenster "journali"
+echo did not come up - see the window "journali"
 exit /b 1
 
 :stop
-taskkill /im Journali.Server.exe /f >nul 2>&1 && echo gestoppt || echo lief nicht
+taskkill /im Journali.Server.exe /f >nul 2>&1 && echo stopped || echo was not running
 exit /b 0
 
 :restart
@@ -50,7 +50,7 @@ call "%~f0" start
 exit /b 0
 
 :status
-curl -s -m 2 localhost:5000/api/health || echo laeuft nicht
+curl -s -m 2 localhost:5000/api/health || echo not running
 echo.
 exit /b 0
 

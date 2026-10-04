@@ -77,7 +77,7 @@ public sealed class SwitchableMediaStore : IMediaStore
         try { next = Build(c); } catch (Exception e) { return e.Message; }
         if (await next.ProbeAsync(ct) is { } error) return error;
         _inner = next; Config = c;
-        _log.LogInformation("Medienspeicher: {Kind}", next.Kind);
+        _log.LogInformation("Media store: {Kind}", next.Kind);
         return null;
     }
 

@@ -4,7 +4,7 @@ namespace Journali.Server;
 
 /// <summary>
 /// Teilzeiten einer Anfrage: wohin die Zeit ging (Wartezeit auf die Lesesperre, Abfragen an die Datenbank, Rechnen im Speicher).
-/// Die Zeile „langsam:“ in der Konsole hängt sie an, wenn eine Anfrage 300 ms überschreitet. Ohne laufende Anfrage (Jobs, Start) wird nichts notiert.
+/// Die Zeile „slow:“ in der Konsole hängt sie an, wenn eine Anfrage 300 ms überschreitet. Ohne laufende Anfrage (Jobs, Start) wird nichts notiert.
 /// </summary>
 public static class Teilzeit
 {
@@ -20,7 +20,7 @@ public static class Teilzeit
         lock (liste) liste.Add((name, ms));
     }
 
-    /// <summary>„ · Sperre 8120 ms, Stand 310 ms“ — oder leer, wenn nichts auffiel.</summary>
+    /// <summary>„ · read lock 8120 ms, stats 310 ms“ — oder leer, wenn nichts auffiel. Die Namen sind englisch wie die ganze Konsole.</summary>
     public static string Text()
     {
         if (_teile.Value is not { } liste) return "";

@@ -60,7 +60,7 @@ public sealed class Embedder : IDisposable
             catch (Exception e)
             {
                 // Prozess weg, keine Antwort in der Zeit: beenden und beim nächsten Bedarf neu starten
-                _log.LogWarning("embed: {Message} — der Kindprozess wird beendet", e.Message);
+                _log.LogWarning("embed: {Message} — stopping the child process", e.Message);
                 Stop();
                 throw new InvalidOperationException("Der Einbetter antwortet nicht: " + e.Message);
             }

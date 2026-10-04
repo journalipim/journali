@@ -79,7 +79,7 @@ public static class DatenbankApi
                 case SslFehler.Modus: return Bad("Verschlüsselung: Disable, Prefer, Require, VerifyCA oder VerifyFull.");
                 case SslFehler.Probe: return Bad("Mit {0} lässt sich keine Verbindung herstellen: {1}", r.Modus, r.Detail);
             }
-            log.LogInformation("Verschlüsselung der Datenbankverbindung auf {Modus} gestellt (gilt nach dem nächsten Start)", body.Modus);
+            log.LogInformation("Database connection encryption set to {Modus} (applies after the next start)", body.Modus);
             return Results.Ok(r.Wert);
         });
 
@@ -91,7 +91,7 @@ public static class DatenbankApi
                 Thread.Sleep(300);
                 return Bad("Passwort falsch.");
             }
-            log.LogInformation("Datenbankpasswort angezeigt für {User}", wer);
+            log.LogInformation("Database password shown to {User}", wer);
             return Results.Ok(new { password = ziel.Password });
         });
     }

@@ -134,8 +134,8 @@ public sealed class JobRunner : BackgroundService
             // Der Zeitplan nimmt nur die Jobs dieses Servers; die Systemjobs zieht nur der Hauptserver nach — auf zwei Servern liefen sie sonst doppelt
             if (Aktiv())
             {
-                try { Tick(); } catch (Exception e) { _log.LogError(e, "Job-Takt"); }
-                if (IstHaupt()) try { await Nachziehen(stop); } catch (Exception e) { _log.LogError(e, "Systemjobs"); }
+                try { Tick(); } catch (Exception e) { _log.LogError(e, "Job tick"); }
+                if (IstHaupt()) try { await Nachziehen(stop); } catch (Exception e) { _log.LogError(e, "System jobs"); }
             }
             else _lastMinute = Floor(DateTimeOffset.Now);   // keine verpassten Minuten nachholen, wenn er wieder darf
             try { await Task.Delay(TimeSpan.FromSeconds(20), stop); } catch (OperationCanceledException) { }
@@ -218,12 +218,12 @@ public sealed class JobRunner : BackgroundService
                 var neu = NaechsterAbstand(offen == v.Offen, abstand);
                 _nachzug[key] = (offen, jetzt, neu);
                 if (offen == v.Offen && neu >= TimeSpan.FromMinutes(8) && abstand < TimeSpan.FromMinutes(8))
-                    _log.LogWarning("Systemjob {Job}: {Offen} offen, aber kein Lauf bewirkt etwas — Abstand jetzt {Min} min", key, offen, neu.TotalMinutes);
+                    _log.LogWarning("System job {Job}: {Offen} pending, but no run has an effect — interval now {Min} min", key, offen, neu.TotalMinutes);
             }
             else _nachzug[key] = (offen, jetzt, TimeSpan.FromMinutes(1));
 
             Start(key, "nachziehen", out var fehler);
-            if (fehler is not null && fehler != "läuft schon") _log.LogWarning("Systemjob {Job}: {Fehler}", key, fehler);
+            if (fehler is not null && fehler != "läuft schon") _log.LogWarning("System job {Job}: {Fehler}", key, fehler);
         }
     }
 
@@ -279,7 +279,7 @@ public sealed class JobRunner : BackgroundService
         {
             if (DriverApi.Aufloesen(_catalog, Dir, inZugang) is not { } a || DriverApi.TreiberFuer(a.Zugang, Dir) is not { } t) { error = $"Zugang {inZugang} gibt es nicht oder er liefert keine Dateien"; return null; }
             try { Fach.Holen(job, t, job.Files.InPfad, inSpec, m => _log.LogWarning("Job {Key}: {Meldung}", key, m)).GetAwaiter().GetResult(); }
-            catch (Exception e) { _log.LogWarning("Job {Key}: Eingang über {Zugang}: {Meldung}", key, inZugang, e.Message); }   // was im Fach liegt, läuft trotzdem
+            catch (Exception e) { _log.LogWarning("Job {Key}: input via {Zugang}: {Meldung}", key, inZugang, e.Message); }   // was im Fach liegt, läuft trotzdem
         }
         // Fächer: Eingang wählen (Duplikate weg), Ausgabeort festlegen, {inFile}/{inDir}/{outFile}/{outDir} füllen
         JobFach.Plan? plan;
@@ -343,7 +343,7 @@ public sealed class JobRunner : BackgroundService
         {
             lock (_gate) { _running.Remove(key); _paused.Remove(key); _vorrang.Remove(key); }
             Auth.RevokeServiceToken(token);
-            try { log.Flush(); LogFertig?.Invoke(key, run, logPath); } catch (Exception e) { _log.LogWarning("Job {Key}: Log nicht in die Datenbank geschrieben — {Meldung}", key, e.Message); }
+            try { log.Flush(); LogFertig?.Invoke(key, run, logPath); } catch (Exception e) { _log.LogWarning("Job {Key}: log not written to the database — {Meldung}", key, e.Message); }
             var exit = 0; try { exit = p.ExitCode; } catch { }
             var bytes = 0L; try { log.Flush(); bytes = new FileInfo(logPath).Length; } catch { }
             var summary = last is { Length: > 0 } ? (last.Length > 200 ? last[..200] : last) : null;
@@ -368,7 +368,7 @@ public sealed class JobRunner : BackgroundService
                 catch (Exception e) { Line("! Fächer: ", e.Message); }
             }
             try { _catalog.With((_, _, write) => write(actor, Jobs.Stream + key, Types.JobRunFinished, new JobRunFinished(run, status, exit, Math.Round(sw.Elapsed.TotalSeconds, 1), summary, bytes, eintraege), null)); }
-            catch (Exception e) { _log.LogError(e, "Job {Key}: Ausgang nicht geschrieben", key); }
+            catch (Exception e) { _log.LogError(e, "Job {Key}: output not written", key); }
             p.Dispose();
         }
     }

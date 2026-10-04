@@ -234,10 +234,10 @@ public static class VersionApi
                 var values = new Dictionary<string, string> { ["journali"] = origin, ["actor"] = actor, ["node"] = id, ["version"] = nr.ToString(), ["kind"] = kind, ["token"] = token };
                 int exit; string output;
                 try { (exit, output) = await PluginApi.RunProcessAsync(pluginDir, key, proc, values, TimeSpan.FromMinutes(30), ct); } finally { Auth.RevokeServiceToken(token); }
-                if (exit != 0) log.LogWarning("Erzeuger {Plugin} für {Node} Version {Nr}: Rückgabe {Exit} — {Output}", key, id, nr, exit, output.Length > 500 ? output[^500..] : output);
-                else log.LogInformation("Erzeuger {Plugin}: {Node} Version {Nr} — {Kind}", key, id, nr, kind);
+                if (exit != 0) log.LogWarning("Generator {Plugin} for {Node} version {Nr}: exit {Exit} — {Output}", key, id, nr, exit, output.Length > 500 ? output[^500..] : output);
+                else log.LogInformation("Generator {Plugin}: {Node} version {Nr} — {Kind}", key, id, nr, kind);
             }
-            catch (Exception e) { log.LogWarning("Erzeuger {Plugin} für {Node} Version {Nr}: {Error}", key, id, nr, e.Message); }
+            catch (Exception e) { log.LogWarning("Generator {Plugin} for {Node} version {Nr}: {Error}", key, id, nr, e.Message); }
         }
     }
 

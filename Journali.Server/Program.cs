@@ -12,10 +12,11 @@ using static Journali.Server.ModelApi;
 // nach wwwroot) daneben. Regel: kein Schreibpfad am Catalog vorbei.
 
 var builder = WebApplication.CreateBuilder(args);
-// Die erste Zeile: welche Version startet — Build wie in der Kopfleiste (TTMM.hhmm, Ortszeit des Servers)
+// Die erste Zeile: welche Version startet — Build wie in der Kopfleiste (TTMM.hhmm, Ortszeit des Servers).
+// Die Konsole spricht Englisch, gleich welche Sprache die Oberfläche hat (04.10.2026): sonst mischen sich die eigenen Zeilen mit denen von ASP.NET.
 {
     var gebaut = System.IO.File.GetLastWriteTimeUtc(typeof(Program).Assembly.Location).ToLocalTime();
-    Console.WriteLine($"journali {typeof(Program).Assembly.GetName().Version?.ToString(3)} · Build {gebaut:ddMM.HHmm} ({gebaut:dd.MM.yyyy HH:mm} {gebaut:zzz})");
+    Console.WriteLine($"journali {typeof(Program).Assembly.GetName().Version?.ToString(3)} · Build {gebaut:ddMM.HHmm} ({gebaut:yyyy-MM-dd HH:mm} {gebaut:zzz})");
 }
 
 // Datenverzeichnis (JOURNALI_JOBS): Jobs, Medien-Einstellung, die Verbindung zur Datenbank (db.json) — und der lokale
@@ -35,7 +36,7 @@ pg.EnsureSchema();
 // teilen ihn. Dateien von früher (auth.json, mail.json, secrets.json) werden übernommen.
 var tresor = new PostgresTresor(db);
 Tresor.Nutze(tresor);
-foreach (var datei in Tresor.Uebernehmen(dataDir, tresor)) Console.WriteLine($"journali: {datei} in die Datenbank übernommen");
+foreach (var datei in Tresor.Uebernehmen(dataDir, tresor)) Console.WriteLine($"journali: {datei} moved into the database");
 // Spiegel und Schnappschuss stellt der Administrator ein — betrieb.json im Datenverzeichnis,
 // ohne Datei zählt die Umgebung (JOURNALI_JOURNAL_CACHE=off, JOURNALI_SNAPSHOT=off). Gelesen wird das hier, vor dem
 // Journal: der Spiegel entscheidet, wie das Journal überhaupt gelesen wird.
@@ -50,14 +51,14 @@ var catalog = new Catalog(journal);
 if (Environment.GetEnvironmentVariable("JOURNALI_LICENCE_KEY") is { Length: > 0 } pruefAussteller)
 {
     Journali.Core.Licensing.Aussteller.Vertraue(pruefAussteller);
-    Console.WriteLine("journali: Prüf-Aussteller aus JOURNALI_LICENCE_KEY angenommen (Debug-Bau)");
+    Console.WriteLine("journali: test issuer from JOURNALI_LICENCE_KEY accepted (debug build)");
 }
 #endif
 // Schnappschuss der Abbilder: Stand #n als Datei, der Start liest nur den Rest;
 // JOURNALI_SNAPSHOT=off schaltet ihn ab. Geschrieben nach dem Start (im Hintergrund) und beim Beenden.
 var snapshotPath = betrieb.Snapshot ? Path.Combine(dataDir, $"snapshot-{connection.Host}-{connection.Port}-{connection.Database}.json") : null;
 var snapshotAt = snapshotPath is null ? 0 : catalog.LoadSnapshot(snapshotPath);
-Console.WriteLine($"journali: Journal wird gelesen …{(snapshotAt > 0 ? $" (Schnappschuss bis #{snapshotAt})" : "")}{(journal is CachedJournal cj && cj.CachedHead > 0 ? $" (Spiegel bis #{cj.CachedHead}, Rest aus der Datenbank)" : "")}");   // vor dem Logger — damit der Start nicht stumm ist
+Console.WriteLine($"journali: reading journal …{(snapshotAt > 0 ? $" (snapshot up to #{snapshotAt})" : "")}{(journal is CachedJournal cj && cj.CachedHead > 0 ? $" (mirror up to #{cj.CachedHead}, rest from the database)" : "")}");   // vor dem Logger — damit der Start nicht stumm ist
 var sw0 = System.Diagnostics.Stopwatch.StartNew();
 // Fortschritt etwa je Sekunde — Ziel ist der Kopf des Journals
 var head0 = journal.Head; var mirror0 = journal is CachedJournal c0 ? c0.CachedHead : 0; var lastTick = 0L;
@@ -65,8 +66,8 @@ void Progress(int n, long number, bool final)
 {
     if (!final && sw0.ElapsedMilliseconds - lastTick < 1000) return;
     lastTick = sw0.ElapsedMilliseconds;
-    var src = number <= mirror0 ? "Spiegel" : "Datenbank";   // Stand beim Start — der Spiegel wächst beim Lesen mit
-    Console.WriteLine($"journali:   … #{number} von #{head0} ({Math.Min(100, number * 100 / Math.Max(1, head0))} %, {n} Einträge, {sw0.Elapsed.TotalSeconds:0} s, {src})");
+    var src = number <= mirror0 ? "mirror" : "database";   // Stand beim Start — der Spiegel wächst beim Lesen mit
+    Console.WriteLine($"journali:   … #{number} of #{head0} ({Math.Min(100, number * 100 / Math.Max(1, head0))} %, {n} entries, {sw0.Elapsed.TotalSeconds:0} s, {src})");
 }
 var rebuilt = catalog.Rebuild(out var timing, (n, number) => Progress(n, number, false));
 if (lastTick > 0) Progress(rebuilt, journal.Head, true);   // der Allerletzte bei 100 %
@@ -86,11 +87,11 @@ void WriteSnapshot(string why)
     try
     {
         var sw = System.Diagnostics.Stopwatch.StartNew(); var n = catalog.SaveSnapshot(snapshotPath);
-        if (n > 0) { schnappschussStand = n; schnappschussZeit = DateTime.UtcNow; Console.WriteLine($"journali: Schnappschuss bis #{n} geschrieben ({sw.ElapsedMilliseconds} ms, {why})"); }
+        if (n > 0) { schnappschussStand = n; schnappschussZeit = DateTime.UtcNow; Console.WriteLine($"journali: snapshot up to #{n} written ({sw.ElapsedMilliseconds} ms, {why})"); }
     }
-    catch (Exception e) { Console.WriteLine($"journali: Schnappschuss nicht geschrieben — {e.Message}"); }
+    catch (Exception e) { Console.WriteLine($"journali: snapshot not written — {e.Message}"); }
 }
-Console.WriteLine($"journali: {rebuilt} Einträge in {sw0.ElapsedMilliseconds} ms — {timing}");   // wo die Zeit hingeht
+Console.WriteLine($"journali: {rebuilt} entries in {sw0.ElapsedMilliseconds} ms — {timing}");   // wo die Zeit hingeht
 // Die Lizenz liegt signiert und verschlüsselt in der Datenbank
 // („jegliche eingespielte Lizenz kommt signiert und verschlüsselt in einen Container — die DB“); eine Datei von früher
 // wird beim ersten Lesen übernommen. Muss vor dem Saatgut stehen: daraus bekommt das Init Team seine Limits.
@@ -111,7 +112,7 @@ var lizenzserver = Journali.Core.Licensing.Aussteller.Adresse;
 if (Environment.GetEnvironmentVariable("JOURNALI_LIZENZSERVER") is { } eigener)
 {
     lizenzserver = eigener.Trim();
-    Console.WriteLine($"journali: Lizenzserver aus JOURNALI_LIZENZSERVER: {(lizenzserver.Length is 0 ? "keiner" : lizenzserver)} (Debug-Bau)");
+    Console.WriteLine($"journali: licence server from JOURNALI_LIZENZSERVER: {(lizenzserver.Length is 0 ? "none" : lizenzserver)} (debug build)");
 }
 #endif
 var abos = new Abos(instanz, dataDir, new HttpClient { Timeout = TimeSpan.FromSeconds(20) }, () => lizenzserver);
@@ -121,8 +122,8 @@ catalog.ZaehltAb = licences.Lic.CountFrom;   // ab wann gezählt wird
 var seeded = catalog.SeedMissing();
 // Server auf derselben Datenbank (pflegestruktur 41): Kennung, Puls, Rolle. Der erste Takt gleich hier, damit der Start weiss, ob er Hauptserver ist
 var verbund = new Verbund(db, catalog, dataDir, typeof(Program).Assembly.GetName().Version?.ToString(3), System.IO.File.GetLastWriteTimeUtc(typeof(Program).Assembly.Location));
-try { verbund.Takt(); } catch (Exception e) { Console.WriteLine($"journali: Server nicht eingetragen — {e.Message}"); }
-Console.WriteLine($"journali: Server {verbund.NameVon(verbund.Id, verbund.Host)} ({verbund.Host}, {verbund.Id}) — {(verbund.IstHaupt ? "Hauptserver" : "Arbeitsserver")}{(verbund.Gesperrt ? ", gesperrt" : "")}{(verbund.OhneLizenz ? $", ohne Lizenz (erlaubt: {verbund.Erlaubt} Server)" : "")}");
+try { verbund.Takt(); } catch (Exception e) { Console.WriteLine($"journali: server not registered — {e.Message}"); }
+Console.WriteLine($"journali: server {verbund.NameVon(verbund.Id, verbund.Host)} ({verbund.Host}, {verbund.Id}) — {(verbund.IstHaupt ? "main server" : "worker server")}{(verbund.Gesperrt ? ", blocked" : "")}{(verbund.OhneLizenz ? $", unlicensed (allowed: {verbund.Erlaubt} {(verbund.Erlaubt == 1 ? "server" : "servers")})" : "")}");
 _ = Task.Run(async () =>
 {
     var war = verbund.IstHaupt; string? fehler = null;
@@ -132,10 +133,10 @@ _ = Task.Run(async () =>
         try
         {
             var ist = verbund.Takt(); fehler = null;
-            if (ist != war) Console.WriteLine($"journali: dieser Server ist jetzt {(ist ? "Hauptserver" : "Arbeitsserver")}");
+            if (ist != war) Console.WriteLine($"journali: this server is now {(ist ? "the main server" : "a worker server")}");
             war = ist;
         }
-        catch (Exception e) { if (e.Message != fehler) Console.WriteLine($"journali: Puls nicht geschrieben — {e.Message}"); fehler = e.Message; }   // einmal je neuem Fehler, nicht alle 2 s
+        catch (Exception e) { if (e.Message != fehler) Console.WriteLine($"journali: heartbeat not written — {e.Message}"); fehler = e.Message; }   // einmal je neuem Fehler, nicht alle 2 s
     }
 });
 // Läuft eine Lizenz (oder der Test) im Betrieb ab, gilt Kostenlos — das Init Team trägt dann dessen Limits. Stündlich
@@ -155,7 +156,7 @@ _ = Task.Run(async () =>
         {
             letzte = DateTime.UtcNow;
             try { catalog.Lesen((_, _) => catalog.LimitsAusLizenz()); } catch { }
-            try { await abos.AuffrischenAsync(catalog); } catch (Exception e) { Console.WriteLine($"journali: Abos nicht aufgefrischt — {e.Message}"); }
+            try { await abos.AuffrischenAsync(catalog); } catch (Exception e) { Console.WriteLine($"journali: subscriptions not refreshed — {e.Message}"); }
         }
         warHaupt = haupt;
         await Task.Delay(TimeSpan.FromSeconds(10));
@@ -171,7 +172,7 @@ if (betrieb.NachziehenSekunden > 0)
         while (true)
         {
             await Task.Delay(TimeSpan.FromSeconds(betrieb.NachziehenSekunden));
-            try { catalog.Nachziehen(); } catch (Exception e) { Console.WriteLine($"journali: nicht nachgezogen — {e.Message}"); }
+            try { catalog.Nachziehen(); } catch (Exception e) { Console.WriteLine($"journali: catching up with the journal failed — {e.Message}"); }
         }
     });
 
@@ -201,7 +202,7 @@ _ = Task.Run(async () =>
         try
         {
             if (MediaConfigFile.Load(dataDir) is { } cfg && cfg != mediaStore.Config && await mediaStore.SwitchAsync(cfg, CancellationToken.None) is null)
-                Console.WriteLine($"journali: Medienspeicher umgestellt auf {cfg.Spec} (eingestellt auf einem anderen Server)");
+                Console.WriteLine($"journali: media store switched to {cfg.Spec} (set on another server)");
         }
         catch (Exception) { }   // Datenbank kurz weg: beim nächsten Mal
     }
@@ -253,7 +254,7 @@ builder.Services.ConfigureHttpJsonOptions(o =>
 builder.Services.AddCors(o => o.AddDefaultPolicy(p => p.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod()));
 
 var app = builder.Build();
-app.Logger.LogInformation("Abbilder aus {Count} Einträgen gebaut, Stand #{Head}, aus Vorgaben angelegt {Seeded}, Medien: {Media}, Plugins unter {Plugins} ({Auto} neu installiert)", rebuilt, catalog.Head, seeded, mediaStore.Kind, pluginDir, autoInstalled);
+app.Logger.LogInformation("Projections built from {Count} entries, head #{Head}, created from defaults {Seeded}, media: {Media}, plugins in {Plugins} ({Auto} newly installed)", rebuilt, catalog.Head, seeded, mediaStore.Kind, pluginDir, autoInstalled);
 
 // Langsame Anfragen stehen in der Konsole: Pfad und Dauer. Wer eine Wartezeit meldet, sieht dort, welche Anfrage sie verursacht hat.
 app.Use(async (ctx, next) =>
@@ -261,7 +262,7 @@ app.Use(async (ctx, next) =>
     var uhr = System.Diagnostics.Stopwatch.StartNew();
     Teilzeit.Beginn();
     try { await next(); }
-    finally { if (uhr.ElapsedMilliseconds >= 300 && ctx.Request.Path.StartsWithSegments("/api")) app.Logger.LogWarning("langsam: {Methode} {Pfad} {Ms} ms ({Status}){Stapel}", ctx.Request.Method, ctx.Request.Path + ctx.Request.QueryString, uhr.ElapsedMilliseconds, ctx.Response.StatusCode, (ctx.Request.Path.Value?.EndsWith("/batch") == true && Catalog.LetzterStapel is { } z ? " · " + z : "") + Teilzeit.Text()); }
+    finally { if (uhr.ElapsedMilliseconds >= 300 && ctx.Request.Path.StartsWithSegments("/api")) app.Logger.LogWarning("slow: {Methode} {Pfad} {Ms} ms ({Status}){Stapel}", ctx.Request.Method, ctx.Request.Path + ctx.Request.QueryString, uhr.ElapsedMilliseconds, ctx.Response.StatusCode, (ctx.Request.Path.Value?.EndsWith("/batch") == true && Catalog.LetzterStapel is { } z ? " · " + z : "") + Teilzeit.Text()); }
 });
 
 app.UseCors();   // auch im Betrieb: das OnlyOffice-Plugin ruft /api aus dem Editor-Origin; noch keine Anmeldung, daher offen
@@ -351,7 +352,7 @@ Auth.Map(api, dataDir);
 if (Auth.Recover(catalog, dataDir, builder.Configuration["JOURNALI_ADMIN_PASSWORD"], builder.Configuration["JOURNALI_ADMIN_USER"]) is { } recovered) Console.WriteLine("journali: " + recovered);
 // Einrichtungscode, solange ein Administrator fehlt oder keiner ein Passwort hat — sonst gibt es keinen
 if (Auth.Lage(catalog, dataDir) is var anmeldung && anmeldung == Auth.Anmeldung.Anmelden) Einrichtungscode.Erledigt(dataDir);
-else Console.WriteLine($"journali: {(anmeldung == Auth.Anmeldung.Einrichten ? "noch kein Administrator" : "kein Administrator hat ein Passwort")} — Einrichtungscode {Einrichtungscode.Aktiv(dataDir)} (auch in {Einrichtungscode.PathOf(dataDir)})");
+else Console.WriteLine($"journali: {(anmeldung == Auth.Anmeldung.Einrichten ? "no administrator yet" : "no administrator has a password")} — setup code {Einrichtungscode.Aktiv(dataDir)} (also in {Einrichtungscode.PathOf(dataDir)})");
 
 // ---- Stand und Modell ----------------------------------------------------
 
@@ -585,15 +586,15 @@ app.MapFallbackToFile("index.html", staticOptions);
 
 if (snapshotPath is not null)
 {
-    if (SchnappschussFaellig(catalog.Head)) _ = Task.Run(() => WriteSnapshot("nach dem Start"));   // im Hintergrund — der Start wartet nicht
-    app.Lifetime.ApplicationStopping.Register(() => { if (SchnappschussFaellig(catalog.Head)) WriteSnapshot("beim Beenden"); });
+    if (SchnappschussFaellig(catalog.Head)) _ = Task.Run(() => WriteSnapshot("after start"));   // im Hintergrund — der Start wartet nicht
+    app.Lifetime.ApplicationStopping.Register(() => { if (SchnappschussFaellig(catalog.Head)) WriteSnapshot("on shutdown"); });
     // Stündlich nachsehen, ob sich einer lohnt: nach einem Absturz sind höchstens 10 000 Einträge oder die eines Tages nachzuspielen
     _ = Task.Run(async () =>
     {
         while (true)
         {
             await Task.Delay(TimeSpan.FromHours(1));
-            try { if (SchnappschussFaellig(catalog.Head)) WriteSnapshot("fällig"); } catch { }
+            try { if (SchnappschussFaellig(catalog.Head)) WriteSnapshot("due"); } catch { }
         }
     });
 }

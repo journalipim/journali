@@ -8,7 +8,7 @@ import { parseLine, replyLine, errorLine } from './core.mjs'
 
 const model = process.env.JOURNALI_EMBED_MODEL || DEFAULT_MODEL
 const t0 = Date.now()
-try { await load(model); console.error(`Modell ${model} geladen (${((Date.now() - t0) / 1000).toFixed(1)} s)`) }
+try { await load(model); console.error(`model ${model} loaded (${((Date.now() - t0) / 1000).toFixed(1)} s)`) }
 catch (e) { console.error('✗ ' + e.message); process.exit(1) }
 
 const rl = readline.createInterface({ input: process.stdin, crlfDelay: Infinity })

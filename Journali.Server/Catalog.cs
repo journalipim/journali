@@ -46,7 +46,7 @@ public sealed class Catalog
     {
         var uhr = System.Diagnostics.Stopwatch.StartNew();
         _state.EnterReadLock();
-        Teilzeit.Notiere("Lesesperre", uhr.ElapsedMilliseconds);   // Wartezeit, solange ein Eintrag angewendet wird
+        Teilzeit.Notiere("read lock", uhr.ElapsedMilliseconds);   // Wartezeit, solange ein Eintrag angewendet wird
         try { return f(); } finally { _state.ExitReadLock(); }
     }
 
@@ -539,7 +539,7 @@ public sealed class Catalog
             try { echte = _journal.AppendMany(actor, offen, batch); }
             catch { NeuAufbauen(); throw; }
             if (echte.Count != offen.Count || echte[0].Number != basis + 1) NeuAufbauen();
-            LetzterStapel = $"{offen.Count} Einträge: Sperre {wartete} ms, anwenden {anwenden} ms, schreiben {uhr.ElapsedMilliseconds} ms";
+            LetzterStapel = $"{offen.Count} entries: lock {wartete} ms, apply {anwenden} ms, write {uhr.ElapsedMilliseconds} ms";
             return ergebnis;
         }
     }

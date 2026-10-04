@@ -180,7 +180,7 @@ public sealed class Verbund : IDisposable
         _lizenziert = rang.Take(Erlaubt).ToHashSet();
         OhneLizenzAnzahl = rang.Count - _lizenziert.Count;
         var ohne = !_lizenziert.Contains(Id) && !Gesperrt;
-        if (ohne != _ohneLizenz) Console.WriteLine(ohne ? $"journali: für einen weiteren Server fehlt die Lizenz (erlaubt: {Erlaubt}) — dieser Server beantwortet nur /api/health" : "journali: dieser Server hat wieder eine Lizenz");
+        if (ohne != _ohneLizenz) Console.WriteLine(ohne ? $"journali: no licence for another server (allowed: {Erlaubt}) — this server answers /api/health only" : "journali: this server is licensed again");
         _ohneLizenz = ohne;
         _haupt = RolleKlaeren();
         // jeder Server schreibt die Logs seiner Läufe — so liest man sie von jedem Server aus

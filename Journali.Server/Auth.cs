@@ -348,11 +348,11 @@ public static class Auth
     {
         if (string.IsNullOrWhiteSpace(password)) return null;
         var key = Key(user) ?? "admin";
-        if (password.Trim().Length < 8) return $"JOURNALI_ADMIN_PASSWORD: mindestens 8 Zeichen — nichts geändert.";
+        if (password.Trim().Length < 8) return $"JOURNALI_ADMIN_PASSWORD: at least 8 characters — nothing changed.";
         var exists = c.Lesen((_, _) => c.Users.All.ContainsKey(key));
         if (!exists) c.With((_, _, write) => write("system", Stream + key, Types.UserDefined, new UserDefined(key, null, "admin", true), null));
         With(dir, s => { s.Passwords[key] = Hash(password.Trim()); return 0; }, save: true);
-        return $"Passwort von {key} aus JOURNALI_ADMIN_PASSWORD gesetzt{(exists ? "" : " (Anwender angelegt, Rolle admin)")} — Variable jetzt wieder entfernen.";
+        return $"password of {key} set from JOURNALI_ADMIN_PASSWORD{(exists ? "" : " (user created, role admin)")} — the variable can be removed now.";
     }
 
     public static void Map(RouteGroupBuilder api, string dir)

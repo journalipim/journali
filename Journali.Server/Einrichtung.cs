@@ -202,6 +202,13 @@ public static class Einrichtung
         catch (Exception e) { return Einordnen(e); }
     }
 
+    /// <summary>Die Lage für die Konsole — sie spricht Englisch.</summary>
+    private static string LageEnglisch(DbLage l) => l switch
+    {
+        DbLage.Ok => "ok", DbLage.Keine => "no database", DbLage.Unerreichbar => "unreachable",
+        DbLage.Abgewiesen => "rejected", DbLage.Rechte => "missing privileges", DbLage.Belegt => "occupied by another server", _ => "error",
+    };
+
     public static string LageKey(DbLage l) => l switch
     {
         DbLage.Ok => "ok", DbLage.Keine => "keine", DbLage.Unerreichbar => "unerreichbar",
@@ -294,8 +301,8 @@ public static class Einrichtung
         };
         var code = Einrichtungscode.Aktiv(dataDir);
         Console.Error.WriteLine(ziel is null
-            ? "journali: keine Datenbank eingerichtet"
-            : $"journali: Datenbank {ziel.Host}:{ziel.Port}/{ziel.Database} — {LageKey(erst.Item1)} ({erst.Item3})");
+            ? "journali: no database configured"
+            : $"journali: database {ziel.Host}:{ziel.Port}/{ziel.Database} — {LageEnglisch(erst.Item1)} ({erst.Item3})");
 
         var b = WebApplication.CreateBuilder(new WebApplicationOptions
         {
@@ -306,7 +313,7 @@ public static class Einrichtung
         var app = b.Build();
         Map(app, stufe);
         await app.StartAsync();
-        Console.WriteLine($"journali: Einrichtung unter {string.Join(", ", app.Urls)} — Einrichtungscode {code} (auch in {Einrichtungscode.PathOf(dataDir)})");
+        Console.WriteLine($"journali: setup at {string.Join(", ", app.Urls)} — setup code {code} (also in {Einrichtungscode.PathOf(dataDir)})");
 
         using var ende = new CancellationTokenSource();
         var wiederholen = Task.Run(async () =>
@@ -322,7 +329,7 @@ public static class Einrichtung
         await Task.Delay(500);   // die Antwort auf „Speichern“ soll noch hinausgehen
         await app.StopAsync();
         await app.DisposeAsync();
-        Console.WriteLine($"journali: Datenbank {fertig.Host}:{fertig.Port}/{fertig.Database} verbunden");
+        Console.WriteLine($"journali: database {fertig.Host}:{fertig.Port}/{fertig.Database} connected");
         return fertig;
     }
 

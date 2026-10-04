@@ -67,7 +67,7 @@ public static class Projector
         public long ReadTicks;
         public long ReadMs;
         public Dictionary<string, long> Apply { get; } = new();
-        public override string ToString() => $"lesen {ReadMs} ms · anwenden " + string.Join(", ", Apply.OrderByDescending(kv => kv.Value).Select(kv => $"{kv.Key} {kv.Value} ms"));
+        public override string ToString() => $"read {ReadMs} ms · apply " + string.Join(", ", Apply.OrderByDescending(kv => kv.Value).Select(kv => $"{kv.Key} {kv.Value} ms"));
     }
 
     /// <summary>Wendet alle neuen Einträge an. Liefert, wie viele es waren.</summary>
