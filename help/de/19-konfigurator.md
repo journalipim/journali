@@ -1,6 +1,6 @@
 # Konfigurator
 
-Ein Konfigurator prüft eine Auswahl von Produkten gegen Gruppen und Regeln und sagt, ob sie zulässig und vollständig ist und welche Teile noch dazukommen können. Die Gruppen und Regeln pflegt ein Anwender unter ⚙ Werkzeuge → Konfigurator; ein Shop schickt seine Auswahl an die Schnittstelle und bekommt zurück, was geht. Die Prüfung steht nur auf dem Server, der Shop kennt die Regeln nicht. Das Plugin gehört ab Pro+ zum Tarif.
+Ein Konfigurator prüft eine Auswahl von Produkten gegen Gruppen und Regeln und sagt, ob sie zulässig und vollständig ist und welche Teile noch dazukommen können. Die Gruppen und Regeln pflegt ein Anwender unter ⚙ Werkzeuge → Konfigurator; ein Shop schickt seine Auswahl an die Schnittstelle und bekommt zurück, was geht. Die Prüfung steht nur auf dem Server, der Shop kennt die Regeln nicht. Das Plugin gehört ab Pro zum Tarif.
 
 ## Ausgangspunkt
 

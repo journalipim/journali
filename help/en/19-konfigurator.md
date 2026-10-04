@@ -1,6 +1,6 @@
 # Configurator
 
-A configurator checks a selection of products against groups and rules and tells whether it is valid and complete and which parts can still be added. A user maintains the groups and rules under ⚙ Tools → Configurator; a shop sends its selection to the interface and gets back what works. The check exists only on the server, the shop does not know the rules. The plugin belongs to the plan from Pro+.
+A configurator checks a selection of products against groups and rules and tells whether it is valid and complete and which parts can still be added. A user maintains the groups and rules under ⚙ Tools → Configurator; a shop sends its selection to the interface and gets back what works. The check exists only on the server, the shop does not know the rules. The plugin belongs to the plan from Pro.
 
 ## Starting point
 

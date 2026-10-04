@@ -2361,7 +2361,7 @@ Tests: `ConfiguratorTests` (das Beispiel eines Servers mit Mainboard, CPU, Kühl
 - **Recht:** Prüfen braucht nur das Recht zu lesen, auch wenn es ein POST ist (`Auth.Needed`). Ein Teil, das die Rolle des Aufrufers nicht sieht, gibt es für
   ihn nicht (dieselbe Antwort wie für ein unbekanntes). Die Definition liegt unter den Plugin-Daten von `configurator` (`def:<key>`); sie zu ändern
   ist Pflege dieser Daten.
-- **Das Plugin muss da, an und im Tarif sein**; im Saatgut gehört `configurator` zu Pro+ (nicht in der Liste von Kostenlos und Pro). Im Betrieb gilt das
+- **Das Plugin muss da, an und im Tarif sein**; im Saatgut gehört `configurator` zu Pro und höher (nicht zu Kostenlos; Tarifblatt Version 11). Im Betrieb gilt das
   signierte Tarifblatt: ein Blatt, das `configurator` nicht nennt, schliesst es aus.
 
 **Ansicht (Plugin `configurator`, ⚙ Werkzeuge → Konfigurator):** links die Konfiguratoren (anlegen, entfernen), rechts die Definition. *Regeln* pflegt
