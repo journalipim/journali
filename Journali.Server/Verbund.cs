@@ -136,6 +136,9 @@ public sealed class Verbund : IDisposable
                 PRIMARY KEY (job, run)
             );
             ALTER TABLE server_auftrag ADD COLUMN IF NOT EXISTS an TEXT;
+            ALTER TABLE server ADD COLUMN IF NOT EXISTS erlaubt INTEGER;
+            ALTER TABLE server ADD COLUMN IF NOT EXISTS haupt BOOLEAN NOT NULL DEFAULT false;
+            ALTER TABLE server ADD COLUMN IF NOT EXISTS name TEXT;
             """);
         cmd.ExecuteNonQuery();
         _tabelle = true;
@@ -151,9 +154,10 @@ public sealed class Verbund : IDisposable
         Tabelle();
         var jobs = JobsHier();
         using (var cmd = _db.CreateCommand("""
-            INSERT INTO server (id, host, version, built, started, puls, head, import, jobs) VALUES (@id, @host, @version, @built, @started, now(), @head, @import, @jobs::jsonb)
+            INSERT INTO server (id, host, version, built, started, puls, head, import, jobs, erlaubt, haupt, name)
+                VALUES (@id, @host, @version, @built, @started, now(), @head, @import, @jobs::jsonb, @erlaubt, @haupt, @name)
             ON CONFLICT (id) DO UPDATE SET host = excluded.host, version = excluded.version, built = excluded.built, started = excluded.started,
-                puls = excluded.puls, head = excluded.head, import = excluded.import, jobs = excluded.jobs
+                puls = excluded.puls, head = excluded.head, import = excluded.import, jobs = excluded.jobs, erlaubt = excluded.erlaubt, haupt = excluded.haupt, name = excluded.name
             """))
         {
             cmd.Parameters.AddWithValue("id", Id); cmd.Parameters.AddWithValue("host", Host);
@@ -161,6 +165,8 @@ public sealed class Verbund : IDisposable
             cmd.Parameters.AddWithValue("started", _started); cmd.Parameters.AddWithValue("head", _catalog.Head);
             cmd.Parameters.AddWithValue("import", ImportHier());
             cmd.Parameters.AddWithValue("jobs", jobs is null ? DBNull.Value : JsonSerializer.Serialize(jobs, Camel));
+            // für den Einrichtungsdialog eines anderen Servers, der das Journal noch nicht lesen kann: wie viele erlaubt sind, wer Hauptserver ist, wie er heisst
+            cmd.Parameters.AddWithValue("erlaubt", _catalog.ErlaubteServer); cmd.Parameters.AddWithValue("haupt", _haupt); cmd.Parameters.AddWithValue("name", NameVon(Id, Host));
             cmd.ExecuteNonQuery();
         }
         var zeilen = Lies();
@@ -192,6 +198,30 @@ public sealed class Verbund : IDisposable
                 r.GetFieldValue<DateTimeOffset>(4), r.GetFieldValue<DateTimeOffset>(5), r.GetInt64(6), r.GetBoolean(7),
                 r.IsDBNull(8) ? null : JsonDocument.Parse(r.GetString(8)).RootElement.Clone()));
         return liste;
+    }
+
+    /// <summary>
+    /// Für den Einrichtungsdialog (04.10.2026): läuft auf dieser Datenbank schon die erlaubte Zahl von Servern? Dann liefert es den Namen des laufenden
+    /// (des Hauptservers, sonst des frühesten), sonst null. Der Dialog kann das Journal noch nicht lesen — die erlaubte Zahl kommt aus den Zeilen der
+    /// laufenden Server. Ist dieser Server selbst der Hauptserver (dieselbe Kennung), ist nichts belegt: er kommt zurück und hat Vorfahrt.
+    /// </summary>
+    public static string? Belegt(NpgsqlDataSource db, string eigeneId)
+    {
+        var laufend = new List<(string Id, string Name, int Erlaubt, bool Haupt, DateTimeOffset Started)>();
+        try
+        {
+            using var cmd = db.CreateCommand(
+                "SELECT id, COALESCE(name, host), COALESCE(erlaubt, 1), haupt, started FROM server WHERE puls > now() - make_interval(secs => @s) ORDER BY haupt DESC, started");
+            cmd.Parameters.AddWithValue("s", Gilt.TotalSeconds);
+            using var r = cmd.ExecuteReader();
+            while (r.Read()) laufend.Add((r.GetString(0), r.GetString(1), r.GetInt32(2), r.GetBoolean(3), r.GetFieldValue<DateTimeOffset>(4)));
+        }
+        catch (PostgresException) { return null; }   // noch keine Tabelle oder Spalte: hier lief noch kein Server dieser Version
+        if (laufend.Any(x => x.Id == eigeneId && x.Haupt)) return null;
+        var andere = laufend.Where(x => x.Id != eigeneId).ToList();
+        if (andere.Count == 0) return null;
+        var erlaubt = andere.Max(x => x.Erlaubt);
+        return andere.Count >= erlaubt ? andere[0].Name : null;
     }
 
     /// <summary>Die Server, wie der letzte Takt sie sah.</summary>

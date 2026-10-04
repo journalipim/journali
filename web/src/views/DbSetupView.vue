@@ -29,6 +29,8 @@ const GRUND = {
   error: t('Fehler der Datenbank'),
 }
 const grund = g => GRUND[g] ?? g ?? ''
+/// Was eine Antwort sagt — belegt nennt den Server, der schon läuft (04.10.2026: mehrere Server nur mit Lizenz)
+const text = r => r.grund === 'belegt' ? t('Auf dieser Datenbank läuft schon {0}; für einen weiteren Server fehlt die Lizenz.', [r.detail]) : grund(r.grund)
 const lage = computed(() => {
   const s = stand.value
   if (!s) return ''
@@ -60,7 +62,7 @@ async function pruefen() {
   busy.value = 'test'; msg.value = null
   try {
     const r = await api.post('/api/setup/db/test', body())
-    msg.value = { ok: r.ok, text: r.ok ? t('Verbindung steht') : grund(r.grund), title: r.detail }
+    msg.value = { ok: r.ok, text: r.ok ? t('Verbindung steht') : text(r), title: r.detail }
   } catch (e) { msg.value = { ok: false, text: e.message } }
   finally { busy.value = '' }
   laden()
@@ -70,7 +72,7 @@ async function speichern() {
   try {
     const r = await api.post('/api/setup/db', body())
     if (r.ok) { startet.value = true; msg.value = { ok: true, text: t('Server startet mit dieser Datenbank') } }
-    else msg.value = { ok: false, text: grund(r.grund), title: r.detail }
+    else msg.value = { ok: false, text: text(r), title: r.detail }
   } catch (e) { msg.value = { ok: false, text: e.message } }
   finally { busy.value = '' }
   laden()

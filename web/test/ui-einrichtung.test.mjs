@@ -161,3 +161,16 @@ test('Verschlüsselung: ohne gespeicherte Angabe steht „wenn möglich“ da', 
   w.unmount()
 })
 
+// 04.10.2026: läuft auf der Datenbank schon die erlaubte Zahl von Servern, speichert der Dialog nicht und nennt den laufenden Server
+test('Datenbank belegt: Speichern nennt den laufenden Server, der Server startet nicht', async () => {
+  server({ '/api/auth/state': { dbSetup: true }, '/api/setup/state': { lage: 'keine', grund: 'none', versuch: 0, auto: false, ziel: null },
+    '/api/setup/db': { ok: false, lage: 'belegt', grund: 'belegt', detail: 'Unraid' } })
+  const { w } = await aufbauen(DbSetupView, '/setup')
+  const inputs = w.findAll('input')
+  await inputs[0].setValue('ABCD-EFGH'); await inputs[1].setValue('localhost'); await inputs[5].setValue('geheim12')
+  await w.find('form').trigger('submit'); await flushPromises()
+  assert.match(w.find('.msg').text(), /Auf dieser Datenbank läuft schon Unraid; für einen weiteren Server fehlt die Lizenz\./)
+  assert.ok(w.find('.msg').classes().includes('neg'), 'rot')
+  assert.ok(!w.find('.lage.starten').exists(), 'der Server startet nicht')
+  w.unmount()
+})

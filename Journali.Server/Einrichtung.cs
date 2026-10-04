@@ -9,7 +9,7 @@ using static Journali.Server.ModelApi;
 namespace Journali.Server;
 
 /// <summary>Wie es um die Datenbank steht — und warum nicht.</summary>
-public enum DbLage { Ok, Keine, Unerreichbar, Abgewiesen, Rechte, Fehler }
+public enum DbLage { Ok, Keine, Unerreichbar, Abgewiesen, Rechte, Fehler, Belegt }
 
 /// <summary>
 /// Wohin der Server sich verbindet: eine Verbindungszeichenfolge <b>ohne</b> Passwort, das Passwort daneben, und woher
@@ -205,13 +205,15 @@ public static class Einrichtung
     public static string LageKey(DbLage l) => l switch
     {
         DbLage.Ok => "ok", DbLage.Keine => "keine", DbLage.Unerreichbar => "unerreichbar",
-        DbLage.Abgewiesen => "abgewiesen", DbLage.Rechte => "rechte", _ => "fehler",
+        DbLage.Abgewiesen => "abgewiesen", DbLage.Rechte => "rechte", DbLage.Belegt => "belegt", _ => "fehler",
     };
 
     /// <summary>Der Zustand der Stufe — geteilt zwischen Endpunkten und dem Wiederholen im Hintergrund.</summary>
     public sealed class Stufe(string dataDir, IConfiguration cfg, DbZiel? ziel, (DbLage Lage, string Grund, string Detail) erst)
     {
         private readonly object _gate = new();
+        /// <summary>Der Name des Servers, der die Datenbank schon belegt — null, wenn ein weiterer Server dort laufen darf.</summary>
+        public Func<DbZiel, string?> BelegtVon { get; init; } = _ => null;
         public DbZiel? Ziel { get; private set; } = ziel;
         public DbLage Lage { get; private set; } = erst.Lage;
         public string Grund { get; private set; } = erst.Grund;
@@ -250,6 +252,10 @@ public static class Einrichtung
         public (DbLage Lage, string Grund, string Detail) Versuche(DbZiel z, bool speichern)
         {
             var r = Pruefe(z);
+            // Im Dialog (04.10.2026): läuft auf dieser Datenbank schon die erlaubte Zahl von Servern, wird nicht gespeichert — sonst startete dieser
+            // Server, läse das Journal und stünde danach ohne Lizenz da. Der automatische Neuversuch beim Start prüft das nicht: ein Server, der auf
+            // seine Datenbank zurückkommt, bekommt seinen Platz nach der Rangfolge (der Hauptserver zuerst).
+            if (r.Lage == DbLage.Ok && BelegtVon(z) is { } name) r = (DbLage.Belegt, "belegt", name);
             lock (_gate)
             {
                 if (speichern || r.Lage == DbLage.Ok) { Ziel = z; }
@@ -282,7 +288,10 @@ public static class Einrichtung
         var erst = ziel is null ? (DbLage.Keine, "none", "") : Pruefe(ziel);
         if (erst.Item1 == DbLage.Ok) return ziel!;
 
-        var stufe = new Stufe(dataDir, main.Configuration, ziel, erst);
+        var stufe = new Stufe(dataDir, main.Configuration, ziel, erst)
+        {
+            BelegtVon = z => { using var ds = NpgsqlDataSource.Create(z.ConnectionString(5)); return Verbund.Belegt(ds, Verbund.KennungIn(dataDir)); },
+        };
         var code = Einrichtungscode.Aktiv(dataDir);
         Console.Error.WriteLine(ziel is null
             ? "journali: keine Datenbank eingerichtet"
