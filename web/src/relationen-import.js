@@ -23,21 +23,20 @@ export function trenne(source) {
   return { blaetter: alle.filter(b => b !== relationen), relationen }
 }
 
-const wurzelVon = (tree, id) => tree.ancestors?.(id)?.[0]?.id ?? id
-
 /// Der Baum-Abbild-Knoten zu einer Kennung der Datei: Id aus dem Blatt Daten oder im Baum
 const aufloesen = (id, ids, tree) => { id = String(id ?? '').trim(); return !id ? null : ids?.get(id) ?? (tree.byId.has(id) ? id : null) }
 
-/// Die vorhandenen Relationen der Bäume, in denen die Ausgangsknoten der Datei liegen: Map „Typ␁von␁nach“ → { id, werte: „attribut|sprache“ → Text }.
-/// `api.get` liefert die Antwort des Servers; je Wurzel eine Anfrage.
+/// Die vorhandenen Relationen der Knoten, die die Datei nennt (Ausgang und Ziel — eine symmetrische Relation kann am Ziel stehen):
+/// Map „Typ␁von␁nach“ → { id, werte: „attribut|sprache“ → Text }. `api.post` fragt den Server, je 5 000 Knoten einmal (04.10.2026 — vorher
+/// die Relationen des ganzen Baums ab der Wurzel).
 export async function bestandLaden(api, blatt, ids, tree) {
-  const i = blatt.columns.indexOf(VON)
-  const wurzeln = new Set()
-  for (const r of blatt.rows) { const id = aufloesen(r[i], ids, tree); if (id && !id.startsWith('@')) wurzeln.add(wurzelVon(tree, id)) }
-  const bestand = new Map()
-  for (const w of wurzeln) {
+  const iVon = blatt.columns.indexOf(VON), iNach = blatt.columns.indexOf(NACH)
+  const knoten = new Set()
+  for (const r of blatt.rows) for (const i of [iVon, iNach]) { const id = aufloesen(r[i], ids, tree); if (id && !id.startsWith('@')) knoten.add(id) }
+  const liste = [...knoten], bestand = new Map()
+  for (let s = 0; s < liste.length; s += 5000) {
     let baum = {}
-    try { baum = await api.get(`/api/nodes/${encodeURIComponent(w)}/relations/tree?deep=true`) } catch { baum = {} }
+    try { baum = await api.post('/api/relations/out', { nodes: liste.slice(s, s + 5000) }) } catch { baum = {} }
     for (const [von, liste] of Object.entries(baum)) for (const r of liste) {
       if (r.direction !== 'out') continue
       const werte = {}

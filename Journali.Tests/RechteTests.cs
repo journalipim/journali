@@ -30,6 +30,17 @@ public class RechteTests
     [InlineData("/api/media/m-1/workflow", Rights.Read)]         // den Zustand sieht, wer liest
     public void Die_Datei_braucht_download_die_Kachel_nur_lesen(string pfad, string recht) => Assert.Equal(recht, Braucht(pfad));
 
+    /// <summary>Lesende Anfragen als POST, weil die Liste im Rumpf lang sein kann (04.10.2026): Tabelle mit Spalten, Relationen bestimmter Knoten</summary>
+    [Fact]
+    public void Lesen_als_POST_braucht_nur_lesen()
+    {
+        Assert.Equal(Rights.Read, Braucht("/api/nodes/n-1/table", "POST"));
+        Assert.Equal(Rights.Read, Braucht("/api/relations/out", "POST"));
+        Assert.Equal(Rights.Read, Braucht("/api/plugins/gpc/stand"));
+        Assert.Equal(Rights.Read, Braucht("/api/nodes/n-1/media-below"));
+        Assert.NotEqual(Rights.Read, Braucht("/api/relations", "POST"));   // anlegen bleibt Pflege
+    }
+
     [Fact]
     public void Klassifikation_anlegen_und_zuweisen_ist_Pflege_die_Bereitschaft_nur_lesen()
     {

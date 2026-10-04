@@ -41,7 +41,9 @@ function antwort(p) {
   if (/\/api\/model/.test(p)) return { masterLocale: 'de', locales: [{ code: 'de' }], views: [] }
   return {}
 }
-const api = { get: async p => antwort(p) }
+// der Bestand beim Import: POST /relations/out mit den Knoten der Datei (04.10.2026 — vorher /relations/tree ab der Wurzel)
+const gefragt = []
+const api = { get: async p => antwort(p), post: async (p, body) => { gefragt.push({ p, body }); return /\/relations\/out$/.test(p) ? RELATIONEN : {} } }
 
 async function tabelle() {
   const t = await build({ api, model: { views: [] } }, { root: 'g1', locales: ['de'], relations: true })
@@ -139,8 +141,10 @@ test('Import ins selbe System: dieselbe Relation ist unverändert, ein anderer W
   const { daten, relationen } = await dateiBlaetter()
   const tree = baum([{ id: 'g1', parent: null, label: 'Mittel', role: 'group', keys: {} }, { id: 'p1', parent: 'g1', label: 'Tablette', role: 'product', keys: {} }, { id: 'p2', parent: 'g1', label: 'Vitamin C', role: 'product', keys: {} }])
   const p = planKnoten(daten, tree, tree.byId.get('g1'))
+  gefragt.length = 0
   const bestand = await bestandLaden(api, relationen, p.ids, tree)
   assert.equal(bestand.size, 1)
+  assert.deepEqual(gefragt.map(g => [g.p, [...g.body.nodes].sort()]), [['/api/relations/out', ['p1', 'p2']]], 'nur die Knoten der Datei, Ausgang und Ziel')
   let rp = planRelationen({ blatt: relationen, model: MODELL, tree, ids: p.ids, bestand })
   assert.deepEqual([rp.stats.create, rp.stats.update, rp.stats.unchanged, rp.commands.length], [0, 0, 1, 0])
   const geaendert = { ...relationen, rows: relationen.rows.map(r => r.map((v, i) => relationen.columns[i] === 'gehalt' ? '5000' : v)) }

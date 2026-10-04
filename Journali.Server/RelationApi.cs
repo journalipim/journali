@@ -98,6 +98,9 @@ public static class RelationApi
         // ("in", mit der Bezeichnung der Gegenrichtung), das andere Ende mit Id und Name, die Werte je Attribut mit der Einheit des Attributs.
         // Medien-Zuordnungen fehlen (sie gehören zur Bibliothek); ein Ende, das es nicht mehr gibt, auch.
         api.MapGet("/nodes/{id}/relations/tree", (string id, Catalog c, bool deep = true) => Baum(c, id, deep) is { } v ? Results.Ok(v) : Results.NotFound());
+        // Die ausgehenden Relationen bestimmter Knoten, im Format von /relations/tree (04.10.2026): das Relationenblatt beim Import fragt nur die
+        // Knoten, die die Datei nennt — vorher die Relationen des ganzen Baums ab der Wurzel. POST, weil die Liste lang sein kann; liest nur.
+        api.MapPost("/relations/out", (KnotenListe b, Catalog c) => Results.Ok(Ausgehend(c, b.Nodes ?? [])));
 
         api.MapGet("/relations/{id}", (string id, Catalog c) =>
             c.Lesen((model, tree) => c.Relations.All.TryGetValue(id, out var r) ? RelationView.Of(tree, model, c.Media, r, "out", c.Workflows) : null) is { } v ? Results.Ok(v) : Results.NotFound());
@@ -113,21 +116,42 @@ public static class RelationApi
     /// <summary>Die Relationen eines Teilbaums, ausgewertet (für den JSON-Export als Baum oder Liste, 30.09.2026): je Knoten ausgehend ("out") und eingehend
     /// ("in", mit der Bezeichnung der Gegenrichtung), das andere Ende mit Id und Name, die Werte je Attribut mit der Einheit des Attributs.
     /// Medien-Zuordnungen fehlen (sie gehören zur Bibliothek); ein Ende, das es nicht mehr gibt, auch. Null, wenn es den Knoten nicht gibt.</summary>
+    /// <summary>Die Werte einer Relation je Attribut, mit der Einheit des Attributs: knapp, wenn es ein Wert ohne Sprache und Kanal ist</summary>
+    private static object Werte(ModelCatalog model, Relation r) => r.Values.Select(kv => (kv.Key, Wert: (object?)kv.Value)).Concat(r.Lists.Select(kv => (kv.Key, Wert: (object?)kv.Value)))
+        .OrderBy(x => x.Key.Attribute).ThenBy(x => x.Key.Locale).GroupBy(x => x.Key.Attribute)
+        .ToDictionary(g => g.Key, g =>
+        {
+            var einheit = model.Attributes.GetValueOrDefault(g.Key)?.Unit;
+            var liste = g.Select(x => new { locale = x.Key.Locale, channel = x.Key.Channel, value = x.Wert, unit = einheit }).ToList();
+            // der Normalfall, ein Wert ohne Sprache und Kanal: knapp; sonst eine Liste je Achse
+            return liste.Count == 1 && liste[0].locale is null && liste[0].channel is null ? (object)new { liste[0].value, liste[0].unit } : liste;
+        });
+    private static string Bez(ModelCatalog model, Labels? l, string fallback) => l is null ? fallback : (l.GetValueOrDefault(model.MasterLocale ?? "de") ?? l.Values.FirstOrDefault() ?? fallback);
+    private static object Aus(ModelCatalog model, Tree tree, Relation r, Node o) =>
+        new { id = r.Id, type = r.Type, direction = "out", label = Bez(model, model.RelationTypes.GetValueOrDefault(r.Type)?.Label, r.Type), other = new { id = o.Id, label = NodeRow.LabelOf(tree, model, o) }, values = Werte(model, r) };
+
+    /// <summary>Die ausgehenden Relationen dieser Knoten (Format wie <see cref="Baum"/>, nur "out"); unbekannte Knoten fehlen.</summary>
+    public static Dictionary<string, List<object>> Ausgehend(Catalog c, IEnumerable<string> ids) =>
+        c.Lesen((model, tree) =>
+        {
+            var aus = new Dictionary<string, List<object>>();
+            foreach (var id in ids.Distinct())
+            {
+                if (!tree.Nodes.ContainsKey(id)) continue;
+                var list = new List<object>();
+                foreach (var r in c.Relations.From(id).OrderBy(r => r.Type).ThenBy(r => r.To))
+                    if (tree.Nodes.TryGetValue(r.To, out var o)) list.Add(Aus(model, tree, r, o));
+                if (list.Count > 0) aus[id] = list;
+            }
+            return aus;
+        });
+
     public static Dictionary<string, List<object>>? Baum(Catalog c, string id, bool deep) =>
             c.Lesen((model, tree) =>
             {
                 if (!tree.Nodes.TryGetValue(id, out var root)) return null;
-                var master = model.MasterLocale ?? "de";
-                string Bez(Labels? l, string fallback) => l is null ? fallback : (l.GetValueOrDefault(master) ?? l.Values.FirstOrDefault() ?? fallback);
-                object Werte(Relation r) => r.Values.Select(kv => (kv.Key, Wert: (object?)kv.Value)).Concat(r.Lists.Select(kv => (kv.Key, Wert: (object?)kv.Value)))
-                    .OrderBy(x => x.Key.Attribute).ThenBy(x => x.Key.Locale).GroupBy(x => x.Key.Attribute)
-                    .ToDictionary(g => g.Key, g =>
-                    {
-                        var einheit = model.Attributes.GetValueOrDefault(g.Key)?.Unit;
-                        var liste = g.Select(x => new { locale = x.Key.Locale, channel = x.Key.Channel, value = x.Wert, unit = einheit }).ToList();
-                        // der Normalfall, ein Wert ohne Sprache und Kanal: knapp; sonst eine Liste je Achse
-                        return liste.Count == 1 && liste[0].locale is null && liste[0].channel is null ? (object)new { liste[0].value, liste[0].unit } : liste;
-                    });
+                string Bez(Labels? l, string fallback) => RelationApi.Bez(model, l, fallback);
+                object Werte(Relation r) => RelationApi.Werte(model, r);
                 var nodes = deep ? tree.DescendantsDeepestFirst(root.Id).Append(root).ToList() : [root];
                 var aus = new Dictionary<string, List<object>>();
                 foreach (var n in nodes)
@@ -135,7 +159,7 @@ public static class RelationApi
                     var list = new List<object>();
                     foreach (var r in c.Relations.From(n.Id).OrderBy(r => r.Type).ThenBy(r => r.To))
                         if (tree.Nodes.TryGetValue(r.To, out var o))
-                            list.Add(new { id = r.Id, type = r.Type, direction = "out", label = Bez(model.RelationTypes.GetValueOrDefault(r.Type)?.Label, r.Type), other = new { id = o.Id, label = NodeRow.LabelOf(tree, model, o) }, values = Werte(r) });
+                            list.Add(Aus(model, tree, r, o));
                     foreach (var r in c.Relations.To(n.Id).OrderBy(r => r.Type).ThenBy(r => r.From))
                         if (tree.Nodes.TryGetValue(r.From, out var o))
                         {
@@ -147,6 +171,9 @@ public static class RelationApi
                 return aus;
             });
 }
+
+/// <summary>Eine Liste von Knoten im Rumpf einer Anfrage</summary>
+public sealed record KnotenListe(List<string>? Nodes);
 
 /// <summary>Das andere Ende einer Relation: Knoten oder Medium (dann mit Typ und Bild-Flag) — oder verwaist, wenn es weg ist.</summary>
 public sealed record RelationEnd(string Id, string? Role, string Label, bool Missing, string? Mime = null, bool IsImage = false, long Bytes = 0, bool HasThumb = false, bool Valid = true, bool Released = true);
