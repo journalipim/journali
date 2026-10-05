@@ -78,6 +78,8 @@ journali ist ein PIM-System, in dem jede Änderung als Eintrag in einem Journal 
 
 Die **Frage an die Dokumente** folgt dem beschriebenen Prinzip: Die besten Abschnitte gehen nummeriert an die KI des Teams, mit der Anweisung, nur aus diesen Auszügen zu antworten, jede Aussage mit der Nummer ihres Auszugs zu versehen und in einem Satz zu sagen, wenn die Auszüge keine Antwort enthalten. Die Antwort nennt zu jeder Nummer Dokument, Seite, Überschrift und die Produkte, an denen das Dokument hängt. Mehr dazu im Beitrag [Suche nach Sinn](/?p=34).
 
+*Erstellt mit Unterstützung von KI.*
+
 ## Quellen
 
 - Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks (2020): [arxiv.org/abs/2005.11401](https://arxiv.org/abs/2005.11401)

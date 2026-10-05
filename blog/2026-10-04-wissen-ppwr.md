@@ -129,6 +129,8 @@ Details und Bedienung beschreibt der Beitrag [PPWR in journali](/?p=48).
 
 *Dieser Beitrag ist kein Rechtsrat. Er fasst die Verordnung nach dem Stand vom 4. Oktober 2026 zusammen; maßgeblich ist der im Amtsblatt veröffentlichte Rechtstext.*
 
+*Erstellt mit Unterstützung von KI.*
+
 ## Quellen
 
 - Verordnung (EU) 2025/40 des Europäischen Parlaments und des Rates vom 19. Dezember 2024 über Verpackungen und Verpackungsabfälle, ABl. L, 2025/40, 22.1.2025: [EUR-Lex](https://eur-lex.europa.eu/eli/reg/2025/40/oj/deu)

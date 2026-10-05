@@ -104,6 +104,8 @@ Für einen eigenen Assistenten exportiert das Plugin **KI-Wissensbasis** je Prod
 
 Mehr dazu: [GEO in journali](/?p=43).
 
+*Erstellt mit Unterstützung von KI.*
+
 ## Quellen
 
 - Forschungsbeitrag „GEO: Generative Engine Optimization“, arXiv:2311.09735 (2023, überarbeitet 2024): [https://arxiv.org/abs/2311.09735](https://arxiv.org/abs/2311.09735)

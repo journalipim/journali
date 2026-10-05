@@ -101,6 +101,8 @@ Mehr dazu: [Digitaler Produktpass in journali](/?p=40).
 
 *Dieser Beitrag gibt den Stand vom 4. Oktober 2026 wieder und ist keine Rechtsberatung. Maßgeblich sind die Rechtstexte in der jeweils geltenden Fassung.*
 
+*Erstellt mit Unterstützung von KI.*
+
 ## Quellen
 
 - Verordnung (EU) 2024/1781 (Ökodesign-Verordnung, ESPR), ABl. L vom 28.6.2024, insbesondere Art. 1, 4, 9–13, 15, 18, 27, 29–31, 35, 38, 79, 80 und Anhang III: [https://eur-lex.europa.eu/eli/reg/2024/1781/oj](https://eur-lex.europa.eu/eli/reg/2024/1781/oj)

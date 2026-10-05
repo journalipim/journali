@@ -98,6 +98,8 @@ Das Plugin arbeitet mit festen Regeln und ohne KI. Es findet Formulierungen; ob 
 
 Dieser Beitrag beschreibt die Rechtslage am 4. Oktober 2026 anhand der amtlichen Texte. Er ist **keine Rechtsberatung** und ersetzt nicht die Prüfung des Einzelfalls.
 
+*Erstellt mit Unterstützung von KI.*
+
 ## Quellen
 
 - Richtlinie (EU) 2024/825 vom 28. Februar 2024, ABl. L, 2024/825, 6.3.2024 – [EUR-Lex](https://eur-lex.europa.eu/eli/dir/2024/825/oj)

@@ -91,6 +91,8 @@ Ein MCP-Dienst ist für journali **als Entwurf geplant und nicht gebaut**. Der E
 
 Offen ist, ob später eine Anmeldung über OAuth dazukommt.
 
+*Erstellt mit Unterstützung von KI.*
+
 ## Quellen
 
 - Model Context Protocol, offizielle Website: [modelcontextprotocol.io](https://modelcontextprotocol.io)
