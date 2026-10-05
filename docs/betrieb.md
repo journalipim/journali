@@ -386,9 +386,9 @@ Dokumente ist ein KI-Aufruf über den Schlüssel des Teams. Die **Frage an die D
 
 ## Plugins im Container
 
-Das Image ist autark: es bringt alle Plugins mit, dazu die Pakete der vier, die
+Das Image bringt alle Plugins mit, dazu die Pakete der vier, die
 welche brauchen (`derive` mit sharp, `docs` mit pdfjs, `embed` mit transformers, `ocr` mit tesseract) und die Node-Binärdatei.
-Ein `docker run` allein genügt, nichts wird nachgeladen.
+Ein `docker run` allein genügt. Nachgeladen werden nur zwei Dateien, jeweils beim ersten Lauf ihres Plugins (unten).
 
 `compose.yaml` legt zusätzlich `./plugins` vom Host darüber, damit ein Plugin ohne
 neues Image ausgetauscht werden kann. Ein Bind-Mount **überdeckt** aber alles
@@ -408,6 +408,24 @@ Volumes genau diese Ordner zurück, dazu das Modell von `embed`:
 Sie werden beim ersten Start aus dem Image gefüllt. Wer die Pakete eines Plugins
 erneuert, entfernt das zugehörige Volume (`docker volume rm journali-docs-modules`)
 und startet neu — dann kommen sie wieder aus dem Image.
+
+### Was beim ersten Lauf nachgeladen wird
+
+Zwei Plugins holen beim ersten Lauf eine Datei aus dem Netz; danach liegt sie im Cache des Plugins, und das Plugin
+braucht das Netz nicht mehr:
+
+| Plugin | Datei | Adresse | Cache | Lizenz |
+|---|---|---|---|---|
+| `embed` | Modell `Xenova/multilingual-e5-small` (ONNX, etwa 120 MB) | huggingface.co | `plugins/embed/.cache`, Volume `journali-embed-cache`, `JOURNALI_EMBED_CACHE` | MIT |
+| `ocr` | Sprachdaten der Texterkennung je Sprache | cdn.jsdelivr.net | `plugins/ocr/.cache`, Volume `journali-ocr-cache`, `JOURNALI_OCR_CACHE` | MIT |
+
+Dabei geht keine Produktdatei und kein Wert hinaus; die beiden Adressen sehen nur, dass der Server die Datei abruft
+(seine IP-Adresse). Ein Server ohne Netz bekommt den Cache von einem Rechner mit Netz kopiert (oben, „Vektoren und die
+Frage an die Dokumente“). Weitergegeben werden die beiden Dateien von journali nicht — sie stehen weder im Repo noch
+im Image.
+
+Lizenzen: `LICENSE` (journali) und `THIRD-PARTY-NOTICES.md` (alles Fremde, mit Quelle) liegen im Repo und im Image
+unter `/app`.
 
 ## Mail
 

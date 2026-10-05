@@ -7,3 +7,4 @@ Journali.Server/wwwroot/
 .vs/
 docs/
 *.md
+!THIRD-PARTY-NOTICES.md
