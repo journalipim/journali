@@ -27,3 +27,17 @@ test('alte Einträge ohne Art brechen nichts', () => {
   const w = mount(EntryList, { props: { entries: [e(1, 'AttributeSet', undefined)] } })
   assert.equal(w.findAll('td.kind')[0].text(), '·')
 })
+
+// Startphase (05.10.2026): es zählt nichts — die Art steht ohne „· zählt“ da und ohne Hervorhebung
+test('in der Startphase kein „zählt“ an der Art', async () => {
+  const { store } = await import('../src/store.js')
+  const vorher = store.startphase
+  store.startphase = true
+  try {
+    const w = mount(EntryList, { props: { entries: [e(2, 'AttributeSet', 'data'), e(1, 'ReleaseGranted', 'publish')] } })
+    const cells = w.findAll('td.kind')
+    assert.equal(cells[0].attributes('title'), 'Datenpflege')
+    assert.equal(cells[1].attributes('title'), 'Ausleitung')
+    assert.ok(!cells[0].classes('counts') && !cells[1].classes('counts'))
+  } finally { store.startphase = vorher }
+})

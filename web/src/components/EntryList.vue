@@ -9,11 +9,13 @@ import { tree } from '../tree.js'
 import { restoreModel, canRestoreModel, mayRestore } from '../modelRestore.js'
 import { t } from '../i18n.js'
 const props = defineProps({ entries: Array, showStream: { type: Boolean, default: false } })
-// Art des Eintrags: ein Symbol je Art, Tooltip nennt sie ausgeschrieben; „zählt“ ist Datenpflege und Ausleitung
+// Art des Eintrags: ein Symbol je Art, Tooltip nennt sie ausgeschrieben; „zählt“ ist Datenpflege und Ausleitung — in der Startphase zählt nichts,
+// dann steht weder „· zählt“ da noch eine Hervorhebung (05.10.2026)
 const KINDS = { model: ['◫', t('Datenmodellierung')], structure: ['▤', t('Struktur')], data: ['✎', t('Datenpflege · zählt')], publish: ['⇶', t('Ausleitung · zählt')], reference: ['⇩', t('Referenzdaten')], setup: ['⚙', t('Einrichtung')], ops: ['⏱', t('Betrieb')] }
+const OHNE_ZAEHLEN = { data: t('Datenpflege'), publish: t('Ausleitung') }
 const kindIcon = k => KINDS[k]?.[0] ?? '·'
-const kindText = k => KINDS[k]?.[1] ?? (k ?? 'unbekannt')
-const counts = k => k === 'data' || k === 'publish'
+const kindText = k => (store.startphase && OHNE_ZAEHLEN[k]) || (KINDS[k]?.[1] ?? (k ?? 'unbekannt'))
+const counts = k => !store.startphase && (k === 'data' || k === 'publish')
 
 const open = reactive({})   // batch → aufgeklappt
 const rows = computed(() => {

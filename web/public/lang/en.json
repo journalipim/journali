@@ -3051,5 +3051,20 @@
  "Alle Einträge im Journal, je Monat nach Art der Arbeit; nichts davon geht von selbst an journali.": "All entries in the journal, per month by kind of work; none of it goes to journali by itself.",
  "▦ Nutzung · {0} Monate": "▦ Usage · {0} months",
  "Als CSV-Datei speichern": "Save as CSV file",
- "⇩ CSV": "⇩ CSV"
+ "⇩ CSV": "⇩ CSV",
+ "Nutzungsberichte senden?": "Send usage reports?",
+ "Die Zahlen zeigen, wie journali genutzt wird.": "The figures show how journali is used.",
+ "einmal im Monat an den Lizenzserver von journali": "once a month to the journali licence server",
+ "je Monat die Einträge nach Art, wie in dieser Tabelle": "entries per month by kind, as in this table",
+ "die Version und eine zufällige Kennung": "the version and a random identifier",
+ "keine Namen, keine Inhalte, keine Lizenzdaten": "no names, no content, no licence data",
+ "Der Lizenzserver sieht die IP-Adresse dieses Servers.": "The licence server sees the IP address of this server.",
+ "✓ senden": "✓ send",
+ "nicht senden": "do not send",
+ "An seit {0} · {1}; ein Klick schaltet sie aus": "On since {0} · {1}; a click turns them off",
+ "Einmal im Monat diese Zahlen an journali senden": "Send these figures to journali once a month",
+ "● Nutzungsberichte an": "● Usage reports on",
+ "○ Nutzungsberichte senden": "○ Send usage reports",
+ "Datenpflege": "Data maintenance",
+ "Ausleitung": "Output"
 }
