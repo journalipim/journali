@@ -25,13 +25,13 @@ Das Format **hängt an nichts**: nicht an der Postgres-Version, nicht am Schema,
 
 Unter ⚙ Einstellungen → ⇅ B&R wählt ihr ein Verzeichnis auf dem Server. Bevor ihr etwas tut, **zeigt journali beide Seiten**: was dieses System hat – Einträge, Assets, Speicher – und was im Verzeichnis liegt: Einträge, Assets, Dateien, Plugins und den Zeitpunkt der Sicherung.
 
-Mit drei Häkchen entscheidet ihr, was mitgeht: **Assets, Zugänge, Plugins**. Dann **⇩ Sichern**. Das geht **in jedem Tarif**.
+Mit drei Häkchen entscheidet ihr, was mitgeht: **Assets, Zugänge, Plugins**. Dann **⇩ Sichern**.
 
 ## Nach Zeitplan: das Plugin Sicherung
 
 Wer nicht jeden Abend daran denken will, nimmt das **Plugin Sicherung** und lässt es als Job laufen. Zeitplan wie bei jedem Job – täglich, wöchentlich oder so genau, wie ihr es braucht. Je Lauf entsteht **ein Ordner mit Zeitstempel**. Wie viele Stände ihr behalten wollt, stellt ihr ein (Vorgabe: 14), ältere räumt der Job selbst weg. Wohin gesichert wird, steht am Job: im Verzeichnis eurer Wahl oder im Fach `out/` des Jobs.
 
-Das Plugin gibt es **ab Pro**. Es ruft denselben Weg auf wie der Knopf – von Hand und nach Zeitplan entsteht also dieselbe Sicherung.
+Es ruft denselben Weg auf wie der Knopf – von Hand und nach Zeitplan entsteht also dieselbe Sicherung.
 
 ## Zurück in ein leeres System
 
@@ -44,15 +44,13 @@ Zwei Dinge sind Absicht:
 
 Danach startet ihr den Server einmal neu. Plugins mit eigenen Paketen brauchen einmal `npm install` – die Pakete sind für ein Betriebssystem gebaut und gehören darum nicht in die Sicherung.
 
-Die **Lizenz** geht nicht mit: Eine wiederhergestellte Instanz bekommt eine neue Kennung, und eine Lizenz gilt nur für die Instanz, für die sie ausgestellt wurde.
-
 ## Warum das so einfach geht
 
 Der Grund steht im Kern von journali: **Im Journal wird nie etwas überschrieben.** Jede Änderung ist ein neuer Eintrag, hinten angehängt. Das Journal ist die einzige Wahrheit – alles andere, der Baum, das Modell, die Suche, ist ein **Abbild**, das sich jederzeit löschen und aus dem Journal neu bauen lässt.
 
 Für die Sicherung heißt das: **Für alles Fachliche genügt das Journal.** Kein Stand von Tabellen, die zueinander passen müssen, keine Zwischenergebnisse. Modell, Baum, Werte, Rollen und Rechte, Workflows, Jobs und der Stand der Plugins stehen als Einträge im Journal und kommen damit zurück. Beim Start baut der Server seine Abbilder daraus neu – das ist derselbe Weg, den er bei jedem Start geht.
 
-Auch eine Testinstanz neben der Produktion ist dadurch kein Aufwand: Ihr spielt eine Sicherung der Produktion in die leere Testinstanz ein. Sie bekommt ihre eigene Kennung und ihre eigene Lizenz.
+Auch eine Testinstanz neben der Produktion ist dadurch kein Aufwand: Ihr spielt eine Sicherung der Produktion in die leere Testinstanz ein. Sie bekommt ihre eigene Kennung.
 
 ## Spiegel und Schnappschuss: schneller Start, nie die Wahrheit
 

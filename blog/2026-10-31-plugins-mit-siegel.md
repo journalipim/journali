@@ -75,7 +75,7 @@ Unter ⬡ Plugins seht ihr zu jedem Plugin Version und **Zustand**: nicht instal
 
 Manche Plugins brauchen etwas, das niemand in journali setzt: eine Erweiterung der Datenbank, ein Modell, einen erreichbaren Dienst. Solche Plugins nennen im Manifest einen Endpunkt, der Bereitschaft meldet. Steht etwas aus, zeigt die Liste **„◑ an, nicht bereit“**, und der Grund steht daneben. Ihr wartet also nicht auf einen Job, der nichts tun kann.
 
-Was journali selbst trägt – etwa Jobs, Sicherung und Zugänge –, lässt sich ausschalten, aber nicht entfernen. Welche Plugins sich einschalten lassen, hängt zudem am Tarif der Instanz.
+Was journali selbst trägt – etwa Jobs, Sicherung und Zugänge –, lässt sich ausschalten, aber nicht entfernen.
 
 ## Und jetzt?
 

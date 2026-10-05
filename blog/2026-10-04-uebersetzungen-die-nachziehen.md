@@ -54,8 +54,6 @@ Oder ihr hängt die Wirkung `translate:<sprache>` an einen Übergang im Workflow
 - **✦ KI vorübersetzen**: Die KI füllt leere Ziele – mit eurem Wörterbuch als verbindlichem Glossar. Das Ergebnis ist ein **Vorschlag** in der Tabelle; geschrieben wird erst mit 💾.
 - **DeepL-Übersetzung** als Job: übersetzt die offenen Einheiten aus einem Profil und schreibt sie zurück. Der Schlüssel liegt **beim Server am Profil, nie im Journal**.
 
-Übersetzung (XLIFF) gehört zum Tarif **Pro**.
-
 ## Und jetzt?
 
 journali ist noch in Entwicklung – Übersetzungen, die nachziehen, stecken schon drin. Hier entsteht etwas ganz Großes, und ihr könnt dabei sein: [Bleibt dran](/#kontakt).

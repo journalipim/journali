@@ -35,8 +35,6 @@ Ihr startet nicht bei null. journali bringt **eingebaute Vorgaben** mit – und 
 - **Vorschauen**: Kachel, Web und Druck für eure Bilder
 - **Init Team**: euer erster Administrator gehört hinein – umbenennbar, nicht löschbar
 
-Dazu kommt der Test: **Jede neue Instanz hat drei Monate Enterprise**, gezählt ab dem ersten Eintrag im Journal. Ihr probiert journali mit allen Plugins aus.
-
 ## Plugins: austauschen ohne neues Image
 
 Die Plugins liegen als **Verzeichnis neben dem Paket** – per Bind-Mount im Container. Eine Datei dort tauschen, und das Plugin ist aktualisiert: Der Server liest Manifeste und Module bei jedem Zugriff, eine neue Version zeigt er unter Plugins als ↑ Update. **Kein neues Image, kein neues Deployment.**
@@ -55,7 +53,7 @@ Umgestellt wird unter ⚙ Einstellungen → ▨ Storage. Der Wechsel ist ein Kop
 
 ## Sichern und zurück – auf Knopfdruck
 
-Unter ⚙ Einstellungen → ⇅ B&R sichert ihr **in jedem Tarif** auf Knopfdruck: das Journal mit allen Einträgen, die Medien aus der Datenbank, Anmeldungen und Einstellungen, die Plugin-Verzeichnisse. Die Sicherung hängt an nichts – **nicht an der Version von PostgreSQL, nicht am Schema**. Als Job mit Zeitplan erledigt das Plugin Sicherung dasselbe regelmäßig.
+Unter ⚙ Einstellungen → ⇅ B&R sichert ihr auf Knopfdruck: das Journal mit allen Einträgen, die Medien aus der Datenbank, Anmeldungen und Einstellungen, die Plugin-Verzeichnisse. Die Sicherung hängt an nichts – **nicht an der Version von PostgreSQL, nicht am Schema**. Als Job mit Zeitplan erledigt das Plugin Sicherung dasselbe regelmäßig.
 
 Zurück geht sie in ein leeres System, und der Server baut seine Abbilder daraus neu. Das passt auch für eine **Testinstanz neben der Produktion**: Sicherung der Produktion einspielen, fertig.
 

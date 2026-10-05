@@ -56,7 +56,7 @@ Im Reiter **Prüfen** wählt ihr Teile und seht das Ergebnis genau so, wie der S
 
 Wo eine Konfiguration beginnt, bestimmt ihr: Die **Wurzel** des Konfigurators legt fest, woraus gewählt werden darf. Zwei Bereiche, die getrennt gerechnet werden sollen, bekommen getrennte Gruppen – etwa eigener Arbeitsspeicher je Mainboard.
 
-Und der Zugriff bleibt, wie er ist: Prüfen braucht nur das Recht zu lesen, und ein Teil, das die Rolle des Aufrufers nicht sieht, gibt es für ihn nicht. Der Konfigurator gehört ab dem Tarif **Pro** zu journali.
+Und der Zugriff bleibt, wie er ist: Prüfen braucht nur das Recht zu lesen, und ein Teil, das die Rolle des Aufrufers nicht sieht, gibt es für ihn nicht.
 
 ## Und jetzt?
 

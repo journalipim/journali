@@ -48,7 +48,7 @@ In journali übernimmt das Plugin **GPC** diese Schritte:
 - Beim Zuweisen legt journali an, was fehlt: die Attributgruppe des Bricks mit **je GPC-Attribut einem Listenattribut**. Die Klasse **erbt auf alles darunter**.
 - Das Band **⌗ GPC** zeigt am Knoten die Klasse, eigen oder geerbt, und die Zahl ihrer Attribute.
 
-Ehrlich dazu: Ein Export ins GDSN gehört nicht zum Plugin. journali pflegt die Klassifikation und ihre Attribute. GPC gehört zu den Plugins ab dem Tarif **Pro+**. Mehr dazu: [GPC in journali](/?p=44).
+Ehrlich dazu: Ein Export ins GDSN gehört nicht zum Plugin. journali pflegt die Klassifikation und ihre Attribute. Mehr dazu: [GPC in journali](/?p=44).
 
 ## Hinweis
 

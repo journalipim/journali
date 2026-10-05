@@ -54,10 +54,6 @@ Geschrieben wird **nichts ohne euren Klick**. Was ihr übernehmt, geht als ein S
 
 Datenpunkte, Fristen, Geltungen und Vorschläge sind eine Arbeitshilfe. **Maßgeblich bleibt der Rechtstext** – der Verweis auf EUR-Lex steht in jeder Prüfansicht ganz oben, zusammen mit diesem Hinweis.
 
-## Ab Pro+ dabei
-
-Verpackung (PPWR) gehört zur Datenanalyse und ist **ab Pro+** enthalten.
-
 ## Und jetzt?
 
 journali ist noch in Entwicklung – die Prüfung der Verpackungsdaten steckt schon drin. Hier entsteht etwas ganz Großes, und ihr könnt dabei sein: [Bleibt dran](/#kontakt).

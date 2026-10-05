@@ -60,10 +60,6 @@ Bei „Version erzeugen“ liefert das Plugin **das Datenblatt als eingefrorenen
 
 Der Beleg landet in der Bibliothek im Ordner „Belege“, mit seiner Herkunft, und ist am Produkt zugeordnet. Für die Haftungsfrage zählt das Dokument, das nach draußen ging – **und genau das habt ihr in der Hand**.
 
-## Ab Pro dabei
-
-Das Datenblatt-Plugin ist **ab dem Tarif Pro** enthalten.
-
 ## Und jetzt?
 
 journali ist noch in Entwicklung – der Datenblatt-Designer steckt schon drin. Hier entsteht etwas ganz Großes, und ihr könnt dabei sein: [Bleibt dran](/#kontakt).

@@ -30,13 +30,6 @@ Die Server müssen einander nicht erreichen. **Sie verständigen sich ausschlie�
 
 Unter Einstellungen → ⧉ Server seht ihr jeden Server auf einen Blick: Name, Rolle, Version und Build, Stand des Journals, letzter Puls, laufende Jobs, laufender Import. Hauptserver festlegen, Server benennen, sperren, aufräumen – alles mit einem Klick. Läuft irgendwo eine andere Version, seht ihr das sofort.
 
-## Lizenz: so einfach wie möglich
-
-- **Unlimited**: beliebig viele Server, ohne Wenn und Aber.
-- **Zusatz Multi-Server**: weitere Server zu jedem Tarif dazu – zu Pro, zu Pro+, sogar zu Kostenlos. Er gilt für die ganze Instanz, egal über welches Team ihr ihn kauft.
-
-Und wenn mal ein Server mehr startet, als die Lizenz erlaubt? Dann passiert nichts Schlimmes: Er meldet sich an, wartet und fragt alle fünf Minuten selbst beim Lizenzserver nach. **Ist der Zusatz gekauft, legt er los – ohne Neustart.** Der festgelegte Hauptserver hat dabei immer Vorrang, auch wenn er als Letzter hochfährt.
-
 ## Und jetzt?
 
 journali ist noch in Entwicklung – Multi-Server steckt ab sofort drin. Hier entsteht etwas ganz Großes, und ihr könnt dabei sein: [Bleibt dran](/#kontakt).

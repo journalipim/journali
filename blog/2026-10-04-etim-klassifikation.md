@@ -52,10 +52,6 @@ Der Vorlagen-Export bringt die Startvorlage **ETIM BMEcat 5.0** mit – **geprü
 - **Eure Regeln im Profil**: Klasse ist Pflicht, Werte müssen passen, **Vollständigkeit ≥ n %** je Produkt. Ein Verstoß sperrt den Export – mit Liste.
 - **Als Job**: Der Export läuft auf Wunsch regelmäßig in ein Verzeichnis, die durchschnittliche Vollständigkeit steht im Log.
 
-## Ab Pro dabei
-
-ETIM ist **ab dem Tarif Pro** enthalten – Vorlagen-Export und Datenanalyse kommen gleich mit.
-
 ## Und jetzt?
 
 journali ist noch in Entwicklung – ETIM steckt schon drin, von der Freigabe bis zum BMEcat. Hier entsteht etwas ganz Großes, und ihr könnt dabei sein: [Bleibt dran](/#kontakt).

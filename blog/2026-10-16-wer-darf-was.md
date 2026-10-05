@@ -1,6 +1,6 @@
 ---
 title: Wer darf was – journali richtet sich nach den Menschen
-excerpt: Anwender, Rollen mit Rechten, Teams mit eigenem Kontingent und Tarife aus einem signierten Tarifblatt – jede Person sieht und tut, was ihre Rolle erlaubt.
+excerpt: Anwender, Rollen mit Rechten und Teams mit eigenem Kontingent – jede Person sieht und tut, was ihre Rolle erlaubt.
 slug: wer-darf-was
 tags: [Betrieb, Architektur, Journal]
 categories: [Entwicklung]
@@ -39,7 +39,7 @@ Auch die Einstellungen passen sich an: Es erscheinen nur die Reiter, die zu eure
 
 ## Teams: führen und dazugehören
 
-Ein **Team** ist eine Gruppe von Personen, die am Gesamtsystem mitarbeitet. Daran hängen Kontingent, KI-Schlüssel und KI-Austauschvolumen. Jede Anlage bringt das **Init Team** mit – nicht löschbar, umbenennbar, Träger der Grenzen aus der Lizenz. Der erste Administrator gehört hinein und führt es. Wer kein eigenes Team hat, arbeitet dort.
+Ein **Team** ist eine Gruppe von Personen, die am Gesamtsystem mitarbeitet. Daran hängen Kontingent, KI-Schlüssel und KI-Austauschvolumen. Jede Anlage bringt das **Init Team** mit – nicht löschbar, umbenennbar. Der erste Administrator gehört hinein und führt es. Wer kein eigenes Team hat, arbeitet dort.
 
 Führen und dazugehören sind zweierlei: Eine Person kann **Manager mehrerer Teams** sein, aber **Mitglied nur eines**. So führt jemand aus der IT mehrere Standorte und sitzt trotzdem in genau einem Team. Teammanager tragen Mitglieder ein und aus und pflegen Schlüssel und Grenzen ihres Teams; neue Teams legt, wer Anwender verwaltet.
 
@@ -47,7 +47,7 @@ Führen und dazugehören sind zweierlei: Eine Person kann **Manager mehrerer Tea
 
 Ein Team kann **über ein anderes abrechnen** – und das wiederum über ein drittes. Am Ende der Kette steht das Team, dessen Kontingent gilt. Kreise (a über b über a) lehnt journali beim Einstellen ab. Alle Teams, die am selben Ende hängen, teilen sich ein Kontingent; die Balken in der Kopfzeile zeigen immer das Team eurer Mitgliedschaft am Ende der Kette.
 
-So bleibt die Struktur klein: Ein Team trägt das Kontingent, die anderen hängen sich dran – oder bekommen einen eigenen Anteil aus der Lizenz.
+So bleibt die Struktur klein: Ein Team trägt das Kontingent, die anderen hängen sich dran – oder bekommen ein eigenes.
 
 ## Verfügbar statt verboten
 
@@ -55,23 +55,10 @@ journali zählt **Pflege, nicht Personen und nicht Produkte**. Die Einheit ist d
 
 Unter **◍ Team** seht ihr, was für euer Team verfügbar ist – je Woche und je Monat –, daneben Kontingent und Genutztes, dazu den Verlauf. Zwei Balken in der Kopfzeile füllen sich mit dem, was genutzt wurde, und der Tooltip sagt, was noch verfügbar ist und wann zurückgesetzt wird. Pflege braucht Kontingent; Modell, Struktur, Einrichtung und Betrieb gehen immer weiter.
 
-## Tarife kommen aus einem signierten Tarifblatt
-
-Die Tarife stehen nicht im Code, sondern im Journal: als **Tarifblatt** mit Signatur. journali übernimmt nur ein Blatt, dessen Signatur stimmt und das neuer ist als das geltende. Das Blatt legt je Tarif fest: Grenzen je Woche und Monat, Zahl der Publikationsbäume und welche Plugins enthalten sind. Ändert sich ein Tarif, **braucht ihr keine neue journali-Version** – das Blatt wird nachgeführt.
-
-Die Regeln dazu sind schlicht:
-
-- **Grenzen gelten je Team**, am Ende der Zahlerkette.
-- **Plugins und Publikationsbäume gelten für die ganze Anlage** nach dem höchsten Tarif, den sie hat.
-- Eine Anlage hat keine eigene Lizenz, sondern **jede Lizenz gehört einem Team**: Abo oder Schlüssel, eingefügt unter **⚿ journali Lizenz**. Für die Limits gibt es kein Eingabefeld – sie kommen aus der Lizenz.
-- Eine neue Anlage startet mit einem Test, danach gilt der Tarif Kostenlos. Welcher Tarif und wie lange, steht im Tarifblatt.
-
-Die Tarifstufen heißen Kostenlos, Pro, Pro+, Enterprise und Unlimited; Zahlen und Preise nennt das Tarifblatt, nicht dieser Beitrag.
-
 ## API-Token: Skripte arbeiten mit euren Rechten
 
 Unter **◐ Mein Account** legt jede Person eigene **API-Token** an – für das Excel-Add-in, OnlyOffice und Skripte. Ein Token arbeitet **mit den Rechten der Person**: Ein Leser mit Token bleibt Leser. Was damit geschrieben wird, ist dem Team der Person zugeordnet. Sichtbar ist der Token nur beim Anlegen, danach liegt von ihm nur der Hash vor, und ihr widerruft ihn mit einem Klick. Auch Jobs bekommen je Lauf ein eigenes Dienst-Token, das mit dem Lauf erlischt.
 
 ## Und jetzt?
 
-journali ist noch in Entwicklung – Anwender, Rollen, Teams und Tarife stecken schon drin. Hier entsteht etwas ganz Großes, und ihr könnt dabei sein: [Bleibt dran](/#kontakt).
+journali ist noch in Entwicklung – Anwender, Rollen und Teams stecken schon drin. Hier entsteht etwas ganz Großes, und ihr könnt dabei sein: [Bleibt dran](/#kontakt).

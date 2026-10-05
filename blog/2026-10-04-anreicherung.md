@@ -47,8 +47,6 @@ Auch in einem Jahr seht ihr also noch, woher ein Wert stammt. Und ändert sich d
 
 Die Anreicherung nutzt die KI, die ihr eingerichtet habt – mit dem **KI-Schlüssel eures Teams**. journali selbst bietet keine KI an, und ihr wählt den Anbieter. Ohne Schlüssel steht euch der manuelle Weg offen.
 
-Die Anreicherung ist **ab Pro+** enthalten – und in den ersten drei Monaten jeder neuen Instanz ohnehin dabei.
-
 ## Und jetzt?
 
 journali ist noch in Entwicklung – die Anreicherung steckt schon drin. Hier entsteht etwas ganz Großes, und ihr könnt dabei sein: [Bleibt dran](/#kontakt).

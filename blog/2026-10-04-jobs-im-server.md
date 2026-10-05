@@ -25,8 +25,6 @@ Als Job läuft unter anderem:
 
 Der Zeitplan-Assistent kennt alles, was man braucht: nur von Hand, alle paar Minuten, stündlich, täglich, wöchentlich, monatlich. Aber auch *alle zwei Wochen montags und donnerstags um 06:30* oder *am 3. Sonntag im Monat*. Wer cron kennt, schreibt den Ausdruck direkt hinein.
 
-Zeitpläne gibt es **ab Pro** – von Hand startet ihr jeden Job in jedem Tarif.
-
 ## Jeder Lauf mit Log
 
 Jeder Lauf steht im Journal: Start, Ende, Dauer und Ergebnis – **ok, mit Warnungen, gescheitert, Zeitgrenze oder abgebrochen**. Das Log lest ihr direkt am Job, auch während der Lauf noch arbeitet.
@@ -60,7 +58,7 @@ Was ein Job schreibt, geht auf das **Kontingent seines Teams**. Starten, anhalte
 
 ## Eure eigenen Skripte als Job
 
-Mit **scriptum** schreibt ihr Skripte direkt in der Oberfläche: Auswertungen über Systemgrenzen, eigene Umwandlungen, Übergaben an Fremdsysteme. Das Skript steht **im Journal** – versioniert und in der Sicherung enthalten. Gestartet wird es wie jeder Job: von Hand, nach Zeitplan oder **über die Schnittstelle von einem anderen System aus**. Dasselbe Log, dieselbe Zeitgrenze, dieselben Fächer. Das Ergebnis ist eine Tabelle, ein Text oder eine Datei in `out/`. Skripte gibt es **ab Pro+**.
+Mit **scriptum** schreibt ihr Skripte direkt in der Oberfläche: Auswertungen über Systemgrenzen, eigene Umwandlungen, Übergaben an Fremdsysteme. Das Skript steht **im Journal** – versioniert und in der Sicherung enthalten. Gestartet wird es wie jeder Job: von Hand, nach Zeitplan oder **über die Schnittstelle von einem anderen System aus**. Dasselbe Log, dieselbe Zeitgrenze, dieselben Fächer. Das Ergebnis ist eine Tabelle, ein Text oder eine Datei in `out/`.
 
 ## Und jetzt?
 
