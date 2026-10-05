@@ -3078,5 +3078,9 @@
  "Für Inhalt und Wirkung ist sein Herausgeber verantwortlich.": "Its publisher is responsible for its content and effects.",
  "⇩ trotzdem installieren": "⇩ install anyway",
  "nicht installieren": "do not install",
- "{0} stammt nicht von journali; die Bestätigung dazu fehlt.": "{0} does not come from journali; the confirmation is missing."
+ "{0} stammt nicht von journali; die Bestätigung dazu fehlt.": "{0} does not come from journali; the confirmation is missing.",
+ "Gilt für diese Anlage; die Bestätigung steht im Journal.": "Applies to this installation; the confirmation is recorded in the journal.",
+ "✓ zur Kenntnis genommen": "✓ acknowledged",
+ "später": "later",
+ "Die Hinweise zum Betrieb in Version {0} sind nicht bestätigt.": "The notes on operation in version {0} are not confirmed."
 }

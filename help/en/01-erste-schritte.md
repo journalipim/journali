@@ -18,6 +18,8 @@ Then the first administrator is created, also with the setup code. After that ev
 
 Further users with role and team are added under ⚙ Settings → ◈ IAM. Roles bundle rights; the preset ones are Administrator, PIM manager, PIM editor, Team admin and Reader.
 
+Whoever administers the installation then confirms the **notes on operation** once: journali comes free of charge and without warranty, backup and testing the restore are the operator's responsibility, journali is intended for businesses. The confirmation is recorded in the journal with version and wording; if the wording changes, it is asked again.
+
 ## 2. Languages and channels
 
 Under ⊞ Model → Languages and Channels are the axes of the data. Preset are German and English and the channels Web and Print. The master language is the language in which required fields are entered; when a value changes there, the other languages count as to be revised.

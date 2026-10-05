@@ -500,6 +500,7 @@ api.MapGet("/usage", (Catalog c, string? history = null, int limit = 90) => c.Re
 api.MapGet("/usage/months", (Catalog c, int limit = 120) => c.ReadUsage(u => u.Months(Math.Clamp(limit, 1, 600)))
     .Select(m => new { month = m.Month.ToString("yyyy-MM"), kinds = m.Kinds, total = m.Kinds.Values.Sum() }).ToList());
 NutzungsberichtApi.Map(api, laufendeVersion);
+BetriebshinweisApi.Map(api);   // Hinweise zum Betrieb: einmal bestätigt, im Journal
 // Nutzungsberichte (05.10.2026): nur eingeschaltet, einmal im Monat, nur vom Hauptserver. Auch in der Startphase — dann ist das der einzige Weg zum
 // Lizenzserver, und den schaltet ein Administrator selbst ein
 var berichtAdresse = Journali.Core.Licensing.Aussteller.Adresse;

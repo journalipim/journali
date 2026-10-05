@@ -6,6 +6,7 @@ import Dialog from './components/Dialog.vue'
 import { useRoute, useRouter } from 'vue-router'
 import { plugins } from './plugins.js'
 import { frageNachRegistrierung } from './registrierung.js'
+import { frageNachBetriebshinweis } from './betriebshinweis.js'
 import { TOPICS, entries, baseTopics, topicOfPath } from './topics.js'
 import { ai } from './ai.js'
 import { menu } from './menu.js'
@@ -39,6 +40,7 @@ onMounted(() => { plugins.load() })
 
 // Registrierung beim Lizenzserver: einmal fragen (registrierung.js sagt, wann und was)
 watch(() => [store.registriert, store.auth.user, store.auth.rights], () => { frageNachRegistrierung() }, { immediate: true })
+watch(() => [store.auth.known, store.auth.user, store.auth.rights], () => { frageNachBetriebshinweis() }, { immediate: true })   // Hinweise zum Betrieb, einmal bestätigt
 plugins.beobachte(store)   // nach der Anmeldung und nach einem neuen Serverstand neu laden — sonst fehlen Gruppen in der Leiste
 onMounted(() => window.addEventListener('keydown', e => {
   if (e.altKey && !e.ctrlKey && [...nav, ...navBottom].some(n => n.key === e.key)) {

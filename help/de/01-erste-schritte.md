@@ -18,6 +18,8 @@ Danach legt man den ersten Administrator an, ebenfalls mit dem Einrichtungscode.
 
 Unter ⚙ Einstellungen → ◈ IAM kommen weitere Anwender mit Rolle und Team dazu. Rollen bündeln Rechte; die vorbelegten sind Administrator, PIM-Manager, PIM-Editor, Team-Admin und Leser.
 
+Wer die Anlage verwaltet, bestätigt danach einmal die **Hinweise zum Betrieb**: journali kommt kostenlos und ohne Gewähr, Sicherung und die Probe der Wiederherstellung liegen beim Betreiber, journali ist für Unternehmen bestimmt. Die Bestätigung steht mit Version und Wortlaut im Journal; ändert sich der Wortlaut, wird wieder gefragt.
+
 ## 2. Sprachen und Kanäle
 
 Unter ⊞ Modell → Sprachen und Kanäle stehen die Achsen der Daten. Vorbelegt sind Deutsch und Englisch sowie die Kanäle Web und Print. Die Mastersprache ist die Sprache, in der Pflichtfelder erfasst werden; ändert sich dort ein Wert, gelten die anderen Sprachen als zu überarbeiten.

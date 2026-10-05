@@ -74,6 +74,7 @@ Verwaltung der Plugins (docs/pflegestruktur.md, 19): die Dateien liegen unter
 | `PluginEnabled` / `PluginDisabled` | — | an / aus |
 | `PluginAcknowledged` | `Version`, `Text` | der Hinweis des Plugins (Manifest: `acknowledge`) ist bestätigt — wer und wann steht am Eintrag (05.10.2026) |
 | `PluginRemoved` | — | aus dem Abbild; die Dateien bleiben |
+| `NoticeAcknowledged` | `Version`, `Text` | die Hinweise zum Betrieb sind zur Kenntnis genommen (Strom `notice:betrieb`, 05.10.2026): Version und Wortlaut — wer und wann steht am Eintrag |
 | `UsageReportsSet` | `On`, `Id`, `Text` | Nutzungsberichte an oder aus (Strom `report:usage`, 05.10.2026): die zufällige Kennung des Berichts und beim Einschalten der Wortlaut, den der Administrator gesehen hat |
 
 Befehle: `GET /api/plugins` (Platte + Journal), `POST /api/plugins/{key}/install | enable | disable`,
