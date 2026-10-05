@@ -454,6 +454,7 @@ async function mount(root, ctx) {
       ...[...st.plugins].sort((a, b) => svcLabel(a).localeCompare(svcLabel(b), 'de'))
         .map(p => el('option', { value: svcId(p), title: p.description ?? '' }, svcLabel(p))))   // nur der Name
     const pluginHint = el('div', { class: 'muted', style: 'font-size:12px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis' })
+    const pluginNotice = el('div', { class: 'plugin-notice', style: 'font-size:12px;margin-top:2px' })   // process.notice aus dem Manifest, ein Satz
     if (j) pluginSel.value = `${j.plugin}|${j.service ?? ''}`
     else if (preset) { pluginSel.value = preset; if (pluginSel.value !== preset) pluginSel.value = st.plugins.find(p => svcId(p).startsWith(preset.split('|')[0] + '|')) ? svcId(st.plugins.find(p => svcId(p).startsWith(preset.split('|')[0] + '|'))) : pluginSel.value }
     const sched = scheduleAssistant(j?.schedule ?? '', () => {}, store.tarif?.schedules !== false)   // Zeitplan-Assistent statt Vorgaben-Liste
@@ -508,6 +509,7 @@ async function mount(root, ctx) {
       paramsBox.innerHTML = ''
       const p = st.plugins.find(x => svcId(x) === pluginSel.value); const defs = p?.params ?? []
       pluginHint.textContent = p?.description ?? ''; pluginHint.title = pluginHint.textContent
+      pluginNotice.textContent = p?.notice ? t(p.notice) : ''; pluginNotice.title = p?.notice ? t(p.noticeTitle ?? p.notice) : ''; pluginNotice.style.display = p?.notice ? '' : 'none'
       // Mit Profil:
       // im Dialog stehen dann nur Profil, Dateien/Verzeichnisse und Schalter. Ohne gewähltes Profil sind seine Felder
       // die einzige Quelle und stehen hier
@@ -682,7 +684,7 @@ async function mount(root, ctx) {
     // ---- Assistent: vier Schritte statt einer Seite, die über den Bildschirm hinauswächst ----
     const lab = text => el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, text)
     const seiten = [
-      { name: '① Was', box: el('div', {}, lab('Key'), keyIn, lab(t('Bezeichnung')), labelIn, lab('Plugin (Prozess)'), pluginSel, pluginHint, lab(t('Team (Abrechnung)')), teamSel) },
+      { name: '① Was', box: el('div', {}, lab('Key'), keyIn, lab(t('Bezeichnung')), labelIn, lab('Plugin (Prozess)'), pluginSel, pluginHint, pluginNotice, lab(t('Team (Abrechnung)')), teamSel) },
       { name: t('② Womit'), box: el('div', {}, paramsBox), leer: () => !paramsBox.childElementCount },
       { name: t('③ Ablage'), box: el('div', {}, fachBox), leer: () => fachBox.style.display === 'none' },
       { name: t('④ Wann'), box: el('div', {}, lab(t('Zeitplan')), sched.el, lab('Zeitgrenze (min)'), timeoutIn, ...(darfRolle ? [lab(t('Rolle des Laufs')), rolleSel] : [])) },

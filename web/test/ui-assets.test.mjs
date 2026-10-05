@@ -89,6 +89,10 @@ test('B&R: sichern und wiederherstellen — gesichert wird erst auf Knopfdruck',
   assert.match(t, /Teilbaum einspielen/, 'und die einzelne Datei')
   assert.match(t, /937 Assets/, 'der Stand spricht von Assets')
   assert.ok(!calls.some(c => c.path === '/api/backup' && c.method === 'POST'), 'nichts wurde gesichert')
+  // 05.10.2026: ob sich eine Sicherung einspielen lässt, zeigt nur die Probe — ein fester Satz, der Rest im Tooltip
+  const probe = w.find('.probe')
+  assert.equal(probe.text(), 'Ob das Einspielen gelingt, zeigt nur eine Probe.')
+  assert.match(probe.attributes('title'), /liegen beim Betreiber/)
   await ruhe(); w.unmount()
 })
 

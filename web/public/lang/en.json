@@ -3020,5 +3020,7 @@
  "einhängen": "placing",
  "{0} Fehler": "{0} errors",
  "Mit gesetzter ETIM-Klasse oder KI sind Vorschläge möglich.": "With an ETIM class set or AI, suggestions are possible.",
- "Vorschläge kommen aus der ETIM-Klasse des Knotens (eigen oder geerbt) und von der KI (Schlüssel unter ⚙ Einstellungen) — entschieden wird hier mit ja oder nein": "Suggestions come from the ETIM class of the node (own or inherited) and from the AI (key under ⚙ Settings) — the decision is made here with yes or no"
+ "Vorschläge kommen aus der ETIM-Klasse des Knotens (eigen oder geerbt) und von der KI (Schlüssel unter ⚙ Einstellungen) — entschieden wird hier mit ja oder nein": "Suggestions come from the ETIM class of the node (own or inherited) and from the AI (key under ⚙ Settings) — the decision is made here with yes or no",
+ "Sicherung, Aufbewahrung und Probe liegen beim Betreiber: die Sicherung regelmässig in eine leere Testinstanz einspielen und prüfen, ob Einträge, Assets, Anmeldungen und Plugins da sind": "Backup, retention and trial are the operator’s responsibility: restore the backup regularly into an empty test instance and check that entries, assets, sign-ins and plugins are there",
+ "Ob das Einspielen gelingt, zeigt nur eine Probe.": "Only a trial shows whether restoring works."
 }

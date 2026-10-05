@@ -134,6 +134,7 @@ onMounted(lies)
       <span v-else-if="stand && !stand.dort" class="muted" style="font-size:12px">{{ $t("keine Sicherung im Verzeichnis") }}</span>
     </div>
     <div v-if="said" :class="said.startsWith('✗') ? 'fehler' : 'pos'" style="font-size:12px;margin-top:6px">{{ said }}</div>
+    <div class="probe" style="font-size:12px;margin-top:6px" :title="$t('Sicherung, Aufbewahrung und Probe liegen beim Betreiber: die Sicherung regelmässig in eine leere Testinstanz einspielen und prüfen, ob Einträge, Assets, Anmeldungen und Plugins da sind')">{{ $t('Ob das Einspielen gelingt, zeigt nur eine Probe.') }}</div>
   </div>
 
   <div class="section">

@@ -76,6 +76,8 @@ public static class JobApi
                     label = x.Proc.TryGetProperty("label", out var pl) ? pl : (manifests[p.Key].Raw.TryGetProperty("label", out var l) ? l : (JsonElement?)null),
                     @params = x.Proc.TryGetProperty("params", out var ps) ? ps : (JsonElement?)null,
                     description = x.Proc.TryGetProperty("description", out var d) ? d.GetString() : null,
+                    notice = x.Proc.TryGetProperty("notice", out var no) && no.ValueKind == JsonValueKind.String ? no.GetString() : null,   // ein fester Satz im Job-Dialog (Sicherung: die Probe, 05.10.2026)
+                    noticeTitle = x.Proc.TryGetProperty("noticeTitle", out var nt) && nt.ValueKind == JsonValueKind.String ? nt.GetString() : null,
                     files = x.Proc.TryGetProperty("files", out var fi) ? fi : (JsonElement?)null,   // Fächer-Vertrag (in/out) — der Dialog zeigt dann die Fächer
                     // Systemjob (probe, embed, derive): immer sichtbar im Tasker, mit Balken aus progress (GET, liefert offen/gelesen/total)
                     system = manifests[p.Key].Raw.TryGetProperty("system", out var sy) && sy.ValueKind == JsonValueKind.True,

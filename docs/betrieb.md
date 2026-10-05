@@ -480,6 +480,13 @@ weil sie für ein Betriebssystem gebaut sind (sharp, pdfjs bringen Binärdateien
 Die Sicherung enthält Passwort-Hashes und Token. Sie gehört dorthin, wo auch das
 Datenverzeichnis hingehört.
 
+**Die Probe liegt beim Betreiber** (05.10.2026). Ob sich eine Sicherung einspielen lässt, hängt an Speicher, Rechten,
+Netz und Hardware des Betriebs — das zeigt nur eine Probe: die Sicherung regelmässig in eine leere Testinstanz
+einspielen und prüfen, ob Einträge, Medien (auch die in `file` oder `s3`), Anmeldungen und Plugins da sind.
+Sicherung, Aufbewahrung und Probe liegen beim Betreiber; journali stellt die Werkzeuge bereit und sagt nicht zu,
+dass eine Wiederherstellung gelingt. Die Oberfläche sagt das in ⇅ B&R und im Job-Dialog des Plugins `backup`
+(`process.notice` im Manifest — ein Satz, den der Job-Dialog unter der Plugin-Wahl zeigt, `noticeTitle` im Tooltip).
+
 ## Tabelle `journal`
 
 | Spalte | Typ | |
