@@ -75,7 +75,7 @@ public class PluginHinweisTests : IDisposable
         File.WriteAllText(Path.Combine(dir, "recht", "plugin.json"), Manifest.Replace("\"version\":\"1.0.0\",", "\"version\":\"1.0.0\",\"autoInstall\":true,"));
         File.WriteAllText(Path.Combine(dir, "frei", "plugin.json"), """{"key":"frei","version":"1.0.0","autoInstall":true}""");
         var c = new Catalog(new MemoryJournal()); c.Rebuild(); c.SeedMissing();
-        PluginApi.AutoInstall(c, dir);
+        PluginApi.AutoInstall(c, dir, auchFremde: true);   // die Plugins hier tragen kein Siegel von journali
         Assert.False(c.Lesen((_, _) => c.Plugins.All["recht"].Enabled));
         Assert.True(c.Lesen((_, _) => c.Plugins.All["frei"].Enabled));
         Assert.NotNull(PluginApi.Hinweis(System.Text.Json.JsonDocument.Parse(Manifest).RootElement));

@@ -150,6 +150,28 @@ async function toggle(p) {
 onMounted(async () => { await plugins.load(); if (!cur.value) cur.value = plugins.list[0]?.key ?? null; await plugins.pruefeZustand() })
 // Die Auswahl folgt der Liste: was nicht mehr dasteht, steht auch rechts nicht mehr
 watch(shown, liste => { if (cur.value && !liste.some(p => p.key === cur.value)) cur.value = liste[0]?.key ?? null })
+// Ein Plugin, das nicht von journali stammt (kein ❖), installiert nur, wer den Warnhinweis bestätigt (05.10.2026): Herkunft, wo es läuft, wer
+// verantwortlich ist. Ohne Bestätigung keine Anfrage; mit ihr ?fremd=ja — der Server verlangt es
+async function installieren(p) {
+  let q = ''
+  if (!p.sealOriginal) {
+    const m = p.manifest ?? {}
+    const ok = await dialog.confirm({
+      title: t('{0} installieren?', [L(m.label) || p.key]),
+      warn: t('Dieses Plugin stammt nicht von journali.'),
+      list: [
+        p.certified ? t('Siegel von {0}', [p.sealIssuer ?? '?']) : p.sealReason ? t('Siegel gebrochen: {0}', [p.sealReason]) : t('ohne Siegel'),
+        ...(m.entry ? [t('läuft im Browser mit den Rechten des angemeldeten Anwenders')] : []),
+        ...(m.runs === 'process' || m.process ? [t('läuft als Prozess auf dem Server und erreicht die Schnittstelle')] : []),
+        t('Für Inhalt und Wirkung ist sein Herausgeber verantwortlich.'),
+      ],
+      ok: t('⇩ trotzdem installieren'), cancel: t('nicht installieren'), danger: true,
+    })
+    if (!ok) return
+    q = '?fremd=ja'
+  }
+  await act(`/api/plugins/${p.key}/install${q}`)
+}
 async function act(path, method = 'POST') {
   if (!store.actor) { store.toast(t('👤 Name fehlt → Einstellungen')); return }
   busy.value = '…'
@@ -218,9 +240,9 @@ function pick(k) { cur.value = k }
       <h1>⬡ {{ label(manifest) || current.key }}</h1><span class="mono muted">{{ current.key }}</span>
       <span class="muted">· {{ KIND[manifest.kind] ?? manifest.kind }} · {{ manifest.runs === 'process' ? $t('⚙ Prozess') : manifest.runs === 'office' ? (current.key === 'ooaddin' ? '▤ OnlyOffice' : '▤ Excel-Add-in') : $t('▭ Browser') }}{{ services.length ? ' + ⚙ ' + (services.length > 1 ? services.length + ' ' + $t('Dienste') : $t('Prozess')) : '' }}</span>
       <span class="grow" />
-      <template v-if="current.onDisk && !current.installed"><button class="primary" :disabled="current.allowed === false" :title="current.allowed === false ? $t('Tarif {0}', [tarifOf(current)]) : ''" @click="act(`/api/plugins/${current.key}/install`)">{{ $t("⇩ installieren {0}", [current.diskVersion]) }}</button></template>
+      <template v-if="current.onDisk && !current.installed"><button class="primary" :disabled="current.allowed === false" :title="current.allowed === false ? $t('Tarif {0}', [tarifOf(current)]) : ''" @click="installieren(current)">{{ $t("⇩ installieren {0}", [current.diskVersion]) }}</button></template>
       <template v-else-if="current.installed">
-        <button v-if="current.update" class="primary" @click="act(`/api/plugins/${current.key}/install`)" :title="`${current.version} → ${current.diskVersion}`">{{ $t("↑ aktualisieren auf {0}", [current.diskVersion]) }}</button>
+        <button v-if="current.update" class="primary" @click="installieren(current)" :title="`${current.version} → ${current.diskVersion}`">{{ $t("↑ aktualisieren auf {0}", [current.diskVersion]) }}</button>
         <button v-if="current.enabled && railToggle(current.key)" :class="{ primary: !store.railOff.includes(current.key) }" @click="toggleRail(current.key)" :title="store.railOff.includes(current.key) ? $t('In die Leiste links aufnehmen (unter sein Thema)') : $t('Aus der Leiste links nehmen (nur für dich, in den Einstellungen)')">{{ store.railOff.includes(current.key) ? $t('▯ nicht in der Leiste') : $t('▮ in der Leiste') }}</button>
         <!-- Zustandsschalter wie „in der Leiste“: leuchtet, wenn es wirkt; Klick kippt. Ein Plugin, das der Tarif nicht
              enthält, wirkt nicht — auch wenn es im Journal aktiviert ist; dann steht der Tarif da, der es enthält -->

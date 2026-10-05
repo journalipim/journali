@@ -80,7 +80,9 @@ public static class PluginApi
 
     /// <summary>Beim Start: Manifeste mit <c>autoInstall</c>, die das Journal noch nicht kennt, installieren und einschalten (Saatgut) —
     /// Basis zuerst: ein Plugin kommt dran, wenn alles, was es braucht, schon da ist (sonst in einer späteren Runde).</summary>
-    public static int AutoInstall(Catalog c, string dir)
+    /// <summary>Die Saat: installiert, was <c>autoInstall</c> trägt — nur Originale von journali (05.10.2026): ein Plugin anderer Herkunft installiert
+    /// ein Mensch nach dem Warnhinweis. <paramref name="auchFremde"/> nur für Tests, deren Plugins kein Siegel von journali tragen können.</summary>
+    public static int AutoInstall(Catalog c, string dir, bool auchFremde = false)
     {
         var n = 0;
         var all = Scan(dir).Values.ToList();
@@ -91,6 +93,7 @@ public static class PluginApi
         foreach (var m in ordered)
         {
             if (!(m.Raw.TryGetProperty("autoInstall", out var a) && a.ValueKind == JsonValueKind.True)) continue;
+            if (!auchFremde && !m.Seal.Original) continue;
             c.With((_, _, write) =>
             {
                 if (c.Plugins.All.ContainsKey(m.Key)) return 0;
@@ -149,6 +152,9 @@ public static class PluginApi
             if (Actor(req) is not { } actor) return ActorMissing();
             if (!Scan(dir).TryGetValue(key, out var m)) return Results.NotFound(Err("plugins/{0}/plugin.json fehlt.", key));
             if (NichtImTarif(c, key) is { } nein) return nein;
+            // Ein Plugin, das nicht von journali stammt (kein Siegel mit dem Schlüssel von journali), installiert nur, wer den Warnhinweis bestätigt
+            // (05.10.2026): ⬡ Plugins nennt Herkunft und Rechte und schickt dann ?fremd=ja — auch bei jeder Aktualisierung
+            if (!m.Seal.Original && req.Query["fremd"] != "ja") return Bad("{0} stammt nicht von journali; die Bestätigung dazu fehlt.", key);
             return c.With((_, _, write) =>
             {
                 var fresh = !c.Plugins.All.ContainsKey(key);

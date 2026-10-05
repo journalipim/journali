@@ -90,3 +90,8 @@ stammt und seitdem nicht verändert wurde. Plugins Dritter werden nicht geprüft
 von journali aufgenommen; für sie steht ihr Herausgeber ein. Wer eigene Plugins siegeln will, tut das mit einem eigenen
 Schlüssel (`JOURNALI_PLUGIN_KEY`); die Oberfläche nennt dann diesen Herausgeber. Der Quelltext des Kerns nimmt keine
 Pull Requests an (`.github/workflows/pull-requests.yml`, `CONTRIBUTING.md`).
+
+**Installieren nur nach Warnhinweis** (05.10.2026): ein Plugin ohne Siegel von journali (◇, ⚠ oder ohne Zertifikat) installiert
+⬡ Plugins erst, nachdem der Anwender bestätigt hat — der Hinweis nennt das Siegel, ob das Plugin im Browser mit den Rechten des
+Anwenders oder als Prozess auf dem Server läuft, und dass sein Herausgeber verantwortlich ist. Der Server verlangt dafür `?fremd=ja`,
+auch bei jeder Aktualisierung; `autoInstall` gilt nur für Originale.

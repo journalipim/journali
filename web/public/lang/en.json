@@ -3069,5 +3069,14 @@
  "Ausleitung": "Output",
  "Rechtsstand {0}": "Legal status {0}",
  "Rechtsstand": "Legal status",
- "Stand, zu dem Datenpunkte und Fristen am Rechtstext geprüft sind": "Date up to which data points and deadlines have been checked against the legal text"
+ "Stand, zu dem Datenpunkte und Fristen am Rechtstext geprüft sind": "Date up to which data points and deadlines have been checked against the legal text",
+ "{0} installieren?": "Install {0}?",
+ "Dieses Plugin stammt nicht von journali.": "This plugin does not come from journali.",
+ "ohne Siegel": "without seal",
+ "läuft im Browser mit den Rechten des angemeldeten Anwenders": "runs in the browser with the rights of the signed-in user",
+ "läuft als Prozess auf dem Server und erreicht die Schnittstelle": "runs as a process on the server and reaches the API",
+ "Für Inhalt und Wirkung ist sein Herausgeber verantwortlich.": "Its publisher is responsible for its content and effects.",
+ "⇩ trotzdem installieren": "⇩ install anyway",
+ "nicht installieren": "do not install",
+ "{0} stammt nicht von journali; die Bestätigung dazu fehlt.": "{0} does not come from journali; the confirmation is missing."
 }
