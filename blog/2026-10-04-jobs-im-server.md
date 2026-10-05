@@ -31,7 +31,7 @@ Jeder Lauf steht im Journal: Start, Ende, Dauer und Ergebnis – **ok, mit Warnu
 
 - **Zeitgrenze** je Job, Vorgabe 60 Minuten. Ist sie erreicht, bricht journali den Lauf ab und schreibt das ins Log.
 - **Abbrechen** geht jederzeit per Klick.
-- **Trockenlauf**: Ein Import aus CSV, Excel oder JSON zählt vorher, wie viele Einträge er schreiben würde – **und schreibt nichts**. Dazu seht ihr, was euer Team in dieser Woche und diesem Monat noch schreiben darf.
+- **Trockenlauf**: Ein Import aus CSV, Excel oder JSON zählt vorher, wie viele Einträge er schreiben würde – **und schreibt nichts**.
 
 ## Fächer: in/ rein, out/ raus
 
@@ -54,7 +54,7 @@ Und **ein Import hat Vorfahrt**: Solange er läuft, halten die Systemjobs an. Wa
 
 ## Jeder Job gehört einem Team
 
-Was ein Job schreibt, geht auf das **Kontingent seines Teams**. Starten, anhalten und abbrechen darf ihn dieses Team oder ein Administrator. Und mit mehreren Servern läuft ein Job auf dem Server, auf dem ihr ihn angelegt habt, mit dessen Verzeichnissen und Zugängen.
+Starten, anhalten und abbrechen darf ihn sein Team oder ein Administrator. Und mit mehreren Servern läuft ein Job auf dem Server, auf dem ihr ihn angelegt habt, mit dessen Verzeichnissen und Zugängen.
 
 ## Eure eigenen Skripte als Job
 

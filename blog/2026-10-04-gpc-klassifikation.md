@@ -10,7 +10,7 @@ Segment, Family, Class, Brick: Die **GS1-Produktklassifikation GPC** ordnet Prod
 
 ## Die Daten holt ihr bei GS1 – journali liest sie ein
 
-Die GPC ist laut GS1 kostenfrei nutzbar. Ihr ladet die Veröffentlichung bei GS1 herunter und zieht sie in journali – **das komplette Zip oder die JSON-Datei daraus, gelesen direkt im Browser**. journali bringt selbst keine GPC-Daten mit: Was ihr einlest, steht danach in eurem Journal.
+Ihr ladet die Veröffentlichung bei GS1 herunter und zieht sie in journali – **das komplette Zip oder die JSON-Datei daraus, gelesen direkt im Browser**. journali bringt selbst keine GPC-Daten mit: Was ihr einlest, steht danach in eurem Journal.
 
 - **Nur Neues wird geschrieben.** Dieselbe Datei ein zweites Mal ergibt nichts.
 - **Weitere Sprachen dazu.** Eine andere Datei derselben Version ergänzt die Titel, die Struktur bleibt.

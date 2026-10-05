@@ -56,7 +56,7 @@ Genauso liest journali die **Maße** eines Bildes aus dem Dateikopf – Breite, 
 
 ## Gepflegt oder gemessen
 
-journali unterscheidet zwei Arten von Angaben. **Gepflegt** ist, was ein Mensch sagt: Alt-Text, Rechte, Stichwörter. **Gemessen** ist, was in den Bytes steht: Maße, Ableitungen, Herkunft. Gemessenes zählt **nicht gegen euer Kontingent** – das Auslesen von fünfzigtausend Bildern kostet euch nichts.
+journali unterscheidet zwei Arten von Angaben. **Gepflegt** ist, was ein Mensch sagt: Alt-Text, Rechte, Stichwörter. **Gemessen** ist, was in den Bytes steht: Maße, Ableitungen, Herkunft.
 
 ## Ein Bestand statt einer Liste
 

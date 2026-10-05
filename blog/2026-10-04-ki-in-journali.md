@@ -1,6 +1,6 @@
 ---
 title: KI in journali – euer Schlüssel, euer Anbieter, euer letztes Wort
-excerpt: journali bindet die KI eures Teams an – Anbieter nach Wahl, Schlüssel sicher beim Server, jede Anfrage gezählt. Und vieles läuft ganz ohne KI-Anbieter, direkt auf eurem Server.
+excerpt: journali bindet die KI eures Teams an – Anbieter nach Wahl, Schlüssel sicher beim Server. Und vieles läuft ganz ohne KI-Anbieter, direkt auf eurem Server.
 slug: ki-in-journali
 tags: [KI, Datenqualität, Übersetzung, Suche]
 categories: [Entwicklung]
@@ -18,13 +18,7 @@ Ein Team rechnet über ein anderes ab? Dann nutzt es dessen Schlüssel – die E
 
 Gefragt wird **immer über den Server**. Der Schlüssel liegt verschlüsselt im Tresor – **nie im Journal, nie im Browser**. Die Oberfläche sieht nur, *dass* ein Schlüssel hinterlegt ist.
 
-Und weil der Server fragt, können sogar **Jobs die KI nutzen** – mit dem Token ihres Laufs, gezählt beim Team.
-
-## Jede Anfrage zählt – und ihr seht sie
-
-Jeder Aufruf wird beim zahlenden Team festgehalten: Anbieter, Modell, Person, Anlass. Unter **✧ KI Austauschvolumen** seht ihr je Tag die Aufrufe, was hin- und was zurückging und wofür – Editor, Übersetzung, Klassifikation, Prüfung, Geodaten. Die Kennzahl in der Statuszeile wächst mit jeder Antwort mit.
-
-Und überall in der Oberfläche gilt: **Was Token kostet, ist magenta.** Jeder Knopf, der die bezahlte KI ruft, jedes Ergebnis, das von ihr stammt. Bezahlte Aufrufe laufen auf Knopfdruck, nicht von selbst.
+Und weil der Server fragt, können sogar **Jobs die KI nutzen** – mit dem Token ihres Laufs.
 
 ## Wo die KI mit anpackt
 
@@ -44,14 +38,14 @@ Die KI schlägt vor, ihr entscheidet. Vorschläge der Prüfungen hakt ihr ab, di
 ## Vieles läuft ganz ohne KI-Anbieter
 
 - **Regelbasierte Vorschläge** in DPP und PPWR – aus vorhandenen Werten abgeleitet.
-- **Tabellen aus Datenblättern** – Schlüssel/Wert-Zeilen ordnet der Mapper zu, ohne KI. Was in derselben Zeile wie sein Schlüssel steht, findet journali ohne Kosten.
+- **Tabellen aus Datenblättern** – Schlüssel/Wert-Zeilen ordnet der Mapper zu, ohne KI.
 - **GEO-Prüfregeln und GEO-Reife** – erkennen Texte, die für Suchmaschinen und KI-Antworten nicht taugen, und bewerten jedes Produkt. Ohne KI.
 - **Werbeaussagen (EmpCo)** – prüft eure Texte je Sprache auf Umweltaussagen, die unzulässig oder belegpflichtig sind. Heuristisch, ohne KI.
 - **Einbettungen** – die Suche nach Sinn und „Ähnliche Knoten“ rechnet journali mit einem lokalen Modell auf eurem Server: rund 120 MB, auf der CPU, **ohne Schlüssel, ohne Grafikkarte**.
 
 ## Oder: die KI im eigenen Haus
 
-Ihr wollt gar nichts nach draußen schicken? Dann bindet **ein Sprachmodell auf eurem eigenen Server** an – als Anbieter „lokal“, mit Adresse statt Schlüssel. Es kostet keine Token, ist darum nicht magenta, und gezählt wird es trotzdem. Gemessen auf vier Kernen ohne Grafikkarte: eine kurze Zuordnungsfrage beantwortet es in rund acht Sekunden. Nur im Internet sucht es nicht.
+Ihr wollt gar nichts nach draußen schicken? Dann bindet **ein Sprachmodell auf eurem eigenen Server** an – als Anbieter „lokal“, mit Adresse statt Schlüssel. Gemessen auf vier Kernen ohne Grafikkarte: eine kurze Zuordnungsfrage beantwortet es in rund acht Sekunden. Nur im Internet sucht es nicht.
 
 ## Und jetzt?
 

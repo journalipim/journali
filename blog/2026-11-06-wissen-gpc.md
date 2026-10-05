@@ -42,7 +42,7 @@ Die GPC wird **zweimal im Jahr** veröffentlicht. Nach jeder Veröffentlichung g
 
 In journali übernimmt das Plugin **GPC** diese Schritte:
 
-- Ihr holt die Veröffentlichung bei GS1 – laut GS1 ist die GPC kostenfrei nutzbar – und **lest das Zip oder die JSON-Datei im Browser ein**. Im Repository liegen keine GPC-Daten.
+- Ihr holt die Veröffentlichung bei GS1 und **lest das Zip oder die JSON-Datei im Browser ein**. Im Repository liegen keine GPC-Daten.
 - Die Bricks stehen danach im Journal; eine weitere Sprache aus einer anderen Datei derselben Version **ergänzt die Titel**, die Struktur bleibt.
 - Ihr **sucht** nach Code, Titel, Weg und Definition und weist den Brick am Knoten zu. Wer will, lässt sich per KI-Vorschlag helfen.
 - Beim Zuweisen legt journali an, was fehlt: die Attributgruppe des Bricks mit **je GPC-Attribut einem Listenattribut**. Die Klasse **erbt auf alles darunter**.

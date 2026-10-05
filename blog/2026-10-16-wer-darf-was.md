@@ -1,6 +1,6 @@
 ---
 title: Wer darf was – journali richtet sich nach den Menschen
-excerpt: Anwender, Rollen mit Rechten und Teams mit eigenem Kontingent – jede Person sieht und tut, was ihre Rolle erlaubt.
+excerpt: Anwender, Rollen mit Rechten und Teams – jede Person sieht und tut, was ihre Rolle erlaubt.
 slug: wer-darf-was
 tags: [Betrieb, Architektur, Journal]
 categories: [Entwicklung]
@@ -39,21 +39,9 @@ Auch die Einstellungen passen sich an: Es erscheinen nur die Reiter, die zu eure
 
 ## Teams: führen und dazugehören
 
-Ein **Team** ist eine Gruppe von Personen, die am Gesamtsystem mitarbeitet. Daran hängen Kontingent, KI-Schlüssel und KI-Austauschvolumen. Jede Anlage bringt das **Init Team** mit – nicht löschbar, umbenennbar. Der erste Administrator gehört hinein und führt es. Wer kein eigenes Team hat, arbeitet dort.
+Ein **Team** ist eine Gruppe von Personen, die am Gesamtsystem mitarbeitet. Daran hängen KI-Schlüssel und KI-Austauschvolumen. Jede Anlage bringt das **Init Team** mit – nicht löschbar, umbenennbar. Der erste Administrator gehört hinein und führt es. Wer kein eigenes Team hat, arbeitet dort.
 
-Führen und dazugehören sind zweierlei: Eine Person kann **Manager mehrerer Teams** sein, aber **Mitglied nur eines**. So führt jemand aus der IT mehrere Standorte und sitzt trotzdem in genau einem Team. Teammanager tragen Mitglieder ein und aus und pflegen Schlüssel und Grenzen ihres Teams; neue Teams legt, wer Anwender verwaltet.
-
-## Ein Kontingent, mehrere Teams
-
-Ein Team kann **über ein anderes abrechnen** – und das wiederum über ein drittes. Am Ende der Kette steht das Team, dessen Kontingent gilt. Kreise (a über b über a) lehnt journali beim Einstellen ab. Alle Teams, die am selben Ende hängen, teilen sich ein Kontingent; die Balken in der Kopfzeile zeigen immer das Team eurer Mitgliedschaft am Ende der Kette.
-
-So bleibt die Struktur klein: Ein Team trägt das Kontingent, die anderen hängen sich dran – oder bekommen ein eigenes.
-
-## Verfügbar statt verboten
-
-journali zählt **Pflege, nicht Personen und nicht Produkte**. Die Einheit ist der journali-Token: ein Eintrag im Journal, der Pflege oder Ausleitung ist – Werte setzen, Knoten anlegen, freigeben, importieren. **Nicht gezählt** werden Modellieren, Strukturieren, Einrichtung (Anwender, Rollen, Teams, Plugins), Betrieb, Lesen und Exportieren. Die Zahl der Anwender ist keine Einheit der Zählung.
-
-Unter **◍ Team** seht ihr, was für euer Team verfügbar ist – je Woche und je Monat –, daneben Kontingent und Genutztes, dazu den Verlauf. Zwei Balken in der Kopfzeile füllen sich mit dem, was genutzt wurde, und der Tooltip sagt, was noch verfügbar ist und wann zurückgesetzt wird. Pflege braucht Kontingent; Modell, Struktur, Einrichtung und Betrieb gehen immer weiter.
+Führen und dazugehören sind zweierlei: Eine Person kann **Manager mehrerer Teams** sein, aber **Mitglied nur eines**. So führt jemand aus der IT mehrere Standorte und sitzt trotzdem in genau einem Team. Teammanager tragen Mitglieder ein und aus und pflegen die Schlüssel ihres Teams; neue Teams legt, wer Anwender verwaltet.
 
 ## API-Token: Skripte arbeiten mit euren Rechten
 

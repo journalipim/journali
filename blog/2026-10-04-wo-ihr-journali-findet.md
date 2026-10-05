@@ -21,7 +21,7 @@ Auf GitHub ist journali unter **[github.com/journalipim](https://github.com/jour
 
 Dort entstehen zwei öffentliche Repositories:
 
-- **[journalipim/journali](https://github.com/journalipim/journali)** – der **Quellcode** von journali: Kern, Server, Oberfläche und die mitgelieferten Plugins. journali erscheint unter der **Elastic License 2.0**, mit einer zusätzlichen Erlaubnis: Ihr dürft journali auch als gehosteten Dienst für andere betreiben.
+- **[journalipim/journali](https://github.com/journalipim/journali)** – der **Quellcode** von journali: Kern, Server, Oberfläche und die mitgelieferten Plugins.
 - **[journalipim/plugins](https://github.com/journalipim/plugins)** – der **Katalog der zertifizierten Plugins**. Jedes Plugin liegt dort als Paket mit seinem Zertifikat; journali liest den Katalog und zeigt, welche Plugins es gibt und welche Version die neueste ist.
 
 **Beide Repositories sind noch nicht öffentlich.** Die Links stehen trotzdem schon hier – sobald der Quellcode veröffentlicht ist, führen sie direkt dorthin.

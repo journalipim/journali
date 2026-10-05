@@ -18,7 +18,7 @@ Dann entscheidet ihr: Häkchen an die Attribute, die gefüllt werden sollen – 
 
 - **✦ KI + Websuche**: Die KI recherchiert im Internet – über Hersteller, Artikelnummer, EAN/GTIN, Herstellerseite, Datenblatt und Katalog – und nennt **zu jedem Wert die Quelle**. Bis zu sechs Suchen je Knoten.
 - **✦ nur KI**: Die KI schlägt aus ihrem Wissen vor, ohne Websuche. Günstiger – stark bei allem, was sich aus den vorhandenen Werten ableiten lässt.
-- **⌕ manuell**: journali baut Suchbegriffe aus den vorhandenen Werten und gibt euch je Lücke einen fertigen Suchlink. Ihr recherchiert selbst und tragt den Wert direkt in die Ergebnistabelle ein – **ganz ohne KI-Kosten**.
+- **⌕ manuell**: journali baut Suchbegriffe aus den vorhandenen Werten und gibt euch je Lücke einen fertigen Suchlink. Ihr recherchiert selbst und tragt den Wert direkt in die Ergebnistabelle ein.
 
 ## Die KI weiß, wonach sie sucht
 
