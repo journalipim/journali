@@ -52,3 +52,39 @@ test('je Monat: Tabelle nach Art, CSV zum Speichern, zurück zu den Einträgen',
     assert.ok(!w.find('table.nutzung').exists(), 'zweiter Klick zeigt wieder die Einträge')
   } finally { w.unmount(); api.get = orig; URL.createObjectURL = origUrl; HTMLAnchorElement.prototype.click = origClick }
 })
+
+// Nutzungsberichte (05.10.2026): der Schalter steht bei der Tabelle; Einschalten fragt mit der Liste dessen, was gesendet wird — ohne Zustimmung
+// geht keine Anfrage hinaus; Ausschalten fragt nicht.
+test('Nutzungsberichte: einschalten nur nach Zustimmung, ausschalten ohne Frage', async () => {
+  const { dialog } = await import('../src/dialog.js')
+  const origGet = api.get, origPost = api.post, origConfirm = dialog.confirm
+  let an = false, antwort = false
+  const gesendet = [], gefragt = []
+  api.get = async p => p === '/api/usage/months' ? MONATE : p === '/api/usage/report' ? { on: an, since: an ? '2026-10-05T08:00:00Z' : null, by: an ? 'admin' : null } : p === '/api/health' ? { head: store.head } : []
+  api.post = async p => { gesendet.push(p); an = p.endsWith('on=true'); return {} }
+  dialog.confirm = async o => { gefragt.push(o); return antwort }
+  const router = createRouter({ history: createMemoryHistory(), routes: [{ path: '/journal', component: JournalView }] })
+  router.push('/journal'); await router.isReady()
+  const w = mount({ template: '<router-view />' }, { global: { plugins: [router] } })
+  try {
+    await flushPromises()
+    await w.find('.je-monat').trigger('click'); await flushPromises()
+    assert.match(w.find('button.bericht').text(), /Nutzungsberichte senden/)
+
+    await w.find('button.bericht').trigger('click'); await flushPromises()
+    assert.equal(gefragt.length, 1)
+    assert.ok(gefragt[0].list.some(z => /keine Namen/.test(z)), 'die Liste sagt, was nicht gesendet wird')
+    assert.ok(gefragt[0].list.some(z => /IP-Adresse/.test(z)))
+    assert.deepEqual(gesendet, [], 'abgelehnt: keine Anfrage')
+
+    antwort = true
+    await w.find('button.bericht').trigger('click'); await flushPromises()
+    assert.deepEqual(gesendet, ['/api/usage/report?on=true'])
+    assert.match(w.find('button.bericht').text(), /Nutzungsberichte an/)
+    assert.match(w.find('button.bericht').attributes('title') ?? '', /2026-10-05 · admin/)
+
+    await w.find('button.bericht').trigger('click'); await flushPromises()
+    assert.equal(gefragt.length, 2, 'Ausschalten fragt nicht')
+    assert.deepEqual(gesendet.at(-1), '/api/usage/report?on=false')
+  } finally { w.unmount(); api.get = origGet; api.post = origPost; dialog.confirm = origConfirm }
+})

@@ -38,6 +38,10 @@ With a subscription, the instance confirms its key daily with the licence server
 This version asks no licence server: neither the identifier of the instance nor details of teams or users go to journali.
 <!-- /startphase -->
 
+## Usage reports
+
+Under ≡ Journal → ▦ per month you see how many entries of which kind went into the journal per month; ⇩ CSV saves the table. An administrator can turn on usage reports there. Then exactly this table goes to the journali licence server once a month, together with the version and a random identifier created when the reports are first turned on. Names, content, licence data and the identifier of the instance are not included. The licence server sees the IP address of the server. The default is off; turning reports on and off is recorded in the journal with its author and wording.
+
 ## Files on the first run
 
 Two plugins fetch a file from the net on their first run: Embeddings the model (huggingface.co), text recognition the language data (cdn.jsdelivr.net). No product file and no value goes out; the addresses only see the request. A machine without net access gets the files copied. When one of these plugins is enabled, journali asks first, naming purpose, file, address and size; without consent the plugin stays off.

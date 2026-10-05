@@ -38,6 +38,10 @@ Bei einem Abo bestätigt die Instanz ihren Schlüssel täglich beim Lizenzserver
 Diese Version fragt keinen Lizenzserver: weder die Kennung der Instanz noch Angaben zu Teams oder Anwendern gehen an journali.
 <!-- /startphase -->
 
+## Nutzungsberichte
+
+Unter ≡ Journal → ▦ je Monat steht, wie viele Einträge je Monat welcher Art ins Journal gingen; ⇩ CSV speichert die Tabelle. Ein Administrator kann dort Nutzungsberichte einschalten. Dann geht einmal im Monat genau diese Tabelle an den Lizenzserver von journali, dazu die Version und eine zufällige Kennung, die beim ersten Einschalten entsteht. Namen, Inhalte, Lizenzdaten und die Kennung der Instanz gehen nicht mit. Der Lizenzserver sieht dabei die IP-Adresse des Servers. Voreingestellt ist aus; Ein- und Ausschalten steht mit Urheber und Wortlaut im Journal.
+
 ## Dateien beim ersten Lauf
 
 Zwei Plugins holen beim ersten Lauf eine Datei aus dem Netz: Einbettungen das Modell (huggingface.co), Texterkennung die Sprachdaten (cdn.jsdelivr.net). Dabei geht keine Produktdatei und kein Wert hinaus; die Adressen sehen nur den Abruf. Ein Rechner ohne Netz bekommt die Dateien kopiert. Beim Einschalten eines dieser Plugins fragt journali nach, mit Zweck, Datei, Adresse und Grösse; ohne Zustimmung bleibt das Plugin aus.

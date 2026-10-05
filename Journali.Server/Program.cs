@@ -499,6 +499,25 @@ api.MapGet("/usage", (Catalog c, string? history = null, int limit = 90) => c.Re
 // nichts davon verlässt den Server von selbst
 api.MapGet("/usage/months", (Catalog c, int limit = 120) => c.ReadUsage(u => u.Months(Math.Clamp(limit, 1, 600)))
     .Select(m => new { month = m.Month.ToString("yyyy-MM"), kinds = m.Kinds, total = m.Kinds.Values.Sum() }).ToList());
+NutzungsberichtApi.Map(api, laufendeVersion);
+// Nutzungsberichte (05.10.2026): nur eingeschaltet, einmal im Monat, nur vom Hauptserver. Auch in der Startphase — dann ist das der einzige Weg zum
+// Lizenzserver, und den schaltet ein Administrator selbst ein
+var berichtAdresse = Journali.Core.Licensing.Aussteller.Adresse;
+#if DEBUG
+if (Environment.GetEnvironmentVariable("JOURNALI_LIZENZSERVER") is { } berichtEigener) berichtAdresse = berichtEigener.Trim();
+#endif
+_ = Task.Run(async () =>
+{
+    using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(20) };
+    await Task.Delay(TimeSpan.FromMinutes(2));
+    while (true)
+    {
+        if (verbund.IstHaupt)
+            try { if (await NutzungsberichtApi.SendenAsync(catalog, journal, http, berichtAdresse, dataDir, laufendeVersion, DateOnly.FromDateTime(DateTime.Now)) is { } was) Console.WriteLine($"journali: {was}"); }
+            catch (Exception e) { Console.WriteLine($"journali: usage report not sent — {e.Message}"); }
+        await Task.Delay(TimeSpan.FromHours(6));
+    }
+});
 
 ModelApi.Map(api);
 DocsApi.Map(api);

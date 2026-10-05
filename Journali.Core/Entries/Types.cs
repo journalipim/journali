@@ -120,6 +120,8 @@ public static class Types
     /// <summary>Der Hinweis eines Plugins wurde bestätigt (05.10.2026): Version und Wortlaut, wer und wann steht am Eintrag.</summary>
     public const string PluginAcknowledged = "PluginAcknowledged";
     public const string PluginDisabled = "PluginDisabled";
+    /// <summary>Nutzungsberichte an oder aus (05.10.2026), Strom <c>report:usage</c>: die zufällige Kennung und der Wortlaut beim Einschalten.</summary>
+    public const string UsageReportsSet = "UsageReportsSet";
     public const string PluginRemoved = "PluginRemoved";
     public const string PluginDataSet = "PluginDataSet";      // benannter Datensatz eines Plugins (Vorlage, Zuordnung, Regel) — JSON-Text
 
@@ -704,6 +706,7 @@ public sealed record RelationTypeRetired(string Key);
 public sealed record PluginInstalled(string Version, string Manifest);
 public sealed record PluginEnabled();
 public sealed record PluginAcknowledged(string Version, string Text);
+public sealed record UsageReportsSet(bool On, string Id, string Text);
 public sealed record PluginDisabled();
 public sealed record PluginRemoved();
 /// <summary>Benannter Datensatz eines Plugins (Datenblatt-Vorlage, Import-Zuordnung, Prüfregel …); Value ist JSON-Text, leer = weg. Der letzte gewinnt.</summary>

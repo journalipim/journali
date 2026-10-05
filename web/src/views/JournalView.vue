@@ -6,6 +6,7 @@ import { useRoute } from 'vue-router'
 import { api, describe } from '../api.js'
 import { store } from '../store.js'
 import EntryList from '../components/EntryList.vue'
+import { dialog } from '../dialog.js'
 import { t } from '../i18n.js'
 
 const route = useRoute()
@@ -69,6 +70,24 @@ const monate = ref(null)
 async function jeMonat() {
   if (monate.value) { monate.value = null; return }
   try { monate.value = await api.get('/api/usage/months') } catch (e) { store.toast(e.message) }
+  berichtLaden()
+}
+// Nutzungsberichte (05.10.2026): aus als Voreinstellung; ein Administrator schaltet sie ein, nachdem er gesehen hat, was gesendet wird
+const bericht = ref(null)
+async function berichtLaden() {
+  if (!store.can('users')) return
+  try { bericht.value = await api.get('/api/usage/report') } catch { bericht.value = null }
+}
+async function berichtSchalten() {
+  const an = !bericht.value?.on
+  if (an && !await dialog.confirm({
+    title: t('Nutzungsberichte senden?'),
+    text: t('Die Zahlen zeigen, wie journali genutzt wird.'),
+    list: [t('einmal im Monat an den Lizenzserver von journali'), t('je Monat die Einträge nach Art, wie in dieser Tabelle'), t('die Version und eine zufällige Kennung'),
+      t('keine Namen, keine Inhalte, keine Lizenzdaten'), t('Der Lizenzserver sieht die IP-Adresse dieses Servers.')],
+    ok: t('✓ senden'), cancel: t('nicht senden'),
+  })) return
+  try { await api.post(`/api/usage/report?on=${an}`); await berichtLaden() } catch (e) { store.toast(e.message) }
 }
 function csv() {
   const arten = KINDS.map(([k]) => k)
@@ -95,7 +114,9 @@ function csv() {
     <div v-if="monate" class="scroll">
       <div class="section">
         <h2 :title="$t('Alle Einträge im Journal, je Monat nach Art der Arbeit; nichts davon geht von selbst an journali.')">{{ $t("▦ Nutzung · {0} Monate", [monate.length]) }}</h2>
-        <div class="chips"><button class="csv" :disabled="!monate.length" @click="csv" :title="$t('Als CSV-Datei speichern')">{{ $t("⇩ CSV") }}</button></div>
+        <div class="chips"><button class="csv" :disabled="!monate.length" @click="csv" :title="$t('Als CSV-Datei speichern')">{{ $t("⇩ CSV") }}</button>
+          <button v-if="bericht" class="bericht" :class="{ primary: bericht.on }" @click="berichtSchalten"
+            :title="bericht.on ? $t('An seit {0} · {1}; ein Klick schaltet sie aus', [String(bericht.since ?? '').slice(0, 10), bericht.by ?? '']) : $t('Einmal im Monat diese Zahlen an journali senden')">{{ bericht.on ? $t("● Nutzungsberichte an") : $t("○ Nutzungsberichte senden") }}</button></div>
         <table class="grid nutzung">
           <thead><tr><th>{{ $t("Monat") }}</th><th v-for="[k, label] in KINDS" :key="k" class="num">{{ label }}</th><th class="num">Σ</th></tr></thead>
           <tbody><tr v-for="m in monate" :key="m.month"><td class="mono">{{ m.month }}</td><td v-for="[k] in KINDS" :key="k" class="num">{{ m.kinds?.[k] ?? 0 }}</td><td class="num">{{ m.total }}</td></tr></tbody>

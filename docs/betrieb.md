@@ -716,6 +716,12 @@ aller Dateien). `PluginSeal.cs` prüft es bei jedem Lesen der Platte; `GET /api/
 
 ## Lizenz — je Team
 
+**Nutzungsberichte (05.10.2026, `NutzungsberichtApi.cs`):** aus als Voreinstellung. Schaltet ein Administrator sie unter ≡ Journal → ▦ je Monat ein
+(Eintrag `UsageReportsSet`), schickt der Hauptserver einmal im Monat `POST <Lizenzserver>/v1/bericht` mit dem `Nutzungsbericht`
+(`Core.Licensing`): je Monat die Einträge nach Art, die Version, eine zufällige Kennung — unsigniert, damit er sich keiner Instanz zuordnen lässt.
+Der Monat des letzten Versands steht in `nutzungsbericht.txt` im Datenverzeichnis. Das gilt auch in der Startphase; es ist dann der einzige Aufruf
+des Lizenzservers.
+
 **Startphase (05.10.2026, `Core.Licensing.Startphase`):** Zurzeit gilt nichts von diesem Abschnitt. Jedes Team hat Unlimited,
 kein Eintrag wird wegen eines Kontingents abgewiesen, auf einer Datenbank läuft **ein** Server (kein Multi-Server), und
 kein Server fragt den Lizenzserver — weder Abo noch Tarifblatt noch Registrierung (die Adresse ist dann leer). Die
