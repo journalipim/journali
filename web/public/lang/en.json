@@ -3066,5 +3066,8 @@
  "● Nutzungsberichte an": "● Usage reports on",
  "○ Nutzungsberichte senden": "○ Send usage reports",
  "Datenpflege": "Data maintenance",
- "Ausleitung": "Output"
+ "Ausleitung": "Output",
+ "Rechtsstand {0}": "Legal status {0}",
+ "Rechtsstand": "Legal status",
+ "Stand, zu dem Datenpunkte und Fristen am Rechtstext geprüft sind": "Date up to which data points and deadlines have been checked against the legal text"
 }

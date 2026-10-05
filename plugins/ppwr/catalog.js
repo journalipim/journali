@@ -21,6 +21,7 @@ export default {
     { scope: 'protected', match: [], why: '' },
   ],
   source: 'https://eur-lex.europa.eu/eli/reg/2025/40/oj', sourceLabel: 'EUR-Lex 2025/40 ↗',
+  asOf: '2026-09-18',   // Rechtsstand: Stand der Recherche — steht in der Prüfansicht neben der Quelle
   description: 'Verpackungsdaten nach PPWR — je Produkt: Materialien und Gewichte der Verpackungsbestandteile, Rezyklatanteil, Recyclingfähigkeitsklasse, Wiederverwendbarkeit, Leerraum, Stoffgrenzen, Kennzeichnung, Register. Attribute wählen oder anlegen, dann einen Teilbaum prüfen.',
   groupKey: 'regulation_ppwr', groupLabel: 'Verpackung (PPWR)', prefix: 'pack_',
   groups: [

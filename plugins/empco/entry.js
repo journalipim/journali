@@ -1,4 +1,4 @@
-(function(){const s=document.createElement('style');s.textContent="\n.bench[data-v-15658930] { padding: 10px 12px;\n}\n.pfad[data-v-15658930] { font-size: 12px; display: flex; flex-wrap: wrap; gap: 4px;\n}\n.knoten[data-v-15658930] { margin: 4px 0; font-size: 15px; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap;\n}\n.knoten a[data-v-15658930] { color: var(--text); text-decoration: none;\n}\n.knoten a[data-v-15658930]:hover { color: var(--accent);\n}\n.feld[data-v-15658930] { font-size: 12px; font-weight: 400;\n}\n.erben[data-v-15658930] { font-size: 12px; margin: 0 0 6px;\n}\n.regel[data-v-15658930] { margin: 6px 0;\n}\n.hint[data-v-15658930] { font-size: 12px; color: var(--muted);\n}\n.wert[data-v-15658930] { background: var(--pane); border: 1px solid var(--line); border-radius: 4px; padding: 6px 8px; margin: 8px 0 6px; font-size: 13px; white-space: pre-wrap; max-height: 120px; overflow: auto;\n}\n.feldtext[data-v-15658930] { width: 100%; font-family: inherit;\n}\n.knoepfe[data-v-15658930] { display: flex; gap: 6px; margin: 6px 0;\n}\n.ausnahme[data-v-15658930] { display: flex; gap: 6px; align-items: center; margin: 10px 0;\n}\n.grund[data-v-15658930] { flex: 1; min-width: 120px;\n}\n.weitere[data-v-15658930] { display: flex; flex-wrap: wrap; gap: 4px; align-items: center;\n}\n.chip[data-v-15658930] { border: 1px solid var(--line); background: var(--pane); border-radius: 10px; padding: 0 8px; cursor: pointer; color: var(--text);\n}\n.x[data-v-15658930] { border: 0; background: none; color: var(--muted); cursor: pointer;\n}\n.x[data-v-15658930]:hover { color: var(--accent);\n}\n\n.term[data-v-bf2351b5] { padding: 10px 12px;\n}\n.term h3[data-v-bf2351b5] { margin: 0 0 4px; font-size: 15px;\n}\n.regel[data-v-bf2351b5] { font-size: 12px; margin: 0 0 8px;\n}\n.ersatz[data-v-bf2351b5] { display: flex; gap: 6px; margin: 0 0 8px;\n}\n.ersatz input[data-v-bf2351b5] { flex: 1;\n}\n.vorschau td[data-v-bf2351b5] { vertical-align: top;\n}\n.snip[data-v-bf2351b5] { font-size: 12px;\n}\n.feld[data-v-bf2351b5] { font-size: 11px;\n}\n.aus[data-v-bf2351b5] { opacity: .45;\n}\nmark.neu[data-v-bf2351b5] { background: color-mix(in srgb, var(--pos) 35%, transparent);\n}\n\n.empco[data-v-8ecf7adc] { display: flex; flex-direction: column; min-height: 0;\n}\n.wurzel[data-v-8ecf7adc] { position: relative;\n}\n.knoten[data-v-8ecf7adc] { border: 1px solid var(--line); background: var(--pane); color: var(--text); padding: 2px 8px; border-radius: 3px; cursor: pointer;\n}\n.picker[data-v-8ecf7adc] { position: absolute; left: 0; top: 30px; z-index: 6; width: 380px; padding: 6px; background: var(--pane); border: 1px solid var(--line);\n}\n.katalog[data-v-8ecf7adc] { padding: 4px 12px; border-bottom: 1px solid var(--line);\n}\n.katalog summary[data-v-8ecf7adc] { cursor: pointer;\n}\n.quellen[data-v-8ecf7adc] { font-size: 12px; margin: 4px 0; display: flex; gap: 10px;\n}\n.klein[data-v-8ecf7adc] { font-size: 11px;\n}\n.leiste[data-v-8ecf7adc] { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; padding: 6px 12px; border-bottom: 1px solid var(--line);\n}\n.chip[data-v-8ecf7adc] { border: 1px solid var(--line); background: var(--pane); color: var(--text); border-radius: 12px; padding: 1px 10px; cursor: pointer; font-size: 12px;\n}\n.chip.on[data-v-8ecf7adc] { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 18%, var(--pane));\n}\n.suche[data-v-8ecf7adc] { width: 180px;\n}\n.arbeit[data-v-8ecf7adc] { display: flex; flex: 1; min-height: 0;\n}\n.liste[data-v-8ecf7adc] { width: 48%; min-width: 360px; overflow: auto; border-right: 1px solid var(--line);\n}\n.flaeche[data-v-8ecf7adc] { flex: 1; overflow: auto;\n}\ntr[data-v-8ecf7adc] { cursor: pointer;\n}\ntr.cur[data-v-8ecf7adc] { background: color-mix(in srgb, var(--accent) 16%, transparent);\n}\ntr.aus[data-v-8ecf7adc] { opacity: .5;\n}\n.kn[data-v-8ecf7adc] { white-space: nowrap; max-width: 220px; overflow: hidden; text-overflow: ellipsis;\n}\n.feld[data-v-8ecf7adc] { white-space: nowrap;\n}\n.snip[data-v-8ecf7adc] { font-size: 12px;\n}\n.hinweis[data-v-8ecf7adc] { padding: 6px 12px;\n}\n.empty[data-v-8ecf7adc] { padding: 24px;\n}\n";document.head.append(s)})();
+(function(){const s=document.createElement('style');s.textContent="\n.bench[data-v-15658930] { padding: 10px 12px;\n}\n.pfad[data-v-15658930] { font-size: 12px; display: flex; flex-wrap: wrap; gap: 4px;\n}\n.knoten[data-v-15658930] { margin: 4px 0; font-size: 15px; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap;\n}\n.knoten a[data-v-15658930] { color: var(--text); text-decoration: none;\n}\n.knoten a[data-v-15658930]:hover { color: var(--accent);\n}\n.feld[data-v-15658930] { font-size: 12px; font-weight: 400;\n}\n.erben[data-v-15658930] { font-size: 12px; margin: 0 0 6px;\n}\n.regel[data-v-15658930] { margin: 6px 0;\n}\n.hint[data-v-15658930] { font-size: 12px; color: var(--muted);\n}\n.wert[data-v-15658930] { background: var(--pane); border: 1px solid var(--line); border-radius: 4px; padding: 6px 8px; margin: 8px 0 6px; font-size: 13px; white-space: pre-wrap; max-height: 120px; overflow: auto;\n}\n.feldtext[data-v-15658930] { width: 100%; font-family: inherit;\n}\n.knoepfe[data-v-15658930] { display: flex; gap: 6px; margin: 6px 0;\n}\n.ausnahme[data-v-15658930] { display: flex; gap: 6px; align-items: center; margin: 10px 0;\n}\n.grund[data-v-15658930] { flex: 1; min-width: 120px;\n}\n.weitere[data-v-15658930] { display: flex; flex-wrap: wrap; gap: 4px; align-items: center;\n}\n.chip[data-v-15658930] { border: 1px solid var(--line); background: var(--pane); border-radius: 10px; padding: 0 8px; cursor: pointer; color: var(--text);\n}\n.x[data-v-15658930] { border: 0; background: none; color: var(--muted); cursor: pointer;\n}\n.x[data-v-15658930]:hover { color: var(--accent);\n}\n\n.term[data-v-bf2351b5] { padding: 10px 12px;\n}\n.term h3[data-v-bf2351b5] { margin: 0 0 4px; font-size: 15px;\n}\n.regel[data-v-bf2351b5] { font-size: 12px; margin: 0 0 8px;\n}\n.ersatz[data-v-bf2351b5] { display: flex; gap: 6px; margin: 0 0 8px;\n}\n.ersatz input[data-v-bf2351b5] { flex: 1;\n}\n.vorschau td[data-v-bf2351b5] { vertical-align: top;\n}\n.snip[data-v-bf2351b5] { font-size: 12px;\n}\n.feld[data-v-bf2351b5] { font-size: 11px;\n}\n.aus[data-v-bf2351b5] { opacity: .45;\n}\nmark.neu[data-v-bf2351b5] { background: color-mix(in srgb, var(--pos) 35%, transparent);\n}\n\n.empco[data-v-9949f12a] { display: flex; flex-direction: column; min-height: 0;\n}\n.wurzel[data-v-9949f12a] { position: relative;\n}\n.knoten[data-v-9949f12a] { border: 1px solid var(--line); background: var(--pane); color: var(--text); padding: 2px 8px; border-radius: 3px; cursor: pointer;\n}\n.picker[data-v-9949f12a] { position: absolute; left: 0; top: 30px; z-index: 6; width: 380px; padding: 6px; background: var(--pane); border: 1px solid var(--line);\n}\n.katalog[data-v-9949f12a] { padding: 4px 12px; border-bottom: 1px solid var(--line);\n}\n.katalog summary[data-v-9949f12a] { cursor: pointer;\n}\n.quellen[data-v-9949f12a] { font-size: 12px; margin: 4px 0; display: flex; gap: 10px;\n}\n.klein[data-v-9949f12a] { font-size: 11px;\n}\n.leiste[data-v-9949f12a] { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; padding: 6px 12px; border-bottom: 1px solid var(--line);\n}\n.chip[data-v-9949f12a] { border: 1px solid var(--line); background: var(--pane); color: var(--text); border-radius: 12px; padding: 1px 10px; cursor: pointer; font-size: 12px;\n}\n.chip.on[data-v-9949f12a] { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 18%, var(--pane));\n}\n.suche[data-v-9949f12a] { width: 180px;\n}\n.arbeit[data-v-9949f12a] { display: flex; flex: 1; min-height: 0;\n}\n.liste[data-v-9949f12a] { width: 48%; min-width: 360px; overflow: auto; border-right: 1px solid var(--line);\n}\n.flaeche[data-v-9949f12a] { flex: 1; overflow: auto;\n}\ntr[data-v-9949f12a] { cursor: pointer;\n}\ntr.cur[data-v-9949f12a] { background: color-mix(in srgb, var(--accent) 16%, transparent);\n}\ntr.aus[data-v-9949f12a] { opacity: .5;\n}\n.kn[data-v-9949f12a] { white-space: nowrap; max-width: 220px; overflow: hidden; text-overflow: ellipsis;\n}\n.feld[data-v-9949f12a] { white-space: nowrap;\n}\n.snip[data-v-9949f12a] { font-size: 12px;\n}\n.hinweis[data-v-9949f12a] { padding: 6px 12px;\n}\n.empty[data-v-9949f12a] { padding: 24px;\n}\n";document.head.append(s)})();
 const m = window.journali.vue;
 const Fragment = m.Fragment;
 const computed = m.computed;
@@ -37,6 +37,8 @@ const catalog = {
   key: "empco",
   label: "EmpCo — Greenwashing (EU 2024/825)",
   icon: "♻",
+  asOf: "2026-10-04",
+  // Rechtsstand: Anker am amtlichen Text geprüft — steht in der Ansicht bei den Quellen
   sources: [
     { label: "Richtlinie (EU) 2024/825 (EUR-Lex)", url: "https://eur-lex.europa.eu/eli/dir/2024/825/oj" },
     { label: "UGP-Richtlinie 2005/29/EG, Anhang I (konsolidiert)", url: "https://eur-lex.europa.eu/eli/dir/2005/29/oj" }
@@ -806,53 +808,54 @@ const _hoisted_8 = { class: "katalog" };
 const _hoisted_9 = { class: "muted" };
 const _hoisted_10 = { class: "quellen muted" };
 const _hoisted_11 = ["href"];
-const _hoisted_12 = { class: "grid" };
-const _hoisted_13 = { style: { "width": "260px" } };
-const _hoisted_14 = { style: { "width": "220px" } };
-const _hoisted_15 = { class: "muted klein" };
-const _hoisted_16 = { class: "muted" };
-const _hoisted_17 = { class: "muted klein" };
-const _hoisted_18 = { class: "leiste" };
-const _hoisted_19 = ["title", "onClick"];
+const _hoisted_12 = ["title"];
+const _hoisted_13 = { class: "grid" };
+const _hoisted_14 = { style: { "width": "260px" } };
+const _hoisted_15 = { style: { "width": "220px" } };
+const _hoisted_16 = { class: "muted klein" };
+const _hoisted_17 = { class: "muted" };
+const _hoisted_18 = { class: "muted klein" };
+const _hoisted_19 = { class: "leiste" };
 const _hoisted_20 = ["title", "onClick"];
-const _hoisted_21 = ["placeholder"];
-const _hoisted_22 = ["title"];
+const _hoisted_21 = ["title", "onClick"];
+const _hoisted_22 = ["placeholder"];
 const _hoisted_23 = ["title"];
-const _hoisted_24 = {
+const _hoisted_24 = ["title"];
+const _hoisted_25 = {
   key: 0,
   class: "muted"
 };
-const _hoisted_25 = {
+const _hoisted_26 = {
   key: 0,
   class: "empty pos"
 };
-const _hoisted_26 = {
+const _hoisted_27 = {
   key: 1,
   class: "arbeit"
 };
-const _hoisted_27 = { class: "grid" };
-const _hoisted_28 = ["onClick"];
-const _hoisted_29 = { class: "kn" };
-const _hoisted_30 = { class: "muted" };
-const _hoisted_31 = ["title"];
-const _hoisted_32 = { class: "muted klein feld" };
-const _hoisted_33 = { class: "snip" };
-const _hoisted_34 = ["onClick"];
-const _hoisted_35 = { class: "muted klein" };
-const _hoisted_36 = {
+const _hoisted_28 = { class: "grid" };
+const _hoisted_29 = ["onClick"];
+const _hoisted_30 = { class: "kn" };
+const _hoisted_31 = { class: "muted" };
+const _hoisted_32 = ["title"];
+const _hoisted_33 = { class: "muted klein feld" };
+const _hoisted_34 = { class: "snip" };
+const _hoisted_35 = ["onClick"];
+const _hoisted_36 = { class: "muted klein" };
+const _hoisted_37 = {
   class: "muted",
   style: { "text-align": "right" }
 };
-const _hoisted_37 = {
+const _hoisted_38 = {
   key: 0,
   class: "muted klein hinweis"
 };
-const _hoisted_38 = { class: "flaeche scroll" };
-const _hoisted_39 = {
+const _hoisted_39 = { class: "flaeche scroll" };
+const _hoisted_40 = {
   key: 2,
   class: "empty muted"
 };
-const _hoisted_40 = {
+const _hoisted_41 = {
   key: 1,
   class: "empty muted"
 };
@@ -1137,9 +1140,14 @@ const _sfc_main = {
               }),
               128
               /* KEYED_FRAGMENT */
-            ))
+            )),
+            unref(catalog).asOf ? (openBlock(), createElementBlock("span", {
+              key: 0,
+              class: "rechtsstand",
+              title: _ctx.$t("Stand, zu dem die Regeln am Rechtstext geprüft sind")
+            }, "· " + toDisplayString(_ctx.$t("Rechtsstand {0}", [unref(catalog).asOf.split("-").reverse().join(".")])), 9, _hoisted_12)) : createCommentVNode("v-if", true)
           ]),
-          createElementVNode("table", _hoisted_12, [
+          createElementVNode("table", _hoisted_13, [
             createElementVNode("thead", null, [
               createElementVNode("tr", null, [
                 _cache[9] || (_cache[9] = createElementVNode(
@@ -1151,7 +1159,7 @@ const _sfc_main = {
                 )),
                 createElementVNode(
                   "th",
-                  _hoisted_13,
+                  _hoisted_14,
                   toDisplayString(_ctx.$t("Regel")),
                   1
                   /* TEXT */
@@ -1165,7 +1173,7 @@ const _sfc_main = {
                 ),
                 createElementVNode(
                   "th",
-                  _hoisted_14,
+                  _hoisted_15,
                   toDisplayString(_ctx.$t("Anker")),
                   1
                   /* TEXT */
@@ -1195,7 +1203,7 @@ const _sfc_main = {
                         1
                         /* TEXT */
                       ),
-                      createElementVNode("div", _hoisted_15, [
+                      createElementVNode("div", _hoisted_16, [
                         createTextVNode(
                           toDisplayString((r.terms ?? []).slice(0, 8).join(", ")),
                           1
@@ -1214,14 +1222,14 @@ const _sfc_main = {
                     ]),
                     createElementVNode(
                       "td",
-                      _hoisted_16,
+                      _hoisted_17,
                       toDisplayString(r.hint),
                       1
                       /* TEXT */
                     ),
                     createElementVNode(
                       "td",
-                      _hoisted_17,
+                      _hoisted_18,
                       toDisplayString(r.ref),
                       1
                       /* TEXT */
@@ -1238,7 +1246,7 @@ const _sfc_main = {
           Fragment,
           { key: 0 },
           [
-            createElementVNode("div", _hoisted_18, [
+            createElementVNode("div", _hoisted_19, [
               (openBlock(true), createElementBlock(
                 Fragment,
                 null,
@@ -1264,7 +1272,7 @@ const _sfc_main = {
                       1
                       /* TEXT */
                     )
-                  ], 10, _hoisted_19)), [
+                  ], 10, _hoisted_20)), [
                     [vShow, ruleCounts.value[r.id] || unref(memory).rule === r.id]
                   ]);
                 }),
@@ -1288,7 +1296,7 @@ const _sfc_main = {
                     class: normalizeClass(["chip sev", [{ on: unref(memory).sev.includes(s) }, SEV_CLASS(s)]]),
                     title: _ctx.$t("Nur diese Schwere"),
                     onClick: ($event) => toggleSev(s)
-                  }, toDisplayString(SEV[s]) + " " + toDisplayString(sevCounts.value[s]), 11, _hoisted_20);
+                  }, toDisplayString(SEV[s]) + " " + toDisplayString(sevCounts.value[s]), 11, _hoisted_21);
                 }),
                 64
                 /* STABLE_FRAGMENT */
@@ -1297,7 +1305,7 @@ const _sfc_main = {
                 "onUpdate:modelValue": _cache[2] || (_cache[2] = ($event) => unref(memory).text = $event),
                 class: "suche",
                 placeholder: _ctx.$t("Knoten, Feld, Begriff")
-              }, null, 8, _hoisted_21), [
+              }, null, 8, _hoisted_22), [
                 [vModelText, unref(memory).text]
               ]),
               createElementVNode("button", {
@@ -1305,14 +1313,14 @@ const _sfc_main = {
                 class: normalizeClass(["chip", { on: unref(memory).mode === "list" }]),
                 title: _ctx.$t("Jeder Befund einzeln"),
                 onClick: _cache[3] || (_cache[3] = ($event) => mode("list"))
-              }, toDisplayString(_ctx.$t("Liste")), 11, _hoisted_22),
+              }, toDisplayString(_ctx.$t("Liste")), 11, _hoisted_23),
               createElementVNode("button", {
                 type: "button",
                 class: normalizeClass(["chip", { on: unref(memory).mode === "terms" }]),
                 title: _ctx.$t("Gleiche Begriffe zusammen — ersetzen in vielen Feldern"),
                 onClick: _cache[4] || (_cache[4] = ($event) => mode("terms"))
-              }, toDisplayString(_ctx.$t("Begriffe")), 11, _hoisted_23),
-              ignoredCount.value ? (openBlock(), createElementBlock("label", _hoisted_24, [
+              }, toDisplayString(_ctx.$t("Begriffe")), 11, _hoisted_24),
+              ignoredCount.value ? (openBlock(), createElementBlock("label", _hoisted_25, [
                 withDirectives(createElementVNode(
                   "input",
                   {
@@ -1334,11 +1342,11 @@ const _sfc_main = {
             ]),
             !visible.value.length ? (openBlock(), createElementBlock(
               "div",
-              _hoisted_25,
+              _hoisted_26,
               toDisplayString(findings.value.length ? _ctx.$t("Kein Befund passt zum Filter") : _ctx.$t("✓ keine Befunde in {0} Knoten", [unref(memory).result.nodes])),
               1
               /* TEXT */
-            )) : (openBlock(), createElementBlock("div", _hoisted_26, [
+            )) : (openBlock(), createElementBlock("div", _hoisted_27, [
               createElementVNode(
                 "div",
                 {
@@ -1347,7 +1355,7 @@ const _sfc_main = {
                   class: "liste scroll"
                 },
                 [
-                  createElementVNode("table", _hoisted_27, [
+                  createElementVNode("table", _hoisted_28, [
                     createElementVNode("tbody", null, [
                       unref(memory).mode === "list" ? (openBlock(true), createElementBlock(
                         Fragment,
@@ -1368,10 +1376,10 @@ const _sfc_main = {
                               3
                               /* TEXT, CLASS */
                             ),
-                            createElementVNode("td", _hoisted_29, [
+                            createElementVNode("td", _hoisted_30, [
                               createElementVNode(
                                 "span",
-                                _hoisted_30,
+                                _hoisted_31,
                                 toDisplayString(ICON[f.node.role]),
                                 1
                                 /* TEXT */
@@ -1385,16 +1393,16 @@ const _sfc_main = {
                                 key: 0,
                                 class: "muted",
                                 title: f.heirs.map((h2) => h2.label).join(", ")
-                              }, " +" + toDisplayString(f.heirs.length), 9, _hoisted_31)) : createCommentVNode("v-if", true)
+                              }, " +" + toDisplayString(f.heirs.length), 9, _hoisted_32)) : createCommentVNode("v-if", true)
                             ]),
                             createElementVNode(
                               "td",
-                              _hoisted_32,
+                              _hoisted_33,
                               toDisplayString(attributeLabel(f.attribute)) + " · " + toDisplayString(f.locale),
                               1
                               /* TEXT */
                             ),
-                            createElementVNode("td", _hoisted_33, [
+                            createElementVNode("td", _hoisted_34, [
                               createElementVNode(
                                 "span",
                                 null,
@@ -1417,7 +1425,7 @@ const _sfc_main = {
                                 /* TEXT */
                               )
                             ])
-                          ], 10, _hoisted_28);
+                          ], 10, _hoisted_29);
                         }),
                         128
                         /* KEYED_FRAGMENT */
@@ -1451,19 +1459,19 @@ const _sfc_main = {
                             ]),
                             createElementVNode(
                               "td",
-                              _hoisted_35,
+                              _hoisted_36,
                               toDisplayString(unref(catalog).rules.find((r) => r.id === g.rule)?.label),
                               1
                               /* TEXT */
                             ),
                             createElementVNode(
                               "td",
-                              _hoisted_36,
+                              _hoisted_37,
                               toDisplayString(g.findings.length),
                               1
                               /* TEXT */
                             )
-                          ], 10, _hoisted_34);
+                          ], 10, _hoisted_35);
                         }),
                         128
                         /* KEYED_FRAGMENT */
@@ -1472,7 +1480,7 @@ const _sfc_main = {
                   ]),
                   unref(memory).mode === "list" && visible.value.length > LIMIT ? (openBlock(), createElementBlock(
                     "div",
-                    _hoisted_37,
+                    _hoisted_38,
                     toDisplayString(_ctx.$t("{0} von {1} Befunden — der Filter grenzt ein", [LIMIT, visible.value.length])),
                     1
                     /* TEXT */
@@ -1481,7 +1489,7 @@ const _sfc_main = {
                 512
                 /* NEED_PATCH */
               ),
-              createElementVNode("div", _hoisted_38, [
+              createElementVNode("div", _hoisted_39, [
                 current.value ? (openBlock(), createBlock(Workbench, {
                   key: 0,
                   finding: current.value,
@@ -1498,7 +1506,7 @@ const _sfc_main = {
                   onApply: apply
                 }, null, 8, ["group"])) : (openBlock(), createElementBlock(
                   "div",
-                  _hoisted_39,
+                  _hoisted_40,
                   toDisplayString(_ctx.$t("Einen Befund wählen — Pfeil nach oben und unten wechselt, Strg+Enter speichert")),
                   1
                   /* TEXT */
@@ -1510,7 +1518,7 @@ const _sfc_main = {
           /* STABLE_FRAGMENT */
         )) : (openBlock(), createElementBlock(
           "div",
-          _hoisted_40,
+          _hoisted_41,
           toDisplayString(_ctx.$t("Teilbaum wählen und prüfen — dieselben Regeln laufen auch in ✓ Datenqualität mit allen anderen.")),
           1
           /* TEXT */
@@ -1519,7 +1527,7 @@ const _sfc_main = {
     };
   }
 };
-const View = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-8ecf7adc"]]);
+const View = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-9949f12a"]]);
 const entry = {
   views: [{ path: "check", label: catalog.label, icon: catalog.icon, topic: "analysis", hint: t("Greenwashing-Kritikalität von Produkttexten nach Richtlinie (EU) 2024/825 — Kriterienkatalog, Prüfung je Teilbaum, Regeln in der Datenqualität"), component: View }],
   nodeActions: [{ label: t("EmpCo prüfen"), icon: catalog.icon, topic: "analysis", roles: ["group", "product"], run(id, ctx) {

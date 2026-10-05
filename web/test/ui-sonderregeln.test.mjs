@@ -12,7 +12,7 @@ import { dialog } from '../src/dialog.js'
 const warte = (ms = 0) => new Promise(r => setTimeout(r, ms))
 
 const katalog = {
-  key: 'pk', label: 'Verpackung', icon: '▧', groupKey: 'pk', prefix: 'pk_', source: 'https://example.org', sourceLabel: 'Quelle',
+  key: 'pk', label: 'Verpackung', icon: '▧', groupKey: 'pk', prefix: 'pk_', source: 'https://example.org', sourceLabel: 'Quelle', asOf: '2026-09-18',
   scopeRules: [{ scope: 'hazmat', match: [/aerosol/i], why: 'ETIM-Klasse deutet auf Gefahrgut' }, { scope: 'food', match: [/\bfood\b/i], why: 'ETIM-Klasse mit Lebensmittelkontakt' }],
   groups: [
     { key: 'g', label: 'Gruppe', items: [{ key: 'gewicht', label: 'Gewicht', level: 'must', type: 'boolean' }] },
@@ -76,4 +76,21 @@ test('die Klasse steht im Klassenattribut, das ETIM eingestellt hat: der Vorschl
     assert.match(a.root.textContent, /Gefahrgut: nicht gesetzt, Vorschlag „ja“/)
     assert.match(a.root.textContent, /Lebensmittelkontakt: gilt hier nicht/)
   } finally { a.zurueck() }
+})
+
+// Rechtsstand (05.10.2026): neben der Quelle steht, bis wann der Katalog am Rechtstext geprüft ist
+test('die Prüfansicht nennt den Rechtsstand mit Datum', async () => {
+  const a = await ansicht()
+  try {
+    const r = a.root.querySelector('.rechtsstand')
+    assert.ok(r, 'Rechtsstand fehlt')
+    assert.equal(r.textContent, 'Rechtsstand 18.09.2026')
+  } finally { a.zurueck() }
+})
+
+test('jeder Katalog mit Rechtsinhalt hat einen Rechtsstand', async () => {
+  for (const key of ['dpp', 'ppwr', 'empco']) {
+    const k = (await import(`../../plugins/${key}/catalog.js`)).default
+    assert.match(k.asOf ?? '', /^\d{4}-\d{2}-\d{2}$/, key)
+  }
 })

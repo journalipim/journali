@@ -172,7 +172,8 @@ async function apply(items, replacement) {
 
     <details class="katalog">
       <summary class="muted">{{ catalog.icon }} {{ $t('Kriterienkatalog') }} · {{ $t('{0} Regeln', [catalog.rules.length]) }} · {{ $t('heuristisch, keine Rechtsberatung') }}</summary>
-      <div class="quellen muted">{{ $t('Quellen:') }} <a v-for="s in catalog.sources" :key="s.url" :href="s.url" target="_blank" rel="noopener">{{ s.label }}</a></div>
+      <div class="quellen muted">{{ $t('Quellen:') }} <a v-for="s in catalog.sources" :key="s.url" :href="s.url" target="_blank" rel="noopener">{{ s.label }}</a>
+        <span v-if="catalog.asOf" class="rechtsstand" :title="$t('Stand, zu dem die Regeln am Rechtstext geprüft sind')">· {{ $t('Rechtsstand {0}', [catalog.asOf.split('-').reverse().join('.')]) }}</span></div>
       <table class="grid"><thead><tr><th style="width:30px" /><th style="width:260px">{{ $t('Regel') }}</th><th>{{ $t('Was zu tun ist') }}</th><th style="width:220px">{{ $t('Anker') }}</th></tr></thead><tbody>
         <tr v-for="r in catalog.rules" :key="r.id">
           <td :class="SEV_CLASS(r.severity)">{{ SEV[r.severity] }}</td>

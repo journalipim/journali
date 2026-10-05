@@ -304,6 +304,9 @@ export function editorOeffnen({ onSave, onClose, ...props }) {
 }
 
 // ---- Die Ansicht — dieselbe für jeden Katalog (das Plugin ruft mount(root, ctx, catalog))
+// Rechtsstand (05.10.2026): bis wann die Datenpunkte und Fristen des Katalogs am Rechtstext geprüft sind — asOf im Katalog, als TT.MM.JJJJ
+const rechtsstand = catalog => /^\d{4}-\d{2}-\d{2}$/.test(catalog.asOf ?? '') ? catalog.asOf.split('-').reverse().join('.') : null
+
 export async function mount(root, ctx, catalog) {
   if (!tree.loaded) await tree.load()
   // KI-Status frisch: die Knöpfe werden einmal gezeichnet — wenn ai.server hier null ist,
@@ -334,7 +337,7 @@ export async function mount(root, ctx, catalog) {
   // verbindlich ist der Rechtstext; die Einordnung verantwortet der Anwender. Steht in jeder Prüfansicht oben, fett, und in jedem Bericht.
   const disclaimer = el('div', { class: 'warn', style: 'font-weight:700;font-size:12px;padding:4px 8px;border-bottom:1px solid var(--line)', title: t_('Die Datenpunkte, Hinweise, Fristen und Vorschläge (auch der KI) sind eine Arbeitshilfe nach bestem Wissen — keine Rechtsberatung. Massgeblich ist der Rechtstext (Quelle oben); ob und wie eine Vorschrift für ein Produkt gilt, entscheidet der Anwender.') },
     t_('⚠ Keine Rechtsberatung — Datenpunkte, Fristen, Geltungen und Vorschläge sind Hinweise und Empfehlungen. Massgeblich ist der Rechtstext ({0}).', [catalog.sourceLabel ?? t_('Quelle')]))
-  root.append(el('div', { class: 'toolbar' }, el('h1', {}, `${catalog.icon ?? '✓'} ${catalog.label}`), el('a', { href: catalog.source, target: '_blank', class: 'muted', style: 'font-size:12px', title: t_('Quelle') }, catalog.sourceLabel ?? t_('Quelle ↗')), el('span', { class: 'grow' }), status), disclaimer, body)
+  root.append(el('div', { class: 'toolbar' }, el('h1', {}, `${catalog.icon ?? '✓'} ${catalog.label}`), el('a', { href: catalog.source, target: '_blank', class: 'muted', style: 'font-size:12px', title: t_('Quelle') }, catalog.sourceLabel ?? t_('Quelle ↗')), rechtsstand(catalog) && el('span', { class: 'muted rechtsstand', style: 'font-size:12px', title: t_('Stand, zu dem Datenpunkte und Fristen am Rechtstext geprüft sind') }, t_('Rechtsstand {0}', [rechtsstand(catalog)])), el('span', { class: 'grow' }), status), disclaimer, body)
   body.append(s2, s3, s1)   // 1 Prüfen · 2 Ergebnis · 3 Modell — erst der Knoten, dann was fehlt, dann das Modell dazu
 
   // -- 1 Zuordnung
@@ -437,6 +440,7 @@ export async function mount(root, ctx, catalog) {
     if (it.type) rows.push([t_('Form'), `${it.type}${it.unit ? ' in ' + it.unit : ''}${it.values ? ' — ' + it.values.slice(0, 8).join(', ') + (it.values.length > 8 ? ' …' : '') : ''}`])
     rows.push([t_('Pflicht'), it.level === 'must' ? t_('● Pflicht') : it.level === 'should' ? '◐ empfohlen' : '○ optional'])
     const to = st.mapping[it.key]?.to; rows.push([t_('Attribut'), to ? `${L(store.model.attributes.find(a => a.key === to)?.label) || to} · ${to}` : t_('— noch keins —')])
+    if (rechtsstand(catalog)) rows.push([t_('Rechtsstand'), rechtsstand(catalog)])
     rows.push([t_('Hinweis'), t_('keine Rechtsberatung — Hinweis nach bestem Wissen, massgeblich ist der Rechtstext')])
     return dialog.help({ title: `${it.label} · ${catalog.label}`, rows })
   }

@@ -6,6 +6,7 @@
 // 23g Haltbarkeit (im UWG Anhang Nr. 23d Buchst. d), Art. 6 Abs. 2 Buchst. d Zukunftsaussagen.
 export default {
   key: 'empco', label: 'EmpCo — Greenwashing (EU 2024/825)', icon: '♻',
+  asOf: '2026-10-04',   // Rechtsstand: Anker am amtlichen Text geprüft — steht in der Ansicht bei den Quellen
   sources: [
     { label: 'Richtlinie (EU) 2024/825 (EUR-Lex)', url: 'https://eur-lex.europa.eu/eli/dir/2024/825/oj' },
     { label: 'UGP-Richtlinie 2005/29/EG, Anhang I (konsolidiert)', url: 'https://eur-lex.europa.eu/eli/dir/2005/29/oj' },

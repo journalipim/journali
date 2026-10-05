@@ -55,5 +55,7 @@
  "Begründung (optional)": "Reason (optional)",
  "Kein Fehlalarm: der Befund bleibt aus der Liste, solange der Text so bleibt": "Not a real finding: it stays out of the list as long as the text stays as it is",
  "Weitere Befunde im Feld": "More findings in the field",
- "prüfe {0}: {1} von {2} …": "checking {0}: {1} of {2} …"
+ "prüfe {0}: {1} von {2} …": "checking {0}: {1} of {2} …",
+ "Stand, zu dem die Regeln am Rechtstext geprüft sind": "Date up to which the rules have been checked against the legal text",
+ "Rechtsstand {0}": "Legal status {0}"
 }
