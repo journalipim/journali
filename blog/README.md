@@ -70,6 +70,9 @@ sondern „durchstarten vom ersten Moment an“.
 **Kein Startdatum des Projekts** (Datum des ersten Commits, „seit wenigen Wochen“): es wirkt wie schnell zusammengebaut. Zahlen wie Commits und
 Tests stehen ohne Zeitraum.
 
+**Fachartikel (Kategorie Wissen)** enden vor „## Quellen“ mit `*Erstellt mit Unterstützung von KI.*` (05.10.2026) — nach dem Hinweis
+zur Rechtsberatung, wo es einen gibt. In WordPress steht der Satz in kleiner Schrift.
+
 **Nicht öffentlich** (04.10.2026): das Plugin und die Schnittstelle **IXP** — eine interne Schnittstelle. Sie kommt in keinem Beitrag und
 auf keiner Seite vor.
 
