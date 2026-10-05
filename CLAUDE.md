@@ -236,6 +236,10 @@ Liegt `origin` mehr als ein Stück Arbeit hinter dem Rechner, ist das ein Fehler
   pflegen darf) · ✉ Mail · ⇅ B&R (Sichern von Hand und zurück — jeder Tarif; als
   Zeitplan ist es ein Job des Plugins `backup`, ab Pro) · ⧉ Server (welche Server auf die Datenbank zugreifen,
   Hauptserver und Arbeitsserver, `docs/pflegestruktur.md` 41) · ⚑ Workflows.
+  **Startphase** (05.10.2026, `Core.Licensing.Startphase`, gesetzt in `Program.cs`): alle Teams Unlimited, kein Kontingent,
+  **ein** Server je Datenbank, **kein Aufruf des Lizenzservers**; die Oberfläche blendet Lizenz, Limits und journali-Token aus
+  (`store.startphase` aus `/api/health`). Die Lizenzfunktionen bleiben im Code und werden mit `Startphase.An = false` getestet —
+  wer an ihnen arbeitet, prüft beide Zustände. Was folgt, beschreibt die Lizenz nach der Startphase.
   **Tarife**: Kostenlos, Pro, Pro+, Enterprise, Unlimited — aus dem signierten **Tarifblatt** des Lizenzservers im
   Journal (`TarifeReceived`, `Teams.Tarife`, `Catalog.Tarife`); `Tarife.cs` ist nur das Saatgut, im Code nie
   `Tarife.Free`/`Tarife.Pro` für den Betrieb verwenden. Grenzen je Team, Plugins und Publikationsbäume nach dem

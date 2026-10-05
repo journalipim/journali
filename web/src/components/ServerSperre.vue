@@ -7,7 +7,11 @@ import { store } from '../store.js'
 <template>
   <div class="server-sperre">
     <img src="/logo-128.png" :alt="$t('journali PIM')" onerror="this.style.display='none'" />
-    <div v-if="store.serverSperre === 'lizenz'" class="neg satz"
+    <!-- Startphase: ein Server je Datenbank (05.10.2026) -->
+    <div v-if="store.serverSperre === 'lizenz' && store.startphase" class="neg satz"
+      :title="$t('Auf einer Datenbank arbeitet ein Server. Dieser führt keine Jobs aus und beantwortet unter /api nur /api/health.')">
+      {{ $t("Auf dieser Datenbank arbeitet schon ein Server.") }}</div>
+    <div v-else-if="store.serverSperre === 'lizenz'" class="neg satz"
       :title="$t('Auf dieser Datenbank dürfen {0} Server laufen. Dieser Server führt keine Jobs aus und arbeitet wieder, sobald die Lizenz einen weiteren erlaubt.', [store.erlaubteServer ?? 1])">
       {{ $t("Für einen weiteren Server fehlt die Lizenz.") }}</div>
     <div v-else class="neg satz" :title="$t('Die Sperre gilt, bis ein Administrator sie unter Einstellungen → Server aufhebt.')">{{ $t("Dieser Server ist gesperrt.") }}</div>

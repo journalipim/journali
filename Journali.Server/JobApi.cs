@@ -59,6 +59,7 @@ public static class JobApi
         // Die Oberfläche warnt damit vor einer Übergabe an den Tasker (03.10.2026). Ohne Team: null
         api.MapGet("/jobs/verfuegbar", (HttpRequest req, Catalog c, bool job = true) =>
         {
+            if (Journali.Core.Licensing.Startphase.An) return Results.Ok((object?)null);   // Startphase: keine Grenze, keine Warnung
             var team = Actor(req) is { } a ? c.Lesen((_, _) => c.Users.All.GetValueOrDefault(a)?.Team) : null;
             return c.VerfuegbarFuerJob(team, job) is { } v ? Results.Ok(new { woche = v.Woche, monat = v.Monat }) : Results.Ok((object?)null);
         });

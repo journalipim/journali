@@ -76,6 +76,7 @@ public sealed class Catalog
     public Tarif InstanzTarif => Lesend(TarifOhneSperre);
     private Tarif TarifOhneSperre()
     {
+        if (Core.Licensing.Startphase.An) return Unbegrenzt();   // Startphase: alles ohne Grenzen
         var heute = DateOnly.FromDateTime(DateTime.Now);
         var lizenz = Lizenz.TarifIn(_teams.Tarife);
         return _teams.HoechsterTarif(heute) is { } t ? Core.Projections.Tarife.Hoeher(lizenz, t) : lizenz;
@@ -87,10 +88,14 @@ public sealed class Catalog
     /// </summary>
     public int ErlaubteServer => Lesend(() =>
     {
+        if (Core.Licensing.Startphase.An) return 1;   // Startphase: ein Server je Datenbank, kein Multi-Server
         var t = TarifOhneSperre();
         if (t.Server >= Core.Projections.Tarife.Ohne) return Core.Projections.Tarife.Ohne;
         return (int)Math.Min(Core.Projections.Tarife.Ohne, (long)Math.Max(1, t.Server) + _teams.ServerZusatz(DateOnly.FromDateTime(DateTime.Now)));
     });
+
+    /// <summary>Unlimited aus der geltenden Liste, sonst aus dem Saatgut — der Tarif aller Teams in der Startphase. Nur unter der Sperre.</summary>
+    private Tarif Unbegrenzt() => _teams.Tarife.Von(Core.Projections.Tarife.Unlimited.Key) ?? Core.Projections.Tarife.Unlimited;
 
     /// <summary>Die geltenden Tarife: aus dem Tarifblatt im Journal, sonst das Saatgut.</summary>
     public Tarifliste Tarife => Lesend(() => _teams.Tarife);
@@ -100,6 +105,7 @@ public sealed class Catalog
     /// <summary>Der Tarif eines Teams: sein Schlüssel — und beim ersten Team die Lizenz, deren Limits es trägt. Nur unter der Sperre.</summary>
     public Tarif TeamTarif(string team)
     {
+        if (Core.Licensing.Startphase.An) return Unbegrenzt();
         var heute = DateOnly.FromDateTime(DateTime.Now);
         var liste = _teams.Tarife;
         var basis = _teams.Primary?.Key == team ? Lizenz.TarifIn(liste) : liste.Free;
@@ -348,6 +354,7 @@ public sealed class Catalog
     /// </summary>
     public int LimitsAusLizenz()
     {
+        if (Core.Licensing.Startphase.An) return 0;   // Startphase: keine Grenzen aus einer Lizenz ins Journal
         var lic = Lizenz;
         var tarif = lic.TarifIn(_teams.Tarife);
         ZaehltAb = lic.CountFrom;
@@ -440,6 +447,7 @@ public sealed class Catalog
     /// </summary>
     private bool KeinKontingent(string actor, string type)
     {
+        if (Core.Licensing.Startphase.An) return false;   // Startphase: nichts wird wegen eines Kontingents abgewiesen
         if (!Kinds.Billable(null, type)) return false;
         // Ein Joblauf schreibt als job:<key> — gezählt wird beim Anwender, dem der Job gehört,
         // und er lässt der Handarbeit eine Reserve: bis 90 %, nicht bis zum letzten Eintrag.

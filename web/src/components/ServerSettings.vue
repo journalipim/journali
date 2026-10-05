@@ -5,6 +5,7 @@
 import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue'
 import { api, when } from '../api.js'
 import { dialog } from '../dialog.js'
+import { store } from '../store.js'
 import { t } from '../i18n.js'
 import { bauKurz, bauLang } from '../bau.js'
 
@@ -78,6 +79,7 @@ const entfernen = s => tun(() => api.del(`/api/server/${s.id}`))
           <td class="mono muted" :title="s.id">{{ s.host }}</td>
           <td class="rolle">
             <span v-if="s.gesperrt" class="neg" :title="$t('Beantwortet keine Anfrage unter /api.')">⊘ {{ $t("gesperrt") }}</span>
+            <span v-else-if="s.lizenziert === false && store.startphase" class="neg ohne-lizenz" :title="$t('Auf einer Datenbank arbeitet ein Server; dieser beantwortet keine Anfrage unter /api.')">⊘ {{ $t("zweiter Server") }}</span>
             <span v-else-if="s.lizenziert === false" class="neg ohne-lizenz" :title="$t('Mehr Server, als die Lizenz erlaubt ({0}); dieser beantwortet keine Anfrage unter /api. Der Hauptserver hat Vorfahrt.', [d.erlaubt ?? 1])">⊘ {{ $t("ohne Lizenz") }}</span>
             <span v-else-if="s.haupt" :title="$t('Führt Systemjobs, Zeitplan-Jobs und Jobs von Hand aus.')">◆ {{ $t("Hauptserver") }}</span>
             <span v-else class="muted" :title="$t('Bedient Oberfläche und Schnittstelle; Jobs gehen an den Hauptserver.')">◇ {{ $t("Arbeitsserver") }}</span>

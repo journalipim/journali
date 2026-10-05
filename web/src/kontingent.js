@@ -1,6 +1,7 @@
 // Warnung vor dem Kontingent (03.10.2026): reicht, was das eigene Team noch schreiben darf, für so viele Einträge? Wenn nicht, fragt ein Dialog — starten
 // lässt es sich trotzdem; ein Lauf hält dann an, wenn das Kontingent erschöpft ist. Für Plugins über `import { kontingent } from 'journali'`.
 import { api } from './api.js'
+import { store } from './store.js'
 import { dialog } from './dialog.js'
 import { t } from './i18n.js'
 
@@ -23,6 +24,7 @@ export function frage({ label, eintraege, verfuegbar, hoechstens = false }) {
 
 /// Reicht es — oder will der Anwender trotzdem? `job`: als Joblauf (ohne die 10 % Reserve für die Handarbeit). Ohne Auskunft des Servers: ja.
 export async function reicht({ label, eintraege, job = true, hoechstens = false }) {
+  if (store.startphase) return true   // Startphase: keine Grenze
   let verfuegbar = null
   try { verfuegbar = await api.get(`/api/jobs/verfuegbar?job=${job}`) } catch { return true }
   const f = frage({ label, eintraege, verfuegbar, hoechstens })

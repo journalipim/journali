@@ -684,7 +684,7 @@ async function mount(root, ctx) {
     // ---- Assistent: vier Schritte statt einer Seite, die über den Bildschirm hinauswächst ----
     const lab = text => el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, text)
     const seiten = [
-      { name: '① Was', box: el('div', {}, lab('Key'), keyIn, lab(t('Bezeichnung')), labelIn, lab('Plugin (Prozess)'), pluginSel, pluginHint, pluginNotice, lab(t('Team (Abrechnung)')), teamSel) },
+      { name: '① Was', box: el('div', {}, lab('Key'), keyIn, lab(t('Bezeichnung')), labelIn, lab('Plugin (Prozess)'), pluginSel, pluginHint, pluginNotice, lab(store.startphase ? t('Team') : t('Team (Abrechnung)')), teamSel) },
       { name: t('② Womit'), box: el('div', {}, paramsBox), leer: () => !paramsBox.childElementCount },
       { name: t('③ Ablage'), box: el('div', {}, fachBox), leer: () => fachBox.style.display === 'none' },
       { name: t('④ Wann'), box: el('div', {}, lab(t('Zeitplan')), sched.el, lab('Zeitgrenze (min)'), timeoutIn, ...(darfRolle ? [lab(t('Rolle des Laufs')), rolleSel] : [])) },

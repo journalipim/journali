@@ -3022,5 +3022,14 @@
  "Mit gesetzter ETIM-Klasse oder KI sind Vorschläge möglich.": "With an ETIM class set or AI, suggestions are possible.",
  "Vorschläge kommen aus der ETIM-Klasse des Knotens (eigen oder geerbt) und von der KI (Schlüssel unter ⚙ Einstellungen) — entschieden wird hier mit ja oder nein": "Suggestions come from the ETIM class of the node (own or inherited) and from the AI (key under ⚙ Settings) — the decision is made here with yes or no",
  "Sicherung, Aufbewahrung und Probe liegen beim Betreiber: die Sicherung regelmässig in eine leere Testinstanz einspielen und prüfen, ob Einträge, Assets, Anmeldungen und Plugins da sind": "Backup, retention and trial are the operator’s responsibility: restore the backup regularly into an empty test instance and check that entries, assets, sign-ins and plugins are there",
- "Ob das Einspielen gelingt, zeigt nur eine Probe.": "Only a trial shows whether restoring works."
+ "Ob das Einspielen gelingt, zeigt nur eine Probe.": "Only a trial shows whether restoring works.",
+ "Init Team: bleibt": "Init Team: stays",
+ "Woher die KI-Schlüssel kommen: eigene oder die eines anderen Teams": "Where the AI keys come from: own ones or those of another team",
+ "KI-Schlüssel": "AI keys",
+ "eigene": "own",
+ "Auf einer Datenbank arbeitet ein Server. Dieser führt keine Jobs aus und beantwortet unter /api nur /api/health.": "One server works on a database. This one runs no jobs and answers only /api/health under /api.",
+ "Auf dieser Datenbank arbeitet schon ein Server.": "A server already works on this database.",
+ "Auf einer Datenbank arbeitet ein Server; dieser beantwortet keine Anfrage unter /api.": "One server works on a database; this one answers no request under /api.",
+ "zweiter Server": "second server",
+ "Auf dieser Datenbank läuft schon {0}.": "{0} already runs on this database."
 }

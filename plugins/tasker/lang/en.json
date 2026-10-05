@@ -143,5 +143,6 @@
  "⏸ {0} angehalten: das Kontingent ist erschöpft": "⏸ {0} paused: the quota is used up",
  "Trockenlauf: zählt, wie viele Einträge der Job schreiben würde, und schreibt nichts": "Dry run: counts how many entries the job would write, and writes nothing",
  "Letzter Trockenlauf {0}": "Last dry run {0}",
- "≈ {0} Einträge": "≈ {0} entries"
+ "≈ {0} Einträge": "≈ {0} entries",
+ "Team": "Team"
 }

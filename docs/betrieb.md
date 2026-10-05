@@ -700,6 +700,13 @@ aller Dateien). `PluginSeal.cs` prüft es bei jedem Lesen der Platte; `GET /api/
 
 ## Lizenz — je Team
 
+**Startphase (05.10.2026, `Core.Licensing.Startphase`):** Zurzeit gilt nichts von diesem Abschnitt. Jedes Team hat Unlimited,
+kein Eintrag wird wegen eines Kontingents abgewiesen, auf einer Datenbank läuft **ein** Server (kein Multi-Server), und
+kein Server fragt den Lizenzserver — weder Abo noch Tarifblatt noch Registrierung (die Adresse ist dann leer). Die
+Oberfläche zeigt nichts zu Lizenz, Limits und journali-Token (`/api/health` sagt `startphase: true`). Die Funktionen
+bleiben im Code; eine spätere Version schaltet die Startphase ab, und Grenzen gelten dann nur für diese neue Version.
+Der Schalter steht in `Program.cs`, nicht in der Umgebung; nur der Debug-Bau schaltet ihn mit `JOURNALI_STARTPHASE=0` ab.
+
 Eine Lizenz für die ganze Instanz gibt es nicht (seit 25.09.2026): jede gehört einem Team. Ein Team bekommt Tarif und
 Grenzen durch ein **Abo** (Shop-Schlüssel, Lizenzserver) oder einen **Schlüssel zum Kopieren** (Reset oder Limit), den
 es selbst einlöst. Das **Init Team** hat dazu den **Test** einer neuen Instanz; danach gilt für es Kostenlos. Jedes

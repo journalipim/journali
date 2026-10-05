@@ -162,7 +162,7 @@ async function austragen(m) {
   <template v-else>
     <div class="section">
       <h2>◍ {{ team.label }}
-        <span class="muted">· {{ mitglieder.length }}<span v-if="team.primary" class="accent" :title="$t('Init Team: bleibt, trägt die Limits der Lizenz')"> ①</span></span>
+        <span class="muted">· {{ mitglieder.length }}<span v-if="team.primary" class="accent" :title="store.startphase ? $t('Init Team: bleibt') : $t('Init Team: bleibt, trägt die Limits der Lizenz')"> ①</span></span>
         <select v-if="teams.length > 1" v-model="gewaehlt" style="margin-left:8px" @change="wechsel">
           <option v-for="t in teams" :key="t.key" :value="t.key">{{ t.label }}</option>
         </select>
@@ -194,9 +194,10 @@ async function austragen(m) {
     </div>
 
 
-    <LicenceSettings :team="team" :limits="jt?.limits" @eingespielt="details" />
+    <!-- Startphase: keine Lizenz, keine Limits (05.10.2026) -->
+    <LicenceSettings v-if="!store.startphase" :team="team" :limits="jt?.limits" @eingespielt="details" />
 
-    <div class="section">
+    <div v-if="!store.startphase" class="section limits">
       <h2>{{ $t("✦ journali Limits") + ' ' }}<button class="x" :title="$t('Was gezählt wird')" @click="hilfeToken">?</button>
       </h2>
       <table class="grid form" style="width:auto"><colgroup><col style="width:150px" /><col style="width:320px" /><col /></colgroup><tbody>

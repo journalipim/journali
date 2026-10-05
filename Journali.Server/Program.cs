@@ -106,10 +106,17 @@ builder.Services.AddRateLimiter(o => { o.RejectionStatusCode = 429; o.GlobalLimi
 var licences = new Licences(dataDir, new LicenceStore(db), instanz) { ErsterTag = () => catalog.ErsterTag, Tarife = () => catalog.Tarife };   // ohne Lizenz: Test ab dem ersten Eintrag
 // Abo über den Lizenzserver: seine Adresse ist eingebaut (Core.Licensing.Aussteller.Adresse), geprüft wird mit
 // seinem eingebauten Schlüssel. Der Shop-Schlüssel liegt in jobs/secrets.json
-var lizenzserver = Journali.Core.Licensing.Aussteller.Adresse;
+// Startphase (05.10.2026, Core.Licensing.Startphase): alles ohne Grenzen, ein Server, kein Lizenzserver. Der Schalter steht hier, nicht in der
+// Umgebung; nur der Debug-Bau kann ihn zum Prüfen der Lizenzfunktionen ausschalten (JOURNALI_STARTPHASE=0)
+Journali.Core.Licensing.Startphase.An = true;
+#if DEBUG
+if (Environment.GetEnvironmentVariable("JOURNALI_STARTPHASE") == "0") { Journali.Core.Licensing.Startphase.An = false; Console.WriteLine("journali: start phase off (debug build)"); }
+#endif
+// ohne Adresse fragt kein Weg den Lizenzserver (Abos: „Kein Lizenzserver eingebaut.“)
+var lizenzserver = Journali.Core.Licensing.Startphase.An ? "" : Journali.Core.Licensing.Aussteller.Adresse;
 #if DEBUG
 // Nur im Debug-Bau: gegen einen Lizenzserver der Entwicklung arbeiten. Der Release-Bau fragt immer den eingebauten
-if (Environment.GetEnvironmentVariable("JOURNALI_LIZENZSERVER") is { } eigener)
+if (!Journali.Core.Licensing.Startphase.An && Environment.GetEnvironmentVariable("JOURNALI_LIZENZSERVER") is { } eigener)
 {
     lizenzserver = eigener.Trim();
     Console.WriteLine($"journali: licence server from JOURNALI_LIZENZSERVER: {(lizenzserver.Length is 0 ? "none" : lizenzserver)} (debug build)");
@@ -149,6 +156,7 @@ _ = Task.Run(async () =>
     //  - alle 5 Minuten, solange ein Server ohne Lizenz läuft: ein eben gekaufter Zusatz Multi-Server soll ihn freigeben.
     // Ein Server ohne Lizenz fragt dazu selbst, unten.
     var letzte = DateTime.MinValue; var warHaupt = false;
+    if (Journali.Core.Licensing.Startphase.An) return;   // Startphase: keine Lizenz, kein Abo, kein Lizenzserver
     while (true)
     {
         var haupt = verbund.IstHaupt;
@@ -322,7 +330,8 @@ app.Use(async (ctx, next) =>
     {
         ctx.Response.StatusCode = 503;
         // mehr Server, als die Lizenz erlaubt (04.10.2026): dieser antwortet nicht — der Hauptserver hat Vorfahrt
-        await ctx.Response.WriteAsJsonAsync(verbund.Gesperrt ? ModelApi.Err("Dieser Server ist gesperrt.") : ModelApi.Err("Für einen weiteren Server fehlt die Lizenz."));
+        await ctx.Response.WriteAsJsonAsync(verbund.Gesperrt ? ModelApi.Err("Dieser Server ist gesperrt.")
+            : Journali.Core.Licensing.Startphase.An ? ModelApi.Err("Auf dieser Datenbank arbeitet schon ein Server.") : ModelApi.Err("Für einen weiteren Server fehlt die Lizenz."));
         return;
     }
     await next();
@@ -372,7 +381,7 @@ api.MapGet("/health", (HttpRequest req, Catalog c) =>
     DatenbankPruefen();   // wirft bei unerreichbarer Datenbank; die Wache oben macht daraus 503
     var wer = req.HttpContext.Items["user"] as string;
     if (string.IsNullOrEmpty(wer) && Auth.Enabled(c)) wer = Auth.Resolve(req.HttpContext, c, dataDir)?.User;
-    if (Auth.Enabled(c) && string.IsNullOrEmpty(wer)) return Results.Ok(new { ok = true, abgemeldet = true, built = gebautAm, version = laufendeVersion, gesperrt = verbund.Gesperrt ? true : (bool?)null, ohneLizenz = verbund.OhneLizenz ? true : (bool?)null });
+    if (Auth.Enabled(c) && string.IsNullOrEmpty(wer)) return Results.Ok(new { ok = true, abgemeldet = true, built = gebautAm, version = laufendeVersion, startphase = Journali.Core.Licensing.Startphase.An ? true : (bool?)null, gesperrt = verbund.Gesperrt ? true : (bool?)null, ohneLizenz = verbund.OhneLizenz ? true : (bool?)null });
     return Results.Ok(new
 {
     head = c.Head,
@@ -382,7 +391,8 @@ api.MapGet("/health", (HttpRequest req, Catalog c) =>
     // Wessen Nutzung: „die beiden kleinen Balken oben sollen dem Anwender anzeigen, was für ein
     // Verbrauchsstand in seinem Team ist“ — das Team der Mitgliedschaft, am Ende der Zahlerkette. Auch beim
     // Administrator: er führt vielleicht viele Teams, gehört aber genau einem an.
-    usage = Nutzung(req, c),
+    usage = Journali.Core.Licensing.Startphase.An ? null : Nutzung(req, c),   // Startphase: nichts zu journali-Token
+    startphase = Journali.Core.Licensing.Startphase.An ? true : (bool?)null,    // die Oberfläche blendet Lizenz, Limits und Token aus
     built = gebautAm,      // Stand der LAUFENDEN Version — einmal beim Start gelesen
     version = laufendeVersion,     // die Version, die läuft — steht oben in der Leiste
     // der Tarif dieser Instanz: die Oberfläche richtet sich danach, was sie überhaupt anbietet

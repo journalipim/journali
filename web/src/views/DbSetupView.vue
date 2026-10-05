@@ -30,7 +30,8 @@ const GRUND = {
 }
 const grund = g => GRUND[g] ?? g ?? ''
 /// Was eine Antwort sagt — belegt nennt den Server, der schon läuft (04.10.2026: mehrere Server nur mit Lizenz)
-const text = r => r.grund === 'belegt' ? t('Auf dieser Datenbank läuft schon {0}; für einen weiteren Server fehlt die Lizenz.', [r.detail]) : grund(r.grund)
+// Startphase: ein Server je Datenbank, ohne Lizenz (05.10.2026)
+const text = r => r.grund === 'belegt' ? (store.startphase ? t('Auf dieser Datenbank läuft schon {0}.', [r.detail]) : t('Auf dieser Datenbank läuft schon {0}; für einen weiteren Server fehlt die Lizenz.', [r.detail])) : grund(r.grund)
 const lage = computed(() => {
   const s = stand.value
   if (!s) return ''

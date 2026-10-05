@@ -52,15 +52,18 @@ async function entfernen(t) {
 
 <template>
   <div class="section">
-    <h2>{{ $t("◍ Teams") + ' ' }}<span class="muted" :title="$t('Die Limits kommen aus der Lizenz: das Init Team trägt sie, jedes weitere startet bei 0.')">· {{ teams.length }}</span></h2>
+    <h2>{{ $t("◍ Teams") + ' ' }}<span class="muted" :title="store.startphase ? '' : $t('Die Limits kommen aus der Lizenz: das Init Team trägt sie, jedes weitere startet bei 0.')">· {{ teams.length }}</span></h2>
     <table class="grid" style="width:auto">
       <thead>
         <tr>
           <th>{{ $t("Team") }}</th>
           <th :title="$t('Wer das Team führt: Schlüssel, Modell, Mitglieder ein und aus')">{{ $t("★ Teammanager") }}</th>
-          <th :title="$t('Woher die Token kommen: eigenes Kontingent oder das eines anderen Teams')">{{ $t("Token") }}</th>
+          <th v-if="store.startphase" :title="$t('Woher die KI-Schlüssel kommen: eigene oder die eines anderen Teams')">{{ $t("KI-Schlüssel") }}</th>
+          <th v-else :title="$t('Woher die Token kommen: eigenes Kontingent oder das eines anderen Teams')">{{ $t("Token") }}</th>
+          <template v-if="!store.startphase">
           <th class="num" :title="$t('journali-Token je Woche — aus der Lizenz, hier nicht einstellbar')">{{ $t("▤ Woche ⊞") }}</th>
           <th class="num" :title="$t('journali-Token je Monat — aus der Lizenz, hier nicht einstellbar')">{{ $t("▦ Monat ⊞") }}</th>
+          </template>
           <th>👤</th><th></th>
         </tr>
       </thead>
@@ -69,7 +72,7 @@ async function entfernen(t) {
           <td>
             <input type="text" :value="t.label" style="width:140px" @change="speichern(t, 'label', $event.target.value)" />
             <span class="mono muted" style="font-size:12px"> {{ t.key }}</span>
-            <span v-if="t.primary" class="accent" :title="$t('Init Team: bleibt, trägt die Limits der Lizenz')"> ①</span>
+            <span v-if="t.primary" class="accent" :title="store.startphase ? $t('Init Team: bleibt') : $t('Init Team: bleibt, trägt die Limits der Lizenz')"> ①</span>
           </td>
           <td>
             <span v-for="m in (t.managers ?? [])" :key="m" class="chip" style="margin-right:4px">{{ leute.find(p => p.key === m)?.name || m }}
@@ -83,12 +86,14 @@ async function entfernen(t) {
           <td>
             <select :value="t.keysFrom ?? ''" :disabled="t.keys.length > 0" :title="t.keys.length ? $t('eigene Schlüssel hinterlegt') : $t('woher die Token kommen')"
                     @change="speichern(t, 'keysFrom', $event.target.value)">
-              <option value="">{{ $t("eigenes Kontingent") }}</option>
+              <option value="">{{ store.startphase ? $t("eigene") : $t("eigenes Kontingent") }}</option>
               <option v-for="z in teams.filter(x => x.key !== t.key)" :key="z.key" :value="z.key">{{ $t("über Team {0}", [z.label]) }}</option>
             </select>
           </td>
+          <template v-if="!store.startphase">
           <td class="num mono" :class="t.entriesWeek ? '' : 'muted'">{{ n(t.entriesWeek) }}</td>
           <td class="num mono" :class="t.entriesMonth ? '' : 'muted'">{{ n(t.entriesMonth) }}</td>
+          </template>
           <td class="muted" :title="$t('{0} im Team', [t.members])">{{ t.members }}</td>
           <td><button v-if="!t.primary" class="x" :title="$t('Team entfernen')" @click="entfernen(t)">✕</button></td>
         </tr>
@@ -100,11 +105,11 @@ async function entfernen(t) {
               <option v-for="p in leute" :key="p.key" :value="p.key">{{ p.name || p.key }}</option>
             </select>
           </td>
-          <td colspan="5"><button class="x" :title="$t('Team anlegen')" @click="anlegen">+</button></td>
+          <td :colspan="store.startphase ? 3 : 5"><button class="x" :title="$t('Team anlegen')" @click="anlegen">+</button></td>
         </tr>
       </tbody>
     </table>
-    <div v-if="lizenz" style="display:flex;gap:16px;align-items:baseline;margin-top:6px;font-size:12px">
+    <div v-if="lizenz && !store.startphase" style="display:flex;gap:16px;align-items:baseline;margin-top:6px;font-size:12px">
       <span class="muted">{{ $t("aus der Lizenz vergeben") }}</span>
       <span class="mono" :class="zuviel ? 'neg' : ''" :title="$t('Summe der Kontingente aller Teams gegen die Lizenz')">▤ {{ n(verteilt.week) }} / {{ n(lizenz.entriesWeek) }} ⊞</span>
       <span class="mono" :class="zuviel ? 'neg' : ''">▦ {{ n(verteilt.month) }} / {{ n(lizenz.entriesMonth) }} ⊞</span>

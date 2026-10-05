@@ -143,7 +143,7 @@ function railDrop(target) {
       <span>▣ {{ store.nodes }}</span>
       <template v-if="store.usage"><span class="sep">·</span><router-link to="/settings#teams" class="muted" :title="$t('Nutzung anzeigen')"><UsageMini :usage="store.usage" /></router-link></template>
       <!-- Ohne Team gibt es kein Kontingent — und damit keine Pflege -->
-      <template v-else-if="store.auth.enabled && store.auth.user"><span class="sep">·</span><router-link to="/settings#teams" class="warn" :title="$t('Ohne Kontingent weist der Server jede Änderung ab; es kommt aus der Lizenz oder von einem Team, über das abgerechnet wird.')">◍ {{ store.auth.team ? $t('kein Kontingent') : $t('kein Team') }}</router-link></template>
+      <template v-else-if="!store.startphase && store.auth.enabled && store.auth.user"><span class="sep">·</span><router-link to="/settings#teams" class="warn" :title="$t('Ohne Kontingent weist der Server jede Änderung ab; es kommt aus der Lizenz oder von einem Team, über das abgerechnet wird.')">◍ {{ store.auth.team ? $t('kein Kontingent') : $t('kein Team') }}</router-link></template>
       <!-- KI-Austauschvolumen: was journali hingeschickt und zurückbekommen hat — gemessen, nicht geschätzt -->
       <template v-if="ai.server?.ready"><span class="sep">·</span><router-link to="/settings#teams" class="ai"
         :title="$t('KI Austauschvolumen (mengenbasiert) — Diese Kennzahl gibt an, welche Datenmenge mit KIs über deren APIs ausgetauscht wurden (Senden+Empfangen). Wird zum Monatsbeginn zurückgesetzt.')"

@@ -56,6 +56,8 @@ export const store = reactive({
   // Antwort. Der Unterschied zählt: mit null als Anfangswert fragte der Dialog bei jedem Laden, bevor /api/health
   // antwortete — auch bei einer längst registrierten Anlage (26.09.2026).
   registriert: undefined,
+  // Startphase (05.10.2026, Core.Licensing.Startphase): alles ohne Grenzen — die Oberfläche zeigt nichts zu Lizenz, Limits und journali-Token
+  startphase: false,
   // Darf ich das? Ohne Benutzer alles; sonst nach den Rechten der Rolle (Vokabular: read, write, retire, release, model, plugins, jobs, storage, users)
   can(right) { return !this.auth.enabled || !this.auth.user ? true : (this.auth.rights ?? []).includes(right) },
   head: 0,
@@ -160,6 +162,7 @@ export const store = reactive({
       this.online = true
       // Ohne Lizenz oder gesperrt: nur dieser Zustand. Wird der Server wieder frei, gilt die Anmeldung von vorher wieder — sie neu fragen
       const sperreVorher = this.serverSperre
+      this.startphase = h.startphase === true
       const s = h.server ?? h
       this.serverSperre = s.ohneLizenz ? 'lizenz' : s.gesperrt ? 'gesperrt' : null
       if (h.server?.erlaubt) this.erlaubteServer = h.server.erlaubt
