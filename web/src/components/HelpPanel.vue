@@ -6,8 +6,14 @@
 import { ref, computed, watch } from 'vue'
 import { i18n, DEFAULT_LANG } from '../i18n.js'
 import { hilfe, closeHelp } from '../help.js'
+import { store } from '../store.js'
 
-const index = ref([])        // [{ slug, title, nr }]
+const alle = ref([])         // [{ slug, title, nr, lizenz? }]
+// Startphase (05.10.2026): Kapitel, die nur mit Lizenz gelten, fallen weg (build-help.mjs: <!-- nur-mit-lizenz -->)
+const index = computed(() => alle.value.filter(k => !(store.startphase && k.lizenz)))
+/// Klartext für die Suche: in der Startphase ohne die Blöcke, die nur mit Lizenz gelten, sonst ohne die der Startphase
+const klartext = h => h.replace(store.startphase ? /<div class="nur-lizenz">[\s\S]*?<\/div>\n/g : /<div class="nur-startphase">[\s\S]*?<\/div>\n/g, ' ')
+  .replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').toLowerCase()
 const lang = ref(DEFAULT_LANG)
 const html = ref('')
 const q = ref('')
@@ -19,10 +25,10 @@ async function ladeIndex() {
   for (const code of [i18n.global.locale.value, DEFAULT_LANG]) {
     try {
       const r = await fetch(`/help/${code}/index.json`)
-      if (r.ok) { index.value = await r.json(); lang.value = code; return }
+      if (r.ok) { alle.value = await r.json(); lang.value = code; return }
     } catch { /* nächste Sprache */ }
   }
-  index.value = []
+  alle.value = []
 }
 async function ladeKapitel(slug) {
   if (!slug) { html.value = ''; return }
@@ -38,7 +44,7 @@ async function ladeKapitel(slug) {
 async function ladeTexte() {
   for (const k of index.value) {
     if (texts.value[k.slug] != null) continue
-    try { const r = await fetch(`/help/${lang.value}/${encodeURIComponent(k.slug)}.html`); texts.value[k.slug] = r.ok ? (await r.text()).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').toLowerCase() : '' } catch { texts.value[k.slug] = '' }
+    try { const r = await fetch(`/help/${lang.value}/${encodeURIComponent(k.slug)}.html`); texts.value[k.slug] = r.ok ? klartext(await r.text()) : '' } catch { texts.value[k.slug] = '' }
   }
 }
 const treffer = computed(() => {
@@ -77,7 +83,7 @@ watch(q, s => { if (s.trim()) ladeTexte() })
           </aside>
           <main ref="body" class="help-body scroll">
             <div v-if="busy" class="muted">…</div>
-            <div v-else-if="html" class="help-text" v-html="html" />
+            <div v-else-if="html" class="help-text" :class="{ startphase: store.startphase }" v-html="html" />
             <div v-else class="empty">{{ $t("Kapitel links wählen.") }}</div>
           </main>
         </div>
@@ -105,6 +111,8 @@ watch(q, s => { if (s.trim()) ladeTexte() })
 .help-text :deep(table) { border-collapse: collapse; margin: 8px 0; }
 .help-text :deep(td), .help-text :deep(th) { border: 1px solid var(--line); padding: 4px 8px; text-align: left; vertical-align: top; }
 .help-text :deep(a) { color: var(--accent); }
+/* Startphase: was nur mit Lizenz gilt, steht nicht da — und umgekehrt (05.10.2026) */
+.help-text.startphase :deep(.nur-lizenz), .help-text:not(.startphase) :deep(.nur-startphase) { display: none; }
 .x { border: 0; background: none; color: var(--muted); font-size: 14px; padding: 0 6px; }
 .x:hover { color: var(--fg); }
 </style>

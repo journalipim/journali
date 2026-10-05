@@ -8,9 +8,16 @@ journali steht unter der **Elastic License 2.0** mit einer zusätzlichen Erlaubn
 - Du darfst die Lizenzschlüssel-Funktion nicht verändern, abschalten oder umgehen, und keine Funktion entfernen oder verbergen, die davon geschützt ist.
 - Du darfst Lizenz- und Urheberhinweise nicht entfernen; wer die Software ändert, kennzeichnet die Änderung, und wer sie weitergibt, gibt diese Bedingungen mit.
 
+<!-- lizenz -->
 ## Was das für den Betrieb heisst
 
 Die Tarife und ihre Grenzen sind Teil der Software und gelten in jeder Installation, ob selbst betrieben oder bei einem Hoster. Der Hoster braucht keinen Vertrag mit journali; die Lizenz für den Tarif kauft das Team, das die Instanz nutzt.
+<!-- /lizenz -->
+<!-- startphase -->
+## Was das für den Betrieb heisst
+
+Zurzeit gibt es keine Tarife und keine Grenzen: jede Installation hat den vollen Umfang, ob selbst betrieben oder bei einem Hoster.
+<!-- /startphase -->
 
 ## Zusätzliche Erlaubnis
 

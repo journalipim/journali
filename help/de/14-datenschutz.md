@@ -27,9 +27,20 @@ journali hat keinen eigenen KI-Anbieter und keinen eigenen Schlüssel. Ein Team 
 
 Was an den Anbieter geht, sind die Produktdaten des jeweiligen Knotens und die Aufgabe. Personendaten von Anwendern gehen nicht mit.
 
+<!-- lizenz -->
 ## Lizenzserver
 
 Bei einem Abo bestätigt die Instanz ihren Schlüssel täglich beim Lizenzserver. Übertragen werden die Kennung der Instanz, das Team und der Schlüssel; die Antwort ist der Tarif mit Laufzeit. Adressen von Anwendern gehen nicht an den Lizenzserver.
+<!-- /lizenz -->
+<!-- startphase -->
+## Lizenzserver
+
+Diese Version fragt keinen Lizenzserver: weder die Kennung der Instanz noch Angaben zu Teams oder Anwendern gehen an journali.
+<!-- /startphase -->
+
+## Dateien beim ersten Lauf
+
+Zwei Plugins holen beim ersten Lauf eine Datei aus dem Netz: Einbettungen das Modell (huggingface.co), Texterkennung die Sprachdaten (cdn.jsdelivr.net). Dabei geht keine Produktdatei und kein Wert hinaus; die Adressen sehen nur den Abruf. Ein Rechner ohne Netz bekommt die Dateien kopiert.
 
 ## Geplant
 

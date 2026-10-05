@@ -20,7 +20,12 @@ Jeder Lauf steht im Journal mit Start, Ende, Ergebnis und Grösse des Protokolls
 
 ## Was ein Job kostet
 
+<!-- lizenz -->
 Die Betriebsspur eines Laufs, also Start, Ende, verarbeitete und geschriebene Dateien, zählt nicht gegen das Kontingent. Was ein Job an Daten schreibt, zählt wie Handarbeit: ein Import einen Eintrag je geändertem Wert, ein Wiederholungsimport ohne Änderung keinen.
+<!-- /lizenz -->
+<!-- startphase -->
+Was ein Job an Daten schreibt, steht im Journal wie Handarbeit: ein Import einen Eintrag je geändertem Wert, ein Wiederholungsimport ohne Änderung keinen.
+<!-- /startphase -->
 
 ## Von selbst
 

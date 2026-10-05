@@ -14,14 +14,13 @@
 | Eintrag | eine Zeile im Journal: Nummer, Zeit, Urheber, Strom, Typ, Inhalt |
 | Version | Version eines Plugins oder des Servers |
 | Freigabe | Erlaubnis, eine Variante in einem Kanal auszuleiten |
-| Init Team | das Team, das jede Anlage mitbringt und die Grenzen der Lizenz trägt |
+| Init Team | das Team, das jede Anlage mitbringt; umbenennbar, nicht löschbar |
 | Journal | die Folge aller Einträge; die einzige Wahrheit |
 | Kanal | Ausgabeweg wie Web oder Print, mit eigenen Werten, Pflichtfeldern und Freigaben |
 | Kennung | eindeutiger Wert eines Knotens, etwa SKU oder EAN; oder die Kennung einer Instanz |
 | Knoten | Produktgruppe, Produkt, Variante oder Rubrik |
 | Konfigurator | prüft eine Auswahl von Produkten gegen Gruppen und Regeln: zulässig, vollständig, was noch dazukommen kann; sein Ausgangspunkt ist die Wurzel seiner Definition |
 | Konfiguratorgruppe | Gruppe, zu der Teile mit Zeilen gehören: sie summiert, verlangt gleiche Werte oder gibt Mengen und Werte vor |
-| Kontingent | die Zahl der journali-Token, die ein Team je Woche und Monat hat |
 | Master | Sprache oder Kanal, von dem andere ihren Wert beziehen, solange sie nichts Eigenes haben |
 | Pflegebaum | der Baum, in dem gepflegt wird; Gegenstück zum Publikationsbaum |
 | Plugin | Erweiterung als Verzeichnis: im Browser oder als Prozess |
@@ -33,13 +32,23 @@
 | Stern | der Wert ohne Sprache und ohne Kanal |
 | Strom | die Einträge eines Knotens, Attributs, Anwenders oder Plugins |
 | Suche nach Sinn | findet Abschnitte und Knoten, die dasselbe meinen wie die Frage, über die Nähe ihrer Einbettungen; zeigt Ähnlichkeit in Prozent, hat immer Treffer |
-| Team | Gruppe von Personen, an der Kontingent und KI-Schlüssel hängen |
+| Team | Gruppe von Personen, an der die KI-Schlüssel hängen |
 | Texterkennung | macht aus einem gescannten Dokument (Bild von Text) durchsuchbaren Text; Job des Plugins ocr, lokal auf dem Server |
-| Token | journali-Token: ein Eintrag, der zählt; API-Token: Zugang für Skripte und Add-ins |
+| Token | API-Token: Zugang für Skripte und Add-ins |
 | Variante | verkaufsfähiges Blatt unter einem Produkt, mit SKU und Achsenwerten |
 | Vektor | siehe Einbettung |
 | Verweis | ein Knoten des Pflegebaums in einer Rubrik, der dem Pflegebaum folgt |
 | Version | eingefrorener Stand eines Knotens mit Belegen und Aufbewahrung |
 | Wertelist | erlaubte Werte eines Attributs, mit Bezeichnung je Sprache und eigenen Spalten |
 | Workflow | Zustände und Übergänge über den Daten, mit Rollen, Notizen und Wirkungen |
+
+<!-- lizenz -->
+## Lizenz und Grenzen
+
+| Begriff | Bedeutung |
+|---|---|
+| Init Team | trägt die Grenzen der Lizenz |
+| Kontingent | die Zahl der journali-Token, die ein Team je Woche und Monat hat |
+| journali-Token | ein Eintrag, der zählt |
 | Zahlerkette | über welches Team ein Team abrechnet; ohne Kreise |
+<!-- /lizenz -->

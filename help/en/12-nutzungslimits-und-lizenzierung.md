@@ -1,3 +1,4 @@
+<!-- nur-mit-lizenz -->
 # Usage limits and licensing
 
 journali counts maintenance, not users and not products. The unit is the **journali token**: an entry in the journal that is maintenance or publication.

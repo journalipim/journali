@@ -14,7 +14,12 @@ Anmeldepasswort, und nach einer Minute ist es wieder verdeckt. Den Abschnitt sie
 
 ## Als Job
 
+<!-- lizenz -->
 Das Plugin Sicherung läuft als Job mit Zeitplan: je Lauf ein Ordner mit Zeitstempel, ältere werden nach der Aufbewahrung weggeräumt. Es gehört zum Tarif Pro.
+<!-- /lizenz -->
+<!-- startphase -->
+Das Plugin Sicherung läuft als Job mit Zeitplan: je Lauf ein Ordner mit Zeitstempel, ältere werden nach der Aufbewahrung weggeräumt.
+<!-- /startphase -->
 
 ## Was mitgeht
 
@@ -25,7 +30,12 @@ Das Plugin Sicherung läuft als Job mit Zeitplan: je Lauf ein Ordner mit Zeitste
 | Zugänge | Anmeldungen und Passwort-Hashes, Token, Speicher- und Mail-Einstellungen, Geheimnisse der Jobs |
 | Plugins | die Verzeichnisse ohne Pakete |
 
+<!-- lizenz -->
 Nicht mit geht die Kennung der Instanz: eine wiederhergestellte Anlage bekommt eine neue, und eine Lizenz gilt nur für die Instanz, für die sie ausgestellt ist.
+<!-- /lizenz -->
+<!-- startphase -->
+Nicht mit geht die Kennung der Instanz: eine wiederhergestellte Anlage bekommt eine neue.
+<!-- /startphase -->
 
 ## Zurück
 
@@ -39,4 +49,9 @@ Zwei Kopien, die den Start schnell machen, beide nur Cache: der **Spiegel** häl
 
 ## Test und Produktion
 
+<!-- lizenz -->
 Wer eine Testinstanz neben der Produktion betreibt, spielt eine Sicherung der Produktion in die leere Testinstanz ein. Die Testinstanz bekommt eine eigene Kennung und ihre eigene Lizenz.
+<!-- /lizenz -->
+<!-- startphase -->
+Wer eine Testinstanz neben der Produktion betreibt, spielt eine Sicherung der Produktion in die leere Testinstanz ein. Die Testinstanz bekommt eine eigene Kennung.
+<!-- /startphase -->

@@ -1,3 +1,4 @@
+<!-- nur-mit-lizenz -->
 # Nutzungslimits und Lizenzierung
 
 journali zählt Pflege, nicht Nutzer und nicht Produkte. Die Einheit ist der **journali-Token**: ein Eintrag im Journal, der Pflege oder Ausleitung ist.

@@ -1,6 +1,11 @@
 # Anwender, Rollen und Teams
 
+<!-- lizenz -->
 Drei Begriffe, die zusammenwirken: der **Anwender** ist eine Person mit Anmeldung, die **Rolle** sagt, was sie darf, das **Team** sagt, wessen Kontingent und wessen KI-Schlüssel sie nutzt.
+<!-- /lizenz -->
+<!-- startphase -->
+Drei Begriffe, die zusammenwirken: der **Anwender** ist eine Person mit Anmeldung, die **Rolle** sagt, was sie darf, das **Team** sagt, wessen KI-Schlüssel sie nutzt.
+<!-- /startphase -->
 
 ## Anwender
 
@@ -32,20 +37,32 @@ Die Rechte im Einzelnen:
 | Plugins | Plugins installieren, ein- und ausschalten, entfernen |
 | Jobs | Jobs anlegen, starten, Protokolle lesen |
 | Speicher | Assetspeicher einstellen und kopieren |
-| Team | das eigene Team: KI-Schlüssel, Grenzen, Verbrauch |
+| Team | das eigene Team führen: Mitglieder und KI-Schlüssel |
 | Anwender | Anwender und Rollen verwalten |
 
 Eigene Rollen entstehen unter ◈ IAM. Eine Rolle mit Anwendern lässt sich nicht zurückziehen, und das Recht zur Anwenderverwaltung kann nicht aus der letzten Rolle verschwinden, die ein aktiver Anwender hat.
 
 ## Teams
 
+<!-- lizenz -->
 Ein Team ist eine Gruppe von Personen, die am Gesamtsystem mitarbeitet. Daran hängen das Kontingent an journali-Token, die KI-Schlüssel und das KI-Austauschvolumen. Jede Anlage bringt das **Init Team** mit: nicht löschbar, umbenennbar, Träger der Grenzen aus der Lizenz. Wer kein eigenes Team hat, arbeitet dort.
+<!-- /lizenz -->
+<!-- startphase -->
+Ein Team ist eine Gruppe von Personen, die am Gesamtsystem mitarbeitet. Daran hängen die KI-Schlüssel und das KI-Austauschvolumen. Jede Anlage bringt das **Init Team** mit: nicht löschbar, umbenennbar. Wer kein eigenes Team hat, arbeitet dort.
+<!-- /startphase -->
 
+<!-- lizenz -->
 Führen und dazugehören sind zweierlei: eine Person kann **Manager** mehrerer Teams sein, aber **Mitglied nur eines**. Ein Team kann über ein anderes abrechnen; die Kette darf keinen Kreis bilden. Die Balken in der Kopfzeile zeigen immer das Team der Mitgliedschaft am Ende dieser Kette.
+<!-- /lizenz -->
+<!-- startphase -->
+Führen und dazugehören sind zweierlei: eine Person kann **Manager** mehrerer Teams sein, aber **Mitglied nur eines**. Ein Team kann die KI-Schlüssel eines anderen nutzen; die Kette darf keinen Kreis bilden.
+<!-- /startphase -->
 
+<!-- lizenz -->
 ## Was ohne Kontingent geschieht
 
 Ein Team ohne Kontingent kann nicht pflegen: jeder Eintrag, der journali-Token kostet, wird abgewiesen. Modellieren, Strukturieren, Einrichten und Betrieb kosten nichts und gehen weiter. Was zählt und was nicht, steht im Kapitel Nutzungslimits und Lizenzierung.
+<!-- /lizenz -->
 
 ## Jobs und das System
 

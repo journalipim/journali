@@ -23,9 +23,11 @@ Ein **Basis-Plugin** bringt die Grundfunktion einer Gruppe der Leiste mit und is
 
 ⬡ Plugins zeigt alle Plugins mit Version und Zustand: installiert, an, aus, Basis fehlt, nicht installiert. Installieren nimmt ein Plugin ins Journal auf, einschalten macht es wirksam, aktualisieren übernimmt eine neue Version von der Platte. Beim Einschalten legt ein Plugin an, was es braucht, etwa eine Attributgruppe. Jedes Plugin lässt sich für die eigene Leiste ein- und ausblenden.
 
+<!-- lizenz -->
 ## Was der Tarif erlaubt
 
 Welche Plugins sich installieren und einschalten lassen, hängt am Tarif der Instanz: Kostenlos enthält Tabelle, Excel-Add-in, OnlyOffice, Vorschauen und Export; Pro dazu Datenblatt, Übersetzung, Vorlagen-Export, ETIM, Konfigurator, Datenanalyse und Sicherung als Job; ab Pro+ alle. Es zählt der höchste Tarif, den ein Team der Instanz hat.
+<!-- /lizenz -->
 
 ## journali Core Plugins
 

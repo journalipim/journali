@@ -23,9 +23,11 @@ A **base plugin** brings the basic function of a group of the rail and is the co
 
 ⬡ Plugins shows all plugins with version and state: installed, on, off, base missing, not installed. Installing takes a plugin into the journal, enabling makes it effective, updating adopts a new version from disk. When enabled, a plugin creates what it needs, such as an attribute group. Every plugin can be shown or hidden in your own rail.
 
+<!-- lizenz -->
 ## What the tier allows
 
 Which plugins can be installed and enabled depends on the tier of the instance: Free includes Table, Excel add-in, OnlyOffice, previews and export; Pro adds data sheet, translation, template export, ETIM, configurator, data analysis and backup as a job; from Pro+ all. The highest tier any team of the instance has counts.
+<!-- /lizenz -->
 
 ## journali Core plugins
 

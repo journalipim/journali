@@ -24,7 +24,12 @@ Eine Fehlerantwort ist JSON: `{ "error": …, "template": …, "args": […] }`.
 
 ## Schreiben
 
+<!-- lizenz -->
 Ein schreibender Aufruf legt Einträge im Journal an; ein Aufruf, der mehrere anlegt, bildet einen Stapel. Einträge, die journali-Token kosten, weist der Server ab, wenn das Team kein Kontingent mehr hat.
+<!-- /lizenz -->
+<!-- startphase -->
+Ein schreibender Aufruf legt Einträge im Journal an; ein Aufruf, der mehrere anlegt, bildet einen Stapel.
+<!-- /startphase -->
 
 ## Beispiel
 

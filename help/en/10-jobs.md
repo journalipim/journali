@@ -20,7 +20,12 @@ Every run is in the journal with start, end, result and size of the log; the log
 
 ## What a job costs
 
+<!-- lizenz -->
 The operational trace of a run, i.e. start, end, processed and written files, does not count against the quota. What a job writes as data counts like manual work: an import one entry per changed value, a repeated import without changes none.
+<!-- /lizenz -->
+<!-- startphase -->
+What a job writes as data stands in the journal like manual work: an import one entry per changed value, a repeated import without changes none.
+<!-- /startphase -->
 
 ## By itself
 

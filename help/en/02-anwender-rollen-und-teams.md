@@ -1,6 +1,11 @@
 # Users, roles and teams
 
+<!-- lizenz -->
 Three terms that work together: the **user** is a person with a login, the **role** says what they may do, the **team** says whose quota and whose AI keys they use.
+<!-- /lizenz -->
+<!-- startphase -->
+Three terms that work together: the **user** is a person with a login, the **role** says what they may do, the **team** says whose AI keys they use.
+<!-- /startphase -->
 
 ## Users
 
@@ -32,20 +37,32 @@ The rights in detail:
 | plugins | install, enable, disable and remove plugins |
 | jobs | create and start jobs, read logs |
 | storage | configure and copy the asset store |
-| team | the own team: AI keys, limits, usage |
+| team | lead the own team: members and AI keys |
 | users | manage users and roles |
 
 Own roles are created under ◈ IAM. A role with users cannot be retired, and the right to manage users cannot disappear from the last role an active user has.
 
 ## Teams
 
+<!-- lizenz -->
 A team is a group of people working on the whole system. The quota of journali tokens, the AI keys and the AI exchange volume hang on it. Every installation brings the **Init Team**: not deletable, renamable, carrier of the limits from the licence. Whoever has no own team works there.
+<!-- /lizenz -->
+<!-- startphase -->
+A team is a group of people working on the whole system. The AI keys and the AI exchange volume hang on it. Every installation brings the **Init Team**: not deletable, renamable. Whoever has no own team works there.
+<!-- /startphase -->
 
+<!-- lizenz -->
 Managing and belonging are two different things: a person can be **manager** of several teams but **member of only one**. A team can be billed via another team; the chain must not form a circle. The bars in the header always show the team of membership at the end of this chain.
+<!-- /lizenz -->
+<!-- startphase -->
+Managing and belonging are two different things: a person can be **manager** of several teams but **member of only one**. A team can use the AI keys of another; the chain must not form a circle.
+<!-- /startphase -->
 
+<!-- lizenz -->
 ## What happens without quota
 
 A team without quota cannot maintain data: every entry that costs journali tokens is rejected. Modelling, structuring, setup and operations cost nothing and continue. What counts and what does not is in the chapter Usage limits and licensing.
+<!-- /lizenz -->
 
 ## Jobs and the system
 

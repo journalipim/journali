@@ -8,9 +8,16 @@ journali is licensed under the **Elastic License 2.0** with an additional permis
 - You may not change, disable or circumvent the licence key functionality, and you may not remove or obscure any functionality that is protected by it.
 - You may not remove licence and copyright notices; whoever modifies the software marks the modification, and whoever passes it on passes these terms on with it.
 
+<!-- lizenz -->
 ## What that means for operation
 
 The tiers and their limits are part of the software and apply in every installation, self-hosted or at a hoster. The hoster needs no contract with journali; the licence for the tier is bought by the team that uses the instance.
+<!-- /lizenz -->
+<!-- startphase -->
+## What that means for operation
+
+Currently there are no tiers and no limits: every installation has the full scope, self-hosted or at a hoster.
+<!-- /startphase -->
 
 ## Additional permission
 

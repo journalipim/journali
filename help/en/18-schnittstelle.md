@@ -24,7 +24,12 @@ An error response is JSON: `{ "error": …, "template": …, "args": […] }`. `
 
 ## Writing
 
+<!-- lizenz -->
 A writing call creates entries in the journal; a call that creates several forms a batch. Entries that cost journali tokens are rejected by the server when the team has no quota left.
+<!-- /lizenz -->
+<!-- startphase -->
+A writing call creates entries in the journal; a call that creates several forms a batch.
+<!-- /startphase -->
 
 ## Example
 

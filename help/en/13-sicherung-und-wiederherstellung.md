@@ -14,7 +14,12 @@ it is hidden again. The section is visible to whoever manages users and roles.
 
 ## As a job
 
+<!-- lizenz -->
 The plugin Backup runs as a job with a schedule: one folder with timestamp per run, older ones are removed according to retention. It belongs to the tier Pro.
+<!-- /lizenz -->
+<!-- startphase -->
+The plugin Backup runs as a job with a schedule: one folder with timestamp per run, older ones are removed according to retention.
+<!-- /startphase -->
 
 ## What goes along
 
@@ -25,7 +30,12 @@ The plugin Backup runs as a job with a schedule: one folder with timestamp per r
 | Credentials | logins and password hashes, tokens, storage and mail settings, secrets of the jobs |
 | Plugins | the directories without packages |
 
+<!-- lizenz -->
 What does not go along is the identifier of the instance: a restored installation gets a new one, and a licence applies only to the instance for which it was issued.
+<!-- /lizenz -->
+<!-- startphase -->
+What does not go along is the identifier of the instance: a restored installation gets a new one.
+<!-- /startphase -->
 
 ## Restoring
 
@@ -39,4 +49,9 @@ Two copies that make startup fast, both only a cache: the **mirror** holds the j
 
 ## Test and production
 
+<!-- lizenz -->
 Whoever runs a test instance next to production restores a backup of production into the empty test instance. The test instance gets its own identifier and its own licence.
+<!-- /lizenz -->
+<!-- startphase -->
+Whoever runs a test instance next to production restores a backup of production into the empty test instance. The test instance gets its own identifier.
+<!-- /startphase -->

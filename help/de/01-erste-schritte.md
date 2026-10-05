@@ -9,7 +9,12 @@ zeigt der Browser den Dialog **Datenbank**: Host, Port, Datenbank, Anmeldename, 
 **Einrichtungscode**, den der Server in seine Konsole schreibt. Ist die Datenbank nur kurz nicht erreichbar, versucht der
 Server es von selbst weiter.
 
+<!-- lizenz -->
 Danach legt man den ersten Administrator an, ebenfalls mit dem Einrichtungscode. Danach braucht jeder Zugriff eine Anmeldung. Der Administrator gehört zum **Init Team**, das jede Anlage mitbringt: es trägt die Grenzen der Lizenz und lässt sich umbenennen, aber nicht löschen.
+<!-- /lizenz -->
+<!-- startphase -->
+Danach legt man den ersten Administrator an, ebenfalls mit dem Einrichtungscode. Danach braucht jeder Zugriff eine Anmeldung. Der Administrator gehört zum **Init Team**, das jede Anlage mitbringt: es lässt sich umbenennen, aber nicht löschen.
+<!-- /startphase -->
 
 Unter ⚙ Einstellungen → ◈ IAM kommen weitere Anwender mit Rolle und Team dazu. Rollen bündeln Rechte; die vorbelegten sind Administrator, PIM-Manager, PIM-Editor, Team-Admin und Leser.
 

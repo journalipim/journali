@@ -27,9 +27,20 @@ journali has no AI provider of its own and no key of its own. A team stores the 
 
 What goes to the provider are the product data of the respective node and the task. Personal data of users does not go along.
 
+<!-- lizenz -->
 ## Licence server
 
 With a subscription, the instance confirms its key daily with the licence server. Transmitted are the identifier of the instance, the team and the key; the answer is the tier with its term. Addresses of users do not go to the licence server.
+<!-- /lizenz -->
+<!-- startphase -->
+## Licence server
+
+This version asks no licence server: neither the identifier of the instance nor details of teams or users go to journali.
+<!-- /startphase -->
+
+## Files on the first run
+
+Two plugins fetch a file from the net on their first run: Embeddings the model (huggingface.co), text recognition the language data (cdn.jsdelivr.net). No product file and no value goes out; the addresses only see the request. A machine without net access gets the files copied.
 
 ## Planned
 
