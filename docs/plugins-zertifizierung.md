@@ -45,8 +45,10 @@ Pfaden unter `ignore`; Pfade relativ mit `/`, ordinal sortiert; je Datei `pfad\0
 
 ## Schlüssel
 
-Der öffentliche Schlüssel steht in `PluginSeal.DefaultKey`; `JOURNALI_PLUGIN_KEY` (Base64, SubjectPublicKeyInfo)
-überschreibt ihn — wer eigene Plugins mit eigenem Schlüssel signiert, setzt ihn dort. Der private Schlüssel liegt
+Der öffentliche Schlüssel steht in `PluginSeal.DefaultKey`; **nur er macht ein Plugin zum Original von journali** (❖ journali
+Core Plugin). `JOURNALI_PLUGIN_KEY` (Base64, SubjectPublicKeyInfo) nimmt einen **weiteren** Schlüssel dazu — für eigene Plugins
+des Betreibers; er ersetzt den eingebauten nicht. Seine Siegel stehen als ◇ „Siegel von …“ da und dürfen nicht „journali“ als
+Herausgeber nennen, sonst gelten sie nicht. Der Katalog holt nur Originale. Der private Schlüssel liegt
 **nie im Repo**: `~/.journali/plugin-signing.pem` oder `JOURNALI_PLUGIN_SIGNING_KEY` (Pfad).
 
 ```
@@ -81,9 +83,10 @@ eingeschaltet wird danach wie jedes Plugin von der Platte. Ohne Netz ist der Kat
 
 `file` ist relativ zur `catalog.json`. Das Zip enthält das Verzeichnis `<key>/` mit allen Dateien und dem Zertifikat.
 
-## Fremde Plugins zertifizieren lassen
+## Plugins Dritter
 
-Wer ein Plugin in den Katalog bringen will, reicht das Verzeichnis ein (Discussions im Katalog-Repo). Geprüft wird,
-was das Manifest verspricht, was das Plugin an den Server schickt und dass es keine Kundendaten enthält; dann wird es
-signiert und mit Zip in den Katalog gestellt. Der Quelltext des Kerns nimmt keine Pull Requests an
-(`.github/workflows/pull-requests.yml`); Ergänzungen sind Plugins.
+Das Siegel von journali gilt **nur Plugins von journali** (Entscheidung 05.10.2026): es zeigt, dass ein Plugin von journali
+stammt und seitdem nicht verändert wurde. Plugins Dritter werden nicht geprüft, nicht gesiegelt und nicht in den Katalog
+von journali aufgenommen; für sie steht ihr Herausgeber ein. Wer eigene Plugins siegeln will, tut das mit einem eigenen
+Schlüssel (`JOURNALI_PLUGIN_KEY`); die Oberfläche nennt dann diesen Herausgeber. Der Quelltext des Kerns nimmt keine
+Pull Requests an (`.github/workflows/pull-requests.yml`, `CONTRIBUTING.md`).

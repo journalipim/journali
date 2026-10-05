@@ -45,7 +45,7 @@ Und weil ein Siegel nur so viel wert ist wie sein Schlüssel: Wer eigene Plugins
 
 ## Ein Katalog, der nur Gesiegeltes annimmt
 
-Neben der Liste zeigt ⬡ Plugins den **Katalog** des Herausgebers. Mit ⇩ holt der Server ein Plugin als Zip, entpackt es in ein Temporärverzeichnis und prüft das Siegel. **Nur mit gültigem Siegel kommt es nach `plugins/`.** Danach installiert und schaltet ihr es ein wie jedes andere. Ohne Verbindung ist der Katalog leer.
+Neben der Liste zeigt ⬡ Plugins den **Katalog** des Herausgebers. Mit ⇩ holt der Server ein Plugin als Zip, entpackt es in ein Temporärverzeichnis und prüft das Siegel. **Nur mit gültigem Siegel kommt es nach `plugins/`.** Danach installiert und schaltet ihr es ein wie jedes andere. Ohne Verbindung ist der Katalog leer. Der Katalog enthält nur Plugins von journali, und nur sie tragen das Siegel von journali.
 
 ## Basis und Ergänzung
 
