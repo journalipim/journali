@@ -706,6 +706,8 @@ kein Server fragt den Lizenzserver — weder Abo noch Tarifblatt noch Registrier
 Oberfläche zeigt nichts zu Lizenz, Limits und journali-Token (`/api/health` sagt `startphase: true`). Die Funktionen
 bleiben im Code; eine spätere Version schaltet die Startphase ab, und Grenzen gelten dann nur für diese neue Version.
 Der Schalter steht in `Program.cs`, nicht in der Umgebung; nur der Debug-Bau schaltet ihn mit `JOURNALI_STARTPHASE=0` ab.
+Ein Server aus dem **Debug-Bau** (`dotnet run`, Entwicklung) zählt dabei nicht mit: er trägt sich in der Tabelle `server` als
+`entwicklung` ein, ist immer zugelassen und nimmt dem Server des Betriebs nicht den einzigen Platz (`Verbund.Entwicklung`).
 
 Eine Lizenz für die ganze Instanz gibt es nicht (seit 25.09.2026): jede gehört einem Team. Ein Team bekommt Tarif und
 Grenzen durch ein **Abo** (Shop-Schlüssel, Lizenzserver) oder einen **Schlüssel zum Kopieren** (Reset oder Limit), den

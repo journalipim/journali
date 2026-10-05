@@ -202,6 +202,18 @@ public class VerbundTests
         Assert.Equal(Kinds.Setup, Kinds.Of(Types.ServerNamed));
     }
 
+    /// <summary>05.10.2026: ein Server aus dem Debug-Bau zählt nicht — der Entwicklungsrechner nimmt dem Server des Betriebs nicht den einzigen Platz.</summary>
+    [Fact]
+    public void Ein_Entwicklungsserver_zaehlt_nicht_in_der_Rangfolge()
+    {
+        var jetzt = DateTimeOffset.UtcNow;
+        var zeilen = new Verbund.Zeile[] {
+            new("entwicklung", "pc", "1", null, jetzt.AddMinutes(-90), jetzt.AddSeconds(-1), 1, false, null, Entwicklung: true),
+            new("betrieb", "unraid", "1", null, jetzt.AddMinutes(-10), jetzt.AddSeconds(-1), 1, false, null),
+        };
+        Assert.Equal(["betrieb"], Verbund.Rangfolge(zeilen, null, new HashSet<string>(), jetzt));   // früher gestartet und trotzdem nicht im Rang
+    }
+
     [Fact]
     public void Rangfolge_der_Hauptserver_zuerst_auch_wenn_er_spaeter_startet_dann_nach_dem_Start_gesperrte_und_ferne_zaehlen_nicht()
     {

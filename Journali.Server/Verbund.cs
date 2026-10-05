@@ -21,7 +21,17 @@ public sealed class Verbund : IDisposable
     /// <summary>Schlüssel der Sperre des Hauptservers („journali“ als Zahl).</summary>
     public const long SperrSchluessel = 0x6A6F75726E616C69;
 
-    public sealed record Zeile(string Id, string Host, string? Version, DateTimeOffset? Built, DateTimeOffset Started, DateTimeOffset Puls, long Head, bool Import, JsonElement? Jobs);
+    public sealed record Zeile(string Id, string Host, string? Version, DateTimeOffset? Built, DateTimeOffset Started, DateTimeOffset Puls, long Head, bool Import, JsonElement? Jobs, bool Entwicklung = false);
+
+    /// <summary>
+    /// Ein Server aus dem Debug-Bau (05.10.2026): er zählt nicht gegen die erlaubte Zahl von Servern und ist selbst immer zugelassen — wer an journali
+    /// entwickelt, arbeitet neben dem Server des Betriebs auf derselben Datenbank. Ausgeliefert wird nur der Release-Bau (Image).
+    /// </summary>
+#if DEBUG
+    public const bool Entwicklung = true;
+#else
+    public const bool Entwicklung = false;
+#endif
 
     /// <summary>So stehen die laufenden Jobs in der Spalte <c>jobs</c>: Felder klein geschrieben, wie die Oberfläche sie liest.</summary>
     public static readonly JsonSerializerOptions Camel = new(JsonSerializerDefaults.Web);
@@ -93,7 +103,7 @@ public sealed class Verbund : IDisposable
     /// startet —, dann nach dem Start, der früheste zuerst. Die ersten <paramref name="erlaubt"/> laufen, die übrigen sind ohne Lizenz.
     /// </summary>
     public static List<string> Rangfolge(IEnumerable<Zeile> zeilen, string? main, IReadOnlySet<string> gesperrt, DateTimeOffset jetzt) =>
-        zeilen.Where(z => Erreichbar(z, jetzt) && !gesperrt.Contains(z.Id))
+        zeilen.Where(z => Erreichbar(z, jetzt) && !gesperrt.Contains(z.Id) && !z.Entwicklung)   // Entwicklungsserver zählen nicht
             .OrderBy(z => z.Id == main ? 0 : 1).ThenBy(z => z.Started).ThenBy(z => z.Id, StringComparer.Ordinal).Select(z => z.Id).ToList();
     /// <summary>Läuft auf einem anderen erreichbaren Server ein Import? Aus dem letzten Puls, ohne Anfrage an die Datenbank.</summary>
     public bool ImportAnderswo => _importAnderswo;
@@ -140,6 +150,7 @@ public sealed class Verbund : IDisposable
             ALTER TABLE server_auftrag ADD COLUMN IF NOT EXISTS an TEXT;
             ALTER TABLE server ADD COLUMN IF NOT EXISTS erlaubt INTEGER;
             ALTER TABLE server ADD COLUMN IF NOT EXISTS haupt BOOLEAN NOT NULL DEFAULT false;
+            ALTER TABLE server ADD COLUMN IF NOT EXISTS entwicklung BOOLEAN NOT NULL DEFAULT false;
             ALTER TABLE server ADD COLUMN IF NOT EXISTS name TEXT;
             """);
         cmd.ExecuteNonQuery();
@@ -156,10 +167,10 @@ public sealed class Verbund : IDisposable
         Tabelle();
         var jobs = JobsHier();
         using (var cmd = _db.CreateCommand("""
-            INSERT INTO server (id, host, version, built, started, puls, head, import, jobs, erlaubt, haupt, name)
-                VALUES (@id, @host, @version, @built, @started, now(), @head, @import, @jobs::jsonb, @erlaubt, @haupt, @name)
+            INSERT INTO server (id, host, version, built, started, puls, head, import, jobs, erlaubt, haupt, name, entwicklung)
+                VALUES (@id, @host, @version, @built, @started, now(), @head, @import, @jobs::jsonb, @erlaubt, @haupt, @name, @entwicklung)
             ON CONFLICT (id) DO UPDATE SET host = excluded.host, version = excluded.version, built = excluded.built, started = excluded.started,
-                puls = excluded.puls, head = excluded.head, import = excluded.import, jobs = excluded.jobs, erlaubt = excluded.erlaubt, haupt = excluded.haupt, name = excluded.name
+                puls = excluded.puls, head = excluded.head, import = excluded.import, jobs = excluded.jobs, erlaubt = excluded.erlaubt, haupt = excluded.haupt, name = excluded.name, entwicklung = excluded.entwicklung
             """))
         {
             cmd.Parameters.AddWithValue("id", Id); cmd.Parameters.AddWithValue("host", Host);
@@ -169,6 +180,7 @@ public sealed class Verbund : IDisposable
             cmd.Parameters.AddWithValue("jobs", jobs is null ? DBNull.Value : JsonSerializer.Serialize(jobs, Camel));
             // für den Einrichtungsdialog eines anderen Servers, der das Journal noch nicht lesen kann: wie viele erlaubt sind, wer Hauptserver ist, wie er heisst
             cmd.Parameters.AddWithValue("erlaubt", _catalog.ErlaubteServer); cmd.Parameters.AddWithValue("haupt", _haupt); cmd.Parameters.AddWithValue("name", NameVon(Id, Host));
+            cmd.Parameters.AddWithValue("entwicklung", Entwicklung);
             cmd.ExecuteNonQuery();
         }
         var zeilen = Lies();
@@ -179,7 +191,7 @@ public sealed class Verbund : IDisposable
         var rang = Rangfolge(zeilen, Festgelegt(), Gesperrte(), jetzt);
         _lizenziert = rang.Take(Erlaubt).ToHashSet();
         OhneLizenzAnzahl = rang.Count - _lizenziert.Count;
-        var ohne = !_lizenziert.Contains(Id) && !Gesperrt;
+        var ohne = !Entwicklung && !_lizenziert.Contains(Id) && !Gesperrt;   // ein Entwicklungsserver ist immer zugelassen
         if (ohne != _ohneLizenz) Console.WriteLine(ohne ? $"journali: no licence for another server (allowed: {Erlaubt}) — this server answers /api/health only" : "journali: this server is licensed again");
         _ohneLizenz = ohne;
         _haupt = RolleKlaeren();
@@ -193,13 +205,13 @@ public sealed class Verbund : IDisposable
     {
         if (_db is null) return _zeilen;
         Tabelle();
-        using var cmd = _db.CreateCommand("SELECT id, host, version, built, started, puls, head, import, jobs::text FROM server ORDER BY host, id");
+        using var cmd = _db.CreateCommand("SELECT id, host, version, built, started, puls, head, import, jobs::text, entwicklung FROM server ORDER BY host, id");
         using var r = cmd.ExecuteReader();
         var liste = new List<Zeile>();
         while (r.Read())
             liste.Add(new Zeile(r.GetString(0), r.GetString(1), r.IsDBNull(2) ? null : r.GetString(2), r.IsDBNull(3) ? null : r.GetFieldValue<DateTimeOffset>(3),
                 r.GetFieldValue<DateTimeOffset>(4), r.GetFieldValue<DateTimeOffset>(5), r.GetInt64(6), r.GetBoolean(7),
-                r.IsDBNull(8) ? null : JsonDocument.Parse(r.GetString(8)).RootElement.Clone()));
+                r.IsDBNull(8) ? null : JsonDocument.Parse(r.GetString(8)).RootElement.Clone(), r.GetBoolean(9)));
         return liste;
     }
 
@@ -210,11 +222,12 @@ public sealed class Verbund : IDisposable
     /// </summary>
     public static string? Belegt(NpgsqlDataSource db, string eigeneId)
     {
+        if (Entwicklung) return null;   // ein Entwicklungsserver ist immer zugelassen
         var laufend = new List<(string Id, string Name, int Erlaubt, bool Haupt, DateTimeOffset Started)>();
         try
         {
             using var cmd = db.CreateCommand(
-                "SELECT id, COALESCE(name, host), COALESCE(erlaubt, 1), haupt, started FROM server WHERE puls > now() - make_interval(secs => @s) ORDER BY haupt DESC, started");
+                "SELECT id, COALESCE(name, host), COALESCE(erlaubt, 1), haupt, started FROM server WHERE puls > now() - make_interval(secs => @s) AND NOT entwicklung ORDER BY haupt DESC, started");
             cmd.Parameters.AddWithValue("s", Gilt.TotalSeconds);
             using var r = cmd.ExecuteReader();
             while (r.Read()) laufend.Add((r.GetString(0), r.GetString(1), r.GetInt32(2), r.GetBoolean(3), r.GetFieldValue<DateTimeOffset>(4)));
