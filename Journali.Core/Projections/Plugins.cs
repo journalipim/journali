@@ -10,6 +10,10 @@ public sealed class PluginState
     public string Version { get; set; } = "";
     public string Manifest { get; set; } = "{}";     // plugin.json, wie es bei der Installation war
     public bool Enabled { get; set; }
+    /// <summary>Die bestätigte Version des Hinweises (Manifest: acknowledge), wann und von wem — null, solange niemand bestätigt hat.</summary>
+    public string? Acknowledged { get; set; }
+    public DateTimeOffset? AcknowledgedAt { get; set; }
+    public string? AcknowledgedBy { get; set; }
     public long LastNumber { get; set; }
     public DateTimeOffset LastAt { get; set; }
     public string LastActor { get; set; } = "";
@@ -46,6 +50,13 @@ public sealed class Plugins : IProjection
                 break;
             case Types.PluginEnabled:
                 if (_all.TryGetValue(key, out var e)) { e.Enabled = true; Touch(e, entry); }
+                break;
+            case Types.PluginAcknowledged:
+                if (_all.TryGetValue(key, out var ak))
+                {
+                    ak.Acknowledged = Types.Deserialize<PluginAcknowledged>(entry.Payload).Version; ak.AcknowledgedAt = entry.At; ak.AcknowledgedBy = entry.Actor;
+                    Touch(ak, entry);
+                }
                 break;
             case Types.PluginDisabled:
                 if (_all.TryGetValue(key, out var d)) { d.Enabled = false; Touch(d, entry); }

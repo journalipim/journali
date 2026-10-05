@@ -150,7 +150,9 @@ export const plugins = reactive({
   /// Wirkt das Plugin? Eingeschaltet, im Tarif, auf der Platte (onDisk) — und alles, was es braucht, wirkt auch.
   /// Ohne Verzeichnis liefert der Server das Manifest aus dem Journal weiter (umbenanntes oder entferntes Plugin);
   /// geladen wird es nicht, sonst scheitert der Import an einer Datei, die es nicht gibt (26.09.2026: xlsx, onlyoffice).
-  active(key, seen = new Set()) { const p = this.list.find(x => x.key === key); if (!p?.enabled || p.allowed === false || p.onDisk === false || seen.has(key)) return false; seen.add(key); return (p.manifest?.requires ?? []).every(r => this.active(r, seen)) },
+  /// Hat das Plugin einen Hinweis (Manifest: acknowledge), dessen geltende Version noch niemand bestätigt hat? Dann wirkt es nicht (05.10.2026)
+  hinweisOffen(p) { const v = p?.manifest?.acknowledge?.version; return !!v && p.acknowledged !== v },
+  active(key, seen = new Set()) { const p = this.list.find(x => x.key === key); if (!p?.enabled || p.allowed === false || p.onDisk === false || this.hinweisOffen(p) || seen.has(key)) return false; seen.add(key); return (p.manifest?.requires ?? []).every(r => this.active(r, seen)) },
   requires(key) { return this.list.find(x => x.key === key)?.manifest?.requires ?? [] },
   dependents(key) { return this.list.filter(p => (p.manifest?.requires ?? []).includes(key)).map(p => p.key) },
   /// Welche Plugins schon eingerichtet sind (je Journal gemerkt — der Schlüssel nennt den Server, damit zwei Journale sich nicht stören)

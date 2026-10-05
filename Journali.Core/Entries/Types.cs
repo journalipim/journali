@@ -117,6 +117,8 @@ public static class Types
     // Plugins (docs/pflegestruktur.md, 19): Strom plugin:<key>
     public const string PluginInstalled = "PluginInstalled";
     public const string PluginEnabled = "PluginEnabled";
+    /// <summary>Der Hinweis eines Plugins wurde bestätigt (05.10.2026): Version und Wortlaut, wer und wann steht am Eintrag.</summary>
+    public const string PluginAcknowledged = "PluginAcknowledged";
     public const string PluginDisabled = "PluginDisabled";
     public const string PluginRemoved = "PluginRemoved";
     public const string PluginDataSet = "PluginDataSet";      // benannter Datensatz eines Plugins (Vorlage, Zuordnung, Regel) — JSON-Text
@@ -701,6 +703,7 @@ public sealed record RelationTypeRetired(string Key);
 /// <summary>Plugin installiert (oder aktualisiert): Version und das Manifest (plugin.json), wie es dabei war.</summary>
 public sealed record PluginInstalled(string Version, string Manifest);
 public sealed record PluginEnabled();
+public sealed record PluginAcknowledged(string Version, string Text);
 public sealed record PluginDisabled();
 public sealed record PluginRemoved();
 /// <summary>Benannter Datensatz eines Plugins (Datenblatt-Vorlage, Import-Zuordnung, Prüfregel …); Value ist JSON-Text, leer = weg. Der letzte gewinnt.</summary>

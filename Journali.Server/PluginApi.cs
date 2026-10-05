@@ -66,6 +66,18 @@ public static class PluginApi
     public static string[] Requires(JsonElement raw) => raw.TryGetProperty("requires", out var r) && r.ValueKind == JsonValueKind.Array
         ? r.EnumerateArray().Select(x => x.GetString() ?? "").Where(x => x.Length > 0).ToArray() : Array.Empty<string>();
 
+    /// <summary>Der Hinweis eines Plugins (Manifest: acknowledge): Version und Wortlaut auf Deutsch — Titel und Punkte, je Zeile einer. Null ohne Hinweis.</summary>
+    public static (string Version, string Text)? Hinweis(JsonElement manifest)
+    {
+        if (!manifest.TryGetProperty("acknowledge", out var a) || a.ValueKind != JsonValueKind.Object) return null;
+        var version = a.TryGetProperty("version", out var v) ? v.GetString() ?? "" : "";
+        static string De(JsonElement x) => x.ValueKind == JsonValueKind.String ? x.GetString() ?? "" : x.TryGetProperty("de", out var d) ? d.GetString() ?? "" : "";
+        var zeilen = new List<string>();
+        if (a.TryGetProperty("title", out var t)) zeilen.Add(De(t));
+        if (a.TryGetProperty("points", out var ps) && ps.ValueKind == JsonValueKind.Array) zeilen.AddRange(ps.EnumerateArray().Select(De));
+        return (version, string.Join("\n", zeilen.Where(z => z.Length > 0)));
+    }
+
     /// <summary>Beim Start: Manifeste mit <c>autoInstall</c>, die das Journal noch nicht kennt, installieren und einschalten (Saatgut) —
     /// Basis zuerst: ein Plugin kommt dran, wenn alles, was es braucht, schon da ist (sonst in einer späteren Runde).</summary>
     public static int AutoInstall(Catalog c, string dir)
@@ -83,7 +95,9 @@ public static class PluginApi
             {
                 if (c.Plugins.All.ContainsKey(m.Key)) return 0;
                 write("system", Plugins.Stream + m.Key, Types.PluginInstalled, new PluginInstalled(m.Version, m.Raw.GetRawText()), null);
-                write("system", Plugins.Stream + m.Key, Types.PluginEnabled, new PluginEnabled(), null);
+                // mit Hinweis oder Download nur installieren: eingeschaltet wird es von einem Menschen, der bestätigt (05.10.2026)
+                if (Hinweis(m.Raw) is null && !m.Raw.TryGetProperty("download", out _))
+                    write("system", Plugins.Stream + m.Key, Types.PluginEnabled, new PluginEnabled(), null);
                 n++;
                 return 0;
             });
@@ -123,7 +137,8 @@ public static class PluginApi
                         allowed = tarif.Erlaubt(k), tarif = c.Tarife.Ab(k)?.Key,
                         // das Siegel: zertifiziert, oder warum nicht (leer ohne Zertifikat)
                         certified = m?.Seal.Certified ?? false, sealIssued = m?.Seal.Issued, sealIssuer = m?.Seal.Issuer, sealReason = m?.Seal.Grund,
-                        sealOriginal = m?.Seal.Original ?? false,   // geprüft mit dem Schlüssel von journali: ein Original
+                        sealOriginal = m?.Seal.Original ?? false,
+                        acknowledged = s?.Acknowledged, acknowledgedAt = s?.AcknowledgedAt, acknowledgedBy = s?.AcknowledgedBy,   // der bestätigte Hinweis   // geprüft mit dem Schlüssel von journali: ein Original
                     };
                 }).ToList();
             });
@@ -143,6 +158,19 @@ public static class PluginApi
             });
         });
         api.MapPost("/plugins/{key}/enable", (string key, HttpRequest req, Catalog c) => Toggle(req, c, key, true));
+        // Den Hinweis eines schon eingeschalteten Plugins bestätigen (ein Plugin von vor dem Hinweis, oder ein neuer Wortlaut): ohne Bestätigung wirkt es nicht
+        api.MapPost("/plugins/{key}/acknowledge", (string key, HttpRequest req, Catalog c) =>
+        {
+            if (Actor(req) is not { } actor) return ActorMissing();
+            return c.With((_, _, write) =>
+            {
+                if (!c.Plugins.All.TryGetValue(key, out var s)) return Results.NotFound();
+                if (Hinweis(JsonDocument.Parse(s.Manifest).RootElement) is not { } h) return Bad("{0} hat keinen Hinweis.", key);
+                if (req.Query["hinweis"] != h.Version) return Bad("{0}: der Hinweis ist nicht bestätigt.", key);
+                if (s.Acknowledged == h.Version) return Results.Ok(new { unchanged = true });
+                return Results.Ok(EntryView.Of(write(actor, Plugins.Stream + key, Types.PluginAcknowledged, new PluginAcknowledged(h.Version, h.Text), null)));
+            });
+        });
         api.MapPost("/plugins/{key}/disable", (string key, HttpRequest req, Catalog c) => Toggle(req, c, key, false));
         api.MapDelete("/plugins/{key}", (string key, HttpRequest req, Catalog c) =>
         {
@@ -269,12 +297,20 @@ public static class PluginApi
         if (on && req.Query["download"] != "ja" && c.Lesen((_, _) => c.Plugins.All.GetValueOrDefault(key)?.Manifest) is { } mf
             && JsonDocument.Parse(mf).RootElement.TryGetProperty("download", out _))
             return Bad("{0} lädt beim ersten Lauf eine Datei aus dem Netz; die Zustimmung dazu fehlt.", key);
-        return c.With((_, _, write) => c.Plugins.All.TryGetValue(key, out var s)
-            ? on && Requires(JsonDocument.Parse(s.Manifest).RootElement).Where(r => !(c.Plugins.All.TryGetValue(r, out var b) && b.Enabled)).ToList() is { Count: > 0 } missing
-                ? Bad("{0} braucht {1} — zuerst einschalten.", key, string.Join(", ", missing))   // Ergänzung ohne Basis
-            : s.Enabled == on ? Results.Ok(new { unchanged = true })
-                : Results.Ok(EntryView.Of(write(actor, Plugins.Stream + key, on ? Types.PluginEnabled : Types.PluginDisabled, on ? new PluginEnabled() : new PluginDisabled(), null)))
-            : Results.NotFound());
+        // Ein Plugin mit Hinweis (Manifest: acknowledge, etwa Rechtsinhalt) schaltet nur ein, wer die geltende Version bestätigt (05.10.2026):
+        // die Oberfläche zeigt den Hinweis und schickt ?hinweis=<Version>; die Bestätigung steht danach im Journal
+        var hinweis = on ? c.Lesen((_, _) => c.Plugins.All.GetValueOrDefault(key)?.Manifest) is { } mft ? Hinweis(JsonDocument.Parse(mft).RootElement) : null : null;
+        if (hinweis is { } h && req.Query["hinweis"] != h.Version) return Bad("{0}: der Hinweis ist nicht bestätigt.", key);
+        return c.With((_, _, write) =>
+        {
+            if (!c.Plugins.All.TryGetValue(key, out var s)) return Results.NotFound();
+            if (on && Requires(JsonDocument.Parse(s.Manifest).RootElement).Where(r => !(c.Plugins.All.TryGetValue(r, out var b) && b.Enabled)).ToList() is { Count: > 0 } missing)
+                return Bad("{0} braucht {1} — zuerst einschalten.", key, string.Join(", ", missing));   // Ergänzung ohne Basis
+            if (hinweis is { } bestaetigt && s.Acknowledged != bestaetigt.Version)
+                write(actor, Plugins.Stream + key, Types.PluginAcknowledged, new PluginAcknowledged(bestaetigt.Version, bestaetigt.Text), null);
+            if (s.Enabled == on) return Results.Ok(new { unchanged = true });
+            return Results.Ok(EntryView.Of(write(actor, Plugins.Stream + key, on ? Types.PluginEnabled : Types.PluginDisabled, on ? new PluginEnabled() : new PluginDisabled(), null)));
+        });
     }
 
     /// <summary>Prozess eines Plugins aufbauen: Befehl und Argumente aus dem Manifest (process.command/args), {param} aus den Werten,

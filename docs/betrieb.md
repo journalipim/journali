@@ -409,6 +409,20 @@ Sie werden beim ersten Start aus dem Image gefüllt. Wer die Pakete eines Plugin
 erneuert, entfernt das zugehörige Volume (`docker volume rm journali-docs-modules`)
 und startet neu — dann kommen sie wieder aus dem Image.
 
+### Hinweis vor dem Einschalten
+
+Ein Plugin, dessen Ergebnis jemand für mehr halten könnte, als es ist, nennt im Manifest einen Hinweis (`acknowledge`: `version`,
+`title`, `points`, je Sprache; 05.10.2026). ⬡ Plugins zeigt ihn vor dem Einschalten; eingeschaltet wird nur mit „zur Kenntnis
+genommen“, und der Server schaltet nur mit `?hinweis=<version>` ein. Die Bestätigung steht im Journal (`PluginAcknowledged`:
+Version und Wortlaut, wer und wann am Eintrag). Ein eingeschaltetes Plugin, dessen geltende Version niemand bestätigt hat, wirkt
+nicht; ⬡ Plugins bietet „◐ Hinweis bestätigen“ an (`POST /api/plugins/{key}/acknowledge?hinweis=`). Eine neue Version des Hinweises
+verlangt eine neue Bestätigung. Die Saat (`autoInstall`) installiert solche Plugins, schaltet sie aber nicht ein.
+
+| Plugin | Hinweis |
+|---|---|
+| `dpp`, `ppwr`, `empco` | Hilfsmittel, keine Rechtsberatung: keine Gewähr für Vollständigkeit, Richtigkeit und Aktualität; ob und wie Pflichten erfüllt sind, prüft und entscheidet der Betreiber |
+| MCP (geplant) | Zugriff für fremde KI-Agenten: sie arbeiten mit dem Token einer Person, lesend und, wenn die Rolle es erlaubt, schreibend; was ein Agent liest, geht an seinen Anbieter, was er schreibt, steht unter der Person im Journal; ob und welchem Agenten Zugriff gegeben wird, entscheidet und verantwortet der Betreiber |
+
 ### Was beim ersten Lauf nachgeladen wird
 
 Zwei Plugins holen beim ersten Lauf eine Datei aus dem Netz; danach liegt sie im Cache des Plugins, und das Plugin

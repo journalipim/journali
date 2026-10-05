@@ -16,5 +16,26 @@
     "da"
   ],
   "autoInstall": true,
-  "health": "/api/plugins/dpp/system/health"
+  "health": "/api/plugins/dpp/system/health",
+  "acknowledge": {
+    "version": "2026-10-05",
+    "title": {
+      "de": "Hilfsmittel, keine Rechtsberatung",
+      "en": "An aid, not legal advice"
+    },
+    "points": [
+      {
+        "de": "Keine Rechtsberatung: Datenpunkte, Fristen, Geltungen und Vorschläge sind Hinweise und Empfehlungen.",
+        "en": "No legal advice: data points, deadlines, scopes and suggestions are notes and recommendations."
+      },
+      {
+        "de": "Keine Gewähr für Vollständigkeit, Richtigkeit und Aktualität; massgeblich ist der Rechtstext.",
+        "en": "No guarantee of completeness, correctness or currency; the legal text is authoritative."
+      },
+      {
+        "de": "Das Plugin ist ein Hilfsmittel; ob und wie Pflichten erfüllt sind, prüft und entscheidet der Betreiber.",
+        "en": "The plugin is an aid; whether and how obligations are met is checked and decided by the operator."
+      }
+    ]
+  }
 }

@@ -120,11 +120,26 @@ async function zustimmung(p) {
   })
   return ok ? '?download=ja' : null
 }
+// Ein Plugin mit Hinweis (Manifest: acknowledge, etwa Rechtsinhalt): vor dem Einschalten bestätigen; die Bestätigung steht im Journal (05.10.2026)
+async function kenntnisnahme(p) {
+  const a = p.manifest?.acknowledge; if (!a) return ''
+  const ok = await dialog.confirm({
+    title: t('Hinweis zu {0}', [L(p.manifest?.label) || p.key]), warn: L(a.title) || '', list: (a.points ?? []).map(x => L(x)),
+    ok: t('zur Kenntnis genommen'), cancel: t('nicht einschalten'),
+  })
+  return ok ? `hinweis=${encodeURIComponent(a.version)}` : null
+}
+async function bestaetigen(p) {
+  const h = await kenntnisnahme(p); if (!h) return
+  await act(`/api/plugins/${p.key}/acknowledge?${h}`)
+}
 async function toggle(p) {
   if (!p.enabled) {
     const m = missing(p.key); if (m.length) { store.toast(t('braucht {0} — zuerst einschalten', [m.join(', ')])); return }
     const z = await zustimmung(p); if (z === null) return
-    await act(`/api/plugins/${p.key}/enable${z}`); return
+    const h = await kenntnisnahme(p); if (h === null) return
+    const q = [z.replace(/^\?/, ''), h].filter(Boolean).join('&')
+    await act(`/api/plugins/${p.key}/enable${q ? '?' + q : ''}`); return
   }
   const dep = plugins.dependents(p.key).filter(k => plugins.list.find(x => x.key === k)?.enabled)
   if (dep.length && !await dialog.confirm({ title: `${label(p.manifest) || p.key} deaktivieren?`, warn: t('Damit aus: {0}', [dep.join(', ')]), ok: t('Deaktivieren') })) return
@@ -209,6 +224,7 @@ function pick(k) { cur.value = k }
         <button v-if="current.enabled && railToggle(current.key)" :class="{ primary: !store.railOff.includes(current.key) }" @click="toggleRail(current.key)" :title="store.railOff.includes(current.key) ? $t('In die Leiste links aufnehmen (unter sein Thema)') : $t('Aus der Leiste links nehmen (nur für dich, in den Einstellungen)')">{{ store.railOff.includes(current.key) ? $t('▯ nicht in der Leiste') : $t('▮ in der Leiste') }}</button>
         <!-- Zustandsschalter wie „in der Leiste“: leuchtet, wenn es wirkt; Klick kippt. Ein Plugin, das der Tarif nicht
              enthält, wirkt nicht — auch wenn es im Journal aktiviert ist; dann steht der Tarif da, der es enthält -->
+        <button v-if="current.enabled && plugins.hinweisOffen(current)" class="primary hinweis" :title="$t('Ohne bestätigten Hinweis wirkt das Plugin nicht')" @click="bestaetigen(current)">{{ $t("◐ Hinweis bestätigen") }}</button>
         <button :class="{ primary: plugins.active(current.key) }" :disabled="current.allowed === false && !current.enabled" @click="toggle(current)" :title="current.allowed === false ? (current.enabled ? $t('Aktiviert, aber ohne Wirkung — {0} gehört zum Tarif {1}', [current.key, tarifOf(current)]) : $t('Tarif {0}', [tarifOf(current)])) : current.enabled ? (plugins.active(current.key) ? $t('Deaktivieren (jetzt aktiviert)') : $t('aktiviert, aber ohne Wirkung:') + ' ' + missing(current.key).join(', ') + ' ' + $t('ist aus')) : missing(current.key).length ? 'braucht ' + missing(current.key).join(', ') : $t('Aktivieren (jetzt deaktiviert)')">{{ current.allowed === false ? `◇ ${tarifOf(current)}` : current.enabled ? (plugins.ausstehend.includes(current.key) ? $t('◐ wartet auf Bestätigung') : plugins.active(current.key) ? '● aktiviert' : '◐ aktiviert') : '○ deaktiviert' }}</button>
         <button v-if="!fest(current)" class="x" @click="act(`/api/plugins/${current.key}`, 'DELETE')" :title="$t('aus dem Journal entfernen — die Dateien bleiben')">🗑</button>
       </template>

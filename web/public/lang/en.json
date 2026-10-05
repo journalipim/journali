@@ -3039,5 +3039,11 @@
  "Die Adresse sieht nur den Abruf; Daten aus journali gehen nicht hinaus.": "The address only sees the request; no data from journali goes out.",
  "⇩ herunterladen und einschalten": "⇩ download and enable",
  "nicht einschalten": "do not enable",
- "{0} lädt beim ersten Lauf eine Datei aus dem Netz; die Zustimmung dazu fehlt.": "{0} downloads a file from the net on its first run; consent to that is missing."
+ "{0} lädt beim ersten Lauf eine Datei aus dem Netz; die Zustimmung dazu fehlt.": "{0} downloads a file from the net on its first run; consent to that is missing.",
+ "Hinweis zu {0}": "Note on {0}",
+ "zur Kenntnis genommen": "acknowledged",
+ "◐ Hinweis bestätigen": "◐ acknowledge note",
+ "Ohne bestätigten Hinweis wirkt das Plugin nicht": "Without an acknowledged note the plugin has no effect",
+ "{0}: der Hinweis ist nicht bestätigt.": "{0}: the note is not acknowledged.",
+ "{0} hat keinen Hinweis.": "{0} has no note."
 }

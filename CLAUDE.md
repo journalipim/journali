@@ -187,6 +187,9 @@ Liegt `origin` mehr als ein Stück Arbeit hinter dem Rechner, ist das ein Fehler
   Beitragspunkte: views (mit `needs` — die Kachel erscheint nur, solange das genannte Plugin wirkt — und `props`),
   nodeActions, importers, checks, nodeBands (Band in der Knotenansicht),
   install(ctx) (einmal beim Einschalten: legt an, was das Plugin braucht);
+  **Zustimmung im Manifest** (05.10.2026): `download` (eine Datei aus dem Netz beim ersten Lauf) und `acknowledge` (ein Hinweis,
+  etwa „keine Rechtsberatung“) fragt ⬡ Plugins vor dem Einschalten ab; der Server schaltet nur mit `?download=ja` bzw.
+  `?hinweis=<version>` ein, die Bestätigung steht als `PluginAcknowledged` im Journal, und ohne sie wirkt das Plugin nicht.
   **`health` im Manifest** (27.09.2026): die Adresse eines Endpunkts, der `{ ready, reason }` sagt — für Plugins mit
   Voraussetzungen, die niemand in journali setzt (eine Erweiterung der Datenbank, ein Modell, ein erreichbarer Dienst).
   ⑁ Plugins fragt ihn für jedes wirkende Plugin und zeigt den Zustand in der Spalte: `◑ an, nicht bereit`, der Grund im

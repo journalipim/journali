@@ -72,6 +72,7 @@ Verwaltung der Plugins (docs/pflegestruktur.md, 19): die Dateien liegen unter
 |---|---|---|
 | `PluginInstalled` | `version`, `manifest` (plugin.json als Text) | installiert oder aktualisiert |
 | `PluginEnabled` / `PluginDisabled` | — | an / aus |
+| `PluginAcknowledged` | `Version`, `Text` | der Hinweis des Plugins (Manifest: `acknowledge`) ist bestätigt — wer und wann steht am Eintrag (05.10.2026) |
 | `PluginRemoved` | — | aus dem Abbild; die Dateien bleiben |
 
 Befehle: `GET /api/plugins` (Platte + Journal), `POST /api/plugins/{key}/install | enable | disable`,
