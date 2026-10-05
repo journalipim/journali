@@ -42,6 +42,8 @@ Der Quelltext ist öffentlich einsehbar (Source Available) und zum Lesen, Herunt
 2.0 mit Hosting-Erlaubnis ([LICENSE](LICENSE)), keine Open-Source-Lizenz. Pull Requests werden
 nicht angenommen und automatisch geschlossen ([CONTRIBUTING.md](CONTRIBUTING.md)). Ergänzungen sind Plugins
 ([docs/plugins-zertifizierung.md](docs/plugins-zertifizierung.md)); Siegel und Katalog von journali gelten nur eigenen Plugins.
+Eine Schwachstelle meldet man vertraulich ([SECURITY.md](SECURITY.md)); schwere bekannte Fehler stehen in
+[BEKANNTE-FEHLER.md](BEKANNTE-FEHLER.md).
 
 ## Aufbau
 
