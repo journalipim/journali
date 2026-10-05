@@ -3045,5 +3045,11 @@
  "◐ Hinweis bestätigen": "◐ acknowledge note",
  "Ohne bestätigten Hinweis wirkt das Plugin nicht": "Without an acknowledged note the plugin has no effect",
  "{0}: der Hinweis ist nicht bestätigt.": "{0}: the note is not acknowledged.",
- "{0} hat keinen Hinweis.": "{0} has no note."
+ "{0} hat keinen Hinweis.": "{0} has no note.",
+ "Einträge je Monat und Art, über das ganze Journal": "Entries per month and kind, across the whole journal",
+ "▦ je Monat": "▦ per month",
+ "Alle Einträge im Journal, je Monat nach Art der Arbeit; nichts davon geht von selbst an journali.": "All entries in the journal, per month by kind of work; none of it goes to journali by itself.",
+ "▦ Nutzung · {0} Monate": "▦ Usage · {0} months",
+ "Als CSV-Datei speichern": "Save as CSV file",
+ "⇩ CSV": "⇩ CSV"
 }

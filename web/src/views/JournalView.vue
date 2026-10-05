@@ -62,6 +62,23 @@ const ZEIGE = 1000
 const zeige = ref(ZEIGE)
 watch([filter, kinds], () => { zeige.value = ZEIGE })
 const sichtbar = computed(() => shown.value.slice(0, zeige.value))
+
+// Je Monat (05.10.2026): wie viele Einträge welcher Art ins Journal gingen — aus dem Abbild des Servers, also über das ganze Journal, nicht nur
+// über die geladenen Einträge; als CSV zum Weitergeben. null = die Einträge stehen da.
+const monate = ref(null)
+async function jeMonat() {
+  if (monate.value) { monate.value = null; return }
+  try { monate.value = await api.get('/api/usage/months') } catch (e) { store.toast(e.message) }
+}
+function csv() {
+  const arten = KINDS.map(([k]) => k)
+  const zeilen = [['month', ...arten, 'total'], ...monate.value.map(m => [m.month, ...arten.map(k => m.kinds?.[k] ?? 0), m.total])]
+  const a = document.createElement('a')
+  a.href = URL.createObjectURL(new Blob([zeilen.map(z => z.join(';')).join('\n') + '\n'], { type: 'text/csv' }))
+  a.download = `journali-nutzung-${new Date().toISOString().slice(0, 10)}.csv`
+  a.click()
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000)
+}
 </script>
 
 <template>
@@ -71,10 +88,21 @@ const sichtbar = computed(() => shown.value.slice(0, zeige.value))
       <span class="muted" :title="oldest ? $t('geladen ab #{0}', [oldest]) : ''">{{ shown.length }}{{ shown.length !== entries.length ? ' / ' + entries.length : '' }}{{ oldest && oldest > 1 ? ` · ab #${oldest}` : '' }}</span>
       <input v-model="filter" type="search" :placeholder="$t('Filter: Strom, Typ, Name, Inhalt')" style="width:300px" />
       <span v-for="[k, label] in KINDS" :key="k" class="view-chip" :class="{ on: kinds.has(k) }" @click="toggleKind(k)" :title="$t('{0} Einträge dieser Art anzeigen', [kindCount(k)])">{{ label }}</span>
+      <span class="view-chip je-monat" :class="{ on: monate }" @click="jeMonat" :title="$t('Einträge je Monat und Art, über das ganze Journal')">{{ $t("▦ je Monat") }}</span>
       <span class="grow" />
       <span class="muted mono">#{{ store.head }}</span>
     </div>
-    <div class="scroll"><EntryList :entries="sichtbar" show-stream />
+    <div v-if="monate" class="scroll">
+      <div class="section">
+        <h2 :title="$t('Alle Einträge im Journal, je Monat nach Art der Arbeit; nichts davon geht von selbst an journali.')">{{ $t("▦ Nutzung · {0} Monate", [monate.length]) }}</h2>
+        <div class="chips"><button class="csv" :disabled="!monate.length" @click="csv" :title="$t('Als CSV-Datei speichern')">{{ $t("⇩ CSV") }}</button></div>
+        <table class="grid nutzung">
+          <thead><tr><th>{{ $t("Monat") }}</th><th v-for="[k, label] in KINDS" :key="k" class="num">{{ label }}</th><th class="num">Σ</th></tr></thead>
+          <tbody><tr v-for="m in monate" :key="m.month"><td class="mono">{{ m.month }}</td><td v-for="[k] in KINDS" :key="k" class="num">{{ m.kinds?.[k] ?? 0 }}</td><td class="num">{{ m.total }}</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div v-else class="scroll"><EntryList :entries="sichtbar" show-stream />
       <div v-if="shown.length > sichtbar.length" class="chips" style="padding:8px"><button class="x weitere" @click="zeige += ZEIGE" :title="$t('Die nächsten Zeilen zeigen')">▼ {{ $t('weitere {0}', [Math.min(ZEIGE, shown.length - sichtbar.length)]) }}</button></div>
       <div v-if="oldest && oldest > 1" class="chips" style="padding:8px"><button class="x" :disabled="loadingOlder || entries.length >= MAX" @click="older" :title="$t('die nächsten älteren Einträge laden')">{{ $t("⇣ ältere{0}", [loadingOlder ? ' …' : ` (vor #${oldest})`]) }}</button></div>
     </div>

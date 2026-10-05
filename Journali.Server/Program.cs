@@ -495,6 +495,10 @@ api.MapGet("/usage", (Catalog c, string? history = null, int limit = 90) => c.Re
             .Select(h => new { start = h.Start.ToString("yyyy-MM-dd"), count = h.Count, all = h.All }).ToList(),
     };
 }));
+// Nutzungsstatistik (05.10.2026): je Monat, wie viele Einträge welcher Art ins Journal gingen — zum Ansehen und als CSV in ≡ Journal;
+// nichts davon verlässt den Server von selbst
+api.MapGet("/usage/months", (Catalog c, int limit = 120) => c.ReadUsage(u => u.Months(Math.Clamp(limit, 1, 600)))
+    .Select(m => new { month = m.Month.ToString("yyyy-MM"), kinds = m.Kinds, total = m.Kinds.Values.Sum() }).ToList());
 
 ModelApi.Map(api);
 DocsApi.Map(api);

@@ -30,6 +30,22 @@ public class UsageTests
     }
 
     [Fact]
+    public void Je_Monat_und_Art_auch_was_nicht_zaehlt()
+    {
+        var u = new Usage();
+        u.Apply(new Entry(1, Local(2026, 9, 30), "t", "x", Types.AttributeSet, "{}"));                        // ohne Art: der Typ sagt Datenpflege
+        u.Apply(new Entry(2, Local(2026, 10, 1), "t", "x", Types.AttributeDefined, "{}", null, Kinds.Model));
+        u.Apply(new Entry(3, Local(2026, 10, 2), "t", "x", Types.AttributeSet, "{}", null, Kinds.Data));
+        u.Apply(new Entry(4, Local(2026, 10, 5), "t", "x", Types.AttributeSet, "{}", null, Kinds.Data));
+
+        var m = u.Months();
+        Assert.Equal([new DateOnly(2026, 10, 1), new DateOnly(2026, 9, 1)], m.Select(x => x.Month));   // neueste zuerst
+        Assert.Equal(2, m[0].Kinds[Kinds.Data]);
+        Assert.Equal(1, m[0].Kinds[Kinds.Model]);
+        Assert.Equal(1, m[1].Kinds[Kinds.Data]);
+    }
+
+    [Fact]
     public void Woche_beginnt_am_Montag_auch_am_Sonntag()
     {
         // Sonntag, 27.09.2026 — die Woche reicht zurück bis Montag, 21.09.

@@ -29,12 +29,18 @@ public sealed class Usage : IProjection
     /// wird damit abgezogen (<see cref="Sum(IReadOnlySet{string}, DateOnly, DateOnly, long?)"/>).
     /// </summary>
     public Dictionary<long, UsageCut> Cuts { get; } = new();
+    /// <summary>Alle Einträge je Monat (erster Tag, Ortszeit) und Art — die Nutzungsstatistik (05.10.2026): was in einem Monat an welcher Arbeit
+    /// ins Journal ging, gleich ob es zählt. Einträge ohne Art ordnet ihr Typ ein.</summary>
+    public Dictionary<DateOnly, Dictionary<string, int>> PerMonthKind { get; } = new();
 
     public void Apply(Entry entry)
     {
         LastApplied = entry.Number;
         var day = DateOnly.FromDateTime(entry.At.ToLocalTime().DateTime);
         AllPerDay[day] = AllPerDay.GetValueOrDefault(day) + 1;
+        if (!PerMonthKind.TryGetValue(MonthStart(day), out var arten)) PerMonthKind[MonthStart(day)] = arten = new();
+        var art = entry.Kind ?? Kinds.Of(entry.Type);
+        arten[art] = arten.GetValueOrDefault(art) + 1;
         // Ein Schnitt je Eintrag, der den Zählbeginn eines Teams setzen kann: ein Reset-Schlüssel, und alles, was seine Grenzen ändert
         // (Grundkontingent, Stand vom Lizenzserver, Limit-Schlüssel) — ab ihm wird gezählt, nicht ab dem Tag
         if (entry.Type is Types.KeyRedeemed or Types.TeamDefined or Types.EntitlementReceived && entry.Stream.StartsWith(Teams.Stream, StringComparison.Ordinal))
@@ -49,6 +55,10 @@ public sealed class Usage : IProjection
     }
 
     public IEnumerable<KeyValuePair<DateOnly, int>> Days => PerDay.OrderBy(p => p.Key);
+
+    /// <summary>Die Monate mit den Einträgen je Art, neueste zuerst — als Kopie, damit sie ausserhalb der Sperre gelesen werden darf.</summary>
+    public List<(DateOnly Month, Dictionary<string, int> Kinds)> Months(int limit = 120) =>
+        PerMonthKind.OrderByDescending(m => m.Key).Take(limit).Select(m => (m.Key, new Dictionary<string, int>(m.Value))).ToList();
 
     /// <summary>
     /// Wie <see cref="Sum(IReadOnlySet{string}, DateOnly, DateOnly)"/>, aber erst ab dem Eintrag <paramref name="cut"/>
