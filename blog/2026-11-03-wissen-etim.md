@@ -5,6 +5,7 @@ slug: etim-klassifikation-erklaert
 tags: [Klassifikation, ETIM, BMEcat]
 categories: [Wissen]
 date: 2026-11-03
+wp: 161
 ---
 Ein Hersteller nennt es „Breite“, der nächste „B“, der dritte „Gehäusebreite in mm“. Für einen Großhändler, der Tausende Artikel von vielen Lieferanten vergleichbar anbieten will, ist das ein Problem: **Dieselbe Eigenschaft steht überall anders da.** ETIM löst es mit einem gemeinsamen Modell: Jedes technische Produkt gehört in eine Klasse, und jede Klasse legt fest, welche Merkmale es gibt und in welcher Form ihre Werte stehen.
 

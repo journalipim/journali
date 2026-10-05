@@ -5,6 +5,7 @@ slug: attributgruppen-vererbung
 tags: [Datenpflege, Datenqualität, Architektur, Import & Export]
 categories: [Entwicklung]
 date: 2026-10-13
+wp: 154
 ---
 Die Spannungsversorgung steht bei Betriebsgeräten für Entladungslampen genauso wie bei LED-Treibern. Dimmung gibt es nur bei den Treibern, die Zündung nur bei den Betriebsgeräten. Wie pflegt ihr das, ohne dieselbe Größe zweimal anzulegen, und ohne dass die Treiber ein Feld „Zündung“ mitschleppen? **Mit Attributgruppen, die an den Baum gehängt werden.**
 

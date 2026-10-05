@@ -5,6 +5,7 @@ slug: veroeffentlichen
 tags: [Datenqualität, Workflow, Mehrsprachigkeit, Import & Export]
 categories: [Entwicklung]
 date: 2026-10-25
+wp: 158
 ---
 Die Heckenschere soll ab Montag im Webshop stehen. Die englische Beschreibung fehlt noch, und in der Schweiz wird sie gar nicht verkauft. In vielen Abläufen merkt das jemand erst, wenn der Export schon hinausgegangen ist. **In journali merkt ihr es vorher – und zwar an der Stelle, an der ihr freigeben wollt.**
 

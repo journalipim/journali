@@ -5,6 +5,7 @@ slug: sicherung
 tags: [Betrieb, Jobs, Journal, Architektur, PostgreSQL]
 categories: [Entwicklung]
 date: 2026-10-28
+wp: 159
 ---
 Der Server ist weg. Festplatte defekt, Umzug auf neue Hardware oder ein Update, das schiefgelaufen ist. Bei vielen Systemen beginnt jetzt ein Wochenende aus Datenbank-Dump, Dateikopien und der Frage, was man vergessen hat. **Bei journali startet ihr einen neuen Server, spielt die Sicherung ein und startet neu.** Dann steht das System wieder da – mit allen Einträgen, Medien, Zugängen und Plugins.
 

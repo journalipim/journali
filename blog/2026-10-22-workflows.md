@@ -5,6 +5,7 @@ slug: workflows
 tags: [Workflow, Datenpflege, Datenqualität, Mehrsprachigkeit, Betrieb]
 categories: [Entwicklung]
 date: 2026-10-22
+wp: 157
 ---
 Eine Redakteurin schreibt die Texte zu einer neuen Bohrmaschine fertig und schickt das Produkt zur Prüfung. Die Prüfung findet ein fehlendes Bild und schickt es zurück, mit Begründung. Danach gibt eine Person mit dem Recht dazu das Produkt frei. Später fragt jemand: Wer hat das freigegeben, und wann? In vielen Systemen steht die Antwort in einer Tabelle, die jemand nebenbei pflegt, oder in einer Mail. **In journali steht sie am Produkt.** Jeder Schritt ist ein Eintrag im Journal – mit Anwender, Zeit und Notiz.
 

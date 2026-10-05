@@ -5,6 +5,7 @@ slug: medien-und-ableitungen
 tags: [Medien, Jobs, Datenpflege]
 categories: [Entwicklung]
 date: 2026-10-19
+wp: 156
 ---
 Eine Produktgruppe, vierzig Varianten, ein gemeinsames Hauptbild. Wohin damit? Vierzigmal hochladen und bei jeder Änderung vierzigmal austauschen? **Bei journali lädt ihr das Bild einmal hoch, ordnet es der Gruppe zu – und alle Varianten darunter haben es.** Ohne Kopie, ohne Handarbeit.
 
