@@ -55,7 +55,7 @@ Umgestellt wird unter ⚙ Einstellungen → ▨ Storage. Der Wechsel ist ein Kop
 
 Unter ⚙ Einstellungen → ⇅ B&R sichert ihr auf Knopfdruck: das Journal mit allen Einträgen, die Medien aus der Datenbank, Anmeldungen und Einstellungen, die Plugin-Verzeichnisse. Die Sicherung hängt an nichts – **nicht an der Version von PostgreSQL, nicht am Schema**. Als Job mit Zeitplan erledigt das Plugin Sicherung dasselbe regelmäßig.
 
-Zurück geht sie in ein leeres System, und der Server baut seine Abbilder daraus neu. Das passt auch für eine **Testinstanz neben der Produktion**: Sicherung der Produktion einspielen, fertig.
+Zurück geht sie in ein leeres System, und der Server baut seine Abbilder daraus neu. Auf demselben Weg entsteht eine **Testinstanz neben der Produktion**: Sicherung der Produktion einspielen. Diese Probe zeigt zugleich, ob sich eure Sicherung einspielen lässt – Sicherung, Aufbewahrung und Probe liegen beim Betreiber.
 
 ## Auf Unraid? Auch.
 

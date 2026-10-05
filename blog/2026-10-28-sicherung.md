@@ -1,13 +1,13 @@
 ---
-title: Sicherung – neuer Server, Sicherung rein, journali steht
-excerpt: Eine Vollsicherung per Knopfdruck oder als Job mit Zeitplan, zurück in ein leeres System – und weil im Journal nie etwas überschrieben wird, baut der Server alle Abbilder daraus von selbst neu.
+title: Sicherung und Wiederherstellung – was journali sichert und wie es zurückkommt
+excerpt: Eine Vollsicherung per Knopfdruck oder als Job mit Zeitplan, zurück in ein leeres System – und weil im Journal nie etwas überschrieben wird, baut der Server alle Abbilder daraus neu. Ob sich eine Sicherung einspielen lässt, zeigt die Probe auf einem Testsystem.
 slug: sicherung
 tags: [Betrieb, Jobs, Journal, Architektur, PostgreSQL]
 categories: [Entwicklung]
 date: 2026-10-28 06:00
 wp: 159
 ---
-Der Server ist weg. Festplatte defekt, Umzug auf neue Hardware oder ein Update, das schiefgelaufen ist. Bei vielen Systemen beginnt jetzt ein Wochenende aus Datenbank-Dump, Dateikopien und der Frage, was man vergessen hat. **Bei journali startet ihr einen neuen Server, spielt die Sicherung ein und startet neu.** Dann steht das System wieder da – mit allen Einträgen, Medien, Zugängen und Plugins.
+Der Server ist weg: Festplatte defekt, Umzug auf neue Hardware oder ein Update, das schiefgelaufen ist. Für diesen Fall bringt journali eine **Vollsicherung** mit und einen Weg, sie in ein leeres System einzuspielen – mit Einträgen, Medien, Zugängen und Plugins. Hier steht, was sie umfasst, was sie nicht umfasst und warum die Probe dazugehört.
 
 ## Eine Sicherung ist ein Verzeichnis
 
@@ -44,13 +44,13 @@ Zwei Dinge sind Absicht:
 
 Danach startet ihr den Server einmal neu. Plugins mit eigenen Paketen brauchen einmal `npm install` – die Pakete sind für ein Betriebssystem gebaut und gehören darum nicht in die Sicherung.
 
-## Warum das so einfach geht
+## Warum das Journal genügt
 
 Der Grund steht im Kern von journali: **Im Journal wird nie etwas überschrieben.** Jede Änderung ist ein neuer Eintrag, hinten angehängt. Das Journal ist die einzige Wahrheit – alles andere, der Baum, das Modell, die Suche, ist ein **Abbild**, das sich jederzeit löschen und aus dem Journal neu bauen lässt.
 
 Für die Sicherung heißt das: **Für alles Fachliche genügt das Journal.** Kein Stand von Tabellen, die zueinander passen müssen, keine Zwischenergebnisse. Modell, Baum, Werte, Rollen und Rechte, Workflows, Jobs und der Stand der Plugins stehen als Einträge im Journal und kommen damit zurück. Beim Start baut der Server seine Abbilder daraus neu – das ist derselbe Weg, den er bei jedem Start geht.
 
-Auch eine Testinstanz neben der Produktion ist dadurch kein Aufwand: Ihr spielt eine Sicherung der Produktion in die leere Testinstanz ein. Sie bekommt ihre eigene Kennung.
+Auf demselben Weg entsteht eine **Testinstanz** neben der Produktion: Ihr spielt eine Sicherung der Produktion in die leere Testinstanz ein. Sie bekommt ihre eigene Kennung.
 
 ## Spiegel und Schnappschuss: schneller Start, nie die Wahrheit
 
@@ -59,11 +59,17 @@ Zwei Kopien machen den Start schnell, beide sind **nur Cache**:
 - Der **Spiegel** hält die Journaleinträge als Datei neben dem Server. Beim Start kommt alles bis zum Spiegelstand von der Platte, nur der Rest aus der Datenbank. Der letzte Eintrag wird dabei gegen die Datenbank geprüft – stimmt etwas nicht, liest journali alles neu.
 - Der **Schnappschuss** hält den Stand aller Abbilder. Beim Start lädt journali ihn und wendet nur an, was danach dazukam.
 
-Beide lassen sich unter ▨ Storage → Start ein- und ausschalten und **jederzeit wegwerfen**. Der nächste Start liest dann neu aus dem Journal. Es kann nichts verloren gehen, was nicht ohnehin im Journal steht.
+Beide lassen sich unter ▨ Storage → Start ein- und ausschalten und **jederzeit wegwerfen**. Der nächste Start liest dann neu aus dem Journal. Weggeworfen wird dabei nur, was ohnehin aus dem Journal neu entsteht.
 
 ## Auch ein einzelner Teilbaum kommt zurück
 
 Nicht jeder Fall ist ein totaler Ausfall. Ein **Teilbaum aus einem JSON-Export** lässt sich auch in ein **volles System** einspielen – mit Modellteil. **Prüfen** zeigt vorher, wie viele Knoten neu wären, wie viele angeglichen und wie viele zurückgeholt würden; erst danach schreibt ihr.
+
+## Die Probe gehört dazu
+
+Eine Sicherung hilft nur, wenn sie sich einspielen lässt – auf eurem Speicher, mit euren Rechten, in eurem Netz und auf eurer Hardware. Das kann journali nicht für euch beurteilen. Darum gehört zu jeder Sicherung die **Probe**: Spielt eure Sicherung regelmäßig in eine leere Testinstanz ein und seht nach, ob alles da ist – Einträge, Medien, Anmeldungen und Plugins. Medien in einem Verzeichnis oder in S3 sichert ihr selbst; sie gehören in dieselbe Probe.
+
+**Sicherung, Aufbewahrung und Probe liegen beim Betreiber.** journali stellt die Werkzeuge bereit. Ob eure Wiederherstellung im Ernstfall gelingt, zeigt nur eure eigene Probe.
 
 ## Gut zu wissen
 
