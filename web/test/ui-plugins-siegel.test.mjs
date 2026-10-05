@@ -13,7 +13,7 @@ const opts = { global: { stubs: { RouterLink: true, 'router-link': true, Splitte
 
 function welt() {
   plugins.list = [
-    { key: 'csv', version: '1.0.0', installed: true, enabled: true, onDisk: true, certified: true, sealIssued: '2026-09-24', sealIssuer: 'journali', manifest: { kind: 'import', label: { de: 'Import: CSV' } } },
+    { key: 'csv', version: '1.0.0', installed: true, enabled: true, onDisk: true, certified: true, sealOriginal: true, sealIssued: '2026-09-24', sealIssuer: 'journali', manifest: { kind: 'import', label: { de: 'Import: CSV' } } },
     { key: 'json', version: '2.2.0', installed: true, enabled: true, onDisk: true, certified: false, sealReason: 'Dateien verändert', manifest: { kind: 'import', label: { de: 'Import: JSON' } } },
     { key: 'mine', version: '0.1.0', installed: false, enabled: false, onDisk: true, certified: false, manifest: { kind: 'tool', label: { de: 'Eigenes' } } },
   ]
@@ -110,6 +110,7 @@ test('ein Plugin, das der Tarif nicht enthält, wirkt nicht — auch wenn es im 
   } finally { api.get = orig }
 })
 
+// 05.10.2026: ❖ nur für Originale von journali; ein Siegel mit einem weiteren Schlüssel ist ◇ und nennt seinen Herausgeber
 test('ein Siegel eines anderen Herausgebers nennt diesen, nicht journali', async () => {
   welt()
   plugins.list = [{ key: 'fremd', version: '1.0.0', installed: true, enabled: true, onDisk: true, certified: true, sealIssued: '2026-09-24', sealIssuer: 'acme', manifest: { kind: 'tool', label: { de: 'Fremd' } } }]
@@ -117,7 +118,8 @@ test('ein Siegel eines anderen Herausgebers nennt diesen, nicht journali', async
   try {
     const w = mount(PluginsView, opts)
     await flushPromises()
-    assert.match(row(w, 'fremd').find('.seal').attributes('title'), /Original von acme/)
+    assert.match(row(w, 'fremd').find('.seal').attributes('title'), /Siegel von acme/)
+    assert.equal(row(w, 'fremd').find('.seal').text(), '◇', 'kein ❖ — das ist nur journali')
     assert.ok(!w.text().includes('journali Core Plugin'))
   } finally { api.get = orig }
 })

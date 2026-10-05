@@ -2440,7 +2440,6 @@
  "Passwort falsch.": "Password is wrong.",
  "{0} ist eingelöst.": "{0} has been redeemed.",
  "Der Stand im Journal bleibt: kommt der Tarif zurück, wirkt es wieder.": "The state in the journal stays: when the tier comes back, it takes effect again.",
- "Original von {0}": "Original from {0}",
  "Signatur des Herausgebers: Schlüssel, Version und alle Dateien sind unverändert": "The publisher's signature: key, version and all files are unchanged",
  "❖ Herkunft": "❖ Origin",
  "signiert vom Herausgeber; jede Änderung an den Dateien bricht das Siegel": "signed by the publisher; any change to the files breaks the seal",
@@ -3031,5 +3030,7 @@
  "Auf dieser Datenbank arbeitet schon ein Server.": "A server already works on this database.",
  "Auf einer Datenbank arbeitet ein Server; dieser beantwortet keine Anfrage unter /api.": "One server works on a database; this one answers no request under /api.",
  "zweiter Server": "second server",
- "Auf dieser Datenbank läuft schon {0}.": "{0} already runs on this database."
+ "Auf dieser Datenbank läuft schon {0}.": "{0} already runs on this database.",
+ "Siegel von {0}": "Seal of {0}",
+ "Kein Original von journali.": "Not an original of journali."
 }

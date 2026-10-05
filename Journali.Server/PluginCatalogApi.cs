@@ -50,7 +50,7 @@ public static class PluginCatalogApi
                     var key = p.TryGetProperty("key", out var k) ? k.GetString() ?? "" : "";
                     if (!ValidKey(key)) continue;
                     var m = disk.GetValueOrDefault(key);
-                    list.Add(new { entry = p, onDisk = m is not null, diskVersion = m?.Version, certified = m?.Seal.Certified ?? false });
+                    list.Add(new { entry = p, onDisk = m is not null, diskVersion = m?.Version, certified = m?.Seal.Original ?? false });
                 }
             return Results.Ok(new { url = Url, updated = doc is { } dd && dd.TryGetProperty("updated", out var u) ? u.GetString() : null, error = grund, plugins = list });
         });
@@ -94,6 +94,7 @@ public static class PluginCatalogApi
                 if (!(raw.TryGetProperty("key", out var kk) && kk.GetString() == key)) return Bad("Manifest nennt einen anderen Schlüssel.");
                 var seal = PluginSeal.Check(src, key, version);
                 if (!seal.Certified) return Bad("Siegel ungültig: {0}", seal.Grund ?? "kein Zertifikat");
+                if (!seal.Original) return Bad("Kein Original von journali.");   // der Katalog liefert nur Plugins von journali (05.10.2026)
                 var dest = Path.Combine(dir, key);
                 if (Directory.Exists(dest)) Directory.Delete(dest, true);
                 CopyDir(src, dest);

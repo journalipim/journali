@@ -10,8 +10,10 @@ namespace Journali.Server;
 /// SHA-256, Signatur IEEE P1363 in Base64). Es nennt Schlüssel, Version und den Hash über alle Dateien des Verzeichnisses
 /// (ausser node_modules, __pycache__, .git, .cache, certificate.json und den Pfaden unter <c>ignore</c>). Passt eine Datei nicht
 /// mehr, ist das Siegel gebrochen — das Plugin bleibt nutzbar, trägt aber kein Siegel.
-/// <para>Geprüft wird mit dem eingebauten öffentlichen Schlüssel oder mit <c>JOURNALI_PLUGIN_KEY</c>; das Werkzeug
-/// dazu ist <c>tools/plugin-cert.mjs</c>, das denselben Hash rechnet.</para>
+/// <para>Ein <b>Original von journali</b> ist nur, was der eingebaute Schlüssel bestätigt (05.10.2026): das Siegel zeigt, dass ein Plugin
+/// von journali stammt und unverändert ist — installiert jemand ein fremdes Plugin, lässt sich sicher sagen, dass es nicht von journali ist.
+/// <c>JOURNALI_PLUGIN_KEY</c> nimmt einen weiteren Schlüssel dazu (eigene Plugins des Betreibers); seine Siegel sind keine Originale und
+/// dürfen nicht „journali“ als Herausgeber nennen. Das Werkzeug ist <c>tools/plugin-cert.mjs</c>, das denselben Hash rechnet.</para>
 /// </summary>
 public static class PluginSeal
 {
@@ -30,16 +32,19 @@ public static class PluginSeal
     }
 
     /// <summary>Ergebnis der Prüfung: zertifiziert, oder warum nicht. Ohne Zertifikat: <c>Certified</c> falsch, <c>Grund</c> leer — das ist kein Fehler.</summary>
-    public sealed record Seal(bool Certified, string? Issued = null, string? Issuer = null, string? Grund = null)
+    public sealed record Seal(bool Certified, string? Issued = null, string? Issuer = null, string? Grund = null, bool Original = false)
     {
         public static readonly Seal Keins = new(false);
     }
 
-    /// <summary>Der öffentliche Schlüssel: Umgebung vor eingebautem.</summary>
-    public static string PublicKey => Environment.GetEnvironmentVariable("JOURNALI_PLUGIN_KEY") is { Length: > 0 } k ? k : DefaultKey;
+    /// <summary>Der Herausgeber, den nur der eingebaute Schlüssel nennen darf.</summary>
+    public const string Herausgeber = "journali";
+    /// <summary>Ein weiterer Schlüssel für eigene Plugins des Betreibers — er ersetzt den eingebauten nicht.</summary>
+    public static string? WeitererSchluessel => Environment.GetEnvironmentVariable("JOURNALI_PLUGIN_KEY") is { Length: > 0 } k ? k : null;
 
-    /// <summary>Das Siegel eines Plugin-Verzeichnisses prüfen: Zertifikat lesen, Schlüssel und Version gegen das Manifest, Signatur, dann den Hash.</summary>
-    public static Seal Check(string dir, string key, string version, string? pub = null)
+    /// <summary>Das Siegel eines Plugin-Verzeichnisses prüfen: Zertifikat lesen, Schlüssel und Version gegen das Manifest, Signatur, dann den Hash.
+    /// <paramref name="pub"/> steht für den Schlüssel von journali (Tests), <paramref name="weiterer"/> für einen weiteren (sonst <c>JOURNALI_PLUGIN_KEY</c>).</summary>
+    public static Seal Check(string dir, string key, string version, string? pub = null, string? weiterer = null)
     {
         var file = Path.Combine(dir, FileName);
         if (!File.Exists(file)) return Seal.Keins;
@@ -49,10 +54,15 @@ public static class PluginSeal
         if (c is null) return new Seal(false, Grund: "Zertifikat leer");
         if (c.Key != key) return new Seal(false, c.Issued, c.Issuer, $"Zertifikat für {c.Key}");
         if (c.Version != version) return new Seal(false, c.Issued, c.Issuer, $"Zertifikat für Version {c.Version}, Manifest {version}");
-        var (ok, grund) = Verify(c.Rumpf, c.Sig, pub ?? PublicKey);
+        // erst der Schlüssel von journali: nur er macht ein Plugin zum Original
+        var (ok, grund) = Verify(c.Rumpf, c.Sig, pub ?? DefaultKey);
+        var original = ok;
+        if (!ok && (weiterer ?? WeitererSchluessel) is { } w) (ok, grund) = Verify(c.Rumpf, c.Sig, w);
         if (!ok) return new Seal(false, c.Issued, c.Issuer, grund);
+        if (!original && string.Equals(c.Issuer?.Trim(), Herausgeber, StringComparison.OrdinalIgnoreCase))
+            return new Seal(false, c.Issued, c.Issuer, "Herausgeber journali ohne den Schlüssel von journali");
         if (!string.Equals(Hash(dir, c.Ignore), c.Hash, StringComparison.OrdinalIgnoreCase)) return new Seal(false, c.Issued, c.Issuer, "Dateien verändert");
-        return new Seal(true, c.Issued, c.Issuer);
+        return new Seal(true, c.Issued, c.Issuer, Original: original);
     }
 
     /// <summary>Der Hash über die Dateien — je Datei <c>pfad\0sha256hex\n</c> in einen SHA-256, Pfade mit / und ordinal sortiert.</summary>

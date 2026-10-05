@@ -123,6 +123,7 @@ public static class PluginApi
                         allowed = tarif.Erlaubt(k), tarif = c.Tarife.Ab(k)?.Key,
                         // das Siegel: zertifiziert, oder warum nicht (leer ohne Zertifikat)
                         certified = m?.Seal.Certified ?? false, sealIssued = m?.Seal.Issued, sealIssuer = m?.Seal.Issuer, sealReason = m?.Seal.Grund,
+                        sealOriginal = m?.Seal.Original ?? false,   // geprüft mit dem Schlüssel von journali: ein Original
                     };
                 }).ToList();
             });

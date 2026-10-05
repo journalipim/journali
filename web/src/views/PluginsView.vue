@@ -58,7 +58,7 @@ const shown = computed(() => {
   const list = plugins.list.filter(p => (zeigeFeste.value ? fest(p) : (!fest(p) || zuTun(p)))
     && (!kindFilter.value || p.manifest?.kind === kindFilter.value)
     && (!nurTarif.value || p.allowed !== false)
-    && (!stateFilter.value || (stateFilter.value === 'on' ? p.enabled : stateFilter.value === 'off' ? p.installed && !p.enabled : stateFilter.value === 'update' ? p.update : stateFilter.value === 'cert' ? p.certified : !p.installed))
+    && (!stateFilter.value || (stateFilter.value === 'on' ? p.enabled : stateFilter.value === 'off' ? p.installed && !p.enabled : stateFilter.value === 'update' ? p.update : stateFilter.value === 'cert' ? p.sealOriginal : !p.installed))
     && (!s || p.key.includes(s) || label(p.manifest).toLowerCase().includes(s) || (L(p.manifest?.description) ?? '').toLowerCase().includes(s) || (p.manifest?.kind ?? '').includes(s)))
   return [...list].sort((a, b) => cmp(a, b) || a.key.localeCompare(b.key, 'de'))
 })
@@ -93,9 +93,9 @@ const notReady = p => plugins.bereit(p.key)?.ready === false ? (plugins.bereit(p
 const missing = key => plugins.requires(key).filter(r => !plugins.active(r))   // was fehlt, damit es wirkt
 // Siegel: ❖ für ein Original (Signatur des Herausgebers passt, keine Datei geändert), ⚠ für ein gebrochenes, sonst
 // nichts. Nach aussen heisst ❖ nicht „zertifiziert“ — das klänge nach einer Prüfstelle —, sondern: es ist ein Original.
-const HERAUSGEBER = 'journali'
-const sealOf = p => p.certified ? '❖' : p.sealReason ? '⚠' : ''
-const sealName = p => p.sealIssuer === HERAUSGEBER || !p.sealIssuer ? t('journali Core Plugin') : t('Original von {0}', [p.sealIssuer])
+// ❖ nur für Originale von journali (geprüft mit dem eingebauten Schlüssel), ◇ für ein Siegel mit einem weiteren Schlüssel, ⚠ gebrochen (05.10.2026)
+const sealOf = p => p.certified ? (p.sealOriginal ? '❖' : '◇') : p.sealReason ? '⚠' : ''
+const sealName = p => p.sealOriginal ? t('journali Core Plugin') : t('Siegel von {0}', [p.sealIssuer ?? '?'])
 const sealTitle = p => p.certified ? `${sealName(p)} · ${p.sealIssued ?? ''}` : p.sealReason ? t('Siegel gebrochen: {0}', [p.sealReason]) : ''
 // Katalog des Herausgebers: was es an zertifizierten Plugins gibt — holen legt das Verzeichnis unter plugins/ ab, installiert wird danach wie sonst
 const catalog = ref(null)

@@ -23,6 +23,28 @@ public class PluginSealTests
         return (dir, priv, pub);
     }
 
+    /// <summary>05.10.2026: Original ist nur, was der Schlüssel von journali bestätigt. Ein weiterer Schlüssel siegelt eigene Plugins des Betreibers,
+    /// macht sie aber nicht zum Original und darf nicht „journali“ als Herausgeber nennen.</summary>
+    [Fact]
+    public void Original_nur_mit_dem_Schluessel_von_journali_ein_weiterer_kann_sich_nicht_als_journali_ausgeben()
+    {
+        var (dir, priv, pub) = Welt();
+        PluginSeal.Sign(dir, "demo", "1.2.0", priv);
+        var s = PluginSeal.Check(dir, "demo", "1.2.0", pub);
+        Assert.True(s.Certified); Assert.True(s.Original);
+
+        var fremd = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        var fremdPub = Convert.ToBase64String(fremd.ExportSubjectPublicKeyInfo());
+        PluginSeal.Sign(dir, "demo", "1.2.0", fremd, issuer: "acme");
+        var f = PluginSeal.Check(dir, "demo", "1.2.0", pub, fremdPub);
+        Assert.True(f.Certified); Assert.False(f.Original); Assert.Equal("acme", f.Issuer);
+
+        PluginSeal.Sign(dir, "demo", "1.2.0", fremd);   // Herausgeber „journali“ mit fremdem Schlüssel
+        var falsch = PluginSeal.Check(dir, "demo", "1.2.0", pub, fremdPub);
+        Assert.False(falsch.Certified); Assert.False(falsch.Original);
+        Assert.Equal("Herausgeber journali ohne den Schlüssel von journali", falsch.Grund);
+    }
+
     [Fact]
     public void Ohne_Zertifikat_kein_Siegel_und_kein_Grund()
     {
