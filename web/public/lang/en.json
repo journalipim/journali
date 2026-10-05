@@ -1069,7 +1069,6 @@
  "{0}: nicht gesetzt, Vorschlag „ja“{1} —": "{0}: not set, suggestion “yes”{1} —",
  "setzen — ab welchem Knoten, fragt der nächste Schritt": "set — the next step asks from which node",
  "gilt hier nicht — wird gemerkt, die Frage kommt nicht wieder": "does not apply here — remembered, the question will not return",
- "— kein Vorschlag möglich: ETIM-Klasse setzen oder KI-Schlüssel (⚙ Einstellungen)": "— no suggestion possible: set an ETIM class or an AI key (⚙ Settings)",
  "Schritt: {0} Datenpunkte ohne Attribut — unten zuordnen oder anlegen": "Step: {0} data points without attribute — map or create below",
  "Schritt: die Gruppe im Baum anhängen — dann erneut prüfen": "Step: attach the group in the tree — then check again",
  "Zuordnung vollständig — {0} leere{1} Werte füllen (Klick auf die Zahl „leer“ oder in die Zelle der Knoten-Tabelle){2}": "Mapping complete — fill {0} empty{1} values (click the number “empty” or the cell of the node table){2}",
@@ -3019,5 +3018,7 @@
  "Die nächsten Assets laden": "Load the next assets",
  "verschiebe": "moving",
  "einhängen": "placing",
- "{0} Fehler": "{0} errors"
+ "{0} Fehler": "{0} errors",
+ "Mit gesetzter ETIM-Klasse oder KI sind Vorschläge möglich.": "With an ETIM class set or AI, suggestions are possible.",
+ "Vorschläge kommen aus der ETIM-Klasse des Knotens (eigen oder geerbt) und von der KI (Schlüssel unter ⚙ Einstellungen) — entschieden wird hier mit ja oder nein": "Suggestions come from the ETIM class of the node (own or inherited) and from the AI (key under ⚙ Settings) — the decision is made here with yes or no"
 }

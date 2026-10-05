@@ -207,12 +207,13 @@ export async function setup(ctx, catalog) {
 // Produkt, Pfad, Klasse und den Geltungen samt Hinweis — Antwort je Geltung ja/nein mit Begründung. Null, wenn beides fehlt.
 async function suggestScopes(catalog, rootRow, scopes, have) {
   if (!rootRow) return null
-  // wirksame ETIM-Klasse: eigen oder von oben
+  // wirksame ETIM-Klasse: eigen oder von oben — im Klassenattribut, das ETIM eingestellt hat (nach einer Namenskollision nicht class_etim, 05.10.2026)
   let code = null
   try {
+    const klasse = (await api.get('/api/plugins/etim/data/settings').catch(() => null))?.classAttr || 'class_etim'
     const n = await api.get(`/api/nodes/${encodeURIComponent(rootRow.id)}`)
-    code = n.values?.find(v => v.attribute === 'class_etim' && !v.locale && !v.channel && !v.row)?.value ?? null
-    if (!code) for (const a of n.ancestors ?? []) { const v = a.values?.find(v => v.attribute === 'class_etim' && !v.locale && !v.channel)?.value; if (v) { code = v; break } }
+    code = n.values?.find(v => v.attribute === klasse && !v.locale && !v.channel && !v.row)?.value ?? null
+    if (!code) for (const a of n.ancestors ?? []) { const v = a.values?.find(v => v.attribute === klasse && !v.locale && !v.channel)?.value; if (v) { code = v; break } }
   } catch { }
   let cls = null
   if (code) { try { const rel = await api.get('/api/plugins/etim/data/release'); const ver = rel?.version ?? (rel?.number != null ? String(rel.number) : null); cls = (ver != null ? await api.get('/api/plugins/etim/data/' + encodeURIComponent(`class:${ver}:${code}`)).catch(() => null) : null) ?? await api.get('/api/plugins/etim/data/' + encodeURIComponent('class:' + code)).catch(() => null) } catch { } }
@@ -586,6 +587,8 @@ export async function mount(root, ctx, catalog) {
       const rowsBox = el('div', { style: 'margin:2px 0 6px' }); s3.append(rowsBox)
       const render = (list) => {
         rowsBox.innerHTML = ''
+        // ohne Vorschlag: einmal über den Zeilen, was Vorschläge möglich macht (05.10.2026 — vorher je Zeile ein Ratschlag)
+        if (list === null) rowsBox.append(el('div', { class: 'muted vorschlag-quelle', style: 'margin:2px 0;font-size:12px', title: t_('Vorschläge kommen aus der ETIM-Klasse des Knotens (eigen oder geerbt) und von der KI (Schlüssel unter ⚙ Einstellungen) — entschieden wird hier mit ja oder nein') }, t_('Mit gesetzter ETIM-Klasse oder KI sind Vorschläge möglich.')))
         for (const s of scopes) {
           const on = have.includes(s.key); const sg = list?.items.find(x => x.key === s.key) ?? null
           const why = sg?.why ? ` (${sg.why})` : ''
@@ -601,7 +604,7 @@ export async function mount(root, ctx, catalog) {
           } else if (sg) {
             row.append(el('span', { class: 'warn' }, t_('{0}: nicht gesetzt, Vorschlag „ja“{1} —', [s.label, why])), el('button', { class: 'primary', title: t_('setzen — ab welchem Knoten, fragt der nächste Schritt'), onclick: () => setScope(s, true) }, '→ ja'), el('button', { class: 'x', title: t_('gilt hier nicht — wird gemerkt, die Frage kommt nicht wieder'), onclick: async () => { await decline(st.root, s.key, true); drawResult() } }, 'nein'))
           } else {
-            row.append(el('span', {}, `${s.label}?`), el('button', { class: on ? 'primary' : '', onclick: () => setScope(s, true) }, 'ja'), el('button', { class: on ? '' : 'primary', onclick: () => setScope(s, false) }, 'nein'), el('span', { class: 'muted' }, list === null ? t_('— kein Vorschlag möglich: ETIM-Klasse setzen oder KI-Schlüssel (⚙ Einstellungen)') : ''))
+            row.append(el('span', {}, `${s.label}?`), el('button', { class: on ? 'primary' : '', onclick: () => setScope(s, true) }, 'ja'), el('button', { class: on ? '' : 'primary', onclick: () => setScope(s, false) }, 'nein'))
           }
           rowsBox.append(row)
         }
