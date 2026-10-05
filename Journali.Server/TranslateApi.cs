@@ -50,7 +50,9 @@ public static class TranslateApi
             if (term.Text.TryGetValue(from, out var s) && term.Text.TryGetValue(to, out var t) && !string.IsNullOrWhiteSpace(s) && !string.IsNullOrWhiteSpace(t)) mem[Norm(s)] = (t, "term");   // Wörterbuch schlägt die Einheit
         return mem;
     }
-    public sealed record ImportUnit(string Id, string? Target, string? SourceHash);
+    /// <param name="Method"><c>ai</c>: das Ziel ist eine Vorübersetzung der KI, die jemand übernommen hat — der Wert bekommt die Herkunft „KI“ (05.10.2026).</param>
+    /// <param name="Edited">die Vorübersetzung wurde vor dem Übernehmen von Hand geändert</param>
+    public sealed record ImportUnit(string Id, string? Target, string? SourceHash, string? Method = null, bool? Edited = null);
     public sealed record ImportBody(string From, string To, List<ImportUnit> Units, bool? Force, string? Order = null);
 
     private static readonly XNamespace X2 = "urn:oasis:names:tc:xliff:document:2.0";
@@ -301,6 +303,11 @@ public static class TranslateApi
                 else
                 {
                     write(actor, n.Id, Types.AttributeSet, new AttributeSet(attr, to, ch, target, null, row), null);
+                    // Eine übernommene Vorübersetzung der KI trägt ihre Herkunft am Wert, wie Ergänzen und die Prüfansichten (KI-Verordnung Art. 50, 05.10.2026)
+                    if (u.Method == "ai")
+                        write(actor, n.Id, Types.ValueSourced, new ValueSourced(attr, to, ch, row, "KI", null,
+                            u.Edited == true ? "Vorübersetzung der KI, von Hand nachbearbeitet" : "Vorübersetzung der KI, geprüft und übernommen",
+                            "ai", DateOnly.FromDateTime(DateTime.Now).ToString("yyyy-MM-dd")), null);
                     written++; nodes.Add(n.Id);
                 }
                 if (late) behind++;   // bleibt im Rückstand, ob geschrieben oder nicht — die Differenz geht ins nächste Paket

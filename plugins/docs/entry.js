@@ -49,7 +49,7 @@ async function mount(root, ctx) {
     st.askBusy = true; draw()
     try {
       const r = await api.post('/api/docs/ask', { q, under: st.under, k: 6 })
-      st.antwort = r.empty ? { text: t_('Nichts in den Dokumenten dazu'), sources: [], warning: r.warning ?? null } : { text: r.answer, sources: r.sources ?? [], warning: r.warning ?? null, model: r.model }
+      st.antwort = r.empty ? { text: t_('Nichts in den Dokumenten dazu'), sources: [], warning: r.warning ?? null } : { text: r.answer, sources: r.sources ?? [], warning: r.warning ?? null, model: r.model, ki: true }
     } catch (e) { st.antwort = { text: '✗ ' + e.message, sources: [], warning: null } }
     finally { st.askBusy = false; draw() }
   }
@@ -135,6 +135,9 @@ async function mount(root, ctx) {
   function antwort() {
     const a = st.antwort
     const box = el('div', { class: 'answer', style: 'padding:10px 12px;border-bottom:1px solid var(--line);background:var(--accent-soft)' })
+    // KI-Verordnung Art. 50 (05.10.2026): wer fragt, sieht, dass die Antwort von einer KI kommt — vor dem Text, nicht im Tooltip
+    if (a.ki) box.append(el('div', { class: 'ki-label', style: 'font-size:11px;font-weight:600;margin-bottom:4px', title: t_('Erzeugt von der KI des Teams aus den nummerierten Auszügen unten.') },
+      a.model ? t_('✧ Antwort der KI · {0}', [a.model]) : t_('✧ Antwort der KI')))
     box.append(el('div', { class: 'answer-text', style: 'white-space:pre-wrap;font-size:13px' }, a.text))
     if (a.sources.length) {
       const list = el('div', { class: 'sources muted', style: 'font-size:12px;margin-top:6px' })

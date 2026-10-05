@@ -108,7 +108,7 @@ async function mount(root, ctx) {
   } }, t_('📦 Paket schnüren'))
   async function loadUnits() {
     say('lade …')
-    try { const r = await api.get(`/api/translate/units?${q()}&limit=5000`); st.units = r.units; st.edited = new Map(); drawUnits(); say(t_('{0} Einheiten · ○ {1} · ⟳ {2} · ✓ {3}', [r.count, r.missing, r.stale, r.done])) } catch (e) { say(''); store.toast(e.message) }
+    try { const r = await api.get(`/api/translate/units?${q()}&limit=5000`); st.units = r.units; st.edited = new Map(); st.ki = new Map(); drawUnits(); say(t_('{0} Einheiten · ○ {1} · ⟳ {2} · ✓ {3}', [r.count, r.missing, r.stale, r.done])) } catch (e) { say(''); store.toast(e.message) }
   }
   function drawUnits() {
     unitsBox.innerHTML = ''
@@ -137,14 +137,15 @@ async function mount(root, ctx) {
       try {
         const glossary = st.terms.filter(t => t.text?.[st.from] && t.text?.[st.to]).map(t => `${t.text[st.from]} = ${t.text[st.to]}`).slice(0, 200)
         const out = await ai.ask({ system: t_('Du übersetzt Produktdaten von {0} nach {1}. Antworte nur mit JSON: ein Objekt {id: übersetzung}. HTML-Struktur beibehalten, Zahlen, Einheiten, Marken- und Produktnamen unverändert, keine Erklärungen.{2}', [st.from, st.to, glossary.length ? ' Glossar (verbindlich): ' + glossary.join('; ') : '']), user: JSON.stringify(Object.fromEntries(batch.map(u => [u.id, u.source]))), json: true, maxTokens: 4000, purpose: t_('Übersetzung') })
-        for (const u of batch) { const t = out?.[u.id]; if (typeof t === 'string' && t.trim()) { st.edited.set(u.id, t.trim()); if (u._ta) u._ta.value = t.trim(); n++ } }
+        for (const u of batch) { const t = out?.[u.id]; if (typeof t === 'string' && t.trim()) { st.edited.set(u.id, t.trim()); st.ki.set(u.id, t.trim()); if (u._ta) u._ta.value = t.trim(); n++ } }
       } catch (e) { store.toast(e.message); break }
     }
     count.textContent = t_('{0} Einheiten · {1} geändert', [st.units.length, st.edited.size]); say(t_('✦ {0} Vorschläge — prüfen, dann 💾 schreiben', [n]))
   }
   async function writeEdited() {
     if (!st.edited.size) { store.toast(t_('nichts geändert')); return }
-    const units = [...st.edited].map(([id, target]) => ({ id, target, sourceHash: st.units.find(u => u.id === id)?.sourceHash }))
+    // Ein Ziel aus der KI-Vorübersetzung geht mit method 'ai' — der Server vermerkt die Herkunft „KI“ am Wert (KI-Verordnung Art. 50, 05.10.2026)
+    const units = [...st.edited].map(([id, target]) => ({ id, target, sourceHash: st.units.find(u => u.id === id)?.sourceHash, ...(st.ki?.has(id) ? { method: 'ai', edited: target !== st.ki.get(id) } : {}) }))
     try { const r = await api.post('/api/translate/import', { from: st.from, to: st.to, units }); store.toast(`${r.written} geschrieben${r.behind ? `, ${r.behind} bleiben offen (Quelle weitergezogen)` : ''}${r.conflicts ? `, ${r.conflicts} Konflikt(e)` : ''}${r.unchanged ? `, ${r.unchanged} unverändert` : ''}`, r.conflicts ? 'warn' : 'ok'); lastNodes = r.nodes ?? []; advBtn.style.display = wfDef && lastNodes.length ? '' : 'none'; advBtn.textContent = t_('⚑ {0} Knoten → übersetzt', [lastNodes.length]); await store.poll(true); await loadUnits(); drawOverview() } catch (e) { store.toast(e.message) }
   }
 

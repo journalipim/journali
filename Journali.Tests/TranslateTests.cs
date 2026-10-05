@@ -69,4 +69,24 @@ public class TranslateTests
         var x12 = TranslateApi.FromXliff("""<xliff xmlns="urn:oasis:names:tc:xliff:document:1.2" version="1.2"><file source-language="de" target-language="fr"><body><trans-unit id="a|name||"><source>x</source><target>y</target></trans-unit></body></file></xliff>""");
         Assert.Equal("fr", x12.To); Assert.Single(x12.Units); Assert.Equal("y", x12.Units[0].Target);
     }
+
+    [Fact]
+    public void Eine_uebernommene_Vorübersetzung_der_KI_traegt_die_Herkunft_KI()
+    {
+        // KI-Verordnung Art. 50 (05.10.2026): wie Ergänzen und die Prüfansichten — die Herkunft steht maschinenlesbar am Wert
+        var (c, p, g) = World();
+        var units = new List<TranslateApi.ImportUnit>
+        {
+            new(TranslateApi.UnitId(p, "name", null, null), "Device X1", null, "ai", false),
+            new(TranslateApi.UnitId(p, "description", "web", null), "<p>New text</p>", null),   // von Hand: keine Herkunft KI
+        };
+        TranslateApi.Import(c, "anwender1", "de", "en", units, false);
+        var (ki, hand) = c.Lesen((_, tree) => (tree.Nodes[p].Sources.GetValueOrDefault(new Axis("name", "en", null, null)),
+            tree.Nodes[p].Sources.GetValueOrDefault(new Axis("description", "en", "web", null))));
+        Assert.NotNull(ki);
+        Assert.Equal("ai", ki!.Method);
+        Assert.Equal("anwender1", ki.Actor);   // wer übernommen hat
+        Assert.Contains("geprüft und übernommen", ki.Note);
+        Assert.Null(hand);
+    }
 }
