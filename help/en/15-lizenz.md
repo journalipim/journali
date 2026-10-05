@@ -1,6 +1,6 @@
 # Licence
 
-journali is licensed under the **Elastic License 2.0** with an additional permission for hosting. The full text is in the file LICENSE in the source code.
+journali is licensed under the **Elastic License 2.0** with an additional permission for hosting. The source code is publicly available (source available); this is not an open-source license. The full text is in the file LICENSE in the source code.
 
 ## In three sentences
 

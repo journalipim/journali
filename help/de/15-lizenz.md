@@ -1,6 +1,6 @@
 # Lizenz
 
-journali steht unter der **Elastic License 2.0** mit einer zusätzlichen Erlaubnis für Hosting. Der vollständige Wortlaut liegt als Datei LICENSE im Quelltext.
+journali steht unter der **Elastic License 2.0** mit einer zusätzlichen Erlaubnis für Hosting. Der Quelltext ist öffentlich einsehbar (Source Available); das ist keine Open-Source-Lizenz. Der vollständige Wortlaut liegt als Datei LICENSE im Quelltext.
 
 ## In drei Sätzen
 

@@ -2256,7 +2256,7 @@ im Ergebnis und Rückgabewert 1 — kein Absturz.
 
 **Offen.**
 
-**Nicht bevormunden** (29.09.2026). journali ist Open Source (ELv2); wer `scriptum.write` hat, kann ohnehin alles, was
+**Nicht bevormunden** (29.09.2026). der Quelltext von journali ist öffentlich einsehbar (Source Available, ELv2); wer `scriptum.write` hat, kann ohnehin alles, was
 der Serverprozess kann (er könnte längst per `fetch` Fremdcode ziehen). Einen Anwender mit erteilten Rechten davor zu
 schützen ist **nicht unsere Aufgabe** — das Sicherheitsnetz sind die gestaffelten Umgebungen des Betreibers
 (dev→test→preview→prod), nicht paternalistischer Produktcode. Was bleibt, ist **kein** Paternalismus, sondern Schutz

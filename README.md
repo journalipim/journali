@@ -38,7 +38,8 @@ selbst bauen will: `docker compose up --build -d`. Alles Weitere zu Umgebung, Sp
 
 ## Quelltext und Beiträge
 
-Der Quelltext ist zum Lesen, Herunterladen und Betreiben da (Lizenz: [LICENSE](LICENSE)). Pull Requests werden
+Der Quelltext ist öffentlich einsehbar (Source Available) und zum Lesen, Herunterladen und Betreiben da — Lizenz: Elastic License
+2.0 mit Hosting-Erlaubnis ([LICENSE](LICENSE)), keine Open-Source-Lizenz. Pull Requests werden
 nicht angenommen und automatisch geschlossen ([CONTRIBUTING.md](CONTRIBUTING.md)). Ergänzungen sind Plugins
 ([docs/plugins-zertifizierung.md](docs/plugins-zertifizierung.md)); Siegel und Katalog von journali gelten nur eigenen Plugins.
 
