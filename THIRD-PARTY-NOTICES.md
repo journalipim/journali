@@ -3,9 +3,11 @@
 journali selbst steht unter der Elastic License 2.0 mit einer zusätzlichen Erlaubnis (`LICENSE`). Diese Datei nennt,
 was von anderen kommt, unter welcher Lizenz und woher — und dankt allen, die es geschrieben haben.
 
-Der Text jeder Lizenz liegt beim jeweiligen Paket (`node_modules/<paket>/LICENSE`, bei .NET im NuGet-Paket). Die
-Liste nennt die direkten Abhängigkeiten; was diese ihrerseits mitbringen, zeigt `npm ls --all` im jeweiligen
-Verzeichnis, mit den Lizenzangaben in den `package.json` der Pakete.
+Die Lizenztexte liegen im Image unter `licenses/` (`licenses/README.md`): die Texte selbst, je Paket der Oberfläche und
+des Servers seine Lizenz- und Hinweisdateien (auch die NOTICE-Dateien der Apache-Pakete) und die Angaben zu libvips. Die
+Plugins bringen ihre Pakete mit deren eigenen LICENSE- und NOTICE-Dateien mit (`plugins/<key>/node_modules/<paket>/`).
+Die Liste hier nennt die direkten Abhängigkeiten; die vollständige Liste mit Versionen steht in
+`licenses/oberflaeche/PAKETE.txt` und `licenses/server/PAKETE.txt`.
 
 ## Beim ersten Lauf geladen, nicht im Image
 
@@ -26,6 +28,8 @@ und legt sie in den Cache des Plugins (`docs/betrieb.md`, „Plugins im Containe
 | Npgsql | 10.0.3 | PostgreSQL License |
 | MailKit | 4.18.0 | MIT |
 | MimeKit (von MailKit) | 4.18.0 | MIT |
+| BouncyCastle.Cryptography (von MimeKit) | 2.7.0 | MIT |
+| Microsoft.Bcl.Cryptography, System.Formats.Asn1, System.Security.Cryptography.Pkcs, System.Diagnostics.DiagnosticSource, Microsoft.Extensions.*.Abstractions (von Npgsql und MimeKit) | 8.0 bis 10.0 | MIT |
 
 Dazu die .NET-Laufzeit und ASP.NET Core aus dem Basis-Image `mcr.microsoft.com/dotnet/aspnet` (MIT) und die
 Node.js-Binärdatei aus `node:22-bookworm-slim` (MIT, mit den Lizenzen ihrer Bestandteile in Node.js selbst).
@@ -52,7 +56,9 @@ Node.js-Binärdatei aus `node:22-bookworm-slim` (MIT, mit den Lizenzen ihrer Bes
 | tesseract.js, tesseract.js-core | 5.1.1 | ocr | Apache-2.0 |
 
 libvips ist dynamisch gebunden und liegt als eigene Bibliothek im Paket `@img/sharp-libvips-*`; sie lässt sich dort
-austauschen. Ihr Quelltext: https://github.com/libvips/libvips.
+austauschen. Sie enthält weitere Bibliotheken unter LGPL-3.0, MPL-1.1, MIT, BSD und ähnlichen Lizenzen. Lizenzen, Versionen,
+Quelltext und Austausch: `licenses/libvips.md`. Die Lizenz von journali schränkt die Rechte aus der LGPL nicht ein (`LICENSE`,
+Abschnitt „Third-party components“).
 
 ## Danke
 

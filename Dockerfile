@@ -60,8 +60,9 @@ COPY --from=derive /derive/node_modules ./plugins/derive/node_modules
 COPY --from=docs /docs/node_modules ./plugins/docs/node_modules
 COPY --from=embed /embed/node_modules ./plugins/embed/node_modules
 COPY --from=ocr /ocr/node_modules ./plugins/ocr/node_modules
-# Lizenz von journali und die Liste der fremden Bestandteile mit ihren Lizenzen (THIRD-PARTY-NOTICES.md)
+# Lizenz von journali, die Liste der fremden Bestandteile (THIRD-PARTY-NOTICES.md) und ihre Lizenztexte (licenses/, tools/lizenzen.mjs)
 COPY LICENSE THIRD-PARTY-NOTICES.md ./
+COPY licenses/ ./licenses/
 ENV ASPNETCORE_URLS=http://+:8080
 EXPOSE 8080
 ENTRYPOINT ["dotnet", "Journali.Server.dll"]

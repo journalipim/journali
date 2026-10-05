@@ -98,6 +98,8 @@ Liegt `origin` mehr als ein Stück Arbeit hinter dem Rechner, ist das ein Fehler
   Vokabular `Rights` im Kern, `Auth.Needed` sagt je Anfrage das Recht), Passwörter/Token/Sitzungen
   im Tresor (`Tresor.cs`: Tabelle `tresor`, dazu Mailserver und Job-Geheimnisse; ohne Datenbank Dateien). Ohne Anwender offen; mit Anwendern kommt
   `X-Actor` aus der Sitzung. Jobs bekommen `JOURNALI_TOKEN` (Bearer) je Lauf.
+- **Paket dazu oder gewechselt** (in `web/` oder im Server): `node tools/lizenzen.mjs` erzeugt `licenses/oberflaeche` und
+  `licenses/server` neu, und `THIRD-PARTY-NOTICES.md` nennt das Paket — Prüfstand `lizenzen.test.mjs`.
 - **Kein Passwort im Repo.** Die Datenbankverbindung gibt man einmal je Server im Einrichtungsdialog ein (`db.json` im
   Datenverzeichnis, `Einrichtung.cs`), im Paket kommt sie aus `.env`/`compose.yaml`; `.env` ist ignoriert. Nur als
   Paket betrieben — `dotnet run` ist Entwicklung.

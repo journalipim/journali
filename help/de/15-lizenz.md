@@ -27,6 +27,10 @@ Die Elastic License 2.0 verbietet, die Software Dritten als gehosteten oder verw
 
 Andere Lizenzbedingungen sind auf Anfrage möglich. Die Kontaktadresse steht auf der Website.
 
+## Fremde Bestandteile
+
+journali enthält Bibliotheken anderer, jede unter ihrer eigenen Lizenz. `THIRD-PARTY-NOTICES.md` nennt sie, die Lizenztexte liegen im Image unter `licenses/`. Die Lizenz von journali gilt für sie nicht; insbesondere schränkt sie die Rechte aus der LGPL an libvips nicht ein (`licenses/libvips.md`).
+
 ## Haftung
 
 Die Software wird bereitgestellt, wie sie ist, ohne Gewährleistung, soweit das Gesetz das zulässt. Der Wortlaut dazu steht in der Lizenz unter No Liability.

@@ -1,0 +1,10 @@
+BouncyCastle.Cryptography	2.7.0	MIT
+MailKit	4.18.0	MIT
+Microsoft.Bcl.Cryptography	10.0.0	MIT
+Microsoft.Extensions.DependencyInjection.Abstractions	8.0.0	MIT
+Microsoft.Extensions.Logging.Abstractions	8.0.0	MIT
+MimeKit	4.18.0	MIT
+Npgsql	10.0.3	PostgreSQL
+System.Diagnostics.DiagnosticSource	9.0.11	MIT
+System.Formats.Asn1	10.0.0	MIT
+System.Security.Cryptography.Pkcs	10.0.0	MIT

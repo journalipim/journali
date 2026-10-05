@@ -11,6 +11,16 @@ with the following additional permission granted by the licensor:
   circumvent the license key functionality, and you may not remove or obscure
   any functionality in the software that is protected by the license key.
 
+  THIRD-PARTY COMPONENTS
+
+  These terms apply to journali itself, not to the third-party components
+  distributed with it (THIRD-PARTY-NOTICES.md, directory licenses/). Each of
+  them is licensed under its own license. In particular, nothing in these
+  terms, including the limitations on the license key functionality,
+  restricts your rights under the GNU Lesser General Public License to modify
+  the libraries licensed under it (such as libvips) and to reverse engineer
+  for debugging such modifications.
+
   Other licensing arrangements are available from the licensor on request.
 
 Licensor: journali (https://journali.de — Kontakt im Impressum)

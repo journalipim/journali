@@ -8,3 +8,4 @@ Journali.Server/wwwroot/
 docs/
 *.md
 !THIRD-PARTY-NOTICES.md
+!licenses/**
