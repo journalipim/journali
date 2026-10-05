@@ -4,7 +4,7 @@ excerpt: Die Global Product Classification ordnet Produkte in vier Ebenen bis zu
 slug: gpc-klassifikation-erklaert
 tags: [Klassifikation, GS1 GPC]
 categories: [Wissen]
-date: 2026-11-06
+date: 2026-11-06 06:00
 wp: 162
 ---
 Ein Händler bekommt Produktdaten von hunderten Lieferanten und muss sie in seinem System einordnen. Ohne gemeinsame Kategorien heißt dieselbe Ware überall anders. **Die GPC von GS1 gibt jedem Produkt eine Kategorie, die weltweit gleich ist** – und jeder Kategorie die Attribute, mit denen ein Produkt dort beschrieben wird.

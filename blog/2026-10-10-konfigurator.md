@@ -4,7 +4,7 @@ excerpt: Teile gehören mit Zeilen zu Konfiguratorgruppen, die summieren, gleich
 slug: konfigurator
 tags: [Integration, REST API, Datenqualität]
 categories: [Entwicklung]
-date: 2026-10-10
+date: 2026-10-10 06:00
 wp: 153
 ---
 Ein Kunde stellt sich einen Server zusammen: Mainboard, zwei Prozessoren, Arbeitsspeicher, drei Karten. Passt der Kühler zum Gehäuse? Reichen die Steckplätze? Darf er die 16-GB-Bausteine nehmen, die er schon im Warenkorb hat? **Mit dem Konfigurator beantwortet journali diese Fragen – auf dem Server, in einem Aufruf, für jeden Shop.**

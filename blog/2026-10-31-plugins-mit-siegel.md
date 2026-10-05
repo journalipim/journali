@@ -4,7 +4,7 @@ excerpt: Ein Plugin ist ein Verzeichnis mit Manifest, läuft nie im Serverprozes
 slug: plugins-mit-siegel
 tags: [Architektur, Betrieb]
 categories: [Entwicklung]
-date: 2026-10-31
+date: 2026-10-31 06:00
 wp: 160
 ---
 Ihr tauscht auf dem Server ein Plugin aus – eine neue Version, ohne dass journali neu ausgeliefert wird. Am nächsten Tag fragt jemand im Team: Ist das noch das Original? **In ⬡ Plugins steht die Antwort neben dem Namen:** ein ❖, wenn alles stimmt, ein ⚠ mit Grund, wenn nicht. Niemand muss Dateien vergleichen.
