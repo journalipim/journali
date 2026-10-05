@@ -3032,5 +3032,12 @@
  "zweiter Server": "second server",
  "Auf dieser Datenbank läuft schon {0}.": "{0} already runs on this database.",
  "Siegel von {0}": "Seal of {0}",
- "Kein Original von journali.": "Not an original of journali."
+ "Kein Original von journali.": "Not an original of journali.",
+ "{0} einschalten?": "Enable {0}?",
+ "lädt beim ersten Lauf: {0}": "downloads on the first run: {0}",
+ "von {0} · {1}": "from {0} · {1}",
+ "Die Adresse sieht nur den Abruf; Daten aus journali gehen nicht hinaus.": "The address only sees the request; no data from journali goes out.",
+ "⇩ herunterladen und einschalten": "⇩ download and enable",
+ "nicht einschalten": "do not enable",
+ "{0} lädt beim ersten Lauf eine Datei aus dem Netz; die Zustimmung dazu fehlt.": "{0} downloads a file from the net on its first run; consent to that is missing."
 }

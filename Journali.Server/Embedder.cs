@@ -27,8 +27,12 @@ public sealed class Embedder : IDisposable
 
     /// <summary>Das Modell, das der Kindprozess laden soll — die Umgebung zuerst, sonst der feste Name des Plugins.</summary>
     public string Model => Environment.GetEnvironmentVariable("JOURNALI_EMBED_MODEL") is { Length: > 0 } m ? m : DefaultModelName;
-    public bool Available => File.Exists(Path.Combine(_dir, "serve.mjs")) && Directory.Exists(Path.Combine(_dir, "node_modules"));
-    public string? Reason => !File.Exists(Path.Combine(_dir, "serve.mjs")) ? "Plugin embed fehlt."
+    /// <summary>Ist das Plugin eingeschaltet? Gesetzt beim Start (Program.cs). Ausgeschaltet startet kein Kindprozess — er holte sonst beim ersten Mal
+    /// das Modell aus dem Netz, ohne dass jemand dem zugestimmt hat (05.10.2026).</summary>
+    public Func<bool> Eingeschaltet { get; set; } = () => true;
+    public bool Available => Eingeschaltet() && File.Exists(Path.Combine(_dir, "serve.mjs")) && Directory.Exists(Path.Combine(_dir, "node_modules"));
+    public string? Reason => !Eingeschaltet() ? "Plugin embed ist aus."
+        : !File.Exists(Path.Combine(_dir, "serve.mjs")) ? "Plugin embed fehlt."
         : !Directory.Exists(Path.Combine(_dir, "node_modules")) ? "Plugin embed ohne Pakete (npm install im Plugin-Verzeichnis)." : null;
 
     /// <summary>Eine Antwort des Kindprozesses: Modell, Dimension und Vektor — oder ein Fehler.</summary>

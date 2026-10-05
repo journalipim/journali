@@ -40,7 +40,7 @@ This version asks no licence server: neither the identifier of the instance nor 
 
 ## Files on the first run
 
-Two plugins fetch a file from the net on their first run: Embeddings the model (huggingface.co), text recognition the language data (cdn.jsdelivr.net). No product file and no value goes out; the addresses only see the request. A machine without net access gets the files copied.
+Two plugins fetch a file from the net on their first run: Embeddings the model (huggingface.co), text recognition the language data (cdn.jsdelivr.net). No product file and no value goes out; the addresses only see the request. A machine without net access gets the files copied. When one of these plugins is enabled, journali asks first, naming purpose, file, address and size; without consent the plugin stays off.
 
 ## Planned
 

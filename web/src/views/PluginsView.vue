@@ -109,8 +109,23 @@ async function fetchPlugin(key) {
   finally { busy.value = '' }
 }
 // Ein/Aus: Einschalten braucht die Basis; Ausschalten einer Basis nimmt die Ergänzungen mit
+// Ein Plugin, das beim ersten Lauf eine Datei aus dem Netz holt (Manifest: download), fragt vor dem Einschalten (05.10.2026); ohne Zustimmung bleibt es aus
+async function zustimmung(p) {
+  const d = p.manifest?.download; if (!d) return ''
+  const ok = await dialog.confirm({
+    title: t('{0} einschalten?', [L(p.manifest?.label) || p.key]),
+    text: L(d.why) || '',
+    list: [t('lädt beim ersten Lauf: {0}', [L(d.what) || '']), t('von {0} · {1}', [d.from ?? '', d.size ?? '']), t('Die Adresse sieht nur den Abruf; Daten aus journali gehen nicht hinaus.')],
+    ok: t('⇩ herunterladen und einschalten'), cancel: t('nicht einschalten'),
+  })
+  return ok ? '?download=ja' : null
+}
 async function toggle(p) {
-  if (!p.enabled) { const m = missing(p.key); if (m.length) { store.toast(t('braucht {0} — zuerst einschalten', [m.join(', ')])); return } await act(`/api/plugins/${p.key}/enable`); return }
+  if (!p.enabled) {
+    const m = missing(p.key); if (m.length) { store.toast(t('braucht {0} — zuerst einschalten', [m.join(', ')])); return }
+    const z = await zustimmung(p); if (z === null) return
+    await act(`/api/plugins/${p.key}/enable${z}`); return
+  }
   const dep = plugins.dependents(p.key).filter(k => plugins.list.find(x => x.key === k)?.enabled)
   if (dep.length && !await dialog.confirm({ title: `${label(p.manifest) || p.key} deaktivieren?`, warn: t('Damit aus: {0}', [dep.join(', ')]), ok: t('Deaktivieren') })) return
   plugins.forgetInstalled(p.key)   // beim nächsten Einschalten wieder einrichten (install)

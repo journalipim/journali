@@ -420,7 +420,9 @@ braucht das Netz nicht mehr:
 | `ocr` | Sprachdaten der Texterkennung je Sprache | cdn.jsdelivr.net | `plugins/ocr/.cache`, Volume `journali-ocr-cache`, `JOURNALI_OCR_CACHE` | MIT |
 
 Dabei geht keine Produktdatei und kein Wert hinaus; die beiden Adressen sehen nur, dass der Server die Datei abruft
-(seine IP-Adresse). Ein Server ohne Netz bekommt den Cache von einem Rechner mit Netz kopiert (oben, „Vektoren und die
+(seine IP-Adresse). **Eingeschaltet wird nur mit Zustimmung** (05.10.2026): das Manifest nennt den Download (`download`: `why`,
+`what`, `from`, `size`), ⬡ Plugins fragt vor dem Einschalten, und der Server schaltet ein solches Plugin nur mit `?download=ja`
+ein. Ohne Zustimmung bleibt es aus; der Einbetter für Suchfragen (`Embedder.cs`) startet nur, solange `embed` an ist. Ein Server ohne Netz bekommt den Cache von einem Rechner mit Netz kopiert (oben, „Vektoren und die
 Frage an die Dokumente“). Weitergegeben werden die beiden Dateien von journali nicht — sie stehen weder im Repo noch
 im Image.
 

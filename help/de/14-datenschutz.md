@@ -40,7 +40,7 @@ Diese Version fragt keinen Lizenzserver: weder die Kennung der Instanz noch Anga
 
 ## Dateien beim ersten Lauf
 
-Zwei Plugins holen beim ersten Lauf eine Datei aus dem Netz: Einbettungen das Modell (huggingface.co), Texterkennung die Sprachdaten (cdn.jsdelivr.net). Dabei geht keine Produktdatei und kein Wert hinaus; die Adressen sehen nur den Abruf. Ein Rechner ohne Netz bekommt die Dateien kopiert.
+Zwei Plugins holen beim ersten Lauf eine Datei aus dem Netz: Einbettungen das Modell (huggingface.co), Texterkennung die Sprachdaten (cdn.jsdelivr.net). Dabei geht keine Produktdatei und kein Wert hinaus; die Adressen sehen nur den Abruf. Ein Rechner ohne Netz bekommt die Dateien kopiert. Beim Einschalten eines dieser Plugins fragt journali nach, mit Zweck, Datei, Adresse und Grösse; ohne Zustimmung bleibt das Plugin aus.
 
 ## Geplant
 

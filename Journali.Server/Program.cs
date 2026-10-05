@@ -255,7 +255,8 @@ jobRunner.Anderswo = verbund.LaufendAnderswo;
 jobRunner.LogFertig = verbund.ProtokollFertig;
 verbund.LogsHier = () => jobRunner.LaufendeLogs();
 builder.Services.AddSingleton(verbund);
-builder.Services.AddSingleton(new Embedder(pluginDir, LoggerFactory.Create(b => b.AddConsole()).CreateLogger("embed")));   // eine Suchfrage einbetten: Kindprozess plugins/embed/serve.mjs
+builder.Services.AddSingleton(new Embedder(pluginDir, LoggerFactory.Create(b => b.AddConsole()).CreateLogger("embed"))
+{ Eingeschaltet = () => catalog.Lesen((_, _) => catalog.Plugins.All.TryGetValue(Embedder.PluginKey, out var e) && e.Enabled) });   // eine Suchfrage einbetten: Kindprozess plugins/embed/serve.mjs
 builder.Services.AddHostedService(sp => sp.GetRequiredService<JobRunner>());
 
 // Umlaute lesbar lassen statt \u00fc — das Journal ist zum Anschauen da.

@@ -56,5 +56,17 @@
         "perJob": false
       }
     ]
+  },
+  "download": {
+    "why": {
+      "de": "Texterkennung für gescannte Dokumente und Bilder von Text — gerechnet auf diesem Server.",
+      "en": "Text recognition for scanned documents and images of text — computed on this server."
+    },
+    "what": {
+      "de": "Sprachdaten der Texterkennung je Sprache (MIT)",
+      "en": "language data for text recognition per language (MIT)"
+    },
+    "from": "cdn.jsdelivr.net",
+    "size": "≈ 4 MB für Deutsch und Englisch"
   }
 }

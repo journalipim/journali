@@ -1,8 +1,8 @@
 {
  "key": "ocr",
  "version": "1.0.1",
- "hash": "4b8f8b93aa3be8646eec24b98f4d2cb3bc186d76cfbb0a7c78cfa92a0b4e0cbe",
- "issued": "2026-10-02",
+ "hash": "e64a3805a03d743eb26643634daf200b8f11fbeafddf84bfd0ff7cdcee16be92",
+ "issued": "2026-10-05",
  "issuer": "journali",
- "sig": "gFdX0Tlm2KfxCZUZ/7iMaSo7gYDzNnmiCfmIqAFQ9TKEqOddNq70dxBs0/RvNyUpZiWYf2meMG1qQpZkbKDRKA=="
+ "sig": "4krJV694wzEpYARuna4jrDO1lxF6EK9loEyB82dFdLIpFT979WRvtmuBMmROYbZkxQcOi+Mg8vYxbUqpKqcZPg=="
 }

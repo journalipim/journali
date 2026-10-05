@@ -264,6 +264,11 @@ public static class PluginApi
     {
         if (Actor(req) is not { } actor) return ActorMissing();
         if (on && NichtImTarif(c, key) is { } nein) return nein;
+        // Ein Plugin, das beim ersten Lauf eine Datei aus dem Netz holt (Manifest: download), schaltet nur ein, wer dem zugestimmt hat (05.10.2026):
+        // die Oberfläche fragt und schickt dann ?download=ja — ohne Zustimmung bleibt es aus, und nichts wird geladen
+        if (on && req.Query["download"] != "ja" && c.Lesen((_, _) => c.Plugins.All.GetValueOrDefault(key)?.Manifest) is { } mf
+            && JsonDocument.Parse(mf).RootElement.TryGetProperty("download", out _))
+            return Bad("{0} lädt beim ersten Lauf eine Datei aus dem Netz; die Zustimmung dazu fehlt.", key);
         return c.With((_, _, write) => c.Plugins.All.TryGetValue(key, out var s)
             ? on && Requires(JsonDocument.Parse(s.Manifest).RootElement).Where(r => !(c.Plugins.All.TryGetValue(r, out var b) && b.Enabled)).ToList() is { Count: > 0 } missing
                 ? Bad("{0} braucht {1} — zuerst einschalten.", key, string.Join(", ", missing))   // Ergänzung ohne Basis

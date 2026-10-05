@@ -44,5 +44,17 @@
         "perJob": false
       }
     ]
+  },
+  "download": {
+    "why": {
+      "de": "Vektoren für die Suche nach Sinn, die Frage an die Dokumente und ähnliche Knoten — gerechnet auf diesem Server.",
+      "en": "Vectors for searching by meaning, asking the documents and similar nodes — computed on this server."
+    },
+    "what": {
+      "de": "Sprachmodell multilingual-e5-small (MIT)",
+      "en": "language model multilingual-e5-small (MIT)"
+    },
+    "from": "huggingface.co",
+    "size": "≈ 130 MB"
   }
 }
