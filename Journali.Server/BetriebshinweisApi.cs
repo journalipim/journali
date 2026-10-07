@@ -12,7 +12,7 @@ namespace Journali.Server;
 public static class BetriebshinweisApi
 {
     public const string Stream = "notice:betrieb";
-    public const string Version = "2026-10-07.2";
+    public const string Version = "2026-10-07.3";
 
     /// <summary>
     /// Testversion (07.10.2026): alles, was derzeit herausgegeben wird, ist eine Testversion — die Aussagen auf journali.de beziehen sich auf das
@@ -26,8 +26,8 @@ public static class BetriebshinweisApi
     [
         new() { ["de"] = "Diese Software befindet sich in der Entwicklung (Alpha/Beta) und wird ausschließlich zu Test- und Evaluationszwecken bereitgestellt. Sie ist ausdrücklich nicht für den Produktiveinsatz oder kritische Systemumgebungen geeignet.",
                 ["en"] = "This software is under development (alpha/beta) and is provided solely for testing and evaluation purposes. It is expressly not suitable for production use or critical system environments." },
-        new() { ["de"] = "Die Bereitstellung ist unentgeltlich (Schenkung nach deutschem Recht); die Haftung des Entwicklers ist nach § 521 BGB auf Vorsatz und grobe Fahrlässigkeit beschränkt. Die Haftung für einfache Fehler, Datenverlust, Systemausfälle oder entgangenen Gewinn ist vollständig ausgeschlossen. Die Nutzung erfolgt auf eigene Gefahr.",
-                ["en"] = "This software is provided \"as is\" and without warranties of any kind, express or implied. In no event shall the authors or copyright holders be liable for any claim, damages, or other liability, whether in an action of contract, tort, or otherwise, arising from, out of, or in connection with the software or the use or other dealings in the software." },
+        new() { ["de"] = "Die Nutzung erfolgt auf eigene Gefahr.",
+                ["en"] = "Use is at your own risk." },
     ];
 
     public static readonly Dictionary<string, string> Titel = new() { ["de"] = "Hinweise zum Betrieb", ["en"] = "Notes on operation" };

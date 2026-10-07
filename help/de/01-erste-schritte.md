@@ -18,7 +18,7 @@ Danach legt man den ersten Administrator an, ebenfalls mit dem Einrichtungscode.
 
 Unter ⚙ Einstellungen → ◈ IAM kommen weitere Anwender mit Rolle und Team dazu. Rollen bündeln Rechte; die vorbelegten sind Administrator, PIM-Manager, PIM-Editor, Team-Admin und Leser.
 
-Wer die Anlage verwaltet, bestätigt danach einmal die **Hinweise zum Betrieb**: journali ist eine Testversion zu Test- und Evaluationszwecken, unentgeltlich und mit beschränkter Haftung; Sicherung und die Probe der Wiederherstellung liegen beim Betreiber. Die Bestätigung steht mit Version und Wortlaut im Journal; ändert sich der Wortlaut, wird wieder gefragt.
+Wer die Anlage verwaltet, bestätigt danach einmal die **Hinweise zum Betrieb**: journali ist eine Testversion zu Test- und Evaluationszwecken, die Nutzung erfolgt auf eigene Gefahr; Sicherung und die Probe der Wiederherstellung liegen beim Betreiber. Die Bestätigung steht mit Version und Wortlaut im Journal; ändert sich der Wortlaut, wird wieder gefragt.
 
 ## 2. Sprachen und Kanäle
 
