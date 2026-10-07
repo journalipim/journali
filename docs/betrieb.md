@@ -509,7 +509,8 @@ dass eine Wiederherstellung gelingt. Die Oberfläche sagt das in ⇅ B&R und im 
 ausser bei den Werten der Produkte, die pflegt man wie sonst.
 
 - **Anmeldung mit demo / demo** (07.10.2026): die Anmeldeseite nennt den Zugang; das Passwort setzt der Start (`Demo.Passwort`, im Tresor), ändern
-  lässt es sich nicht. Die Bremse gegen Fehlversuche gilt für `demo` nur je Absender, nicht je Name — sonst sperrte ein Fehlversuch alle Besucher.
+  lässt es sich nicht. Ein anderer Anwender meldet sich in der Demo nicht an, auch kein Administrator: Anmeldung, Sitzung und API-Token
+  gelten nur für `demo`, `JOURNALI_ADMIN_PASSWORD` wird übergangen, Einrichten und Passwort festlegen sind gesperrt. Die Bremse gegen Fehlversuche gilt für `demo` nur je Absender, nicht je Name — sonst sperrte ein Fehlversuch alle Besucher.
   Angemeldet ist man der Anwender `demo` mit der Rolle `demo` — lesen, Werte pflegen,
   zurückziehen, freigeben, herunterladen. Ohne `model`: Attribute, Typen, Gruppen, Listen und Basics sieht man, ändern und anlegen
   weist der Server ab. Plugins, Jobs, Skripte, Speicher, Team (KI-Schlüssel), Anwender und Rollen gehören nicht dazu.

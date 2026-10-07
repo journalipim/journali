@@ -386,7 +386,9 @@ var api = app.MapGroup("/api");
 ServerApi.Map(api, verbund);
 BetriebApi.Map(api, dataDir, cachePath, Path.Combine(dataDir, $"snapshot-{connection.Host}-{connection.Port}-{connection.Database}.json"), builder.Configuration);
 Auth.Map(api, dataDir);
-if (Auth.Recover(catalog, dataDir, builder.Configuration["JOURNALI_ADMIN_PASSWORD"], builder.Configuration["JOURNALI_ADMIN_USER"]) is { } recovered) Console.WriteLine("journali: " + recovered);
+// Demo: kein Administrator — das Passwort aus der Umgebung gilt dort nicht (07.10.2026)
+if (Demo.An && !string.IsNullOrWhiteSpace(builder.Configuration["JOURNALI_ADMIN_PASSWORD"])) Console.WriteLine("journali: JOURNALI_ADMIN_PASSWORD ignored in demo mode");
+else if (Auth.Recover(catalog, dataDir, builder.Configuration["JOURNALI_ADMIN_PASSWORD"], builder.Configuration["JOURNALI_ADMIN_USER"]) is { } recovered) Console.WriteLine("journali: " + recovered);
 // Einrichtungscode, solange ein Administrator fehlt oder keiner ein Passwort hat — sonst gibt es keinen
 if (Auth.Lage(catalog, dataDir) is var anmeldung && anmeldung == Auth.Anmeldung.Anmelden) Einrichtungscode.Erledigt(dataDir);
 else Console.WriteLine($"journali: {(anmeldung == Auth.Anmeldung.Einrichten ? "no administrator yet" : "no administrator has a password")} — setup code {Einrichtungscode.Aktiv(dataDir)} (also in {Einrichtungscode.PathOf(dataDir)})");

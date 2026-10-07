@@ -170,16 +170,19 @@ public static class Auth
                 return (svc.Actor, rolle);
             }
             var rec = Finde(dir, s => s.Tokens.GetValueOrDefault(Sha(token)));
-            if (rec is not null && c.Lesen((_, _) => c.Users.All.GetValueOrDefault(rec.User)) is { Enabled: true } tu) return (tu.Key, tu.Role);
+            if (rec is not null && NurDemo(rec.User) && c.Lesen((_, _) => c.Users.All.GetValueOrDefault(rec.User)) is { Enabled: true } tu) return (tu.Key, tu.Role);
             return null;
         }
         if (ctx.Request.Cookies.TryGetValue(Cookie, out var cookie) && cookie is { Length: > 0 })
         {
             var sess = Finde(dir, s => s.Sessions.GetValueOrDefault(Sha(cookie)));
-            if (sess is not null && sess.Until > DateTimeOffset.UtcNow && c.Lesen((_, _) => c.Users.All.GetValueOrDefault(sess.User)) is { Enabled: true } su) return (su.Key, su.Role);
+            if (sess is not null && sess.Until > DateTimeOffset.UtcNow && NurDemo(sess.User) && c.Lesen((_, _) => c.Users.All.GetValueOrDefault(sess.User)) is { Enabled: true } su) return (su.Key, su.Role);
         }
         return null;
     }
+
+    /// <summary>In der Demo gilt nur der Anwender demo — keine Anmeldung, keine Sitzung und kein API-Token eines anderen, auch keines Administrators (07.10.2026).</summary>
+    private static bool NurDemo(string user) => !Demo.An || user == Demo.Anwender;
 
     /// <summary>Welches Recht braucht diese Anfrage? Null = eigenes Konto, immer erlaubt. Die Rollen sagen dann, wer es hat.</summary>
     public static string? Needed(HttpRequest req)
@@ -461,7 +464,7 @@ public static class Auth
                 ctx.Response.Headers.RetryAfter = sek.ToString();
                 return Results.Json(Err("Zu viele Anmeldeversuche — gesperrt für {0} Sekunden.", sek), statusCode: 429);
             }
-            var u = key is null ? null : c.Lesen((_, _) => c.Users.All.GetValueOrDefault(key));
+            var u = key is null || !NurDemo(key) ? null : c.Lesen((_, _) => c.Users.All.GetValueOrDefault(key));   // Demo: nur demo meldet sich an
             var stored = key is null ? null : Finde(dir, s => s.Passwords.GetValueOrDefault(key));
             if (u is null || !u.Enabled || stored is null || !Verify(pw, stored))
             {

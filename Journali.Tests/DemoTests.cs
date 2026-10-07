@@ -245,4 +245,33 @@ public class DemoAnmeldungTests
         Demo.An = true;
         try { Assert.Equal(Auth.Anmeldung.Anmelden, Auth.Lage(c, dir)); } finally { Demo.An = false; }
     }
+
+    [Fact]
+    public async Task In_der_Demo_meldet_sich_kein_Administrator_an()
+    {
+        // 07.10.2026: auch wenn es einen Administrator mit Passwort gäbe — Anmeldung und Sitzung gelten in der Demo nur für demo
+        var dir = Path.Combine(Path.GetTempPath(), "journali-demo-admin-" + Guid.NewGuid().ToString("N")); Directory.CreateDirectory(dir);
+        var c = new Catalog(new MemoryJournal()); c.Rebuild(); c.SeedMissing();
+        Demo.Einrichten(c, null, null, dir);
+        Auth.Recover(c, dir, "geheim-123456", "admin");
+        var b = WebApplication.CreateBuilder(); b.WebHost.UseUrls("http://127.0.0.1:0"); b.Services.AddSingleton(c);
+        await using var app = b.Build();
+        Auth.Map(app.MapGroup("/api"), dir);
+        await app.StartAsync();
+        var url = app.Urls.First();
+        using var vorher = new HttpClient();
+        var sitzung = await vorher.PostAsJsonAsync(url + "/api/auth/login", new { user = "admin", password = "geheim-123456" });
+        Assert.True(sitzung.IsSuccessStatusCode);   // ohne Demo: der Administrator meldet sich an
+        var cookie = sitzung.Headers.GetValues("Set-Cookie").First().Split(';')[0];
+        Demo.An = true;
+        try
+        {
+            using var http = new HttpClient();
+            Assert.Equal(System.Net.HttpStatusCode.Unauthorized, (await http.PostAsJsonAsync(url + "/api/auth/login", new { user = "admin", password = "geheim-123456" })).StatusCode);
+            Assert.True((await http.PostAsJsonAsync(url + "/api/auth/login", new { user = "demo", password = "demo" })).IsSuccessStatusCode);
+            var req = new HttpRequestMessage(HttpMethod.Get, url + "/api/auth/state"); req.Headers.Add("Cookie", cookie);
+            Assert.Contains("\"user\":null", await (await new HttpClient().SendAsync(req)).Content.ReadAsStringAsync());   // die Sitzung des Administrators gilt nicht
+        }
+        finally { Demo.An = false; }
+    }
 }
