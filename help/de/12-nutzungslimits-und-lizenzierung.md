@@ -35,6 +35,10 @@ Grenzen gelten je Team; Plugins und Publikationsbäume gelten für die ganze Ins
 
 Jede neue Instanz hat drei Monate Enterprise ab dem ersten Journaleintrag. Danach, und nach Ablauf jeder Lizenz, gilt Kostenlos. Eine wiederhergestellte Instanz beginnt den Test nicht von vorn; der erste Tag kommt aus dem Journal.
 
+## Rechtzeitig verlängern
+
+Für einen passenden Tarif und das rechtzeitige Verlängern sorgt der Betreiber. Ist eine Grenze erreicht oder endet ein Tarif, nimmt journali keine zählenden Änderungen mehr an; Lesen, Exportieren und Sichern gehen weiter. 14 Tage vor dem Ende eines Tests, einer Lizenz, eines Schlüssels oder eines Abos, das sich nicht von selbst verlängert (etwa gekündigt), steht ⏳ in der Kopfzeile — für alle, die das Team führen, und für die Verwaltung. Ein laufendes Abo verlängert sich selbst.
+
 ## Lizenz und Schlüssel
 
 Eine Lizenz ist auf die **Instanz** ausgestellt, deren Kennung unter ◍ Team steht, und gehört zu einem Team. Sie kommt als Text und wird in das Feld unter ⚿ journali Lizenz eingefügt. Zwei Wege:

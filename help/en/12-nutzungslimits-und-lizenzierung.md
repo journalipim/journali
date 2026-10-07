@@ -35,6 +35,10 @@ Limits apply per team; plugins and publication trees apply to the whole instance
 
 Every new instance has three months of Enterprise from the first journal entry. After that, and after every licence expires, Free applies. A restored instance does not start the trial anew; the first day comes from the journal.
 
+## Renewing in time
+
+The operator is responsible for a suitable plan and for renewing it in time. When a limit is reached or a plan ends, journali accepts no further counted changes; reading, exporting and backing up continue. 14 days before a trial, a licence, a key or a subscription that does not renew itself (for example cancelled) ends, ⏳ appears in the header — for everyone who leads the team, and for administration. A running subscription renews itself.
+
 ## Licence and keys
 
 A licence is issued for the **instance**, whose identifier is under ◍ Team, and belongs to a team. It arrives as text and is pasted into the field under ⚿ journali licence. Two ways:

@@ -62,6 +62,17 @@ public static class LicenceApi
             });
         });
 
+        // Erinnerung vor dem Ablauf (07.10.2026, Ablaufhinweise.cs): die Verwaltung sieht alles, wer ein Team führt, das seines; die Instanz
+        // (Test, Lizenz) nur die Verwaltung. In der Startphase nichts — es gibt keine Grenzen
+        api.MapGet("/licence/ablauf", (HttpRequest req, Catalog c) =>
+        {
+            if (Journali.Core.Licensing.Startphase.An) return Results.Ok(Array.Empty<Ablaufhinweise.Ablauf>());
+            var verwaltung = Auth.Has(req, c, Journali.Core.Entries.Rights.Users);
+            var alle = Ablaufhinweise.Bald(licences.Roh, licences.Geprueft, c.Lesen((_, _) => c.Teams.All.Values.ToList()), c.Tarife, DateOnly.FromDateTime(DateTime.Now));
+            return Results.Ok(alle.Where(a => a.Team is null ? verwaltung : verwaltung || TeamApi.Fuehrt(req, c, a.Team))
+                .Select(a => new { was = a.Was, team = a.Team, teamLabel = a.TeamLabel, tarif = a.Tarif, am = a.Am.ToString("yyyy-MM-dd"), tage = a.Tage }).ToList());
+        });
+
         // Abo verbinden: Lizenzschlüssel aus dem Shop für ein Team — Recht users, wie das Einspielen
 
         api.MapPost("/licence/abo", async (AboBody body, HttpRequest req, Catalog c, CancellationToken ct) =>

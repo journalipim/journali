@@ -1,6 +1,7 @@
 <script setup>
 import { onMounted, onErrorCaptured, ref, computed, watch } from 'vue'
 import { store } from './store.js'
+import { ladeAblauf, ablaufText, ablaufTitel } from './ablauf.js'
 import ContextMenu from './components/ContextMenu.vue'
 import Dialog from './components/Dialog.vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -61,6 +62,8 @@ const nav = [
   { to: '/tasks', icon: '⚑', label: t_('Aufgaben'), key: '9' },   // Workflow-Schritte, die meiner Rolle gehören (27)
 ]
 // unten in der Leiste: Journal und Einstellungen
+// Erinnerung vor dem Ablauf (07.10.2026): nach der Anmeldung und bei jedem Wechsel der Startphase neu fragen
+watch(() => [store.auth.known, store.auth.user, store.startphase, store.demo], () => { ladeAblauf() }, { immediate: true })
 const navBottom = [
   { to: '/plugins', icon: '⬡', label: t_('Plugins'), key: '7' },
   { to: '/journal', icon: '≡', label: t_('Journal'), key: '2' },
@@ -157,6 +160,7 @@ function railDrop(target) {
         :title="$t('KI Austauschvolumen (mengenbasiert) — Diese Kennzahl gibt an, welche Datenmenge mit KIs über deren APIs ausgetauscht wurden (Senden+Empfangen). Wird zum Monatsbeginn zurückgesetzt.')"
         >{{ $t("✧ KI {0}", [kb(ai.server.volume?.month)]) }}</router-link></template>
       </template>
+      <router-link v-if="!abgemeldet && store.ablauf?.length" to="/settings#teams" class="warn ablauf" :title="ablaufTitel(store.ablauf)">{{ ablaufText(store.ablauf[0]) }}</router-link>
       <span class="grow" />
       <button v-if="store.stale" class="primary" style="padding:0 8px;height:20px;font-size:12px" @click="reload" :title="$t('Neue Version der Oberfläche laden')">{{ $t("↻ Neue Version") }}</button>
       <template v-if="!abgemeldet">

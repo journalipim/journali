@@ -3091,5 +3091,11 @@
  "Diese Eingabe ist nicht zulässig.": "This input is not permitted.",
  "{0}: HTML mit Skript oder Ereignissen ist nicht zulässig.": "{0}: HTML with script or event handlers is not permitted.",
  "Impressum": "Legal notice",
- "Datenschutz": "Privacy"
+ "Datenschutz": "Privacy",
+ "Lizenz": "Licence",
+ "Abo": "Subscription",
+ "⏳ {0} endet heute": "⏳ {0} ends today",
+ "⏳ {0} endet morgen": "⏳ {0} ends tomorrow",
+ "⏳ {0} endet in {1} Tagen": "⏳ {0} ends in {1} days",
+ "Für einen passenden Tarif und das rechtzeitige Verlängern sorgt der Betreiber.": "The operator is responsible for a suitable plan and for renewing it in time."
 }
