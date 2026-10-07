@@ -118,14 +118,16 @@ public static class Demo
         var n = 0; var bilder = 0;
         if (pluginDir is not null) n += PluginsEinschalten(c, pluginDir);
         var leer = c.Lesen((_, t) => !t.Nodes.Values.Any(x => x.Role == Roles.Product));
+        var geo = new List<GeoText>();
         if (leer)
         {
             var wuensche = new List<(string Knoten, string Produkt, DemoBilder.Wunsch Wunsch)>();
-            n += Beispielkatalog(c, wuensche);
+            n += Beispielkatalog(c, wuensche, geo);
             if (store is not null) (n, bilder) = (n + Bilder(c, store, wuensche, out var neu), neu);
         }
         n += Etim(c);
         if (pluginDir is not null) n += Systemobjekte(c, pluginDir);
+        n += GeoTexte(c, geo);
         n += Publikationsbaum(c);
         c.MaxPubTrees = 1;   // ein Publikationsbaum, wie eine Grenze des Tarifs: anlegen geht nicht, löschen sperrt Gesperrt (Knoten zurückziehen)
         foreach (var key in OhnePlugins)
@@ -223,7 +225,8 @@ public static class Demo
     };
 
     /// <param name="bilder">bekommt je Variante den Wunsch nach ihrem Bild (mit ihrem Produkt) — gezeichnet wird ausserhalb der Sperre</param>
-    public static int Beispielkatalog(Catalog c, List<(string Knoten, string Produkt, DemoBilder.Wunsch Wunsch)>? bilder = null) => c.WithBatch(Anwender, "demo", (model, tree, write) =>
+    /// <param name="geo">bekommt je Produkt seine GEO-Texte — geschrieben wird nach den Systemobjekten (<see cref="GeoTexte"/>)</param>
+    public static int Beispielkatalog(Catalog c, List<(string Knoten, string Produkt, DemoBilder.Wunsch Wunsch)>? bilder = null, List<GeoText>? geo = null) => c.WithBatch(Anwender, "demo", (model, tree, write) =>
     {
         var n = 0;
         Entry W(string stream, string type, object payload) { n++; return write(Anwender, stream, type, payload, "demo"); }
@@ -253,16 +256,27 @@ public static class Demo
         if (!model.Groups.ContainsKey("lighting")) W(Model.GroupStream + "lighting", Types.AttributeGroupDefined, new AttributeGroupDefinition("lighting", Labels.Of("Lichttechnik", "Lighting")));
         foreach (var a in new AttributeDefinition[]
         {
-            new("power", Labels.Of("Leistung", "Power"), AttributeTypes.Decimal, Unit: "W", Group: "lighting"),
-            new("luminous_flux", Labels.Of("Lichtstrom", "Luminous flux"), AttributeTypes.Integer, Unit: "lm", Group: "lighting"),
-            new("colour_temperature", Labels.Of("Farbtemperatur", "Colour temperature"), AttributeTypes.Integer, Unit: "K", Group: "lighting"),
-            new("socket", Labels.Of("Sockel", "Socket"), AttributeTypes.Enum, Group: "lighting", List: "socket"),
-            new("protection", Labels.Of("Schutzart", "Protection rating"), AttributeTypes.Enum, Group: "lighting", List: "protection"),
-            new("dimmable", Labels.Of("dimmbar", "Dimmable"), AttributeTypes.Boolean, Group: "lighting"),
-            new("energy_class", Labels.Of("Energieeffizienzklasse", "Energy efficiency class"), AttributeTypes.Enum, Group: "lighting", List: "energy_class"),
-            new("lifetime", Labels.Of("Lebensdauer", "Lifetime"), AttributeTypes.Integer, Unit: "h", Group: "lighting"),
+            new("power", Labels.Of("Leistung", "Power"), AttributeTypes.Decimal, Unit: "W", Group: "lighting", Inheritable: true),
+            new("luminous_flux", Labels.Of("Lichtstrom", "Luminous flux"), AttributeTypes.Integer, Unit: "lm", Group: "lighting", Inheritable: true),
+            new("colour_temperature", Labels.Of("Farbtemperatur", "Colour temperature"), AttributeTypes.Integer, Unit: "K", Group: "lighting", Inheritable: true),
+            new("socket", Labels.Of("Sockel", "Socket"), AttributeTypes.Enum, Group: "lighting", Inheritable: true, List: "socket"),
+            new("protection", Labels.Of("Schutzart", "Protection rating"), AttributeTypes.Enum, Group: "lighting", Inheritable: true, List: "protection"),
+            new("dimmable", Labels.Of("dimmbar", "Dimmable"), AttributeTypes.Boolean, Group: "lighting", Inheritable: true),
+            new("energy_class", Labels.Of("Energieeffizienzklasse", "Energy efficiency class"), AttributeTypes.Enum, Group: "lighting", Inheritable: true, List: "energy_class"),
+            new("lifetime", Labels.Of("Lebensdauer", "Lifetime"), AttributeTypes.Integer, Unit: "h", Group: "lighting", Inheritable: true),
         })
             if (!model.Attributes.ContainsKey(a.Key)) W(Model.AttributeStream + a.Key, Types.AttributeDefined, a);
+        // Die Beschreibung steht am Produkt und gilt für seine Varianten: in der Demo vererbbar (im Grundmodell nicht). Die Lichttechnik
+        // ist es von Anfang an — ein Wert am Produkt gilt für die Varianten, bis eine einen eigenen hat (Datenblatt, Subitems-Tabelle).
+        if (model.Attributes.GetValueOrDefault("description") is { Inheritable: false } beschreibung)
+            W(Model.AttributeStream + "description", Types.AttributeDefined, beschreibung with { Inheritable = true });
+        // Der Name einer Variante ist ihr eigener: der des Produkts mit dem Wert der Achse (Farbe, Sockel)
+        void Variantenname(string id, string produktDe, string produktEn, string liste, string wert)
+        {
+            var l = model.Lists[liste].Values[wert].Label;
+            Wert(id, "name", "de", $"{produktDe}, {l.GetValueOrDefault("de") ?? wert}");
+            Wert(id, "name", "en", $"{produktEn}, {l.GetValueOrDefault("en") ?? wert}");
+        }
 
         // Baum: Bereiche → Formen der Leuchte → Produkte mit Farbvarianten
         var zufall = new Random(7);
@@ -284,16 +298,22 @@ public static class Demo
                     var watt = lampe ? new[] { 4, 5, 7, 9, 11, 13 }[i] : 8 + 4 * zufall.Next(1, 8);
                     var kelvin = new[] { 2700, 3000, 4000 }[zufall.Next(3)];
                     var produkt = Id(Commands.CreateProduct(ctx, gruppe, lampe ? ["socket"] : ["color"]));   // Lampen je Sockel, Leuchten je Farbe
-                    Wert(produkt, "name", "de", lampe ? $"LED-Lampe {watt} W {fDe}" : $"{einzahlDe} {fDe} {groesse} cm");
-                    Wert(produkt, "name", "en", lampe ? $"LED lamp {watt} W {fEn}" : $"{einzahlEn} {fEn} {groesse} cm");
+                    var nameDe = lampe ? $"LED-Lampe {watt} W {fDe}" : $"{einzahlDe} {fDe} {groesse} cm";
+                    var nameEn = lampe ? $"LED lamp {watt} W {fEn}" : $"{einzahlEn} {fEn} {groesse} cm";
+                    Wert(produkt, "name", "de", nameDe);
+                    Wert(produkt, "name", "en", nameEn);
                     Wert(produkt, "description", "de", $"<p>{(lampe ? "LED-Lampe" : einzahlDe)} in {fDe}er Form mit {watt} W und {kelvin} K{(aussen ? " für den Aussenbereich" : "")}. {(lampe ? "Ersetzt eine herkömmliche Glühlampe." : "Gehäuse aus Aluminium, Abdeckung aus Kunststoff.")}</p>");
                     Wert(produkt, "description", "en", $"<p>{(lampe ? "LED lamp" : einzahlEn)} in a {fEn} shape with {watt} W and {kelvin} K{(aussen ? " for outdoor use" : "")}. {(lampe ? "Replaces a conventional incandescent lamp." : "Aluminium housing, plastic cover.")}</p>");
                     Wert(produkt, "power", null, watt.ToString(System.Globalization.CultureInfo.InvariantCulture));
-                    Wert(produkt, "luminous_flux", null, (watt * (95 + zufall.Next(30))).ToString());
+                    var lumen = watt * (95 + zufall.Next(30));
+                    Wert(produkt, "luminous_flux", null, lumen.ToString());
                     Wert(produkt, "colour_temperature", null, kelvin.ToString());
                     if (!lampe) Wert(produkt, "socket", null, aussen ? "led" : new[] { "e27", "gu10", "led", "g9" }[zufall.Next(4)]);
-                    Wert(produkt, "protection", null, aussen ? new[] { "ip44", "ip54", "ip65" }[zufall.Next(3)] : "ip20");
-                    Wert(produkt, "dimmable", null, zufall.Next(3) > 0 ? "true" : "false");
+                    var schutz = aussen ? new[] { "ip44", "ip54", "ip65" }[zufall.Next(3)] : "ip20";
+                    Wert(produkt, "protection", null, schutz);
+                    var dimmbar = zufall.Next(3) > 0;
+                    Wert(produkt, "dimmable", null, dimmbar ? "true" : "false");
+                    geo?.Add(GeoTexteVon(produkt, nameDe, nameEn, lampe ? "LED-Lampe" : einzahlDe, lampe ? "LED lamp" : einzahlEn, fDe, fEn, watt, lumen, kelvin, schutz, dimmbar, aussen));
                     Wert(produkt, "energy_class", null, new[] { "c", "d", "e", "f" }[zufall.Next(4)]);
                     Wert(produkt, "lifetime", null, (15000 + 5000 * zufall.Next(5)).ToString());
                     Id(Commands.SetStatus(ctx, produkt, i == 5 ? "draft" : "active"));
@@ -302,12 +322,14 @@ public static class Demo
                         foreach (var sockel in new[] { "e27", "e14", "gu10" }.Take(2 + zufall.Next(2)))
                         {
                             knoten.Add(Id(Commands.CreateVariant(ctx, produkt, new() { ["socket"] = sockel })));
+                            Variantenname(knoten[^1], nameDe, nameEn, "socket", sockel);
                             bilder?.Add((knoten[^1], produkt, new DemoBilder.Wunsch("lampe", fDe, null, kelvin, sockel)));
                         }
                     else
                         foreach (var farbe in Farben.OrderBy(_ => zufall.Next()).Take(2 + zufall.Next(2)))
                         {
                             knoten.Add(Id(Commands.CreateVariant(ctx, produkt, new() { ["color"] = farbe })));
+                            Variantenname(knoten[^1], nameDe, nameEn, "color", farbe);
                             bilder?.Add((knoten[^1], produkt, new DemoBilder.Wunsch(Art(formDe), fDe, farbe, kelvin)));
                         }
                     foreach (var k in knoten)
@@ -531,6 +553,62 @@ public static class Demo
         if (!proc.WaitForExit(30_000)) { proc.Kill(true); throw new InvalidOperationException("Demo: demo-system.mjs antwortet nicht."); }
         if (proc.ExitCode != 0) throw new InvalidOperationException("Demo: demo-system.mjs — " + err.Result.Trim());
         return aus.Result;
+    }
+
+    // ---- GEO-Texte (07.10.2026): in der Demo ohne KI, aus den Werten jedes Produkts gesetzt — damit Datenblatt, Prüfung und Varianten sie zeigen.
+    // Die Attribute legt das Plugin geo an (Systemobjekte); in der Demo sind sie vererbbar (demo-system.mjs), die Varianten zeigen die des Produkts.
+
+    /// <summary>Die GEO-Texte eines Produkts: Attribut → (de, en).</summary>
+    public sealed record GeoText(string Produkt, Dictionary<string, (string De, string En)> Werte);
+
+    private static GeoText GeoTexteVon(string produkt, string nameDe, string nameEn, string artDe, string artEn, string formDe, string formEn,
+        int watt, int lumen, int kelvin, string schutz, bool dimmbar, bool aussen)
+    {
+        var ip = schutz.ToUpperInvariant();
+        var einDe = artDe is "Strahler" ? "ein" : "eine";
+        var lichtDe = kelvin <= 3000 ? "warmweiss" : "neutralweiss"; var lichtEn = kelvin <= 3000 ? "warm white" : "neutral white";
+        var kurzDe = $"{artDe} mit {watt} W und {lumen} lm, {kelvin} K ({lichtDe}), Schutzart {ip}{(dimmbar ? ", dimmbar" : "")}.";
+        var kurzEn = $"{artEn} with {watt} W and {lumen} lm, {kelvin} K ({lichtEn}), protection rating {ip}{(dimmbar ? ", dimmable" : "")}.";
+        string JsonLd(string name, string kurz, string leistung, string lichtstrom, string farbtemperatur) => System.Text.Json.JsonSerializer.Serialize(new Dictionary<string, object>
+        {
+            ["@context"] = "https://schema.org", ["@type"] = "Product", ["name"] = name, ["description"] = kurz,
+            ["additionalProperty"] = new object[]
+            {
+                new Dictionary<string, object> { ["@type"] = "PropertyValue", ["name"] = leistung, ["value"] = watt, ["unitText"] = "W" },
+                new Dictionary<string, object> { ["@type"] = "PropertyValue", ["name"] = lichtstrom, ["value"] = lumen, ["unitText"] = "lm" },
+                new Dictionary<string, object> { ["@type"] = "PropertyValue", ["name"] = farbtemperatur, ["value"] = kelvin, ["unitText"] = "K" },
+            },
+        }, new System.Text.Json.JsonSerializerOptions { Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping });
+        return new(produkt, new()
+        {
+            ["geo_definition"] = ($"{nameDe} ist {einDe} {artDe} in {formDe}er Form mit {watt} W, {lumen} lm und {kelvin} K{(aussen ? " für den Aussenbereich" : "")}.",
+                                  $"{nameEn} is a {artEn.ToLowerInvariant()} in a {formEn} shape with {watt} W, {lumen} lm and {kelvin} K{(aussen ? " for outdoor use" : "")}."),
+            ["geo_description"] = (kurzDe, kurzEn),
+            ["geo_faq"] = ($"Ist {nameDe} dimmbar? {(dimmbar ? "Ja." : "Nein.")}\nWelche Schutzart hat {nameDe}? {ip}.\nWelche Lichtfarbe? {kelvin} K, {lichtDe}.",
+                           $"Is {nameEn} dimmable? {(dimmbar ? "Yes." : "No.")}\nWhat is the protection rating of {nameEn}? {ip}.\nWhich light colour? {kelvin} K, {lichtEn}."),
+            ["geo_keywords"] = ($"{artDe}, {formDe}, LED, {watt} W, {kelvin} K, {lichtDe}, {ip}{(aussen ? ", Aussenbereich" : "")}{(dimmbar ? ", dimmbar" : "")}",
+                                $"{artEn.ToLowerInvariant()}, {formEn}, LED, {watt} W, {kelvin} K, {lichtEn}, {ip}{(aussen ? ", outdoor" : "")}{(dimmbar ? ", dimmable" : "")}"),
+            ["geo_jsonld"] = (JsonLd(nameDe, kurzDe, "Leistung", "Lichtstrom", "Farbtemperatur"), JsonLd(nameEn, kurzEn, "Power", "Luminous flux", "Colour temperature")),
+        });
+    }
+
+    /// <summary>Die GEO-Texte an die Produkte — nach den Systemobjekten (erst dann gibt es die Attribute), nur Attribute, die es gibt.</summary>
+    public static int GeoTexte(Catalog c, List<GeoText> texte)
+    {
+        if (texte.Count == 0) return 0;
+        return c.WithBatch(Anwender, "demo-geo", (model, tree, write) =>
+        {
+            var z = 0;
+            var ctx = new Ctx { Model = model, Tree = tree, Relations = c.Relations, Media = c.Media, Write = (stream, type, payload) => { z++; return write(Anwender, stream, type, payload, "demo-geo"); } };
+            foreach (var t in texte)
+                foreach (var (attr, (de, en)) in t.Werte)
+                {
+                    if (!model.Attributes.ContainsKey(attr)) continue;
+                    foreach (var (loc, text) in new[] { ("de", de), ("en", en) })
+                        if (Commands.SetAttribute(ctx, t.Produkt, attr, loc, null, text, null).Error is { } e) throw new InvalidOperationException($"Demo: {attr} — {e}");
+                }
+            return z;
+        });
     }
 
     /// <summary>EAN-13 aus zwölf Ziffern: die Prüfziffer dazu.</summary>

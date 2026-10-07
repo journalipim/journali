@@ -164,6 +164,25 @@ public class DemoTests
         foreach (var attr in new[] { "power", "luminous_flux", "socket", "energy_class" })
             Assert.Contains(c.Lesen((m, _) => m.GroupsOf(attr).ToList()), g => g.Contains("ec001959"));
         Assert.False(c.Lesen((m, _) => m.Attributes.ContainsKey("ef011586")));   // zugeordnet, nicht angelegt
+        // Vererbung (07.10.2026): Lichttechnik, Beschreibung und GEO-Texte stehen am Produkt und gelten für seine Varianten; der Name ist der eigene
+        c.Lesen((m, t) =>
+        {
+            var variante = t.Nodes.Values.First(x => x.Role == Roles.Variant && x.AxisValues.ContainsKey("color"));
+            var produkt = t.Nodes[variante.Parent!];
+            foreach (var attr in new[] { "power", "luminous_flux", "protection", "dimmable", "energy_class" })
+                Assert.Equal(produkt.Id, t.Resolve(m, variante, attr, null, null).From?.Id);
+            foreach (var attr in new[] { "description", "geo_definition", "geo_description", "geo_faq", "geo_keywords", "geo_jsonld" })
+            {
+                var (wert, von) = t.Resolve(m, variante, attr, "de", null);
+                Assert.False(string.IsNullOrEmpty(wert), attr);
+                Assert.Equal(produkt.Id, von?.Id);
+            }
+            Assert.Contains("schema.org", t.Resolve(m, variante, "geo_jsonld", "en", null).Value);
+            var (name, nameVon) = t.Resolve(m, variante, "name", "de", null);
+            Assert.Equal(variante.Id, nameVon?.Id);
+            Assert.StartsWith(t.Resolve(m, produkt, "name", "de", null).Value + ", ", name);
+            return 0;
+        });
         var vorher = c.Head;
         Demo.Einrichten(c, null, dir);
         Assert.Equal(vorher, c.Head);   // der nächste Start schreibt nichts

@@ -45,7 +45,8 @@ for (const key of ['dpp', 'ppwr']) {
 const geo = (await lade('geo/entry.js'))?.SYSTEM
 if (geo) out.push({
   plugin: 'geo', group: { key: geo.group, label: geo.label }, units: [],
-  attributes: geo.attributes.map(([, key, label]) => ({ key, label, type: 'text', group: geo.group, axes: ['locale'] })),
+  // in der Demo vererbbar: die Texte stehen am Produkt (Demo.GeoTexte) und gelten für seine Varianten
+  attributes: geo.attributes.map(([, key, label]) => ({ key, label, type: 'text', group: geo.group, axes: ['locale'], inheritable: true })),
   data: { targets: geo.targets }, attach: true,
 })
 const gpc = await lade('gpc/core.mjs')
