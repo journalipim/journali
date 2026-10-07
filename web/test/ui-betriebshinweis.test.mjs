@@ -58,3 +58,16 @@ test('Testversion: das Feld steht in der Statusleiste und ruft den Hinweis', asy
   const app = fs.readFileSync(new URL('../src/App.vue', import.meta.url), 'utf8')
   assert.match(app, /<button v-if="store\.testversion" class="testversion"[^>]*@click="zeigeTesthinweis">\{\{ \$t\("Testversion"\) \}\}<\/button>/)
 })
+// Demo (07.10.2026): /api/health sagt demo; dann gibt es weder Abmelden noch Passwort und Token
+test('Demo: der Stand kommt aus /api/health, Abmelden und das eigene Konto entfallen', async () => {
+  const get = api.get
+  api.get = async p => p.startsWith('/api/health') ? { ok: true, demo: true, testversion: true, version: '0.9.0', head: 1, nodes: 1 } : {}
+  try { await store.poll(true) } finally { api.get = get }
+  assert.equal(store.demo, true)
+  assert.equal(store.testversion, true)
+  const fs = await import('node:fs')
+  const app = fs.readFileSync(new URL('../src/App.vue', import.meta.url), 'utf8')
+  assert.match(app, /<button v-if="!store\.demo"[^>]*@click="logout"/)
+  const einstellungen = fs.readFileSync(new URL('../src/views/SettingsView.vue', import.meta.url), 'utf8')
+  assert.match(einstellungen, /<AccountSettings v-if="store\.auth\.enabled && !store\.demo" \/>/)
+})

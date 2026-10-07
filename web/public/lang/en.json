@@ -3083,6 +3083,7 @@
  "✓ zur Kenntnis genommen": "✓ acknowledged",
  "später": "later",
  "Testversion": "Test version",
+ "In der Demo nicht verfügbar.": "Not available in the demo.",
  "Nur für Test und Evaluation, nicht für den Produktiveinsatz.": "For testing and evaluation only, not for production use.",
  "Die Hinweise zum Betrieb in Version {0} sind nicht bestätigt.": "The notes on operation in version {0} are not confirmed."
 }

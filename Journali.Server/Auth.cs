@@ -177,7 +177,7 @@ public static class Auth
             var sess = Finde(dir, s => s.Sessions.GetValueOrDefault(Sha(cookie)));
             if (sess is not null && sess.Until > DateTimeOffset.UtcNow && c.Lesen((_, _) => c.Users.All.GetValueOrDefault(sess.User)) is { Enabled: true } su) return (su.Key, su.Role);
         }
-        return null;
+        return Demo.An ? Demo.Besucher(c) : null;   // Demo: wer ohne Sitzung kommt, ist der Anwender demo
     }
 
     /// <summary>Welches Recht braucht diese Anfrage? Null = eigenes Konto, immer erlaubt. Die Rollen sagen dann, wer es hat.</summary>
@@ -302,6 +302,8 @@ public static class Auth
         // Dazu die Dateien der Plugins (/plugins/…): sie liegen ausserhalb von /api und waren offen; ohne Sitzung gibt es nur noch die der Office-Add-ins.
         bool Beginnt(string vorn) => path.StartsWith(vorn, StringComparison.OrdinalIgnoreCase);
         var plugin = Beginnt("/plugins/");
+        // Demo: das eigene Konto, Anmelden und Einrichten gibt es nicht — vor allem anderen, auch vor den Wegen ohne Sitzung
+        if (Demo.An && Demo.Gesperrt(path, ctx.Request.Method)) { ctx.Response.StatusCode = 403; await ctx.Response.WriteAsJsonAsync(Err("In der Demo nicht verfügbar.")); return; }
         if ((!Beginnt("/api") && !plugin) || (plugin && OeffentlichesPlugin(path)) || ApiOhneSitzung(path))
         {
             // Wer nicht angemeldet ist, bekommt keinen grossen Körper: Kestrel erlaubt sonst 30 MB, die ein JSON-Aufruf (Anmeldung) in den Speicher läse

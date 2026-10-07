@@ -127,7 +127,8 @@ async function save() {
       </table>
       </div>
 
-      <AccountSettings v-if="store.auth.enabled" />
+      <!-- Demo: Passwort und Token gibt es nicht, der Server sperrt sie -->
+      <AccountSettings v-if="store.auth.enabled && !store.demo" />
 
       <div class="section" v-if="false && store.model">
         <h2>{{ $t("Modell") }}</h2>

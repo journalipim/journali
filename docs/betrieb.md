@@ -503,6 +503,23 @@ Sicherung, Aufbewahrung und Probe liegen beim Betreiber; journali stellt die Wer
 dass eine Wiederherstellung gelingt. Die Oberfläche sagt das in ⇅ B&R und im Job-Dialog des Plugins `backup`
 (`process.notice` im Manifest — ein Satz, den der Job-Dialog unter der Plugin-Wahl zeigt, `noticeTitle` im Tooltip).
 
+## Demo (07.10.2026)
+
+`JOURNALI_DEMO=1` macht eine Instanz zur öffentlichen Demo (`Demo.cs`):
+
+- **Ohne Anmeldung**: wer ohne Sitzung und ohne Token kommt, ist der Anwender `demo` mit der Rolle `demo` — lesen, pflegen,
+  zurückziehen, freigeben, modellieren, herunterladen. Plugins, Jobs, Skripte, Speicher, Team (KI-Schlüssel), Anwender und Rollen
+  gehören nicht dazu; die Oberfläche zeigt davon nichts.
+- **Gesperrt** (403 „In der Demo nicht verfügbar.“), mit jedem Recht: Passwort, API-Token anlegen und löschen, Anmelden, Einrichten.
+  Die Oberfläche zeigt weder ⏻ noch Mein Konto.
+- **Beispielkatalog**: ist das Journal ohne Produkte, legt der Start einen erfundenen Katalog an (Leuchten und Leuchtmittel: 11 Gruppen,
+  42 Produkte, etwa 100 Varianten, Lichttechnik mit Einheiten und Listen, zwei Sprachen) — über `Catalog.WithBatch` und `Commands`, wie
+  jede Pflege. Danach Rolle und Anwender; ein weiterer Start schreibt nichts.
+- **Zurücksetzen** geschieht von aussen: die Demo läuft mit einer Datenbank ohne Volume, der Betrieb startet den Stack täglich neu,
+  und der Start legt alles wieder an. Einen Weg, das Journal zu leeren, gibt es nicht.
+- **Hinweis**: hinter „Testversion“ steht zusätzlich, dass die Demo täglich zurückgesetzt wird und alle Besucher sehen, was eingegeben wird.
+- **Uploads** begrenzt `JOURNALI_UPLOAD_MB` (in der Demo klein, etwa 5).
+
 ## Tabelle `journal`
 
 | Spalte | Typ | |

@@ -127,6 +127,9 @@ catalog.LicenceDir = dataDir;
 catalog.Licences = licences;
 catalog.ZaehltAb = licences.Lic.CountFrom;   // ab wann gezählt wird
 var seeded = catalog.SeedMissing();
+// Demo (07.10.2026): Beispielkatalog in ein leeres Journal, Anwender und Rolle demo — Demo.cs
+Demo.An = Environment.GetEnvironmentVariable("JOURNALI_DEMO") == "1";
+if (Demo.An) Console.WriteLine($"journali: demo mode — {Demo.Einrichten(catalog)} entries written");
 // Server auf derselben Datenbank (pflegestruktur 41): Kennung, Puls, Rolle. Der erste Takt gleich hier, damit der Start weiss, ob er Hauptserver ist
 var verbund = new Verbund(db, catalog, dataDir, typeof(Program).Assembly.GetName().Version?.ToString(3), System.IO.File.GetLastWriteTimeUtc(typeof(Program).Assembly.Location));
 try { verbund.Takt(); } catch (Exception e) { Console.WriteLine($"journali: server not registered — {e.Message}"); }
@@ -382,7 +385,7 @@ api.MapGet("/health", (HttpRequest req, Catalog c) =>
     DatenbankPruefen();   // wirft bei unerreichbarer Datenbank; die Wache oben macht daraus 503
     var wer = req.HttpContext.Items["user"] as string;
     if (string.IsNullOrEmpty(wer) && Auth.Enabled(c)) wer = Auth.Resolve(req.HttpContext, c, dataDir)?.User;
-    if (Auth.Enabled(c) && string.IsNullOrEmpty(wer)) return Results.Ok(new { ok = true, abgemeldet = true, built = gebautAm, version = laufendeVersion, startphase = Journali.Core.Licensing.Startphase.An ? true : (bool?)null, testversion = BetriebshinweisApi.Testversion ? true : (bool?)null, gesperrt = verbund.Gesperrt ? true : (bool?)null, ohneLizenz = verbund.OhneLizenz ? true : (bool?)null });
+    if (Auth.Enabled(c) && string.IsNullOrEmpty(wer)) return Results.Ok(new { ok = true, abgemeldet = true, built = gebautAm, version = laufendeVersion, startphase = Journali.Core.Licensing.Startphase.An ? true : (bool?)null, testversion = BetriebshinweisApi.Testversion ? true : (bool?)null, demo = Demo.An ? true : (bool?)null, gesperrt = verbund.Gesperrt ? true : (bool?)null, ohneLizenz = verbund.OhneLizenz ? true : (bool?)null });
     return Results.Ok(new
 {
     head = c.Head,
@@ -395,6 +398,7 @@ api.MapGet("/health", (HttpRequest req, Catalog c) =>
     usage = Journali.Core.Licensing.Startphase.An ? null : Nutzung(req, c),   // Startphase: nichts zu journali-Token
     startphase = Journali.Core.Licensing.Startphase.An ? true : (bool?)null,    // die Oberfläche blendet Lizenz, Limits und Token aus
     testversion = BetriebshinweisApi.Testversion ? true : (bool?)null,    // oben das rote Feld „Testversion“
+    demo = Demo.An ? true : (bool?)null,    // Demo: kein eigenes Konto, kein Abmelden
     built = gebautAm,      // Stand der LAUFENDEN Version — einmal beim Start gelesen
     version = laufendeVersion,     // die Version, die läuft — steht oben in der Leiste
     // der Tarif dieser Instanz: die Oberfläche richtet sich danach, was sie überhaupt anbietet

@@ -56,7 +56,7 @@ public static class BetriebshinweisApi
             return Results.Ok(new { version = Version, title = Titel, points = Punkte, acknowledged = b?.Version, at = b?.At, by = b?.Wer });
         });
         // ohne Sitzung zu haben (Auth.ApiOhneSitzung), wie Version und Bau: das rote Feld steht auch vor der Anmeldung
-        api.MapGet("/testversion", () => Results.Ok(new { test = Testversion, title = TestTitel, points = Testhinweis }));
+        api.MapGet("/testversion", () => Results.Ok(new { test = Testversion, demo = Demo.An, title = TestTitel, points = Demo.An ? [.. Testhinweis, Demo.Hinweis] : Testhinweis }));
         api.MapPost("/notice/acknowledge", (HttpRequest req, Catalog c, IJournal journal) =>
         {
             if (Actor(req) is not { } actor) return ActorMissing();

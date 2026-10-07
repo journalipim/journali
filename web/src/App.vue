@@ -157,7 +157,7 @@ function railDrop(target) {
       <button v-if="store.stale" class="primary" style="padding:0 8px;height:20px;font-size:12px" @click="reload" :title="$t('Neue Version der Oberfläche laden')">{{ $t("↻ Neue Version") }}</button>
       <template v-if="!abgemeldet">
       <button v-if="(store.auth.enabled && store.auth.user) || store.actor" class="x lesezeichen-knopf" :title="$t('Lesezeichen anzeigen (Knoten wiederfinden)')" @click="lesezeichen">{{ $t("⚐ {0}", [store.bookmarks.length]) }}</button>
-      <template v-if="store.auth.enabled && store.auth.user"><span class="actor" :title="$t('Rolle') + ' ' + store.auth.role + ' · ' + (store.auth.rights ?? []).join(', ')">👤 {{ store.auth.name || store.auth.user }} <span class="muted">· {{ store.auth.role }}</span></span><button class="x" style="height:20px;padding:0 6px;font-size:12px" @click="logout" :title="$t('abmelden')">⏻</button></template>
+      <template v-if="store.auth.enabled && store.auth.user"><span class="actor" :title="$t('Rolle') + ' ' + store.auth.role + ' · ' + (store.auth.rights ?? []).join(', ')">👤 {{ store.auth.name || store.auth.user }} <span class="muted">· {{ store.auth.role }}</span></span><button v-if="!store.demo" class="x" style="height:20px;padding:0 6px;font-size:12px" @click="logout" :title="$t('abmelden')">⏻</button></template>
       <span v-else-if="store.actor" class="actor">👤 {{ store.actor }}</span>
       <router-link v-else to="/settings" class="warn">{{ $t("👤 Name fehlt → Einstellungen") }}</router-link>
       </template>
