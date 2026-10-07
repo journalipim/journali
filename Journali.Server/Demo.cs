@@ -69,8 +69,28 @@ public static class Demo
     /// </summary>
     public const int Kontingent = 500;
 
-    /// <summary>Höchstens so viele Befehle je Stapel: Pflege ja, Massenbearbeitung und Import nein.</summary>
-    public const int MaxStapel = 50;
+    /// <summary>Höchstens so viele Befehle je Stapel: Pflege ja, Massenbearbeitung und Import nein. 20 (07.10.2026, vorher 50): die Tabellenpflege
+    /// speichert alle geänderten Zellen in einem Stapel — weniger hielte schon die gewöhnliche Pflege auf; ein Import über die API kommt nicht weit.</summary>
+    public const int MaxStapel = 20;
+
+    /// <summary>
+    /// Kontingent je Absender (07.10.2026): so viele zählende Einträge (Datenpflege, Ausleitung) am Tag je Adresse des Besuchers — ein Einzelner,
+    /// etwa mit einem Skript über die API, verbraucht so nicht das Tageskontingent aller (<see cref="Kontingent"/>). Gezählt wird im Speicher; die
+    /// Demo startet jeden Tag neu. Hinter einem Proxy braucht es <c>JOURNALI_PROXY=1</c>, sonst ist jeder Besucher der Proxy.
+    /// </summary>
+    public const int KontingentJeAbsender = 100;
+    /// <summary>Die Adresse des Besuchers der laufenden Anfrage — gesetzt von der Anfrage (Program.cs), gelesen im Schreibpfad.</summary>
+    public static readonly AsyncLocal<string?> Absender = new();
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<(DateOnly Tag, string Absender), int> Gezaehlt = new();
+
+    /// <summary>Darf dieser Eintrag noch geschrieben werden? Zählt, was zählt (Kinds), je Absender und Tag; ohne Absender (Start, Jobs) immer.</summary>
+    public static bool Zaehle(string type)
+    {
+        if (Absender.Value is not { Length: > 0 } wer || !Kinds.Billable(null, type)) return true;
+        var heute = DateOnly.FromDateTime(DateTime.Now);
+        foreach (var alt in Gezaehlt.Keys.Where(k => k.Tag != heute).ToList()) Gezaehlt.TryRemove(alt, out _);
+        return Gezaehlt.AddOrUpdate((heute, wer), 1, (_, n) => n + 1) <= KontingentJeAbsender;
+    }
 
     /// <summary>Ein Stapel des Anwenders demo, der abgewiesen wird: mehr als <see cref="MaxStapel"/> Befehle oder ein Zurückziehen darin.</summary>
     public static bool StapelGesperrt(IReadOnlyCollection<string> befehle) =>

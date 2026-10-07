@@ -154,6 +154,9 @@ public sealed class Catalog
     /// (<see cref="Server.Eingabefilter"/>), sonst null.</summary>
     public Func<string, string, bool>? Eingabefilter { get; set; }
 
+    /// <summary>Darf dieser Eintrag (Typ) noch geschrieben werden — ein Kontingent neben dem des Teams, in der Demo je Absender (Demo.Zaehle); sonst null.</summary>
+    public Func<string, bool>? ZusatzKontingent { get; set; }
+
     /// <summary>Höchstens so viele Publikationsbäume, gleich was der Tarif sagt — gesetzt in der Demo (Demo.Einrichten: einer), sonst null.</summary>
     public int? MaxPubTrees { get; set; }
 
@@ -446,7 +449,7 @@ public sealed class Catalog
         lock (_write)
             return action(_model, _tree, (actor, stream, type, payload, batch) =>
             {
-                if (KeinKontingent(actor, type)) throw new KeinKontingentException();
+                if (KeinKontingent(actor, type) || ZusatzKontingent?.Invoke(type) == false) throw new KeinKontingentException();
                 PruefeTarif(type, payload);
                 var roh = Types.Serialize(payload);
                 if (Eingabefilter?.Invoke(type, roh) == true) throw new EingabeException();
@@ -548,7 +551,7 @@ public sealed class Catalog
             {
                 ergebnis = action(_model, _tree, (wer, stream, type, payload, _) =>
                 {
-                    if (KeinKontingent(wer, type)) throw new KeinKontingentException();
+                    if (KeinKontingent(wer, type) || ZusatzKontingent?.Invoke(type) == false) throw new KeinKontingentException();
                     PruefeTarif(type, payload);
                     var roh = Types.Serialize(payload);
                     if (Eingabefilter?.Invoke(type, roh) == true) throw new EingabeException();

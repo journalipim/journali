@@ -538,10 +538,12 @@ ausser bei den Werten der Produkte, die pflegt man wie sonst.
   je Begriff, # für Kommentare). Verglichen wird nach Vereinfachung — klein, ohne Akzente, 0/1/3/4/5/7/@/$ als Buchstaben, ohne Zeichen
   dazwischen. Der Beispielkatalog geht am Filter vorbei (gesetzt nach dem Einrichten).
 - **Kein Zurückziehen, keine Massenbearbeitung**: Knoten und Medien zurückziehen ist gesperrt (auch im Kontextmenü, Einträge mit
-  `demo: 'aus'` fallen dort weg), ebenso der Import; ein Stapel hat höchstens 50 Befehle (`Demo.MaxStapel`). Rückgängig bleibt.
+  `demo: 'aus'` fallen dort weg), ebenso der Import; ein Stapel hat höchstens 20 Befehle (`Demo.MaxStapel`, seit 07.10.2026; die Tabellenpflege speichert alle geänderten Zellen in einem
+  Stapel). Rückgängig bleibt.
 - **Kontingent**: 500 zählende Einträge (Datenpflege) je Woche und Monat für das Init Team, also für alle Besucher zusammen — weil die
   Demo täglich leer startet, ein Tageskontingent. Gesetzt zuletzt beim Einrichten; der Beispielkatalog zählt nicht mit. Die Balken in
-  der Statusleiste zeigen den Stand.
+  der Statusleiste zeigen den Stand. Dazu je Besucher (Adresse, hinter dem Proxy aus `X-Forwarded-For`) höchstens 100 am Tag
+  (`Demo.KontingentJeAbsender`, im Speicher gezählt) — ein Einzelner verbraucht nicht das Kontingent aller.
 - **Beispielkatalog**: ist das Journal ohne Produkte, legt der Start einen erfundenen Katalog an (Leuchten und Leuchtmittel: 11 Gruppen,
   42 Produkte, etwa 100 Varianten, Lichttechnik mit Einheiten und Listen, zwei Sprachen) — über `Catalog.WithBatch` und `Commands`, wie
   jede Pflege. Dazu je Variante ein Bild, im Code gezeichnet (PNG, gleicher Inhalt ein Medium), als Relation `image` an Variante und

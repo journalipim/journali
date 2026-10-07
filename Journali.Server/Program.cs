@@ -251,6 +251,7 @@ if (Demo.An)
     // erst nach dem Einrichten: der Beispielkatalog geht am Filter vorbei, was Besucher schreiben, nicht
     var filter = Eingabefilter.AusDatei(Environment.GetEnvironmentVariable("JOURNALI_DEMO_SPERRLISTE"));
     catalog.Eingabefilter = filter.Unzulaessig;
+    catalog.ZusatzKontingent = Demo.Zaehle;   // je Besucher höchstens Demo.KontingentJeAbsender zählende Einträge am Tag
     Console.WriteLine($"journali: demo input filter — {filter.Begriffe} blocked terms, links, contact data, at most {Eingabefilter.MaxText} characters");
 }
 jobRunner.IstHaupt = () => verbund.IstHaupt;
@@ -350,6 +351,8 @@ app.Use(async (ctx, next) =>
 
 // Benutzer & Rollen: ohne Benutzer offen wie bisher; mit Benutzern Sitzung oder Token noetig, X-Actor kommt aus der Sitzung
 app.UseRateLimiter();
+// Demo: wer fragt — für das Kontingent je Besucher (Demo.Zaehle); hinter dem Proxy aus X-Forwarded-For (JOURNALI_PROXY)
+if (Demo.An) app.Use(async (ctx, next) => { Demo.Absender.Value = ctx.Connection.RemoteIpAddress?.ToString(); await next(); });
 // Ein gesperrter Server (pflegestruktur 41) beantwortet unter /api nur noch /api/health — entsperrt wird er von einem anderen Server aus
 app.Use(async (ctx, next) =>
 {

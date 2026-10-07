@@ -164,6 +164,29 @@ public class DemoTests
     }
 
     [Fact]
+    public void Kontingent_je_Absender()
+    {
+        // 07.10.2026: höchstens 100 zählende Einträge am Tag je Besucher; was nicht zählt und was ohne Absender kommt (Start, Jobs), ist frei
+        var a = "10.0.0." + Random.Shared.Next(1, 250) + "-" + Guid.NewGuid().ToString("N")[..6];
+        Demo.Absender.Value = a;
+        try
+        {
+            for (var i = 0; i < Demo.KontingentJeAbsender; i++) Assert.True(Demo.Zaehle(Types.AttributeSet));
+            Assert.False(Demo.Zaehle(Types.AttributeSet));
+            Assert.True(Demo.Zaehle(Types.GroupCreated));   // Struktur zählt nicht
+            Demo.Absender.Value = a + "-anderer";
+            Assert.True(Demo.Zaehle(Types.AttributeSet));
+            Demo.Absender.Value = null;
+            Assert.True(Demo.Zaehle(Types.AttributeSet));
+        }
+        finally { Demo.Absender.Value = null; }
+        // im Schreibpfad: abgewiesen wie ein aufgebrauchtes Kontingent
+        var c = Neu();
+        c.ZusatzKontingent = _ => false;
+        Assert.Throws<KeinKontingentException>(() => c.With((_, _, w) => w("demo", "p-x", Types.AttributeSet, new AttributeSet("name", "de", null, "x", null), null)));
+    }
+
+    [Fact]
     public void Stapel_ohne_Massenbearbeitung_und_ohne_Zurueckziehen()
     {
         Assert.False(Demo.StapelGesperrt(Enumerable.Repeat("attribute.set", Demo.MaxStapel).ToList()));
