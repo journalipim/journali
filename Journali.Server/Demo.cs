@@ -58,7 +58,11 @@ public static class Demo
         if (p is "/api/nodes/import" or "/api/classification/retire") return !lesen;
         if (method == "DELETE" && (p.StartsWith("/api/nodes/") || p.StartsWith("/api/media/")) && p.Count(ch => ch == '/') == 3) return true;   // zurückziehen
         if (p.StartsWith("/api/plugins/") && p.Contains("/secrets")) return !lesen;
-        if (p.StartsWith("/api/plugins/") && p.Contains("/data")) return !lesen && !p.EndsWith("/data/settings");
+        // Daten der Plugins, auch die Einstellungen: sie gelten für alle Besucher (07.10.2026; vorher blieb settings offen)
+        if (p.StartsWith("/api/plugins/") && p.Contains("/data")) return !lesen;
+        if (p.StartsWith("/api/plugins/") && p.EndsWith("/run")) return true;   // keinen Prozess eines Plugins starten
+        if (p.StartsWith("/api/media/") && p.EndsWith("/thumb")) return !lesen;   // keine Vorschaubilder überschreiben — am Eingabefilter vorbei
+        if (p == "/api/auth/me/prefs") return !lesen;   // Ansicht und Sprache von demo teilen sich alle Besucher
         return p == "/api/drivers" && !lesen;
     }
 
@@ -79,17 +83,26 @@ public static class Demo
     /// Demo startet jeden Tag neu. Hinter einem Proxy braucht es <c>JOURNALI_PROXY=1</c>, sonst ist jeder Besucher der Proxy.
     /// </summary>
     public const int KontingentJeAbsender = 100;
+    /// <summary>Alle Einträge je Absender und Tag, auch die nicht zählenden (Rubriken, Verweise, Regeln …) — die Datenbank der Demo liegt im Speicher.</summary>
+    public const int EintraegeJeAbsender = 1000;
+    /// <summary>Der Journalkopf nach dem Einrichten: was bis dahin geschrieben ist (der Beispielkatalog), nimmt Rückgängig in der Demo nicht zurück.</summary>
+    public static long Saatkopf { get; set; }
+    /// <summary>Gehört der Eintrag mit dieser Nummer zum Beispielkatalog der Demo?</summary>
+    public static bool Saat(long nummer) => An && nummer > 0 && nummer <= Saatkopf;
     /// <summary>Die Adresse des Besuchers der laufenden Anfrage — gesetzt von der Anfrage (Program.cs), gelesen im Schreibpfad.</summary>
     public static readonly AsyncLocal<string?> Absender = new();
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<(DateOnly Tag, string Absender), int> Gezaehlt = new();
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<(DateOnly Tag, string Absender), int> Alle = new();
 
     /// <summary>Darf dieser Eintrag noch geschrieben werden? Zählt, was zählt (Kinds), je Absender und Tag; ohne Absender (Start, Jobs) immer.</summary>
     public static bool Zaehle(string type)
     {
-        if (Absender.Value is not { Length: > 0 } wer || !Kinds.Billable(null, type)) return true;
+        if (Absender.Value is not { Length: > 0 } wer) return true;
         var heute = DateOnly.FromDateTime(DateTime.Now);
         foreach (var alt in Gezaehlt.Keys.Where(k => k.Tag != heute).ToList()) Gezaehlt.TryRemove(alt, out _);
-        return Gezaehlt.AddOrUpdate((heute, wer), 1, (_, n) => n + 1) <= KontingentJeAbsender;
+        foreach (var alt in Alle.Keys.Where(k => k.Tag != heute).ToList()) Alle.TryRemove(alt, out _);
+        if (Alle.AddOrUpdate((heute, wer), 1, (_, n) => n + 1) > EintraegeJeAbsender) return false;
+        return !Kinds.Billable(null, type) || Gezaehlt.AddOrUpdate((heute, wer), 1, (_, n) => n + 1) <= KontingentJeAbsender;
     }
 
     /// <summary>Ein Stapel des Anwenders demo, der abgewiesen wird: mehr als <see cref="MaxStapel"/> Befehle oder ein Zurückziehen darin.</summary>

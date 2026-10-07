@@ -503,6 +503,17 @@ Sicherung, Aufbewahrung und Probe liegen beim Betreiber; journali stellt die Wer
 dass eine Wiederherstellung gelingt. Die Oberfläche sagt das in ⇅ B&R und im Job-Dialog des Plugins `backup`
 (`process.notice` im Manifest — ein Satz, den der Job-Dialog unter der Plugin-Wahl zeigt, `noticeTitle` im Tooltip).
 
+## Sicherheit (07.10.2026)
+
+- **Hinter einem Proxy** (NPMplus, nginx …): `JOURNALI_PROXY=1` setzen, wenn der Server nur über den Proxy erreichbar ist (Port an
+  `127.0.0.1`). Dann liest journali Absender und Schema aus `X-Forwarded-For`/`-Proto`: Bremse und Begrenzung gelten je Besucher, und das
+  Sitzungs-Cookie trägt `Secure`. Ohne die Variable sieht journali nur den Proxy.
+- **HTML-Werte** mit Skript, Ereignisattributen (`on…`), `javascript:`-Adressen, Rahmen oder Objekten weist der Server beim Speichern ab
+  (`HtmlPruefung.cs`); die Oberfläche setzt HTML nur bereinigt ein (`web/src/html-sicher.js`, im Datenblatt `plugins/datasheet/sicher.js`).
+- **Den Prozess eines Plugins** (`/api/plugins/{key}/run`) startet nur, wer das Recht `jobs` hat.
+- **Hochgeladene Dateien** laufen nie als Seite von journali: HTML, SVG, XML und Skript gehen als Anhang hinaus, jede Datei mit
+  `Content-Security-Policy: sandbox` und `nosniff`.
+
 ## Demo (07.10.2026)
 
 `JOURNALI_DEMO=1` macht eine Instanz zur öffentlichen Demo (`Demo.cs`, `DemoBilder.cs`). **Ansehen ja, speichern und neu anlegen nein** —
@@ -526,6 +537,10 @@ ausser bei den Werten der Produkte, die pflegt man wie sonst.
 - **ETIM**: fest zugewiesen ist EC001959 „LED-lamp/Multi-LED“ (ETIM 10.0) an den LED-Lampen, mit den acht Merkmalen des Katalogs, zugeordnet
   auf seine Attribute — Namen nur englisch (ETIM-Modell unter ODC-BY 1.0, die deutschen Bezeichnungen gehören ETIM Deutschland). Eine
   Freigabe holen, Klassen zuweisen oder entfernen gibt es in der Demo nicht.
+- **Gehärtet** (07.10.2026): kein Prozess eines Plugins (`/run`), keine Daten und Einstellungen der Plugins schreiben (sie gälten für alle),
+  keine Vorschaubilder überschreiben, keine Einstellungen der Person (Ansicht und Sprache von `demo` teilen sich alle; die Oberfläche
+  schickt sie nicht). Rückgängig nimmt nichts zurück, was bis zum Ende des Einrichtens geschrieben ist (`Demo.Saatkopf`). Je Besucher
+  höchstens 1000 Einträge am Tag, auch die nicht zählenden (`Demo.EintraegeJeAbsender`) — die Datenbank liegt im Speicher.
 - **Keine Plugin-Ansicht** (07.10.2026): ⬡ Plugins steht nicht in der Leiste, Alt+7 und `/plugins` führen zum Baum.
 - **Hinter dem Proxy** (`JOURNALI_PROXY=1`, gilt auch ausserhalb der Demo): Absender aus `X-Forwarded-For`, damit Bremse und Begrenzung je
   Besucher gelten und nicht für alle zusammen. Nur setzen, wenn der Server allein über den Proxy erreichbar ist.

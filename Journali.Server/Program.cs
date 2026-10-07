@@ -251,7 +251,8 @@ if (Demo.An)
     // erst nach dem Einrichten: der Beispielkatalog geht am Filter vorbei, was Besucher schreiben, nicht
     var filter = Eingabefilter.AusDatei(Environment.GetEnvironmentVariable("JOURNALI_DEMO_SPERRLISTE"));
     catalog.Eingabefilter = filter.Unzulaessig;
-    catalog.ZusatzKontingent = Demo.Zaehle;   // je Besucher höchstens Demo.KontingentJeAbsender zählende Einträge am Tag
+    catalog.ZusatzKontingent = Demo.Zaehle;
+    Demo.Saatkopf = catalog.Head;   // bis hier der Beispielkatalog — Rückgängig nimmt ihn nicht zurück   // je Besucher höchstens Demo.KontingentJeAbsender zählende Einträge am Tag
     Console.WriteLine($"journali: demo input filter — {filter.Begriffe} blocked terms, links, contact data, at most {Eingabefilter.MaxText} characters");
 }
 jobRunner.IstHaupt = () => verbund.IstHaupt;

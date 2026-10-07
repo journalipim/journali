@@ -16,7 +16,8 @@ public static class Undo
 {
     public sealed record Step(string Stream, string Kind, string What, string? Payload = null);
     /// <param name="More">Mit take: es gäbe weitere Schritte (die Vorschau zeigt nur die ersten).</param>
-    public sealed record Plan(List<Step> Steps, List<string> Skipped, string? Actor, DateTimeOffset? At, int Entries, bool More = false);
+    /// <param name="Number">die Nummer des ersten Eintrags, der zurückgenommen würde (Demo: nicht vor dem Ende des Einrichtens)</param>
+    public sealed record Plan(List<Step> Steps, List<string> Skipped, string? Actor, DateTimeOffset? At, int Entries, bool More = false, long Number = 0);
 
     /// <summary>Was Rückgängig tun würde — für die Vorschau und für den Lauf selbst.</summary>
     /// <remarks>take (Vorschau, 04.10.2026): nur die ersten so viele Schritte — je Schritt liest der Plan den Strom des Knotens, und ein Import-Stapel hat
@@ -33,7 +34,7 @@ public static class Undo
             if (take is { } t && steps.Count >= t) { more = true; break; }
             Fuer(journal, model, tree, e, seen, steps, skipped);
         }
-        return new Plan(steps, skipped, entries.FirstOrDefault()?.Actor, entries.FirstOrDefault()?.At, entries.Count, more);
+        return new Plan(steps, skipped, entries.FirstOrDefault()?.Actor, entries.FirstOrDefault()?.At, entries.Count, more, entries.FirstOrDefault()?.Number ?? 0);
     }
 
     /// <summary>
@@ -47,7 +48,7 @@ public static class Undo
         {
             var steps = new List<Step>(); var skipped = new List<string>();
             Fuer(journal, model, tree, e, new HashSet<string>(), steps, skipped);
-            if (steps.Count > 0) return new Plan(steps, [], e.Actor, e.At, 1);
+            if (steps.Count > 0) return new Plan(steps, [], e.Actor, e.At, 1, Number: e.Number);
         }
         return new Plan([], [], null, null, 0);
     }

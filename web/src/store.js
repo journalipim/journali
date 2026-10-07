@@ -113,6 +113,7 @@ export const store = reactive({
     if (!Object.keys(changed).length) return
     this._prefsSent = now
     clearTimeout(this._prefsTimer)
+    if (this.demo) return   // Demo: Ansicht und Sprache bleiben in diesem Browser, alle teilen sich den Anwender demo
     this._prefsTimer = setTimeout(() => { api.post('/api/auth/me/prefs', { prefs: changed }, 'PUT').catch(() => { this._prefsSent = null }) }, 400)
   },
   // Was am Benutzer steht, gilt — er hat es zuletzt irgendwo gesetzt (Werte sind JSON als Text)

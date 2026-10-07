@@ -190,7 +190,7 @@ export const plugins = reactive({
       data: {
         list: () => api.get(`/api/plugins/${key}/data`),
         get: name => api.get(base + encodeURIComponent(name)).catch(() => null),
-        set: (name, value) => api.post(base + encodeURIComponent(name), value, 'PUT'),
+        set: (name, value) => store.demo ? Promise.resolve(null) : api.post(base + encodeURIComponent(name), value, 'PUT'),   // Demo: gilt nur in dieser Sitzung
         del: name => api.del(base + encodeURIComponent(name)),
       },
       batch: (commands, batch = null) => api.post('/api/batch', { commands, batch }),

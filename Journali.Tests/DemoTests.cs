@@ -94,6 +94,12 @@ public class DemoTests
     [Theory]
     [InlineData("/api/auth/password", "POST", true)]
     [InlineData("/api/openapi.json", "GET", true)]
+    [InlineData("/api/plugins/backup/run", "POST", true)]          // 07.10.2026: kein Prozess eines Plugins
+    [InlineData("/api/plugins/etim/data/settings", "PUT", true)]   // Einstellungen der Plugins gelten für alle
+    [InlineData("/api/plugins/etim/data/settings", "GET", false)]
+    [InlineData("/api/media/m-1/thumb", "PUT", true)]              // Vorschaubilder überschreiben
+    [InlineData("/api/media/m-1/thumb", "GET", false)]
+    [InlineData("/api/auth/me/prefs", "PUT", true)]                // Ansicht von demo teilen sich alle
     [InlineData("/api/auth/login", "POST", false)]   // 07.10.2026: Anmeldung mit demo / demo
     [InlineData("/API/AUTH/SETUP", "POST", true)]
     [InlineData("/api/auth/claim", "POST", true)]
@@ -116,7 +122,7 @@ public class DemoTests
     [InlineData("/api/files", "GET", true)]
     [InlineData("/api/plugins/datasheet/data/layout:standard", "PUT", true)]
     [InlineData("/api/plugins/xliff/data/profile:abc", "DELETE", true)]
-    [InlineData("/api/plugins/datasheet/data/settings", "PUT", false)]
+    [InlineData("/api/plugins/datasheet/data/settings", "PUT", true)]
     [InlineData("/api/plugins/datasheet/data", "GET", false)]
     [InlineData("/api/plugins/xliff/secrets/abc", "PUT", true)]
     [InlineData("/api/tree", "POST", false)]
@@ -178,6 +184,10 @@ public class DemoTests
             Assert.True(Demo.Zaehle(Types.AttributeSet));
             Demo.Absender.Value = null;
             Assert.True(Demo.Zaehle(Types.AttributeSet));
+            // alle Einträge, auch die nicht zählenden: höchstens Demo.EintraegeJeAbsender am Tag
+            Demo.Absender.Value = a + "-struktur";
+            for (var i = 0; i < Demo.EintraegeJeAbsender; i++) Assert.True(Demo.Zaehle(Types.RubricCreated));
+            Assert.False(Demo.Zaehle(Types.RubricCreated));
         }
         finally { Demo.Absender.Value = null; }
         // im Schreibpfad: abgewiesen wie ein aufgebrauchtes Kontingent
@@ -267,6 +277,23 @@ public class DemoAnmeldungTests
         Demo.Einrichten(c, null, null, dir);
         Demo.An = true;
         try { Assert.Equal(Auth.Anmeldung.Anmelden, Auth.Lage(c, dir)); } finally { Demo.An = false; }
+    }
+
+    [Fact]
+    public void Rueckgaengig_nimmt_den_Beispielkatalog_nicht_zurueck()
+    {
+        // 07.10.2026: was bis zum Ende des Einrichtens geschrieben ist (Demo.Saatkopf), bleibt — ausserhalb der Demo gilt das nicht
+        Demo.Saatkopf = 10;
+        try
+        {
+            Assert.False(Demo.Saat(5));
+            Demo.An = true;
+            Assert.True(Demo.Saat(5));
+            Assert.True(Demo.Saat(10));
+            Assert.False(Demo.Saat(11));
+            Assert.False(Demo.Saat(0));
+        }
+        finally { Demo.An = false; Demo.Saatkopf = 0; }
     }
 
     [Fact]

@@ -283,7 +283,7 @@ public static class TreeApi
         {
             if (!tree.Nodes.ContainsKey(id) && !tree.Retired.ContainsKey(id)) return Results.NotFound();
             var plan = Undo.LetzterAmKnoten(j, model, tree, id);
-            return Results.Ok(new { possible = plan.Steps.Count > 0, what = plan.Steps.FirstOrDefault()?.What, plan.Actor, plan.At });
+            return Results.Ok(new { possible = plan.Steps.Count > 0 && !Demo.Saat(plan.Number), what = plan.Steps.FirstOrDefault()?.What, plan.Actor, plan.At });
         }));
         api.MapPost("/nodes/{id}/undo", (string id, HttpRequest req, IJournal j, Catalog c) =>
         {
@@ -294,6 +294,7 @@ public static class TreeApi
                 if (!tree.Nodes.ContainsKey(id) && !tree.Retired.ContainsKey(id)) return Results.NotFound();
                 var plan = Undo.LetzterAmKnoten(j, model, tree, id);
                 if (plan.Steps.Count == 0) return Bad("Hier gibt es nichts rückgängig zu machen.");
+                if (Demo.Saat(plan.Number)) return Bad("In der Demo nicht verfügbar.");   // der Beispielkatalog bleibt
                 var ctx = new Ctx { Model = model, Tree = tree, Relations = c.Relations, Media = c.Media, Write = (stream, type, payload) => write(actor, stream, type, payload, undo) };
                 var result = Undo.Run(plan, ctx, tree);
                 return result.Failed.Count > 0 && result.Done == 0
@@ -309,6 +310,7 @@ public static class TreeApi
             var result = c.With((model, tree, write) =>
             {
                 var plan = Undo.Of(j, model, tree, batch);
+                if (Demo.Saat(plan.Number)) return (Done: 0, Failed: new List<string>(), Skipped: plan.Skipped, Error: (string?)"In der Demo nicht verfügbar.");   // der Beispielkatalog bleibt
                 if (plan.Steps.Count == 0) return (Done: 0, Failed: new List<string>(), Skipped: plan.Skipped, Error: (string?)$"Stapel {batch}: nichts, was sich rückgängig machen lässt ({plan.Entries} Einträge: {string.Join(", ", plan.Skipped.Take(3))})");
                 var ctx = new Ctx { Model = model, Tree = tree, Relations = c.Relations, Media = c.Media, Write = (stream, type, payload) => write(actor, stream, type, payload, undo) };
                 var (done, failed) = Undo.Run(plan, ctx, tree);
