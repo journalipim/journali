@@ -232,6 +232,8 @@ var pluginDir = builder.Configuration["JOURNALI_PLUGINS"]
     ?? Path.Combine(builder.Environment.ContentRootPath, "plugins");
 pluginDir = Path.GetFullPath(pluginDir);
 var autoInstalled = PluginApi.AutoInstall(catalog, pluginDir);
+// Attribute von DPP, PPWR, GEO, ETIM und GPC sind vererbbar (07.10.2026) — was eine Instanz von vorher anders angelegt hat, zieht nach
+if (ClassificationApi.PluginAttributeVererbbar(catalog) is > 0 and var vererbbar) Console.WriteLine($"journali: {vererbbar} plugin attributes made inheritable");
 
 // Jobs (Plugin tasker): laufen im Server als Kindprozesse, unabhängig vom Browser; Logs und Geheimnisse
 // unter JOURNALI_JOBS (Vorgabe jobs/ neben dem Programm, im Repo ignoriert)

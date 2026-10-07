@@ -842,6 +842,10 @@ Export-Konfiguration im Klassifikations-Plugin („welche Klassen, ab welcher St
   Bäumen zurück (`POST /api/classification/retire`). Das verlangt das Recht `system.retire` („Systemobjekte zurückziehen“), das der Administrator
   trägt; wer Anwender verwaltet, hat es mit. Erkannt werden sie an ihrer Form (geschlossene Liste so benannt wie das Attribut, mit Spalte „group“),
   nicht an einem Namen. Attribute des Kunden, die einer Klassengruppe zugeordnet waren, bleiben mit ihren Werten.
+  *Entschieden (07.10.2026):* **Die Attribute von DPP, PPWR, GEO, ETIM und GPC sind vererbbar** — ihre Werte pflegt man am Produkt
+  oder an der Gruppe, sie gelten nach unten. Neu angelegte entstehen so (`compliance.js`, `install()` von geo, `ClassificationApi`); eine
+  Instanz von vorher zieht beim Start nach (`ClassificationApi.PluginAttributeVererbbar`) — nur, was in der angemeldeten Gruppe des Plugins
+  zu Hause ist; ein eigenes Attribut, das einem Plugin zugeordnet ist, bleibt, wie es ist.
 - **Klasse an der Produktgruppe, erbt** (Regelfall), Ausnahme am Produkt; an der Variante nicht.
   Die Gruppe des Systems gilt überall (die Klasse muss an der Gruppe stehen dürfen), die
   Merkmale nur an Produkt und Variante (`levels`) — normale Vererbung reicht.

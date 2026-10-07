@@ -36,7 +36,7 @@ for (const key of ['dpp', 'ppwr']) {
     attributes.push({
       key: k, label: { de: it.label, en: it.labelEn ?? it.label }, type: berechneterTyp(it) ?? (it.type === 'enum' && !it.values ? 'text' : it.type),
       group: cat.groupKey, levels: it.roles?.length ? it.roles : null, unit: it.unit ?? null, axes: it.perLocale ? ['locale'] : [],
-      inheritable: !!it.inheritable, required: it.level === 'must' && it.requiredChannels ? it.requiredChannels : null,
+      inheritable: it.inheritable !== false, required: it.level === 'must' && it.requiredChannels ? it.requiredChannels : null,
     })
     mapping[it.key] = { to: k, why: 'angelegt', sure: true }
   }
@@ -45,7 +45,7 @@ for (const key of ['dpp', 'ppwr']) {
 const geo = (await lade('geo/entry.js'))?.SYSTEM
 if (geo) out.push({
   plugin: 'geo', group: { key: geo.group, label: geo.label }, units: [],
-  // in der Demo vererbbar: die Texte stehen am Produkt (Demo.GeoTexte) und gelten für seine Varianten
+  // vererbbar wie in install() von geo: die Texte stehen am Produkt (Demo.GeoTexte) und gelten für seine Varianten
   attributes: geo.attributes.map(([, key, label]) => ({ key, label, type: 'text', group: geo.group, axes: ['locale'], inheritable: true })),
   data: { targets: geo.targets }, attach: true,
 })

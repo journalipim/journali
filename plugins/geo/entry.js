@@ -261,7 +261,8 @@ async function install(ctx) {
     }) ?? true
     if (!ok) return false
     if (!hatGruppe) await api.post(`/api/model/groups/${GROUP}`, { key: GROUP, label: GROUP_LABEL, activeFrom: null }, 'PUT')
-    for (const [, key, label] of fehlen) await api.post(`/api/model/attributes/${key}`, { key, label, type: 'text', group: GROUP, axes: ['locale'] }, 'PUT')
+    // vererbbar (07.10.2026): die Texte stehen am Produkt oder an der Gruppe und gelten nach unten
+    for (const [, key, label] of fehlen) await api.post(`/api/model/attributes/${key}`, { key, label, type: 'text', group: GROUP, axes: ['locale'], inheritable: true }, 'PUT')
     await store.poll(true)
   }
   // an die Wurzeln des Baums, damit die Attribute überall gelten

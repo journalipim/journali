@@ -377,6 +377,25 @@ public static class ClassificationApi
     }
 
     /// <summary>Was die Plugins angemeldet haben: Plugin → ob es eingeschaltet ist, die Gruppen und Attribute, die es zum Betrieb braucht, und seine Klassifikation.</summary>
+    /// <summary>Die Plugins, deren Attribute vererbbar sind (07.10.2026): ihre Werte pflegt man am Produkt oder an der Gruppe, sie gelten nach unten.</summary>
+    public static readonly string[] VererbbarePlugins = ["dpp", "ppwr", "geo", "etim", "gpc"];
+    /// <summary>Kennungen erben nicht: eine GTIN oder Charge gilt für genau ein Produkt (im Katalog von dpp mit <c>inheritable: false</c>).</summary>
+    public static readonly string[] NichtVererbbar = ["dpp_gtin", "dpp_batch"];
+
+    /// <summary>
+    /// Beim Start: die angemeldeten Attribute dieser Plugins vererbbar, wo sie es noch nicht sind — Instanzen von vorher ziehen nach. Nur Attribute, die
+    /// in einer angemeldeten Gruppe des Plugins zu Hause sind; ein eigenes Attribut, das einem Plugin zugeordnet ist, bleibt, wie es ist.
+    /// </summary>
+    public static int PluginAttributeVererbbar(Catalog c) => c.With((model, _, write) =>
+    {
+        var n = 0;
+        foreach (var r in Registered(c.Plugins).Where(r => VererbbarePlugins.Contains(r.Plugin)))
+            foreach (var key in r.Attributes)
+                if (model.Attributes.GetValueOrDefault(key) is { Inheritable: false, Unique: false } def && !NichtVererbbar.Contains(key) && def.Group is { } g && r.Groups.Contains(g))
+                { write("system", Model.AttributeStream + key, Types.AttributeDefined, def with { Inheritable = true }, null); n++; }
+        return n;
+    });
+
     public static List<(string Plugin, bool Enabled, string[] Groups, string[] Attributes, string? Group, string? ClassAttr)> Registered(Plugins? plugins)
     {
         var list = new List<(string, bool, string[], string[], string?, string?)>();
