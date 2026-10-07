@@ -539,6 +539,10 @@ ausser bei den Werten der Produkte, die pflegt man wie sonst.
 - **ETIM**: fest zugewiesen ist EC001959 „LED-lamp/Multi-LED“ (ETIM 10.0) an den LED-Lampen, mit den acht Merkmalen des Katalogs, zugeordnet
   auf seine Attribute — Namen nur englisch (ETIM-Modell unter ODC-BY 1.0, die deutschen Bezeichnungen gehören ETIM Deutschland). Eine
   Freigabe holen, Klassen zuweisen oder entfernen gibt es in der Demo nicht.
+- **GPC**: ein Auszug der GS1-Produktklassifikation (englische Titel, „GPC as of May 2026“; die Nutzung ist kostenfrei) aus
+  `demo-gpc.mjs`, gelesen mit den Funktionen des Plugins: LED-Lampen 10000552, Decken- und Wandleuchten 10008403, Pendelleuchten 10008404,
+  Tischleuchten 10005641, Strahler 10005413 (Security Lights); Wegeleuchten haben keinen eigenen Brick. Die Werte der Bricks (z. B.
+  CEILING MOUNTED, LED) stehen an der Gruppe und gelten für die Produkte darunter.
 - **Gehärtet** (07.10.2026): kein Prozess eines Plugins (`/run`), keine Daten und Einstellungen der Plugins schreiben (sie gälten für alle),
   keine Vorschaubilder überschreiben, keine Einstellungen der Person (Ansicht und Sprache von `demo` teilen sich alle; die Oberfläche
   schickt sie nicht). Rückgängig nimmt nichts zurück, was bis zum Ende des Einrichtens geschrieben ist (`Demo.Saatkopf`). Je Besucher

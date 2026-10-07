@@ -128,6 +128,7 @@ public static class Demo
         n += Etim(c);
         if (pluginDir is not null) n += Systemobjekte(c, pluginDir);
         n += GeoTexte(c, geo);
+        if (pluginDir is not null) n += Gpc(c, pluginDir);
         n += Publikationsbaum(c);
         c.MaxPubTrees = 1;   // ein Publikationsbaum, wie eine Grenze des Tarifs: anlegen geht nicht, löschen sperrt Gesperrt (Knoten zurückziehen)
         foreach (var key in OhnePlugins)
@@ -544,15 +545,55 @@ public static class Demo
     };
 
     /// <summary>Die Ausgabe von <see cref="SystemSkript"/>: node mit dem Verzeichnis der Plugins.</summary>
-    private static string SystemJson(string pluginDir)
+    private static string SystemJson(string pluginDir) => NodeJson(SystemSkript, pluginDir);
+
+    /// <summary>Ein Skript der Demo mit node ausführen (Argument: das Verzeichnis der Plugins) — seine Ausgabe ist eine Zeile JSON.</summary>
+    private static string NodeJson(string skript, string pluginDir)
     {
         var psi = new System.Diagnostics.ProcessStartInfo("node") { RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false };
-        psi.ArgumentList.Add(SystemSkript); psi.ArgumentList.Add(pluginDir);
+        psi.ArgumentList.Add(skript); psi.ArgumentList.Add(pluginDir);
         using var proc = System.Diagnostics.Process.Start(psi) ?? throw new InvalidOperationException("Demo: node startet nicht.");
         var aus = proc.StandardOutput.ReadToEndAsync(); var err = proc.StandardError.ReadToEndAsync();
-        if (!proc.WaitForExit(30_000)) { proc.Kill(true); throw new InvalidOperationException("Demo: demo-system.mjs antwortet nicht."); }
-        if (proc.ExitCode != 0) throw new InvalidOperationException("Demo: demo-system.mjs — " + err.Result.Trim());
+        if (!proc.WaitForExit(30_000)) { proc.Kill(true); throw new InvalidOperationException($"Demo: {Path.GetFileName(skript)} antwortet nicht."); }
+        if (proc.ExitCode != 0) throw new InvalidOperationException($"Demo: {Path.GetFileName(skript)} — " + err.Result.Trim());
         return aus.Result;
+    }
+
+    // ---- GPC (07.10.2026): wie ETIM fest an den Gruppen des Beispielkatalogs — Auszug der Veröffentlichung, Datensätze und Merkmale aus den
+    // Funktionen des Plugins (demo-gpc.mjs), zugewiesen über ClassificationApi.Assign, dazu die Werte an der Gruppe (vererbbar).
+
+    /// <summary>Das Skript mit dem GPC-Auszug — neben dem Server (im Image unter /app).</summary>
+    public static string GpcSkript => Path.Combine(AppContext.BaseDirectory, "demo-gpc.mjs");
+
+    /// <summary>GPC an die Gruppen: nur, wenn gpc an ist und noch keine Veröffentlichung im Journal steht.</summary>
+    public static int Gpc(Catalog c, string pluginDir)
+    {
+        if (c.Lesen((_, _) => c.Plugins.All.GetValueOrDefault("gpc")) is not { Enabled: true } plugin || plugin.Data.ContainsKey("release")) return 0;
+        using var doc = System.Text.Json.JsonDocument.Parse(NodeJson(GpcSkript, pluginDir));
+        var root = doc.RootElement;
+        var n = c.With((_, _, write) =>
+        {
+            var z = 0;
+            foreach (var r in root.GetProperty("records").EnumerateObject()) { write(Anwender, Plugins.Stream + "gpc", Types.PluginDataSet, new PluginDataSet(r.Name, r.Value.GetRawText()), null); z++; }
+            return z;
+        });
+        var system = root.GetProperty("system").Deserialize<ClassificationApi.SystemSpec>(Web)!;
+        foreach (var zw in root.GetProperty("zuweisungen").EnumerateArray())
+        {
+            var label = zw.GetProperty("gruppe").GetString();
+            var gruppe = c.Lesen((_, t) => t.Nodes.Values.FirstOrDefault(x => x.Role == Roles.Group && x.Label.GetValueOrDefault("de") == label)?.Id);
+            if (gruppe is null) continue;
+            var body = new ClassificationApi.AssignBody(gruppe, zw.GetProperty("brick").GetString()!, system,
+                zw.GetProperty("classes").Deserialize<ClassificationApi.ClassSpec[]>(Web), zw.GetProperty("features").Deserialize<ClassificationApi.FeatureSpec[]>(Web));
+            var a = c.With((model, tree, write) => ClassificationApi.Assign(Kontext(c, model, tree, write, () => n++), body, true));
+            if (a.Error is { } fehler) throw new InvalidOperationException($"Demo: GPC {label} — " + string.Format(fehler, a.Args ?? []));
+            foreach (var w in zw.GetProperty("werte").EnumerateObject())
+            {
+                var o = c.With((model, tree, write) => Commands.SetAttribute(Kontext(c, model, tree, write, () => n++), gruppe, w.Name, null, null, w.Value.GetString(), null));
+                if (o.Error is { } e) throw new InvalidOperationException($"Demo: GPC {label} {w.Name} — {e}");
+            }
+        }
+        return n;
     }
 
     // ---- GEO-Texte (07.10.2026): in der Demo ohne KI, aus den Werten jedes Produkts gesetzt — damit Datenblatt, Prüfung und Varianten sie zeigen.

@@ -183,6 +183,19 @@ public class DemoTests
             Assert.StartsWith(t.Resolve(m, produkt, "name", "de", null).Value + ", ", name);
             return 0;
         });
+        // GPC: die Veröffentlichung (Auszug) im Journal, Bricks an den Gruppen, Werte an der Gruppe gelten für die Produkte darunter
+        Assert.True(c.Lesen((_, _) => c.Plugins.All["gpc"].Data.ContainsKey("release")));
+        c.Lesen((m, t) =>
+        {
+            var gruppe = t.Nodes.Values.First(x => x.Role == Roles.Group && x.Label.GetValueOrDefault("de") == "LED-Lampen");
+            Assert.Equal("10000552", t.Resolve(m, gruppe, "class_gpc", null, null).Value);
+            var produkt = t.Nodes.Values.First(x => x.Parent == gruppe.Id && x.Role == Roles.Product);
+            Assert.Equal("30016052", t.Resolve(m, produkt, "gpc20000697", null, null).Value);   // LIGHT-EMITTING DIODE (LED), geerbt
+            var decke = t.Nodes.Values.First(x => x.Role == Roles.Group && x.Label.GetValueOrDefault("de") == "Deckenleuchten");
+            Assert.Equal("10008403", t.Resolve(m, decke, "class_gpc", null, null).Value);
+            Assert.Equal("30009772", t.Resolve(m, decke, "gpc20001353", null, null).Value);    // CEILING MOUNTED
+            return 0;
+        });
         var vorher = c.Head;
         Demo.Einrichten(c, null, dir);
         Assert.Equal(vorher, c.Head);   // der nächste Start schreibt nichts
