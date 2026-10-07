@@ -27,10 +27,11 @@ public sealed class Verbund : IDisposable
     /// Ein Server aus dem Debug-Bau (05.10.2026): er zählt nicht gegen die erlaubte Zahl von Servern und ist selbst immer zugelassen — wer an journali
     /// entwickelt, arbeitet neben dem Server des Betriebs auf derselben Datenbank. Ausgeliefert wird nur der Release-Bau (Image).
     /// </summary>
+// static readonly statt const: sonst meldet der Debug-Bau den Code hinter „if (Entwicklung) return …“ als unerreichbar (CS0162)
 #if DEBUG
-    public const bool Entwicklung = true;
+    public static readonly bool Entwicklung = true;
 #else
-    public const bool Entwicklung = false;
+    public static readonly bool Entwicklung = false;
 #endif
 
     /// <summary>So stehen die laufenden Jobs in der Spalte <c>jobs</c>: Felder klein geschrieben, wie die Oberfläche sie liest.</summary>
