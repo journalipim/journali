@@ -786,6 +786,7 @@ async function mediaDrop(r) {
 }
 /// auswerten: mit Strg abgelegt — die Tabellen der Dokumente werden danach zur Übernahme angeboten
 async function uploadMedia(files, auswerten = false) {
+  if (store.demo) return   // Demo: kein Hochladen, auch nicht durch Ablegen (Demo.Gesperrt)
   if (!store.actor) { store.toast(t_('👤 Name fehlt → Einstellungen')); return }
   busy.value = true
   try {
@@ -1155,7 +1156,7 @@ function cellMenu(e, def, col, block) {
           <span v-for="r in stopped" :key="r.id" class="chip" :title="$t('{0} — von oben vererbt; hier und darunter weder verwendet noch weitervererbt', [r.other.label])">{{ r.other.label }} <button @click="retireRel(r)" :title="$t('wieder zulassen — das Medium gilt dann wieder als geerbt')">×</button></span>
         </div>
         <div class="chips" style="margin-top:6px" v-if="mediaTypes.length">
-          <button class="primary" @click="mediaFile.click()">{{ $t("⇧ Hochladen") }}</button>
+          <button class="primary" data-demo="aus" @click="mediaFile.click()">{{ $t("⇧ Hochladen") }}</button>
           <button v-if="mediaRels.length && node.children" @click="inheritToSubitems" :disabled="!!inheriting" :title="$t('Aufräumen: die Medien hier auf „vererben“ setzen und gleiche feste Zuordnungen an den Subitems lösen — sie erben dann')">{{ inheriting || $t('↓ feste Bilder der Subitems durch Vererbung ersetzen') }}</button>
           <input ref="mediaFile" type="file" multiple style="display:none" @change="uploadMedia([...$event.target.files]); $event.target.value = ''" />
           <button @click="mediaPick.open = true" :title="$t('Medien aus der Bibliothek zuordnen — Ordner, Suche, Mehrfachauswahl')">{{ $t("▨ Aus der Bibliothek wählen …") }}</button>

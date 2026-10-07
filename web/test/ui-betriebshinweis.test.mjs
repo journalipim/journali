@@ -79,7 +79,10 @@ test('Demo: Hochladen, Profile, Workflows, Presets, Modell und Plugins tragen da
   assert.match(lies('../src/style.css'), /html\.demo \[data-demo="aus"\] \{ display: none !important; \}/)
   assert.match(lies('../src/App.vue'), /classList\.toggle\('demo', !!d\)/)
   const erwartet = {
-    '../src/views/MediaView.vue': [/<button class="primary" data-demo="aus" @click="fileInput\.click\(\)"/, /if \(store\.demo\) return; upload\(/],
+    '../src/views/MediaView.vue': [/<button class="primary" data-demo="aus" @click="fileInput\.click\(\)"/, /if \(store\.demo\) return; upload\(/,
+      /\{ demo: 'aus', label: t_\('Neue Version hochladen …'\)/, /\{ demo: 'aus', label: t_\('Zuschneiden und ausrichten …'\)/, /class="x" data-demo="aus" @click="zuschneiden\(current\)"/],
+    // Knotenansicht (07.10.2026): Hochladen per Knopf und durch Ablegen
+    '../src/views/NodeView.vue': [/<button class="primary" data-demo="aus" @click="mediaFile\.click\(\)">/, /async function uploadMedia\(files, auswerten = false\) \{\r?\n  if \(store\.demo\) return/],
     '../src/components/WorkflowSettings.vue': [/data-demo="aus" :disabled="!dirty" @click="save"/],
     '../src/components/StorageSettings.vue': [/data-demo="aus" style="gap:8px;margin-top:6px"><button @click="newPreset"/],
     '../src/components/ProfileBar.vue': [/<input data-demo="aus" v-model="name"/, /class="savebar" data-demo="aus"/],
