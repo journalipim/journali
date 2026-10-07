@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "node build-help.mjs && vite",
     "build": "node build-help.mjs && vite build && node build-plugins.mjs",
-    "test": "node --import ./test/vue-loader.mjs --test \"test/**/*.test.mjs\"",
+    "test": "node --import ./test/vue-loader.mjs --test --test-concurrency=2 \"test/**/*.test.mjs\"",
     "build:web": "node build-help.mjs && vite build",
     "build:help": "node build-help.mjs",
     "build:plugins": "node build-plugins.mjs",
