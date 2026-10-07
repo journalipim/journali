@@ -118,6 +118,7 @@ public static class Auth
     public static Anmeldung Lage(Catalog c, string dir)
     {
         if (!Enabled(c)) return Anmeldung.Einrichten;
+        if (Demo.An) return Anmeldung.Anmelden;   // Demo: es gibt keinen Administrator, nur demo / demo — kein Passwort festlegen, kein Einrichtungscode
         var pw = With(dir, s => s.Passwords.Keys.ToHashSet());
         return Bestimme(true, Admins(c), pw.Contains);
     }

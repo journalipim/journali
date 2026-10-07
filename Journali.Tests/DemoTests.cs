@@ -210,6 +210,8 @@ public class DemoTests
         var gut = await http.PostAsJsonAsync(url + "/api/auth/login", new { user = "demo", password = "demo" });
         Assert.True(gut.IsSuccessStatusCode, await gut.Content.ReadAsStringAsync());
         Assert.False(Demo.Gesperrt("/api/auth/login", "POST"));
+        // ohne Administrator wäre die Lage „Passwort festlegen“ — in der Demo heisst sie Anmelden (die Seite zeigt sonst das falsche Formular)
+        Assert.Equal(Auth.Anmeldung.Festlegen, Auth.Lage(c, dir));
         Assert.True(Demo.Gesperrt("/api/auth/password", "POST"));
     }
 
@@ -226,5 +228,21 @@ public class DemoTests
         Assert.Throws<TarifException>(() => c.With((_, _, write) => write(Demo.Anwender, Ids.New(Roles.Rubric), Types.RubricCreated, new RubricCreated(null, Labels.Of("x", "x"), "Zweiter", "web", null), null)));
         Assert.True(Demo.Gesperrt($"/api/nodes/{baum.Id}", "DELETE"));   // löschen: Knoten zurückziehen ist gesperrt
         Assert.Equal(0, Demo.Publikationsbaum(c));   // ein weiterer Start legt keinen zweiten an
+    }
+}
+
+/// <summary>Die Lage der Anmeldung mit eingeschalteter Demo (07.10.2026): ohne Administrator hiesse sie „Passwort festlegen“, und die Seite zeigte das
+/// falsche Formular. Der Schalter Demo.An ist statisch — darum in der Sammlung ohne Parallelität.</summary>
+[Collection("Startphase")]
+public class DemoAnmeldungTests
+{
+    [Fact]
+    public void In_der_Demo_ist_die_Lage_Anmelden()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), "journali-demo-lage-" + Guid.NewGuid().ToString("N")); Directory.CreateDirectory(dir);
+        var c = new Catalog(new MemoryJournal()); c.Rebuild(); c.SeedMissing();
+        Demo.Einrichten(c, null, null, dir);
+        Demo.An = true;
+        try { Assert.Equal(Auth.Anmeldung.Anmelden, Auth.Lage(c, dir)); } finally { Demo.An = false; }
     }
 }
