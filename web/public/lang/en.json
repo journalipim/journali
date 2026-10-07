@@ -3087,5 +3087,6 @@
  "Nur für Test und Evaluation, nicht für den Produktiveinsatz.": "For testing and evaluation only, not for production use.",
  "Die Hinweise zum Betrieb in Version {0} sind nicht bestätigt.": "The notes on operation in version {0} are not confirmed.",
  "Demo: Anmeldename demo, Passwort demo.": "Demo: user name demo, password demo.",
- "Die Demo wird täglich zurückgesetzt.": "The demo is reset daily."
+ "Die Demo wird täglich zurückgesetzt.": "The demo is reset daily.",
+ "Diese Eingabe ist nicht zulässig.": "This input is not permitted."
 }

@@ -14,6 +14,8 @@ namespace Journali.Server;
 public sealed class KeinKontingentException() : InvalidOperationException("Kontingent aufgebraucht — nichts gespeichert.");
 /// <summary>Der Tarif erlaubt es nicht — z. B. ein weiterer Publikationsbaum. Wird zu 403 wie das Kontingent.</summary>
 public sealed class TarifException(string message) : InvalidOperationException(message);
+/// <summary>Der Eingabefilter (Demo) weist einen Eintrag ab — die Antwort sagt nur, dass die Eingabe nicht zulässig ist.</summary>
+public sealed class EingabeException() : InvalidOperationException("Diese Eingabe ist nicht zulässig.");
 
 public sealed class Catalog
 {
@@ -147,6 +149,10 @@ public sealed class Catalog
 
     /// <summary>Der Tag des ersten Eintrags — der Test einer neuen Instanz zählt ab ihm.</summary>
     public DateOnly? ErsterTag => Lesend(() => _usage.AllPerDay.Count == 0 ? (DateOnly?)null : _usage.AllPerDay.Keys.Min());
+
+    /// <summary>Prüft jeden Eintrag vor dem Schreiben (Typ, Nutzdaten als JSON): true = unzulässig, er wird nicht geschrieben. Gesetzt in der Demo
+    /// (<see cref="Server.Eingabefilter"/>), sonst null.</summary>
+    public Func<string, string, bool>? Eingabefilter { get; set; }
 
     /// <summary>Höchstens so viele Publikationsbäume, gleich was der Tarif sagt — gesetzt in der Demo (Demo.Einrichten: einer), sonst null.</summary>
     public int? MaxPubTrees { get; set; }
@@ -442,8 +448,10 @@ public sealed class Catalog
             {
                 if (KeinKontingent(actor, type)) throw new KeinKontingentException();
                 PruefeTarif(type, payload);
+                var roh = Types.Serialize(payload);
+                if (Eingabefilter?.Invoke(type, roh) == true) throw new EingabeException();
                 // Anhängen geht an die Datenbank — hier darf kein Leser warten; erst das Anwenden ist exklusiv
-                var entry = _journal.Append(actor, stream, type, Types.Serialize(payload), batch);
+                var entry = _journal.Append(actor, stream, type, roh, batch);
                 return Aendernd(() => Apply(entry));
             });
     }
@@ -543,6 +551,7 @@ public sealed class Catalog
                     if (KeinKontingent(wer, type)) throw new KeinKontingentException();
                     PruefeTarif(type, payload);
                     var roh = Types.Serialize(payload);
+                    if (Eingabefilter?.Invoke(type, roh) == true) throw new EingabeException();
                     offen.Add((stream, type, roh));
                     var entry = new Entry(basis + offen.Count, DateTimeOffset.Now, actor, stream, type, roh, batch, Kinds.Of(type));
                     return Aendernd(() => Apply(entry));

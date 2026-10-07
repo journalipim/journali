@@ -528,6 +528,11 @@ ausser bei den Werten der Produkte, die pflegt man wie sonst.
 - **Ein Publikationsbaum** (07.10.2026): der Start leitet „Online-Shop“ (Kanal web) aus den Bereichen des Beispielkatalogs ab
   (`Demo.Publikationsbaum`). Einen zweiten weist der Server ab wie eine Grenze des Tarifs (`Catalog.MaxPubTrees` = 1); löschen, leeren und
   Rubriken entfernen gehen nicht (Knoten zurückziehen ist gesperrt) und stehen in der Oberfläche nicht da.
+- **Eingabefilter** (07.10.2026, `Eingabefilter.cs`): was Besucher als Text schreiben (Datenpflege, Struktur, Ausleitung), darf keinen Link,
+  keine E-Mail-Adresse, keine Telefonnummer und keinen Begriff der Sperrliste enthalten und höchstens 2000 Zeichen lang sein; sonst 400 „Diese
+  Eingabe ist nicht zulässig.“ Die Sperrliste liegt beim Betrieb der Demo, nicht im Repo: `JOURNALI_DEMO_SPERRLISTE` nennt die Datei (eine Zeile
+  je Begriff, # für Kommentare). Verglichen wird nach Vereinfachung — klein, ohne Akzente, 0/1/3/4/5/7/@/$ als Buchstaben, ohne Zeichen
+  dazwischen. Der Beispielkatalog geht am Filter vorbei (gesetzt nach dem Einrichten).
 - **Kein Zurückziehen, keine Massenbearbeitung**: Knoten und Medien zurückziehen ist gesperrt (auch im Kontextmenü, Einträge mit
   `demo: 'aus'` fallen dort weg), ebenso der Import; ein Stapel hat höchstens 50 Befehle (`Demo.MaxStapel`). Rückgängig bleibt.
 - **Kontingent**: 500 zählende Einträge (Datenpflege) je Woche und Monat für das Init Team, also für alle Besucher zusammen — weil die

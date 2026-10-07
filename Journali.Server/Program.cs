@@ -248,6 +248,10 @@ if (Demo.An)
     var (demoEintraege, neueBilder) = Demo.Einrichten(catalog, mediaStore, pluginDir, dataDir);
     demoBilder = neueBilder;
     Console.WriteLine($"journali: demo mode — {demoEintraege} entries, {neueBilder} images written");
+    // erst nach dem Einrichten: der Beispielkatalog geht am Filter vorbei, was Besucher schreiben, nicht
+    var filter = Eingabefilter.AusDatei(Environment.GetEnvironmentVariable("JOURNALI_DEMO_SPERRLISTE"));
+    catalog.Eingabefilter = filter.Unzulaessig;
+    Console.WriteLine($"journali: demo input filter — {filter.Begriffe} blocked terms, links, contact data, at most {Eingabefilter.MaxText} characters");
 }
 jobRunner.IstHaupt = () => verbund.IstHaupt;
 jobRunner.Aktiv = () => !verbund.Gesperrt && !verbund.OhneLizenz;   // ein gesperrter Server und einer ohne Lizenz führen keine Jobs aus
@@ -364,6 +368,11 @@ app.Use(async (ctx, next) =>
     {
         ctx.Response.StatusCode = 403;
         await ctx.Response.WriteAsJsonAsync(ModelApi.Err(e.Message));
+    }
+    catch (EingabeException) when (!ctx.Response.HasStarted)
+    {
+        ctx.Response.StatusCode = 400;   // Demo: der Eingabefilter — nur der Satz, nicht der Grund
+        await ctx.Response.WriteAsJsonAsync(ModelApi.Err("Diese Eingabe ist nicht zulässig."));
     }
 });
 
