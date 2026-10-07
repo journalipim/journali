@@ -5,6 +5,7 @@
 // Eintrag: { label, icon, url, hint } — hint steht im Tooltip, label ist ein Name.
 import { reactive } from 'vue'
 import { t } from './i18n.js'
+import { store } from './store.js'
 
 /// Das Hilfefenster: offen und welches Kapitel. Es liegt über der Ansicht — wer nachliest, bleibt, wo er war.
 export const hilfe = reactive({ open: false, chapter: '' })
@@ -38,7 +39,8 @@ export function helpItems(open = url => window.open(url, '_blank', 'noopener'), 
   return [
     { label: t('? Hilfe zu dieser Ansicht'), icon: '?', action: () => zeig(chapterFor(path)) },
     { label: t('Alle Kapitel'), icon: '≡', action: () => zeig('') },
-    { label: t('{ } Schnittstelle (API)'), icon: '{}', action: () => open('/schnittstelle') },   // die Beschreibung der Schnittstelle, lesbar
+    // die Beschreibung der Schnittstelle, lesbar — nicht in der Demo (07.10.2026): dort ist sie gesperrt (Demo.Gesperrt)
+    ...(store.demo ? [] : [{ label: t('{ } Schnittstelle (API)'), icon: '{}', action: () => open('/schnittstelle') }]),
     { sep: true },
     ...HELP_LINKS.map(l => ({ label: l.label, icon: l.icon, title: l.hint, action: () => open(l.url) })),
   ]

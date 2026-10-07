@@ -93,6 +93,7 @@ public class DemoTests
 
     [Theory]
     [InlineData("/api/auth/password", "POST", true)]
+    [InlineData("/api/openapi.json", "GET", true)]
     [InlineData("/api/auth/login", "POST", false)]   // 07.10.2026: Anmeldung mit demo / demo
     [InlineData("/API/AUTH/SETUP", "POST", true)]
     [InlineData("/api/auth/claim", "POST", true)]

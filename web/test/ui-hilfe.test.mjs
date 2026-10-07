@@ -58,3 +58,11 @@ test('jeder Link hat Name, Adresse mit https und einen Hinweis für den Tooltip'
     assert.ok(l.hint)
   }
 })
+
+// Demo (07.10.2026): die Schnittstelle (API) steht nicht im Hilfemenü — sie ist dort gesperrt
+test('in der Demo kein Eintrag Schnittstelle (API)', async () => {
+  const { store } = await import('../src/store.js')
+  store.demo = true
+  try { assert.ok(!helpItems(() => {}, '/tree').some(i => /Schnittstelle/.test(i.label ?? ''))) } finally { store.demo = false }
+  assert.ok(helpItems(() => {}, '/tree').some(i => /Schnittstelle/.test(i.label ?? '')))
+})

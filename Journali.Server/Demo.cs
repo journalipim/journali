@@ -9,7 +9,7 @@ namespace Journali.Server;
 /// Demo (07.10.2026): <c>JOURNALI_DEMO=1</c> macht eine Instanz zur öffentlichen Demo. Wer sie aufruft, meldet sich als Anwender
 /// <see cref="Anwender"/> mit dem Passwort <see cref="Passwort"/> an (die Anmeldeseite nennt beides) und arbeitet mit der Rolle <see cref="Rolle"/>: ansehen, Werte pflegen, freigeben — das Modell, die Einstellungen und die Profile der
 /// Plugins sieht man, speichert und legt aber nichts davon an (Rolle ohne Recht model, dazu <see cref="Gesperrt"/>); keine Plugins, Jobs,
-/// Skripte, Speicher, Team (KI-Schlüssel), Anwender und Rollen. Das eigene Konto (Passwort, API-Token), Anmelden und Einrichten sind gesperrt (<see cref="Gesperrt"/>).
+/// Skripte, Speicher, Team (KI-Schlüssel), Anwender und Rollen. Das eigene Konto (Passwort, API-Token) und Einrichten sind gesperrt; Abmelden geht (<see cref="Gesperrt"/>).
 /// <para>Ist das Journal leer, legt <see cref="Einrichten"/> einen erfundenen Beispielkatalog an — über denselben Schreibweg wie jede Pflege
 /// (<see cref="Catalog.WithBatch{TResult}"/>, <see cref="Commands"/>), danach Rolle und Anwender. Zurückgesetzt wird von aussen: der Betrieb
 /// startet die Demo täglich mit leerer Datenbank neu, und dieser Server legt alles wieder an. Ein Weg, das Journal zu leeren, gibt es nicht.</para>
@@ -38,7 +38,7 @@ public static class Demo
     public static readonly string[] OhnePlugins = ["driver", "ixp", "solr"];
 
     /// <summary>
-    /// In der Demo gesperrt, mit jedem Recht: das eigene Konto (Passwort, Token anlegen und löschen), Anmelden und Einrichten; Hochladen und
+    /// In der Demo gesperrt, mit jedem Recht: das eigene Konto (Passwort, Token anlegen und löschen), Einrichten, die Beschreibung der Schnittstelle; Hochladen und
     /// Holen von Medien; Workflows und Vorschau-Presets ändern, Vorschauen und Abmessungen von Hand anstossen; Zugänge und das Dateisystem;
     /// Daten der Plugins schreiben (Profile, Layouts — nur die eigene Einstellung <c>settings</c> eines Plugins bleibt) und ihre Geheimnisse
     /// (Schlüssel am Profil); Knoten und Medien zurückziehen, Klassifikationen zurückziehen; der JSON-Import. Übergänge am Knoten bleiben,
@@ -50,6 +50,7 @@ public static class Demo
         var lesen = method is "GET" or "HEAD" or "OPTIONS";
         if (p.StartsWith("/api/auth/password") || p.StartsWith("/api/auth/setup") || p.StartsWith("/api/auth/claim")) return true;
         if (p.StartsWith("/api/auth/tokens")) return !lesen;
+        if (p == "/api/openapi.json") return true;   // die Beschreibung der Schnittstelle: ohne API-Token nutzt sie in der Demo niemand (07.10.2026)
         if (p is "/api/media" or "/api/media/fetch" or "/api/media/derive" || p.StartsWith("/api/media/blob/") || p.StartsWith("/api/media/probe")) return !lesen;
         if (p.StartsWith("/api/media/presets")) return !lesen;
         if (p.StartsWith("/api/workflows/") && p != "/api/workflows/applicable") return !lesen;

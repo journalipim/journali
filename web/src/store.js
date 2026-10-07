@@ -59,7 +59,7 @@ export const store = reactive({
   // Startphase (05.10.2026, Core.Licensing.Startphase): alles ohne Grenzen — die Oberfläche zeigt nichts zu Lizenz, Limits und journali-Token
   startphase: false,
   testversion: false,   // oben das rote Feld „Testversion“ (07.10.2026)
-  demo: false,          // Demo (07.10.2026): jeder ist der Anwender demo — kein eigenes Konto, kein Abmelden
+  demo: false,          // Demo (07.10.2026): alle melden sich als demo an — kein eigenes Konto
   // Darf ich das? Ohne Benutzer alles; sonst nach den Rechten der Rolle (Vokabular: read, write, retire, release, model, plugins, jobs, storage, users)
   can(right) { return !this.auth.enabled || !this.auth.user ? true : (this.auth.rights ?? []).includes(right) },
   head: 0,
