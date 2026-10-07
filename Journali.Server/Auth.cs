@@ -209,7 +209,7 @@ public static class Auth
         if (path.StartsWith("/api/jobs")) return read && !path.Contains("/log") && !path.Contains("/runs") ? Rights.Read : Rights.Jobs;
         if (path.StartsWith("/api/restore") || path.StartsWith("/api/backup") || path.StartsWith("/api/mail")) return Rights.Users;   // Systemsache, auch lesend
         if (path.StartsWith("/api/usage/report")) return Rights.Users;   // Nutzungsberichte: eine Systemsache, auch lesend
-        if (path == "/api/notice/acknowledge") return Rights.Users;   // die Hinweise zum Betrieb bestätigt, wer die Anlage verwaltet
+        if (path == "/api/notice/acknowledge") return Rights.Users;   // die Hinweise zum Betrieb bestätigt, wer die Instanz verwaltet
         if (path == "/api/server" || path.StartsWith("/api/server/")) return Rights.Users;   // welche Server auf die Datenbank zugreifen (pflegestruktur 41)
         // Den Stand des eigenen Teams holen darf, wer es führt (26.09.2026: er bestellt sein Kontingent selbst) — welches Team, prüft LicenceApi
         if (path.StartsWith("/api/licence/abo/") && path.EndsWith("/auffrischen")) return Rights.Team;

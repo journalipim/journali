@@ -431,7 +431,7 @@ object[] Dort(HttpRequest req, Catalog c)
     return c.Lesen((_, _) => andere.Select(a => (object)new { key = a, name = c.Users.All.GetValueOrDefault(a)?.Name ?? a }).ToArray());
 }
 
-/// <summary>Die Zahlen der Statusleiste — für die Anlage oder für das eigene Team, je nachdem, wer fragt.</summary>
+/// <summary>Die Zahlen der Statusleiste — für die Instanz oder für das eigene Team, je nachdem, wer fragt.</summary>
 object? Nutzung(HttpRequest req, Catalog c)
 {
     var today = DateOnly.FromDateTime(DateTime.Now);
@@ -446,7 +446,7 @@ object? Nutzung(HttpRequest req, Catalog c)
     if (string.IsNullOrEmpty(ich) && Auth.Enabled(c)) ich = Auth.Resolve(req.HttpContext, c, dataDir)?.User;
     return c.Lesen((_, _) =>
     {
-        // Ohne Anmeldung (offene Anlage) gilt die Lizenz
+        // Ohne Anmeldung (offene Instanz) gilt die Lizenz
         if (string.IsNullOrEmpty(ich))
             return c.ReadUsage(u => new
             {

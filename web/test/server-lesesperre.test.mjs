@@ -1,7 +1,7 @@
 // Wer nur liest, nimmt nicht die Schreibsperre (27.09.2026). `Catalog.With` hält `lock (_write)`, weil es prüfen und
 // schreiben in einem Schritt erlaubt — es ist aber auch der bequemste Weg, an Modell und Baum zu kommen, und wurde
 // darum an 130 Stellen benutzt, die gar nichts schreiben. Eine davon baute den Text aller Knoten neu, alle fünf
-// Sekunden: die ganze Anlage stand. Für reines Lesen gibt es `Catalog.Lesen(model, tree)` — dieser Prüfstand hält das
+// Sekunden: die ganze Instanz stand. Für reines Lesen gibt es `Catalog.Lesen(model, tree)` — dieser Prüfstand hält das
 // fest, weil es im Betrieb erst bei vielen Knoten auffällt und in keinem Test mit zehn Knoten.
 import test from 'node:test'
 import assert from 'node:assert/strict'

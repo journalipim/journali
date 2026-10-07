@@ -103,7 +103,7 @@ public sealed class Usage : IProjection
     public int Week(DateOnly d, bool all = false) => Between(WeekStart(d), d, all);
     public int Month(DateOnly d, bool all = false) => Between(MonthStart(d), d, all);
 
-    /// <summary>Wie der Verlauf der Anlage, aber nur für diese Urheber — der Verlauf eines Teams.</summary>
+    /// <summary>Wie der Verlauf der Instanz, aber nur für diese Urheber — der Verlauf eines Teams.</summary>
     public IEnumerable<(DateOnly Start, int Count, int All)> History(IReadOnlySet<string> actors, string period, DateOnly today, int limit = 90)
     {
         DateOnly Key(DateOnly d) => period switch { "week" => WeekStart(d), "month" => MonthStart(d), _ => d };

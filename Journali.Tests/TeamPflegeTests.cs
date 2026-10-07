@@ -7,7 +7,7 @@ namespace Journali.Tests;
 
 // Ein Team muss sich pflegen lassen. Das Init Team kam aus
 // dem Saatgut ohne Führung — und die Pflicht „mindestens ein Teammanager“ blockierte damit jedes Speichern, auch das
-// Modell. Die Pflicht gilt beim Anlegen; eine bestehende Anlage repariert sich beim Start selbst.
+// Modell. Die Pflicht gilt beim Anlegen; eine bestehende Instanz repariert sich beim Start selbst.
 public class TeamPflegeTests
 {
     [Fact]

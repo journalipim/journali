@@ -23,7 +23,7 @@ public static class Model
     public const string LabelStream = "settings:label:";
     public const string MasterLocaleStream = "settings:master_locale";
     public const string MasterChannelStream = "settings:master_channel";
-    /// <summary>Das Team, das jede Anlage mitbringt: nicht löschbar, umbenennbar; hierher fällt, wer kein eigenes trägt.</summary>
+    /// <summary>Das Team, das jede Instanz mitbringt: nicht löschbar, umbenennbar; hierher fällt, wer kein eigenes trägt.</summary>
     public const string InitTeam = "init";
     public const string RelationStream = "relation:";
     /// <summary>Gruppe der Werte am Medium (20).</summary>

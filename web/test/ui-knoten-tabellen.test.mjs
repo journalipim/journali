@@ -156,7 +156,7 @@ test('jeder Wert bekommt seinen Beleg: das Dokument, die Seite, die Stelle', asy
   assert.match(beleg.checkedAt, /^\d{4}-\d{2}-\d{2}$/)
 })
 
-test('neue Attribute in eine bestehende Gruppe, die hier schon gilt: keine Anlage, nichts hängt neu', async () => {
+test('neue Attribute in eine bestehende Gruppe, die hier schon gilt: nichts wird angelegt, nichts hängt neu', async () => {
   const { w, rufe } = await dialog()
   assert.equal(w.vm.gruppe, 'from_document', 'Vorgabe: „aus Dokument“, weil es die Gruppe gibt')
   const wahl = w.find('.dt-foot select')

@@ -6,7 +6,7 @@ using System.Text.Json.Serialization;
 namespace Journali.Server;
 
 /// <summary>
-/// Die Lizenz. Sie sagt, was diese Anlage darf — nicht der Administrator und schon gar nicht ein anderes Team:
+/// Die Lizenz. Sie sagt, was diese Instanz darf — nicht der Administrator und schon gar nicht ein anderes Team:
 /// <list type="bullet">
 /// <item><c>Plan</c>: der Tarif — und damit, wie viele Einträge ins Journal gehen dürfen. Die Zahlen stehen in der
 /// Tarifliste (Tarifblatt des Lizenzservers im Journal, sonst das Saatgut im Kern), nicht in der Lizenz: was „Kostenlos“
@@ -47,7 +47,7 @@ public sealed record Licence(
     public static readonly Licence Frei = new(Core.Projections.Tarife.Free.Key);
 
     /// <summary>Der Tarif dieser Lizenz in der geltenden Tarifliste — <c>plan</c> nennt ihn, die Testlizenz hat den
-    /// Test-Tarif; ein unbekannter gilt als Kostenlos. Seine Grenzen sind die der Anlage; was ein einzelnes Team darüber
+    /// Test-Tarif; ein unbekannter gilt als Kostenlos. Seine Grenzen sind die der Instanz; was ein einzelnes Team darüber
     /// hinaus hat, steht in <see cref="Teams"/>, was zeitlich dazukommt, ist ein Limit-Schlüssel oder ein Abo am Team.</summary>
     public Core.Projections.Tarif TarifIn(Core.Projections.Tarifliste liste) => Trial == true ? liste.Test : liste.Von(Plan) ?? liste.Free;
 

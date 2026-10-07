@@ -231,7 +231,7 @@ public class AboTests
     }
 
     /// <summary>
-    /// Registriert holt die Instanz das Tarifblatt auch ohne Abo und ohne Schlüssel (26.09.2026): eine frische Anlage
+    /// Registriert holt die Instanz das Tarifblatt auch ohne Abo und ohne Schlüssel (26.09.2026): eine frische Instanz
     /// kennt sonst weder die Grenzen der Tarife noch die Aktionen des Shops, weil sie erst beim ersten Kauf fragen würde.
     /// </summary>
     [Fact]
@@ -255,7 +255,7 @@ public class AboTests
     }
 
     /// <summary>
-    /// Ohne Registrierung geht nichts hinaus (26.09.2026): wer nicht zugestimmt hat, dessen Anlage fragt auch nicht nach
+    /// Ohne Registrierung geht nichts hinaus (26.09.2026): wer nicht zugestimmt hat, dessen Instanz fragt auch nicht nach
     /// dem Tarifblatt. Ein Team mit Abo spricht ohnehin mit dem Lizenzserver — dann kommt das Blatt mit.
     /// </summary>
     [Fact]
@@ -271,7 +271,7 @@ public class AboTests
         Assert.Equal(0, w.Server.Blattanfragen);
         Assert.False(w.C.Registriert);
 
-        // ein Abo ist Zustimmung genug: dafür spricht die Anlage ohnehin mit dem Lizenzserver
+        // ein Abo ist Zustimmung genug: dafür spricht die Instanz ohnehin mit dem Lizenzserver
         await w.Abos.VerbindenAsync(w.C, "de", Key, "taloan");
         w.Uhr.Jetzt = Jetzt + Abos.Auffrischen + TimeSpan.FromMinutes(1);
         await w.Abos.AuffrischenAsync(w.C);

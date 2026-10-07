@@ -6,7 +6,7 @@ using Journali.Server;
 namespace Journali.Tests;
 
 /// <summary>
-/// Die Lizenz gilt für eine Anlage. Darum nennt sie die Kennung der Anlage, für
+/// Die Lizenz gilt für eine Instanz. Darum nennt sie die Kennung der Instanz, für
 /// die sie ausgestellt wurde, und zwar im signierten Rumpf; passt sie nicht, gilt der Testbetrieb.
 /// <para>Was das nicht leistet, steht bei <see cref="Instanz"/>: wer die Datenbank besitzt, kann die Kennung ändern,
 /// und bei offenem Quelltext lässt sich die Prüfung entfernen. Es macht Vervielfältigung zu einer bewussten Handlung statt zu einem Nebeneffekt der
@@ -34,7 +34,7 @@ public class LicenceInstanzTests
     [Fact]
     public void Nach_der_Wiederherstellung_gilt_sie_nicht_mehr()
     {
-        // dieselbe Lizenz, aber die Anlage hat eine neue Kennung — genau die Fall mit den drei Instanzen
+        // dieselbe Lizenz, aber die Instanz hat eine neue Kennung — genau die Fall mit den drei Instanzen
         var (lic, geprueft, grund) = LicenceFile.Aus(Json(Fuer(A)), B);
         Assert.Equal(Journali.Core.Projections.Tarife.Free.Key, lic.Plan);
         Assert.False(geprueft);

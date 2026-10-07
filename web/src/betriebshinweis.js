@@ -1,4 +1,4 @@
-// Hinweise zum Betrieb (05.10.2026): einmal je Anlage und Version zur Kenntnis nehmen — gefragt wird, wer die Anlage verwaltet (Recht users).
+// Hinweise zum Betrieb (05.10.2026): einmal je Instanz und Version zur Kenntnis nehmen — gefragt wird, wer die Instanz verwaltet (Recht users).
 // Die Bestätigung steht mit Version und Wortlaut im Journal; „später“ fragt beim nächsten Laden wieder. Wie registrierung.js steht die Frage
 // hier und nicht in App.vue, damit der Prüfstand sie ohne die ganze Leiste stellen kann.
 import { dialog } from './dialog.js'
@@ -18,7 +18,7 @@ export async function frageNachBetriebshinweis() {
   if (!n || n.acknowledged === n.version) return false
   const ok = await dialog.confirm({
     title: L(n.title),
-    text: t_('Gilt für diese Anlage; die Bestätigung steht im Journal.'),
+    text: t_('Gilt für diese Instanz; die Bestätigung steht im Journal.'),
     list: (n.points ?? []).map(p => L(p)),
     ok: t_('✓ zur Kenntnis genommen'),
     cancel: t_('später'),

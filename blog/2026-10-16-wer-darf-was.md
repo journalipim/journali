@@ -39,7 +39,7 @@ Auch die Einstellungen passen sich an: Es erscheinen nur die Reiter, die zu eure
 
 ## Teams: führen und dazugehören
 
-Ein **Team** ist eine Gruppe von Personen, die am Gesamtsystem mitarbeitet. Daran hängen KI-Schlüssel und KI-Austauschvolumen. Jede Anlage bringt das **Init Team** mit – nicht löschbar, umbenennbar. Der erste Administrator gehört hinein und führt es. Wer kein eigenes Team hat, arbeitet dort.
+Ein **Team** ist eine Gruppe von Personen, die am Gesamtsystem mitarbeitet. Daran hängen KI-Schlüssel und KI-Austauschvolumen. Jede Instanz bringt das **Init Team** mit – nicht löschbar, umbenennbar. Der erste Administrator gehört hinein und führt es. Wer kein eigenes Team hat, arbeitet dort.
 
 Führen und dazugehören sind zweierlei: Eine Person kann **Manager mehrerer Teams** sein, aber **Mitglied nur eines**. So führt jemand aus der IT mehrere Standorte und sitzt trotzdem in genau einem Team. Teammanager tragen Mitglieder ein und aus und pflegen die Schlüssel ihres Teams; neue Teams legt, wer Anwender verwaltet.
 

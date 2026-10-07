@@ -12,7 +12,7 @@ journali ist headless: Die Oberfläche ruft dieselbe HTTP-Schnittstelle, die auc
 - **Token:** Unter ⚙ Einstellungen → ◐ Mein Account entsteht ein API-Token; er ist nur beim Anlegen sichtbar. Im Kopf jeder Anfrage: `Authorization: Bearer <token>`.
 - **Verschlüsselung:** journali spricht selbst nur HTTP. Über ein Netz gehört TLS davor (ein Reverse-Proxy); sonst läuft das Passwort der Anmeldung unverschlüsselt. Das Cookie der Sitzung trägt das Merkmal `Secure`, sobald die Verbindung HTTPS ist.
 - **Ohne Sitzung** gibt es nur `GET /api/health` (Version und Bau), die Aufrufe zum Anmelden (`/api/auth/login`, `state`, `setup`, `claim`) und die Dateien der Office-Add-ins. Alles andere antwortet `401`.
-- **Ohne Anwender** in der Anlage ist alles offen; der Urheber eines Eintrags kommt dann aus dem Kopf `X-Actor`. Mit Anwendern kommt er aus der Sitzung oder dem Token.
+- **Ohne Anwender** in der Instanz ist alles offen; der Urheber eines Eintrags kommt dann aus dem Kopf `X-Actor`. Mit Anwendern kommt er aus der Sitzung oder dem Token.
 
 ## Rechte
 

@@ -25,7 +25,7 @@ public class TarifPluginsTests
         Assert.Equal(Tarife.ProPlus.Key, Tarife.Saat.Ab(ScriptumApiPlugin)?.Key);
     }
 
-    /// <summary>Kein Systemjob: ein Skript rechnet nichts, was jede Anlage braucht — es ist kein Betrieb, sondern ein Merkmal.</summary>
+    /// <summary>Kein Systemjob: ein Skript rechnet nichts, was jede Instanz braucht — es ist kein Betrieb, sondern ein Merkmal.</summary>
     [Fact]
     public void Ein_Skript_ist_kein_Systemjob()
     {

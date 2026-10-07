@@ -1,6 +1,6 @@
 <script setup>
 // Mein Konto: Passwort und die eigenen API-Token. Wer sonst im System arbeitet, steht unter
-// ⚙ Anlage — das ist Verwaltung, nicht mein Konto.
+// ⚙ Instanz — das ist Verwaltung, nicht mein Konto.
 import { ref, onMounted } from 'vue'
 import { api, when } from '../api.js'
 import { store } from '../store.js'

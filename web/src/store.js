@@ -54,7 +54,7 @@ export const store = reactive({
   tarif: null,     // { key, label, schedules } aus /api/health
   // beim Lizenzserver registriert? undefined = noch nichts vom Server gehört, null = noch niemand gefragt, sonst die
   // Antwort. Der Unterschied zählt: mit null als Anfangswert fragte der Dialog bei jedem Laden, bevor /api/health
-  // antwortete — auch bei einer längst registrierten Anlage (26.09.2026).
+  // antwortete — auch bei einer längst registrierten Instanz (26.09.2026).
   registriert: undefined,
   // Startphase (05.10.2026, Core.Licensing.Startphase): alles ohne Grenzen — die Oberfläche zeigt nichts zu Lizenz, Limits und journali-Token
   startphase: false,

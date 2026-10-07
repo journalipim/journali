@@ -26,7 +26,7 @@ const kb = b => {
 const tok = n => n >= 1e6 ? (n / 1e6).toFixed(1).replace('.', ',') + 'M' : n >= 1000 ? Math.round(n / 1000) + 'k' : String(n)
 const route = useRoute()
 const router = useRouter()
-const abgemeldet = computed(() => istAbgemeldet(route.path, store.auth))   // auf der Anmeldeseite sieht man nichts von der Anlage
+const abgemeldet = computed(() => istAbgemeldet(route.path, store.auth))   // auf der Anmeldeseite sieht man nichts von der Instanz
 /// Lesezeichen (01.10.2026): das Menü neben der Person; es hängt an keinem Plugin
 async function lesezeichen(e) { menu.open(e, await lesezeichenMenue(router)) }
 // Auffangrahmen: ein Fehler beim Zeichnen einer

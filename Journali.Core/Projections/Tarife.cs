@@ -104,7 +104,7 @@ public static class Tarife
     public const int Ohne = int.MaxValue;
 
     /// <summary>
-    /// Systemjobs: sie rechnen und messen, was jede Anlage braucht — die Vorschauen und die Bildabmessungen.
+    /// Systemjobs: sie rechnen und messen, was jede Instanz braucht — die Vorschauen und die Bildabmessungen.
     /// Das ist Betrieb, kein Merkmal eines Tarifs, und darum sind sie in jedem erlaubt. Die Vektoren (<c>embed</c>) nicht mehr (03.10.2026): sie sind ein
     /// Merkmal des Tarifs — welcher Tarif sie enthält, sagt das Tarifblatt des Lizenzservers mit dem Schlüssel <c>embed</c> (Version 11: ab Pro+).
     /// <para>Die Ausnahme steht hier und nicht nur in <see cref="Basis"/>, weil im Betrieb das signierte Tarifblatt

@@ -5,7 +5,7 @@ using static Journali.Server.ModelApi;
 namespace Journali.Server;
 
 /// <summary>
-/// Hinweise zum Betrieb (05.10.2026): einmal je Anlage und Version zur Kenntnis genommen — von jemandem, der die Anlage verwaltet (Recht users).
+/// Hinweise zum Betrieb (05.10.2026): einmal je Instanz und Version zur Kenntnis genommen — von jemandem, der die Instanz verwaltet (Recht users).
 /// Die Bestätigung steht mit Version und Wortlaut im Journal (Strom <see cref="Stream"/>); im Streitfall belegt sie, dass die Hinweise bekannt waren.
 /// Ändert sich der Wortlaut, bekommt er eine neue <see cref="Version"/> und wird wieder gefragt.
 /// </summary>

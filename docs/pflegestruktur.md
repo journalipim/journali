@@ -1751,7 +1751,7 @@ liess sich nur als Zahl tippen. Jetzt ziehen die Kacheln — beim Ablegen bekomm
 geschrieben wird nur, was sich ändert; die erste ist als solche gekennzeichnet (①), die Ausleitung nimmt sie als
 Hauptbild. Offen: `usage` ist Freitext. Eine Werteliste (Hauptbild, Detail, Verpackung, Zeichnung) liesse Exporte
 die Rolle zuverlässig lesen — aber der Typ eines bestehenden Attributs ändert sich nicht ohne Weiteres, und die
-Werte, die in Anlagen schon als Text stehen, müssten mit. Das ist eine Entscheidung, keine Kleinigkeit.
+Werte, die in Instanzen schon als Text stehen, müssten mit. Das ist eine Entscheidung, keine Kleinigkeit.
 
 **H. Rechte und Fristen — gebaut (27.09.2026).** Entschieden nach der Vorlage: **`download`** ist ein Recht
 („Herunterladen“). Es braucht, wer die Datei selbst, ein Preset oder einen Blob lädt (`Auth.IstDatei`); Kachel,
@@ -1803,7 +1803,7 @@ aus Zeilen und Wortkästen dieselben Abschnitte und Tabellen baut wie der Leser 
 Abgelegt wird mit `PUT /api/docs/{id}`, `state: text`, `note: "ocr · Vertrauen n %"`; ein Dokument ohne erkennbaren
 Text wird `fehler` mit dem Grund, damit es nicht in jeder Runde wiederkommt (`/docs/retry` gibt es frei). Die
 Sprachdaten kommen beim ersten Lauf nach `plugins/ocr/.cache` (Volume). Kein Systemjob: die Erkennung ist teuer und
-eine Entscheidung je Anlage. Damit wird ein gescanntes Datenblatt durchsuchbar, einbettbar (35) und seine Tabellen
+eine Entscheidung je Instanz. Damit wird ein gescanntes Datenblatt durchsuchbar, einbettbar (35) und seine Tabellen
 werden Attribute (L). **Bilder** kommen ausdrücklich: das gesäte Stichwort „Text erkennen“ (`ocr`, Werteliste `keyword`) stellt ein Bild in
 die Liste der Texterkennung (`DocsApi.IstScan`), solange der Index es nicht zu seinem Hash kennt; der Zähler in
 ⌕ Dokumente zählt sie mit. Der Leser nimmt weiterhin nur Dokumente (`Readable`) — jedes Bild zu erkennen kostet viel
@@ -2210,7 +2210,7 @@ in der Oberfläche geschrieben, versioniert wie jeder andere Eintrag, ausgeführ
 **Abgrenzung, die scharf bleibt.** Formel und Vorlage (`Tree.Compute`) rechnen Werte **am Knoten**, ohne Aussenwelt,
 und ihr Ergebnis ist ein Attributwert. `scriptum` darf nach aussen und schreibt über `/api` wie ein Anwender. Ein
 ausgeliefertes Plugin bleibt, was es ist: ein Verzeichnis mit Zertifikat, das journali mitbringt. Ein Skript ist das
-Gegenstück dazu — nichts wird mitgeliefert, nichts signiert, alles gehört der Anlage.
+Gegenstück dazu — nichts wird mitgeliefert, nichts signiert, alles gehört der Instanz.
 
 **Was ehrlich dabeisteht.** Ein Skript läuft als Prozess auf dem Server. Sein Token begrenzt, was es in journali
 darf; was es darüber hinaus tut (Netz, Dateisystem), begrenzt nur das Betriebssystem. Darum ist `scriptum.write` ein

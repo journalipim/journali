@@ -123,7 +123,7 @@ public sealed class Abos(Instanz instanz, string jobsDir, HttpClient http, Func<
     }
 
     /// <summary>
-    /// Das Tarifblatt holen, ohne Abo und ohne Schlüssel (26.09.2026): eine frische Anlage kennt sonst weder die Tarife
+    /// Das Tarifblatt holen, ohne Abo und ohne Schlüssel (26.09.2026): eine frische Instanz kennt sonst weder die Tarife
     /// des Shops noch seine Aktionen, weil sie den Lizenzserver erst beim ersten Kauf fragen würde. Die Anfrage nennt
     /// Instanz und öffentlichen Schlüssel, sonst nichts. Übernommen wird nur ein neueres Blatt mit gültiger Signatur.
     /// </summary>
@@ -163,7 +163,7 @@ public sealed class Abos(Instanz instanz, string jobsDir, HttpClient http, Func<
     public async Task<int> AuffrischenAsync(Catalog c, CancellationToken ct = default, bool sofort = false)
     {
         if (!Eingestellt) return 0;
-        // Das Tarifblatt zuerst, auch ohne Abo — aber nur, wenn die Anlage registriert ist oder ohnehin ein Abo hat:
+        // Das Tarifblatt zuerst, auch ohne Abo — aber nur, wenn die Instanz registriert ist oder ohnehin ein Abo hat:
         // wer nicht registriert ist, schickt nichts hinaus (26.09.2026).
         var darf = c.Registriert == true || c.Lesen((_, _) => c.Teams.All.Values.Any(x => x.Abo is not null));
         if (darf && (_blattGeholt is not { } zuvor || Jetzt - zuvor >= Auffrischen))

@@ -7,7 +7,7 @@
 # (compose.extern.yaml, docs/betrieb.md).
 services:
   # Einmal je Start, fertig in einem Augenblick: liegt noch kein Passwort im Volume journali-secrets, entsteht eines —
-  # aus .env, wenn dort JOURNALI_DB_PASSWORD steht (bestehende Anlagen), sonst zufällig. Danach bleibt es, wie es ist:
+  # aus .env, wenn dort JOURNALI_DB_PASSWORD steht (bestehende Instanzen), sonst zufällig. Danach bleibt es, wie es ist:
   # Postgres übernimmt ein Passwort nur beim allerersten Start.
   db-passwort:
     image: pgvector/pgvector:pg18

@@ -1,4 +1,4 @@
-// Hinweise zum Betrieb (05.10.2026): gefragt wird einmal je Laden, nur wer die Anlage verwaltet, und nur solange die geltende Version nicht
+// Hinweise zum Betrieb (05.10.2026): gefragt wird einmal je Laden, nur wer die Instanz verwaltet, und nur solange die geltende Version nicht
 // bestätigt ist. Bestätigt geht die Version an den Server; „später“ schickt nichts.
 import test from 'node:test'
 import assert from 'node:assert/strict'

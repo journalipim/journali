@@ -193,7 +193,7 @@ public class TarifTests
     {
         var j = new MemoryJournal();
         var c = new Catalog(j); c.Rebuild(); c.SeedMissing();
-        // ein Blatt, dem probe in jedem Tarif fehlt — so sieht eine Anlage aus, deren Blatt älter ist als das Plugin
+        // ein Blatt, dem probe in jedem Tarif fehlt — so sieht eine Instanz aus, deren Blatt älter ist als das Plugin
         Assert.True(c.NimmTarifblatt(PruefAussteller.Blatt(2, z => z.Plugins is null ? z : z with { Plugins = [.. z.Plugins.Where(k => k != "probe")] }), "t"));
         Assert.DoesNotContain("probe", c.Tarife.Free.Plugins!);
 

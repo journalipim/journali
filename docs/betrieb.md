@@ -758,7 +758,7 @@ weitere Team ohne Abo und Schlüssel hat nichts und rechnet über ein anderes ab
   dem Journal und fährt mit jeder Sicherung mit: eine wiederhergestellte Instanz fängt den Test nicht von vorn an.
 - **Nach dem Test** gilt für das Init Team **Kostenlos** — auch im laufenden Betrieb; stündlich zieht der Server seine
   Limits nach (`LimitsAusLizenz`).
-- **Die Grenzen sagt der Tarif** (Tarifblatt, Saatgut `Tarife.cs`): was „Kostenlos“ heisst, bedeutet in jeder Anlage
+- **Die Grenzen sagt der Tarif** (Tarifblatt, Saatgut `Tarife.cs`): was „Kostenlos“ heisst, bedeutet in jeder Instanz
   dasselbe. Ein Limit-Schlüssel oder ein Abo gibt einem Team zeitlich mehr.
 - **Reset-Schlüssel** gibt es getrennt für Pro (gilt für Pro und Pro+) und Enterprise; kostenlos gibt es keinen,
   Unlimited braucht keinen.
@@ -796,7 +796,7 @@ Ein **Joblauf** hört schon bei 90 % auf (`Limits.JobReserve`) — die letzten 1
 selben Moment wieder weg.
 
 Ein Team mit **eigenem Schlüssel** rechnet beim Anbieter selbst ab — dort begrenzt journali nichts. Teams ohne eigenen Schlüssel arbeiten über den
-Schlüssel der Anlage (Tresor `secrets` unter `licence`, ersatzweise `JOURNALI_AI_KEY`) und zählen gegen das KI-Limit.
+Schlüssel der Instanz (Tresor `secrets` unter `licence`, ersatzweise `JOURNALI_AI_KEY`) und zählen gegen das KI-Limit.
 
 Echtheit: Schlüssel, Abo-Stand und Tarifblatt tragen eine ECDSA-P-256-Signatur (SHA-256, Base64), geprüft mit dem
 öffentlichen Schlüssel des Lizenzservers, der in journali eingebaut ist (`Core.Licensing.Aussteller`). **Nur

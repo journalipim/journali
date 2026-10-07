@@ -14,7 +14,7 @@
 | Eintrag | eine Zeile im Journal: Nummer, Zeit, Urheber, Strom, Typ, Inhalt |
 | Version | Version eines Plugins oder des Servers |
 | Freigabe | Erlaubnis, eine Variante in einem Kanal auszuleiten |
-| Init Team | das Team, das jede Anlage mitbringt; umbenennbar, nicht löschbar |
+| Init Team | das Team, das jede Instanz mitbringt; umbenennbar, nicht löschbar |
 | Journal | die Folge aller Einträge; die einzige Wahrheit |
 | Kanal | Ausgabeweg wie Web oder Print, mit eigenen Werten, Pflichtfeldern und Freigaben |
 | Kennung | eindeutiger Wert eines Knotens, etwa SKU oder EAN; oder die Kennung einer Instanz |

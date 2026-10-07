@@ -39,7 +39,7 @@ const label = m => L(m?.label) || m?.label?.en || ''
 const q = ref('')
 const kindFilter = ref('')
 const stateFilter = ref('')
-// „mein Tarif": nur, was diese Anlage verwenden darf. Der Schalter erscheint nur, wenn überhaupt etwas fehlt —
+// „mein Tarif": nur, was diese Instanz verwenden darf. Der Schalter erscheint nur, wenn überhaupt etwas fehlt —
 // bei Pro+, Enterprise und Unlimited ist alles erlaubt, dann gäbe es nichts zu filtern
 const nurTarif = ref(false)
 /// Gehört das Plugin zu journali? `system` (ein Systemjob) oder `builtin` (ohne es geht es nicht: Jobs, Sicherung,
@@ -191,7 +191,7 @@ function pick(k) { cur.value = k }
       <span v-for="k in kinds" :key="k" class="view-chip" :class="{ on: kindFilter === k }" @click="kindFilter = kindFilter === k ? '' : k" :title="'Art: ' + k">{{ KIND[k] ?? k }}</span>
       <span class="sep">·</span>
       <span v-for="[v, l] in [['on', '● an'], ['off', '○ aus'], ['update', $t('↑ Update')], ['new', $t('⇩ nicht installiert')], ['cert', $t('❖ Core')]]" :key="v" class="view-chip" :class="{ on: stateFilter === v }" @click="stateFilter = stateFilter === v ? '' : v">{{ l }}</span>
-      <span v-if="eingeschraenkt" class="view-chip" :class="{ on: nurTarif }" @click="nurTarif = !nurTarif" :title="$t('nur, was diese Anlage verwenden darf — mit den anderen Filtern zusammen')">{{ $t("◆ mein Tarif") }}</span>
+      <span v-if="eingeschraenkt" class="view-chip" :class="{ on: nurTarif }" @click="nurTarif = !nurTarif" :title="$t('nur, was diese Instanz verwenden darf — mit den anderen Filtern zusammen')">{{ $t("◆ mein Tarif") }}</span>
       <span v-if="festeVerborgen" class="view-chip feste" :class="{ on: zeigeFeste }" @click="zeigeFeste = !zeigeFeste" :title="$t('Was zu journali gehört: Systemjobs und die Plugins, ohne die es nicht arbeitet. Sie stehen hier nur, wenn ein Update vorliegt oder eines fehlt.')">{{ $t("⚙ System · {0}", [festeVerborgen]) }}</span>
     </div>
     <div class="li head">

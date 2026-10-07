@@ -5,12 +5,12 @@ using Journali.Server;
 
 namespace Journali.Tests;
 
-// Das Init Team trägt die Limits der Lizenz. In einer Anlage, die älter ist als die Limits, stand
+// Das Init Team trägt die Limits der Lizenz. In einer Instanz, die älter ist als die Limits, stand
 // dort 0/0, während die Lizenz 20.000/100.000 sagte — die Reparatur lief nie, weil sie an LicenceDir hing und das
 // Saatgut vor dessen Zuweisung startete. Sie hängt jetzt an nichts mehr und lässt sich auch später aufrufen.
 public class LimitsAusLizenzTests
 {
-    /// <summary>Eine Anlage wie vor den Limits: Init Team ohne Zuteilung.</summary>
+    /// <summary>Eine Instanz wie vor den Limits: Init Team ohne Zuteilung.</summary>
     private static MemoryJournal Altanlage()
     {
         var j = new MemoryJournal();

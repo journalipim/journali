@@ -45,10 +45,10 @@ Eigene Rollen entstehen unter ◈ IAM. Eine Rolle mit Anwendern lässt sich nich
 ## Teams
 
 <!-- lizenz -->
-Ein Team ist eine Gruppe von Personen, die am Gesamtsystem mitarbeitet. Daran hängen das Kontingent an journali-Token, die KI-Schlüssel und das KI-Austauschvolumen. Jede Anlage bringt das **Init Team** mit: nicht löschbar, umbenennbar, Träger der Grenzen aus der Lizenz. Wer kein eigenes Team hat, arbeitet dort.
+Ein Team ist eine Gruppe von Personen, die am Gesamtsystem mitarbeitet. Daran hängen das Kontingent an journali-Token, die KI-Schlüssel und das KI-Austauschvolumen. Jede Instanz bringt das **Init Team** mit: nicht löschbar, umbenennbar, Träger der Grenzen aus der Lizenz. Wer kein eigenes Team hat, arbeitet dort.
 <!-- /lizenz -->
 <!-- startphase -->
-Ein Team ist eine Gruppe von Personen, die am Gesamtsystem mitarbeitet. Daran hängen die KI-Schlüssel und das KI-Austauschvolumen. Jede Anlage bringt das **Init Team** mit: nicht löschbar, umbenennbar. Wer kein eigenes Team hat, arbeitet dort.
+Ein Team ist eine Gruppe von Personen, die am Gesamtsystem mitarbeitet. Daran hängen die KI-Schlüssel und das KI-Austauschvolumen. Jede Instanz bringt das **Init Team** mit: nicht löschbar, umbenennbar. Wer kein eigenes Team hat, arbeitet dort.
 <!-- /startphase -->
 
 <!-- lizenz -->

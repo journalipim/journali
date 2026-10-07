@@ -817,10 +817,10 @@ public sealed record EntitlementReceived(string Instance, string Team, string Pl
 public sealed record TarifeReceived(string Blatt, string Sig);
 
 /// <summary>
-/// Ob diese Anlage beim Lizenzserver registriert ist (26.09.2026). Registriert heisst: sie holt dort das Tarifblatt und
+/// Ob diese Instanz beim Lizenzserver registriert ist (26.09.2026). Registriert heisst: sie holt dort das Tarifblatt und
 /// nennt dabei ihre Kennung und ihren öffentlichen Schlüssel — damit kennt sie die Tarife und die Aktionen des Shops.
 /// Nicht registriert heisst: sie spricht nicht mit ihm, solange kein Team ein Abo hat. Gefragt wird einmal; die Antwort
-/// steht im Journal, damit jeder Server dieser Anlage sie kennt und niemand zweimal gefragt wird.
+/// steht im Journal, damit jeder Server dieser Instanz sie kennt und niemand zweimal gefragt wird.
 /// </summary>
 public sealed record RegistrationSet(bool Registered);
 
@@ -890,7 +890,7 @@ public static class Rights
     {
         [Write] = [Download],
         // Wer Rollen verwaltet, könnte sich jedes Recht selbst geben — darum trägt er auch das Schreiben von Skripten;
-        // sonst stünde eine Anlage nach der Aktualisierung ohne jemanden da, der eines anlegen darf (29.09.2026)
+        // sonst stünde eine Instanz nach der Aktualisierung ohne jemanden da, der eines anlegen darf (29.09.2026)
         [Users] = [Team, ScriptumWrite],
         [ScriptumWrite] = [ScriptumRun],
         // Wer Jobs baut, kann jedes Skript als Job laufen lassen — dann darf er es auch von Hand anstossen

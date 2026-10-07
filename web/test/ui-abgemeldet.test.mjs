@@ -1,5 +1,5 @@
-// Abgemeldet (01.10.2026): auf der Anmeldeseite zeigt die Oberfläche nichts von der Anlage — keine Leiste mit den Plugins, keine Kennzahlen, keine Lesezeichen,
-// keinen Namen. Ohne Benutzer in der Anlage bleibt alles offen wie bisher.
+// Abgemeldet (01.10.2026): auf der Anmeldeseite zeigt die Oberfläche nichts von der Instanz — keine Leiste mit den Plugins, keine Kennzahlen, keine Lesezeichen,
+// keinen Namen. Ohne Benutzer in der Instanz bleibt alles offen wie bisher.
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import './ui.mjs'
@@ -11,12 +11,12 @@ test('die Anmeldeseite gilt immer als abgemeldet', () => {
   assert.equal(istAbgemeldet('/login', { enabled: false }), true)
 })
 
-test('mit Benutzern in der Anlage, aber ohne Sitzung, ist man abgemeldet — wohin man auch schaut', () => {
+test('mit Benutzern in der Instanz, aber ohne Sitzung, ist man abgemeldet — wohin man auch schaut', () => {
   assert.equal(istAbgemeldet('/tree', { enabled: true, user: null }), true)
   assert.equal(istAbgemeldet('/tree', { enabled: true }), true)
 })
 
-test('angemeldet, oder eine Anlage ohne Benutzer: nichts ist ausgeblendet', () => {
+test('angemeldet, oder eine Instanz ohne Benutzer: nichts ist ausgeblendet', () => {
   assert.equal(istAbgemeldet('/tree', { enabled: true, user: 'taloan' }), false)
   assert.equal(istAbgemeldet('/tree', { enabled: false, user: null }), false, 'ohne Benutzer bleibt alles offen')
   assert.equal(istAbgemeldet('/tree', undefined), false)

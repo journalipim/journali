@@ -145,7 +145,7 @@ function modelOps(ctx) {
   const classSpec = c => ({ code: c.code, name: c.name, section: c.group ? (nameOf(c.group.name, locale) || c.group.code) : null })
   const TYPES = { Numeric: 'decimal', Logical: 'boolean', Range: 'text', Alphanumeric: 'enum' }
   const RANGE = '^\\s*-?[\\d.,]+(\\s*(-|\\.\\.|…)\\s*-?[\\d.,]+)?\\s*$'
-  /// Merkmal → Klassen, die es führen: einmal je Anlage gerechnet (04.10.2026) — vorher je Merkmal über alle Klassen und ihre Merkmale
+  /// Merkmal → Klassen, die es führen: einmal je Anlegen gerechnet (04.10.2026) — vorher je Merkmal über alle Klassen und ihre Merkmale
   const merkmalIndex = () => { const idx = new Map(); for (const c of cache.classes.values()) for (const x of c.features) { if (!idx.has(x.code)) idx.set(x.code, []); idx.get(x.code).push(c.code) } return idx }
   const featureSpec = (f, idx = merkmalIndex()) => {
     const classes = [...new Set(idx.get(f.code) ?? [])]   // Bedingung: alle Klassen, die es führen

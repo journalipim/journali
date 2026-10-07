@@ -10,15 +10,15 @@ zeigt der Browser den Dialog **Datenbank**: Host, Port, Datenbank, Anmeldename, 
 Server es von selbst weiter.
 
 <!-- lizenz -->
-Danach legt man den ersten Administrator an, ebenfalls mit dem Einrichtungscode. Danach braucht jeder Zugriff eine Anmeldung. Der Administrator gehört zum **Init Team**, das jede Anlage mitbringt: es trägt die Grenzen der Lizenz und lässt sich umbenennen, aber nicht löschen.
+Danach legt man den ersten Administrator an, ebenfalls mit dem Einrichtungscode. Danach braucht jeder Zugriff eine Anmeldung. Der Administrator gehört zum **Init Team**, das jede Instanz mitbringt: es trägt die Grenzen der Lizenz und lässt sich umbenennen, aber nicht löschen.
 <!-- /lizenz -->
 <!-- startphase -->
-Danach legt man den ersten Administrator an, ebenfalls mit dem Einrichtungscode. Danach braucht jeder Zugriff eine Anmeldung. Der Administrator gehört zum **Init Team**, das jede Anlage mitbringt: es lässt sich umbenennen, aber nicht löschen.
+Danach legt man den ersten Administrator an, ebenfalls mit dem Einrichtungscode. Danach braucht jeder Zugriff eine Anmeldung. Der Administrator gehört zum **Init Team**, das jede Instanz mitbringt: es lässt sich umbenennen, aber nicht löschen.
 <!-- /startphase -->
 
 Unter ⚙ Einstellungen → ◈ IAM kommen weitere Anwender mit Rolle und Team dazu. Rollen bündeln Rechte; die vorbelegten sind Administrator, PIM-Manager, PIM-Editor, Team-Admin und Leser.
 
-Wer die Anlage verwaltet, bestätigt danach einmal die **Hinweise zum Betrieb**: journali ist eine Testversion zu Test- und Evaluationszwecken, die Nutzung erfolgt auf eigene Gefahr; Sicherung und die Probe der Wiederherstellung liegen beim Betreiber. Die Bestätigung steht mit Version und Wortlaut im Journal; ändert sich der Wortlaut, wird wieder gefragt.
+Wer die Instanz verwaltet, bestätigt danach einmal die **Hinweise zum Betrieb**: journali ist eine Testversion zu Test- und Evaluationszwecken, die Nutzung erfolgt auf eigene Gefahr; Sicherung und die Probe der Wiederherstellung liegen beim Betreiber. Die Bestätigung steht mit Version und Wortlaut im Journal; ändert sich der Wortlaut, wird wieder gefragt.
 
 ## 2. Sprachen und Kanäle
 

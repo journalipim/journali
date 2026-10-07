@@ -265,7 +265,7 @@ Liegt `origin` mehr als ein Stück Arbeit hinter dem Rechner, ist das ein Fehler
   Abschnitt, kein Hinweis auf Verborgenes; ein Reiter ohne Abschnitt fällt weg.
   **Team** = eine Gruppe von Personen, die am Gesamtsystem mitarbeitet (keine Insel —
   wer Abschottung braucht, braucht ein eigenes System). Daran hängen KI-Schlüssel,
-  Grenzen und Verbrauch, weil sie irgendwo hängen müssen. Jede Anlage bringt das
+  Grenzen und Verbrauch, weil sie irgendwo hängen müssen. Jede Instanz bringt das
   **Init Team** mit (`team:init`, `Model.InitTeam`): nicht löschbar, umbenennbar,
   trägt das Grundkontingent; der erste Administrator gehört hinein, und wer kein
   eigenes Team trägt, arbeitet dort.

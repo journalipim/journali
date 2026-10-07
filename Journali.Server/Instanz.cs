@@ -5,9 +5,9 @@ using NpgsqlTypes;
 namespace Journali.Server;
 
 /// <summary>
-/// Die Kennung dieser Anlage. Sie entsteht beim ersten Start, steht in der Datenbank und geht <b>nicht</b> in die Sicherung — eine
-/// wiederhergestellte Anlage bekommt darum eine neue. Das löst den Fall der Vervielfältigung
-/// Mit eigener Kennung je Anlage gilt eine Lizenz nur dort, wofür sie ausgestellt wurde.
+/// Die Kennung dieser Instanz. Sie entsteht beim ersten Start, steht in der Datenbank und geht <b>nicht</b> in die Sicherung — eine
+/// wiederhergestellte Instanz bekommt darum eine neue. Das löst den Fall der Vervielfältigung
+/// Mit eigener Kennung je Instanz gilt eine Lizenz nur dort, wofür sie ausgestellt wurde.
 /// <para><b>Was fälschungssicher hier heisst.</b> Wer die Datenbank besitzt, kann die Kennung ändern — dagegen hilft
 /// nichts, was im selben Container liegt. Sie ist kein Schloss, sondern ein Name: sie macht Vervielfältigung zu einer
 /// bewussten Handlung statt zu einem Nebeneffekt der Wiederherstellung, und sie gibt beiden Seiten etwas, worüber sie

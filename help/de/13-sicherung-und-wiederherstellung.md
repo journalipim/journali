@@ -31,10 +31,10 @@ Das Plugin Sicherung läuft als Job mit Zeitplan: je Lauf ein Ordner mit Zeitste
 | Plugins | die Verzeichnisse ohne Pakete |
 
 <!-- lizenz -->
-Nicht mit geht die Kennung der Instanz: eine wiederhergestellte Anlage bekommt eine neue, und eine Lizenz gilt nur für die Instanz, für die sie ausgestellt ist.
+Nicht mit geht die Kennung der Instanz: eine wiederhergestellte Instanz bekommt eine neue, und eine Lizenz gilt nur für die Instanz, für die sie ausgestellt ist.
 <!-- /lizenz -->
 <!-- startphase -->
-Nicht mit geht die Kennung der Instanz: eine wiederhergestellte Anlage bekommt eine neue.
+Nicht mit geht die Kennung der Instanz: eine wiederhergestellte Instanz bekommt eine neue.
 <!-- /startphase -->
 
 ## Zurück

@@ -253,9 +253,9 @@ Rauschen, `ReleaseGranted` bleibt). Zwei Fallen:
     `checkout[discount_code]` als einzigen Weg. Darum stehen die Aktionen im Tarifblatt (`RabattZeile`: Code, Wirkung,
     gültig bis) und die Oberfläche zeigt je Aktion einen grünen Kasten mit Code zum Kopieren und einem Knopf, der den
     Shop mit diesem Code öffnet. Abgelaufenes liefert der Server gar nicht erst aus.
-  - **Registrierung beim Lizenzserver** (26.09.2026): eine Anlage ohne Abo sprach nie mit ihm und erfuhr darum nichts
+  - **Registrierung beim Lizenzserver** (26.09.2026): eine Instanz ohne Abo sprach nie mit ihm und erfuhr darum nichts
     von Tarifen und Aktionen. Jetzt wird **einmal gefragt** (`registrierung.js`, Antwort als `RegistrationSet` im
-    Journal, damit jeder Server der Anlage sie kennt); registriert holt sie das Blatt über `POST /v1/tarife` —
+    Journal, damit jeder Server der Instanz sie kennt); registriert holt sie das Blatt über `POST /v1/tarife` —
     signierte Anfrage mit Instanz und öffentlichem Schlüssel, sonst nichts. Wer ablehnt, schickt nichts hinaus; ein Team
     mit Abo spricht ohnehin mit dem Lizenzserver, dann kommt das Blatt mit.
   - **Der Weg von Hand ist freizugeben** (26.09.2026): Anforderung erzeugen und Schlüssel einfügen setzen einen Kontakt
@@ -267,7 +267,7 @@ Rauschen, `ReleaseGranted` bleibt). Zwei Fallen:
     und stellt den Schlüssel in der Verwaltung direkt für sie aus (`AusstellenFuer`); die Oberfläche hat nur noch das
     Feld zum Einfügen und die Liste dessen, was eingelöst ist. Die Endpunkte `/api/licence/requests` und die Seite
     *Anforderung* im Lizenzserver haben damit keinen Erzeuger mehr.
-    *Entschieden:* eine Anlage **ganz ohne Verbindung** bekommt diesen Weg nicht — sie müsste die Freigabe eingeben,
+    *Entschieden:* eine Instanz **ganz ohne Verbindung** bekommt diesen Weg nicht — sie müsste die Freigabe eingeben,
     und dafür müsste ein Feld dastehen, das es ohne Freigabe nicht gibt. Irgendwo ist Schluss.
   - **Eingriffe am Abo** in der Verwaltung des Lizenzservers: entziehen (Betrug), gültig bis von Hand verlängern,
     Tarif ändern (z. B. Pro bezahlt, Enterprise gewährt). Sie wirken beim nächsten Auffrischen der Instanz; ohne

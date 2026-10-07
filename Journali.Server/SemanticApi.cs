@@ -61,7 +61,7 @@ public static class SemanticApi
     /// wird auf Französisch gefunden, nicht nur über die Leitsprache.</summary>
     /// <summary>
     /// Der Text jedes Knotens, einmal je Journalstand gerechnet (27.09.2026). Vorher baute ihn jede Anfrage neu — bei
-    /// 2 253 Knoten je Sprache mit Hash, und die Jobansicht fragt den Stand alle fünf Sekunden: die Anlage rechnete
+    /// 2 253 Knoten je Sprache mit Hash, und die Jobansicht fragt den Stand alle fünf Sekunden: die Instanz rechnete
     /// dauernd an derselben Liste und hielt dabei die Lesesperre, hinter der jeder Schreibvorgang wartet. Solange kein
     /// Eintrag dazukommt, ändert sich kein Text — der Stand des Journals ist darum der ganze Schlüssel.
     /// </summary>

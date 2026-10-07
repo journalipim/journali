@@ -128,7 +128,7 @@ public sealed class Catalog
                 return true;
             });
     }
-    /// <summary>Der Strom der Tarifblätter — dort steht auch, ob die Anlage registriert ist.</summary>
+    /// <summary>Der Strom der Tarifblätter — dort steht auch, ob die Instanz registriert ist.</summary>
     public const string TarifStrom = "tarife";
 
     /// <summary>Die Antwort auf die Frage nach der Registrierung festhalten (26.09.2026). Gefragt wird einmal.</summary>
@@ -142,7 +142,7 @@ public sealed class Catalog
             });
     }
 
-    /// <summary>Ist die Anlage registriert? null: noch nicht gefragt.</summary>
+    /// <summary>Ist die Instanz registriert? null: noch nicht gefragt.</summary>
     public bool? Registriert => Lesend(() => _teams.Registriert);
 
     /// <summary>Der Tag des ersten Eintrags — der Test einer neuen Instanz zählt ab ihm.</summary>
@@ -283,10 +283,10 @@ public sealed class Catalog
                 {
                     Apply(_journal.Append("system", Users.Stream + u.Key, Types.UserDefined, Types.Serialize(new UserDefined(u.Name, u.Email, u.Role, u.Enabled, erstesTeam.Key)))); n++;
                 }
-            // Das erste Team trägt die Limits der Lizenz — eine Anlage von vorher hat noch keine
+            // Das erste Team trägt die Limits der Lizenz — eine Instanz von vorher hat noch keine
             n += LimitsAusLizenz();
             // Ein Team ohne Führung ist unbedienbar — die
-            // Anlage repariert das selbst: der erste Benutzer mit dem Recht „Benutzer und Rollen“ führt es.
+            // Instanz repariert das selbst: der erste Benutzer mit dem Recht „Benutzer und Rollen“ führt es.
             if (_teams.Primary is { Managers.Length: 0 } ohne && _users.All.Count > 0)
             {
                 var admin = _users.All.Values.Where(u => u.Enabled && _users.RightsOf(u.Role).Contains(Rights.Users)).OrderBy(u => u.Key).FirstOrDefault();
@@ -360,7 +360,7 @@ public sealed class Catalog
         ZaehltAb = lic.CountFrom;
         _stand.Clear();   // der Zählbeginn kann sich verschoben haben
         var n = 0;
-        // Das erste Team trägt die Limits der Anlage
+        // Das erste Team trägt die Limits der Instanz
         if (_teams.Primary is { } erstes && (tarif.Week > 0 || tarif.Month > 0)
             && (erstes.EntriesWeek != tarif.Week || erstes.EntriesMonth != tarif.Month))
             n += Setze(erstes, tarif.Week, tarif.Month);
@@ -418,7 +418,7 @@ public sealed class Catalog
 
     /// <summary>
     /// Modell und Baum zusammen — <b>nur lesend</b>. Für alles, was beides befragt und nichts schreibt: <see cref="With"/>
-    /// nimmt die Schreibsperre, und wer dort lange rechnet, hält die ganze Anlage an (27.09.2026: die Fortschrittsanzeige
+    /// nimmt die Schreibsperre, und wer dort lange rechnet, hält die ganze Instanz an (27.09.2026: die Fortschrittsanzeige
     /// der Einbettungen baute unter der Schreibsperre den Text jedes Knotens neu, alle fünf Sekunden).
     /// </summary>
     public TResult Lesen<TResult>(Func<ModelCatalog, Tree, TResult> read) => Lesend(() => read(_model, _tree));

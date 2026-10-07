@@ -1,4 +1,4 @@
-// Registrierung beim Lizenzserver (26.09.2026): gefragt wird einmal, und nur, wer die Anlage verwaltet. Registriert
+// Registrierung beim Lizenzserver (26.09.2026): gefragt wird einmal, und nur, wer die Instanz verwaltet. Registriert
 // holt sie dort das Tarifblatt und kennt damit die Aktionen des Shops; ohne spricht sie nicht mit ihm. Geprüft wird die
 // Frage (registrierung.js) und die Zeile im Lizenzabschnitt, mit der sich die Antwort später ändern lässt.
 import test from 'node:test'
@@ -66,7 +66,7 @@ test('Ein Nein geht auch hinaus — und bleibt', async () => {
   assert.equal(nochmal.length, 0)
 })
 
-// 26.09.2026 gemeldet: die Frage stand bei jedem Laden da, auch bei einer registrierten Anlage — der Anfangswert im
+// 26.09.2026 gemeldet: die Frage stand bei jedem Laden da, auch bei einer registrierten Instanz — der Anfangswert im
 // Store war derselbe wie „noch nicht gefragt“, und der Dialog kam, bevor /api/health antwortete.
 test('Solange der Server nichts gesagt hat, fragt niemand', async () => {
   server({ registriert: true }); anwender(['users']); _wiederFragen()
@@ -75,14 +75,14 @@ test('Solange der Server nichts gesagt hat, fragt niemand', async () => {
   assert.equal(await frageNachRegistrierung(), false)
   assert.equal(gefragt.length, 0, 'gefragt, bevor der Stand da war')
 
-  // erst der Stand vom Server, dann die Frage — und eine registrierte Anlage fragt gar nicht
+  // erst der Stand vom Server, dann die Frage — und eine registrierte Instanz fragt gar nicht
   await store.poll(true)
   assert.equal(store.registriert, true)
   assert.equal(await frageNachRegistrierung(), false)
   assert.equal(gefragt.length, 0)
 })
 
-test('Wer die Anlage nicht verwaltet, wird nicht gefragt', async () => {
+test('Wer die Instanz nicht verwaltet, wird nicht gefragt', async () => {
   server(); anwender(['read', 'write']); _wiederFragen(); store.registriert = null
   const gefragt = antwortet(true)
   assert.equal(await frageNachRegistrierung(), false)

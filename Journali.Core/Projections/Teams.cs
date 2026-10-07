@@ -92,7 +92,7 @@ public sealed class Teams : IProjection
     public long LastApplied { get; private set; }
 
     /// <summary>
-    /// Ist diese Anlage beim Lizenzserver registriert? null: noch nicht gefragt. Registriert holt sie das Tarifblatt und
+    /// Ist diese Instanz beim Lizenzserver registriert? null: noch nicht gefragt. Registriert holt sie das Tarifblatt und
     /// kennt damit die Aktionen des Shops; ohne spricht sie nur, wenn ein Team ein Abo hat.
     /// </summary>
     public bool? Registriert { get; private set; }

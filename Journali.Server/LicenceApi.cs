@@ -82,7 +82,7 @@ public static class LicenceApi
             if (stand is null) return Bad(fehler ?? "Abo nicht aufgefrischt.");
             return Results.Ok(new { stand.Team, stand.Plan, planLabel = c.Tarife.Von(stand.Plan)?.Label ?? stand.Plan, stand.Status, stand.PaidUntil, stand.Geprueft });
         });
-        // Registrieren: die Anlage holt das Tarifblatt beim Lizenzserver und kennt damit Tarife und Aktionen des Shops.
+        // Registrieren: die Instanz holt das Tarifblatt beim Lizenzserver und kennt damit Tarife und Aktionen des Shops.
         // Gefragt wird einmal; ein Nein bleibt ein Nein, bis es hier geändert wird.
         api.MapPost("/licence/registrierung", async (RegistrierungBody body, HttpRequest req, Catalog c, CancellationToken ct) =>
         {

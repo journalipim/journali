@@ -1,6 +1,6 @@
 <script setup>
 // Die Lizenz. Sie wird nicht gepflegt, sondern eingespielt —
-// darum eine Datei, kein Stammdatum. Was sie sagt, gilt für die ganze Anlage: Einträge je Woche und Monat, das
+// darum eine Datei, kein Stammdatum. Was sie sagt, gilt für die ganze Instanz: Einträge je Woche und Monat, das
 // Was ein Team an KI verbraucht, geht an seinen Anbieter — journali lizenziert das nicht.
 import { ref, computed, onMounted } from 'vue'
 import { api } from '../api.js'
@@ -41,7 +41,7 @@ const kannBestellen = computed(() => !!kaufAdresse())
 /// Die Aktionen des Shops, die heute gelten — je eine steht als eigener Knopf da, mit ihrem Code an der Adresse
 const rabatte = computed(() => lic.value?.rabatte ?? [])
 
-/// Registrierung umstellen: registriert holt die Anlage das Tarifblatt, ohne spricht sie nicht mit dem Lizenzserver
+/// Registrierung umstellen: registriert holt die Instanz das Tarifblatt, ohne spricht sie nicht mit dem Lizenzserver
 async function registrierung(ja) {
   try {
     const r = await api.post('/api/licence/registrierung', { ja })
@@ -193,8 +193,8 @@ async function kopiere(text) {
       <tr v-if="lic?.instanz" class="instanz"><td class="muted" :title="$t('Diese Instanz. Eine Lizenz wird auf diese Kennung ausgestellt und gilt nur hier.')">{{ $t("⌗ Instanz") }}</td>
         <td class="mono" style="user-select:all">{{ lic.instanz }}</td>
         <td><button class="x" :title="$t('Kennung kopieren')" @click="kopiere(lic.instanz)">⧉</button></td></tr>
-      <tr v-if="darf() && lic?.lizenzserver" class="registrierung"><td class="muted" :title="$t('Registriert holt diese Anlage Tarife und Aktionen des Shops und nennt dabei ihre Kennung.')">{{ $t("⇄ Lizenzserver") }}</td>
-        <td><button class="x" :class="lic.registriert ? 'pos' : 'muted'" :title="lic.registriert ? $t('Registrierung zurücknehmen') : $t('Diese Anlage registrieren')" @click="registrierung(!lic.registriert)">{{ lic.registriert ? $t("● registriert") : $t("○ nicht registriert") }}</button></td><td></td></tr>
+      <tr v-if="darf() && lic?.lizenzserver" class="registrierung"><td class="muted" :title="$t('Registriert holt diese Instanz Tarife und Aktionen des Shops und nennt dabei ihre Kennung.')">{{ $t("⇄ Lizenzserver") }}</td>
+        <td><button class="x" :class="lic.registriert ? 'pos' : 'muted'" :title="lic.registriert ? $t('Registrierung zurücknehmen') : $t('Diese Instanz registrieren')" @click="registrierung(!lic.registriert)">{{ lic.registriert ? $t("● registriert") : $t("○ nicht registriert") }}</button></td><td></td></tr>
     </tbody></table>
 
     <!-- Kontingent bestellen: Instanz und Team hängen am Buy-Link, der Kauf findet über den Lizenzserver zum Team zurück -->
@@ -214,7 +214,7 @@ async function kopiere(text) {
     </div>
 
     <div v-if="darf() && lic?.vonHand" class="hand" style="margin-top:12px">
-      <button class="x von-hand" :title="$t('Schlüssel einfügen und Anforderungen — für eine Anlage ohne Verbindung zum Lizenzserver')" @click="vonHand = !vonHand">{{ (vonHand ? '● ' : '○ ') + $t("⚷ Von Hand") }}</button>
+      <button class="x von-hand" :title="$t('Schlüssel einfügen und Anforderungen — für eine Instanz ohne Verbindung zum Lizenzserver')" @click="vonHand = !vonHand">{{ (vonHand ? '● ' : '○ ') + $t("⚷ Von Hand") }}</button>
     </div>
 
     <div v-if="darf() && lic?.vonHand && vonHand" class="uebernahme" style="margin-top:8px">

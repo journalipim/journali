@@ -78,6 +78,6 @@ public class OhneStartphaseTests
         var c = new Catalog(new MemoryJournal()); c.Rebuild(); c.SeedMissing();
         c.With((_, _, write) => write("t", Users.Stream + "frei", Types.UserDefined, new UserDefined("Frei", null, "editor"), null));
         Assert.Throws<KeinKontingentException>(() => c.With((_, _, write) => write("frei", "n-test", Types.AttributeSet, new AttributeSet("name", "de", null, "x"), null)));
-        Assert.NotEqual(Tarife.Unlimited.Key, c.InstanzTarif.Key);   // eine neue Anlage hat den Test-Tarif, nicht Unlimited
+        Assert.NotEqual(Tarife.Unlimited.Key, c.InstanzTarif.Key);   // eine neue Instanz hat den Test-Tarif, nicht Unlimited
     }
 }

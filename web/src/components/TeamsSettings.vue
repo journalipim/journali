@@ -45,7 +45,7 @@ const fuehrt = computed(() => store.can('users') || (store.can('team') && (team.
 const lizenz = ref(null)
 const zahl = n => n >= 2147483647 ? '∞' : (n ?? 0).toLocaleString('de-DE')   // Unlimited: keine Grenze
 /// Anteil am Limit — 0 heisst: nichts zugeteilt, dann gibt es auch keinen Anteil
-/// Was UsageBars zeigt: die Zahlen dieses Teams gegen seine Limits — nicht die der ganzen Anlage
+/// Was UsageBars zeigt: die Zahlen dieses Teams gegen seine Limits — nicht die der ganzen Instanz
 const teamUsage = computed(() => jt.value && {
   week: { used: jt.value.used?.week ?? 0, max: jt.value.limits?.week ?? 0, resetAt: jt.value.resetWeek },
   month: { used: jt.value.used?.month ?? 0, max: jt.value.limits?.month ?? 0, resetAt: jt.value.resetMonth },

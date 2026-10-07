@@ -7,13 +7,13 @@ using Journali.Server;
 namespace Journali.Tests;
 
 /// <summary>
-/// Die Sperre der Schnittstelle (01.10.2026): mit Benutzern in der Anlage ist ohne Sitzung fast nichts zu haben — nur /api/health (Version und Bau),
+/// Die Sperre der Schnittstelle (01.10.2026): mit Benutzern in der Instanz ist ohne Sitzung fast nichts zu haben — nur /api/health (Version und Bau),
 /// /api/auth/… zum Anmelden und die Dateien der Office-Add-ins. Das Routing ignoriert Gross- und Kleinschreibung; die Sperre darf es nicht anders halten:
 /// „/API/tree“ lieferte den ganzen Baum ohne Anmeldung, „/plugins/…“ lag ausserhalb der Sperre.
 /// </summary>
 public class SperreTests
 {
-    private static (Catalog C, string Dir) Anlage(bool mitBenutzer)
+    private static (Catalog C, string Dir) NeueInstanz(bool mitBenutzer)
     {
         var c = new Catalog(new MemoryJournal()); c.Rebuild(); c.SeedMissing();
         if (mitBenutzer) c.With((_, _, w) => w("system", Users.Stream + "taloan", Types.UserDefined, new UserDefined("Taloan", null, "admin", true), null));
@@ -45,7 +45,7 @@ public class SperreTests
     [InlineData("/PLUGINS/etim/plugin.json")]
     public void Ohne_Sitzung_ist_der_Zugriff_gesperrt_in_jeder_Schreibweise(string pfad)
     {
-        var (c, dir) = Anlage(mitBenutzer: true);
+        var (c, dir) = NeueInstanz(mitBenutzer: true);
         var (durch, status) = OhneSitzung(c, dir, pfad).GetAwaiter().GetResult();
         Assert.False(durch, pfad + " kam ohne Sitzung zum Endpunkt");
         Assert.Equal(401, status);
@@ -64,7 +64,7 @@ public class SperreTests
     [InlineData("/login")]
     public void Offen_bleiben_nur_Gesundheit_Anmeldung_die_Office_Add_ins_und_die_Seite_selbst(string pfad)
     {
-        var (c, dir) = Anlage(mitBenutzer: true);
+        var (c, dir) = NeueInstanz(mitBenutzer: true);
         var (durch, _) = OhneSitzung(c, dir, pfad).GetAwaiter().GetResult();
         Assert.True(durch, pfad + " muss ohne Sitzung zu haben sein");
     }
@@ -72,7 +72,7 @@ public class SperreTests
     [Fact]
     public void Ohne_Benutzer_in_der_Anlage_bleibt_alles_offen_wie_bisher()
     {
-        var (c, dir) = Anlage(mitBenutzer: false);
+        var (c, dir) = NeueInstanz(mitBenutzer: false);
         Assert.True(OhneSitzung(c, dir, "/api/tree").GetAwaiter().GetResult().Durch);
         Assert.True(OhneSitzung(c, dir, "/plugins/da/entry.js").GetAwaiter().GetResult().Durch);
     }
@@ -93,7 +93,7 @@ public class SperreTests
     [Fact]
     public void Ein_gesperrter_Knoten_bleibt_auch_bei_grosser_Schreibweise_gesperrt()
     {
-        var (c, _) = Anlage(mitBenutzer: true);
+        var (c, _) = NeueInstanz(mitBenutzer: true);
         var id = Ids.New(Roles.Group);
         c.With((_, _, w) =>
         {
