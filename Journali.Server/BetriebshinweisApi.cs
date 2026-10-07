@@ -12,7 +12,7 @@ namespace Journali.Server;
 public static class BetriebshinweisApi
 {
     public const string Stream = "notice:betrieb";
-    public const string Version = "2026-10-07";
+    public const string Version = "2026-10-07.2";
 
     /// <summary>
     /// Testversion (07.10.2026): alles, was derzeit herausgegeben wird, ist eine Testversion — die Aussagen auf journali.de beziehen sich auf das
@@ -36,12 +36,8 @@ public static class BetriebshinweisApi
 
     static readonly Dictionary<string, string>[] Grundpunkte =
     [
-        new() { ["de"] = "journali wird kostenlos und ohne Gewähr bereitgestellt; es gilt die Lizenz (LICENSE).",
-                ["en"] = "journali is provided free of charge and without warranty; the license (LICENSE) applies." },
         new() { ["de"] = "Sicherung, Aufbewahrung und die Probe der Wiederherstellung liegen beim Betreiber.",
                 ["en"] = "Backup, retention and testing the restore are the operator's responsibility." },
-        new() { ["de"] = "journali ist für Unternehmen bestimmt, nicht für Verbraucher.",
-                ["en"] = "journali is intended for businesses, not for consumers." },
     ];
 
     /// <summary>Der Wortlaut, so wie er im Eintrag steht: Titel und Punkte auf Deutsch, je eine Zeile.</summary>

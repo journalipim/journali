@@ -336,8 +336,8 @@ Rauschen, `ReleaseGranted` bleibt). Zwei Fallen:
   eine Instanz läuft, der Server dahinter darf über DNS wechseln. Getrennt von jedem privaten Rechner — sonst kann
   kein Prüfstand unterscheiden, ob ein Name im Repo die Lizenzadresse ist oder ein Versehen (Regel 5).
   *Neuer Name (07.10.2026):* `server.journali.de` statt `lizenz.journali.de` — auf dem vServer läuft auch die Testversion
-  zum Ausprobieren, der Name steht für den Rechner, nicht für einen Dienst. Builds davor fragen den alten Namen; er bleibt
-  als zweiter Name am Proxy-Eintrag, bis keine solche Instanz mehr läuft.
+  zum Ausprobieren, der Name steht für den Rechner, nicht für einen Dienst. Der alte Name zeigt nicht mehr auf den
+  vServer; Builds davor erreichen den Lizenzserver nicht.
   *Geprüft im Testmodus (23.09.2026, ein Abo-Produkt mit drei Varianten, zwei Testkäufe, Aufrufe per curl):*
   - `activate` und `validate` gehen **ohne API-Schlüssel**; die Antwort trägt **keine Signatur** (weder im Rumpf
     noch in den Kopfzeilen) — der Lizenzserver signiert selbst.
