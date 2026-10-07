@@ -236,7 +236,7 @@ export async function mountDesigner(root, ctx) {
   // -- Kopf: Vorlage, Rollen, Knoten, Sprache, Blatt
   const names = await layouts(ctx)
   const nameSel = el('select', {}, ...['standard', ...names.filter(n => n !== 'standard')].map(n => el('option', { value: n }, n)))
-  const nameIn = el('input', { type: 'text', placeholder: 'neuer Name', style: 'width:110px' })
+  const nameIn = el('input', { 'data-demo': 'aus', type: 'text', placeholder: 'neuer Name', style: 'width:110px' })   // Demo: ansehen ja, speichern nein (data-demo)
   const roleSel = role => { const s = el('select', { title: `Vorlage für ${role}` }, ...['standard', ...names.filter(n => n !== 'standard')].map(n => el('option', { value: n }, n))); s.value = sett[role] ?? 'standard'; s.addEventListener('change', async () => { sett[role] = s.value; await ctx.data.set('settings', sett); store.toast(`${role} → ${s.value}`, 'ok') }); return s }
   // Knoten per Auswahlbaum: Knopf zeigt den gewählten, Klick klappt den Baum darunter auf
   const nodeBtn = el('button', { class: 'x', title: 'Knoten für die Vorschau wählen' }, st.node ? `${{ group: '▣', product: '▦', variant: '◆' }[tree.byId.get(st.node)?.role] ?? ''} ${tree.byId.get(st.node)?.label ?? ''}` : '🔍 Knoten wählen')
@@ -256,7 +256,7 @@ export async function mountDesigner(root, ctx) {
   async function loadLayout(n) { const l = await ctx.data.get(L + n); st.layout = l ?? DEFAULT_LAYOUT(); st.name = n; st.sel = null; st.dirty = false; dirtyChip.style.display = 'none'; draw() }
   nameSel.addEventListener('change', () => loadLayout(nameSel.value))
   root.append(el('div', { class: 'toolbar' }, el('h1', {}, '▤ Datenblatt-Designer'), nameSel, nameIn,
-    el('button', { class: 'primary', onclick: save, title: 'Layout speichern (Strg+S)' }, '💾'), dirtyChip,
+    el('button', { 'data-demo': 'aus', class: 'primary', onclick: save, title: 'Layout speichern (Strg+S)' }, '💾'), dirtyChip,
     el('span', { class: 'sep' }, '·'), el('span', { class: 'muted' }, '▣'), roleSel('group'), el('span', { class: 'muted' }, '▦'), roleSel('product'), el('span', { class: 'muted' }, '◆'), roleSel('variant'),
     el('span', { class: 'grow' }), el('span', { style: 'position:relative' }, nodeIn, pick), localeSel,
     el('button', { onclick: () => { if (!st.node || !st.data) return; const w = window.open('', '_blank'); if (!w) return; w.document.open(); w.document.write(renderSheet(st.layout, st.data, model)); w.document.close() }, title: 'fertiges Blatt in neuem Fenster (drucken → PDF)' }, '⎙ Blatt')))

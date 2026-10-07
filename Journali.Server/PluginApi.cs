@@ -85,12 +85,7 @@ public static class PluginApi
     public static int AutoInstall(Catalog c, string dir, bool auchFremde = false)
     {
         var n = 0;
-        var all = Scan(dir).Values.ToList();
-        var ordered = new List<Manifest>(); var placed = new HashSet<string>();
-        for (var round = 0; round < all.Count && ordered.Count < all.Count; round++)
-            foreach (var m in all.Where(m => !placed.Contains(m.Key) && Requires(m.Raw).All(r => placed.Contains(r) || all.All(x => x.Key != r)))) { ordered.Add(m); placed.Add(m.Key); }
-        ordered.AddRange(all.Where(m => !placed.Contains(m.Key)));   // Kreise: trotzdem installieren
-        foreach (var m in ordered)
+        foreach (var m in NachAbhaengigkeit(Scan(dir).Values))
         {
             if (!(m.Raw.TryGetProperty("autoInstall", out var a) && a.ValueKind == JsonValueKind.True)) continue;
             if (!auchFremde && !m.Seal.Original) continue;
@@ -106,6 +101,17 @@ public static class PluginApi
             });
         }
         return n;
+    }
+
+    /// <summary>Die Manifeste so geordnet, dass jedes nach dem kommt, was es braucht (<c>requires</c>); Kreise am Ende, trotzdem dabei.</summary>
+    public static List<Manifest> NachAbhaengigkeit(IEnumerable<Manifest> manifeste)
+    {
+        var all = manifeste.ToList();
+        var ordered = new List<Manifest>(); var placed = new HashSet<string>();
+        for (var round = 0; round < all.Count && ordered.Count < all.Count; round++)
+            foreach (var m in all.Where(m => !placed.Contains(m.Key) && Requires(m.Raw).All(r => placed.Contains(r) || all.All(x => x.Key != r)))) { ordered.Add(m); placed.Add(m.Key); }
+        ordered.AddRange(all.Where(m => !placed.Contains(m.Key)));
+        return ordered;
     }
 
     /// <summary>Steht dieser Datensatz des Plugins schon genau so im Journal? Ein leerer Wert meint „weg“ und ist gleich, wenn es ihn nicht gibt.</summary>

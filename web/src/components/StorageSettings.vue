@@ -168,10 +168,10 @@ onMounted(() => { load(); loadStats(); ladeBetrieb() })
         <td><input v-model="p.quality" type="number" min="1" max="100" style="width:60px" @change="savePreset(p)" /></td>
         <td><input v-model="p.auto" type="checkbox" @change="savePreset(p)" /></td>
         <td :class="p.pending ? 'warn' : 'pos'" :title="$t('{0} von {1} ableitbaren Assets gerechnet{2}', [p.have, p.images, p.pending ? ' — ' + p.pending + ' fehlen' : ''])">{{ p.have }} / {{ p.images }}</td>
-        <td><button class="x" @click="deletePreset(p)" :disabled="p.key === 'thumb'" :title="p.key === 'thumb' ? $t('Kachel der Bibliothek — bleibt') : $t('Preset entfernen')">🗑</button></td>
+        <td><button class="x" data-demo="aus" @click="deletePreset(p)" :disabled="p.key === 'thumb'" :title="p.key === 'thumb' ? $t('Kachel der Bibliothek — bleibt') : $t('Preset entfernen')">🗑</button></td>
       </tr>
     </tbody></table>
-    <div class="row" style="gap:8px;margin-top:6px"><button @click="newPreset">{{ $t("+ Preset") }}</button><button @click="derive" :disabled="!!presetBusy" :title="$t('Der Job läuft nach jedem Hochladen und nach jeder Änderung an einem Preset von selbst; hier von Hand.')">{{ $t("▶ Jetzt rechnen") }}</button><span class="muted" style="font-size:12px">{{ presetBusy }}</span></div>
+    <div class="row" data-demo="aus" style="gap:8px;margin-top:6px"><button @click="newPreset">{{ $t("+ Preset") }}</button><button @click="derive" :disabled="!!presetBusy" :title="$t('Der Job läuft nach jedem Hochladen und nach jeder Änderung an einem Preset von selbst; hier von Hand.')">{{ $t("▶ Jetzt rechnen") }}</button><span class="muted" style="font-size:12px">{{ presetBusy }}</span></div>
   </div>
 
   <div class="section" v-if="teil === 'assets'">

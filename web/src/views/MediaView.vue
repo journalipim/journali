@@ -191,7 +191,7 @@ async function upload(files) {
   await store.poll(true); await loadFolders(); await load()
   if (same) store.toast(t_('{0} davon gab es schon (gleiche Datei)', [same]), 'ok')
 }
-function onDrop(e) { dragOver.value = false; if (dragKind.value) { dragKind.value = ''; return } upload([...e.dataTransfer.files]) }
+function onDrop(e) { dragOver.value = false; if (dragKind.value) { dragKind.value = ''; return } if (store.demo) return; upload([...e.dataTransfer.files]) }   // Demo: kein Hochladen
 /// Der eigene Wert auf der Achse — bei einem vermehrbaren Attribut die Liste, kommagetrennt wie in der Zelle.
 const value = (m, def) => {
   const loc = def.perLocale ? master.value : null
@@ -387,7 +387,7 @@ const oeffnen = m => { if (store.can('download')) window.open(dateiLink(m), '_bl
 
 <template>
   <div class="pane" :style="`width:${foldersW}px;flex:none`">
-    <div class="toolbar"><h1>{{ $t("📁 Ordner") }}</h1><span class="grow" /><button class="x" @click="newFolder(null)" :title="$t('neuer Ordner auf der obersten Ebene')">+</button></div>
+    <div class="toolbar"><h1>{{ $t("📁 Ordner") }}</h1><span class="grow" /><button class="x" data-demo="aus" @click="newFolder(null)" :title="$t('neuer Ordner auf der obersten Ebene')">+</button></div>
     <div class="scroll ftree">
       <div class="pick" :class="{ on: folder === 'all' }" @click="pickFolder('all')" :title="$t('alle Medien der Bibliothek')">{{ $t("▦ Alle") + ' ' }}<span class="muted cnt">{{ folders.total }}</span></div>
       <div class="pick" :class="{ on: folder === '-', over: dragTarget === '-' }" @click="pickFolder('-')" :title="$t('Medien, die in keinem Ordner liegen — hierher ziehen nimmt sie aus ihrem Ordner')"
@@ -398,7 +398,7 @@ const oeffnen = m => { if (store.can('download')) window.open(dateiLink(m), '_bl
         @click="pickFolder(r.f.id)" :title="$t('{0} hier · {1} mit Unterordnern — ziehen: Ordner verschieben', [r.f.media, below(r.f.id)])">
         <span class="muted caret" @click.stop="toggle(r.f.id)">{{ r.kids ? (open.has(r.f.id) ? '▾' : '▸') : '' }}</span>
         <span class="fname">📁 {{ r.f.name }}<span v-if="r.f.roles?.length" class="lock" :title="$t('sichtbar nur für: {0}', [r.f.roles.join(', ')])">{{ ' 🔒' }}</span></span><span class="muted cnt">{{ deep ? below(r.f.id) : r.f.media }}</span>
-        <span class="acts"><button class="x" @click.stop="newFolder(r.f.id)" :title="$t('Unterordner anlegen')">+</button><button class="x" @click.stop="renameFolder(r.f)" :title="$t('umbenennen')">✎</button><button class="x" @click.stop="restrictFolder(r.f)" :title="$t('sichtbar für Rollen …')">🔒</button><button class="x" @click.stop="deleteFolder(r.f)" :title="$t('löschen (nur leer)')">🗑</button></span>
+        <span class="acts" data-demo="aus"><button class="x" @click.stop="newFolder(r.f.id)" :title="$t('Unterordner anlegen')">+</button><button class="x" @click.stop="renameFolder(r.f)" :title="$t('umbenennen')">✎</button><button class="x" @click.stop="restrictFolder(r.f)" :title="$t('sichtbar für Rollen …')">🔒</button><button class="x" @click.stop="deleteFolder(r.f)" :title="$t('löschen (nur leer)')">🗑</button></span>
       </div>
       <div v-if="!rows.length" class="empty" style="padding:12px 8px"><span :title="$t('+ legt einen an; Kacheln lassen sich hineinziehen.')">{{ $t("Noch kein Ordner") }}</span></div>
     </div>
@@ -413,7 +413,7 @@ const oeffnen = m => { if (store.can('download')) window.open(dateiLink(m), '_bl
       <select v-model="sort" :title="$t('Sortierung — nur die Anzeige')"><option v-for="[k, l] in SORTS" :key="k" :value="k">{{ l }}</option></select>
       <button class="x" @click="desc = !desc" :title="desc ? $t('Aufsteigend sortieren') : $t('Absteigend sortieren')">{{ desc ? '↓' : '↑' }}</button>
       <select v-model="group" :title="$t('Gruppierung — nur die Anzeige; der Ordnerfilter ist die Liste links')"><option v-for="[k, l] in GROUPS" :key="k" :value="k">{{ l }}</option></select>
-      <button class="primary" @click="fileInput.click()" :title="folder === 'all' || folder === '-' ? $t('Dateien hochladen — oder hierher ziehen') : $t('hochladen in „{0}“ — oder hierher ziehen', [folderTitle])">{{ $t("⇧ Hochladen") }}</button>
+      <button class="primary" data-demo="aus" @click="fileInput.click()" :title="folder === 'all' || folder === '-' ? $t('Dateien hochladen — oder hierher ziehen') : $t('hochladen in „{0}“ — oder hierher ziehen', [folderTitle])">{{ $t("⇧ Hochladen") }}</button>
       <input ref="fileInput" type="file" multiple style="display:none" @change="upload([...$event.target.files]); $event.target.value = ''" />
       <input ref="versionInput" type="file" style="display:none" @change="versionGewaehlt([...$event.target.files]); $event.target.value = ''" />
     </div>

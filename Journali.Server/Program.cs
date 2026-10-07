@@ -127,9 +127,8 @@ catalog.LicenceDir = dataDir;
 catalog.Licences = licences;
 catalog.ZaehltAb = licences.Lic.CountFrom;   // ab wann gezählt wird
 var seeded = catalog.SeedMissing();
-// Demo (07.10.2026): Beispielkatalog in ein leeres Journal, Anwender und Rolle demo — Demo.cs
+// Demo (07.10.2026): eingerichtet wird nach den Plugins (Demo.Einrichten unten), gilt aber von hier an
 Demo.An = Environment.GetEnvironmentVariable("JOURNALI_DEMO") == "1";
-if (Demo.An) Console.WriteLine($"journali: demo mode — {Demo.Einrichten(catalog)} entries written");
 // Server auf derselben Datenbank (pflegestruktur 41): Kennung, Puls, Rolle. Der erste Takt gleich hier, damit der Start weiss, ob er Hauptserver ist
 var verbund = new Verbund(db, catalog, dataDir, typeof(Program).Assembly.GetName().Version?.ToString(3), System.IO.File.GetLastWriteTimeUtc(typeof(Program).Assembly.Location));
 try { verbund.Takt(); } catch (Exception e) { Console.WriteLine($"journali: server not registered — {e.Message}"); }
@@ -240,6 +239,16 @@ var jobDir = dataDir;
 builder.Services.AddSingleton(licences);
 var jobRunner = new JobRunner(catalog, pluginDir, jobDir, LoggerFactory.Create(b => b.AddConsole()).CreateLogger<JobRunner>()) { Store = mediaStore };   // Store: Archiv der Fächer
 builder.Services.AddSingleton(jobRunner);
+// Die Adresse für die Läufe fest (JOURNALI_ORIGIN) — sonst die der letzten Anfrage, hinter einem Proxy der öffentliche Name
+if (builder.Configuration["JOURNALI_ORIGIN"] is { Length: > 0 } festeAdresse) jobRunner.Fest = festeAdresse.TrimEnd('/');
+// Demo: Beispielkatalog mit Bildern in ein leeres Journal, Plugins aus, Rolle und Anwender demo — Demo.cs
+var demoBilder = 0;
+if (Demo.An)
+{
+    var (demoEintraege, neueBilder) = Demo.Einrichten(catalog, mediaStore, pluginDir);
+    demoBilder = neueBilder;
+    Console.WriteLine($"journali: demo mode — {demoEintraege} entries, {neueBilder} images written");
+}
 jobRunner.IstHaupt = () => verbund.IstHaupt;
 jobRunner.Aktiv = () => !verbund.Gesperrt && !verbund.OhneLizenz;   // ein gesperrter Server und einer ohne Lizenz führen keine Jobs aus
 jobRunner.ImportAnderswo = () => verbund.ImportAnderswo;
@@ -661,6 +670,15 @@ app.Lifetime.ApplicationStarted.Register(() =>
 {
     if (app.Urls.FirstOrDefault() is { } eigene && jobRunner.Origin == "http://localhost:5000")
         jobRunner.Origin = System.Text.RegularExpressions.Regex.Replace(eigene, @"//(\+|\*|0\.0\.0\.0|\[::\])(?=[:/]|$)", "//localhost");
+    // Demo: die neuen Bilder brauchen Abmessungen und Vorschauen — wie nach einem Hochladen
+    if (demoBilder > 0 && verbund.IstHaupt)
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(TimeSpan.FromSeconds(5));
+            foreach (var (was, kick) in new (string, Func<(string? Job, string? Error)>)[] { ("probe", () => ProbeApi.Kick(catalog, jobRunner, Demo.Anwender)), ("derive", () => DeriveApi.Kick(catalog, jobRunner, Demo.Anwender)) })
+                try { if (kick().Error is { } fehler) Console.WriteLine($"journali: demo {was} — {fehler}"); }
+                catch (Exception e) { Console.WriteLine($"journali: demo {was} — {e.Message}"); }
+        });
 });
 app.Lifetime.ApplicationStopping.Register(verbund.Dispose);   // die Sperre des Hauptservers freigeben, bevor der Prozess endet
 app.Run();

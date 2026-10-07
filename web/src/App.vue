@@ -40,7 +40,9 @@ onMounted(() => { plugins.load() })
 
 // Registrierung beim Lizenzserver: einmal fragen (registrierung.js sagt, wann und was)
 watch(() => [store.registriert, store.auth.user, store.auth.rights], () => { frageNachRegistrierung() }, { immediate: true })
-watch(() => [store.auth.known, store.auth.user, store.auth.rights], () => { frageNachBetriebshinweis() }, { immediate: true })   // Hinweise zum Betrieb, einmal bestätigt
+watch(() => [store.auth.known, store.auth.user, store.auth.rights], () => { frageNachBetriebshinweis() }, { immediate: true })
+// Demo: die Klasse am Dokument blendet aus, was data-demo="aus" trägt — auch in den Ansichten der Plugins
+watch(() => store.demo, d => document.documentElement.classList.toggle('demo', !!d), { immediate: true })   // Hinweise zum Betrieb, einmal bestätigt
 plugins.beobachte(store)   // nach der Anmeldung und nach einem neuen Serverstand neu laden — sonst fehlen Gruppen in der Leiste
 onMounted(() => window.addEventListener('keydown', e => {
   if (e.altKey && !e.ctrlKey && [...nav, ...navBottom].some(n => n.key === e.key)) {

@@ -22,7 +22,13 @@ public sealed class JobRunner : BackgroundService
     private DateTimeOffset _lastMinute;
     public string Dir { get; }
     public string PluginDir => _pluginDir;
-    public string Origin { get; set; } = "http://localhost:5000";
+    /// <summary>
+    /// Fest gesetzte Adresse für die Läufe (<c>JOURNALI_ORIGIN</c>, 07.10.2026): sonst gilt die der letzten Anfrage — hinter einem Proxy ist das
+    /// der öffentliche Name, den ein Kindprozess im Container nicht oder nur über den Proxy erreicht.
+    /// </summary>
+    public string? Fest { get; set; }
+    private string _origin = "http://localhost:5000";
+    public string Origin { get => Fest ?? _origin; set => _origin = value; }
     /// <summary>Die Fächer (in/done/failed/out je Job, docs/tasker-dateien.md).</summary>
     public JobFach Fach { get; }
     /// <summary>Medienspeicher fürs Archiv (Files.Archive) — vom Programm gesetzt.</summary>

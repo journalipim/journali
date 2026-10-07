@@ -505,20 +505,28 @@ dass eine Wiederherstellung gelingt. Die Oberfläche sagt das in ⇅ B&R und im 
 
 ## Demo (07.10.2026)
 
-`JOURNALI_DEMO=1` macht eine Instanz zur öffentlichen Demo (`Demo.cs`):
+`JOURNALI_DEMO=1` macht eine Instanz zur öffentlichen Demo (`Demo.cs`, `DemoBilder.cs`). **Ansehen ja, speichern und neu anlegen nein** —
+ausser bei den Werten der Produkte, die pflegt man wie sonst.
 
-- **Ohne Anmeldung**: wer ohne Sitzung und ohne Token kommt, ist der Anwender `demo` mit der Rolle `demo` — lesen, pflegen,
-  zurückziehen, freigeben, modellieren, herunterladen. Plugins, Jobs, Skripte, Speicher, Team (KI-Schlüssel), Anwender und Rollen
-  gehören nicht dazu; die Oberfläche zeigt davon nichts.
-- **Gesperrt** (403 „In der Demo nicht verfügbar.“), mit jedem Recht: Passwort, API-Token anlegen und löschen, Anmelden, Einrichten.
-  Die Oberfläche zeigt weder ⏻ noch Mein Konto.
+- **Ohne Anmeldung**: wer ohne Sitzung und ohne Token kommt, ist der Anwender `demo` mit der Rolle `demo` — lesen, Werte pflegen,
+  zurückziehen, freigeben, herunterladen. Ohne `model`: Attribute, Typen, Gruppen, Listen und Basics sieht man, ändern und anlegen
+  weist der Server ab. Plugins, Jobs, Skripte, Speicher, Team (KI-Schlüssel), Anwender und Rollen gehören nicht dazu.
+- **Gesperrt** (403 „In der Demo nicht verfügbar.“), mit jedem Recht: Passwort, API-Token, Anmelden, Einrichten; Hochladen und Holen von
+  Medien; Workflows und Vorschau-Presets ändern, Vorschauen von Hand anstossen; Zugänge und Dateisystem; Daten der Plugins (Profile,
+  Layouts — die eigene Einstellung `settings` eines Plugins bleibt) und ihre Geheimnisse (Schlüssel am Profil). Was abgewiesen wird,
+  blendet die Oberfläche aus: ein Element mit `data-demo="aus"` steht in der Demo nicht da (Klasse `demo` am Dokument) — im Kern wie in
+  den Ansichten der Plugins.
+- **Plugins**: alle mit dem Siegel von journali sind installiert und an, ein Hinweis im Manifest gilt als vom Betreiber bestätigt. Aus
+  bleiben `driver`, `etim`, `ixp`, `solr` und, was beim ersten Lauf etwas aus dem Netz holt (`embed`, `ocr`).
 - **Beispielkatalog**: ist das Journal ohne Produkte, legt der Start einen erfundenen Katalog an (Leuchten und Leuchtmittel: 11 Gruppen,
   42 Produkte, etwa 100 Varianten, Lichttechnik mit Einheiten und Listen, zwei Sprachen) — über `Catalog.WithBatch` und `Commands`, wie
-  jede Pflege. Danach Rolle und Anwender; ein weiterer Start schreibt nichts.
+  jede Pflege. Dazu je Variante ein Bild, im Code gezeichnet (PNG, gleicher Inhalt ein Medium), als Relation `image` an Variante und
+  Produkt; danach stösst der Hauptserver `probe` und `derive` an. Danach Rolle und Anwender; ein weiterer Start schreibt nichts.
 - **Zurücksetzen** geschieht von aussen: die Demo läuft mit einer Datenbank ohne Volume, der Betrieb startet den Stack täglich neu,
   und der Start legt alles wieder an. Einen Weg, das Journal zu leeren, gibt es nicht.
 - **Hinweis**: hinter „Testversion“ steht zusätzlich, dass die Demo täglich zurückgesetzt wird und alle Besucher sehen, was eingegeben wird.
-- **Uploads** begrenzt `JOURNALI_UPLOAD_MB` (in der Demo klein, etwa 5).
+- **Adresse der Läufe**: `JOURNALI_ORIGIN` (z. B. `http://localhost:8080`) setzt fest, unter welcher Adresse Jobs den Server erreichen.
+  Ohne sie gilt die der letzten Anfrage — hinter einem Proxy der öffentliche Name, den ein Kindprozess im Container nicht erreicht.
 
 ## Tabelle `journal`
 

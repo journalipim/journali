@@ -71,3 +71,20 @@ test('Demo: der Stand kommt aus /api/health, Abmelden und das eigene Konto entfa
   const einstellungen = fs.readFileSync(new URL('../src/views/SettingsView.vue', import.meta.url), 'utf8')
   assert.match(einstellungen, /<AccountSettings v-if="store\.auth\.enabled && !store\.demo" \/>/)
 })
+// Demo (07.10.2026): ansehen ja, speichern und neu anlegen nein — die Oberfläche blendet aus, was data-demo="aus" trägt
+test('Demo: Hochladen, Profile, Workflows, Presets, Modell und Plugins tragen data-demo', async () => {
+  const fs = await import('node:fs')
+  const lies = p => fs.readFileSync(new URL(p, import.meta.url), 'utf8')
+  assert.match(lies('../src/style.css'), /html\.demo \[data-demo="aus"\] \{ display: none !important; \}/)
+  assert.match(lies('../src/App.vue'), /classList\.toggle\('demo', !!d\)/)
+  const erwartet = {
+    '../src/views/MediaView.vue': [/<button class="primary" data-demo="aus" @click="fileInput\.click\(\)"/, /if \(store\.demo\) return; upload\(/],
+    '../src/components/WorkflowSettings.vue': [/data-demo="aus" :disabled="!dirty" @click="save"/],
+    '../src/components/StorageSettings.vue': [/data-demo="aus" style="gap:8px;margin-top:6px"><button @click="newPreset"/],
+    '../src/components/ProfileBar.vue': [/<input data-demo="aus" v-model="name"/, /class="savebar" data-demo="aus"/],
+    '../src/views/ModelView.vue': [/<input data-demo="aus" v-model="newKey"/],
+    '../../plugins/xliff/entry.js': [/const keyIn = el\('input', \{ 'data-demo': 'aus'/, /const writeBtn = el\('button', \{ 'data-demo': 'aus'/],
+    '../../plugins/datasheet/designer.js': [/const nameIn = el\('input', \{ 'data-demo': 'aus'/],
+  }
+  for (const [datei, muster] of Object.entries(erwartet)) for (const m of muster) assert.match(lies(datei), m, datei)
+})

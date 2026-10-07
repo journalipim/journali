@@ -81,14 +81,14 @@ defineExpose({ load })
       <option value="">{{ $t("— Profil —") }}</option>
       <option v-for="n in names" :key="n" :value="n">{{ n }}</option>
     </select>
-    <input v-model="name" type="text" :placeholder="$t('Name')" style="width:200px" :title="$t('Name zum Speichern (neu oder vorhanden = überschreiben)')" @keydown.enter="save" />
-    <button class="x" @click="save()" :disabled="busy" :title="name && name !== current ? `als „${name}“ speichern` : $t('Profil speichern (überschreiben)')">💾</button>
-    <button class="x" @click="remove" :disabled="!current || busy" :title="$t('Profil löschen')">✕</button>
+    <input data-demo="aus" v-model="name" type="text" :placeholder="$t('Name')" style="width:200px" :title="$t('Name zum Speichern (neu oder vorhanden = überschreiben)')" @keydown.enter="save" />
+    <button class="x" data-demo="aus" @click="save()" :disabled="busy" :title="name && name !== current ? `als „${name}“ speichern` : $t('Profil speichern (überschreiben)')">💾</button>
+    <button class="x" data-demo="aus" @click="remove" :disabled="!current || busy" :title="$t('Profil löschen')">✕</button>
     <span v-if="dirty" class="unsaved" :title="$t('der Stand hier weicht vom gespeicherten Profil ab')">{{ $t("● geändert") }}</span>
   </div>
   <!-- schwebende Leiste unten: geändert — speichern, als neues, verwerfen oder weg damit -->
   <Teleport to="body">
-    <div v-if="showBar()" class="savebar">
+    <div v-if="showBar()" class="savebar" data-demo="aus">
       <span>{{ current ? $t('Profil „{0}“ geändert', [current]) : $t('Einstellungen geändert — noch kein Profil') }}</span>
       <button v-if="current" class="primary" @click="save()" :disabled="busy" :title="$t('das gewählte Profil überschreiben')">{{ $t("💾 Speichern") }}</button>
       <button @click="saveAs" :disabled="busy" :title="$t('unter neuem Namen speichern — das gewählte Profil bleibt, wie es war')">{{ $t("Als neues Profil speichern …") }}</button>

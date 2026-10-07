@@ -232,10 +232,10 @@ onMounted(load)
     <h2 :title="$t('Der Bearbeitungszustand über dem Status: Zustände, Übergänge mit Rolle, Notiz-Pflicht und Wirkung.')">{{ $t("⚑ Workflows") + ' ' }}<span class="muted">{{ $t("· Zustände und Übergänge") }}</span></h2>
     <div class="row" style="gap:6px;align-items:center;margin-bottom:8px">
       <span v-for="w in list" :key="w.key" class="view-chip" :class="{ on: cur?.key === w.key }" @click="pick(w)" :title="w.key">{{ $L(w.label) || w.key }}</span>
-      <button class="x" @click="add" :title="$t('neuer Workflow')">+</button>
+      <button class="x" data-demo="aus" @click="add" :title="$t('neuer Workflow')">+</button>
       <span class="grow" />
-      <button v-if="cur" class="primary" :disabled="!dirty" @click="save">{{ $t("💾 Speichern") }}</button>
-      <button v-if="cur" class="x" @click="remove" :title="$t('Workflow entfernen')">🗑</button>
+      <button v-if="cur" class="primary" data-demo="aus" :disabled="!dirty" @click="save">{{ $t("💾 Speichern") }}</button>
+      <button v-if="cur" class="x" data-demo="aus" @click="remove" :title="$t('Workflow entfernen')">🗑</button>
     </div>
     <template v-if="cur">
       <div class="row" style="gap:12px;align-items:center;margin-bottom:6px;flex-wrap:wrap">
@@ -246,7 +246,7 @@ onMounted(load)
         <span class="muted" style="font-size:11px">{{ $t("(nichts angehakt = alle)") }}</span>
       </div>
       <div v-if="sketch" class="row" style="gap:6px;align-items:center;margin-bottom:6px">
-        <button @click="addStateAt" :title="$t('Zustand anlegen')">{{ $t("+ Zustand") }}</button>
+        <button data-demo="aus" @click="addStateAt" :title="$t('Zustand anlegen')">{{ $t("+ Zustand") }}</button>
         <button @click="forceLayout" :title="$t('Zustände automatisch anordnen (Andockpunkte bleiben)')">{{ $t("⟲ Anordnen") }}</button>
         <button v-if="selState != null || selTrans != null" class="x" @click="delSelected" :title="$t('Markiertes löschen (auch Entf)')">✕</button>
         <span class="grow" />

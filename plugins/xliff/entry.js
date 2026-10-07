@@ -28,7 +28,7 @@ async function mount(root, ctx) {
 
   // ---- Profil (alles Datenthematische im Profil): Sprachen, Kanal, Umfang, Attribute, Teilbaum; der Job nimmt es
   const profSel = el('select', {}, el('option', { value: '' }, t_('— Profil —')))
-  const profIn = el('input', { type: 'text', placeholder: t_('Name'), style: 'width:110px' })
+  const profIn = el('input', { 'data-demo': 'aus', type: 'text', placeholder: t_('Name'), style: 'width:110px' })   // Demo: ansehen ja, speichern nein (data-demo)
   async function loadProfiles() { try { const names = (await ctx.data.list()).filter(n => n.startsWith('profile:')).map(n => n.slice(8)); profSel.innerHTML = ''; profSel.append(el('option', { value: '' }, t_('— Profil —')), ...names.map(n => el('option', { value: n }, n))) } catch {} }
   profSel.addEventListener('change', async () => { const n = profSel.value; if (!n) return; const p = await ctx.data.get('profile:' + n); if (!p) return; Object.assign(st, { from: p.from ?? st.from, to: p.to ?? st.to, channel: p.channel ?? '', scope: p.scope ?? 'open', root: p.root ?? null, attrs: new Set(p.attributes ? p.attributes.split(',') : textAttrs.map(a => a.key)) }); profIn.value = n; drawSettings(); say(`Profil „${n}“ geladen`) })
   async function saveProfile() {
@@ -37,9 +37,9 @@ async function mount(root, ctx) {
     await loadProfiles(); profSel.value = n; store.toast(t_('Profil „{0}“ gespeichert — als Job: ⏱ Jobs → + Job → XLIFF-Export / XLIFF-Import', [n]), 'ok')
   }
   // DeepL-Schlüssel am Profil beim Server
-  const keyIn = el('input', { type: 'password', placeholder: t_('DeepL-Schlüssel'), title: t_('wird beim Server am Profil hinterlegt (jobs/secrets.json), nie im Journal — der Job „DeepL-Übersetzung“ nimmt ihn'), style: 'width:150px' })
-  const keyBtn = el('button', { class: 'x', title: t_('DeepL-Schlüssel am Profil hinterlegen'), onclick: async () => { const n = (profIn.value || profSel.value).trim(); if (!n) { store.toast(t_('erst ein Profil benennen und speichern')); return } if (!keyIn.value) { store.toast(t_('Schlüssel fehlt')); return } try { await api.post(`/api/plugins/xliff/secrets/${encodeURIComponent(n)}`, { values: { key: keyIn.value } }, 'PUT'); keyIn.value = ''; store.toast(t_('DeepL-Schlüssel am Profil „{0}“ hinterlegt — Job: ⏱ Jobs → + Job → DeepL-Übersetzung', [n]), 'ok') } catch (e) { store.toast(e.message) } } }, '🔒')
-  root.append(el('div', { class: 'toolbar' }, el('h1', {}, t_('⇄ Übersetzung')), el('span', { class: 'sep' }, '·'), profSel, profIn, el('button', { class: 'x', title: t_('Sprachen, Umfang, Attribute und Teilbaum als Profil speichern (für Jobs)'), onclick: saveProfile }, '💾'), el('span', { class: 'sep' }, '·'), keyIn, keyBtn, el('span', { class: 'grow' }), status), body)
+  const keyIn = el('input', { 'data-demo': 'aus', type: 'password', placeholder: t_('DeepL-Schlüssel'), title: t_('wird beim Server am Profil hinterlegt (jobs/secrets.json), nie im Journal — der Job „DeepL-Übersetzung“ nimmt ihn'), style: 'width:150px' })
+  const keyBtn = el('button', { 'data-demo': 'aus', class: 'x', title: t_('DeepL-Schlüssel am Profil hinterlegen'), onclick: async () => { const n = (profIn.value || profSel.value).trim(); if (!n) { store.toast(t_('erst ein Profil benennen und speichern')); return } if (!keyIn.value) { store.toast(t_('Schlüssel fehlt')); return } try { await api.post(`/api/plugins/xliff/secrets/${encodeURIComponent(n)}`, { values: { key: keyIn.value } }, 'PUT'); keyIn.value = ''; store.toast(t_('DeepL-Schlüssel am Profil „{0}“ hinterlegt — Job: ⏱ Jobs → + Job → DeepL-Übersetzung', [n]), 'ok') } catch (e) { store.toast(e.message) } } }, '🔒')
+  root.append(el('div', { class: 'toolbar' }, el('h1', {}, t_('⇄ Übersetzung')), el('span', { class: 'sep' }, '·'), profSel, profIn, el('button', { 'data-demo': 'aus', class: 'x', title: t_('Sprachen, Umfang, Attribute und Teilbaum als Profil speichern (für Jobs)'), onclick: saveProfile }, '💾'), el('span', { class: 'sep' }, '·'), keyIn, keyBtn, el('span', { class: 'grow' }), status), body)
   loadProfiles()
 
   // ---- 1 Sprachen und Umfang
@@ -95,7 +95,7 @@ async function mount(root, ctx) {
     try { const r = await fetch(`${store.server}/api/translate/xliff?${q()}`, { headers: { 'X-Actor': store.actor } }); if (!r.ok) throw new Error(await r.text()); download(await r.blob(), `journali-${st.from}-${st.to}.xlf`) } catch (e) { store.toast(e.message) } } }, t_('⇪ XLIFF exportieren'))
   const aiBtn = el('button', { class: 'ai', title: t_('leere Ziele mit der KI vorübersetzen — Vorschläge in der Tabelle, geschrieben wird mit 💾'), onclick: preTranslate }, t_('✦ KI vorübersetzen'))
   const memBtn = el('button', { title: t_('Vorschläge aus Gedächtnis (◌) und Wörterbuch (📖) in die Ziele übernehmen — geschrieben wird mit 💾'), onclick: () => { let n = 0; for (const u of st.units) if (u.memory && !(st.edited.get(u.id) ?? u.target)) { st.edited.set(u.id, u.memory); if (u._ta) u._ta.value = u.memory; n++ } count.textContent = t_('{0} Einheiten · {1} geändert', [st.units.length, st.edited.size]); say(t_('◌ {0} übernommen', [n])) } }, t_('◌ Gedächtnis übernehmen'))
-  const writeBtn = el('button', { class: 'primary', title: t_('die eingetragenen Ziele schreiben (AttributeSet je Einheit) — nur, wo die Quelle seit dem Laden unverändert ist'), onclick: writeEdited }, t_('💾 Ziele schreiben'))
+  const writeBtn = el('button', { 'data-demo': 'aus', class: 'primary', title: t_('die eingetragenen Ziele schreiben (AttributeSet je Einheit) — nur, wo die Quelle seit dem Laden unverändert ist'), onclick: writeEdited }, t_('💾 Ziele schreiben'))
   // Paket schnüren (30): ein Auftrag im Journal + die XLIFF-Datei dazu — der Rücklauf findet den Auftrag in der Datei wieder
   const orderBtn = el('button', { title: t_('Auftrag aus dem Rückstand — steht im Journal, die Datei geht hinaus; der Rücklauf rechnet dagegen'), onclick: async () => {
     try {
@@ -165,7 +165,7 @@ async function mount(root, ctx) {
       for (const l of locs) cells.push(el('td', {}, inputs[l] = el('input', { type: 'text', value: t.text?.[l] ?? '', style: 'width:130px', onchange: save })))
       cells.push(el('td', {}, inputs.note = el('input', { type: 'text', value: t.note ?? '', placeholder: t_('Kontext'), style: 'width:150px', onchange: save })))
       cells.push(el('td', {}, isNew ? '' : el('button', { class: 'x', title: t_('Begriff entfernen'), onclick: async () => { try { await api.del(`/api/model/terms/${encodeURIComponent(t.key)}`); await loadTerms() } catch (e) { store.toast(e.message) } } }, '🗑')))
-      return el('tr', {}, ...cells)
+      return el('tr', isNew ? { 'data-demo': 'aus' } : {}, ...cells)
     }
     for (const t of st.terms) tbl.append(row(t, false))
     tbl.append(row({}, true))
@@ -194,7 +194,7 @@ async function mount(root, ctx) {
   loadOrders()
 
   // ---- 4 XLIFF zurück
-  const fileIn = el('input', { type: 'file', accept: '.xlf,.xliff,.xml' })
+  const fileIn = el('input', { 'data-demo': 'aus', type: 'file', accept: '.xlf,.xliff,.xml' })
   const planBox = el('div', { style: 'margin-top:6px' })
   const forceCb = el('input', { type: 'checkbox' })
   let xml = ''

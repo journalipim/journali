@@ -6,12 +6,13 @@ namespace Journali.Server;
 
 /// <summary>
 /// Demo (07.10.2026): <c>JOURNALI_DEMO=1</c> macht eine Instanz zur öffentlichen Demo. Wer sie aufruft, arbeitet ohne Anmeldung als Anwender
-/// <see cref="Anwender"/> mit der Rolle <see cref="Rolle"/>: pflegen, modellieren, freigeben — aber keine Plugins, Jobs, Skripte, Speicher, Team
-/// (KI-Schlüssel), Anwender und Rollen. Das eigene Konto (Passwort, API-Token), Anmelden und Einrichten sind gesperrt (<see cref="Gesperrt"/>).
+/// <see cref="Anwender"/> mit der Rolle <see cref="Rolle"/>: ansehen, Werte pflegen, freigeben — das Modell, die Einstellungen und die Profile der
+/// Plugins sieht man, speichert und legt aber nichts davon an (Rolle ohne Recht model, dazu <see cref="Gesperrt"/>); keine Plugins, Jobs,
+/// Skripte, Speicher, Team (KI-Schlüssel), Anwender und Rollen. Das eigene Konto (Passwort, API-Token), Anmelden und Einrichten sind gesperrt (<see cref="Gesperrt"/>).
 /// <para>Ist das Journal leer, legt <see cref="Einrichten"/> einen erfundenen Beispielkatalog an — über denselben Schreibweg wie jede Pflege
 /// (<see cref="Catalog.WithBatch{TResult}"/>, <see cref="Commands"/>), danach Rolle und Anwender. Zurückgesetzt wird von aussen: der Betrieb
 /// startet die Demo täglich mit leerer Datenbank neu, und dieser Server legt alles wieder an. Ein Weg, das Journal zu leeren, gibt es nicht.</para>
-/// <para>Grösse der Uploads: <c>JOURNALI_UPLOAD_MB</c> im Betrieb der Demo, nicht hier.</para>
+/// <para>Bilder zeichnet <see cref="DemoBilder"/>; sie kommen über den Medienspeicher und <see cref="Types.MediaCreated"/> wie hochgeladene.</para>
 /// </summary>
 public static class Demo
 {
@@ -20,7 +21,7 @@ public static class Demo
 
     public const string Anwender = "demo";
     public const string Rolle = "demo";
-    public static readonly string[] Rechte = [Rights.Read, Rights.Write, Rights.Retire, Rights.Release, Rights.Model, Rights.Download];
+    public static readonly string[] Rechte = [Rights.Read, Rights.Write, Rights.Retire, Rights.Release, Rights.Download];
 
     /// <summary>Steht im Hinweis hinter „Testversion“, solange die Demo gilt.</summary>
     public static readonly Dictionary<string, string> Hinweis = new()
@@ -29,24 +30,53 @@ public static class Demo
         ["en"] = "This demo is reset every day; whatever is entered here is visible to all visitors.",
     };
 
-    /// <summary>In der Demo gesperrt, mit jedem Recht: das eigene Konto (Passwort, Token anlegen und löschen), Anmelden und Einrichten.</summary>
+    /// <summary>In der Demo ausgeschaltet: Zugänge (Dateisystem des Servers, fremde Systeme), ETIM (lädt die Klassifikation aus dem Netz),
+    /// die Importe aus fremden Systemen (brauchen einen Zugang; ixp ist eine interne Schnittstelle).</summary>
+    public static readonly string[] OhnePlugins = ["driver", "etim", "ixp", "solr"];
+
+    /// <summary>
+    /// In der Demo gesperrt, mit jedem Recht: das eigene Konto (Passwort, Token anlegen und löschen), Anmelden und Einrichten; Hochladen und
+    /// Holen von Medien; Workflows und Vorschau-Presets ändern, Vorschauen und Abmessungen von Hand anstossen; Zugänge und das Dateisystem;
+    /// Daten der Plugins schreiben (Profile, Layouts — nur die eigene Einstellung <c>settings</c> eines Plugins bleibt) und ihre Geheimnisse
+    /// (Schlüssel am Profil). Übergänge am Knoten bleiben, ebenso das Lesen.
+    /// </summary>
     public static bool Gesperrt(string path, string method)
     {
-        var p = path.ToLowerInvariant();
+        var p = path.ToLowerInvariant().TrimEnd('/');
+        var lesen = method is "GET" or "HEAD" or "OPTIONS";
         if (p.StartsWith("/api/auth/password") || p.StartsWith("/api/auth/login") || p.StartsWith("/api/auth/setup") || p.StartsWith("/api/auth/claim")) return true;
-        return p.StartsWith("/api/auth/tokens") && method is not ("GET" or "HEAD");
+        if (p.StartsWith("/api/auth/tokens")) return !lesen;
+        if (p is "/api/media" or "/api/media/fetch" or "/api/media/derive" || p.StartsWith("/api/media/blob/") || p.StartsWith("/api/media/probe")) return !lesen;
+        if (p.StartsWith("/api/media/presets")) return !lesen;
+        if (p.StartsWith("/api/workflows/") && p != "/api/workflows/applicable") return !lesen;
+        if (p.StartsWith("/api/drivers/") || p.StartsWith("/api/files")) return true;
+        if (p.StartsWith("/api/plugins/") && p.Contains("/secrets")) return !lesen;
+        if (p.StartsWith("/api/plugins/") && p.Contains("/data")) return !lesen && !p.EndsWith("/data/settings");
+        return p == "/api/drivers" && !lesen;
     }
 
     /// <summary>Wer ohne Sitzung und ohne Token fragt: in der Demo der Anwender <see cref="Anwender"/>, solange es ihn gibt.</summary>
     public static (string User, string Role)? Besucher(Catalog c) =>
         c.Lesen((_, _) => c.Users.All.GetValueOrDefault(Anwender)) is { Enabled: true } u ? (u.Key, u.Role) : null;
 
-    /// <summary>Beim Start: der Beispielkatalog (nur in ein leeres Journal), dann Rolle und Anwender. Liefert die Zahl der geschriebenen Einträge.</summary>
-    public static int Einrichten(Catalog c)
+    /// <summary>
+    /// Beim Start, nach den Plugins: der Beispielkatalog (nur in ein leeres Journal) mit Bildern, wenn ein Medienspeicher da ist; die Plugins
+    /// aus <see cref="OhnePlugins"/> aus; dann Rolle und Anwender. Liefert die Zahl der geschriebenen Einträge und der neuen Bilder.
+    /// </summary>
+    public static (int Eintraege, int Bilder) Einrichten(Catalog c, IMediaStore? store = null, string? pluginDir = null)
     {
-        var n = 0;
+        var n = 0; var bilder = 0;
+        if (pluginDir is not null) n += PluginsEinschalten(c, pluginDir);
         var leer = c.Lesen((_, t) => !t.Nodes.Values.Any(x => x.Role == Roles.Product));
-        if (leer) n += Beispielkatalog(c);
+        if (leer)
+        {
+            var wuensche = new List<(string Knoten, string Produkt, DemoBilder.Wunsch Wunsch)>();
+            n += Beispielkatalog(c, wuensche);
+            if (store is not null) (n, bilder) = (n + Bilder(c, store, wuensche, out var neu), neu);
+        }
+        foreach (var key in OhnePlugins)
+            if (c.Lesen((_, _) => c.Plugins.All.GetValueOrDefault(key)) is { Enabled: true })
+                n += c.With((_, _, write) => { write(Anwender, Plugins.Stream + key, Types.PluginDisabled, new PluginDisabled(), null); return 1; });
         var rolle = c.Lesen((_, _) => c.Users.Roles.GetValueOrDefault(Rolle));
         if (rolle is null || !rolle.Rights.ToHashSet().SetEquals(Rechte))
             n += c.With((_, _, write) => { write(Anwender, Users.RoleStream + Rolle, Types.RoleDefined, new RoleDefined("Demo", Rechte), null); return 1; });
@@ -54,6 +84,64 @@ public static class Demo
         var anwender = c.Lesen((_, _) => c.Users.All.GetValueOrDefault(Anwender));
         if (anwender is null || anwender.Role != Rolle || !anwender.Enabled || anwender.Team != team)
             n += c.With((_, _, write) => { write(Anwender, Auth.Stream + Anwender, Types.UserDefined, new UserDefined("Demo", null, Rolle, true, team), null); return 1; });
+        return (n, bilder);
+    }
+
+    /// <summary>
+    /// Alle Plugins mit dem Siegel von journali installiert und an — wer die Demo ansieht, darf keine einschalten. Ausgenommen sind
+    /// <see cref="OhnePlugins"/> und, was beim ersten Lauf etwas aus dem Netz holt (<c>download</c>: Modelle, Sprachdaten). Ein Hinweis im
+    /// Manifest (<c>acknowledge</c>) gilt in der Demo als vom Betreiber bestätigt.
+    /// </summary>
+    public static int PluginsEinschalten(Catalog c, string dir, bool auchFremde = false)
+    {
+        var n = 0;
+        foreach (var m in PluginApi.NachAbhaengigkeit(PluginApi.Scan(dir).Values))
+        {
+            if (OhnePlugins.Contains(m.Key) || m.Raw.TryGetProperty("download", out _) || (!auchFremde && !m.Seal.Original)) continue;
+            var stand = c.Lesen((_, _) => c.Plugins.All.GetValueOrDefault(m.Key));
+            var hinweis = PluginApi.Hinweis(m.Raw);
+            n += c.With((_, _, write) =>
+            {
+                var z = 0;
+                if (stand is null) { write(Anwender, Plugins.Stream + m.Key, Types.PluginInstalled, new PluginInstalled(m.Version, m.Raw.GetRawText()), null); z++; }
+                if (hinweis is { } h && stand?.Acknowledged != h.Version) { write(Anwender, Plugins.Stream + m.Key, Types.PluginAcknowledged, new PluginAcknowledged(h.Version, h.Text), null); z++; }
+                if (stand is not { Enabled: true }) { write(Anwender, Plugins.Stream + m.Key, Types.PluginEnabled, new PluginEnabled(), null); z++; }
+                return z;
+            });
+        }
+        return n;
+    }
+
+    /// <summary>
+    /// Die Bilder zu den Wünschen: jedes einmal zeichnen und in den Medienspeicher, dann in einem Stapel das Medium (gleicher Inhalt einmal)
+    /// und die Relation image am Knoten; das Produkt bekommt das Bild seiner ersten Variante.
+    /// </summary>
+    public static int Bilder(Catalog c, IMediaStore store, List<(string Knoten, string Produkt, DemoBilder.Wunsch Wunsch)> wuensche, out int neu)
+    {
+        var abgelegt = new Dictionary<string, (string Sha, long Bytes)>();
+        foreach (var w in wuensche.Select(x => x.Wunsch).DistinctBy(w => w.Name))
+        {
+            using var daten = new MemoryStream(DemoBilder.Png(w));
+            abgelegt[w.Name] = store.PutAsync(daten, CancellationToken.None).GetAwaiter().GetResult();
+        }
+        var neueMedien = 0;
+        var n = c.WithBatch(Anwender, "demo-bilder", (model, tree, write) =>
+        {
+            var z = 0;
+            Entry W(string stream, string type, object payload) { z++; return write(Anwender, stream, type, payload, "demo-bilder"); }
+            var ctx = new Ctx { Model = model, Tree = tree, Relations = c.Relations, Media = c.Media, Write = W };
+            var produkte = new HashSet<string>();
+            foreach (var (knoten, produkt, w) in wuensche)
+            {
+                var (sha, bytes) = abgelegt[w.Name];
+                var medium = c.Media.BySha(sha)?.Id;
+                if (medium is null) { medium = W(Ids.Media(), Types.MediaCreated, new MediaCreated(sha, bytes, "image/png", w.Name)).Stream; neueMedien++; }
+                foreach (var an in produkte.Add(produkt) && produkt != knoten ? new[] { knoten, produkt } : [knoten])
+                    if (Commands.CreateRelation(ctx, "image", an, medium).Error is { } e) throw new InvalidOperationException("Demo: Bild — " + e);
+            }
+            return z;
+        });
+        neu = neueMedien;
         return n;
     }
 
@@ -69,7 +157,15 @@ public static class Demo
     private static readonly (string De, string En)[] Formen = [("rund", "round"), ("eckig", "square"), ("flach", "flat"), ("oval", "oval"), ("schmal", "slim"), ("breit", "wide")];
     private static readonly string[] Farben = ["white", "black", "anthracite", "silver", "gold", "grey"];
 
-    public static int Beispielkatalog(Catalog c) => c.WithBatch(Anwender, "demo", (model, tree, write) =>
+    /// <summary>Art der Zeichnung je Gruppe des Katalogs (<see cref="DemoBilder.Wunsch.Art"/>).</summary>
+    private static string Art(string gruppeDe) => gruppeDe switch
+    {
+        "Deckenleuchten" => "decke", "Wandleuchten" => "wand", "Tischleuchten" => "tisch", "Pendelleuchten" => "pendel",
+        "Wegeleuchten" => "weg", "Strahler" => "strahler", _ => "lampe",
+    };
+
+    /// <param name="bilder">bekommt je Variante den Wunsch nach ihrem Bild (mit ihrem Produkt) — gezeichnet wird ausserhalb der Sperre</param>
+    public static int Beispielkatalog(Catalog c, List<(string Knoten, string Produkt, DemoBilder.Wunsch Wunsch)>? bilder = null) => c.WithBatch(Anwender, "demo", (model, tree, write) =>
     {
         var n = 0;
         Entry W(string stream, string type, object payload) { n++; return write(Anwender, stream, type, payload, "demo"); }
@@ -146,10 +242,16 @@ public static class Demo
                     var knoten = new List<string>();
                     if (lampe)
                         foreach (var sockel in new[] { "e27", "e14", "gu10" }.Take(2 + zufall.Next(2)))
+                        {
                             knoten.Add(Id(Commands.CreateVariant(ctx, produkt, new() { ["socket"] = sockel })));
+                            bilder?.Add((knoten[^1], produkt, new DemoBilder.Wunsch("lampe", fDe, null, kelvin, sockel)));
+                        }
                     else
                         foreach (var farbe in Farben.OrderBy(_ => zufall.Next()).Take(2 + zufall.Next(2)))
+                        {
                             knoten.Add(Id(Commands.CreateVariant(ctx, produkt, new() { ["color"] = farbe })));
+                            bilder?.Add((knoten[^1], produkt, new DemoBilder.Wunsch(Art(formDe), fDe, farbe, kelvin)));
+                        }
                     foreach (var k in knoten)
                     {
                         nummer++;

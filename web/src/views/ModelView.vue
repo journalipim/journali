@@ -561,8 +561,8 @@ const attrLabel = k => L(model.value.attributes.find(a => a.key === k)?.label) |
     <div class="toolbar"><h1>{{ sec.icon }} {{ sec.label }}</h1><span class="muted">{{ shown.length }}</span><span class="muted" :title="sec.hint">ⓘ</span><span class="grow" /></div>
     <div class="toolbar" style="gap:4px">
       <input v-model="filter" type="search" :placeholder="$t('🔍 Suche in Key und Name')" style="flex:1;min-width:0" />
-      <input v-model="newKey" type="text" :placeholder="addPlaceholder[section]" style="width:130px" @keydown.enter="add" />
-      <button class="primary" :disabled="!newKey.trim()" @click="add" :title="$t('anlegen')">+</button>
+      <input data-demo="aus" v-model="newKey" type="text" :placeholder="addPlaceholder[section]" style="width:130px" @keydown.enter="add" />
+      <button class="primary" data-demo="aus" :disabled="!newKey.trim()" @click="add" :title="$t('anlegen')">+</button>
       <button v-if="removePath[section]" class="x" @click="restoreMenu" :title="$t('zuletzt zurückgezogene wiederherstellen (bis zu 5; weiter zurück: Journal)')">↶</button>
     </div>
     <!-- Filter: Eigenschaften, je Abschnitt andere; leer = alles -->
@@ -701,7 +701,7 @@ const attrLabel = k => L(model.value.attributes.find(a => a.key === k)?.label) |
     <!-- Werteliste -->
     <template v-else-if="section === 'lists' && curList">
       <div class="toolbar"><h1>☰ {{ $L(curList.label) || curList.key }}</h1><span class="mono muted">{{ curList.key }}</span><span class="muted">· {{ valueRows.length }}</span><span class="grow" />
-        <input v-model="newValue" type="text" :placeholder="$t('neuer Wert')" style="width:140px" @keydown.enter="valueAdd" /><button class="primary" :disabled="!newValue.trim()" @click="valueAdd">{{ $t("+ Wert") }}</button></div>
+        <input data-demo="aus" v-model="newValue" type="text" :placeholder="$t('neuer Wert')" style="width:140px" @keydown.enter="valueAdd" /><button class="primary" data-demo="aus" :disabled="!newValue.trim()" @click="valueAdd">{{ $t("+ Wert") }}</button></div>
       <div class="scroll">
         <table class="grid form"><colgroup><col style="width:150px" /><col style="width:260px" /></colgroup><tbody>
           <tr><td class="attr">{{ $t("Name de") }}</td><Cell :value="curList.label?.de ?? null" @save="v => listSet('label_de', v)" /></tr>

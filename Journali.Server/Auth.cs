@@ -313,6 +313,7 @@ public static class Auth
         if (!Enabled(c)) { await next(); return; }   // noch kein Benutzer: offen
         var who = Resolve(ctx, c, dir);
         if (who is null) { ctx.Response.StatusCode = 401; await ctx.Response.WriteAsJsonAsync(new { error = "Anmeldung nötig.", template = "Anmeldung nötig.", login = true }); return; }
+        if (!Allowed(c, who.Value.Role, ctx.Request) && Demo.An && who.Value.User == Demo.Anwender) { ctx.Response.StatusCode = 403; await ctx.Response.WriteAsJsonAsync(Err("In der Demo nicht verfügbar.")); return; }
         if (!Allowed(c, who.Value.Role, ctx.Request)) { ctx.Response.StatusCode = 403; await ctx.Response.WriteAsJsonAsync(Err("Rolle {0} darf das nicht ({1}).", who.Value.Role, Rights.Label.GetValueOrDefault(Needed(ctx.Request) ?? "") ?? Needed(ctx.Request))); return; }
         ctx.Request.Headers["X-Actor"] = who.Value.User;   // der Urheber kommt aus der Sitzung, nicht vom Client
         ctx.Items["user"] = who.Value.User; ctx.Items["role"] = who.Value.Role;
