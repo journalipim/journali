@@ -11,7 +11,7 @@ const saved = JSON.parse(localStorage.getItem('journali.settings') || '{}')
 // Darstellung, Sichtsprachen, Zellen, Sicht je Knotentyp, Anordnung, Umfang, Attributnamen. Sie stehen am Benutzer im
 // Journal (UserPrefsSet) und kommen mit der Anmeldung an jedem Rechner mit. Alles andere ist Fensterzustand und bleibt
 // im Browser: Serveradresse, Journal auf/zu, zugeklappte Abschnitte, Reihenfolge der Leiste, zuletzt gewählter Knoten.
-const USER_PREFS = ['theme', 'lang', 'viewLocales', 'viewCells', 'viewKey', 'layout', 'scope', 'attrNames', 'bookmarks']   // bookmarks: Lesezeichen auf Knoten (01.10.2026)
+const USER_PREFS = ['theme', 'lang', 'viewLocales', 'viewCells', 'viewKey', 'layout', 'bandLayout', 'scope', 'attrNames', 'bookmarks']   // bookmarks: Lesezeichen auf Knoten (01.10.2026)
 /// So viele Lesezeichen hat eine Person höchstens: der Wert am Benutzer hat 4 000 Zeichen, eine Kennung braucht bis zu 16
 export const MAX_BOOKMARKS = 150   // lang: Oberflächensprache (24.09.2026)
 
@@ -35,6 +35,7 @@ export const store = reactive({
   progress: null,        // { done, total, text } — laufender Stapel; Balken oben in der Oberfläche (App.vue)   // zuletzt gewählter Knoten — ▣ Baum in der Leiste kehrt dorthin zurück
   viewKey: (saved.viewKey && typeof saved.viewKey === 'object') ? saved.viewKey : {},   // gewählte Sicht je Knotentyp
   layout: saved.layout ?? 'flat',                    // flat | tabs
+  bandLayout: saved.bandLayout ?? 'flat',            // die Bereiche unter den Attributen (Assets, Relationen, …): flat | tabs (07.10.2026)
   // Umfang am Knoten: 'all' = total (alles, was anliegt, gesperrtes sichtbar) · 'can' = auf dieser Ebene änderbar ·
   // 'only' = nur auf dieser Ebene änderbar (weder darüber noch darunter erlaubt). Drei Stufen, jede in der vorigen enthalten.
   scope: saved.scope ?? (saved.editableOnly ? 'can' : 'all'),
@@ -98,7 +99,7 @@ export const store = reactive({
     return this.attrNames === 'key' ? def.key : this.attrNames === 'both' ? `${label} ⟨${def.key}⟩` : label
   },
   save() {
-    localStorage.setItem('journali.settings', JSON.stringify({ actor: this.actor, theme: this.theme, lang: this.lang, viewLocales: this.viewLocales, viewCells: this.viewCells, journalOpen: this.journalOpen, viewKey: this.viewKey, layout: this.layout, scope: this.scope, attrNames: this.attrNames, bookmarks: this.bookmarks, railOrder: this.railOrder, railOff: this.railOff, collapsed: this.collapsed }))
+    localStorage.setItem('journali.settings', JSON.stringify({ actor: this.actor, theme: this.theme, lang: this.lang, viewLocales: this.viewLocales, viewCells: this.viewCells, journalOpen: this.journalOpen, viewKey: this.viewKey, layout: this.layout, bandLayout: this.bandLayout, scope: this.scope, attrNames: this.attrNames, bookmarks: this.bookmarks, railOrder: this.railOrder, railOff: this.railOff, collapsed: this.collapsed }))
     this.applyTheme()
     this.savePrefs()
   },

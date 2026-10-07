@@ -6,7 +6,7 @@
 // (store.scope) engt ein: Alle · Editierbare · Nur hier editierbare Attribute. Sicht je Knotentyp ordnet
 // Gruppen und Attribute; flach untereinander oder als Reiter. Jede Änderung ist
 // ein Befehl an den Server = ein Eintrag.
-import { ref, reactive, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
+import { ref, reactive, computed, watch, nextTick, onMounted, onUnmounted, onUpdated } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { api, when } from '../api.js'
 import { store } from '../store.js'
@@ -153,7 +153,24 @@ const orderView = computed(() => view.value ?? views.value.find(v => v.key === '
 function setView(k) { store.viewKey = { ...store.viewKey, [node.value.role]: k }; store.save() }
 function setLayout(l) { store.layout = l; store.save() }
 // Abschnitte (attributes, axes, media, relations, groups, releases) per Klick aufs Band auf-/zuklappen
-const open = k => !store.collapsed.includes(k)
+// Die Bereiche unter den Attributen (07.10.2026): untereinander (auf- und zuklappen) oder als Reiter — dann ist nur der gewählte da, und er ist offen
+const BAENDER = ['media', 'relations', 'workflow', 'releases', 'axes', 'groups', 'versions']
+const reiter = computed(() => store.bandLayout === 'tabs')
+const bandTab = ref(localStorage.getItem('journali.bandTab') ?? 'media')
+const bandTabs = ref([])   // aus den gezeichneten Bereichen gelesen: je nach Knoten sind es andere, die Plugins bringen eigene mit
+const baender = ref(null)
+function leseBaender() {
+  const liste = [...(baender.value?.parentElement?.querySelectorAll(':scope > [data-band]') ?? [])]
+    .map(el => ({ key: el.dataset.band, label: (el.querySelector('h2')?.textContent ?? el.dataset.band).replace(/^[▾▸]\s*/, '').trim() }))
+  if (JSON.stringify(liste) !== JSON.stringify(bandTabs.value)) bandTabs.value = liste
+  if (liste.length && !liste.some(t => t.key === bandTab.value)) bandTab.value = liste[0].key
+}
+const zeigeBand = k => !reiter.value || bandTab.value === k
+function waehleBand(k) { bandTab.value = k; try { localStorage.setItem('journali.bandTab', k) } catch {} }
+function setBandLayout(l) { store.bandLayout = l; store.save(); nextTick(leseBaender) }
+onUpdated(leseBaender)
+onMounted(() => nextTick(leseBaender))
+const open = k => (reiter.value && BAENDER.includes(k)) || !store.collapsed.includes(k)
 function toggle(k) { store.collapsed = open(k) ? [...store.collapsed, k] : store.collapsed.filter(x => x !== k); store.save() }
 // Pfad: Schrift verkleinern, bis er in eine Zeile passt (13 → 10 px), statt umzubrechen
 const pathEl = ref(null)
@@ -1131,7 +1148,16 @@ function cellMenu(e, def, col, block) {
     </div>
     </template>
 
-      <div class="section" :class="{ over: mediaDrag }" @dragover.prevent="mediaDrag = true" @dragleave="mediaDrag = false" @drop.prevent="uploadMedia([...$event.dataTransfer.files], $event.ctrlKey || $event.metaKey)">
+      <!-- Bereiche als Liste oder als Reiter (07.10.2026) -->
+      <div ref="baender" class="band-leiste" :class="{ reiter }">
+        <template v-if="reiter"><button v-for="t in bandTabs" :key="t.key" class="tabbtn" :class="{ on: t.key === bandTab }" @click="waehleBand(t.key)">{{ t.label }}</button></template>
+        <span class="grow" />
+        <span class="grp" :title="$t('Anordnung der Bereiche')">
+          <button :class="{ primary: !reiter }" @click="setBandLayout('flat')" :title="$t('Bereiche untereinander')">☰</button>
+          <button :class="{ primary: reiter }" @click="setBandLayout('tabs')" :title="$t('Bereiche als Reiter')">⧉</button>
+        </span>
+      </div>
+      <div class="section" data-band="media" v-show="zeigeBand('media')" :class="{ over: mediaDrag, 'im-reiter': reiter }" @dragover.prevent="mediaDrag = true" @dragleave="mediaDrag = false" @drop.prevent="uploadMedia([...$event.dataTransfer.files], $event.ctrlKey || $event.metaKey)">
         <h2 @click="toggle('media')" :title="$t('Dateien hierher ziehen legt sie an diesem Knoten ab. Mit Strg wird ein Dokument ausgewertet — ein Rechtsklick auf ein Asset tut dasselbe.')"><span class="caret">{{ open('media') ? '▾' : '▸' }}</span>{{ $t("▩ Assets") + ' ' }}<span class="muted">· {{ mediaRels.length }}<template v-if="inheritedMedia.length">{{ ' ' + $t("· {0} geerbt", [inheritedMedia.length]) }}</template></span></h2>
         <template v-if="open('media')">
         <div class="tiles">
@@ -1171,7 +1197,7 @@ function cellMenu(e, def, col, block) {
         </template>
       </div>
 
-      <div class="section" v-if="node.role !== 'rubric' && !props.pub">
+      <div class="section" data-band="relations" v-show="zeigeBand('relations')" :class="{ 'im-reiter': reiter }" v-if="node.role !== 'rubric' && !props.pub">
         <h2 @click="toggle('relations')"><span class="caret">{{ open('relations') ? '▾' : '▸' }}</span>{{ $t("⇄ Relationen") + ' ' }}<span class="muted">· {{ relCount }}</span></h2>
         <template v-if="open('relations')">
         <div v-for="b in relBlocks" :key="b.type" class="relblock">
@@ -1218,7 +1244,7 @@ function cellMenu(e, def, col, block) {
         </template>
       </div>
 
-      <div class="section" v-if="workflows.length">
+      <div class="section" data-band="workflow" v-show="zeigeBand('workflow')" :class="{ 'im-reiter': reiter }" v-if="workflows.length">
         <h2 @click="toggle('workflow')"><span class="caret">{{ open('workflow') ? '▾' : '▸' }}</span>{{ $t("⚑ Workflow") + ' ' }}<span class="muted">· <span v-for="(w, i) in workflows" :key="w.workflow"><span v-if="i"> · </span>{{ $L(w.label) || w.workflow }}: <span :style="`color:${wfColor(w.color)};font-weight:600`">{{ w.stateLabel?.de || w.state }}</span><span v-if="w.pending?.length" class="warn" :title="w.pending.map(pe => pe.canFix ? effLabel(pe.effect) : $t('nicht ausgeleitet')).join(' · ')"> ⚠</span></span></span></h2>
         <template v-if="open('workflow')">
         <table class="grid form"><colgroup><col style="width:150px" /><col /></colgroup><tbody>
@@ -1252,8 +1278,8 @@ function cellMenu(e, def, col, block) {
         </template>
       </div>
       <!-- Bänder der Plugins (nodeBands): ETIM-Stand u. a. — beim Gegenstand, nicht im Plugin -->
-      <PluginBands v-if="node.role !== 'rubric'" :id="id" :role="node.role" />
-      <div class="section" v-if="node.role !== 'group' && node.role !== 'rubric'">
+      <PluginBands v-if="node.role !== 'rubric'" :id="id" :role="node.role" :reiter="reiter" :aktiv="bandTab" />
+      <div class="section" data-band="releases" v-show="zeigeBand('releases')" :class="{ 'im-reiter': reiter }" v-if="node.role !== 'group' && node.role !== 'rubric'">
         <h2 @click="toggle('releases')" :title="$t('Vollständigkeit aus der Pflicht der aktiven Attribute; unvollständig heisst keine Freigabe.')"><span class="caret">{{ open('releases') ? '▾' : '▸' }}</span>{{ $t("✓ Freigaben") }}</h2>
         <template v-if="open('releases')">
         <table class="grid releases">
@@ -1280,7 +1306,7 @@ function cellMenu(e, def, col, block) {
         <div class="muted"><span :title="$t('Werte für Attribute, die hier über keine Gruppe gelten — etwa nach dem Umhängen.')">{{ $t("Eigene Werte ohne Gruppe:") }}</span> <span class="mono">{{ node.orphans.join(', ') }}</span>{{ ' ' + $t("— Gruppe anhängen, dann gelten sie wieder.") }}</div>
       </div>
 
-      <div class="section" v-if="node.role === 'product' && !props.pub">
+      <div class="section" data-band="axes" v-show="zeigeBand('axes')" :class="{ 'im-reiter': reiter }" v-if="node.role === 'product' && !props.pub">
         <h2 @click="toggle('axes')" :title="$t('Sichern Eindeutigkeit in den gewählten Attributen über alle Varianten.')"><span class="caret">{{ open('axes') ? '▾' : '▸' }}</span>{{ $t("◆ Variantenachsen") }}</h2>
         <template v-if="open('axes')">
         <table v-if="node.axes.length" class="grid" style="width:auto">
@@ -1306,7 +1332,7 @@ function cellMenu(e, def, col, block) {
         </template>
       </div>
 
-      <div class="section" v-if="!props.pub || node.role === 'rubric'">
+      <div class="section" data-band="groups" v-show="zeigeBand('groups')" :class="{ 'im-reiter': reiter }" v-if="!props.pub || node.role === 'rubric'">
         <h2 @click="toggle('groups')" :title="$t('Hier angehängt, gelten sie ab hier nach unten; geerbte stehen oben mit ihrer Herkunft.')"><span class="caret">{{ open('groups') ? '▾' : '▸' }}</span>{{ $t("▤ Attributgruppen ab diesem Knoten") }}</h2>
         <template v-if="open('groups')">
         <table v-if="attachedSorted.length" class="grid" style="width:auto">
@@ -1326,7 +1352,7 @@ function cellMenu(e, def, col, block) {
         </template>
       </div>
 
-      <div class="section" v-if="node.role !== 'rubric' && !props.pub">
+      <div class="section" data-band="versions" v-show="zeigeBand('versions')" :class="{ 'im-reiter': reiter }" v-if="node.role !== 'rubric' && !props.pub">
         <h2 @click="toggle('versions')"><span class="caret">{{ open('versions') ? '▾' : '▸' }}</span>{{ $t("⎘ Versionen") + ' ' }}<span class="muted"><span :title="$t('Stand einfrieren, Belege der Erzeuger, Stand ansehen, zurückrollen.')">{{ $t("· eingefrorene Stände") }}</span></span></h2>
         <VersionsPanel v-if="open('versions')" :id="id" :role="node.role" @changed="load(); store.poll(true)" />
       </div>
@@ -1351,6 +1377,10 @@ function cellMenu(e, def, col, block) {
 
 <style scoped>
 .grp { display: inline-flex; align-items: center; gap: 4px; }
+/* Bereiche als Reiter: die Leiste darüber, die Überschrift des Bereichs steht im Reiter */
+.band-leiste { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 2px; padding: 4px 8px 0; border-bottom: 1px solid var(--line); }
+.band-leiste .grp { padding-bottom: 3px; }
+.im-reiter > h2 { display: none; }
 /* Einheit in der Zelle umschalten */
 select.unitsel { font-size: 11px; padding: 0 2px; height: 20px; width: auto; color: var(--muted); }
 /* Filter-Dropdown: leuchtet, wenn ein Filter wirkt */

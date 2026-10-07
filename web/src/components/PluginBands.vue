@@ -7,7 +7,8 @@ import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { plugins } from '../plugins.js'
 import { tree } from '../tree.js'
 
-const props = defineProps({ id: String, role: String })
+// reiter: die Knotenansicht zeigt ihre Bereiche als Reiter — dann ist nur das gewählte Band (aktiv) da, offen, ohne eigene Überschrift
+const props = defineProps({ id: String, role: String, reiter: Boolean, aktiv: String })
 const bands = computed(() => plugins.loaded ? plugins.nodeBands.filter(b => !b.roles || b.roles.includes(props.role)) : [])
 const heads = ref({}), bodies = ref({})
 const openState = ref(Object.fromEntries(bands.value.map(b => [b.key + ':' + b.band, localStorage.getItem(`journali.band.${b.key}.${b.band}`) !== '0'])))
@@ -32,16 +33,18 @@ onUnmounted(() => { for (const c of cleanups) { try { c() } catch {} } })
 </script>
 
 <template>
-  <div v-for="b in bands" :key="b.key + ':' + b.band" class="section plugin-band">
+  <div v-for="b in bands" :key="b.key + ':' + b.band" class="section plugin-band" :data-band="'p:' + b.key + ':' + b.band"
+    v-show="!props.reiter || props.aktiv === 'p:' + b.key + ':' + b.band" :class="{ 'im-reiter': props.reiter }">
     <!-- Band wie Workflow: Überschrift mit kurzer Zusammenfassung (head, Text), der Pfeil klappt den Körper mit der Bedienzeile auf und zu (body) -->
     <h2 @click="toggle(b)"><span class="caret">{{ isOpen(b) ? '▾' : '▸' }}</span>{{ b.icon || '⌁' }} {{ b.label }} <span class="head muted" :ref="el => { if (el) heads[b.key + ':' + b.band] = el }" /></h2>
-    <div v-show="isOpen(b)" class="body" :ref="el => { if (el) bodies[b.key + ':' + b.band] = el }" />
+    <div v-show="props.reiter || isOpen(b)" class="body" :ref="el => { if (el) bodies[b.key + ':' + b.band] = el }" />
   </div>
 </template>
 
 <style scoped>
 .plugin-band { padding: 0 8px 10px; }   /* wie .section in der Knotenansicht — die scoped-Regel dort greift hier nicht (mehrere Wurzeln) */
 .plugin-band h2 { font-size: 12px; margin: 0 -8px 8px; padding: 0 8px; min-height: 26px; line-height: 24px; box-sizing: border-box; color: var(--text); font-weight: 600; letter-spacing: .02em; background: var(--accent-soft); border-top: 2px solid var(--accent); cursor: pointer; user-select: none; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.plugin-band.im-reiter > h2 { display: none; }
 .plugin-band h2 .caret { display: inline-block; width: 14px; color: var(--muted); }
 .plugin-band .head { font-weight: 400; }
 .plugin-band .body { padding: 0 0 4px; }
