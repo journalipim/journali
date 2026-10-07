@@ -926,6 +926,9 @@ function toggleRelease(channel, locale) {
 }
 // Knoten darunter: einmal je Baum gezählt, ohne Rekursion (04.10.2026 — vorher bei jedem Zeichnen des Kopfs der ganze Teilbaum)
 const knotenDarunter = computed(() => { void tree.rows; let n = 0; const stapel = [props.id]; while (stapel.length) for (const k of tree.kids(stapel.pop())) { n++; stapel.push(k.id) } return n })
+/// Name eines Attributs oder einer Gruppe anklicken: dorthin im Modell (07.10.2026) — vorher über ✎ an der Gruppe und Suchen in der Liste
+function zumModell(section, key) { router.push({ path: '/model', query: { section, key } }) }
+
 async function retire() {
   if (store.demo) return   // Demo: zurückziehen gibt es nicht
   const kids = node.value.children
@@ -954,7 +957,7 @@ function cellMenu(e, def, col, block) {
     { label: t_('Wert kopieren'), icon: '⧉', key: 'c', disabled: shown == null, action: () => navigator.clipboard?.writeText(shown ?? '') },
     { label: sourceOf(def, col) ? t_('Quelle ändern …') : t_('Quelle angeben …'), icon: '↗', key: 'q', hint: sourceOf(def, col) ? `${sourceOf(def, col).method} · ${sourceOf(def, col).checkedAt}` : t_('Beleg am Wert'), disabled: ownV == null, action: () => setSource(def, col) },
     def.type !== 'html' && def.type !== 'rows' ? { label: starOwn(def.key) ? t_('Benennung wegnehmen') : t_('Ab hier damit benennen'), icon: '★', key: 's', hint: starOwn(def.key) ? (nextStar(def.key) ? `danach ★ von ${nextStar(def.key).fromLabel}` : t_('danach keine')) : t_('Name im Baum'), action: () => setStar(def) } : null,
-    { label: t_('Attribut im Modell öffnen'), icon: '⊞', key: 'm', hint: '→ Modell → Attribute', action: () => router.push({ path: '/model', query: { section: 'attributes', key: def.key } }) },
+    { label: t_('Attribut im Modell öffnen'), icon: '⊞', key: 'm', hint: '→ Modell → Attribute', action: () => zumModell('attributes', def.key) },
   ])
 }
 </script>
@@ -1048,8 +1051,9 @@ function cellMenu(e, def, col, block) {
         <tbody v-for="b in shownBlocks" :key="b.key" :data-group="b.key">
           <tr class="group-row" :class="{ locked: !b.active }">
             <td :colspan="columns.length + 1">
-              {{ b.label }}
-              <router-link v-if="!b.custom" :to="{ path: '/model', query: { section: 'groups', key: b.key } }" class="muted edit" :title="`${b.key} bearbeiten → Modell → Attributgruppen`">✎</router-link>
+              <!-- der Name führt ins Modell (07.10.2026) — vorher ein ✎ daneben -->
+              <span v-if="!b.custom" class="glbl link" @click="zumModell('groups', b.key)" :title="$t('{0} im Modell öffnen → Attributgruppen', [b.key])">{{ b.label }}</span>
+              <template v-else>{{ b.label }}</template>
               <span v-if="!b.custom" class="muted from" :title="b.fromRole === 'rubric' ? $t('Gruppe an Rubrik {0}', [b.fromLabel]) : (props.pub ? $t('Gruppe an {0} · nur lesen', [b.fromLabel]) : $t('Gruppe hängt an {0}', [b.fromLabel]))">{{ $t("· von {0}{1}", [b.from === id ? 'hier' : (b.fromRole === 'rubric' ? '▥ ' : '') + b.fromLabel, props.pub && b.fromRole !== 'rubric' ? ' ' + $t('· nur lesen') : '']) }}</span>
               <span v-if="!b.active" class="warn" :title="$t('Werte erst ab {0} — hier nur sichtbar', [roleLabel[b.activeFrom]])">{{ $t("· ⌀ ab {0}", [roleLabel[b.activeFrom]]) }}</span>
             </td>
@@ -1058,7 +1062,7 @@ function cellMenu(e, def, col, block) {
           <!-- Zwischenüberschrift innerhalb einer Gruppe -->
           <tr v-if="def.divider" class="sub-row"><td class="sub" :colspan="columns.length + 1">{{ def.divider }}</td></tr>
           <tr v-else-if="def.type === 'formula' || def.type === 'template'">
-            <td class="attr" :title="def.key + (def.type === 'template' ? ' ' + $t('— Vorlage: Textbaustein {key}[ … ] aus Attributen, Ergebnis wird gebaut') : ' ' + $t('— Formel: der Wert ist ein Skript, das Ergebnis wird gerechnet')) + auchTitel(def)"><div class="nm">{{ def.type === 'template' ? '{}' : 'ƒ' }} <span class="lbl">{{ store.label(def) }}</span><span v-if="store.attrNames !== 'label'" class="key muted">{{ def.key }}</span><span v-if="def.required" class="warn" :title="$t('Pflicht')">●</span></div></td>
+            <td class="attr" :title="def.key + (def.type === 'template' ? ' ' + $t('— Vorlage: Textbaustein {key}[ … ] aus Attributen, Ergebnis wird gebaut') : ' ' + $t('— Formel: der Wert ist ein Skript, das Ergebnis wird gerechnet')) + auchTitel(def)"><div class="nm">{{ def.type === 'template' ? '{}' : 'ƒ' }} <span class="lbl link" @click.stop="zumModell('attributes', def.key)">{{ store.label(def) }}</span><span v-if="store.attrNames !== 'label'" class="key muted">{{ def.key }}</span><span v-if="def.required" class="warn" :title="$t('Pflicht')">●</span></div></td>
             <template v-for="c in columns" :key="c.label">
               <td v-if="!enabled(def, c, b)" class="cell" :title="props.pub && b.fromRole !== 'rubric' ? $t('Pflegewert · ändern im Pflegebaum') : ''"><div class="cell-box disabled" :class="{ ro: props.pub && b.fromRole !== 'rubric' }">{{ props.pub && b.fromRole !== 'rubric' ? roValue(def, c) : '' }}</div></td>
               <td v-else class="cell">
@@ -1071,7 +1075,7 @@ function cellMenu(e, def, col, block) {
             </template>
           </tr>
           <tr v-else-if="def.type === 'rows'">
-            <td class="attr" :title="def.key + auchTitel(def)"><div class="nm"><span class="lbl">{{ store.label(def) }}</span><span v-if="store.attrNames !== 'label'" class="key muted">{{ def.key }}</span> <span class="muted">{{ $t("≣ Zeilen") }}</span><span v-if="def.required" class="warn" :title="$t('Pflicht: mindestens eine Zeile')">●</span></div></td>
+            <td class="attr" :title="def.key + auchTitel(def)"><div class="nm"><span class="lbl link" @click.stop="zumModell('attributes', def.key)">{{ store.label(def) }}</span><span v-if="store.attrNames !== 'label'" class="key muted">{{ def.key }}</span> <span class="muted">{{ $t("≣ Zeilen") }}</span><span v-if="def.required" class="warn" :title="$t('Pflicht: mindestens eine Zeile')">●</span></div></td>
             <td :colspan="columns.length" style="padding:0">
               <RowsBlock v-if="b.active" :def="def" :rows="node.rows?.[def.key] ?? []" :values="own" :locale="viewLocales[0] ?? locales[0]"
                 :computed-of="(col, row) => computedRow(col, row, viewLocales[0] ?? locales[0])" @script="col => scriptCell = { def: col, col: columns[0] }"
@@ -1083,7 +1087,7 @@ function cellMenu(e, def, col, block) {
           <tr v-else>
             <td class="attr" :class="{ missing: missingOnly && missingOnly.keys.has(def.key) }" :title="def.key + (def.required ? ' ' + $t('· Pflicht:') + ' ' + Object.entries(def.required).map(([c, l]) => c + ':' + l.join(',')).join(' ') : '') + (def.inheritable ? ' · vererbbar' : '') + auchTitel(def)"><div class="nm">
               <button v-if="def.type !== 'html'" class="star" :class="{ on: !!star(def.key), own: starOwn(def.key), idle: star(def.key) && !star(def.key).applies }" :title="starTitle(def)" @click.stop="setStar(def)">{{ star(def.key) ? '★' : '☆' }}</button>
-              <span class="lbl">{{ store.label(def) }}</span><span v-if="store.attrNames !== 'label'" class="key muted">{{ def.key }}</span>
+              <span class="lbl link" @click.stop="zumModell('attributes', def.key)">{{ store.label(def) }}</span><span v-if="store.attrNames !== 'label'" class="key muted">{{ def.key }}</span>
               <span v-if="def.unit" class="muted">{{ def.unit }}</span>
               <span v-if="def.pattern" class="muted" :title="$t('Muster: {0}', [def.patternHint || def.pattern])">⌗</span>
               <span v-if="def.multiple" class="muted" :title="$t('vermehrbar: mehrere Werte, Liste in der Zelle')">≣</span>
@@ -1427,8 +1431,8 @@ table.values tr.chan th:first-child { text-align: left; }
 .group-row td { background: var(--cell); color: var(--accent); font-size: 12px; font-weight: 600; height: 26px; border-top: 1px solid var(--line); }
 .group-row td:first-child { border-left: 3px solid var(--accent); padding-left: 6px; }
 .group-row td::before { content: '▤ '; }
-.group-row .edit { text-decoration: none; margin-left: 4px; opacity: .5; color: var(--text); }
-.group-row:hover .edit { opacity: 1; }
+.link { cursor: pointer; }
+.link:hover { text-decoration: underline; }
 .group-row .from { font-weight: 400; color: var(--muted); }
 .group-row.locked td { background: var(--bg); color: var(--muted); font-weight: 500; }
 .group-row.locked td:first-child { border-left-color: var(--line); }
