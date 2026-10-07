@@ -45,9 +45,9 @@ watch(() => [store.auth.known, store.auth.user, store.auth.rights], () => { frag
 watch(() => store.demo, d => document.documentElement.classList.toggle('demo', !!d), { immediate: true })   // Hinweise zum Betrieb, einmal bestätigt
 plugins.beobachte(store)   // nach der Anmeldung und nach einem neuen Serverstand neu laden — sonst fehlen Gruppen in der Leiste
 onMounted(() => window.addEventListener('keydown', e => {
-  if (e.altKey && !e.ctrlKey && [...nav, ...navBottom].some(n => n.key === e.key)) {
+  if (e.altKey && !e.ctrlKey && [...nav, ...unten.value].some(n => n.key === e.key)) {
     e.preventDefault()
-    const n = [...nav, ...navBottom].find(n => n.key === e.key); router.push(n.to === '/tree' && store.lastNode ? `/tree/${store.lastNode}` : n.to)
+    const n = [...nav, ...unten.value].find(n => n.key === e.key); router.push(n.to === '/tree' && store.lastNode ? `/tree/${store.lastNode}` : n.to)
   }
 }))
 // Themen in der Leiste: Import, Export, Datenblatt, Datenanalyse, Werkzeuge — jedes führt zur Übersicht
@@ -66,6 +66,8 @@ const navBottom = [
   { to: '/journal', icon: '≡', label: t_('Journal'), key: '2' },
   { to: '/settings', icon: '⚙', label: t_('Einstellungen'), key: '6' },
 ]
+// Demo (07.10.2026): ⬡ Plugins steht nicht in der Leiste — dort lässt sich nichts ein- oder ausschalten, und Manifeste gehen Besucher nichts an
+const unten = computed(() => navBottom.filter(n => !(store.demo && n.to === '/plugins')))
 // Die Leiste als eine Liste (oben … spacer … unten), Reihenfolge aus den Einstellungen; Neues (Plugin-Ansichten) kommt vor den Spacer
 const pluginNews = computed(() => plugins.news())
 async function logout() { await store.logout(); router.push('/login') }
@@ -79,7 +81,7 @@ const railItems = computed(() => {
   const left = topic => (entries.value[topic] ?? []).filter(e => !e.plugin || !store.railOff.includes(e.plugin))
   // Ein Thema mit genau einem Eintrag: das Symbol führt direkt hin, die Übersicht wäre nur ein Klick mehr
   const direct = n => n.topic && !n.always && left(n.topic).length === 1 ? { ...n, href: left(n.topic)[0].to } : n
-  const all = [...nav.filter(n => !n.topic || n.always || baseTopics.value.has(n.topic) || left(n.topic).length).map(n => n.to === '/tree' ? { ...n, href: treeTo } : direct(n)), { to: 'spacer' }, ...navBottom]
+  const all = [...nav.filter(n => !n.topic || n.always || baseTopics.value.has(n.topic) || left(n.topic).length).map(n => n.to === '/tree' ? { ...n, href: treeTo } : direct(n)), { to: 'spacer' }, ...unten.value]
   const order = store.railOrder ?? []
   const known = new Set(all.map(x => x.to))
   const sorted = order.filter(k => known.has(k)).map(k => all.find(x => x.to === k))

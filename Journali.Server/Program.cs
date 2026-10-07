@@ -285,6 +285,16 @@ builder.Services.ConfigureHttpJsonOptions(o =>
 builder.Services.AddCors(o => o.AddDefaultPolicy(p => p.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod()));
 
 var app = builder.Build();
+// Hinter einem Proxy (07.10.2026, JOURNALI_PROXY=1): Absender und Schema aus X-Forwarded-For/-Proto. Sonst sehen Bremse und Begrenzung nur den
+// Proxy — alle Besucher teilten sich eine Begrenzung, und Fehlversuche eines einzigen sperrten alle. Nur setzen, wenn der Server allein über
+// den Proxy erreichbar ist (Port an 127.0.0.1): wer ihn direkt erreicht, könnte sich jede Adresse geben.
+if (Environment.GetEnvironmentVariable("JOURNALI_PROXY") == "1")
+{
+    var fwd = new ForwardedHeadersOptions { ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedFor | Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedProto };
+    fwd.KnownNetworks.Clear(); fwd.KnownProxies.Clear();
+    app.UseForwardedHeaders(fwd);
+    Console.WriteLine("journali: behind a proxy — client address from X-Forwarded-For (JOURNALI_PROXY)");
+}
 app.Logger.LogInformation("Projections built from {Count} entries, head #{Head}, created from defaults {Seeded}, media: {Media}, plugins in {Plugins} ({Auto} newly installed)", rebuilt, catalog.Head, seeded, mediaStore.Kind, pluginDir, autoInstalled);
 
 // Langsame Anfragen stehen in der Konsole: Pfad und Dauer. Wer eine Wartezeit meldet, sieht dort, welche Anfrage sie verursacht hat.

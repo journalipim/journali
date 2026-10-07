@@ -526,6 +526,9 @@ ausser bei den Werten der Produkte, die pflegt man wie sonst.
 - **ETIM**: fest zugewiesen ist EC001959 „LED-lamp/Multi-LED“ (ETIM 10.0) an den LED-Lampen, mit den acht Merkmalen des Katalogs, zugeordnet
   auf seine Attribute — Namen nur englisch (ETIM-Modell unter ODC-BY 1.0, die deutschen Bezeichnungen gehören ETIM Deutschland). Eine
   Freigabe holen, Klassen zuweisen oder entfernen gibt es in der Demo nicht.
+- **Keine Plugin-Ansicht** (07.10.2026): ⬡ Plugins steht nicht in der Leiste, Alt+7 und `/plugins` führen zum Baum.
+- **Hinter dem Proxy** (`JOURNALI_PROXY=1`, gilt auch ausserhalb der Demo): Absender aus `X-Forwarded-For`, damit Bremse und Begrenzung je
+  Besucher gelten und nicht für alle zusammen. Nur setzen, wenn der Server allein über den Proxy erreichbar ist.
 - **Ein Publikationsbaum** (07.10.2026): der Start leitet „Online-Shop“ (Kanal web) aus den Bereichen des Beispielkatalogs ab
   (`Demo.Publikationsbaum`). Einen zweiten weist der Server ab wie eine Grenze des Tarifs (`Catalog.MaxPubTrees` = 1); löschen, leeren und
   Rubriken entfernen gehen nicht (Knoten zurückziehen ist gesperrt) und stehen in der Oberfläche nicht da.

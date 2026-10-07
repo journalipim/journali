@@ -114,3 +114,14 @@ test('Demo: das Kontextmenü lässt Einträge mit demo aus weg, leere Untermenü
   assert.match(baum, /k === 'import' \? \{ demo: 'aus' \}/)
   assert.match(fs.readFileSync(new URL('../src/views/MediaView.vue', import.meta.url), 'utf8'), /\{ demo: 'aus', label: n > 1 \? t_\('\{0\} Assets zurückziehen'/)
 })
+
+// Demo (07.10.2026): ⬡ Plugins steht nicht in der Leiste, Alt+7 führt nicht hin, und /plugins leitet zum Baum
+test('Demo: keine Plugin-Ansicht', async () => {
+  const fs = await import('node:fs')
+  const app = fs.readFileSync(new URL('../src/App.vue', import.meta.url), 'utf8')
+  assert.match(app, /const unten = computed\(\(\) => navBottom\.filter\(n => !\(store\.demo && n\.to === '\/plugins'\)\)\)/)
+  assert.match(app, /\{ to: 'spacer' \}, \.\.\.unten\.value\]/)
+  assert.match(app, /\[\.\.\.nav, \.\.\.unten\.value\]\.some\(n => n\.key === e\.key\)/)
+  const router = fs.readFileSync(new URL('../src/router.js', import.meta.url), 'utf8')
+  assert.match(router, /if \(store\.demo && to\.path\.startsWith\('\/plugins'\)\) return '\/tree'/)
+})

@@ -60,5 +60,6 @@ router.beforeEach(async to => {
   if (to.path === '/setup') return '/login'
   if (to.path === '/login') return true
   if (store.auth.enabled && !store.auth.user) { sessionStorage.setItem('journali.after', to.fullPath); return '/login' }
+  if (store.demo && to.path.startsWith('/plugins')) return '/tree'   // Demo: ⬡ Plugins gibt es dort nicht (07.10.2026)
   return true
 })
