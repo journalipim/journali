@@ -3088,5 +3088,6 @@
  "Die Hinweise zum Betrieb in Version {0} sind nicht bestätigt.": "The notes on operation in version {0} are not confirmed.",
  "Demo: Anmeldename demo, Passwort demo.": "Demo: user name demo, password demo.",
  "Die Demo wird täglich zurückgesetzt.": "The demo is reset daily.",
- "Diese Eingabe ist nicht zulässig.": "This input is not permitted."
+ "Diese Eingabe ist nicht zulässig.": "This input is not permitted.",
+ "{0}: HTML mit Skript oder Ereignissen ist nicht zulässig.": "{0}: HTML with script or event handlers is not permitted."
 }

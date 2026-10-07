@@ -4,6 +4,7 @@
 // einschliesslich allem, was an seinen Kindern vorkommt (Server: /table?deep=true). Das Layout ist JSON im
 // Journal (ctx.data „layout:<name>“), je Rolle zugeordnet; das fertige Blatt ist dieselbe Wiedergabe ohne Griffe.
 import { dataOf, el } from './entry.js'
+import { sicheresHtml, esc as maskiere } from './sicher.js'   // Werte führen im Datenblatt nichts aus (07.10.2026)
 
 // ---- Layout-Modell ----------------------------------------------------------------------------
 let seq = 1
@@ -36,12 +37,13 @@ const newItem = t => t.kind === 'section' ? { id: nid(), kind: 'section', title:
 // ---- Wiedergabe: dieselbe für Designer (edit) und Blatt -------------------------------------
 /// n:m (29.09.2026): ein Attribut gehoert zu einer Gruppe ueber seine Zuordnung oder eine Mitgliedschaft
 const inGruppe = (a, key) => !!key && (a?.groups ?? (a?.group ? [a.group] : [])).includes(key)
-const fill = (s, d) => String(s ?? '').replace(/\{(\w+)\}/g, (_, k) => d[k] ?? d.attr?.[k] ?? '')
+// Platzhalter im Text eines Bausteins: HTML-Werte bereinigt, alles andere maskiert — ein Wert setzt keine Auszeichnung in die Vorlage
+const fill = (s, d) => String(s ?? '').replace(/\{(\w+)\}/g, (_, k) => { const v = d[k] ?? d.attr?.[k] ?? ''; return d.types?.[k] === 'html' ? sicheresHtml(v) : maskiere(v) })
 const esc = s => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 function valueCell(d, key) {
   const type = d.types?.[key]; const v = d.attr?.[key]
   if (v == null || v === '') return null
-  return type === 'html' ? el('span', { html: v }) : el('span', {}, `${v}${d.unit?.[key] ? ' ' + d.unit[key] : ''}`)
+  return type === 'html' ? el('span', { html: sicheresHtml(v) }) : el('span', {}, `${v}${d.unit?.[key] ? ' ' + d.unit[key] : ''}`)
 }
 function renderItem(it, d, model, edit, ctx) {
   const label = k => model.attributes.find(a => a.key === k)?.label?.[d.locale] || model.attributes.find(a => a.key === k)?.label?.de || k

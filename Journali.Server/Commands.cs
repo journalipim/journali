@@ -397,6 +397,9 @@ public static class Commands
         if (string.IsNullOrWhiteSpace(attribute)) return Outcome.Bad("attribute fehlt.");
         if (!c.Model.Attributes.TryGetValue(attribute, out var def)) return Outcome.Bad("Unbekanntes Attribut: {0}", attribute);
         if (def.Type == AttributeTypes.Rows) return Outcome.Bad("{0} ist vermehrbar — Zeilen über RowAdded, Zellen mit row.", def.Key);
+        // Ein HTML-Wert ist Text mit Auszeichnung: Skript, Ereignisse und javascript:-Adressen werden abgewiesen (07.10.2026, HtmlPruefung)
+        if (def.Type == AttributeTypes.Html && (HtmlPruefung.Unsicher(value) || (values?.Any(HtmlPruefung.Unsicher) ?? false)))
+            return Outcome.Bad("{0}: HTML mit Skript oder Ereignissen ist nicht zulässig.", def.Key);
         row = Blank(row);
         // Gilt das Attribut hier? Über eine Gruppe am Pfad, die an dieser Rolle aktiv ist (oder als Zelle einer Zeile).
         if (row is null && !CompletenessRules.IstAktiv(c.Tree, c.Model, n, def) && !IstFormelSpalte(c, n, def))

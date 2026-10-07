@@ -23,6 +23,15 @@ public static class MediaApi
         return $"inline; filename=\"{ascii}\"; filename*=UTF-8''{Uri.EscapeDataString(n)}";
     }
 
+    /// <summary>Dateien, die ein Browser als Seite ausführen würde (HTML, SVG, XML, Skript) — sie gehen als Anhang hinaus, nicht inline.</summary>
+    public static bool AlsSeiteGefaehrlich(string? mime, string? name)
+    {
+        var m = (mime ?? "").ToLowerInvariant();
+        var ext = System.IO.Path.GetExtension(name ?? "").ToLowerInvariant();
+        return m.Contains("html") || m.Contains("svg") || m.Contains("xml") || m.Contains("javascript") || m.Contains("ecmascript")
+            || ext is ".html" or ".htm" or ".xhtml" or ".svg" or ".svgz" or ".xml" or ".js" or ".mjs";
+    }
+
     /// <summary>Die Stichwörter eines Mediums — der vermehrbare Wert steht in den Listen, nicht in den Werten.</summary>
     private static IEnumerable<string> Stichworte(Medium m) =>
         m.Lists.Where(kv => kv.Key.Attribute == Model.KeywordAttribute).SelectMany(kv => kv.Value).Distinct(StringComparer.Ordinal);
@@ -257,7 +266,10 @@ public static class MediaApi
             if (stream is null) return Results.NotFound(Err("Datei {0} fehlt im Store.", m.Sha256));
             res.Headers.CacheControl = "public, max-age=31536000, immutable";
             // Der Name geht mit — sonst hiesse jeder Abruf „file.pdf“, der letzte Teil der Adresse (28.09.2026)
-            res.Headers.ContentDisposition = Inline(m.Name);
+            res.Headers.ContentDisposition = AlsSeiteGefaehrlich(m.Mime, m.Name) ? "attachment" + Inline(m.Name)["inline".Length..] : Inline(m.Name);
+            // Eine hochgeladene Datei läuft nie als Seite von journali (07.10.2026): kein Skript, keine Formulare, eigener Ursprung (sandbox)
+            res.Headers["Content-Security-Policy"] = "sandbox; default-src 'none'; img-src 'self' data:; media-src 'self'; style-src 'unsafe-inline'; object-src 'self'";
+            res.Headers.XContentTypeOptions = "nosniff";
             return Results.File(stream, m.Mime, enableRangeProcessing: true);
         });
 

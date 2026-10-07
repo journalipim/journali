@@ -1,4 +1,5 @@
 <script setup>
+import { sicheresHtml } from '../html-sicher.js'   // gespeichertes HTML kommt bereinigt in den Editor (07.10.2026)
 // Zelle für html: in der Zelle nur der Anfang des Textes (‹› = HTML), Enter oder Doppelklick
 // öffnet den Editor — einfacher Schreibmodus (fett, kursiv, Listen, Überschrift, Link) mit
 // Umschalter auf den Quelltext. Ctrl+Enter speichert, Esc verwirft.
@@ -29,7 +30,7 @@ async function edit() {
   source.value = false
   open.value = true
   await nextTick()
-  if (rich.value) { rich.value.innerHTML = draft.value; rich.value.focus() }
+  if (rich.value) { rich.value.innerHTML = sicheresHtml(draft.value); rich.value.focus() }
 }
 function save() { syncFromRich(); open.value = false; if (draft.value !== (props.value ?? '')) emit('save', draft.value) }
 function cancel() { open.value = false }
@@ -44,13 +45,13 @@ onUnmounted(() => window.removeEventListener('keydown', onWinKey, true))
 // ✦ KI: neuer Text in den Entwurf — Schreibmodus zeigt ihn sofort, Quelltext ebenso
 // Ergebnis der KI: ersetzen oder an der Schreibmarke ergänzen
 function fromAi({ text, mode }) {
-  if (mode === 'insert' && !source.value && rich.value) { rich.value.focus(); document.execCommand('insertHTML', false, text); syncFromRich(); return }
+  if (mode === 'insert' && !source.value && rich.value) { rich.value.focus(); document.execCommand('insertHTML', false, sicheresHtml(text)); syncFromRich(); return }
   if (mode === 'insert' && source.value && area.value) { const t = area.value, i = t.selectionStart ?? draft.value.length; draft.value = draft.value.slice(0, i) + text + draft.value.slice(t.selectionEnd ?? i); return }
-  draft.value = text; if (rich.value && !source.value) rich.value.innerHTML = text
+  draft.value = text; if (rich.value && !source.value) rich.value.innerHTML = sicheresHtml(text)
 }
 function syncFromRich() { if (!source.value && rich.value) draft.value = rich.value.innerHTML.replace(/<div><br><\/div>/g, '<p></p>') }
 async function toggleSource() {
-  if (source.value) { source.value = false; await nextTick(); if (rich.value) { rich.value.innerHTML = draft.value; rich.value.focus() } }
+  if (source.value) { source.value = false; await nextTick(); if (rich.value) { rich.value.innerHTML = sicheresHtml(draft.value); rich.value.focus() } }
   else { syncFromRich(); source.value = true; await nextTick(); area.value?.focus() }
 }
 // Schreibbefehle des Browsers — reichen für Absatz, fett, kursiv, Listen, Überschrift, Link; kein Fremdcode.

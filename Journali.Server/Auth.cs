@@ -230,6 +230,8 @@ public static class Auth
         if (path.StartsWith("/api/model")) return Rights.Model;
         if (path.StartsWith("/api/workflows/") && method is "PUT" or "DELETE") return Rights.Model;   // Workflow definieren = Modell; Schritte sind Schreiben
         if (path.StartsWith("/api/plugins") && path.Contains("/secrets/")) return Rights.Write;   // Token am Profil: wer importiert, hinterlegt ihn (der Wert bleibt beim Server)
+        // Den Prozess eines Plugins starten (mit Parametern aus der Anfrage) ist ein Lauf wie ein Job — nicht Pflege (07.10.2026; vorher write)
+        if (path.StartsWith("/api/plugins/") && path.EndsWith("/run")) return Rights.Jobs;
         if (path.StartsWith("/api/plugins") && !path.Contains("/data/") && !path.EndsWith("/data") && !path.EndsWith("/run")) return Rights.Plugins;   // Plugin-Daten (auch der Sammel-PUT …/data) sind Pflege
         // Wiederherstellen aus einer Sicherung ist Systemsache — nicht zu verwechseln mit dem Zurückholen eines Knotens
         // Rückgängig am Knoten schreibt einen Wert zurück — das darf, wer pflegen darf (der Stapel-Undo bleibt Rückzug)
