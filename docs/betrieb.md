@@ -508,15 +508,19 @@ dass eine Wiederherstellung gelingt. Die Oberfläche sagt das in ⇅ B&R und im 
 `JOURNALI_DEMO=1` macht eine Instanz zur öffentlichen Demo (`Demo.cs`, `DemoBilder.cs`). **Ansehen ja, speichern und neu anlegen nein** —
 ausser bei den Werten der Produkte, die pflegt man wie sonst.
 
-- **Ohne Anmeldung**: wer ohne Sitzung und ohne Token kommt, ist der Anwender `demo` mit der Rolle `demo` — lesen, Werte pflegen,
+- **Anmeldung mit demo / demo** (07.10.2026): die Anmeldeseite nennt den Zugang; das Passwort setzt der Start (`Demo.Passwort`, im Tresor), ändern
+  lässt es sich nicht. Die Bremse gegen Fehlversuche gilt für `demo` nur je Absender, nicht je Name — sonst sperrte ein Fehlversuch alle Besucher.
+  Angemeldet ist man der Anwender `demo` mit der Rolle `demo` — lesen, Werte pflegen,
   zurückziehen, freigeben, herunterladen. Ohne `model`: Attribute, Typen, Gruppen, Listen und Basics sieht man, ändern und anlegen
   weist der Server ab. Plugins, Jobs, Skripte, Speicher, Team (KI-Schlüssel), Anwender und Rollen gehören nicht dazu.
-- **Gesperrt** (403 „In der Demo nicht verfügbar.“), mit jedem Recht: Passwort, API-Token, Anmelden, Einrichten; Hochladen und Holen von
+- **Gesperrt** (403 „In der Demo nicht verfügbar.“), mit jedem Recht: Passwort, API-Token, Einrichten; Hochladen und Holen von
   Medien; Workflows und Vorschau-Presets ändern, Vorschauen von Hand anstossen; Zugänge und Dateisystem; Daten der Plugins (Profile,
   Layouts — die eigene Einstellung `settings` eines Plugins bleibt) und ihre Geheimnisse (Schlüssel am Profil). Was abgewiesen wird,
   blendet die Oberfläche aus: ein Element mit `data-demo="aus"` steht in der Demo nicht da (Klasse `demo` am Dokument) — im Kern wie in
   den Ansichten der Plugins.
-- **Plugins**: alle mit dem Siegel von journali sind installiert und an, ein Hinweis im Manifest gilt als vom Betreiber bestätigt. Aus
+- **Plugins**: alle mit dem Siegel von journali sind installiert und an, ein Hinweis im Manifest gilt als vom Betreiber bestätigt. Ihre
+  Systemobjekte (Attributgruppen und Attribute von DPP, PPWR, GEO, GPC, die Gruppe an den Wurzeln) legt der Start an (`Demo.Systemobjekte`,
+  Angaben aus den Plugins über `demo-system.mjs`); die Oberfläche richtet in der Demo keine Plugins ein, kein Besucher sieht eine Rückfrage. Aus
   bleiben `driver`, `ixp`, `solr` und, was beim ersten Lauf etwas aus dem Netz holt (`embed`, `ocr`).
 - **ETIM**: fest zugewiesen ist EC001959 „LED-lamp/Multi-LED“ (ETIM 10.0) an den LED-Lampen, mit den acht Merkmalen des Katalogs, zugeordnet
   auf seine Attribute — Namen nur englisch (ETIM-Modell unter ODC-BY 1.0, die deutschen Bezeichnungen gehören ETIM Deutschland). Eine

@@ -245,7 +245,7 @@ if (builder.Configuration["JOURNALI_ORIGIN"] is { Length: > 0 } festeAdresse) jo
 var demoBilder = 0;
 if (Demo.An)
 {
-    var (demoEintraege, neueBilder) = Demo.Einrichten(catalog, mediaStore, pluginDir);
+    var (demoEintraege, neueBilder) = Demo.Einrichten(catalog, mediaStore, pluginDir, dataDir);
     demoBilder = neueBilder;
     Console.WriteLine($"journali: demo mode — {demoEintraege} entries, {neueBilder} images written");
 }

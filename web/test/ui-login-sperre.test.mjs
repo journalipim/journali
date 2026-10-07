@@ -57,3 +57,17 @@ test('ein falsches Passwort ohne Sperre zeigt die Meldung des Servers und keinen
   assert.equal(w.find('button[type=submit]').attributes('disabled'), undefined)
   w.unmount()
 })
+
+// Demo (07.10.2026): die Anmeldeseite nennt den Zugang demo / demo — sonst nicht
+test('Demo: die Anmeldeseite nennt Anmeldename und Passwort', async () => {
+  server({ body: {} })
+  store.demo = true
+  try {
+    const w = await seite()
+    assert.match(w.find('.demo-zugang').text(), /Anmeldename demo, Passwort demo/)
+    w.unmount()
+  } finally { store.demo = false }
+  const w = await seite()
+  assert.equal(w.find('.demo-zugang').exists(), false)
+  w.unmount()
+})

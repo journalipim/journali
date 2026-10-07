@@ -17,4 +17,8 @@
     <ProjectReference Include="..\Journali.Core\Journali.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Demo: nennt die Systemobjekte der Plugins (Demo.Systemobjekte) -->
+    <None Update="demo-system.mjs" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>

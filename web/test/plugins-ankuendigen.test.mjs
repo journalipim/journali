@@ -56,3 +56,15 @@ test('lehnt install() ab (false), meldet installNew nichts als eingerichtet und 
   await plugins.installNew()
   assert.equal(plugins.installedSet().has('dpp'), true)
 })
+
+// Demo (07.10.2026): die Systemobjekte legt der Server beim Einrichten an — die Oberfläche richtet keine Plugins ein, und kein Besucher sieht eine Rückfrage
+test('in der Demo ruft installNew kein install() auf', async () => {
+  plugins.list = [{ key: 'dpp', installed: true, enabled: true, onDisk: true, manifest: { label: { de: 'DPP' } } }]
+  plugins.active = () => true
+  let gerufen = 0
+  plugins.modules.set('dpp', { install: async () => { gerufen++; return true } })
+  plugins.forgetInstalled('dpp')
+  store.demo = true
+  try { await plugins.installNew() } finally { store.demo = false }
+  assert.equal(gerufen, 0)
+})

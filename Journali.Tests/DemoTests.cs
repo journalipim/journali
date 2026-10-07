@@ -1,3 +1,7 @@
+using Microsoft.Extensions.DependencyInjection;
+using System.Net.Http.Json;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
 using Journali.Core.Entries;
 using Journali.Core.Journal;
 using Journali.Core.Projections;
@@ -37,7 +41,6 @@ public class DemoTests
             Assert.DoesNotContain(verwaltung, Auth.RightsOf(c, Demo.Rolle));
         var anwender = c.Lesen((_, _) => c.Users.All[Demo.Anwender]);
         Assert.Equal((Demo.Rolle, true, Model.InitTeam), (anwender.Role, anwender.Enabled, anwender.Team));
-        Assert.Equal((Demo.Anwender, Demo.Rolle), Demo.Besucher(c));
 
         Assert.Equal((0, 0), Demo.Einrichten(c));   // der nächste Start schreibt nichts
     }
@@ -90,7 +93,7 @@ public class DemoTests
 
     [Theory]
     [InlineData("/api/auth/password", "POST", true)]
-    [InlineData("/api/auth/login", "POST", true)]
+    [InlineData("/api/auth/login", "POST", false)]   // 07.10.2026: Anmeldung mit demo / demo
     [InlineData("/API/AUTH/SETUP", "POST", true)]
     [InlineData("/api/auth/claim", "POST", true)]
     [InlineData("/api/auth/tokens", "POST", true)]
@@ -142,6 +145,15 @@ public class DemoTests
         Assert.Contains("etim", an);
         Assert.True(c.Lesen((_, _) => c.Plugins.All["etim"].Data.ContainsKey($"class:{Demo.EtimFreigabe}:{Demo.EtimKlasse}")));
         Assert.True(c.Lesen((m, _) => m.Attributes.ContainsKey("class_etim")));
+        // die Systemobjekte der Plugins legt der Server an (die Oberfläche richtet in der Demo nichts ein): Gruppe, Attribute, Zuordnung, angemeldet
+        foreach (var (plugin, gruppe) in new[] { ("dpp", "regulation_dpp"), ("ppwr", "regulation_ppwr"), ("geo", "enrich_geo") })
+        {
+            Assert.True(c.Lesen((m, _) => m.Groups.ContainsKey(gruppe)), gruppe);
+            Assert.Contains(ClassificationApi.Registered(c.Plugins), r => r.Plugin == plugin && r.Groups.Contains(gruppe) && r.Attributes.Length > 0);
+        }
+        Assert.True(c.Lesen((_, _) => c.Plugins.All["dpp"].Data.ContainsKey("mapping")));
+        Assert.True(c.Lesen((_, _) => c.Plugins.All["geo"].Data.ContainsKey("targets")));
+        Assert.Contains("enrich_geo", c.Lesen((_, t) => t.Nodes[Model.RootNode].Groups));
         foreach (var attr in new[] { "power", "luminous_flux", "socket", "energy_class" })
             Assert.Contains(c.Lesen((m, _) => m.GroupsOf(attr).ToList()), g => g.Contains("ec001959"));
         Assert.False(c.Lesen((m, _) => m.Attributes.ContainsKey("ef011586")));   // zugeordnet, nicht angelegt
@@ -177,4 +189,26 @@ public class DemoTests
 
     [Fact]
     public void Ean_hat_die_Pruefziffer() => Assert.Equal("4006381333931", Demo.Ean("400638133393"));
+
+    [Fact]
+    public async Task Anmeldung_mit_demo_demo()
+    {
+        // 07.10.2026: die Demo verlangt eine Anmeldung — Anmeldename demo, Passwort demo; ohne Sitzung ist niemand angemeldet
+        var dir = Path.Combine(Path.GetTempPath(), "journali-demo-login-" + Guid.NewGuid().ToString("N")); Directory.CreateDirectory(dir);
+        var c = Neu();
+        Demo.Einrichten(c, null, null, dir);
+        var b = WebApplication.CreateBuilder(); b.WebHost.UseUrls("http://127.0.0.1:0");
+        b.Services.AddSingleton(c);
+        await using var app = b.Build();
+        Auth.Map(app.MapGroup("/api"), dir);
+        await app.StartAsync();
+        using var http = new HttpClient();
+        var url = app.Urls.First();
+        var falsch = await http.PostAsJsonAsync(url + "/api/auth/login", new { user = "demo", password = "falsch" });
+        Assert.False(falsch.IsSuccessStatusCode);
+        var gut = await http.PostAsJsonAsync(url + "/api/auth/login", new { user = "demo", password = "demo" });
+        Assert.True(gut.IsSuccessStatusCode, await gut.Content.ReadAsStringAsync());
+        Assert.False(Demo.Gesperrt("/api/auth/login", "POST"));
+        Assert.True(Demo.Gesperrt("/api/auth/password", "POST"));
+    }
 }

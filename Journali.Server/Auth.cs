@@ -177,7 +177,7 @@ public static class Auth
             var sess = Finde(dir, s => s.Sessions.GetValueOrDefault(Sha(cookie)));
             if (sess is not null && sess.Until > DateTimeOffset.UtcNow && c.Lesen((_, _) => c.Users.All.GetValueOrDefault(sess.User)) is { Enabled: true } su) return (su.Key, su.Role);
         }
-        return Demo.An ? Demo.Besucher(c) : null;   // Demo: wer ohne Sitzung kommt, ist der Anwender demo
+        return null;
     }
 
     /// <summary>Welches Recht braucht diese Anfrage? Null = eigenes Konto, immer erlaubt. Die Rollen sagen dann, wer es hat.</summary>
@@ -351,6 +351,9 @@ public static class Auth
     /// setzen kann, hat ohnehin Zugang zum Server. Danach die Variable wieder entfernen. Ohne Konsole geht dasselbe mit dem
     /// Einrichtungscode unter /login (<c>/api/auth/claim</c>).
     /// </summary>
+    /// <summary>Das Passwort eines Anwenders setzen, ohne Prüfung der Länge — nur für die Demo (demo / demo, Demo.cs).</summary>
+    public static void PasswortSetzen(string dir, string user, string password) => With(dir, s => { s.Passwords[user] = Hash(password); return 0; }, save: true);
+
     public static string? Recover(Catalog c, string dir, string? password, string? user = null)
     {
         if (string.IsNullOrWhiteSpace(password)) return null;
@@ -445,7 +448,9 @@ public static class Auth
             var key = Key(body.User); var pw = body.Password ?? "";
             // Erst die Bremse, dann (und nur dann) die Prüfung des Passworts: sie kostet 210 000 Runden PBKDF2. Gesperrt wird je Name und je Absender.
             var absender = "ip:" + (ctx.Connection.RemoteIpAddress?.ToString() ?? "?"); var name = "u:" + (key ?? "?");
-            var gesperrtAbsender = Bremse.Gesperrt(absender) is not null; var gesperrtName = Bremse.Gesperrt(name) is not null;
+            // Demo: alle Besucher melden sich als demo an — die Bremse je Name sperrte mit jedem Fehlversuch alle; es bleibt die je Absender
+            var jeName = !(Demo.An && key == Demo.Anwender);
+            var gesperrtAbsender = Bremse.Gesperrt(absender) is not null; var gesperrtName = jeName && Bremse.Gesperrt(name) is not null;
             if (gesperrtAbsender || gesperrtName)
             {
                 // Jeder weitere Versuch in der Sperre setzt sie wieder auf die volle Minute — geprüft wird er nicht (er zählt als falscher Versuch)
@@ -459,7 +464,7 @@ public static class Auth
             var stored = key is null ? null : Finde(dir, s => s.Passwords.GetValueOrDefault(key));
             if (u is null || !u.Enabled || stored is null || !Verify(pw, stored))
             {
-                Bremse.Fehler(absender, LoginBremse.FehlversuchePerAbsender); Bremse.Fehler(name, LoginBremse.FehlversuchePerName);
+                Bremse.Fehler(absender, LoginBremse.FehlversuchePerAbsender); if (jeName) Bremse.Fehler(name, LoginBremse.FehlversuchePerName);
                 await Task.Delay(300);   // kein Thread.Sleep: eine Flut falscher Anmeldungen hielte sonst Arbeitsthreads fest
                 return Results.Json(new { error = "Anwender oder Passwort falsch." }, statusCode: 401);
             }

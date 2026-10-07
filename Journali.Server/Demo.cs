@@ -1,12 +1,13 @@
 using Journali.Core.Entries;
 using Journali.Core.Journal;
 using Journali.Core.Projections;
+using System.Text.Json;
 
 namespace Journali.Server;
 
 /// <summary>
-/// Demo (07.10.2026): <c>JOURNALI_DEMO=1</c> macht eine Instanz zur öffentlichen Demo. Wer sie aufruft, arbeitet ohne Anmeldung als Anwender
-/// <see cref="Anwender"/> mit der Rolle <see cref="Rolle"/>: ansehen, Werte pflegen, freigeben — das Modell, die Einstellungen und die Profile der
+/// Demo (07.10.2026): <c>JOURNALI_DEMO=1</c> macht eine Instanz zur öffentlichen Demo. Wer sie aufruft, meldet sich als Anwender
+/// <see cref="Anwender"/> mit dem Passwort <see cref="Passwort"/> an (die Anmeldeseite nennt beides) und arbeitet mit der Rolle <see cref="Rolle"/>: ansehen, Werte pflegen, freigeben — das Modell, die Einstellungen und die Profile der
 /// Plugins sieht man, speichert und legt aber nichts davon an (Rolle ohne Recht model, dazu <see cref="Gesperrt"/>); keine Plugins, Jobs,
 /// Skripte, Speicher, Team (KI-Schlüssel), Anwender und Rollen. Das eigene Konto (Passwort, API-Token), Anmelden und Einrichten sind gesperrt (<see cref="Gesperrt"/>).
 /// <para>Ist das Journal leer, legt <see cref="Einrichten"/> einen erfundenen Beispielkatalog an — über denselben Schreibweg wie jede Pflege
@@ -21,6 +22,8 @@ public static class Demo
 
     public const string Anwender = "demo";
     public const string Rolle = "demo";
+    /// <summary>Das Passwort des Anwenders demo — öffentlich, die Anmeldeseite der Demo nennt es; ändern lässt es sich in der Demo nicht.</summary>
+    public const string Passwort = "demo";
     public static readonly string[] Rechte = [Rights.Read, Rights.Write, Rights.Retire, Rights.Release, Rights.Download];
 
     /// <summary>Steht im Hinweis hinter „Testversion“, solange die Demo gilt.</summary>
@@ -45,7 +48,7 @@ public static class Demo
     {
         var p = path.ToLowerInvariant().TrimEnd('/');
         var lesen = method is "GET" or "HEAD" or "OPTIONS";
-        if (p.StartsWith("/api/auth/password") || p.StartsWith("/api/auth/login") || p.StartsWith("/api/auth/setup") || p.StartsWith("/api/auth/claim")) return true;
+        if (p.StartsWith("/api/auth/password") || p.StartsWith("/api/auth/setup") || p.StartsWith("/api/auth/claim")) return true;
         if (p.StartsWith("/api/auth/tokens")) return !lesen;
         if (p is "/api/media" or "/api/media/fetch" or "/api/media/derive" || p.StartsWith("/api/media/blob/") || p.StartsWith("/api/media/probe")) return !lesen;
         if (p.StartsWith("/api/media/presets")) return !lesen;
@@ -72,15 +75,11 @@ public static class Demo
     public static bool StapelGesperrt(IReadOnlyCollection<string> befehle) =>
         befehle.Count > MaxStapel || befehle.Any(b => b is "node.retire" or "media.retire");
 
-    /// <summary>Wer ohne Sitzung und ohne Token fragt: in der Demo der Anwender <see cref="Anwender"/>, solange es ihn gibt.</summary>
-    public static (string User, string Role)? Besucher(Catalog c) =>
-        c.Lesen((_, _) => c.Users.All.GetValueOrDefault(Anwender)) is { Enabled: true } u ? (u.Key, u.Role) : null;
-
     /// <summary>
     /// Beim Start, nach den Plugins: der Beispielkatalog (nur in ein leeres Journal) mit Bildern, wenn ein Medienspeicher da ist; die Plugins
     /// aus <see cref="OhnePlugins"/> aus; dann Rolle und Anwender. Liefert die Zahl der geschriebenen Einträge und der neuen Bilder.
     /// </summary>
-    public static (int Eintraege, int Bilder) Einrichten(Catalog c, IMediaStore? store = null, string? pluginDir = null)
+    public static (int Eintraege, int Bilder) Einrichten(Catalog c, IMediaStore? store = null, string? pluginDir = null, string? dataDir = null)
     {
         var n = 0; var bilder = 0;
         if (pluginDir is not null) n += PluginsEinschalten(c, pluginDir);
@@ -92,6 +91,7 @@ public static class Demo
             if (store is not null) (n, bilder) = (n + Bilder(c, store, wuensche, out var neu), neu);
         }
         n += Etim(c);
+        if (pluginDir is not null) n += Systemobjekte(c, pluginDir);
         foreach (var key in OhnePlugins)
             if (c.Lesen((_, _) => c.Plugins.All.GetValueOrDefault(key)) is { Enabled: true })
                 n += c.With((_, _, write) => { write(Anwender, Plugins.Stream + key, Types.PluginDisabled, new PluginDisabled(), null); return 1; });
@@ -102,6 +102,7 @@ public static class Demo
         var anwender = c.Lesen((_, _) => c.Users.All.GetValueOrDefault(Anwender));
         if (anwender is null || anwender.Role != Rolle || !anwender.Enabled || anwender.Team != team)
             n += c.With((_, _, write) => { write(Anwender, Auth.Stream + Anwender, Types.UserDefined, new UserDefined("Demo", null, Rolle, true, team), null); return 1; });
+        if (dataDir is not null) Auth.PasswortSetzen(dataDir, Anwender, Passwort);   // Anmeldung mit demo / demo (Tresor, nicht im Journal)
         // zuletzt: das Kontingent — ab hier wird gezählt
         if (c.Lesen((_, _) => c.Teams.Get(Model.InitTeam)) is { } t && (t.EntriesWeek != Kontingent || t.EntriesMonth != Kontingent))
             n += c.With((_, _, write) => { write(Anwender, Teams.Stream + t.Key, Types.TeamDefined, new TeamDefined(t.Label, t.Note, t.MonthlyTokens, t.DailyTokens, t.Enabled, t.KeysFrom, t.IncludedTokens, t.Managers, t.Models, Kontingent, Kontingent), null); return 1; });
@@ -357,6 +358,123 @@ public static class Demo
         }, new ClassificationApi.AssignBody(gruppe, EtimKlasse, system, [new ClassificationApi.ClassSpec(EtimKlasse, En("LED-lamp/Multi-LED"), "Lamps")], merkmale), true));
         if (antwort.Error is { } fehler) throw new InvalidOperationException("Demo: ETIM — " + string.Format(fehler, antwort.Args ?? []));
         return n + zaehler;
+    }
+
+    /// <summary>Das Skript, das die Systemobjekte der Plugins nennt — neben dem Server (im Image unter /app).</summary>
+    public static string SystemSkript => Path.Combine(AppContext.BaseDirectory, "demo-system.mjs");
+    private static readonly System.Text.Json.JsonSerializerOptions Web = new(System.Text.Json.JsonSerializerDefaults.Web);
+
+    /// <summary>
+    /// Die Systemobjekte der eingeschalteten Plugins (07.10.2026): was die Oberfläche beim Einschalten anlegt — Attributgruppe, Attribute, Einheiten, die
+    /// Zuordnung des Plugins, die Anmeldung als Systemobjekte und die Gruppe an den Wurzeln —, legt in der Demo der Server an. Der Anwender demo darf das
+    /// Modell nicht ändern, und jeder Besucher bekäme sonst die Rückfragen; die Oberfläche richtet in der Demo darum keine Plugins ein. Die Angaben
+    /// kommen aus den Plugins selbst (<see cref="SystemSkript"/>). Was es schon gibt, bleibt.
+    /// </summary>
+    public static int Systemobjekte(Catalog c, string pluginDir)
+    {
+        using var doc = System.Text.Json.JsonDocument.Parse(SystemJson(pluginDir));
+        var n = 0;
+        foreach (var p in doc.RootElement.EnumerateArray())
+        {
+            var key = p.GetProperty("plugin").GetString()!;
+            if (c.Lesen((_, _) => c.Plugins.All.GetValueOrDefault(key)) is not { Enabled: true } plugin) continue;
+            string gruppe; var attribute = new List<string>();
+            if (p.TryGetProperty("ensure", out var ens))
+            {
+                // ein Klassifikationssystem (gpc): Gruppe und Klassenattribut wie /api/classification/ensure, angemeldet über das System
+                var spec = ens.Deserialize<ClassificationApi.SystemSpec>(Web)!;
+                var a = c.With((model, tree, write) => ClassificationApi.Ensure(Kontext(c, model, tree, write, () => n++), new ClassificationApi.EnsureBody(spec), true));
+                if (a.Error is { } f) throw new InvalidOperationException($"Demo: {key} — " + string.Format(f, a.Args ?? []));
+                gruppe = a.Ok is ClassificationApi.Ensured e ? e.Group : spec.Group;
+            }
+            else
+            {
+                gruppe = p.GetProperty("group").GetProperty("key").GetString()!;
+                var gLabel = p.GetProperty("group").GetProperty("label").Deserialize<Labels>(Web) ?? new();
+                n += c.With((model, _, write) =>
+                {
+                    var z = 0;
+                    var einheiten = new Dictionary<string, string>();   // Symbol → Schlüssel: vorhandene nehmen, sonst anlegen (wie ensureUnit)
+                    foreach (var u in p.GetProperty("units").EnumerateArray())
+                    {
+                        var sym = u.GetProperty("symbol").GetString()!;
+                        if (einheiten.ContainsKey(sym)) continue;
+                        var da = model.Units.Values.FirstOrDefault(x => x.Key == sym || x.Key == sym.ToLowerInvariant() || x.Label.Values.Contains(sym));
+                        var ukey = da?.Key ?? u.GetProperty("key").GetString()!;
+                        if (da is null && !model.Units.ContainsKey(ukey))
+                        {
+                            write(Anwender, Model.UnitStream + ukey, Types.UnitDefined, new UnitDefinition(ukey, u.GetProperty("label").Deserialize<Labels>(Web) ?? Labels.Of(sym, sym),
+                                u.GetProperty("quantity").GetString()!, u.GetProperty("factor").GetDecimal(), u.GetProperty("offset").GetDecimal()), null);
+                            z++;
+                        }
+                        einheiten[sym] = ukey;
+                    }
+                    if (!model.Groups.ContainsKey(gruppe)) { write(Anwender, Model.GroupStream + gruppe, Types.AttributeGroupDefined, new AttributeGroupDefinition(gruppe, gLabel), null); z++; }
+                    foreach (var aj in p.GetProperty("attributes").EnumerateArray())
+                    {
+                        var def = aj.Deserialize<AttributeDefinition>(Web)!;
+                        attribute.Add(def.Key);
+                        if (model.Attributes.ContainsKey(def.Key)) continue;
+                        // wie PUT /api/model/attributes: was zum Typ nicht passt, fällt weg
+                        var zahl = def.Type is AttributeTypes.Integer or AttributeTypes.Decimal;
+                        def = def with
+                        {
+                            Unit = zahl && def.Unit is { } sym ? einheiten.GetValueOrDefault(sym, sym) : null,
+                            List = def.Type == AttributeTypes.Enum ? def.List : null,
+                            Axes = def.Type == AttributeTypes.Formula ? def.Axes?.Where(x => x == Axes.Locale).ToArray() is { Length: > 0 } l ? l : null : def.Axes is { Length: > 0 } ax ? ax : null,
+                            Required = def.Required is { Count: > 0 } r ? r : null,
+                        };
+                        write(Anwender, Model.AttributeStream + def.Key, Types.AttributeDefined, def, null);
+                        z++;
+                    }
+                    return z;
+                });
+                // die Daten des Plugins (Zuordnung, Zielattribute), wie es sie beim Einschalten schreibt
+                if (p.TryGetProperty("data", out var daten))
+                    foreach (var d in daten.EnumerateObject())
+                        if (!plugin.Data.ContainsKey(d.Name))
+                            n += c.With((_, _, write) => { write(Anwender, Plugins.Stream + key, Types.PluginDataSet, new PluginDataSet(d.Name, d.Value.GetRawText()), null); return 1; });
+                var antwort = c.With((model, tree, write) => ClassificationApi.RegisterObjects(Kontext(c, model, tree, write, () => n++), key, new ClassificationApi.SystemBody([gruppe], attribute.ToArray())));
+                if (antwort.Error is { } fehler) throw new InvalidOperationException($"Demo: {key} — " + string.Format(fehler, antwort.Args ?? []));
+            }
+            if (p.TryGetProperty("attach", out var an) && an.ValueKind == System.Text.Json.JsonValueKind.True) n += AnDieWurzeln(c, gruppe);
+        }
+        // ETIM: die Gruppe des Klassifikationssystems an die Wurzeln, wie install() des Plugins
+        if (c.Lesen((m, _) => m.Groups.ContainsKey("class_etim")) && c.Lesen((_, _) => c.Plugins.All.GetValueOrDefault("etim")) is { Enabled: true }) n += AnDieWurzeln(c, "class_etim");
+        return n;
+    }
+
+    /// <summary>Die Gruppe an jede Wurzel des Baums (ohne Rubriken), die sie noch nicht hat.</summary>
+    private static int AnDieWurzeln(Catalog c, string gruppe)
+    {
+        var z = 0;
+        var antwort = c.With((model, tree, write) =>
+        {
+            var ctx = Kontext(c, model, tree, write, () => z++);
+            foreach (var w in tree.Nodes.Values.Where(x => x.Parent is null && x.Role != Roles.Rubric && !x.Groups.Contains(gruppe)).Select(x => (x.Id, x.Groups)).ToList())
+                if (Commands.AttachGroups(ctx, w.Id, [.. w.Groups, gruppe]).Error is { } e) return e;
+            return null;
+        });
+        if (antwort is { } fehler) throw new InvalidOperationException("Demo: Gruppe an die Wurzeln — " + fehler);
+        return z;
+    }
+
+    private static Ctx Kontext(Catalog c, ModelCatalog model, Tree tree, Catalog.Writer write, Action gezaehlt) => new()
+    {
+        Model = model, Tree = tree, Relations = c.Relations, Media = c.Media, Workflows = c.Workflows, Translations = c.Translations, Plugins = c.Plugins,
+        Write = (stream, type, payload) => { gezaehlt(); return write(Anwender, stream, type, payload, null); },
+    };
+
+    /// <summary>Die Ausgabe von <see cref="SystemSkript"/>: node mit dem Verzeichnis der Plugins.</summary>
+    private static string SystemJson(string pluginDir)
+    {
+        var psi = new System.Diagnostics.ProcessStartInfo("node") { RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false };
+        psi.ArgumentList.Add(SystemSkript); psi.ArgumentList.Add(pluginDir);
+        using var proc = System.Diagnostics.Process.Start(psi) ?? throw new InvalidOperationException("Demo: node startet nicht.");
+        var aus = proc.StandardOutput.ReadToEndAsync(); var err = proc.StandardError.ReadToEndAsync();
+        if (!proc.WaitForExit(30_000)) { proc.Kill(true); throw new InvalidOperationException("Demo: demo-system.mjs antwortet nicht."); }
+        if (proc.ExitCode != 0) throw new InvalidOperationException("Demo: demo-system.mjs — " + err.Result.Trim());
+        return aus.Result;
     }
 
     /// <summary>EAN-13 aus zwölf Ziffern: die Prüfziffer dazu.</summary>

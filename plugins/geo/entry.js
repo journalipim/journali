@@ -279,6 +279,8 @@ async function install(ctx) {
 }
 
 export { reifeVon }
+/// Die Systemobjekte als Daten — der Server der Demo legt sie damit an (Journali.Server/demo-system.mjs)
+export const SYSTEM = { group: GROUP, label: GROUP_LABEL, attributes: ATTRIBUTES, targets: DEFAULT_TARGETS }
 
 export default {
   install,

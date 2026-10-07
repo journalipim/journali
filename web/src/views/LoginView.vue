@@ -52,6 +52,7 @@ async function go() {
         <p class="muted" style="font-size:12px;margin:0 0 10px" :title="$t('Die Anwender stehen im Journal, ihre Passwörter nicht. Weitere Passwörter setzt danach ein Administrator unter ◈ IAM.')">{{ $t("Kein Administrator hat ein Passwort") }}</p>
       </template>
       <h2 v-else>{{ $t("Anmelden") }}</h2>
+      <p v-if="store.demo && !store.auth.setup && !store.auth.claim" class="demo-zugang" style="font-size:13px;margin:0 0 6px" :title="$t('Die Demo wird täglich zurückgesetzt.')">{{ $t("Demo: Anmeldename demo, Passwort demo.") }}</p>
       <label v-if="store.auth.claim">{{ $t("Administrator") }}<select v-model="user" style="display:block;width:100%;margin-top:3px"><option v-for="k in store.auth.claim" :key="k" :value="k">{{ k }}</option></select></label>
       <label v-else>{{ $t("Anmeldename") }}<input v-model="user" type="text" autocomplete="username" autofocus placeholder="a-z, 0-9, ., _, -" /></label>
       <label v-if="store.auth.setup">{{ $t("Anzeigename") }}<input v-model="name" type="text" autocomplete="name" :placeholder="$t('steht als Urheber im Journal')" /></label>

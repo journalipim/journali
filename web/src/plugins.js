@@ -160,6 +160,7 @@ export const plugins = reactive({
   installedSet() { try { return new Set(JSON.parse(localStorage.getItem(this.installedKey()) || '[]')) } catch { return new Set() } },
   /// install(ctx) je Plugin genau einmal — beim ersten Einschalten; Fehler melden, aber nichts blockieren
   async installNew() {
+    if (store.demo) return   // Demo: die Systemobjekte legt der Server beim Einrichten an (Demo.Systemobjekte) — der Anwender demo darf das Modell nicht ändern
     const done = this.installedSet()
     for (const p of this.list) {
       if (!this.active(p.key) || done.has(p.key)) continue
