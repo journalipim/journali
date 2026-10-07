@@ -57,6 +57,9 @@ nicht angenommen und automatisch geschlossen ([CONTRIBUTING.md](CONTRIBUTING.md)
 Eine Schwachstelle meldet man vertraulich ([SECURITY.md](SECURITY.md)); schwere bekannte Fehler stehen in
 [BEKANNTE-FEHLER.md](BEKANNTE-FEHLER.md).
 
+„journali PIM“ ist eine beim Deutschen Patent- und Markenamt angemeldete Marke. Die Lizenz räumt keine Rechte an ihr ein: Eine
+geänderte oder abgeleitete Software darf nicht unter diesem Namen verbreitet oder angeboten werden.
+
 ## Aufbau
 
 | Projekt | Zweck |
