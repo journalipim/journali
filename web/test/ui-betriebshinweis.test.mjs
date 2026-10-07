@@ -6,7 +6,7 @@ import './ui.mjs'
 import { api } from '../src/api.js'
 import { store } from '../src/store.js'
 import { dialog } from '../src/dialog.js'
-import { frageNachBetriebshinweis, _wiederFragen } from '../src/betriebshinweis.js'
+import { frageNachBetriebshinweis, zeigeTesthinweis, _wiederFragen } from '../src/betriebshinweis.js'
 
 const HINWEIS = { version: '2026-10-05', title: { de: 'Hinweise zum Betrieb' }, points: [{ de: 'Sicherung liegt beim Betreiber.' }, { de: 'Für Unternehmen.' }] }
 
@@ -38,4 +38,23 @@ test('„später“ schickt nichts', async () => {
 test('schon bestätigt oder ohne Recht users: keine Frage', async () => {
   assert.equal((await frage({ bestaetigt: '2026-10-05' })).gefragt.length, 0)
   assert.equal((await frage({ rechte: ['read'] })).gefragt.length, 0)
+})
+// Testversion (07.10.2026): das rote Feld oben zeigt den Hinweis des Servers — ohne Anmeldung, ohne Recht
+test('Testversion: ein Klick zeigt den Hinweis des Servers als Punkte', async () => {
+  store.auth.known = true; store.auth.enabled = true; store.auth.user = null; store.auth.rights = []
+  const geholt = [], gezeigt = []
+  const get = api.get, help = dialog.help
+  api.get = async p => { geholt.push(p); return { test: true, title: { de: 'Testversion' }, points: [{ de: 'Nur zum Testen.' }, { de: 'Ohne Haftung.' }] } }
+  dialog.help = async o => { gezeigt.push(o) }
+  try { assert.equal(await zeigeTesthinweis(), true) }
+  finally { api.get = get; dialog.help = help }
+  assert.deepEqual(geholt, ['/api/testversion'])
+  assert.equal(gezeigt[0].title, 'Testversion')
+  assert.deepEqual(gezeigt[0].rows, [['•', 'Nur zum Testen.'], ['•', 'Ohne Haftung.']])
+})
+
+test('Testversion: das Feld steht in der Statusleiste und ruft den Hinweis', async () => {
+  const fs = await import('node:fs')
+  const app = fs.readFileSync(new URL('../src/App.vue', import.meta.url), 'utf8')
+  assert.match(app, /<button v-if="store\.testversion" class="testversion"[^>]*@click="zeigeTesthinweis">\{\{ \$t\("Testversion"\) \}\}<\/button>/)
 })

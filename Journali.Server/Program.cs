@@ -382,7 +382,7 @@ api.MapGet("/health", (HttpRequest req, Catalog c) =>
     DatenbankPruefen();   // wirft bei unerreichbarer Datenbank; die Wache oben macht daraus 503
     var wer = req.HttpContext.Items["user"] as string;
     if (string.IsNullOrEmpty(wer) && Auth.Enabled(c)) wer = Auth.Resolve(req.HttpContext, c, dataDir)?.User;
-    if (Auth.Enabled(c) && string.IsNullOrEmpty(wer)) return Results.Ok(new { ok = true, abgemeldet = true, built = gebautAm, version = laufendeVersion, startphase = Journali.Core.Licensing.Startphase.An ? true : (bool?)null, gesperrt = verbund.Gesperrt ? true : (bool?)null, ohneLizenz = verbund.OhneLizenz ? true : (bool?)null });
+    if (Auth.Enabled(c) && string.IsNullOrEmpty(wer)) return Results.Ok(new { ok = true, abgemeldet = true, built = gebautAm, version = laufendeVersion, startphase = Journali.Core.Licensing.Startphase.An ? true : (bool?)null, testversion = BetriebshinweisApi.Testversion ? true : (bool?)null, gesperrt = verbund.Gesperrt ? true : (bool?)null, ohneLizenz = verbund.OhneLizenz ? true : (bool?)null });
     return Results.Ok(new
 {
     head = c.Head,
@@ -394,6 +394,7 @@ api.MapGet("/health", (HttpRequest req, Catalog c) =>
     // Administrator: er führt vielleicht viele Teams, gehört aber genau einem an.
     usage = Journali.Core.Licensing.Startphase.An ? null : Nutzung(req, c),   // Startphase: nichts zu journali-Token
     startphase = Journali.Core.Licensing.Startphase.An ? true : (bool?)null,    // die Oberfläche blendet Lizenz, Limits und Token aus
+    testversion = BetriebshinweisApi.Testversion ? true : (bool?)null,    // oben das rote Feld „Testversion“
     built = gebautAm,      // Stand der LAUFENDEN Version — einmal beim Start gelesen
     version = laufendeVersion,     // die Version, die läuft — steht oben in der Leiste
     // der Tarif dieser Instanz: die Oberfläche richtet sich danach, was sie überhaupt anbietet

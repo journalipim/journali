@@ -28,5 +28,13 @@ export async function frageNachBetriebshinweis() {
   return true
 }
 
+/// Testversion (07.10.2026): der Hinweis hinter dem roten Feld oben — vom Server, auch ohne Anmeldung.
+export async function zeigeTesthinweis() {
+  let n
+  try { n = await api.get('/api/testversion') } catch (e) { store.toast(e.message); return false }
+  await dialog.help({ title: L(n.title), rows: (n.points ?? []).map(p => ['•', L(p)]) })
+  return true
+}
+
 /// Nur für den Prüfstand: die Frage steht wieder offen.
 export function _wiederFragen() { gefragt = false }

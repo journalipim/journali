@@ -49,6 +49,8 @@ COPY --from=web /Journali.Server/wwwroot Journali.Server/wwwroot
 RUN dotnet publish Journali.Server/Journali.Server.csproj -c Release -o /app --no-restore -p:DebugType=none -p:DebugSymbols=false
 
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
+# Testversion (07.10.2026): steht auch am Image
+LABEL org.opencontainers.image.description="journali PIM - test version for testing and evaluation only, not suitable for production use."
 WORKDIR /app
 # node für Prozess-Plugins (Jobs: backup, json, export, datasheet) — nur die Binärdatei, kein npm
 COPY --from=node:22-bookworm-slim /usr/local/bin/node /usr/local/bin/node

@@ -283,7 +283,7 @@ public static class Auth
 
     /// <summary>Die Aufrufe unter /api, die ohne Sitzung zu haben sind: die Gesundheit (Version und Bau) und alles zum Anmelden. Die Sperre und die Beschreibung der
     /// Schnittstelle lesen dieselbe Liste.</summary>
-    public static bool ApiOhneSitzung(string path) => new[] { "/api/health", "/api/auth/login", "/api/auth/setup", "/api/auth/claim", "/api/auth/state" }
+    public static bool ApiOhneSitzung(string path) => new[] { "/api/health", "/api/testversion", "/api/auth/login", "/api/auth/setup", "/api/auth/claim", "/api/auth/state" }
         .Any(vorn => path.StartsWith(vorn, StringComparison.OrdinalIgnoreCase));
 
     /// <summary>Die Office-Add-ins (Excel, OnlyOffice) lädt das Office-Programm ohne Sitzung von diesem Server: ihre Dateien bleiben offen.</summary>

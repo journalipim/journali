@@ -5,6 +5,18 @@ eine Ableitung.
 
 *(PIM, MDM, Datenstore je Kanal)*
 
+## Testversion
+
+**Diese Software befindet sich in der Entwicklung (Alpha/Beta) und wird ausschließlich zu Test- und Evaluationszwecken bereitgestellt. Sie ist ausdrücklich nicht für den Produktiveinsatz oder kritische Systemumgebungen geeignet.**
+
+Die Bereitstellung ist unentgeltlich (Schenkung nach deutschem Recht); die Haftung des Entwicklers ist nach § 521 BGB auf Vorsatz und grobe Fahrlässigkeit beschränkt. Die Haftung für einfache Fehler, Datenverlust, Systemausfälle oder entgangenen Gewinn ist vollständig ausgeschlossen. Die Nutzung erfolgt auf eigene Gefahr.
+
+**This software is under development (alpha/beta) and is provided solely for testing and evaluation purposes. It is expressly not suitable for production use or critical system environments.**
+
+This software is provided "as is" and without warranties of any kind, express or implied. In no event shall the authors or copyright holders be liable for any claim, damages, or other liability, whether in an action of contract, tort, or otherwise, arising from, out of, or in connection with the software or the use or other dealings in the software.
+
+Die Beschreibungen auf [journali.de](https://journali.de) beziehen sich auf das produktive Release.
+
 ## Idee
 
 Ein PIM ist nicht schwer wegen Bäumen und Attributen, sondern wegen der

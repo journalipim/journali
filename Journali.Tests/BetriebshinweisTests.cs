@@ -41,4 +41,29 @@ public class BetriebshinweisTests
         Assert.True((await http.PostAsync(url + "/api/notice/acknowledge?version=" + BetriebshinweisApi.Version, null)).IsSuccessStatusCode);
         Assert.Single(journal.ReadStream(BetriebshinweisApi.Stream));   // ein zweites Mal schreibt nichts
     }
+
+    /// <summary>Testversion (07.10.2026): der Hinweis ist ohne Sitzung zu haben und steht vorn in den Hinweisen zum Betrieb; bestätigen bleibt beim Recht users.</summary>
+    [Fact]
+    public async Task Testhinweis_ohne_Sitzung_und_vorn_in_den_Hinweisen()
+    {
+        Assert.True(Auth.ApiOhneSitzung("/api/testversion"));
+        Assert.False(Auth.ApiOhneSitzung("/api/notice"));
+        Assert.False(Auth.ApiOhneSitzung("/api/notice/acknowledge"));
+        if (BetriebshinweisApi.Testversion)
+        {
+            Assert.Same(BetriebshinweisApi.Testhinweis[0], BetriebshinweisApi.Punkte[0]);
+            Assert.Contains("nicht für den Produktiveinsatz", BetriebshinweisApi.Text);
+        }
+
+        var journal = new MemoryJournal();
+        var c = new Catalog(journal); c.Rebuild(); c.SeedMissing();
+        var b = WebApplication.CreateBuilder(); b.WebHost.UseUrls("http://127.0.0.1:0"); b.Services.AddSingleton(c); b.Services.AddSingleton<IJournal>(journal);
+        await using var app = b.Build();
+        BetriebshinweisApi.Map(app.MapGroup("/api"));
+        await app.StartAsync();
+        using var http = new HttpClient();
+        var json = await http.GetStringAsync(app.Urls.First() + "/api/testversion");
+        Assert.Contains("\"title\":{\"de\":\"Testversion\"", json);
+        Assert.Contains("Evaluationszwecken", json);
+    }
 }

@@ -6,7 +6,7 @@ import Dialog from './components/Dialog.vue'
 import { useRoute, useRouter } from 'vue-router'
 import { plugins } from './plugins.js'
 import { frageNachRegistrierung } from './registrierung.js'
-import { frageNachBetriebshinweis } from './betriebshinweis.js'
+import { frageNachBetriebshinweis, zeigeTesthinweis } from './betriebshinweis.js'
 import { TOPICS, entries, baseTopics, topicOfPath } from './topics.js'
 import { ai } from './ai.js'
 import { menu } from './menu.js'
@@ -139,6 +139,8 @@ function railDrop(target) {
       <!-- Version und Bau statt eines zweiten Lämpchens — das in der Leiste links sagt dasselbe -->
       <span v-if="store.online" class="mono muted" :title="`journali ${store.version ?? ''} · gebaut ${store.builtAt}`">{{ store.version }}<span v-if="store.build"> ·{{ store.build }}</span></span>
       <span v-else class="dot" :class="{ offline: store.online === false }">●</span>
+      <!-- Testversion (07.10.2026): alles, was derzeit herausgegeben wird; ein Klick zeigt den Hinweis -->
+      <button v-if="store.testversion" class="testversion" :title="$t('Nur für Test und Evaluation, nicht für den Produktiveinsatz.')" @click="zeigeTesthinweis">{{ $t("Testversion") }}</button>
       <template v-if="!abgemeldet">
       <span class="mono">#{{ store.head }}</span>
       <span class="sep">·</span>
