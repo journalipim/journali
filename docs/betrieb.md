@@ -505,9 +505,11 @@ dass eine Wiederherstellung gelingt. Die Oberfläche sagt das in ⇅ B&R und im 
 
 ## Sicherheit (07.10.2026)
 
-- **Hinter einem Proxy** (NPMplus, nginx …): `JOURNALI_PROXY=1` setzen, wenn der Server nur über den Proxy erreichbar ist (Port an
-  `127.0.0.1`). Dann liest journali Absender und Schema aus `X-Forwarded-For`/`-Proto`: Bremse und Begrenzung gelten je Besucher, und das
-  Sitzungs-Cookie trägt `Secure`. Ohne die Variable sieht journali nur den Proxy.
+- **Hinter einem Proxy, über den der Server aus dem Internet erreichbar ist** (NPMplus, nginx …): `JOURNALI_PROXY=1` setzen — und nur,
+  wenn der Port von journali allein am Proxy hängt (an `127.0.0.1`). Dann liest journali Absender und Schema aus `X-Forwarded-For`/`-Proto`:
+  Bremse und Begrenzung gelten je Besucher, und das Sitzungs-Cookie trägt `Secure`. Ohne die Variable sieht journali nur den Proxy.
+  Im eigenen Netz ohne Proxy nicht setzen: journali sieht die Rechner dort ohnehin, und mit der Variable könnte sich jeder Rechner im Netz
+  über `X-Forwarded-For` eine andere Adresse geben.
 - **HTML-Werte** mit Skript, Ereignisattributen (`on…`), `javascript:`-Adressen, Rahmen oder Objekten weist der Server beim Speichern ab
   (`HtmlPruefung.cs`); die Oberfläche setzt HTML nur bereinigt ein (`web/src/html-sicher.js`, im Datenblatt `plugins/datasheet/sicher.js`).
 - **Den Prozess eines Plugins** (`/api/plugins/{key}/run`) startet nur, wer das Recht `jobs` hat.
