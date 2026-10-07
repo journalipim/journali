@@ -1,4 +1,5 @@
 <script setup>
+import { RECHTLICHES } from '../help.js'   // Impressum und Datenschutz — in der Demo unter dem Zugang
 // Anmeldung. Gibt es noch keinen Benutzer, wird hier der erste Administrator angelegt —
 // danach ist der Server gesperrt und der Urheber jedes Eintrags kommt aus der Sitzung.
 // Stehen im Journal Administratoren, von denen keiner ein Passwort hat (Datenbank von einem anderen Server), legt man hier
@@ -53,6 +54,7 @@ async function go() {
       </template>
       <h2 v-else>{{ $t("Anmelden") }}</h2>
       <p v-if="store.demo && !store.auth.setup && !store.auth.claim" class="demo-zugang" style="font-size:13px;margin:0 0 6px" :title="$t('Die Demo wird täglich zurückgesetzt.')">{{ $t("Demo: Anmeldename demo, Passwort demo.") }}</p>
+      <p v-if="store.demo" class="rechtliches muted" style="font-size:12px;margin:0 0 6px"><a v-for="l in RECHTLICHES" :key="l.url" :href="l.url" target="_blank" rel="noopener" style="margin-right:12px">{{ l.label }}</a></p>
       <label v-if="store.auth.claim">{{ $t("Administrator") }}<select v-model="user" style="display:block;width:100%;margin-top:3px"><option v-for="k in store.auth.claim" :key="k" :value="k">{{ k }}</option></select></label>
       <label v-else>{{ $t("Anmeldename") }}<input v-model="user" type="text" autocomplete="username" autofocus placeholder="a-z, 0-9, ., _, -" /></label>
       <label v-if="store.auth.setup">{{ $t("Anzeigename") }}<input v-model="name" type="text" autocomplete="name" :placeholder="$t('steht als Urheber im Journal')" /></label>

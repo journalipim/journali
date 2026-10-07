@@ -318,7 +318,11 @@ public class DemoAnmeldungTests
         {
             using var http = new HttpClient();
             Assert.Equal(System.Net.HttpStatusCode.Unauthorized, (await http.PostAsJsonAsync(url + "/api/auth/login", new { user = "admin", password = "geheim-123456" })).StatusCode);
-            Assert.True((await http.PostAsJsonAsync(url + "/api/auth/login", new { user = "demo", password = "demo" })).IsSuccessStatusCode);
+            var demo = await http.PostAsJsonAsync(url + "/api/auth/login", new { user = "demo", password = "demo" });
+            Assert.True(demo.IsSuccessStatusCode);
+            // das Sitzungscookie gilt in der Demo einen Tag, nicht 30 (07.10.2026)
+            var ablauf = DateTimeOffset.Parse(System.Text.RegularExpressions.Regex.Match(demo.Headers.GetValues("Set-Cookie").First(), "expires=([^;]+)").Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture);
+            Assert.InRange(ablauf, DateTimeOffset.UtcNow.AddHours(23), DateTimeOffset.UtcNow.AddHours(25));
             var req = new HttpRequestMessage(HttpMethod.Get, url + "/api/auth/state"); req.Headers.Add("Cookie", cookie);
             Assert.Contains("\"user\":null", await (await new HttpClient().SendAsync(req)).Content.ReadAsStringAsync());   // die Sitzung des Administrators gilt nicht
         }

@@ -71,3 +71,15 @@ test('Demo: die Anmeldeseite nennt Anmeldename und Passwort', async () => {
   assert.equal(w.find('.demo-zugang').exists(), false)
   w.unmount()
 })
+
+// Demo (07.10.2026): unter dem Zugang stehen Impressum und Datenschutz — auf journali.de
+test('Demo: die Anmeldeseite verlinkt Impressum und Datenschutz', async () => {
+  server({ body: {} })
+  store.demo = true
+  try {
+    const w = await seite()
+    const links = w.findAll('.rechtliches a').map(a => [a.text(), a.attributes('href')])
+    assert.deepEqual(links, [['Impressum', 'https://journali.de/impressum/'], ['Datenschutz', 'https://journali.de/datenschutz/']])
+    w.unmount()
+  } finally { store.demo = false }
+})

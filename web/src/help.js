@@ -18,6 +18,11 @@ export const HELP_LINKS = [
   { label: 'Discussions', icon: '💬', url: 'https://github.com/journalipim/journali/discussions', hint: 'Fragen und Austausch' },
   { label: 'Issues', icon: '🐞', url: 'https://github.com/journalipim/journali/issues', hint: 'Fehler melden, Wünsche' },
 ]
+// Impressum und Datenschutz (07.10.2026): im Hilfemenü, im Infofenster der Testversion und auf der Anmeldeseite der Demo
+export const RECHTLICHES = [
+  { get label() { return t('Impressum') }, icon: '§', url: 'https://journali.de/impressum/' },   // Bezeichnung in der Sprache der Oberfläche
+  { get label() { return t('Datenschutz') }, icon: '§', url: 'https://journali.de/datenschutz/' },
+]
 
 /// Welches Kapitel zu welcher Ansicht gehört — der Pfad der Route, längster Treffer zuerst; sonst die Einführung
 const CHAPTERS = [
@@ -43,5 +48,7 @@ export function helpItems(open = url => window.open(url, '_blank', 'noopener'), 
     ...(store.demo ? [] : [{ label: t('{ } Schnittstelle (API)'), icon: '{}', action: () => open('/schnittstelle') }]),
     { sep: true },
     ...HELP_LINKS.map(l => ({ label: l.label, icon: l.icon, title: l.hint, action: () => open(l.url) })),
+    { sep: true },
+    ...RECHTLICHES.map(l => ({ label: l.label, icon: l.icon, action: () => open(l.url) })),
   ]
 }

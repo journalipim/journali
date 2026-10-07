@@ -5,6 +5,7 @@ import { dialog } from './dialog.js'
 import { api } from './api.js'
 import { store } from './store.js'
 import { t as t_, L } from './i18n.js'
+import { RECHTLICHES } from './help.js'
 
 let gefragt = false
 
@@ -32,7 +33,7 @@ export async function frageNachBetriebshinweis() {
 export async function zeigeTesthinweis() {
   let n
   try { n = await api.get('/api/testversion') } catch (e) { store.toast(e.message); return false }
-  await dialog.help({ title: L(n.title), rows: (n.points ?? []).map(p => ['•', L(p)]) })
+  await dialog.help({ title: L(n.title), rows: (n.points ?? []).map(p => ['•', L(p)]), links: RECHTLICHES })
   return true
 }
 

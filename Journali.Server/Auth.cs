@@ -565,7 +565,8 @@ public static class Auth
 
     private static void StartSession(HttpContext ctx, string dir, string user)
     {
-        var cookie = NewSecret(); var until = DateTimeOffset.UtcNow.AddDays(30);
+        // Demo: einen Tag — sie startet ohnehin täglich neu (07.10.2026); sonst 30 Tage
+        var cookie = NewSecret(); var until = DateTimeOffset.UtcNow.AddDays(Demo.An ? 1 : 30);
         With(dir, s => { foreach (var k in s.Sessions.Where(x => x.Value.Until < DateTimeOffset.UtcNow).Select(x => x.Key).ToList()) s.Sessions.Remove(k); s.Sessions[Sha(cookie)] = new SessionRec(user, until); return 0; }, save: true);
         ctx.Response.Cookies.Append(Cookie, cookie, new CookieOptions { HttpOnly = true, SameSite = SameSiteMode.Lax, Secure = ctx.Request.IsHttps, Path = "/", Expires = until });
     }

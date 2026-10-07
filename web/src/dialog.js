@@ -8,7 +8,7 @@ import { t } from './i18n.js'
 export const dialog = reactive({
   open: false,
   kind: 'confirm',        // confirm | prompt
-  title: '', text: '', warn: '', list: [], ok: 'OK', cancel: t('Abbrechen'), danger: false,
+  title: '', text: '', warn: '', list: [], links: [], ok: 'OK', cancel: t('Abbrechen'), danger: false,
   option: null,           // { label, checked } — ein Schalter im Dialog (z. B. „fehlende Gruppen anhängen“); Stand nach dem Dialog in dialog.option.checked
   extra: null,            // { label, type, value } — ein zweites Feld (Status ab Datum); Wert nach dem Dialog in dialog.extra.value
   value: '', placeholder: '',
@@ -21,8 +21,8 @@ export const dialog = reactive({
   // help: Tabelle Taste/Geste → Wirkung, nur ein Schliessen-Knopf (das ? in einer Leiste)
   // lange Fehlermeldung als Fenster: erster Satz als Kopf, die Teile nach „ · “ als Zeilen (store.toast leitet hierher)
   error(text) { const s = String(text); const lines = s.includes('\n') ? s.split('\n') : null; const head = lines ? lines[0] : s.split(' — ')[0]; const parts = lines ? lines.slice(1) : (s.split(' — ').slice(1).join(' — ') || '').split(' · ').filter(Boolean); return this.help({ title: '✗ ' + head, rows: parts.map(p => ['•', p.replace(/^•\s*/, '')]) }) },
-  help({ title, rows = [], text = '' }) {
-    return new Promise(resolve => { Object.assign(this, { open: true, kind: 'help', title, text, warn: '', list: rows, ok: t('Schliessen'), cancel: '', danger: false, option: null, extra: null, _resolve: resolve }) })
+  help({ title, rows = [], text = '', links = [] }) {   // links: [{ label, url }] unter dem Titel (Impressum, Datenschutz)
+    return new Promise(resolve => { Object.assign(this, { open: true, kind: 'help', title, text, warn: '', list: rows, links, ok: t('Schliessen'), cancel: '', danger: false, option: null, extra: null, _resolve: resolve }) })
   },
   // choices: [{ value, label }] → Auswahl statt Eingabe; extra: { label, type, value } → ein zweites Feld darunter
   prompt({ title, text = '', value = '', placeholder = '', ok = 'OK', cancel = t('Abbrechen'), warn = '', danger = false, choices = null, secret = false, extra = null }) {
