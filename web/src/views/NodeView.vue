@@ -165,7 +165,7 @@ function leseBaender() {
   if (JSON.stringify(liste) !== JSON.stringify(bandTabs.value)) bandTabs.value = liste
   if (liste.length && !liste.some(t => t.key === bandTab.value)) bandTab.value = liste[0].key
 }
-const zeigeBand = k => !reiter.value || bandTab.value === k
+const zeigeBand = k => !reiter.value || (open('bereiche') && bandTab.value === k)   // zugeklappt: als Reiter ist keiner da
 function waehleBand(k) { bandTab.value = k; try { localStorage.setItem('journali.bandTab', k) } catch {} }
 function setBandLayout(l) { store.bandLayout = l; store.save(); nextTick(leseBaender) }
 onUpdated(leseBaender)
@@ -1150,12 +1150,16 @@ function cellMenu(e, def, col, block) {
 
       <!-- Bereiche als Liste oder als Reiter (07.10.2026) -->
       <div ref="baender" class="band-leiste" :class="{ reiter }">
-        <template v-if="reiter"><button v-for="t in bandTabs" :key="t.key" class="tabbtn" :class="{ on: t.key === bandTab }" @click="waehleBand(t.key)">{{ t.label }}</button></template>
-        <span class="grow" />
-        <span class="grp" :title="$t('Anordnung der Bereiche')">
-          <button :class="{ primary: !reiter }" @click="setBandLayout('flat')" :title="$t('Bereiche untereinander')">☰</button>
-          <button :class="{ primary: reiter }" @click="setBandLayout('tabs')" :title="$t('Bereiche als Reiter')">⧉</button>
-        </span>
+        <!-- als Reiter ein Balken wie „Attribute“: Name und Zahl, klappt alle Bereiche auf und zu -->
+        <h2 v-if="reiter" class="band" @click="toggle('bereiche')" :title="$t('Assets, Relationen, Workflow, Klassifikationen, Freigaben, Gruppen und Versionen dieses Knotens')"><span class="caret">{{ open('bereiche') ? '▾' : '▸' }}</span>{{ $t("⧉ Bereiche") + ' ' }}<span class="muted">· {{ bandTabs.length }}</span></h2>
+        <div class="zeile">
+          <template v-if="reiter && open('bereiche')"><button v-for="t in bandTabs" :key="t.key" class="tabbtn" :class="{ on: t.key === bandTab }" @click="waehleBand(t.key)">{{ t.label }}</button></template>
+          <span class="grow" />
+          <span class="grp" :title="$t('Anordnung der Bereiche')">
+            <button :class="{ primary: !reiter }" @click="setBandLayout('flat')" :title="$t('Bereiche untereinander')">☰</button>
+            <button :class="{ primary: reiter }" @click="setBandLayout('tabs')" :title="$t('Bereiche als Reiter')">⧉</button>
+          </span>
+        </div>
       </div>
       <div class="section" data-band="media" v-show="zeigeBand('media')" :class="{ over: mediaDrag, 'im-reiter': reiter }" @dragover.prevent="mediaDrag = true" @dragleave="mediaDrag = false" @drop.prevent="uploadMedia([...$event.dataTransfer.files], $event.ctrlKey || $event.metaKey)">
         <h2 @click="toggle('media')" :title="$t('Dateien hierher ziehen legt sie an diesem Knoten ab. Mit Strg wird ein Dokument ausgewertet — ein Rechtsklick auf ein Asset tut dasselbe.')"><span class="caret">{{ open('media') ? '▾' : '▸' }}</span>{{ $t("▩ Assets") + ' ' }}<span class="muted">· {{ mediaRels.length }}<template v-if="inheritedMedia.length">{{ ' ' + $t("· {0} geerbt", [inheritedMedia.length]) }}</template></span></h2>
@@ -1278,7 +1282,7 @@ function cellMenu(e, def, col, block) {
         </template>
       </div>
       <!-- Bänder der Plugins (nodeBands): ETIM-Stand u. a. — beim Gegenstand, nicht im Plugin -->
-      <PluginBands v-if="node.role !== 'rubric'" :id="id" :role="node.role" :reiter="reiter" :aktiv="bandTab" />
+      <PluginBands v-if="node.role !== 'rubric'" :id="id" :role="node.role" :reiter="reiter" :aktiv="open('bereiche') ? bandTab : ''" />
       <div class="section" data-band="releases" v-show="zeigeBand('releases')" :class="{ 'im-reiter': reiter }" v-if="node.role !== 'group' && node.role !== 'rubric'">
         <h2 @click="toggle('releases')" :title="$t('Vollständigkeit aus der Pflicht der aktiven Attribute; unvollständig heisst keine Freigabe.')"><span class="caret">{{ open('releases') ? '▾' : '▸' }}</span>{{ $t("✓ Freigaben") }}</h2>
         <template v-if="open('releases')">
@@ -1378,7 +1382,8 @@ function cellMenu(e, def, col, block) {
 <style scoped>
 .grp { display: inline-flex; align-items: center; gap: 4px; }
 /* Bereiche als Reiter: die Leiste darüber, die Überschrift des Bereichs steht im Reiter */
-.band-leiste { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 2px; padding: 4px 8px 0; border-bottom: 1px solid var(--line); }
+.band-leiste { border-bottom: 1px solid var(--line); }
+.band-leiste .zeile { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 2px; padding: 4px 8px 0; }
 .band-leiste .grp { padding-bottom: 3px; }
 .im-reiter > h2 { display: none; }
 /* Einheit in der Zelle umschalten */

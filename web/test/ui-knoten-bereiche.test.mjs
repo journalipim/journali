@@ -13,7 +13,7 @@ HTMLCanvasElement.prototype.getContext = () => ({ font: '', measureText: s => ({
 const MODELL = { masterLocale: 'de', locales: [{ code: 'de' }], channels: [{ key: 'web' }], statuses: [], lists: [], views: [], families: [], relationTypes: [], groups: [], attributes: [] }
 
 async function knoten(layout) {
-  store.actor = 'u1'; store.model = MODELL; store.bandLayout = layout
+  store.actor = 'u1'; store.model = MODELL; store.bandLayout = layout; store.collapsed = []; localStorage.removeItem('journali.bandTab')
   tree.byId = new Map([['p1', { id: 'p1', role: 'product', label: 'Strahler', parent: null, axes: [] }]])
   tree.rows = [tree.byId.get('p1')]; tree.children = new Map([['', tree.rows]]); tree.loaded = true; tree.load = async () => {}
   globalThis.fetch = async url => {
@@ -55,4 +55,21 @@ test('der Umschalter stellt die Anordnung um und merkt sie', async () => {
   assert.equal(store.bandLayout, 'tabs')
   await liste.trigger('click'); await flushPromises()
   assert.equal(store.bandLayout, 'flat')
+})
+
+test('als Reiter: ein Balken „Bereiche“ mit der Zahl, er klappt alle Bereiche zu und auf', async () => {
+  const w = await knoten('tabs')
+  const balken = w.find('.band-leiste h2.band')
+  assert.ok(balken.exists())
+  assert.match(balken.text(), new RegExp(`Bereiche · ${w.findAll('.band-leiste .tabbtn').length}$`))
+  await balken.trigger('click'); await flushPromises()
+  assert.deepEqual(sichtbar(w), [], 'zugeklappt: kein Bereich')
+  assert.equal(w.findAll('.band-leiste .tabbtn').length, 0, 'und keine Reiter')
+  await w.find('.band-leiste h2.band').trigger('click'); await flushPromises()
+  assert.deepEqual(sichtbar(w), ['media'])
+})
+
+test('als Liste: kein Balken — jeder Bereich hat seine eigene Überschrift', async () => {
+  const w = await knoten('flat')
+  assert.equal(w.find('.band-leiste h2.band').exists(), false)
 })
