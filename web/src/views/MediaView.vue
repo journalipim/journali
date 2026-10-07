@@ -229,6 +229,7 @@ async function annehmen(v) {
   await setValue(current.value, def, [...jetzt, v.key].join(', '))
 }
 async function retire(m) {
+  if (store.demo) return   // Demo: zurückziehen gibt es nicht (auch nicht mit Entf)
   const ids = sel.value.size > 1 && sel.value.has(m.id) ? [...sel.value] : [m.id]
   const used = ids.reduce((n, id) => n + (items.value.find(x => x.id === id)?.used ?? 0), 0)
   if (!await dialog.confirm({ title: ids.length > 1 ? t_('{0} Medien zurückziehen?', [ids.length]) : t_('{0} zurückziehen?', [m.name]), text: used ? t_('Hängen an {0} Knoten', [used]) : '', ok: t_('🗑 Zurückziehen'), danger: true })) return
@@ -273,7 +274,7 @@ function contextMenu(e, m) {
     n === 1 && !m.supersededBy ? { label: t_('Neue Version hochladen …'), icon: '⇪', action: () => neueVersion(m) } : null,
     n === 1 && m.isImage && store.can('download') ? { label: t_('Zuschneiden und ausrichten …'), icon: '✂', action: () => zuschneiden(m) } : null,
     { sep: true },
-    { label: n > 1 ? t_('{0} Assets zurückziehen', [n]) : t_('Zurückziehen'), icon: '🗑', danger: true, action: () => retire(m) },
+    { demo: 'aus', label: n > 1 ? t_('{0} Assets zurückziehen', [n]) : t_('Zurückziehen'), icon: '🗑', danger: true, action: () => retire(m) },
   ])
 }
 
@@ -456,7 +457,7 @@ const oeffnen = m => { if (store.can('download')) window.open(dateiLink(m), '_bl
       <!-- Laden darf, wer das Recht hat — sehen ist nicht haben; ohne Recht fehlt der Weg, nicht nur der Knopf -->
       <a v-if="store.can('download')" :href="dateiLink(current)" target="_blank" class="muted" :title="$t('Datei öffnen')">{{ $t("↗ Datei") }}</a>
       <button v-if="current.isImage && store.can('download')" class="x" @click="zuschneiden(current)" :title="$t('Zuschneiden und ausrichten — das Ergebnis ist ein neues Medium')">✂</button>
-      <button class="x" @click="retire(current)" :title="sel.size > 1 ? $t('{0} gewählte Medien zurückziehen (die Dateien bleiben im Store)', [sel.size]) : $t('Medium zurückziehen (die Datei bleibt im Store)')">🗑</button></div>
+      <button class="x" data-demo="aus" @click="retire(current)" :title="sel.size > 1 ? $t('{0} gewählte Medien zurückziehen (die Dateien bleiben im Store)', [sel.size]) : $t('Medium zurückziehen (die Datei bleibt im Store)')">🗑</button></div>
     <div class="toolbar meta muted"><span>{{ current.mime }}</span><span>· {{ kb(current.bytes) }}</span><span>{{ $t("· ⇄ {0} Knoten", [current.used]) }}</span>
       <span :title="current.folder ? $t('Ordner — zum Verschieben die Kachel auf einen Ordner links ziehen') : $t('in keinem Ordner — Kachel auf einen Ordner links ziehen')">· 📁 {{ current.folder ? pathOf(current.folder).map(f => f.name).join(' › ') : '—' }}</span>
       <span class="grow" /><span>≡ {{ current.entries }} · #{{ current.lastNumber }} · {{ when(current.lastAt) }} · {{ current.lastActor }}</span></div>

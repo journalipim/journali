@@ -404,7 +404,7 @@ api.MapGet("/health", (HttpRequest req, Catalog c) =>
     // Wessen Nutzung: „die beiden kleinen Balken oben sollen dem Anwender anzeigen, was für ein
     // Verbrauchsstand in seinem Team ist“ — das Team der Mitgliedschaft, am Ende der Zahlerkette. Auch beim
     // Administrator: er führt vielleicht viele Teams, gehört aber genau einem an.
-    usage = Journali.Core.Licensing.Startphase.An ? null : Nutzung(req, c),   // Startphase: nichts zu journali-Token
+    usage = Journali.Core.Licensing.Startphase.An && !Demo.An ? null : Nutzung(req, c),   // Demo: die Balken zeigen, was heute noch geht   // Startphase: nichts zu journali-Token
     startphase = Journali.Core.Licensing.Startphase.An ? true : (bool?)null,    // die Oberfläche blendet Lizenz, Limits und Token aus
     testversion = BetriebshinweisApi.Testversion ? true : (bool?)null,    // oben das rote Feld „Testversion“
     demo = Demo.An ? true : (bool?)null,    // Demo: kein eigenes Konto, kein Abmelden

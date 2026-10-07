@@ -103,7 +103,7 @@ defineExpose({ wurzel, tabelle, vorschau, bauen, einspielen })
         <p v-if="vorschau.fehler.length" class="fehler">{{ vorschau.fehler.slice(0, 5).join(' · ') }}</p>
         <template v-else>
           <p>{{ planText(vorschau, $t) }}</p>
-          <button class="primary" @click="einspielen">{{ $t("⇩ Einspielen") }}</button>
+          <button class="primary" data-demo="aus" @click="einspielen">{{ $t("⇩ Einspielen") }}</button>
         </template>
       </td></tr>
     </tbody></table>

@@ -331,6 +331,7 @@ async function restore(id, batch) {
   } catch (e) { store.toast(e.message) }
 }
 async function retire(r) {
+  if (store.demo) return   // Demo: zurückziehen gibt es nicht (auch nicht mit Entf)
   const below = countBelow(r.id)
   const b = tree.below(r.id)
   if (!await ask.confirm({ title: t_('{0} {1} zurückziehen?', [icon(r.role), r.label]), warn: b.total ? t_('Mit allen {0} Knoten darunter: {1}', [b.total, b.summary]) : '', list: b.names, ok: b.total ? t_('🗑 {0} Knoten zurückziehen', [b.total + 1]) : t_('🗑 Zurückziehen'), danger: true })) return
@@ -512,6 +513,7 @@ async function setStatusAll(rows, status) {
   await store.poll(true); await tree.load()
 }
 async function retireAll(rows) {
+  if (store.demo) return
   // nur die obersten der Auswahl: ein Knoten, dessen Vorfahr auch ausgewählt ist, geht mit dem Vorfahren
   const ids = new Set(rows.map(x => x.id))
   const tops = rows.filter(x => !tree.ancestors(x.id).some(a => ids.has(a.id)))
@@ -601,7 +603,7 @@ async function contextMenu(e, r) {
   for (const a of plugins.nodeActions.filter(a => a.multi && typeof a.items === 'function' && (!a.roles || a.roles.includes(r.role)))) {
     for (const it of (a.items(r, below(r), sel) || [])) if (it && it.label) scriptMenu.push({ label: it.label, hint: it.hint, action: () => Promise.resolve(it.run({ ...plugins.ctx(a.key), tree })).catch(e => store.toast(`${a.key}: ${e.message}`)) })
   }
-  const topicMenus = TOPICS.filter(([k]) => byTopic.has(k)).map(([k, label]) => ({ label: label.slice(2), icon: label.slice(0, 1), items: plugins.sorted(byTopic.get(k), k, x => x.label), ...(picked.value.has(r.id) && picked.value.size > 1 ? { disabled: true, hint: t_('nur einzeln') } : {}) }))
+  const topicMenus = TOPICS.filter(([k]) => byTopic.has(k)).map(([k, label]) => ({ ...(k === 'import' ? { demo: 'aus' } : {}), label: label.slice(2), icon: label.slice(0, 1), items: plugins.sorted(byTopic.get(k), k, x => x.label), ...(picked.value.has(r.id) && picked.value.size > 1 ? { disabled: true, hint: t_('nur einzeln') } : {}) }))
   menu.open(e, [
     { label: t_('Umbenennen'), icon: '✎', key: 'u', hint: r.name ? '📌 fixiert' : t_('★ Automatik'), action: () => rename(r), ...only1 },
     // Symbol ist der Pin — bei beiden; der Hinweis rechts sagt, was danach gilt
@@ -615,7 +617,7 @@ async function contextMenu(e, r) {
     (r.role !== 'variant' && kids) ? { sep: true } : null,
     sel ? { label: t_('Duplizieren ({0})', [sel.length]), icon: '⧉', key: 'd', hint: t_('ohne SKU/Freigaben'), disabled: sel.some(x => x.role === 'variant' && Object.keys(x.axisValues).length > 0), action: async () => { for (const x of sel) await duplicate(x, false) } }
         : { label: t_('Duplizieren'), icon: '⧉', key: 'd', hint: t_('ohne SKU/Freigaben'), disabled: r.role === 'variant' && Object.keys(r.axisValues).length > 0, action: () => duplicate(r, false) },
-    !sel && r.role !== 'variant' && kids ? { label: t_('Mit {0} darunter duplizieren', [countBelow(r.id)]), icon: '⧉', key: 't', action: () => duplicate(r, true) } : null,
+    !sel && r.role !== 'variant' && kids ? { demo: 'aus', label: t_('Mit {0} darunter duplizieren', [countBelow(r.id)]), icon: '⧉', key: 't', action: () => duplicate(r, true) } : null,
     { sep: true },
     // Workflow und Status je ein Untermenü (01.10.2026): das Modell kennt beliebig viele Status, sie standen alle einzeln im Menü
     ...(wfItems.length ? [{ label: t_('Workflow') + (sel ? ` (${sel.length})` : ''), icon: '⚑', items: wfItems }] : []),
@@ -634,8 +636,8 @@ async function contextMenu(e, r) {
     ...(topicMenus.length ? [{ sep: true }, ...topicMenus] : []),
     ...(scriptMenu.length ? [{ label: t_('Skripte') + (sel ? ` (${sel.length})` : ''), icon: 'λ', items: scriptMenu }] : []),
     { sep: true },
-    sel ? { label: t_('{0} Ausgewählte zurückziehen{1}', [sel.length, sel.reduce((k, x) => k + countBelow(x.id), 0) ? ' ' + t_('(mit {0} darunter)', [sel.reduce((k, x) => k + countBelow(x.id), 0)]) : '']), icon: '🗑', key: 'Delete', danger: true, action: () => retireAll(sel) }
-        : { label: kids ? t_('Mit {0} darunter zurückziehen', [countBelow(r.id)]) : t_('Zurückziehen'), icon: '🗑', key: 'Delete', danger: true, action: () => retire(r) },
+    sel ? { demo: 'aus', label: t_('{0} Ausgewählte zurückziehen{1}', [sel.length, sel.reduce((k, x) => k + countBelow(x.id), 0) ? ' ' + t_('(mit {0} darunter)', [sel.reduce((k, x) => k + countBelow(x.id), 0)]) : '']), icon: '🗑', key: 'Delete', danger: true, action: () => retireAll(sel) }
+        : { demo: 'aus', label: kids ? t_('Mit {0} darunter zurückziehen', [countBelow(r.id)]) : t_('Zurückziehen'), icon: '🗑', key: 'Delete', danger: true, action: () => retire(r) },
   ])
 }
 function bookmark(r) {

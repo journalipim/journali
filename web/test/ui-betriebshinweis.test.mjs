@@ -88,3 +88,22 @@ test('Demo: Hochladen, Profile, Workflows, Presets, Modell und Plugins tragen da
   }
   for (const [datei, muster] of Object.entries(erwartet)) for (const m of muster) assert.match(lies(datei), m, datei)
 })
+// Demo: Kontextmenüs ohne Zurückziehen, Import und Massenbearbeitung — Einträge mit demo: 'aus' fallen weg, auch in Untermenüs
+test('Demo: das Kontextmenü lässt Einträge mit demo aus weg, leere Untermenüs und Trennlinien am Rand ebenso', async () => {
+  const { menu } = await import('../src/menu.js')
+  const items = [{ label: 'Umbenennen' }, { sep: true }, { label: 'Import', items: [{ label: 'CSV', demo: 'aus' }] }, { label: 'Status', items: [{ label: 'aktiv' }, { label: 'weg', demo: 'aus' }] }, { sep: true }, { label: 'Zurückziehen', demo: 'aus' }]
+  const e = { preventDefault() {}, clientX: 0, clientY: 0 }
+  store.demo = true
+  try {
+    menu.open(e, items)
+    assert.deepEqual(menu.items.map(x => x.sep ? '—' : x.label), ['Umbenennen', '—', 'Status'])
+    assert.deepEqual(menu.items[2].items.map(x => x.label), ['aktiv'])
+  } finally { store.demo = false }
+  menu.open(e, items)
+  assert.equal(menu.items.length, items.length)   // ausserhalb der Demo alles
+  const fs = await import('node:fs')
+  const baum = fs.readFileSync(new URL('../src/views/TreeView.vue', import.meta.url), 'utf8')
+  assert.match(baum, /\{ demo: 'aus', label: kids \? t_\('Mit \{0\} darunter zurückziehen'/)
+  assert.match(baum, /k === 'import' \? \{ demo: 'aus' \}/)
+  assert.match(fs.readFileSync(new URL('../src/views/MediaView.vue', import.meta.url), 'utf8'), /\{ demo: 'aus', label: n > 1 \? t_\('\{0\} Assets zurückziehen'/)
+})

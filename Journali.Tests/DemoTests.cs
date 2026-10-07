@@ -116,6 +116,11 @@ public class DemoTests
     [InlineData("/api/plugins/datasheet/data", "GET", false)]
     [InlineData("/api/plugins/xliff/secrets/abc", "PUT", true)]
     [InlineData("/api/tree", "POST", false)]
+    [InlineData("/api/nodes/import", "POST", true)]
+    [InlineData("/api/nodes/p-1", "DELETE", true)]
+    [InlineData("/api/media/m-1", "DELETE", true)]
+    [InlineData("/api/nodes/p-1/undo", "POST", false)]
+    [InlineData("/api/classification/retire", "POST", true)]
     public void Gesperrt_sind_Konto_Hochladen_Einstellungen_und_Profile(string pfad, string methode, bool gesperrt) =>
         Assert.Equal(gesperrt, Demo.Gesperrt(pfad, methode));
 
@@ -133,9 +138,41 @@ public class DemoTests
         foreach (var k in new[] { "table", "csv", "datasheet", "xliff", "geo", "docs", "dpp", "ppwr", "empco" }) Assert.Contains(k, an);
         foreach (var k in Demo.OhnePlugins.Concat(["embed", "ocr"])) Assert.DoesNotContain(k, an);
         Assert.NotNull(c.Lesen((_, _) => c.Plugins.All["dpp"].Acknowledged));   // der Hinweis gilt als bestätigt
+        // ETIM: an, mit EC001959 an den LED-Lampen; die zugeordneten Attribute stehen in der Gruppe der Klasse, ohne Kopie
+        Assert.Contains("etim", an);
+        Assert.True(c.Lesen((_, _) => c.Plugins.All["etim"].Data.ContainsKey($"class:{Demo.EtimFreigabe}:{Demo.EtimKlasse}")));
+        Assert.True(c.Lesen((m, _) => m.Attributes.ContainsKey("class_etim")));
+        foreach (var attr in new[] { "power", "luminous_flux", "socket", "energy_class" })
+            Assert.Contains(c.Lesen((m, _) => m.GroupsOf(attr).ToList()), g => g.Contains("ec001959"));
+        Assert.False(c.Lesen((m, _) => m.Attributes.ContainsKey("ef011586")));   // zugeordnet, nicht angelegt
         var vorher = c.Head;
         Demo.Einrichten(c, null, dir);
         Assert.Equal(vorher, c.Head);   // der nächste Start schreibt nichts
+    }
+
+    [Fact]
+    public void Stapel_ohne_Massenbearbeitung_und_ohne_Zurueckziehen()
+    {
+        Assert.False(Demo.StapelGesperrt(Enumerable.Repeat("attribute.set", Demo.MaxStapel).ToList()));
+        Assert.True(Demo.StapelGesperrt(Enumerable.Repeat("attribute.set", Demo.MaxStapel + 1).ToList()));
+        Assert.True(Demo.StapelGesperrt(["attribute.set", "node.retire"]));
+        Assert.True(Demo.StapelGesperrt(["media.retire"]));
+        Assert.False(Demo.StapelGesperrt(["product.create", "attribute.set", "relation.retire"]));
+    }
+
+    [Fact]
+    public void Nach_dem_Einrichten_gilt_das_Kontingent_der_Beispielkatalog_zaehlt_nicht()
+    {
+        var c = Neu();   // ohne Startphase (Vorgabe der Tests): das Kontingent wirkt wie in der Demo
+        Demo.Einrichten(c);
+        var team = c.Lesen((_, _) => c.Teams.Get(Model.InitTeam))!;
+        Assert.Equal((Demo.Kontingent, Demo.Kontingent), (team.EntriesWeek, team.EntriesMonth));
+        var variante = c.Lesen((_, t) => t.Nodes.Values.First(x => x.Role == Roles.Variant).Id);
+        Outcome Gewicht(int i) => c.With((model, tree, write) => Commands.SetAttribute(
+            new Ctx { Model = model, Tree = tree, Relations = c.Relations, Media = c.Media, Write = (stream, type, payload) => write(Demo.Anwender, stream, type, payload, null) },
+            variante, "weight", null, null, (1 + i % 2).ToString(), null));
+        for (var i = 0; i < Demo.Kontingent; i++) Assert.Null(Gewicht(i).Error);
+        Assert.Throws<KeinKontingentException>(() => Gewicht(Demo.Kontingent));
     }
 
     [Fact]

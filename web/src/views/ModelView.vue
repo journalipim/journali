@@ -236,8 +236,8 @@ function rowMenu(e, r) {
     { sep: true },
     { label: t('Schlüssel kopieren'), icon: '⧉', key: 'c', action: () => navigator.clipboard?.writeText(keys.join(', ')) },
     // Gruppe mit ihren Attributen
-    section.value === 'groups' && keys.length === 1 && blockFor(keys[0]) ? { label: t('Gruppe mit {0} Attributen zurückziehen', [(model.value?.attributes ?? []).filter(a => inGruppe(a, keys[0])).length]), icon: '✕', hint: t('Werte bleiben im Journal'), danger: true, action: () => removeGroupDeep(keys[0]) } : null,
-    p ? { label: keys.length > 1 ? t('{0} zurückziehen', [keys.length]) : t('Zurückziehen'), icon: '✕', key: 'Delete', disabled: blocked.length > 0, hint: blocked.length ? `${blocked[0][0]}: ${blocked[0][1]}` : '', action: () => keys.length > 1 ? bulkRemove() : removeCur() }
+    section.value === 'groups' && keys.length === 1 && blockFor(keys[0]) ? { demo: 'aus', label: t('Gruppe mit {0} Attributen zurückziehen', [(model.value?.attributes ?? []).filter(a => inGruppe(a, keys[0])).length]), icon: '✕', hint: t('Werte bleiben im Journal'), danger: true, action: () => removeGroupDeep(keys[0]) } : null,
+    p ? { demo: 'aus', label: keys.length > 1 ? t('{0} zurückziehen', [keys.length]) : t('Zurückziehen'), icon: '✕', key: 'Delete', disabled: blocked.length > 0, hint: blocked.length ? `${blocked[0][0]}: ${blocked[0][1]}` : '', action: () => keys.length > 1 ? bulkRemove() : removeCur() }
       : null,
   ])
 }
@@ -618,7 +618,7 @@ const attrLabel = k => L(model.value.attributes.find(a => a.key === k)?.label) |
           <tr><td class="attr" :title="$t('ab welchem Knotentyp Werte erfasst werden; leer = überall. Darüber sichtbar, aber gesperrt.')">{{ $t("🔒 aktiv ab") }}</td><SelectCell :value="curGroup.activeFrom ?? ''" :options="roles" :label-of="k => roleLabel[k]" @save="v => groupSet('activeFrom', v)" /></tr>
         </tbody></table>
         <div class="section">
-          <h2>{{ $t("⊞ Attribute: {0}", [groupAttrs.length]) + ' ' }}<span class="grow" /><button class="x" :disabled="busy" @click="removeGroupDeep()":title="$t('Gruppe und ihre {0} Attribute zurückziehen — Werte bleiben im Journal, ★-Attribute und das Kennungsattribut bleiben', [groupAttrs.length])">{{ $t("✕ Gruppe mit {0} Attributen", [groupAttrs.length]) }}</button></h2>
+          <h2>{{ $t("⊞ Attribute: {0}", [groupAttrs.length]) + ' ' }}<span class="grow" /><button class="x" data-demo="aus" :disabled="busy" @click="removeGroupDeep()":title="$t('Gruppe und ihre {0} Attribute zurückziehen — Werte bleiben im Journal, ★-Attribute und das Kennungsattribut bleiben', [groupAttrs.length])">{{ $t("✕ Gruppe mit {0} Attributen", [groupAttrs.length]) }}</button></h2>
           <div class="chips">
             <span v-for="a in groupAttrs" :key="a.key" class="chip" :title="`${a.key} · ${a.type}${a.multiple ? ' ≣' : ''}${a.perLocale ? ' 🗣' : ''}`">
               <a href="#" @click.prevent="goto('attributes', a.key)">{{ $L(a.label) || a.key }}</a>

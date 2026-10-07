@@ -15,6 +15,7 @@ function el(tag, attrs = {}, ...kids) { const e = document.createElement(tag); f
 const ICON = { group: '▣', product: '▦', variant: '◆' }
 const SEV = { error: '✗', warn: '⚠', info: 'ℹ', ok: '✓' }
 const TYPE = { Alphanumeric: t_('Liste'), Numeric: t_('Zahl'), Range: t_('Bereich'), Logical: 'Ja/Nein' }
+// Demo (07.10.2026): Holen, Zuweisen, Entfernen und Anlegen tragen data-demo — in der Demo ist die Klasse fest zugewiesen (Demo.cs)
 const DEFAULTS = { classAttr: 'class_etim', unknownAs: 'UN', requireClass: false }
 /// Gruppe und Klassenattribut des Systems heissen class_etim (die Gruppe einer Klasse class_etim_<klasse>); die Gruppe trägt das Klassenattribut.
 const SYSTEMGRUPPE = 'class_etim'
@@ -256,11 +257,11 @@ function buildCatalog(ctx) {
       const key = mapping?.[classKey]?.to || classKey; const code = String(n.raw?.[key] ?? '').trim().toUpperCase(); const cls = cache.classes.get(code)
       if (cls) return t_('{0} · {1} ETIM-Attribute', [code, cls.features.length])
       if (n.states[classKey] === 'inactive') return ''   // Gruppe fehlt — der ⊘-Knopf oben löst es
-      if (n.leaf || n.row.role !== 'group') { const b = document.createElement('button'); b.className = 'x'; b.textContent = t_('⌗ Klasse zuweisen …'); b.title = t_('ETIM-Klasse für diesen Knoten wählen — sie bestimmt die erforderlichen ETIM-Attribute'); b.addEventListener('click', () => classDialog(n.row.id, c)); return b }
+      if (n.leaf || n.row.role !== 'group') { const b = document.createElement('button'); b.dataset.demo = 'aus'; b.className = 'x'; b.textContent = t_('⌗ Klasse zuweisen …'); b.title = t_('ETIM-Klasse für diesen Knoten wählen — sie bestimmt die erforderlichen ETIM-Attribute'); b.addEventListener('click', () => classDialog(n.row.id, c)); return b }
       return ''
     },
     // ohne Klasse: das Wesentliche zuerst — der Knopf zum Dialog, bei einem Knoten direkt dafür
-    summary: (r, mapping, c) => { const noClass = r.nodes.filter(n => n.leaf && n.states[classKey] === 'empty'); if (!noClass.length) return null; const b = document.createElement('button'); b.className = 'primary'; b.textContent = t_('⌗ Klasse zuweisen …'); b.addEventListener('click', () => classDialog(noClass.length === 1 ? noClass[0].row.id : r.nodes[0].row.id, c)); const w = document.createElement('span'); w.append(t_('⌗ {0} Knoten ohne ETIM-Klasse — sie bestimmt die ETIM-Attribute', [noClass.length]) + ' ', b); return w },
+    summary: (r, mapping, c) => { const noClass = r.nodes.filter(n => n.leaf && n.states[classKey] === 'empty'); if (!noClass.length) return null; const b = document.createElement('button'); b.dataset.demo = 'aus'; b.className = 'primary'; b.textContent = t_('⌗ Klasse zuweisen …'); b.addEventListener('click', () => classDialog(noClass.length === 1 ? noClass[0].row.id : r.nodes[0].row.id, c)); const w = document.createElement('span'); w.append(t_('⌗ {0} Knoten ohne ETIM-Klasse — sie bestimmt die ETIM-Attribute', [noClass.length]) + ' ', b); return w },
   }
 }
 
@@ -339,7 +340,7 @@ async function classDialog(nodeId, ctx, onDone = null) {
       el('div', { class: 'scroll', style: 'max-height:40vh;border:1px solid var(--line);border-radius:4px;padding:4px 8px;font-size:12px' },
         ...c.features.map(f => el('div', {}, el('span', { class: 'mono muted' }, f.code), ' ', featureText(f, locale), el('span', { class: 'muted' }, ` · ${TYPE[f.type] ?? f.type}${ops.hasAttr(attrKeyOf(f.code)) ? '' : ' · neu'}`)))),
       el('div', { class: 'chips', style: 'margin-top:10px' },
-        el('button', { class: 'primary', onclick: () => doAssign(code, at.id) }, '✓ zuweisen'),
+        el('button', { 'data-demo': 'aus', class: 'primary', onclick: () => doAssign(code, at.id) }, '✓ zuweisen'),
         el('button', { onclick: () => draw() }, 'abbrechen')))
   }
   async function doAssign(code, atId = nodeId) {
@@ -386,7 +387,7 @@ async function classDialog(nodeId, ctx, onDone = null) {
     // Fall 1: keine Bibliothek
     if (!P.length) {
       body.append(el('div', { class: 'empty' }, t_('Keine ETIM-Version im Journal.')),
-        el('div', { class: 'chips' }, el('button', { class: 'primary', onclick: () => run(t_('hole Liste …'), async () => {
+        el('div', { class: 'chips' }, el('button', { 'data-demo': 'aus', class: 'primary', onclick: () => run(t_('hole Liste …'), async () => {
           const r = await api.post('/api/plugins/etim/run', { params: { mode: 'list', url: '', langs: '' } }); const j = jsonOfOut(r.output); const best = j?.releases?.[0]; if (!best) throw new Error(t_('keine Liste von etim-international.com'))
           const h0 = (await api.get('/api/health')).head; const t0 = Date.now()
           const tick = setInterval(async () => { try { const h = (await api.get('/api/health')).head; say(`lade ${best.name} … ${h - h0} Klassen · ${Math.round((Date.now() - t0) / 1000)} s`) } catch { } }, 2000)
@@ -405,7 +406,7 @@ async function classDialog(nodeId, ctx, onDone = null) {
           el('span', { class: 'muted', style: 'font-size:12px' }, ownCode ? t_('an diesem Knoten') : t_('geerbt von {0}', [inherited.from])),
           el('span', { class: 'muted', style: 'font-size:12px' }, t_('· {0} ETIM-Attribute', [cache.classes.get(current)?.features.length ?? '?'])),
           el('span', { class: 'grow' }),
-          ownCode ? el('button', { class: 'x', title: t_('die Klasse an diesem Knoten entfernen'), onclick: async () => { try { await api.post(`/api/nodes/${encodeURIComponent(nodeId)}/attributes`, { attribute: key, locale: null, channel: null, value: '', row: null }); await store.poll(true); loadUsed(); store.toast(t_('✓ Klasse entfernt'), 'ok'); close(); onDone?.(null) } catch (e) { store.toast(e.message) } } }, '✕ entfernen') : null)
+          ownCode ? el('button', { 'data-demo': 'aus', class: 'x', title: t_('die Klasse an diesem Knoten entfernen'), onclick: async () => { try { await api.post(`/api/nodes/${encodeURIComponent(nodeId)}/attributes`, { attribute: key, locale: null, channel: null, value: '', row: null }); await store.poll(true); loadUsed(); store.toast(t_('✓ Klasse entfernt'), 'ok'); close(); onDone?.(null) } catch (e) { store.toast(e.message) } } }, '✕ entfernen') : null)
       : el('div', { class: 'muted', style: 'font-size:12px;margin-bottom:6px' }, t_('Noch keine ETIM-Klasse an diesem Knoten.')))
     // 1 · Ziel: irgendein Knoten des Pfads — je Chip die Zahlen, ✦ ist die Empfehlung
     {
@@ -555,15 +556,15 @@ async function bandMount({ head, body: bodyEl }, nodeId, ctx) {
     }
     head.textContent = ''
     const again = () => render()
-    const assignBtn = el('button', { class: S.cls ? 'x' : 'primary', title: S.cls ? t_('andere Klasse wählen (Vorschlag, Umfeld, Suche, Ebene)') : t_('ETIM-Klasse wählen (Vorschlag, Umfeld, Suche, Ebene mit Empfehlung)'), onclick: () => classDialog(nodeId, ctx, again) }, S.cls ? t_('⌗ Klasse ändern …') : t_('⌗ Klasse zuweisen …'))
+    const assignBtn = el('button', { 'data-demo': 'aus', class: S.cls ? 'x' : 'primary', title: S.cls ? t_('andere Klasse wählen (Vorschlag, Umfeld, Suche, Ebene)') : t_('ETIM-Klasse wählen (Vorschlag, Umfeld, Suche, Ebene mit Empfehlung)'), onclick: () => classDialog(nodeId, ctx, again) }, S.cls ? t_('⌗ Klasse ändern …') : t_('⌗ Klasse zuweisen …'))
     // Klasse entfernen — nur die eigene; danach gilt die geerbte oder keine
-    const clearBtn = S.ownCode ? el('button', { class: 'x', title: t_('Klasse an diesem Knoten entfernen — danach gilt die geerbte Klasse, sonst keine'), onclick: async () => {
+    const clearBtn = S.ownCode ? el('button', { 'data-demo': 'aus', class: 'x', title: t_('Klasse an diesem Knoten entfernen — danach gilt die geerbte Klasse, sonst keine'), onclick: async () => {
       const ok = await (ctx.dialog?.confirm?.({ title: t_('ETIM-Klasse {0} entfernen?', [S.ownCode]), text: S.inherited ? t_('Danach gilt wieder {0} von {1}.', [S.inherited.code, S.inherited.from]) : t_('Danach hat dieser Knoten keine Klasse.'), ok: 'entfernen', danger: true }) ?? Promise.resolve(true))
       if (!ok) return
       try { await api.post('/api/classification/clear', { node: nodeId, system: ops.system() }); await store.poll(true); await tree.load?.(true); loadUsed(); store.toast(t_('✓ Klasse entfernt'), 'ok'); again() } catch (e) { store.toast(e.message) }
     } }, t_('✕ Klasse')) : null
     // Gruppe anhängen, wenn sie hier nicht gilt — sonst ist kein ETIM-Attribut verfügbar und man kommt nicht weiter
-    const attachBtnEl = !S.groupOn ? el('button', { class: 'primary', title: S.groupExists ? t_('die Attributgruppe {0} an diesem Knoten anhängen — erst dann gelten die ETIM-Attribute hier und darunter', [groupKey()]) : t_('die Attributgruppe {0} gibt es im Modell nicht mehr — sie wird neu angelegt und hier angehängt; die ETIM-Attribute gehören ihr weiterhin an', [groupKey()]), onclick: async () => {
+    const attachBtnEl = !S.groupOn ? el('button', { 'data-demo': 'aus', class: 'primary', title: S.groupExists ? t_('die Attributgruppe {0} an diesem Knoten anhängen — erst dann gelten die ETIM-Attribute hier und darunter', [groupKey()]) : t_('die Attributgruppe {0} gibt es im Modell nicht mehr — sie wird neu angelegt und hier angehängt; die ETIM-Attribute gehören ihr weiterhin an', [groupKey()]), onclick: async () => {
       try {
         const cg = S.current ? classGroupKey(S.current) : null
         if (!S.groupExists) {
@@ -585,7 +586,7 @@ async function bandMount({ head, body: bodyEl }, nodeId, ctx) {
     } }, S.groupExists ? t_('⌗ Gruppe {0} anhängen', [S.todo.join(', ')]) : t_('⌗ Gruppe {0} anlegen und anhängen', [S.todo.join(', ')])) : null
     // Bestand der früheren Bauart (eine Sammelgruppe, Attribute mit Bedingung): der Server stellt ihn auf Klassengruppen um
     const altAttr = (ctx.store.model?.attributes ?? []).filter(a => a.when?.attribute === cache.settings.classAttr).length
-    const umstellBtn = altAttr ? el('button', { class: 'primary', title: t_('Die {0} Attribute kommen in die Gruppen ihrer Klassen, die Bedingung entfällt, und jeder Knoten mit einer Klasse bekommt deren Gruppe', [altAttr]), onclick: async () => {
+    const umstellBtn = altAttr ? el('button', { 'data-demo': 'aus', class: 'primary', title: t_('Die {0} Attribute kommen in die Gruppen ihrer Klassen, die Bedingung entfällt, und jeder Knoten mit einer Klasse bekommt deren Gruppe', [altAttr]), onclick: async () => {
       try {
         const r = await api.post('/api/classification/migrate', { system: ops.system(), dryRun: false })
         await store.poll(true); await tree.load?.(true); loadUsed()
@@ -908,7 +909,7 @@ async function mount(root, ctx) {
     // Quelle, Klassen, Sprachen, geladen am, ● aktuell. Darunter EINE Zeile zum Holen (Liste → Auswahl → laden, oder URL, oder Datei).
     const langs = m.locales.map(l => l.code)
     const verRows = cache.versions.map(v => el('tr', {},
-      el('td', {}, el('button', { class: 'toggle', style: 'width:28px', title: v.key === cache.releaseKey ? t_('aktuelle Freigabe — gilt für Zuweisen, Prüfen, Export') : t_('zur aktuellen Freigabe machen'), onclick: async () => { await ctx.data.set('release', v); await loadCache(); await store.poll(true); await ops.ensureClassAttr(); await store.poll(true); draw() } }, v.key === cache.releaseKey ? '●' : '○')),
+      el('td', {}, el('button', { 'data-demo': 'aus', class: 'toggle', style: 'width:28px', title: v.key === cache.releaseKey ? t_('aktuelle Freigabe — gilt für Zuweisen, Prüfen, Export') : t_('zur aktuellen Freigabe machen'), onclick: async () => { await ctx.data.set('release', v); await loadCache(); await store.poll(true); await ops.ensureClassAttr(); await store.poll(true); draw() } }, v.key === cache.releaseKey ? '●' : '○')),
       el('td', { class: 'mono', title: v.key }, `ETIM ${v.version}`, v.variant ? el('div', { class: 'muted', style: 'font-size:11px' }, v.variant) : null),
       el('td', {}, v.url ? el('a', { href: v.url, target: '_blank', rel: 'noopener', title: v.url }, v.file ?? v.name ?? v.url.split('/').pop()) : (v.file ?? v.name ?? '')),
       el('td', { class: 'num' }, String(v.classes ?? '')),
@@ -917,8 +918,8 @@ async function mount(root, ctx) {
     // Holen: Liste von etim-international.com (Prozess), Auswahl oder URL, laden — Fortschritt am Journalstand
     const urlIn = el('input', { placeholder: 'URL (Zip/XML)', value: st.url ?? '', style: 'width:360px', oninput: e => { st.url = e.target.value } })
     const sel = el('select', { style: 'max-width:420px', onchange: e => { st.url = e.target.value; urlIn.value = st.url } }, el('option', { value: '' }, st.list ? t_('{0} Versionen bei ETIM International …', [st.list.length]) : t_('↻ Liste erst holen')), ...(st.list ?? []).map(r => el('option', { value: r.url, selected: r.url === st.url ? '' : null }, r.name.replace(/\.zip$/, ''))))
-    const listBtn = el('button', { class: 'x', title: t_('etim-international.com/downloads lesen — die IXF-Versionen als Auswahl'), onclick: () => busy(t_('hole Liste …'), async () => { const r = await api.post('/api/plugins/etim/run', { params: { mode: 'list', url: '', langs: '' } }); const j = jsonOf(r.output); if (!j?.releases) throw new Error(r.output?.slice(0, 200) || t_('keine Liste')); st.list = j.releases; st.url ||= j.releases[0]?.url ?? ''; say(t_('{0} Versionen', [j.releases.length])); draw() }) }, t_('↻ Liste'))
-    const loadBtn = el('button', { class: 'primary', title: t_('laden und alle Klassen ins Journal (Sprachen des Modells; ETIM International = englisch)'), onclick: async () => { if (!st.url) { store.toast(t_('erst eine Version wählen oder eine URL eintragen')); return }
+    const listBtn = el('button', { 'data-demo': 'aus', class: 'x', title: t_('etim-international.com/downloads lesen — die IXF-Versionen als Auswahl'), onclick: () => busy(t_('hole Liste …'), async () => { const r = await api.post('/api/plugins/etim/run', { params: { mode: 'list', url: '', langs: '' } }); const j = jsonOf(r.output); if (!j?.releases) throw new Error(r.output?.slice(0, 200) || t_('keine Liste')); st.list = j.releases; st.url ||= j.releases[0]?.url ?? ''; say(t_('{0} Versionen', [j.releases.length])); draw() }) }, t_('↻ Liste'))
+    const loadBtn = el('button', { 'data-demo': 'aus', class: 'primary', title: t_('laden und alle Klassen ins Journal (Sprachen des Modells; ETIM International = englisch)'), onclick: async () => { if (!st.url) { store.toast(t_('erst eine Version wählen oder eine URL eintragen')); return }
       // schon da? — dann fragen
       const have = cache.versions.find(v => v.url === st.url || (v.file && st.url.endsWith(v.file.replace(/\.xml$/i, '.zip'))))
       if (have && !(await ctx.dialog.confirm({ title: t_('ETIM {0} ist schon im Journal', [have.version]), warn: t_('{0} Klassen vom {1}', [have.classes, (have.at ?? '').slice(0, 10)]), text: t_('Erneut laden überschreibt die Klassen dieser Version (neue Einträge im Journal).'), ok: t_('Erneut laden') }))) return
@@ -929,18 +930,18 @@ async function mount(root, ctx) {
         const r = await api.post('/api/plugins/etim/run', { params: { mode: 'load', url: st.url, langs: langs.join(',') } }); const j = jsonOf(r.output); if (!j?.classes) throw new Error((r.output ?? '').slice(-300) || t_('Laden fehlgeschlagen')); await loadCache(); await store.poll(true); await ops.ensureClassAttr(); await store.poll(true); say(t_('ETIM {0}: {1} Klassen in {2} s{3}', [j.version, j.classes, Math.round(j.ms / 1000), j.current !== j.version ? ' ' + t_('— aktuell bleibt ETIM {0}', [j.current]) : ''])); draw()
       } finally { clearInterval(tick) }
     }) } }, '⇩ laden')
-    const fileBtn = el('button', { class: 'x', title: t_('IXF-3.1-Datei vom Rechner — ergänzt dieselbe Version'), onclick: () => file.click() }, t_('⇩ Datei …'))
+    const fileBtn = el('button', { 'data-demo': 'aus', class: 'x', title: t_('IXF-3.1-Datei vom Rechner — ergänzt dieselbe Version'), onclick: () => file.click() }, t_('⇩ Datei …'))
     const fileState = rel ? el('span', { class: 'muted' }, `gelesen: ETIM ${rel.header.number ?? '?'} · ${rel.classes.length} Klassen · ${[...new Set(rel.classes.slice(0, 50).flatMap(c => Object.keys(c.name)))].join('/')} `, el('button', { class: 'primary', onclick: takeAll }, t_('⇩ {0} Klassen übernehmen', [rel.classes.length]))) : null
     body.append(section(t_('1 · Klassifikation'), t_('ETIM-Versionen im Journal · ● die aktuelle gilt für Zuweisen, Prüfen und Export'),
       cache.versions.length ? el('table', { class: 'grid', style: 'width:auto;min-width:640px' }, el('thead', {}, el('tr', {}, el('th', { style: 'width:34px' }, ''), el('th', { style: 'width:90px' }, t_('Version')), el('th', {}, t_('Quelle')), el('th', { style: 'width:80px' }, t_('Klassen')), el('th', { style: 'width:90px' }, t_('Sprachen')), el('th', { style: 'width:100px' }, 'geladen'))), el('tbody', {}, ...verRows))
         : el('div', { class: 'empty' }, t_('noch keine ETIM-Version im Journal')),
-      el('div', { style: 'display:flex;gap:8px;align-items:center;padding:8px 0 2px;flex-wrap:wrap' }, el('span', { class: 'muted' }, 'dazu:'), listBtn, sel, el('span', { class: 'muted' }, 'oder'), urlIn, loadBtn, el('span', { class: 'muted' }, 'oder'), fileBtn, file, fileState)))
+      el('div', { 'data-demo': 'aus', style: 'display:flex;gap:8px;align-items:center;padding:8px 0 2px;flex-wrap:wrap' }, el('span', { class: 'muted' }, 'dazu:'), listBtn, sel, el('span', { class: 'muted' }, 'oder'), urlIn, loadBtn, el('span', { class: 'muted' }, 'oder'), fileBtn, file, fileState)))
     // Klassen
     // ohne gelesene Freigabe (bleibt im Browser, je Sitzung) gibt es nichts zu suchen — Feld und Knopf sagen das, statt nach dem Klick zu meckern
     const P = pool()
     const wizPick = el('div', { class: 'picker', style: 'position:absolute;left:0;top:28px;z-index:6;width:380px;display:none;padding:6px;background:var(--pane)' })
     ctx.treePicker(wizPick, { roles: ['group', 'product', 'variant'], height: 300, onPick: r => { wizPick.style.display = 'none'; classDialog(r.id, ctx) } })
-    const wizBtn = el('button', { class: 'primary', title: t_('Knoten wählen, dann die Klasse — mit Vorschlag, Umfeld, Suche und Gruppen'), onclick: () => { wizPick.style.display = wizPick.style.display === 'none' ? 'block' : 'none' } }, t_('⌗ Klasse zuweisen … (Knoten wählen)'))
+    const wizBtn = el('button', { 'data-demo': 'aus', class: 'primary', title: t_('Knoten wählen, dann die Klasse — mit Vorschlag, Umfeld, Suche und Gruppen'), onclick: () => { wizPick.style.display = wizPick.style.display === 'none' ? 'block' : 'none' } }, t_('⌗ Klasse zuweisen … (Knoten wählen)'))
     const q = el('input', { placeholder: P.length ? t_('Klasse suchen — Code, Name, Synonym ({0})', [P.length]) : t_('erst oben „⇩ IXF lesen“ — dann suchen'), value: st.q, style: 'width:360px', disabled: !P.length, oninput: e => { st.q = e.target.value; search() } })
     const hits = el('div')
     // Blättern nach Klassengruppen: ohne Suchbegriff die Gruppen, Klick zeigt die Klassen der Gruppe
@@ -993,7 +994,7 @@ async function mount(root, ctx) {
     // Regeln der Ausleitung (unbekannt, Klasse Pflicht, Vollständigkeit) stehen seit 22.09. im BMEcat-Profil (xport), nicht hier
     // Gruppe ETIM gilt erst, wenn sie an einem Knoten des Pfads hängt (GroupsAttached) — hier an einen Teilbaum hängen
     const attached = tree.rows.filter(r => (r.groups ?? '').split(',').includes(groupKey()))
-    const attachBtn = el('button', { class: 'x', title: t_('die Attributgruppe {0} an einen Teilbaum hängen — erst dann gelten die Attribute an den Knoten darunter', [groupKey()]) }, t_('⌗ Gruppe an Teilbaum{0}', [attached.length ? ` · ${attached.length}` : '']))
+    const attachBtn = el('button', { 'data-demo': 'aus', class: 'x', title: t_('die Attributgruppe {0} an einen Teilbaum hängen — erst dann gelten die Attribute an den Knoten darunter', [groupKey()]) }, t_('⌗ Gruppe an Teilbaum{0}', [attached.length ? ` · ${attached.length}` : '']))
     const attachPick = el('div', { class: 'picker', style: 'position:absolute;left:0;top:28px;z-index:5;width:380px;display:none;padding:6px;background:var(--pane)' })
     ctx.treePicker(attachPick, { roles: ['group'], height: 300, onPick: async r => { attachPick.style.display = 'none'; const groups = [...new Set([...(r.groups ?? '').split(',').filter(Boolean), groupKey()])]; await api.post(`/api/nodes/${encodeURIComponent(r.id)}/groups`, { groups }, 'PUT'); await tree.load?.(); say(t_('Gruppe {0} hängt an {1}', [groupKey(), r.label])); draw() } })
     attachBtn.addEventListener('click', () => { attachPick.style.display = attachPick.style.display === 'none' ? 'block' : 'none' })
@@ -1001,7 +1002,7 @@ async function mount(root, ctx) {
     const missing = [...allFeats.values()].filter(f => !hasAttr(attrKeyOf(f.code)))
     body.append(section(t_('3 · Attribute'), t_('{0} ETIM-Attribute · {1} nicht zugeordnet', [allFeats.size, missing.length]),
       el('div', { style: 'display:flex;gap:12px;align-items:center;padding:6px 0;flex-wrap:wrap' }, el('label', { class: 'muted' }, t_('Gruppe') + ' ', groupSel), groupKey() !== 'etim' ? el('button', { class: 'x', title: t_('ETIM-Attribute den vorhandenen Attributen der Gruppe {0} nach Namen zuordnen (ab 80 % Ähnlichkeit); der Rest wird angelegt', [groupKey()]), onclick: guessInGroup }, t_('↻ in {0} zuordnen', [groupKey()])) : null, el('label', { class: 'muted' }, t_('Klasse in') + ' ', classSel),
-        el('button', { class: 'primary', title: t_('Klassenattribut {0} als Werteliste der übernommenen Klassen und je fehlendem ETIM-Attribut ein Attribut (ef…) in der Gruppe {1} anlegen', [cache.settings.classAttr, groupKey()]), onclick: createAttributes }, t_('＋ Attribute anlegen ({0})', [missing.length + (hasAttr(cache.settings.classAttr) ? 0 : 1)])),
+        el('button', { 'data-demo': 'aus', class: 'primary', title: t_('Klassenattribut {0} als Werteliste der übernommenen Klassen und je fehlendem ETIM-Attribut ein Attribut (ef…) in der Gruppe {1} anlegen', [cache.settings.classAttr, groupKey()]), onclick: createAttributes }, t_('＋ Attribute anlegen ({0})', [missing.length + (hasAttr(cache.settings.classAttr) ? 0 : 1)])),
         el('span', { style: 'position:relative' }, attachBtn, attachPick))))
     // Zuordnung
     // Zuordnung: Standard ist ein vorhandenes Attribut mit ƒ; das eigene ef… ist der Ausweg

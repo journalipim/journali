@@ -447,7 +447,7 @@ public sealed class Catalog
     /// </summary>
     private bool KeinKontingent(string actor, string type)
     {
-        if (Core.Licensing.Startphase.An) return false;   // Startphase: nichts wird wegen eines Kontingents abgewiesen
+        if (Core.Licensing.Startphase.An && !Demo.An) return false;   // Startphase: nichts wird wegen eines Kontingents abgewiesen — ausser in der Demo (Demo.Kontingent)
         if (!Kinds.Billable(null, type)) return false;
         // Ein Joblauf schreibt als job:<key> — gezählt wird beim Anwender, dem der Job gehört,
         // und er lässt der Handarbeit eine Reserve: bis 90 %, nicht bis zum letzten Eintrag.

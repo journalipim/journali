@@ -454,7 +454,7 @@ onMounted(async () => {
   <div class="pane" style="flex:1">
     <div class="toolbar"><h1>{{ $t("4 · Plan") }}</h1>
       <button class="primary" :disabled="!source || !!busy" @click="analyse">{{ $t("analysieren") }}</button>
-      <button class="primary" :disabled="!planned || !!busy || !planned.commands.length || blockers.length > 0 || planned.stale" @click="run" :title="!planned ? $t('erst analysieren') : blockers[0] ?? (planned.stale ? $t('erst erneut analysieren') : $t('{0} Befehle schreiben', [planned.commands.length]))">{{ $t("▶ schreiben") }}</button>
+      <button class="primary" data-demo="aus" :disabled="!planned || !!busy || !planned.commands.length || blockers.length > 0 || planned.stale" @click="run" :title="!planned ? $t('erst analysieren') : blockers[0] ?? (planned.stale ? $t('erst erneut analysieren') : $t('{0} Befehle schreiben', [planned.commands.length]))">{{ $t("▶ schreiben") }}</button>
       <span class="grow" /><span class="muted">{{ store.actor ? '👤 ' + store.actor : $t('👤 Name fehlt') }}</span>
     </div>
     <div class="scroll" style="padding:8px">

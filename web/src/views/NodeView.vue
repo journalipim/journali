@@ -926,6 +926,7 @@ function toggleRelease(channel, locale) {
 // Knoten darunter: einmal je Baum gezählt, ohne Rekursion (04.10.2026 — vorher bei jedem Zeichnen des Kopfs der ganze Teilbaum)
 const knotenDarunter = computed(() => { void tree.rows; let n = 0; const stapel = [props.id]; while (stapel.length) for (const k of tree.kids(stapel.pop())) { n++; stapel.push(k.id) } return n })
 async function retire() {
+  if (store.demo) return   // Demo: zurückziehen gibt es nicht
   const kids = node.value.children
   // immer fragen — eigener Dialog statt window.confirm
   const label = tree.byId.get(props.id)?.label ?? props.id
@@ -980,7 +981,7 @@ function cellMenu(e, def, col, block) {
       <button class="x" @click="undo" :disabled="!history.length && !ausJournal?.possible"
         :title="history.length ? stepTitle(history[history.length - 1], $t('↶ Rückgängig'), history.length, $t('Strg+Z')) : (ausJournal?.possible ? $t('{0} (Strg+Z)', [ausJournal.what]) : $t('nichts rückgängig zu machen'))">↶<span v-if="history.length" class="muted"> {{ history.length }}</span></button>
       <button class="x" @click="redo" :disabled="!redoStack.length" :title="stepTitle(redoStack[redoStack.length - 1], $t('↷ Wiederholen'), redoStack.length, $t('Strg+Y'), true)">↷<span v-if="redoStack.length" class="muted"> {{ redoStack.length }}</span></button>
-      <button class="x" @click="retire" :title="node.children ? $t('mit {0} Knoten darunter zurückziehen (Entf im Baum)', [knotenDarunter]) : $t('Knoten zurückziehen (Entf im Baum)')">🗑</button>
+      <button class="x" data-demo="aus" @click="retire" :title="node.children ? $t('mit {0} Knoten darunter zurückziehen (Entf im Baum)', [knotenDarunter]) : $t('Knoten zurückziehen (Entf im Baum)')">🗑</button>
     </div>
     <div class="toolbar meta muted">
       <span class="mono">{{ node.id }}</span>

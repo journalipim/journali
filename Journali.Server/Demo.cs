@@ -30,15 +30,16 @@ public static class Demo
         ["en"] = "This demo is reset every day; whatever is entered here is visible to all visitors.",
     };
 
-    /// <summary>In der Demo ausgeschaltet: Zugänge (Dateisystem des Servers, fremde Systeme), ETIM (lädt die Klassifikation aus dem Netz),
-    /// die Importe aus fremden Systemen (brauchen einen Zugang; ixp ist eine interne Schnittstelle).</summary>
-    public static readonly string[] OhnePlugins = ["driver", "etim", "ixp", "solr"];
+    /// <summary>In der Demo ausgeschaltet: Zugänge (Dateisystem des Servers, fremde Systeme) und die Importe aus fremden Systemen (brauchen
+    /// einen Zugang; ixp ist eine interne Schnittstelle). ETIM bleibt an, mit einer fest zugewiesenen Klasse (<see cref="Etim"/>).</summary>
+    public static readonly string[] OhnePlugins = ["driver", "ixp", "solr"];
 
     /// <summary>
     /// In der Demo gesperrt, mit jedem Recht: das eigene Konto (Passwort, Token anlegen und löschen), Anmelden und Einrichten; Hochladen und
     /// Holen von Medien; Workflows und Vorschau-Presets ändern, Vorschauen und Abmessungen von Hand anstossen; Zugänge und das Dateisystem;
     /// Daten der Plugins schreiben (Profile, Layouts — nur die eigene Einstellung <c>settings</c> eines Plugins bleibt) und ihre Geheimnisse
-    /// (Schlüssel am Profil). Übergänge am Knoten bleiben, ebenso das Lesen.
+    /// (Schlüssel am Profil); Knoten und Medien zurückziehen, Klassifikationen zurückziehen; der JSON-Import. Übergänge am Knoten bleiben,
+    /// ebenso Rückgängig und das Lesen. Stapel prüft <see cref="StapelGesperrt"/>.
     /// </summary>
     public static bool Gesperrt(string path, string method)
     {
@@ -50,10 +51,26 @@ public static class Demo
         if (p.StartsWith("/api/media/presets")) return !lesen;
         if (p.StartsWith("/api/workflows/") && p != "/api/workflows/applicable") return !lesen;
         if (p.StartsWith("/api/drivers/") || p.StartsWith("/api/files")) return true;
+        if (p is "/api/nodes/import" or "/api/classification/retire") return !lesen;
+        if (method == "DELETE" && (p.StartsWith("/api/nodes/") || p.StartsWith("/api/media/")) && p.Count(ch => ch == '/') == 3) return true;   // zurückziehen
         if (p.StartsWith("/api/plugins/") && p.Contains("/secrets")) return !lesen;
         if (p.StartsWith("/api/plugins/") && p.Contains("/data")) return !lesen && !p.EndsWith("/data/settings");
         return p == "/api/drivers" && !lesen;
     }
+
+    /// <summary>
+    /// Kontingent der Demo (07.10.2026): so viele zählende Einträge (Datenpflege) je Woche und Monat für das Init Team, also für alle Besucher
+    /// zusammen. Die Demo startet jeden Tag mit leerem Journal, damit ist es ein Tageskontingent. Gesetzt wird es zuletzt beim Einrichten — eine
+    /// Änderung der Grenzen lässt die Zählung neu beginnen, der Beispielkatalog zählt nicht mit. Die Startphase hebt es in der Demo nicht auf.
+    /// </summary>
+    public const int Kontingent = 500;
+
+    /// <summary>Höchstens so viele Befehle je Stapel: Pflege ja, Massenbearbeitung und Import nein.</summary>
+    public const int MaxStapel = 50;
+
+    /// <summary>Ein Stapel des Anwenders demo, der abgewiesen wird: mehr als <see cref="MaxStapel"/> Befehle oder ein Zurückziehen darin.</summary>
+    public static bool StapelGesperrt(IReadOnlyCollection<string> befehle) =>
+        befehle.Count > MaxStapel || befehle.Any(b => b is "node.retire" or "media.retire");
 
     /// <summary>Wer ohne Sitzung und ohne Token fragt: in der Demo der Anwender <see cref="Anwender"/>, solange es ihn gibt.</summary>
     public static (string User, string Role)? Besucher(Catalog c) =>
@@ -74,6 +91,7 @@ public static class Demo
             n += Beispielkatalog(c, wuensche);
             if (store is not null) (n, bilder) = (n + Bilder(c, store, wuensche, out var neu), neu);
         }
+        n += Etim(c);
         foreach (var key in OhnePlugins)
             if (c.Lesen((_, _) => c.Plugins.All.GetValueOrDefault(key)) is { Enabled: true })
                 n += c.With((_, _, write) => { write(Anwender, Plugins.Stream + key, Types.PluginDisabled, new PluginDisabled(), null); return 1; });
@@ -84,6 +102,9 @@ public static class Demo
         var anwender = c.Lesen((_, _) => c.Users.All.GetValueOrDefault(Anwender));
         if (anwender is null || anwender.Role != Rolle || !anwender.Enabled || anwender.Team != team)
             n += c.With((_, _, write) => { write(Anwender, Auth.Stream + Anwender, Types.UserDefined, new UserDefined("Demo", null, Rolle, true, team), null); return 1; });
+        // zuletzt: das Kontingent — ab hier wird gezählt
+        if (c.Lesen((_, _) => c.Teams.Get(Model.InitTeam)) is { } t && (t.EntriesWeek != Kontingent || t.EntriesMonth != Kontingent))
+            n += c.With((_, _, write) => { write(Anwender, Teams.Stream + t.Key, Types.TeamDefined, new TeamDefined(t.Label, t.Note, t.MonthlyTokens, t.DailyTokens, t.Enabled, t.KeysFrom, t.IncludedTokens, t.Managers, t.Models, Kontingent, Kontingent), null); return 1; });
         return (n, bilder);
     }
 
@@ -264,6 +285,79 @@ public static class Demo
         }
         return n;
     });
+
+    // ---- ETIM (07.10.2026): eine Klasse fest zugewiesen, damit die Demo die Klassifikation zeigt, ohne dass jemand eine Freigabe lädt.
+    // EC001959 „LED-lamp/Multi-LED“ (ETIM 10.0, Klassenversion 10, Gruppe EG000028) an der Gruppe LED-Lampen — nur die acht Merkmale, die der
+    // Beispielkatalog führt, zugeordnet auf seine Attribute. Namen nur englisch (ETIM English Master): das ETIM-Modell steht unter ODC-BY 1.0
+    // (etim-international.com/classification/license-info), die deutschen Bezeichnungen gehören ETIM Deutschland. Codes und Namen aus dem
+    // ETIM-Viewer (viewer.etim-international.com/class/EC001959/10), Stand 07.10.2026.
+
+    public const string EtimFreigabe = "10-demo";
+    public const string EtimKlasse = "EC001959";
+
+    private static readonly (string Code, string Typ, string Name, string Ziel, (string Code, string Name)[] Werte)[] EtimMerkmale =
+    [
+        ("EF011586", "Range", "Lamp power (W)", "power", []),
+        ("EF011587", "Range", "Luminous flux (lm)", "luminous_flux", []),
+        ("EF009346", "Range", "Colour temperature (K)", "colour_temperature", []),
+        ("EF000042", "Alphanumeric", "Socket", "socket", [("EV000098", "E27"), ("EV000097", "E14"), ("EV001442", "GU10"), ("EV006795", "G9")]),
+        ("EF005474", "Alphanumeric", "Degree of protection (IP)", "protection", [("EV006405", "IP20"), ("EV006418", "IP44"), ("EV006419", "IP54"), ("EV006421", "IP65")]),
+        ("EF000137", "Logical", "Dimmable", "dimmable", []),
+        ("EF017139", "Alphanumeric", "Energy efficiency class according to 2019/2015/EU", "energy_class",
+            [("EV000896", "A"), ("EV000074", "B"), ("EV000084", "C"), ("EV000413", "D"), ("EV000647", "E"), ("EV000334", "F"), ("EV004701", "G")]),
+        ("EF008342", "Numeric", "Average nominal lifetime (h)", "lifetime", []),
+    ];
+
+    private static Dictionary<string, string> En(string text) => new() { ["en"] = text };
+
+    /// <summary>
+    /// Die ETIM-Klasse der Demo: Freigabe, Klasse und Zuordnung als Daten des Plugins etim, wie das Plugin sie selbst schreibt, dann zugewiesen
+    /// über <see cref="ClassificationApi.Assign"/> — derselbe Weg wie der Dialog. Nur, wenn etim an ist und noch keine Freigabe kennt.
+    /// </summary>
+    public static int Etim(Catalog c)
+    {
+        if (c.Lesen((_, _) => c.Plugins.All.GetValueOrDefault("etim")) is not { Enabled: true } plugin || plugin.Data.ContainsKey("release")) return 0;
+        var gruppe = c.Lesen((_, t) => t.Nodes.Values.FirstOrDefault(n => n.Role == Roles.Group && n.Label.GetValueOrDefault("de") == "LED-Lampen")?.Id);
+        if (gruppe is null) return 0;
+        var info = new
+        {
+            key = EtimFreigabe, version = "10", variant = "demo", name = "ETIM 10.0", number = "10", classes = 1, features = EtimMerkmale.Length,
+            languages = new[] { "en" }, all = false,
+            source = "ETIM International (etim-international.com), ODC-BY 1.0 — Auszug: Klasse EC001959 mit den Merkmalen des Beispielkatalogs",
+        };
+        var klasse = new
+        {
+            code = EtimKlasse, version = 10, name = En("LED-lamp/Multi-LED"), synonyms = new Dictionary<string, string[]>(),
+            group = new { code = "EG000028", name = En("Lamps") }, release = new { name = "ETIM 10.0", number = "10" },
+            features = EtimMerkmale.Select((f, i) => new
+            {
+                code = f.Code, type = f.Typ, name = En(f.Name), order = i + 1, unit = (object?)null,
+                values = f.Werte.Select(v => new { code = v.Code, name = En(v.Name) }).ToArray(),
+            }).ToArray(),
+        };
+        var n = c.With((_, _, write) =>
+        {
+            foreach (var (name, wert) in new (string, object)[] { ("release:" + EtimFreigabe, info), ($"class:{EtimFreigabe}:{EtimKlasse}", klasse), ("map", EtimMerkmale.ToDictionary(f => f.Code, f => f.Ziel)), ("release", info) })
+                write(Anwender, Plugins.Stream + "etim", Types.PluginDataSet, new PluginDataSet(name, System.Text.Json.JsonSerializer.Serialize(wert)), null);
+            return 4;
+        });
+        // wie das Plugin: System, Klasse, Merkmale (neutral) — zugeordnete Merkmale kommen als vorhandene Attribute in die Gruppe der Klasse
+        var system = new ClassificationApi.SystemSpec("class_etim", new() { ["de"] = "ETIM", ["en"] = "ETIM" }, "class_etim", new() { ["de"] = "ETIM-Klasse", ["en"] = "ETIM class" },
+            ["etim_klasse", "etim_class_std"], "^ef\\d+$", "etim");
+        var merkmale = EtimMerkmale.Select(f => new ClassificationApi.FeatureSpec(f.Code.ToLowerInvariant(), En(f.Name),
+            f.Typ switch { "Numeric" => "decimal", "Logical" => "boolean", "Alphanumeric" => "enum", _ => "text" },
+            Pattern: f.Typ == "Range" ? @"^\s*-?[\d.,]+(\s*(-|\.\.|…)\s*-?[\d.,]+)?\s*$" : null, PatternHint: f.Typ == "Range" ? "von - bis" : null,
+            Values: f.Typ == "Alphanumeric" ? f.Werte.Select(v => new ClassificationApi.ValueSpec(v.Code, En(v.Name))).ToArray() : null,
+            Classes: [EtimKlasse], Target: f.Ziel)).ToArray();
+        var zaehler = 0;
+        var antwort = c.With((model, tree, write) => ClassificationApi.Assign(new Ctx
+        {
+            Model = model, Tree = tree, Relations = c.Relations, Media = c.Media, Workflows = c.Workflows, Translations = c.Translations, Plugins = c.Plugins,
+            Write = (stream, type, payload) => { zaehler++; return write(Anwender, stream, type, payload, null); },
+        }, new ClassificationApi.AssignBody(gruppe, EtimKlasse, system, [new ClassificationApi.ClassSpec(EtimKlasse, En("LED-lamp/Multi-LED"), "Lamps")], merkmale), true));
+        if (antwort.Error is { } fehler) throw new InvalidOperationException("Demo: ETIM — " + string.Format(fehler, antwort.Args ?? []));
+        return n + zaehler;
+    }
 
     /// <summary>EAN-13 aus zwölf Ziffern: die Prüfziffer dazu.</summary>
     public static string Ean(string zwoelf)

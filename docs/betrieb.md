@@ -517,7 +517,15 @@ ausser bei den Werten der Produkte, die pflegt man wie sonst.
   blendet die Oberfläche aus: ein Element mit `data-demo="aus"` steht in der Demo nicht da (Klasse `demo` am Dokument) — im Kern wie in
   den Ansichten der Plugins.
 - **Plugins**: alle mit dem Siegel von journali sind installiert und an, ein Hinweis im Manifest gilt als vom Betreiber bestätigt. Aus
-  bleiben `driver`, `etim`, `ixp`, `solr` und, was beim ersten Lauf etwas aus dem Netz holt (`embed`, `ocr`).
+  bleiben `driver`, `ixp`, `solr` und, was beim ersten Lauf etwas aus dem Netz holt (`embed`, `ocr`).
+- **ETIM**: fest zugewiesen ist EC001959 „LED-lamp/Multi-LED“ (ETIM 10.0) an den LED-Lampen, mit den acht Merkmalen des Katalogs, zugeordnet
+  auf seine Attribute — Namen nur englisch (ETIM-Modell unter ODC-BY 1.0, die deutschen Bezeichnungen gehören ETIM Deutschland). Eine
+  Freigabe holen, Klassen zuweisen oder entfernen gibt es in der Demo nicht.
+- **Kein Zurückziehen, keine Massenbearbeitung**: Knoten und Medien zurückziehen ist gesperrt (auch im Kontextmenü, Einträge mit
+  `demo: 'aus'` fallen dort weg), ebenso der Import; ein Stapel hat höchstens 50 Befehle (`Demo.MaxStapel`). Rückgängig bleibt.
+- **Kontingent**: 500 zählende Einträge (Datenpflege) je Woche und Monat für das Init Team, also für alle Besucher zusammen — weil die
+  Demo täglich leer startet, ein Tageskontingent. Gesetzt zuletzt beim Einrichten; der Beispielkatalog zählt nicht mit. Die Balken in
+  der Statusleiste zeigen den Stand.
 - **Beispielkatalog**: ist das Journal ohne Produkte, legt der Start einen erfundenen Katalog an (Leuchten und Leuchtmittel: 11 Gruppen,
   42 Produkte, etwa 100 Varianten, Lichttechnik mit Einheiten und Listen, zwei Sprachen) — über `Catalog.WithBatch` und `Commands`, wie
   jede Pflege. Dazu je Variante ein Bild, im Code gezeichnet (PNG, gleicher Inhalt ein Medium), als Relation `image` an Variante und
