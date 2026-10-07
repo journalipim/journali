@@ -81,6 +81,9 @@ test('Demo: Hochladen, Profile, Workflows, Presets, Modell und Plugins tragen da
   const erwartet = {
     '../src/views/MediaView.vue': [/<button class="primary" data-demo="aus" @click="fileInput\.click\(\)"/, /if \(store\.demo\) return; upload\(/,
       /\{ demo: 'aus', label: t_\('Neue Version hochladen …'\)/, /\{ demo: 'aus', label: t_\('Zuschneiden und ausrichten …'\)/, /class="x" data-demo="aus" @click="zuschneiden\(current\)"/],
+    // Publikation (07.10.2026): ein Baum von Anfang an — kein neuer, kein Löschen, kein Leeren, keine Rubrik entfernen
+    '../src/views/PubView.vue': [/<button class="x" data-demo="aus" @click="newTree"/, /\{ demo: 'aus', label: t_\('Publikationsbaum löschen'\)/,
+      /\{ demo: 'aus', label: t_\('Publikationsbaum leeren'\)/, /\{ demo: 'aus', label: t_\('Rubrik entfernen'\)/, /\{ demo: 'aus', label: t_\('\{0\} Rubriken entfernen'/],
     // Knotenansicht (07.10.2026): Hochladen per Knopf und durch Ablegen
     '../src/views/NodeView.vue': [/<button class="primary" data-demo="aus" @click="mediaFile\.click\(\)">/, /async function uploadMedia\(files, auswerten = false\) \{\r?\n  if \(store\.demo\) return/],
     '../src/components/WorkflowSettings.vue': [/data-demo="aus" :disabled="!dirty" @click="save"/],

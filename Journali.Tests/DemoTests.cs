@@ -212,4 +212,19 @@ public class DemoTests
         Assert.False(Demo.Gesperrt("/api/auth/login", "POST"));
         Assert.True(Demo.Gesperrt("/api/auth/password", "POST"));
     }
+
+    [Fact]
+    public void Ein_Publikationsbaum_von_Anfang_an_und_kein_zweiter()
+    {
+        // 07.10.2026: „Online-Shop“ aus den Bereichen des Beispielkatalogs; ein zweiter Baum wird abgewiesen wie eine Grenze des Tarifs
+        var c = Neu();
+        Demo.Einrichten(c);
+        var baeume = c.Lesen((_, t) => t.PubTrees.ToList());
+        var baum = Assert.Single(baeume);
+        Assert.Equal(("Online-Shop", "web"), (baum.Name, baum.Channel));
+        Assert.True(c.Lesen((_, t) => t.Nodes.Values.Count(x => x.Role == Roles.Rubric)) > 5, "Rubriken je Produktgruppe");
+        Assert.Throws<TarifException>(() => c.With((_, _, write) => write(Demo.Anwender, Ids.New(Roles.Rubric), Types.RubricCreated, new RubricCreated(null, Labels.Of("x", "x"), "Zweiter", "web", null), null)));
+        Assert.True(Demo.Gesperrt($"/api/nodes/{baum.Id}", "DELETE"));   // löschen: Knoten zurückziehen ist gesperrt
+        Assert.Equal(0, Demo.Publikationsbaum(c));   // ein weiterer Start legt keinen zweiten an
+    }
 }

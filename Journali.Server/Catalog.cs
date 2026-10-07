@@ -148,10 +148,18 @@ public sealed class Catalog
     /// <summary>Der Tag des ersten Eintrags — der Test einer neuen Instanz zählt ab ihm.</summary>
     public DateOnly? ErsterTag => Lesend(() => _usage.AllPerDay.Count == 0 ? (DateOnly?)null : _usage.AllPerDay.Keys.Min());
 
-    /// <summary>Was der Tarif verbietet, wirft: ein Publikationsbaum mehr, als er erlaubt.</summary>
+    /// <summary>Höchstens so viele Publikationsbäume, gleich was der Tarif sagt — gesetzt in der Demo (Demo.Einrichten: einer), sonst null.</summary>
+    public int? MaxPubTrees { get; set; }
+
+    /// <summary>Was der Tarif verbietet, wirft: ein Publikationsbaum mehr, als er erlaubt (oder als <see cref="MaxPubTrees"/> zulässt).</summary>
     private void PruefeTarif(string type, object? payload)
     {
         if (type != Types.RubricCreated || payload is not RubricCreated { Parent: null }) return;
+        if (MaxPubTrees is { } max)
+        {
+            if (_tree.PubTrees.Count() >= max) throw new TarifException($"Höchstens {max} Publikationsbaum.");
+            return;
+        }
         var t = TarifOhneSperre();
         if (t.PubTrees != Core.Projections.Tarife.Ohne && _tree.PubTrees.Count() >= t.PubTrees)
             throw new TarifException($"Tarif {t.Label}: höchstens {t.PubTrees} Publikationsbäume.");

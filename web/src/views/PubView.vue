@@ -193,7 +193,7 @@ function contextMenu(e, row) {
       { label: t_('Verweis entfernen'), icon: '✕', danger: true, hint: t_('Produkt bleibt im Pflegebaum'), action: () => unplace(row.rubric, r.id) },
     ]); return
   }
-  if (sel.value.size > 1 && sel.value.has(r.id)) { menu.open(e, [{ label: t_('{0} Rubriken entfernen', [sel.value.size]), icon: '✕', danger: true, hint: t_('Produkte bleiben im Pflegebaum'), action: () => retireMany([...sel.value]) }]); return }
+  if (sel.value.size > 1 && sel.value.has(r.id)) { menu.open(e, [{ demo: 'aus', label: t_('{0} Rubriken entfernen', [sel.value.size]), icon: '✕', danger: true, hint: t_('Produkte bleiben im Pflegebaum'), action: () => retireMany([...sel.value]) }]); return }
   router.push(`/pub/${r.id}`)
   menu.open(e, [
     { label: t_('Rubrik darunter anlegen …'), icon: '+', action: () => newRubric(r) },
@@ -204,10 +204,10 @@ function contextMenu(e, row) {
       : [{ label: t_('Stand einfrieren'), icon: '❄', hint: standOf(r) ? t_('jetzt; übersteuert Stand #{0} von „{1}“', [standOf(r).stand, standOf(r).from.label]) : t_('jetzt, ab hier nach unten'), action: () => setStand(r, 'now') }]),
     { sep: true },
     { label: t_('Umbenennen'), icon: '✎', action: () => rename(r) },
-    ...(r.parent ? [{ label: t_('Rubrik entfernen'), icon: '✕', danger: true, hint: t_('Produkte bleiben im Pflegebaum'), action: () => retire(r) }]
+    ...(r.parent ? [{ demo: 'aus', label: t_('Rubrik entfernen'), icon: '✕', danger: true, hint: t_('Produkte bleiben im Pflegebaum'), action: () => retire(r) }]
       : [{ label: t_('Kanal / Markt ändern …'), icon: '⇶', action: () => editTree(r) }, { sep: true },
-         { label: t_('Publikationsbaum leeren'), icon: '✕', danger: true, hint: t_('Rubriken und Verweise weg, Baum bleibt'), action: () => clearTree(r) },
-         { label: t_('Publikationsbaum löschen'), icon: '✕', danger: true, hint: t_('Produkte bleiben im Pflegebaum'), action: () => deleteTree(r) }]),
+         { demo: 'aus', label: t_('Publikationsbaum leeren'), icon: '✕', danger: true, hint: t_('Rubriken und Verweise weg, Baum bleibt'), action: () => clearTree(r) },
+         { demo: 'aus', label: t_('Publikationsbaum löschen'), icon: '✕', danger: true, hint: t_('Produkte bleiben im Pflegebaum'), action: () => deleteTree(r) }]),
   ])
 }
 async function editTree(r) {
@@ -318,7 +318,7 @@ onMounted(() => { if (!tree.loaded) tree.load() })
       <select v-if="trees.length" v-model="treeKey" :title="$t('Publikationsbaum — je Kanal (× Markt) die Maximalstruktur')">
         <option v-for="t in trees" :key="t.id" :value="t.id">{{ $t("{0} · {1}{2} · {3} Rubriken", [t.label, t.channel, t.market ? '/' + t.market : '', tree.below(t.id).total]) }}</option>
       </select>
-      <button class="x" @click="newTree" :title="$t('neuer Publikationsbaum')">+</button>
+      <button class="x" data-demo="aus" @click="newTree" :title="$t('neuer Publikationsbaum')">+</button>
       <span class="grow" />
       <button v-if="exp" :class="{ primary: showExport }" @click="showExport = !showExport; showUnplaced = false" :title="$t('Ausleitung anzeigen ({0} ausgeleitet, {1} zurückgehalten)', [exp.in, exp.out])"><span class="pos">{{ exp.in }}</span> <span :class="exp.out ? 'neg' : 'muted'">{{ exp.out }}</span></button>
       <button v-if="current && unplaced.length" :class="{ primary: showUnplaced }" @click="showUnplaced = !showUnplaced; showExport = false" :title="$t('{0} noch nicht einsortierte Produkte anzeigen', [unplaced.length])">⚠ {{ unplaced.length }}</button>

@@ -93,6 +93,8 @@ public static class Demo
         }
         n += Etim(c);
         if (pluginDir is not null) n += Systemobjekte(c, pluginDir);
+        n += Publikationsbaum(c);
+        c.MaxPubTrees = 1;   // ein Publikationsbaum, wie eine Grenze des Tarifs: anlegen geht nicht, löschen sperrt Gesperrt (Knoten zurückziehen)
         foreach (var key in OhnePlugins)
             if (c.Lesen((_, _) => c.Plugins.All.GetValueOrDefault(key)) is { Enabled: true })
                 n += c.With((_, _, write) => { write(Anwender, Plugins.Stream + key, Types.PluginDisabled, new PluginDisabled(), null); return 1; });
@@ -359,6 +361,26 @@ public static class Demo
         }, new ClassificationApi.AssignBody(gruppe, EtimKlasse, system, [new ClassificationApi.ClassSpec(EtimKlasse, En("LED-lamp/Multi-LED"), "Lamps")], merkmale), true));
         if (antwort.Error is { } fehler) throw new InvalidOperationException("Demo: ETIM — " + string.Format(fehler, antwort.Args ?? []));
         return n + zaehler;
+    }
+
+    /// <summary>Der Publikationsbaum der Demo (07.10.2026): „Online-Shop“ für den Kanal web, abgeleitet aus den Bereichen des Beispielkatalogs —
+    /// je Produktgruppe eine Rubrik, jedes Produkt ein Verweis. Nur, solange es keinen Publikationsbaum gibt.</summary>
+    public static int Publikationsbaum(Catalog c)
+    {
+        if (c.Lesen((_, t) => t.PubTrees.Any())) return 0;
+        var kanal = c.Lesen((m, _) => m.Channels.ContainsKey("web") ? "web" : m.Channels.Keys.Order(StringComparer.Ordinal).FirstOrDefault());
+        var bereiche = c.Lesen((_, t) => t.Nodes.Values.Where(x => x.Parent == Model.RootNode && x.Role == Roles.Group).Select(x => x.Id).ToList());
+        if (kanal is null || bereiche.Count == 0) return 0;
+        return c.WithBatch(Anwender, "demo-publikation", (model, tree, write) =>
+        {
+            var z = 0;
+            var ctx = Kontext(c, model, tree, write, () => z++);
+            var baum = Commands.CreateRubric(ctx, null, Labels.Of("Online-Shop", "Online shop"), "Online-Shop", kanal);
+            if (baum.Error is { } e) throw new InvalidOperationException("Demo: Publikationsbaum — " + e);
+            foreach (var bereich in bereiche)
+                if (Commands.Derive(ctx, baum.Entry!.Stream, bereich, true, out _).Error is { } f) throw new InvalidOperationException("Demo: Publikationsbaum — " + f);
+            return z;
+        });
     }
 
     /// <summary>Das Skript, das die Systemobjekte der Plugins nennt — neben dem Server (im Image unter /app).</summary>

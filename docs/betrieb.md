@@ -525,6 +525,9 @@ ausser bei den Werten der Produkte, die pflegt man wie sonst.
 - **ETIM**: fest zugewiesen ist EC001959 „LED-lamp/Multi-LED“ (ETIM 10.0) an den LED-Lampen, mit den acht Merkmalen des Katalogs, zugeordnet
   auf seine Attribute — Namen nur englisch (ETIM-Modell unter ODC-BY 1.0, die deutschen Bezeichnungen gehören ETIM Deutschland). Eine
   Freigabe holen, Klassen zuweisen oder entfernen gibt es in der Demo nicht.
+- **Ein Publikationsbaum** (07.10.2026): der Start leitet „Online-Shop“ (Kanal web) aus den Bereichen des Beispielkatalogs ab
+  (`Demo.Publikationsbaum`). Einen zweiten weist der Server ab wie eine Grenze des Tarifs (`Catalog.MaxPubTrees` = 1); löschen, leeren und
+  Rubriken entfernen gehen nicht (Knoten zurückziehen ist gesperrt) und stehen in der Oberfläche nicht da.
 - **Kein Zurückziehen, keine Massenbearbeitung**: Knoten und Medien zurückziehen ist gesperrt (auch im Kontextmenü, Einträge mit
   `demo: 'aus'` fallen dort weg), ebenso der Import; ein Stapel hat höchstens 50 Befehle (`Demo.MaxStapel`). Rückgängig bleibt.
 - **Kontingent**: 500 zählende Einträge (Datenpflege) je Woche und Monat für das Init Team, also für alle Besucher zusammen — weil die
