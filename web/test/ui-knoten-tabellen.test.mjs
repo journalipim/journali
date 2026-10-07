@@ -1114,5 +1114,6 @@ test('ohne KI: ein langes Dokument (30 000 Zeilen) — jede Zeile wird einmal ze
   const { w } = await dialog({ tabellen: { ready: true, state: 'text', tables: [] }, text })
   const p = w.vm.zeilenWerte.find(r => r.attribute === 'power')
   assert.deepEqual([p?.converted, p?.page], ['35', 2])
-  assert.ok(performance.now() - t0 < 4000, `${Math.round(performance.now() - t0)} ms`)
+  // allein etwa 1,7 s, im ganzen Lauf unter Last bis 4,3 s; die Grenze fängt den Rückfall auf den alten Stand (16 s), nicht die Last
+  assert.ok(performance.now() - t0 < 8000, `${Math.round(performance.now() - t0)} ms`)
 })
