@@ -76,7 +76,7 @@ async function focusGroup() {
     ziel = blocks.value.find(b => b.defs.some(d => keys.includes(d.key)))?.key ?? null
   }
   if (!ziel) { store.toast(t_('Gruppe {0} gilt an diesem Knoten nicht', [g])); return }
-  if (store.layout === 'tabs') tab.value = ziel
+  if (store.layout === 'tabs') { tab.value = ziel; store.reiterWahl = ziel }
   else document.querySelector(`tbody[data-group="${ziel}"]`)?.scrollIntoView({ block: 'start' })
 }
 
@@ -85,6 +85,9 @@ const rels = ref({ out: [], in: [] })   // Relationen dieses Knotens: ausgehend,
 const entries = ref([])
 const busy = ref(false)
 const tab = ref('')
+// Der gewählte Reiter (07.10.2026): bleibt beim Wechsel zu einem anderen Knoten, wenn es ihn dort gibt — sonst gilt dort der erste, die Wahl bleibt.
+// Er steht im Store (store.reiterWahl): die Ansicht wird je Knoten neu gebaut (TreeView: :key="id").
+function waehleTab(k) { tab.value = k; store.reiterWahl = k }
 const addGroup = ref('')
 
 const model = computed(() => store.model)
@@ -156,17 +159,18 @@ function setLayout(l) { store.layout = l; store.save() }
 // Die Bereiche unter den Attributen (07.10.2026): untereinander (auf- und zuklappen) oder als Reiter — dann ist nur der gewählte da, und er ist offen
 const BAENDER = ['media', 'relations', 'workflow', 'releases', 'axes', 'groups', 'versions']
 const reiter = computed(() => store.bandLayout === 'tabs')
-const bandTab = ref(localStorage.getItem('journali.bandTab') ?? 'media')
+// gewählt (gemerkt) und gezeigt: der gewählte, wenn es ihn an diesem Knoten gibt, sonst der erste — die Wahl bleibt für den nächsten Knoten
+const bandWahl = ref((() => { try { return localStorage.getItem('journali.bandTab') } catch { return null } })() ?? 'media')
 const bandTabs = ref([])   // aus den gezeichneten Bereichen gelesen: je nach Knoten sind es andere, die Plugins bringen eigene mit
 const baender = ref(null)
 function leseBaender() {
   const liste = [...(baender.value?.parentElement?.querySelectorAll(':scope > [data-band]') ?? [])]
     .map(el => ({ key: el.dataset.band, label: (el.querySelector('h2')?.textContent ?? el.dataset.band).replace(/^[▾▸]\s*/, '').trim() }))
   if (JSON.stringify(liste) !== JSON.stringify(bandTabs.value)) bandTabs.value = liste
-  if (liste.length && !liste.some(t => t.key === bandTab.value)) bandTab.value = liste[0].key
 }
+const bandTab = computed(() => bandTabs.value.some(t => t.key === bandWahl.value) ? bandWahl.value : bandTabs.value[0]?.key ?? bandWahl.value)
 const zeigeBand = k => !reiter.value || (open('bereiche') && bandTab.value === k)   // zugeklappt: als Reiter ist keiner da
-function waehleBand(k) { bandTab.value = k; try { localStorage.setItem('journali.bandTab', k) } catch {} }
+function waehleBand(k) { bandWahl.value = k; try { localStorage.setItem('journali.bandTab', k) } catch {} }
 function setBandLayout(l) { store.bandLayout = l; store.save(); nextTick(leseBaender) }
 onUpdated(leseBaender)
 onMounted(() => nextTick(leseBaender))
@@ -293,7 +297,11 @@ function customBlocks(list, eff) {
     return { key: b.key, label: b.title, custom: true, active: true, defs }
   }).filter(b => b.defs.length)
 }
-watch(blocks, b => { if (!b.some(x => x.key === tab.value)) tab.value = b[0]?.key ?? '' }, { immediate: true })
+watch(blocks, b => {
+  if (!b.length) return   // beim Laden eines Knotens kurz leer — dabei nichts vergessen
+  if (store.reiterWahl && b.some(x => x.key === store.reiterWahl)) tab.value = store.reiterWahl
+  else if (!b.some(x => x.key === tab.value)) tab.value = b[0].key
+}, { immediate: true })
 watch([() => route.query.group, () => blocks.value.length], focusGroup)
 // Suche über das Sichtbare: Attributname/Key und die Werte in den gezeigten Spalten (eigen oder geerbt, Auswahl als Label)
 const attrFilter = computed({ get: () => store.attrFilter, set: v => { store.attrFilter = v } })
@@ -1050,7 +1058,7 @@ function cellMenu(e, def, col, block) {
     </div>
 
     <div v-if="store.layout === 'tabs' && blocks.length" class="tabs">
-      <button v-for="b in (attrFilter.trim() || missingOnly ? filteredBlocks : blocks)" :key="b.key" class="tabbtn" :class="{ on: tab === b.key, locked: !b.active }" @click="tab = b.key" :title="$t('{0} · {1} Attribute', [b.key, b.defs.length]) + (b.active ? '' : ' ' + $t('· gesperrt: aktiv ab {0}', [roleLabel[b.activeFrom]]))">{{ b.label }}<span v-if="!b.active"> ⌀</span></button>
+      <button v-for="b in (attrFilter.trim() || missingOnly ? filteredBlocks : blocks)" :key="b.key" class="tabbtn" :class="{ on: tab === b.key, locked: !b.active }" @click="waehleTab(b.key)" :title="$t('{0} · {1} Attribute', [b.key, b.defs.length]) + (b.active ? '' : ' ' + $t('· gesperrt: aktiv ab {0}', [roleLabel[b.activeFrom]]))">{{ b.label }}<span v-if="!b.active"> ⌀</span></button>
     </div>
 
 

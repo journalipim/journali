@@ -35,6 +35,7 @@ export const store = reactive({
   progress: null,        // { done, total, text } — laufender Stapel; Balken oben in der Oberfläche (App.vue)   // zuletzt gewählter Knoten — ▣ Baum in der Leiste kehrt dorthin zurück
   viewKey: (saved.viewKey && typeof saved.viewKey === 'object') ? saved.viewKey : {},   // gewählte Sicht je Knotentyp
   layout: saved.layout ?? 'flat',                    // flat | tabs
+  reiterWahl: '',                                    // der zuletzt gewählte Reiter der Attributgruppen — gilt am nächsten Knoten wieder, nur für die Sitzung
   bandLayout: saved.bandLayout ?? 'flat',            // die Bereiche unter den Attributen (Assets, Relationen, …): flat | tabs (07.10.2026)
   // Umfang am Knoten: 'all' = total (alles, was anliegt, gesperrtes sichtbar) · 'can' = auf dieser Ebene änderbar ·
   // 'only' = nur auf dieser Ebene änderbar (weder darüber noch darunter erlaubt). Drei Stufen, jede in der vorigen enthalten.

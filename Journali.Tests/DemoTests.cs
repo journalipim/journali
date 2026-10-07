@@ -189,6 +189,9 @@ public class DemoTests
         {
             var gruppe = t.Nodes.Values.First(x => x.Role == Roles.Group && x.Label.GetValueOrDefault("de") == "LED-Lampen");
             Assert.Equal("10000552", t.Resolve(m, gruppe, "class_gpc", null, null).Value);
+            Assert.Equal("EC001959", t.Resolve(m, gruppe, "class_etim", null, null).Value);
+            var deckenleuchte = t.Nodes.Values.First(x => x.Role == Roles.Product && t.Nodes[x.Parent!].Label.GetValueOrDefault("de") == "Deckenleuchten");
+            Assert.Null(t.Resolve(m, deckenleuchte, "class_etim", null, null).Value);   // die ETIM-Klasse gilt nur unter den LED-Lampen
             var produkt = t.Nodes.Values.First(x => x.Parent == gruppe.Id && x.Role == Roles.Product);
             Assert.Equal("30016052", t.Resolve(m, produkt, "gpc20000697", null, null).Value);   // LIGHT-EMITTING DIODE (LED), geerbt
             var decke = t.Nodes.Values.First(x => x.Role == Roles.Group && x.Label.GetValueOrDefault("de") == "Deckenleuchten");
