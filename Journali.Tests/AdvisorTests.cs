@@ -377,6 +377,27 @@ public class AdvisorTests
         Assert.Equal(HttpStatusCode.OK, (await w.Frage("""{"q":""}""")).Status);
     }
 
+    // ---- KI: warum sie nicht antwortet, sieht die Vorschau, nicht der Besucher (09.10.2026)
+
+    [Fact]
+    public async Task Antwortet_die_KI_nicht_sieht_die_Vorschau_den_Grund_der_Besucher_nicht()
+    {
+        // ein angemeldeter Anwender (die Vorschau): der Grund steht dabei — das Team hat keinen KI-Schlüssel
+        await using (var w = await Welt.Neu())
+        {
+            w.Setze(w.Standard() with { Ki = true, Team = "de" });
+            var (_, j) = await w.Frage("""{"q":"Bohrhammer"}""");
+            Assert.StartsWith("KI nicht verfügbar: ", j.GetProperty("warning").GetString());
+            Assert.Contains("Deutschland", j.GetProperty("warning").GetString());
+        }
+        // der Dienst mit seinem Token: nur, dass sie nicht antwortet
+        await using var v = await Welt.Neu(anmeldung: true);
+        v.Setze(v.Standard() with { Ki = true, Team = "de" });
+        var token = Auth.AdvisorTokenAusgeben(v.Dir, "werkzeug", "Dienst");
+        var (_, k) = await v.Frage("""{"q":"Bohrhammer"}""", token);
+        Assert.Equal("KI nicht verfügbar", k.GetProperty("warning").GetString());
+    }
+
     // ---- das Token des Dienstes
 
     [Fact]

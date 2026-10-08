@@ -108,7 +108,8 @@ async function tokenWiderrufen(id) {
 }
 
 async function fragen() {
-  try { vorschau.value = await api.post(`/api/advisor/${encodeURIComponent(cur.value)}/ask`, { q: vorschauFrage.value, locale: grussSprachen.value[0], ki: false }) }
+  // mit KI, wenn der Berater sie nutzt — die Vorschau zeigt, was ein Besucher bekommt, und warum die KI nicht antwortet (09.10.2026)
+  try { vorschau.value = await api.post(`/api/advisor/${encodeURIComponent(cur.value)}/ask`, { q: vorschauFrage.value, locale: grussSprachen.value[0], ki: !!def.value.ki }) }
   catch (e) { vorschau.value = { error: e.message } }
 }
 
@@ -191,7 +192,7 @@ const compose = computed(() => [
           <code v-if="neuesToken" class="neues-token" :title="$t('nur jetzt sichtbar — als JOURNALI_ADVISOR_TOKEN des Dienstes')">{{ neuesToken }}</code>
         </div>
 
-        <div class="step-band" :title="$t('dieselbe Frage, die ein Besucher stellt — ohne Text der KI')">{{ $t('Vorschau') }}</div>
+        <div class="step-band" :title="$t('dieselbe Frage, die ein Besucher stellt — mit Text der KI, wenn der Berater sie nutzt')">{{ $t('Vorschau') }}</div>
         <form class="row" style="padding:4px 8px" @submit.prevent="fragen">
           <input v-model="vorschauFrage" class="vorschau-frage" style="flex:1" :placeholder="$t('Frage eines Besuchers')" />
           <button type="submit" class="vorschau-los" :disabled="geaendert" :title="geaendert ? $t('ungespeicherte Änderungen') : ''">{{ $t('Fragen') }}</button>
@@ -199,7 +200,10 @@ const compose = computed(() => [
         <div v-if="vorschau" class="vorschau" style="padding:0 8px 8px">
           <div v-if="vorschau.error" class="neg">✗ {{ vorschau.error }}</div>
           <template v-else>
-            <div class="muted" :title="vorschau.warning || ''">{{ $t('{0} Treffer', [vorschau.total]) }}{{ vorschau.warning ? ' · ' + $t('nur Wortsuche') : '' }}</div>
+            <div class="muted" :title="vorschau.warning || ''">{{ $t('{0} Treffer', [vorschau.total]) }}{{ vorschau.warning && !vorschau.warning.startsWith('KI') ? ' · ' + $t('nur Wortsuche') : '' }}</div>
+            <div v-if="vorschau.warning?.startsWith('KI')" class="neg ki-fehler">✗ {{ vorschau.warning }}</div>
+            <div v-if="vorschau.answer" class="ki-text" :title="$t('Text von einer KI erstellt')">✧ {{ vorschau.answer }}</div>
+            <div v-for="u in vorschau.docs ?? []" :key="u.n" class="unterlage muted" :title="u.text">⎘ U{{ u.n }} {{ u.heading || u.name }} · {{ u.name }}</div>
             <ol class="treffer"><li v-for="h in vorschau.hits" :key="h.id">{{ h.name }} <span class="muted">{{ (h.values ?? []).map(v => v.label + ': ' + v.value).join(' · ') }}</span></li></ol>
             <div v-if="vorschau.facets?.length" class="muted facetten">{{ $t('Facetten') }}: {{ vorschau.facets.map(f => f.label).join(', ') }}</div>
           </template>

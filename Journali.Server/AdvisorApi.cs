@@ -637,6 +637,18 @@ public static partial class AdvisorApi
         return (system, sb.ToString().TrimEnd());
     }
 
+    /// <summary>
+    /// „KI nicht verfügbar“ — und warum, aber nur für die Vorschau (09.10.2026): ein Besucher fragt mit dem Token des Dienstes (Akteur
+    /// advisor:&lt;key&gt;) und bekommt keinen internen Grund; wer in journali angemeldet ist, sieht ihn („Kein Team …“, „Connection refused“).
+    /// </summary>
+    public static string KiNichtVerfuegbar(HttpRequest req, IResult fehler)
+    {
+        const string kurz = "KI nicht verfügbar";
+        if (ModelApi.Actor(req) is not { } a || a.StartsWith("advisor:", StringComparison.Ordinal)) return kurz;
+        var grund = fehler is IValueHttpResult { Value: { } v } && JsonSerializer.SerializeToElement(v).TryGetProperty("error", out var e) ? e.GetString() : null;
+        return grund is { Length: > 0 } ? $"{kurz}: {grund}" : kurz;
+    }
+
     /// <summary>Die Unterlagen eines Bestands, die heute gelten, freigegeben sind und die Rolle sieht — wie bei den Bildern.</summary>
     public static List<string> Unterlagen(Catalog c, Bestand b, string role, bool admin)
     {
@@ -759,7 +771,7 @@ public static partial class AdvisorApi
                     foreach (var e in neu.Where(e => filter.All(y => y.Def.Key != e.Def.Key))) { filter.Add(e); neuAngaben.Add(e); }
                     foreach (var w in namen) if (Ganz(rest, w) is var i and >= 0) rest = Weg(rest, i, w.Length).Trim();
                 }
-                else warnung = "KI nicht verfügbar";
+                else warnung = KiNichtVerfuegbar(req, r.Fehler);
             }
 
             // Die Wörter: gesammelte und neue; was in keinem Produkt vorkommt, zählt nicht und wird genannt
@@ -865,7 +877,7 @@ public static partial class AdvisorApi
                 var (system, user) = Prompt(q.Length > 0 ? q : string.Join(" ", bekannt), fuerKi, merkmale, verlauf,
                     unterlagen.Select(u => ($"{u.Name}{(u.Heading is { } h ? " · " + h : "")}{(u.Node is { } k ? " · " + k.Label : "")}", u.Text)).ToList());
                 var r = await AiApi.AskAsync(req, c, jobsDir, null, null, system, user, 600, false, 1, "advisor", ct, fuerTeam: d.Team);
-                if (r.Fehler is null) text = r.Text; else warnung ??= "KI nicht verfügbar";
+                if (r.Fehler is null) text = r.Text; else warnung ??= KiNichtVerfuegbar(req, r.Fehler);
             }
             return Results.Ok(new { locale = loc, total, hits = treffer, facets = facetten, filter = filterEcho, words = bekannt, unknown = unbekannt, similar = aehnlich, relax = lockern, instead = statt, docs = unterlagen, answer = text, warning = warnung });
         });

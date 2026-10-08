@@ -10,7 +10,7 @@ import { dialog } from '../src/dialog.js'
 
 const warte = async w => { for (let i = 0; i < 6; i++) { await new Promise(r => setTimeout(r, 0)); await w.vm.$nextTick() } }
 
-async function welt({ daten = {}, fehler = [] } = {}) {
+async function welt({ daten = {}, fehler = [], antwort = null } = {}) {
   const get = api.get, post = api.post, del = api.del, confirm = dialog.confirm
   const gesendet = []
   const gespeichert = { 'def:shop': { label: 'Shop', pub: 'r1', role: 'reader', view: 'sellable', locales: ['de'], greeting: { de: 'Hallo' }, ki: false, mcp: true, origins: ['https://shop.example'], limits: { jeTag: 500 } }, ...daten }
@@ -28,6 +28,7 @@ async function welt({ daten = {}, fehler = [] } = {}) {
     gesendet.push([m, p, body])
     if (m === 'PUT' && p.startsWith('/api/plugins/advisor/data/')) { gespeichert[decodeURIComponent(p.split('/').pop())] = body; return {} }
     if (p === '/api/advisor/shop/tokens') { tokens = [...tokens, { id: '999999aaaaaa', label: body.label, at: '2026-10-08T11:00:00Z' }]; return { token: 'ja_neu', label: body.label } }
+    if (p === '/api/advisor/shop/ask' && antwort) return antwort
     if (p === '/api/advisor/shop/ask') return { total: 2, hits: [{ id: 'p1', name: 'Bohrhammer Pro', values: [{ label: 'Leistung', value: '800 W' }] }, { id: 'p2', name: 'Akkuschrauber', values: [] }], facets: [{ key: 'color', label: 'Farbe' }], warning: 'Plugin embed ist aus.' }
     return {}
   }
@@ -122,6 +123,30 @@ test('die Vorschau stellt die Frage eines Besuchers ohne KI und zeigt Treffer un
     assert.deepEqual(w.findAll('ol.treffer li').map(l => l.text().split(' ')[0]), ['Bohrhammer', 'Akkuschrauber'])
     assert.match(w.find('.vorschau').text(), /2 Treffer · nur Wortsuche/)
     assert.match(w.find('.facetten').text(), /Farbe/)
+  } finally { ende() }
+})
+
+// Vorschau mit KI (09.10.2026): nutzt der Berater sie, fragt die Vorschau wie ein Besucher mit KI — und zeigt, warum sie nicht antwortet
+test('nutzt der Berater KI, fragt die Vorschau mit KI und zeigt Text, Unterlagen und den Grund, wenn sie nicht antwortet', async () => {
+  const def = { label: 'Shop', pub: 'r1', role: 'reader', view: 'sellable', locales: ['de'], greeting: { de: 'Hallo' }, ki: true, team: 'init', mcp: true, origins: [], limits: {} }
+  let { w, gesendet, ende } = await welt({ daten: { 'def:shop': def }, antwort: { total: 1, hits: [{ id: 'p1', name: 'Kilden Hose', values: [] }], facets: [],
+    answer: 'Den Schieber vorsichtig zusammendrücken [U1].', docs: [{ n: 1, media: 'm1', name: 'Pflege – Hosen.pdf', heading: 'Reparatur: Reißverschluss', text: 'Schieber …' }] } })
+  try {
+    await w.find('tr.berater').trigger('click'); await warte(w)
+    await w.find('input.vorschau-frage').setValue('reissverschluss kaputt')
+    await w.find('form.row').trigger('submit'); await warte(w)
+    assert.equal(gesendet.find(g => g[1] === '/api/advisor/shop/ask')[2].ki, true)
+    assert.equal(w.find('.ki-text').text(), '✧ Den Schieber vorsichtig zusammendrücken [U1].')
+    assert.equal(w.find('.unterlage').text(), '⎘ U1 Reparatur: Reißverschluss · Pflege – Hosen.pdf')
+    assert.ok(!w.find('.ki-fehler').exists())
+  } finally { ende() }
+  ;({ w, ende } = await welt({ daten: { 'def:shop': def }, antwort: { total: 1, hits: [], facets: [], warning: 'KI nicht verfügbar: Für „Init Team“ ist kein KI-Schlüssel hinterlegt.' } }))
+  try {
+    await w.find('tr.berater').trigger('click'); await warte(w)
+    await w.find('input.vorschau-frage').setValue('zelt')
+    await w.find('form.row').trigger('submit'); await warte(w)
+    assert.equal(w.find('.ki-fehler').text(), '✗ KI nicht verfügbar: Für „Init Team“ ist kein KI-Schlüssel hinterlegt.')
+    assert.doesNotMatch(w.find('.vorschau').text(), /nur Wortsuche/, 'ein KI-Fehler ist kein Fehler der Suche')
   } finally { ende() }
 })
 
