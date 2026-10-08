@@ -288,6 +288,11 @@ public static partial class AdvisorApi
         "im", "in", "an", "am", "auf", "aus", "bei", "ist", "sind", "ich", "wir", "sie", "es", "suche", "brauche", "welche", "welcher", "welches", "was", "wie",
         "gibt", "habt", "haben", "hat", "nicht", "kein", "keine", "the", "a", "an", "and", "or", "with", "for", "of", "to", "in", "on", "is", "are", "i", "we",
         "need", "looking", "which", "what", "do", "you", "have", "any", "some", "bis", "ab", "unter", "über", "ueber", "mehr", "als", "auch", "noch", "mir", "mich",
+        // Fragen nach einem Problem (09.10.2026): „mein zelt ist nicht mehr wasserdicht“ — wem es gehört und wie gefragt wird, sucht kein Produkt
+        "mein", "meine", "meinen", "meinem", "meiner", "meins", "dein", "deine", "unser", "unsere", "unseren", "euer", "eure", "sein", "seine", "ihr", "ihre",
+        "bin", "bist", "war", "waren", "wird", "werden", "wurde", "habe", "hab", "hast", "geht", "gehen", "kann", "können", "koennen", "soll", "sollte", "muss",
+        "warum", "wieso", "weshalb", "wo", "wann", "wer", "so", "sehr", "schon", "immer", "wieder", "jetzt", "mal", "bitte", "danke", "hallo", "man", "einfach",
+        "my", "our", "your", "it", "its", "not", "no", "anymore", "why", "how", "can", "does", "did", "was", "were", "has", "had", "me", "please",
     };
 
     /// <summary>Die Suchwörter einer Frage: klein, ohne Füllwörter, Zahlen bleiben.</summary>

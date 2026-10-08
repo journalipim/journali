@@ -520,6 +520,14 @@ public class AdvisorTests
     }
 
     [Fact]
+    public void Wem_etwas_gehoert_und_wie_gefragt_wird_sucht_kein_Produkt()
+    {
+        Assert.Equal(["zelt", "wasserdicht"], AdvisorApi.Woerter("Mein Zelt ist nicht mehr wasserdicht"));
+        Assert.Equal(["reißverschluss", "hose", "kaputt"], AdvisorApi.Woerter("Warum geht der Reißverschluss an meiner Hose immer wieder kaputt?"));
+        Assert.Equal(["tent", "waterproof"], AdvisorApi.Woerter("my tent is not waterproof anymore"));
+    }
+
+    [Fact]
     public async Task Ein_Gespraech_sammelt_die_Angaben_und_jede_Eingabe_ergaenzt_sie()
     {
         await using var w = await Welt.Neu();
