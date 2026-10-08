@@ -1,0 +1,37 @@
+{
+  "key": "berater",
+  "version": "1.0.0",
+  "label": {
+    "de": "Produktberatung",
+    "en": "Product advisor"
+  },
+  "description": {
+    "de": "Beantwortet Fragen von Besuchern einer Website zu den Produkten eines Publikationsbaums: Treffer über Wörter und, mit dem Plugin embed, über den Sinn; Facetten, nach denen sich die Treffer unterscheiden; Produkt und Vergleich mit den Attributen einer Sicht. Es liest mit den Rechten einer Rolle; ein Text der KI des gewählten Teams ist wählbar. Der Dienst serve.mjs läuft in einem eigenen Container, spricht nur über /api mit journali und bietet ein Chat-Fenster zum Einbinden (widget.js) und einen MCP-Server (Streamable HTTP) an.",
+    "en": "Answers questions from website visitors about the products of a publication tree: hits by words and, with the embed plugin, by meaning; facets in which the hits differ; product and comparison with the attributes of a view. It reads with the rights of a role; a text written by the AI of a chosen team is optional. The service serve.mjs runs in its own container, talks to journali only via /api and offers an embeddable chat window (widget.js) and an MCP server (Streamable HTTP)."
+  },
+  "kind": "export",
+  "runs": "browser",
+  "entry": "entry.js",
+  "autoInstall": true,
+  "acknowledge": {
+    "version": "2026-10-08",
+    "title": {
+      "de": "Öffentliche Auskunft über Produkte",
+      "en": "Public information about products"
+    },
+    "points": [
+      {
+        "de": "Was ein Berater zeigt, ist öffentlich: jeder Besucher der Website und jeder KI-Agent am MCP-Endpunkt liest die Produkte des Publikationsbaums mit den Attributen der Sicht.",
+        "en": "What an advisor shows is public: every visitor of the website and every AI agent at the MCP endpoint reads the products of the publication tree with the attributes of the view."
+      },
+      {
+        "de": "Die Wahl von Publikationsbaum, Rolle und Sicht, die Produktdaten und die Angaben auf der Website (Datenschutz, Kennzeichnung) verantwortet der Betreiber.",
+        "en": "The choice of publication tree, role and view, the product data and the statements on the website (privacy, labelling) are the operator's responsibility."
+      },
+      {
+        "de": "Schreibt die KI eines Teams Texte für Besucher, gehen Frage und Treffer an deren Anbieter; die Texte sind als KI-Text gekennzeichnet und können falsch sein.",
+        "en": "If a team's AI writes texts for visitors, the question and the hits go to its provider; the texts are labelled as AI text and can be wrong."
+      }
+    ]
+  }
+}

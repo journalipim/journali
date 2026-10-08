@@ -48,8 +48,28 @@ public static class Auth
         public Dictionary<string, string> Passwords { get; set; } = new();           // user → pbkdf2$iter$salt$hash
         public Dictionary<string, TokenRec> Tokens { get; set; } = new();            // sha256(token) → { user, label, at }
         public Dictionary<string, SessionRec> Sessions { get; set; } = new();        // sha256(cookie) → { user, until }
+        public Dictionary<string, BeraterRec> Berater { get; set; } = new();         // sha256(token) → { berater, label, at }
     }
     public sealed record TokenRec(string User, string Label, DateTimeOffset At);
+    /// <summary>Token des Dienstes eines Produktberaters (08.10.2026, BeraterApi): gehört keiner Person, liest mit der Rolle des Beraters und erreicht
+    /// nur dessen Fragen (<see cref="BeraterApi.FuerToken"/>).</summary>
+    public sealed record BeraterRec(string Berater, string Label, DateTimeOffset At);
+
+    public static string BeraterTokenAusgeben(string dir, string berater, string label)
+    {
+        var token = "jb_" + NewSecret();
+        With(dir, s => { s.Berater[Sha(token)] = new BeraterRec(berater, label, DateTimeOffset.UtcNow); return 0; }, save: true);
+        return token;
+    }
+    public static List<(string Id, string Label, DateTimeOffset At)> BeraterTokens(string dir, string berater) =>
+        With(dir, s => s.Berater.Where(t => t.Value.Berater == berater).OrderByDescending(t => t.Value.At).Select(t => (t.Key[..12], t.Value.Label, t.Value.At)).ToList());
+    public static int BeraterTokenWiderrufen(string dir, string berater, string id) =>
+        With(dir, s =>
+        {
+            var keys = s.Berater.Where(t => id.Length >= 6 && t.Key.StartsWith(id, StringComparison.Ordinal) && t.Value.Berater == berater).Select(t => t.Key).ToList();
+            foreach (var k in keys) s.Berater.Remove(k);
+            return keys.Count;
+        }, save: true);
 
     /// <summary>Die Token dieser Personen — Kennung (Anfang des Hashes), Bezeichnung, wann, wem. Der Token selbst steht nirgends,
     /// auch nicht hier: in der Datei liegt nur sein Hash.</summary>
@@ -169,6 +189,14 @@ public static class Auth
                     : c.Lesen((_, _) => c.Users.Roles.ContainsKey("editor")) ? "editor" : "$service";
                 return (svc.Actor, rolle);
             }
+            if (token.StartsWith("jb_"))
+            {
+                // Berater: kein Anwender, die Rolle aus seiner Definition; in der Demo gibt es keinen
+                var br = Demo.An ? null : Finde(dir, s => s.Berater.GetValueOrDefault(Sha(token)));
+                if (br is null || BeraterApi.RolleVon(c, br.Berater) is not { } rolle) return null;
+                ctx.Items["berater"] = br.Berater;
+                return ("berater:" + br.Berater, rolle);
+            }
             var rec = Finde(dir, s => s.Tokens.GetValueOrDefault(Sha(token)));
             if (rec is not null && NurDemo(rec.User) && c.Lesen((_, _) => c.Users.All.GetValueOrDefault(rec.User)) is { Enabled: true } tu) return (tu.Key, tu.Role);
             return null;
@@ -193,7 +221,8 @@ public static class Auth
         if (path.StartsWith("/api/auth/me") || path.StartsWith("/api/auth/logout") || path.StartsWith("/api/auth/password") || path.StartsWith("/api/auth/tokens")) return null;   // eigenes Konto
         if (path.StartsWith("/api/auth/rights") || path.StartsWith("/api/auth/people")) return path.StartsWith("/api/auth/people") ? Rights.Read : null;   // Personen (Key, Name, Rolle) für Zuweisungen darf jeder Leser sehen                                                                         // das Vokabular darf jeder lesen
         if (path.StartsWith("/api/auth/users") || path.StartsWith("/api/auth/roles")) return read && path.StartsWith("/api/auth/roles") ? Rights.Read : Rights.Users;
-        if (path.StartsWith("/api/ai")) return read ? Rights.Read : Rights.Write;   // KI fragen darf, wer pflegen darf — der Schlüssel gehört dem Team, nicht der Person
+        if (path.StartsWith("/api/ai")) return read ? Rights.Read : Rights.Write;
+        if (path.StartsWith("/api/berater")) return BeraterApi.Recht(path, method);   // Fragen lesen nur (auch als POST); die Token verwaltet, wer Plugins verwaltet   // KI fragen darf, wer pflegen darf — der Schlüssel gehört dem Team, nicht der Person
         if (path.StartsWith("/api/teams")) return read ? Rights.Read : Rights.Team;   // das eigene Team; Anlegen, Löschen und Grundkontingent prüft TeamApi gegen „users“
         if (path.StartsWith("/api/media/store") || path.StartsWith("/api/media/copy")) return Rights.Storage;
         if (path.StartsWith("/api/betrieb")) return Rights.Storage;   // Spiegel und Schnappschuss: Ablage, kein Modell
@@ -319,6 +348,8 @@ public static class Auth
         if (!Enabled(c)) { await next(); return; }   // noch kein Benutzer: offen
         var who = Resolve(ctx, c, dir);
         if (who is null) { ctx.Response.StatusCode = 401; await ctx.Response.WriteAsJsonAsync(new { error = "Anmeldung nötig.", template = "Anmeldung nötig.", login = true }); return; }
+        // Das Token eines Beraters erreicht nur dessen Fragen — nichts sonst unter /api, auch nichts, was seine Rolle sonst lesen dürfte
+        if (ctx.Items["berater"] is string berater && !BeraterApi.FuerToken(path, ctx.Request.Method, berater)) { ctx.Response.StatusCode = 403; await ctx.Response.WriteAsJsonAsync(Err("Das Token des Beraters gilt nur für seine Fragen.")); return; }
         if (!Allowed(c, who.Value.Role, ctx.Request) && Demo.An && who.Value.User == Demo.Anwender) { ctx.Response.StatusCode = 403; await ctx.Response.WriteAsJsonAsync(Err("In der Demo nicht verfügbar.")); return; }
         if (!Allowed(c, who.Value.Role, ctx.Request)) { ctx.Response.StatusCode = 403; await ctx.Response.WriteAsJsonAsync(Err("Rolle {0} darf das nicht ({1}).", who.Value.Role, Rights.Label.GetValueOrDefault(Needed(ctx.Request) ?? "") ?? Needed(ctx.Request))); return; }
         ctx.Request.Headers["X-Actor"] = who.Value.User;   // der Urheber kommt aus der Sitzung, nicht vom Client

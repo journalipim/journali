@@ -261,12 +261,14 @@ public static class AiApi
     /// Fehler als fertige Antwort zurück.
     /// </summary>
     public static async Task<(IResult? Fehler, string Text, List<object> Sources, string Team, string Payer, string Provider, string Model)> AskAsync(
-        HttpRequest req, Catalog c, string jobsDir, string? wantProvider, string? wantModel, string? system, string frage, int maxTokens, bool web, int maxSearches, string? purpose, CancellationToken ct)
+        HttpRequest req, Catalog c, string jobsDir, string? wantProvider, string? wantModel, string? system, string frage, int maxTokens, bool web, int maxSearches, string? purpose, CancellationToken ct,
+        string? fuerTeam = null)
     {
         if (Actor(req) is not { } actor) return (ActorMissing(), "", [], "", "", "", "");
         var (fehler, team, zahler, provider, key, lokalUrl) = c.Lesen((_, _) =>
         {
-            var mein = TeamApi.TeamOf(c, req.HttpContext.Items["user"] as string);
+            // team: ein Berater (08.10.2026) gehört keinem Team — seine Definition nennt, wessen Schlüssel gilt
+            var mein = fuerTeam ?? TeamApi.TeamOf(c, req.HttpContext.Items["user"] as string);
             if (mein is null || c.Teams.Get(mein) is not { Enabled: true } t) return (Bad("Kein Team — ohne Team gibt es keine KI über den Server."), "", "", "", "", (string?)null);
             var zahlerKey = c.Teams.Payer(mein); var zt = c.Teams.Get(zahlerKey)!;
             if (!zt.Enabled) return (Bad("Das zahlende Team „{0}“ ist abgeschaltet.", zt.Label), "", "", "", "", (string?)null);

@@ -3103,5 +3103,18 @@
  "⏳ {0} endet heute": "⏳ {0} ends today",
  "⏳ {0} endet morgen": "⏳ {0} ends tomorrow",
  "⏳ {0} endet in {1} Tagen": "⏳ {0} ends in {1} days",
- "Für einen passenden Tarif und das rechtzeitige Verlängern sorgt der Betreiber.": "The operator is responsible for a suitable plan and for renewing it in time."
+ "Für einen passenden Tarif und das rechtzeitige Verlängern sorgt der Betreiber.": "The operator is responsible for a suitable plan and for renewing it in time.",
+ "Eine Frage hat höchstens {0} Zeichen.": "A question has at most {0} characters.",
+ "Höchstens {0} Filter.": "At most {0} filters.",
+ "Berater {0}: Tagesgrenze der Fragen erreicht.": "Advisor {0}: daily limit of questions reached.",
+ "Produkt {0} gibt es hier nicht.": "Product {0} does not exist here.",
+ "Ein Vergleich hat 2 bis {0} Produkte.": "A comparison has 2 to {0} products.",
+ "Bild {0} gibt es hier nicht.": "Image {0} does not exist here.",
+ "Bild {0} hat keine Vorschau.": "Image {0} has no preview.",
+ "Der Zugang gilt für einen anderen Berater.": "The access is for a different advisor.",
+ "Den Berater fragt sein Dienst; die Vorschau braucht das Recht Plugins.": "The advisor is asked by its service; the preview needs the right Plugins.",
+ "Berater {0}: {1}": "Advisor {0}: {1}",
+ "Plugin {0}: der Hinweis ist nicht bestätigt.": "Plugin {0}: the notice is not confirmed.",
+ "Berater {0} gibt es nicht.": "Advisor {0} does not exist.",
+ "Das Token des Beraters gilt nur für seine Fragen.": "The advisor's token is valid only for its questions."
 }

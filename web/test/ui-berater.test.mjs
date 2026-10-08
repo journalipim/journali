@@ -1,0 +1,136 @@
+// ⇪ Export → Produktberatung (plugins/berater/src/View.vue): Berater anlegen, einrichten, speichern; ein Token für den Dienst; die Vorschau stellt
+// dieselbe Frage wie ein Besucher. Der Server ist vorgetäuscht (api.get/post/del).
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import { win, button } from './ui.mjs'
+import { mount } from '@vue/test-utils'
+import { api } from '../src/api.js'
+import { store } from '../src/store.js'
+import { dialog } from '../src/dialog.js'
+
+const warte = async w => { for (let i = 0; i < 6; i++) { await new Promise(r => setTimeout(r, 0)); await w.vm.$nextTick() } }
+
+async function welt({ daten = {}, fehler = [] } = {}) {
+  const get = api.get, post = api.post, del = api.del, confirm = dialog.confirm
+  const gesendet = []
+  const gespeichert = { 'def:shop': { label: 'Shop', pub: 'r1', role: 'reader', view: 'sellable', locales: ['de'], greeting: { de: 'Hallo' }, ki: false, mcp: true, origins: ['https://shop.example'], limits: { jeTag: 500 } }, ...daten }
+  let tokens = [{ id: 'abcdef123456', label: 'Dienst', at: '2026-10-08T10:00:00Z' }]
+  api.get = async p => {
+    if (p === '/api/berater') return Object.keys(gespeichert).map(k => ({ key: k.slice(4), label: gespeichert[k].label, pub: gespeichert[k].pub, errors: k === 'def:shop' ? fehler : [] }))
+    if (p === '/api/pub') return [{ id: 'r1', label: 'Online-Shop', channel: 'web', market: null }, { id: 'r2', label: 'Katalog', channel: 'print', market: 'de' }]
+    if (p === '/api/auth/roles') return [{ key: 'admin', label: 'Administrator' }, { key: 'reader', label: 'Leser' }]
+    if (p === '/api/teams') return [{ key: 'init', label: 'Init Team' }]
+    if (p.startsWith('/api/plugins/berater/data/')) return gespeichert[decodeURIComponent(p.split('/').pop())] ?? null
+    if (p === '/api/berater/shop/tokens') return tokens
+    return []
+  }
+  api.post = async (p, body, m = 'POST') => {
+    gesendet.push([m, p, body])
+    if (m === 'PUT' && p.startsWith('/api/plugins/berater/data/')) { gespeichert[decodeURIComponent(p.split('/').pop())] = body; return {} }
+    if (p === '/api/berater/shop/tokens') { tokens = [...tokens, { id: '999999aaaaaa', label: body.label, at: '2026-10-08T11:00:00Z' }]; return { token: 'jb_neu', label: body.label } }
+    if (p === '/api/berater/shop/frage') return { total: 2, hits: [{ id: 'p1', name: 'Bohrhammer Pro', values: [{ label: 'Leistung', value: '800 W' }] }, { id: 'p2', name: 'Akkuschrauber', values: [] }], facets: [{ key: 'color', label: 'Farbe' }], warning: 'Plugin embed ist aus.' }
+    return {}
+  }
+  api.del = async p => { gesendet.push(['DELETE', p]); if (p.startsWith('/api/plugins/berater/data/')) delete gespeichert[decodeURIComponent(p.split('/').pop())]; return {} }
+  dialog.confirm = async () => true
+  store.model = { ...(store.model ?? {}), masterLocale: 'de', locales: [{ code: 'de' }, { code: 'en' }], views: [{ key: 'sellable', label: { de: 'Verkaufbares' } }, { key: 'beratung', label: { de: 'Beratung' } }], attributes: store.model?.attributes ?? [] }
+  const { default: View } = await import('../../plugins/berater/src/View.vue')
+  const w = mount(View, { attachTo: win.document.body })
+  await warte(w)
+  return { w, gesendet, gespeichert, ende: () => { w.unmount(); api.get = get; api.post = post; api.del = del; dialog.confirm = confirm } }
+}
+
+test('die Liste zeigt die Berater mit ihrem Zustand; ein Klick öffnet einen mit seinen Feldern', async () => {
+  const { w, ende } = await welt({ fehler: ['keine Sicht'] })
+  try {
+    const zeile = w.find('tr.berater')
+    assert.match(zeile.text(), /Shop/)
+    assert.equal(zeile.find('td.neg').text(), '✗')
+    assert.equal(zeile.find('td.neg').attributes('title'), 'keine Sicht')
+    await zeile.trigger('click'); await warte(w)
+    assert.equal(w.find('select.pub').element.value, 'r1')
+    assert.equal(w.find('select.rolle').element.value, 'reader')
+    assert.equal(w.find('select.sicht').element.value, 'sellable')
+    assert.equal(w.find('textarea.websites').element.value, 'https://shop.example')
+    assert.equal(w.find('input.je-tag').element.value, '500')
+    assert.deepEqual(w.findAll('ul.fehler li').map(l => l.text()), ['✗ keine Sicht'])
+    assert.match(w.find('.token').text(), /abcdef123456/)
+    assert.ok(w.find('pre.code').text().includes('widget.js'))
+    assert.ok(w.text().includes('JOURNALI_BERATER: shop'))
+  } finally { ende() }
+})
+
+test('speichern schreibt die aufgeräumte Definition als Plugin-Daten', async () => {
+  const { w, gesendet, ende } = await welt()
+  try {
+    await w.find('tr.berater').trigger('click'); await warte(w)
+    assert.equal(w.find('button.speichern').attributes('disabled') !== undefined, true, 'unverändert: nichts zu speichern')
+    await w.find('select.sicht').setValue('beratung')
+    await w.findAll('.sprache').find(s => s.text() === 'en').trigger('click')
+    await w.find('input.ki').setValue(true)
+    await w.find('select.team').setValue('init')
+    const t = w.find('textarea.websites'); t.element.value = 'https://shop.example/\nhttps://www.shop.example'; await t.trigger('change')
+    await w.find('input.je-tag').setValue('')
+    await w.find('button.speichern').trigger('click'); await warte(w)
+    const [m, p, body] = gesendet.find(g => g[0] === 'PUT')
+    assert.equal(m, 'PUT'); assert.equal(p, '/api/plugins/berater/data/' + encodeURIComponent('def:shop'))
+    assert.equal(body.view, 'beratung')
+    assert.deepEqual(body.locales, ['de', 'en'])
+    assert.equal(body.ki, true); assert.equal(body.team, 'init')
+    assert.deepEqual(body.origins, ['https://shop.example', 'https://www.shop.example'], 'ohne Schrägstrich am Ende')
+    assert.deepEqual(body.limits, {}, 'eine leere Grenze fällt weg')
+    assert.deepEqual(body.greeting, { de: 'Hallo' })
+  } finally { ende() }
+})
+
+test('anlegen nur mit gültigem, neuem Schlüssel — mit Vorschlägen für Baum, Rolle und Sicht', async () => {
+  const { w, gesendet, ende } = await welt()
+  try {
+    const knopf = w.find('form.neu button')
+    await w.find('input.neu-key').setValue('Shop!'); assert.ok(knopf.attributes('disabled') !== undefined)
+    await w.find('input.neu-key').setValue('shop'); assert.ok(knopf.attributes('disabled') !== undefined, 'den gibt es schon')
+    await w.find('input.neu-key').setValue('katalog'); assert.equal(knopf.attributes('disabled'), undefined)
+    await w.find('form.neu').trigger('submit'); await warte(w)
+    const [, p, body] = gesendet.find(g => g[0] === 'PUT')
+    assert.equal(p, '/api/plugins/berater/data/' + encodeURIComponent('def:katalog'))
+    assert.deepEqual([body.pub, body.role, body.view], ['r1', 'reader', 'sellable'])
+    assert.equal(w.findAll('tr.berater').length, 2)
+  } finally { ende() }
+})
+
+test('ein Token für den Dienst ist nur einmal sichtbar; widerrufen fragt nach', async () => {
+  const { w, gesendet, ende } = await welt()
+  try {
+    await w.find('tr.berater').trigger('click'); await warte(w)
+    await button(w, '＋ Token').trigger('click'); await warte(w)
+    assert.equal(w.find('code.neues-token').text(), 'jb_neu')
+    assert.equal(w.findAll('tr.token').length, 2)
+    await w.find('button.widerrufen').trigger('click'); await warte(w)
+    assert.ok(gesendet.some(g => g[0] === 'DELETE' && g[1] === '/api/berater/shop/tokens/abcdef123456'))
+  } finally { ende() }
+})
+
+test('die Vorschau stellt die Frage eines Besuchers ohne KI und zeigt Treffer und Facetten', async () => {
+  const { w, gesendet, ende } = await welt()
+  try {
+    await w.find('tr.berater').trigger('click'); await warte(w)
+    await w.find('input.vorschau-frage').setValue('Bohrhammer')
+    await w.find('form.row').trigger('submit'); await warte(w)
+    const [, p, body] = gesendet.find(g => g[1] === '/api/berater/shop/frage')
+    assert.equal(p, '/api/berater/shop/frage')
+    assert.deepEqual(body, { q: 'Bohrhammer', locale: 'de', ki: false })
+    assert.deepEqual(w.findAll('ol.treffer li').map(l => l.text().split(' ')[0]), ['Bohrhammer', 'Akkuschrauber'])
+    assert.match(w.find('.vorschau').text(), /2 Treffer · nur Wortsuche/)
+    assert.match(w.find('.facetten').text(), /Farbe/)
+  } finally { ende() }
+})
+
+test('entfernen nimmt die Token und die Definition weg', async () => {
+  const { w, gesendet, ende } = await welt()
+  try {
+    await w.find('tr.berater').trigger('click'); await warte(w)
+    await w.find('button.entfernen').trigger('click'); await warte(w)
+    assert.deepEqual(gesendet.filter(g => g[0] === 'DELETE').map(g => g[1]), ['/api/berater/shop/tokens/abcdef123456', '/api/plugins/berater/data/' + encodeURIComponent('def:shop')])
+    assert.equal(w.findAll('tr.berater').length, 0)
+  } finally { ende() }
+})

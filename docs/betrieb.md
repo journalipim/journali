@@ -421,6 +421,7 @@ verlangt eine neue Bestätigung. Die Saat (`autoInstall`) installiert solche Plu
 | Plugin | Hinweis |
 |---|---|
 | `dpp`, `ppwr`, `empco` | Hilfsmittel, keine Rechtsberatung: keine Gewähr für Vollständigkeit, Richtigkeit und Aktualität; ob und wie Pflichten erfüllt sind, prüft und entscheidet der Betreiber |
+| `berater` | Was ein Berater zeigt, ist öffentlich (Website, MCP); die Wahl von Publikationsbaum, Rolle und Sicht, die Produktdaten und die Angaben auf der Website (Datenschutz, Kennzeichnung) verantwortet der Betreiber; Texte der KI gehen an deren Anbieter und können falsch sein |
 | MCP (geplant) | Zugriff für fremde KI-Agenten: sie arbeiten mit dem Token einer Person, lesend und, wenn die Rolle es erlaubt, schreibend; was ein Agent liest, geht an seinen Anbieter, was er schreibt, steht unter der Person im Journal; ob und welchem Agenten Zugriff gegeben wird, entscheidet und verantwortet der Betreiber |
 
 ### Was beim ersten Lauf nachgeladen wird
@@ -442,6 +443,58 @@ im Image.
 
 Lizenzen: `LICENSE` (journali) und `THIRD-PARTY-NOTICES.md` (alles Fremde, mit Quelle) liegen im Repo und im Image
 unter `/app`.
+
+## Produktberater (Plugin berater)
+
+Ein Berater beantwortet Fragen von Besuchern einer Website zu den Produkten eines Publikationsbaums (`docs/pflegestruktur.md` 42).
+Angelegt wird er unter ⇪ Export → Produktberatung: Publikationsbaum, Rolle, Sicht, Sprachen, Begrüssung, wahlweise KI mit Team,
+MCP, Websites und Grenzen. Dort gibt es auch das Token für seinen Dienst — nur beim Ausgeben sichtbar.
+
+Der Dienst läuft im **eigenen Container**, ohne eigenes Image: `node:22-alpine` mit dem Verzeichnis des Plugins (nur lesen).
+Er braucht nur HTTP zu journali, keine Datenbank, keinen Medienspeicher. Neben `compose.yaml`:
+
+```yaml
+  berater-shop:
+    image: node:22-alpine
+    command: ["node", "/berater/serve.mjs"]
+    volumes: ["./plugins/berater:/berater:ro"]
+    environment:
+      JOURNALI: http://server:8080
+      JOURNALI_BERATER: shop
+      JOURNALI_BERATER_TOKEN: ${JOURNALI_BERATER_TOKEN}   # in .env, oder JOURNALI_BERATER_TOKEN_FILE
+      JOURNALI_PROXY: "1"                               # nur hinter einem Reverse Proxy
+    ports: ["127.0.0.1:8090:8090"]
+    restart: unless-stopped
+```
+
+Der Reverse Proxy (TLS) gibt **nur diesen Port** nach aussen, etwa als `https://berater.example.com`; der journali-Server bleibt
+innen. `JOURNALI_PROXY=1` liest die Adresse des Besuchers aus `X-Forwarded-For` — nur setzen, wenn der Port allein am Proxy hängt
+(wie bei `127.0.0.1:8090`), sonst kann jeder Besucher eine Adresse vortäuschen und die Grenze je Besucher umgehen.
+
+Auf der Website:
+
+```html
+<script src="https://berater.example.com/widget.js" async></script>
+```
+
+`data-sprache="en"`, `data-ziel="#berater"` (in ein Element statt schwebend) und `data-farbe="#0b6e4f"` sind wählbar. Die Adresse
+der Website gehört in die Liste „Websites“ des Beraters, sonst antwortet der Dienst dem Browser mit 403. KI-Agenten erreichen
+denselben Dienst unter `https://berater.example.com/mcp` (MCP, Streamable HTTP; 2026-07-28 und die Versionen mit `initialize`).
+
+| Weg am Dienst | was |
+|---|---|
+| `GET /widget.js` | das Chat-Fenster |
+| `GET /api/info`, `POST /api/frage`, `GET /api/produkt/{id}`, `POST /api/vergleich`, `GET /api/bild/{id}` | die Fragen des Fensters |
+| `POST /mcp` | MCP: `search_products`, `get_product`, `compare_products` |
+| `GET /health` | 200, wenn journali mit dem Token antwortet |
+
+**Was der Dienst speichert:** nichts auf Platte. Im Arbeitsspeicher die Zahl der Fragen je Besucheradresse für Minute und Tag
+(danach verworfen) und die Angaben des Beraters für eine Minute. Den Inhalt einer Frage protokolliert er nicht; ins Protokoll des
+Containers schreibt er nur, wenn journali nicht erreichbar ist. Ist die KI an, gehen Frage und Treffer an den Anbieter des Teams —
+das gehört in die Datenschutzerklärung der Website, ebenso die Adresse des Besuchers beim Dienst.
+
+**Token widerrufen** (Ansicht → ✕ am Token): der Dienst bekommt danach 401 und antwortet Besuchern mit „journali ist nicht
+erreichbar.“. Ein neues Token: ＋ Token, in `.env` eintragen, Container neu starten.
 
 ## Mail
 

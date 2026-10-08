@@ -2524,3 +2524,86 @@ Tarif mit den Servern. Den Reiter ⧉ Server gibt es erst, wenn mehr als ein Ser
 **Der Medienspeicher** ist für alle Server derselbe — er steht im Tresor, nicht mehr je Server in `media.json` (03.10.2026): ein Journal, ein Speicher.
 
 **Offen:** Die wartenden Eingänge im Fach `in/` eines Jobs liegen auf der Platte seines Servers; die anderen zeigen dafür „auf Server …“, nicht die Dateien.
+
+## 42. Produktberater (`berater`) — Fragen von Website-Besuchern an einen Publikationsbaum (08.10.2026, gebaut)
+
+Ein Kunde baut auf seiner Website ein Chat-Fenster ein, in dem Besucher nach Produkten fragen: „Bohrhammer für Beton, nicht
+zu schwer“. Dieselben Fragen sollen fremde KI-Agenten über MCP stellen können. Der Berater antwortet aus den Produkten eines
+Publikationsbaums, ohne dass ein Besucher je den journali-Server erreicht.
+
+**Was ein Berater zeigt — entschieden.** Drei Angaben zusammen, jede schränkt ein:
+
+| Angabe | wirkt auf |
+|---|---|
+| Publikationsbaum | welche Produkte: was der Baum für seinen Kanal und Markt ausleitet (`Publication.Export`, Freigabe an der Variante) — ein Produkt mit seinen ausgeleiteten Varianten |
+| Rolle | was davon sichtbar ist: eingeschränkte Knoten (`Tree.Visible`) und Ordner von Medien fallen weg; die Rolle muss es im Journal geben |
+| Sicht | welche Attribute: nur die der Sicht erscheinen am Produkt, in Facetten, Vergleich und dem Text der KI — ein internes Attribut (Einkaufspreis) bleibt draussen, auch als Filter |
+
+Bilder nur, wenn sie heute gelten, freigegeben sind und in einem Ordner liegen, den die Rolle sieht. Die Werte sind die
+aktuellen, auch unter einem eingefrorenen Stand einer Rubrik — der Stand entscheidet nur, welche Produkte drin sind.
+
+**So weit wie möglich ohne KI — entschieden.** Die Antwort setzt sich zusammen aus:
+
+1. **Treffer über die Wörter** der Frage (ohne Füllwörter; Zahlen zählen) im Text des Produkts und seiner Varianten
+   (`NodeText`), der Name zählt doppelt;
+2. **Treffer über den Sinn**, wenn das Plugin `embed` läuft: die Frage wird eingebettet und mit den Vektoren der Knoten des
+   Bestands verglichen (`Vectors.SearchNodesAsync` mit `nur`). Finden die Wörter etwas, ordnet der Sinn nur um (Reciprocal Rank
+   Fusion); finden sie nichts, zählen die 40 nächsten nach Sinn;
+3. **Facetten**: Attribute der Sicht vom Typ Liste, ja/nein und Zahl, nach denen sich die Treffer unterscheiden — mit Anzahl je
+   Wert, bei Zahlen mit kleinstem und grösstem Wert und einer Mitte zum Teilen („bis 550 W“, „ab 550 W“). Vorn steht, was die
+   Treffer am gleichmässigsten teilt. Das ist die Beratung: das Fenster fragt nicht nach, es bietet an, wonach sich noch
+   unterscheiden lässt;
+4. **Vergleich** von zwei bis vier Produkten, Zeile für Zeile, gleiche Werte gekennzeichnet.
+
+Nur wenn der Berater es erlaubt (`ki`), schreibt die KI des gewählten Teams zwei bis vier Sätze zu den ersten fünf Treffern
+(`AiApi.AskAsync` mit `fuerTeam`, gezählt bei diesem Team). Sie bekommt nur die nummerierten Treffer mit ihren Werten und keine
+Werkzeuge; ein Satz in den Produktdaten, der wie eine Anweisung aussieht, kann darum nichts auslösen. Das Fenster kennzeichnet den
+Text als „Text von einer KI erstellt“. Fehlt der Schlüssel oder ist die Tagesgrenze erreicht, kommt die Antwort ohne Text.
+
+**Bauform — entschieden, wie in 31.** Zwei Teile:
+
+- **Im Server** (`BeraterApi.cs`): die Definition als Plugin-Daten `def:<schlüssel>` von `berater` (Journal), der Bestand je
+  Berater und Sprache einmal je Journalstand gerechnet, die Fragen unter `/api/berater/{key}/…` (`info`, `frage`, `produkt/{id}`,
+  `vergleich`, `bild/{media}`) und die Token (`tokens`).
+- **Der Dienst** (`plugins/berater/serve.mjs`, `dienst.mjs`, `mcp.mjs`): ein eigener Container aus dem Image `node:22-alpine` mit dem
+  Verzeichnis des Plugins, ohne npm-Pakete. Er ist das einzige Stück, das von aussen erreichbar ist, spricht ausgehend mit journali
+  und hält nichts ausser dem Token und einer Zählung je Besucher im Arbeitsspeicher. Er liefert das Chat-Fenster (`widget.js`), die
+  Fragen für das Fenster und einen MCP-Server.
+
+**Das Token des Dienstes — entschieden.** Ein Berater hat keine Person, die fragt — anders als in 31, wo jeder Aufruf mit dem
+Token einer Person kommt. Sein Token (`jb_…`, im Tresor als Hash, Stück `auth`) gehört dem Berater: es liest mit dessen Rolle und
+erreicht **nur** dessen fünf Fragen (`BeraterApi.FuerToken`), nicht `/api/tree`, nicht die Definition, nicht die Token, keinen
+anderen Berater — auch nichts, was die Rolle sonst lesen dürfte. Im Journal steht als Akteur `berater:<schlüssel>` (nur beim
+Verbrauch der KI). Ausgeben und widerrufen darf, wer Plugins verwaltet; die Vorschau in der Ansicht fragt mit diesem Recht statt mit
+dem Token. In der Demo gilt kein Berater-Token.
+
+**Grenzen.** Je Besucher (Adresse) zählt der Dienst Fragen je Minute und Tag (Vorgabe 20 und 300), denn nur er kennt die Adresse;
+je Tag zählt journali alle Fragen und alle Texte der KI eines Beraters (`jeTag`, `kiJeTag`) — ein übernommener Dienst kann damit
+nicht mehr kosten als die Grenze. Beides ist Betrieb, nichts davon steht im Journal.
+
+**Herkunft (CORS).** Die Definition nennt die Websites, die das Fenster einbinden dürfen. Eine Anfrage mit einem anderen `Origin`
+bekommt 403 — auch am MCP-Endpunkt, wie die Spezifikation es gegen DNS-Rebinding verlangt. Ohne `Origin` (ein Server, ein
+MCP-Client) gilt die Anfrage.
+
+**MCP — zwei Versionen der Spezifikation.** Der Dienst bedient am Endpunkt `/mcp` (POST, Streamable HTTP, Antwort als JSON):
+
+| Version | Form |
+|---|---|
+| 2026-07-28 | ohne Handshake: jede Anfrage nennt ihre Version im Kopf `MCP-Protocol-Version` und in `params._meta` (`io.modelcontextprotocol/protocolVersion`, `clientCapabilities`), dazu `Mcp-Method` und bei `tools/call` `Mcp-Name` (auch Base64). Weichen Kopf und Rumpf ab: 400 mit `-32020`; unbekannte Version: 400 mit `-32022` und der Liste; `server/discover` sagt Versionen, Fähigkeiten und Anleitung; unbekannte Methode: 404 mit `-32601`. Ergebnisse tragen `resultType: "complete"` und `serverInfo` |
+| 2025-11-25, 2025-06-18, 2025-03-26 | mit `initialize`, ohne Sitzung (`Mcp-Session-Id` wird weder ausgegeben noch verlangt); Benachrichtigungen 202 |
+
+`GET` und `DELETE` am Endpunkt beantwortet er mit 405. Drei Werkzeuge, alle nur lesend (`readOnlyHint`): `search_products`
+(Frage, Filter aus den Facetten, Sprache, Anzahl), `get_product`, `compare_products` — dieselben Fragen wie das Fenster, ohne Text
+der KI, mit Text und `structuredContent`. Eine Anmeldung am MCP-Endpunkt gibt es nicht: was er zeigt, zeigt die Website ohnehin.
+Ob ein Berater MCP anbietet, steht an ihm (`mcp`).
+
+**Das Chat-Fenster.** Ein `<script>`-Tag, kein Paket: Shadow DOM, damit Seite und Fenster sich nicht gegenseitig gestalten;
+Werte aus den Produktdaten nur als Text (`textContent`), nie als HTML; kein Cookie, kein Speicher im Browser. Schwebend mit Knopf
+oder mit `data-ziel` in ein Element der Seite; Sprache aus `data-sprache` oder dem Browser (deutsch, sonst englisch).
+
+**Hinweis vor dem Einschalten.** Das Plugin trägt einen Hinweis (Manifest `acknowledge`): was ein Berater zeigt, ist öffentlich;
+die Wahl von Baum, Rolle und Sicht und die Angaben auf der Website verantwortet der Betreiber; Texte der KI gehen an deren
+Anbieter und können falsch sein. Ohne Bestätigung antwortet kein Berater.
+
+**Offen.** Preise und Verfügbarkeit kennt der Berater nur, soweit sie Attribute der Sicht sind. Ein Verweis vom Treffer in den
+Shop (Adresse je Produkt) fehlt; er käme als Attribut der Sicht oder als Vorlage an der Definition.

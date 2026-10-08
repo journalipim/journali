@@ -258,8 +258,9 @@ public sealed class Vectors
         return n;
     }
 
-    /// <summary>Die nächsten Knoten zu einem Vektor in einer Sprache; <paramref name="exclude"/> nimmt den Ausgangsknoten heraus.</summary>
-    public async Task<List<KnotenTreffer>> SearchNodesAsync(string model, float[] query, string locale, int limit, string? exclude = null, CancellationToken ct = default)
+    /// <summary>Die nächsten Knoten zu einem Vektor in einer Sprache; <paramref name="exclude"/> nimmt den Ausgangsknoten heraus, <paramref name="nur"/> begrenzt auf
+    /// diese Knoten (der Bestand eines Beraters).</summary>
+    public async Task<List<KnotenTreffer>> SearchNodesAsync(string model, float[] query, string locale, int limit, string? exclude = null, CancellationToken ct = default, IReadOnlyCollection<string>? nur = null)
     {
         var list = new List<KnotenTreffer>();
         if (!Ready) return list;
@@ -267,12 +268,13 @@ public sealed class Vectors
         var dims = query.Length;
         await using var cmd = new NpgsqlCommand($"""
             SELECT node, locale, embedding::vector({dims}) <=> @q::vector({dims}) AS d FROM node_vector
-            WHERE model = {ModelLiteral(model)} AND locale = @l{(exclude is null ? "" : " AND node <> @x")}
+            WHERE model = {ModelLiteral(model)} AND locale = @l{(exclude is null ? "" : " AND node <> @x")}{(nur is null ? "" : " AND node = ANY(@nur)")}
             ORDER BY embedding::vector({dims}) <=> @q::vector({dims}), node LIMIT @n
             """, conn);
         cmd.Parameters.AddWithValue("q", Literal(query)); cmd.Parameters.AddWithValue("l", locale);
         cmd.Parameters.AddWithValue("n", Math.Clamp(limit, 1, 200));
         if (exclude is not null) cmd.Parameters.AddWithValue("x", exclude);
+        if (nur is not null) cmd.Parameters.AddWithValue("nur", nur.ToArray());
         await using var r = await cmd.ExecuteReaderAsync(ct);
         while (await r.ReadAsync(ct)) list.Add(new KnotenTreffer(r.GetString(0), r.GetString(1), r.GetDouble(2)));
         return list;

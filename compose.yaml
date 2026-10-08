@@ -86,6 +86,20 @@ services:
       db:
         condition: service_healthy
 
+  # Produktberater (Plugin berater, docs/betrieb.md → Produktberater): je Berater ein Container ohne eigenes Image, nach aussen nur
+  # dieser Port (hinter dem Reverse Proxy); das Token gibt ⇪ Export → Produktberatung aus und steht in .env
+  # berater-shop:
+  #   image: node:22-alpine
+  #   command: ["node", "/berater/serve.mjs"]
+  #   volumes: ["./plugins/berater:/berater:ro"]
+  #   environment:
+  #     JOURNALI: http://server:8080
+  #     JOURNALI_BERATER: shop
+  #     JOURNALI_BERATER_TOKEN: ${JOURNALI_BERATER_TOKEN}
+  #     JOURNALI_PROXY: "1"
+  #   ports: ["127.0.0.1:8090:8090"]
+  #   restart: unless-stopped
+
 volumes:
   journali-db:
   journali-secrets:
