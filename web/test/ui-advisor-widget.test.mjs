@@ -39,6 +39,7 @@ const STANDARD = {
     facets: body.filter.length ? [] : [{ key: 'color', label: 'Farbe', type: 'list', n: 2, values: [{ value: 'red', label: 'Rot', n: 1 }, { value: 'blue', label: 'Blau', n: 1 }] },
       { key: 'leistung', label: 'Leistung', type: 'range', unit: 'W', min: 300, max: 800, split: 550, n: 2 }],
     filter: body.filter.map(f => ({ ...f, label: 'Farbe', valueLabel: 'Rot' })), answer: null,
+    words: [...new Set([...(body.woerter || []), ...(body.q ? [body.q.toLowerCase()] : [])])],
   }],
   '/api/compare': [200, { products: [{ id: 'p1', name: 'Bohrhammer Pro' }, { id: 'p2', name: 'Akkuschrauber' }], rows: [{ key: 'leistung', label: 'Leistung', values: ['800 W', '300 W'], same: false }, { key: 'color', label: 'Farbe', values: ['Rot', 'Rot'], same: true }] }],
   '/api/product/p1': [200, { id: 'p1', name: 'Bohrhammer Pro', images: ['m1'], values: [{ label: 'Leistung', value: '800 W' }], variants: [] }],
@@ -80,22 +81,25 @@ test('eingebettet in ein Element gibt es keinen Knopf und kein Schliessen', asyn
   assert.equal(b.schatten.querySelector('.kopf button'), null)
 })
 
-test('eine Frage zeigt Treffer als Karten und Facetten zum Eingrenzen; ein Klick grenzt ein, ein zweiter nimmt es zurück', async () => {
+test('eine Frage zeigt Treffer, fragt nach dem Merkmal, das sie am besten teilt, und bietet die weiteren an; ein Klick grenzt ein, ein zweiter nimmt es zurück', async () => {
   const w = starte()
   await warte()
   await w.frage('Bohrhammer')
   assert.equal(w.$('.blase.ich').textContent, 'Bohrhammer')
   assert.deepEqual(w.$$('.karte .name').map(e => e.textContent), ['Bohrhammer Pro', 'Akkuschrauber'])
   assert.ok(w.$$('.blase').some(b => b.textContent === '2 Produkte passen.'))
+  // die erste Facette als Rückfrage, die übrigen zum Eingrenzen
+  assert.equal(w.$('.rueckfrage .blase').textContent, 'Farbe?')
+  assert.deepEqual(w.$$('.rueckfrage .chip').map(c => c.textContent), ['Rot (1)', 'Blau (1)'])
   const chips = w.$$('.chip').map(c => c.textContent)
-  assert.ok(chips.includes('Farbe: Rot (1)'))
   assert.ok(chips.includes('Leistung bis 550 W') && chips.includes('Leistung ab 550 W'), 'eine Zahl teilt sich in bis und ab')
-  await w.klick(w.$$('.chip').find(c => c.textContent === 'Farbe: Rot (1)'))
+  await w.klick(w.$$('.rueckfrage .chip').find(c => c.textContent === 'Rot (1)'))
   const letzte = w.rufe.filter(r => r.url.endsWith('/api/ask')).at(-1)
-  assert.equal(letzte.body.q, 'Bohrhammer', 'dieselbe Frage')
+  assert.equal(letzte.body.q, '', 'keine neue Eingabe')
+  assert.deepEqual(letzte.body.woerter, ['bohrhammer'], 'die gesammelten Wörter gehen mit')
   assert.deepEqual(letzte.body.filter, [{ attribute: 'color', op: 'eq', value: 'red' }])
   assert.ok(w.$$('.chip.an').some(c => c.textContent === 'Farbe: Rot ×'), 'der Filter steht als Chip da')
-  await w.klick(w.$$('.chip.an').at(-1))
+  await w.klick(w.$$('.chip.an').find(c => c.textContent === 'Farbe: Rot ×'))
   assert.deepEqual(w.rufe.filter(r => r.url.endsWith('/api/ask')).at(-1).body.filter, [])
 })
 
@@ -162,4 +166,61 @@ test('englisch, wenn die Seite es sagt', async () => {
   assert.equal(w.rufe.find(r => r.url.endsWith('/api/ask')).body.locale, 'en')
   assert.ok(w.$$('.blase').some(b => b.textContent === '2 products match.'))
   assert.equal(w.$('input[type=text]').placeholder, 'What are you looking for?')
+})
+
+// ---- Gespräch (08.10.2026): jede Eingabe ergänzt die Angaben, die Anfrage trägt sie mit, der Server merkt sich nichts
+
+test('eine zweite Eingabe ergänzt die erste: Wörter, Filter und Verlauf gehen mit, nichts wird verworfen', async () => {
+  const w = starte()
+  await warte()
+  await w.frage('Bohrhammer')
+  await w.klick(w.$$('.rueckfrage .chip').find(c => c.textContent === 'Rot (1)'))
+  await w.frage('leise')
+  const letzte = w.rufe.filter(r => r.url.endsWith('/api/ask')).at(-1)
+  assert.equal(letzte.body.q, 'leise')
+  assert.deepEqual(letzte.body.woerter, ['bohrhammer'])
+  assert.deepEqual(letzte.body.filter, [{ attribute: 'color', op: 'eq', value: 'red' }], 'der Filter bleibt')
+  assert.deepEqual(letzte.body.verlauf, ['Bohrhammer'])
+  // die Angaben stehen als Chips da, ein Wort lässt sich einzeln entfernen
+  const woerter = w.$$('.angaben .chip.wort').map(c => c.textContent)
+  assert.deepEqual(woerter.slice(-2), ['bohrhammer ×', 'leise ×'])
+  await w.klick(w.$$('.angaben .chip.wort').find(c => c.textContent === 'bohrhammer ×'))
+  assert.deepEqual(w.rufe.filter(r => r.url.endsWith('/api/ask')).at(-1).body.woerter, ['leise'])
+})
+
+test('„Neue Suche“ fängt von vorn an', async () => {
+  const w = starte()
+  await warte()
+  await w.frage('Bohrhammer')
+  await w.klick(w.$$('.chip.neu').at(-1))
+  assert.ok(w.$$('.blase').some(b => b.textContent === 'Neue Suche'))
+  await w.frage('Schrauber')
+  const letzte = w.rufe.filter(r => r.url.endsWith('/api/ask')).at(-1)
+  assert.deepEqual([letzte.body.woerter, letzte.body.filter, letzte.body.verlauf], [[], [], []])
+})
+
+test('ein Wort, das in keinem Produkt steht, wird genannt; ist nichts übrig, lässt sich eine Angabe lockern', async () => {
+  const w = starte({
+    ...STANDARD,
+    '/api/ask': body => body.q === 'auto'
+      ? [200, { total: 0, hits: [], facets: [], filter: [], words: ['zelt', 'blau'], unknown: ['auto'], relax: [{ kind: 'word', word: 'blau', label: 'blau', n: 3 }] }]
+      : [200, { total: 3, hits: [HIT('z1', 'Zelt')], facets: [], filter: [], words: body.woerter ?? [] }],
+  })
+  await warte()
+  await w.frage('auto')
+  const blasen = w.$$('.blase').map(b => b.textContent)
+  assert.ok(blasen.includes('„auto“ steht in keinem Produkt.'))
+  assert.ok(blasen.includes('Kein Produkt passt dazu.'))
+  const ohne = w.$$('.lockern .chip')
+  assert.deepEqual(ohne.map(c => c.textContent), ['ohne blau (3)'])
+  await w.klick(ohne[0])
+  const letzte = w.rufe.filter(r => r.url.endsWith('/api/ask')).at(-1)
+  assert.deepEqual([letzte.body.q, letzte.body.woerter], ['', ['zelt']], 'die zu enge Angabe ist weg')
+})
+
+test('Treffer nur nach dem Sinn heissen ähnliche Produkte', async () => {
+  const w = starte({ ...STANDARD, '/api/ask': [200, { total: 2, similar: true, hits: [HIT('p1', 'Schlafsack'), HIT('p2', 'Decke')], facets: [], filter: [], words: [] }] })
+  await warte()
+  await w.frage('warm schlafen')
+  assert.ok(w.$$('.blase').some(b => b.textContent === '2 ähnliche Produkte.'))
 })

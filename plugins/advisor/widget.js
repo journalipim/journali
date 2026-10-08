@@ -3,6 +3,8 @@
 // Wahlweise: data-locale="en" (sonst die des Browsers), data-target="#advisor" (in dieses Element statt schwebend), data-color="#0a6" (Akzent).
 // Kein Paket, kein Framework; alles im Shadow DOM, damit die Seite und das Fenster sich nicht gegenseitig gestalten. Werte aus den Produktdaten
 // kommen nur als Text in die Seite (textContent), nie als HTML. Gespeichert wird nichts — kein Cookie, kein Speicher im Browser.
+// Ein Gespräch (08.10.2026): jede Eingabe ergänzt die bisherigen Angaben (Wörter und Filter, als Chips über den Treffern, einzeln zu entfernen);
+// die Anfrage trägt sie mit, der Server merkt sich nichts. Das Merkmal, das die Treffer am besten teilt, steht als Rückfrage da.
 (function () {
   'use strict'
 
@@ -12,12 +14,16 @@
       keine: 'Kein Produkt passt dazu.', eingrenzen: 'Eingrenzen:', bis: 'bis', ab: 'ab', details: 'Details', vergleichen: 'Vergleichen', vergleich: n => `${n} vergleichen`,
       zurueck: 'Zurück', fehler: 'Der Berater antwortet gerade nicht.', zuviel: 'Zu viele Fragen in kurzer Zeit.', varianten: n => `${n} Ausführungen`, ki: 'Text von einer KI erstellt',
       filterWeg: 'Filter entfernen', merkmal: 'Merkmal', gleich: 'gleich',
+      aehnlich: n => n === 1 ? '1 ähnliches Produkt.' : `${n} ähnliche Produkte.`, unbekannt: w => `„${w.join('“, „')}“ steht in keinem Produkt.`,
+      neu: 'Neue Suche', angabeWeg: 'Angabe entfernen', lockern: 'Ohne diese Angabe:', ohne: (l, n) => `ohne ${l} (${n})`, rueckfrage: l => `${l}?`,
     },
     en: {
       oeffnen: 'Product advice', schliessen: 'Close', frage: 'What are you looking for?', senden: 'Ask', treffer: n => n === 1 ? '1 product matches.' : `${n} products match.`,
       keine: 'No product matches.', eingrenzen: 'Narrow down:', bis: 'up to', ab: 'from', details: 'Details', vergleichen: 'Compare', vergleich: n => `Compare ${n}`,
       zurueck: 'Back', fehler: 'The advisor is not answering right now.', zuviel: 'Too many questions in a short time.', varianten: n => `${n} versions`, ki: 'Text written by an AI',
       filterWeg: 'Remove filter', merkmal: 'Attribute', gleich: 'same',
+      aehnlich: n => n === 1 ? '1 similar product.' : `${n} similar products.`, unbekannt: w => `"${w.join('", "')}" does not appear in any product.`,
+      neu: 'New search', angabeWeg: 'Remove', lockern: 'Without:', ohne: (l, n) => `without ${l} (${n})`, rueckfrage: l => `${l}?`,
     },
   }
 
@@ -49,6 +55,9 @@ button { font: inherit; cursor: pointer; }
 .chip { border: 1px solid var(--linie); background: transparent; color: var(--text); border-radius: 14px; padding: 3px 10px; }
 .chip.an { background: var(--akzent); border-color: var(--akzent); color: #fff; }
 .leise { color: var(--leise); font-size: 12px; }
+.chip.wort { border-style: dashed; }
+.chip.neu { margin-left: auto; }
+.rueckfrage { display: flex; flex-direction: column; gap: 6px; }
 form { display: flex; gap: 6px; padding: 10px; border-top: 1px solid var(--linie); }
 input[type=text] { flex: 1; font: inherit; color: var(--text); background: var(--flaeche); border: 1px solid var(--linie); border-radius: 8px; padding: 8px 10px; min-width: 0; }
 form button, .leiste button { border: 0; border-radius: 8px; padding: 8px 12px; background: var(--akzent); color: #fff; }
@@ -73,7 +82,8 @@ tr.gleich td { color: var(--leise); }
     const holen = o.fetch || window.fetch.bind(window)
     const sprache = (String(o.locale || navigator.language || 'de').slice(0, 2).toLowerCase() === 'de') ? 'de' : 'en'
     const T = TEXTE[sprache]
-    const zustand = { q: '', filter: [], auswahl: new Set(), info: null, laeuft: false }
+    // das Gespräch: gesammelte Wörter und Filter, die früheren Eingaben — nur im Arbeitsspeicher der Seite
+    const zustand = { woerter: [], filter: [], verlauf: [], auswahl: new Set(), info: null, laeuft: false }
 
     const wirt = document.createElement('div')
     wirt.setAttribute('data-journali-advisor', '')
@@ -154,35 +164,76 @@ tr.gleich td { color: var(--leise); }
       return k
     }
 
-    function filterChips() {
-      if (!zustand.filter.length) return null
-      const c = el('div', 'chips')
+    const filterText = f => `${f.label}: ${f.op === 'le' ? T.bis + ' ' : f.op === 'ge' ? T.ab + ' ' : ''}${f.valueLabel || f.value}`
+
+    /// Die gesammelten Angaben als Chips: Wörter und Filter, jede einzeln zu entfernen — dazu „Neue Suche“
+    function angabenChips() {
+      if (!zustand.filter.length && !zustand.woerter.length) return null
+      const c = el('div', 'chips angaben')
+      for (const w of zustand.woerter) {
+        const chip = el('button', 'chip an wort', `${w} ×`); chip.type = 'button'; chip.title = T.angabeWeg
+        chip.addEventListener('click', () => { zustand.woerter = zustand.woerter.filter(x => x !== w); frage('', false) })
+        c.append(chip)
+      }
       for (const f of zustand.filter) {
-        const chip = el('button', 'chip an', `${f.label}: ${f.op === 'le' ? T.bis + ' ' : f.op === 'ge' ? T.ab + ' ' : ''}${f.valueLabel || f.value} ×`)
+        const chip = el('button', 'chip an', `${filterText(f)} ×`)
         chip.type = 'button'; chip.title = T.filterWeg
-        chip.addEventListener('click', () => { zustand.filter = zustand.filter.filter(x => x !== f); frage(zustand.q, false) })
+        chip.addEventListener('click', () => { zustand.filter = zustand.filter.filter(x => x !== f); frage('', false) })
+        c.append(chip)
+      }
+      const neu = el('button', 'chip neu', T.neu); neu.type = 'button'
+      neu.addEventListener('click', () => { zustand.woerter = []; zustand.filter = []; zustand.verlauf = []; blase(T.neu); eingabe.focus() })
+      c.append(neu)
+      return c
+    }
+
+    /// Nichts gefunden: welche Angabe zu eng ist — ein Klick nimmt sie weg
+    function lockernChips(lockern) {
+      if (!lockern || !lockern.length) return null
+      const c = el('div', 'chips lockern')
+      c.append(el('span', 'leise', T.lockern))
+      for (const l of lockern) {
+        const text = l.kind === 'word' ? l.word : filterText(l)
+        const chip = el('button', 'chip', T.ohne(text, l.n)); chip.type = 'button'
+        chip.addEventListener('click', () => {
+          if (l.kind === 'word') zustand.woerter = zustand.woerter.filter(x => x !== l.word)
+          else zustand.filter = zustand.filter.filter(x => !(x.attribute === l.attribute && x.op === l.op && x.value === l.value))
+          frage('', false)
+        })
         c.append(chip)
       }
       return c
+    }
+
+    /// Die Optionen einer Facette: bei Zahlen bis und ab der Mitte, sonst ihre Werte mit Anzahl
+    const optionen = (f, mitName) => f.type === 'range'
+      ? [{ op: 'le', value: String(f.split), text: `${mitName ? f.label + ' ' : ''}${T.bis} ${f.split}${f.unit ? ' ' + f.unit : ''}` }, { op: 'ge', value: String(f.split), text: `${mitName ? f.label + ' ' : ''}${T.ab} ${f.split}${f.unit ? ' ' + f.unit : ''}` }]
+      : (f.values || []).map(v => ({ op: 'eq', value: v.value, valueLabel: v.label, text: `${mitName ? f.label + ': ' : ''}${v.label} (${v.n})` }))
+
+    function facettenChip(f, opt) {
+      const chip = el('button', 'chip', opt.text); chip.type = 'button'
+      chip.addEventListener('click', () => {
+        zustand.filter.push({ attribute: f.key, op: opt.op, value: opt.value, label: f.label, valueLabel: opt.valueLabel || `${opt.value}${f.unit ? ' ' + f.unit : ''}` })
+        frage('', false)
+      })
+      return chip
+    }
+
+    /// Die Rückfrage: das Merkmal, das die Treffer am besten teilt, als Frage mit Knöpfen
+    function rueckfrage(f) {
+      const r = el('div', 'rueckfrage')
+      r.append(el('div', 'blase', T.rueckfrage(f.label)))
+      const c = el('div', 'chips')
+      for (const opt of optionen(f, false)) c.append(facettenChip(f, opt))
+      r.append(c)
+      return r
     }
 
     function facettenChips(facetten) {
       if (!facetten || !facetten.length) return null
       const c = el('div', 'chips')
       c.append(el('span', 'leise', T.eingrenzen))
-      for (const f of facetten) {
-        const optionen = f.type === 'range'
-          ? [{ op: 'le', value: String(f.split), text: `${f.label} ${T.bis} ${f.split}${f.unit ? ' ' + f.unit : ''}` }, { op: 'ge', value: String(f.split), text: `${f.label} ${T.ab} ${f.split}${f.unit ? ' ' + f.unit : ''}` }]
-          : (f.values || []).map(v => ({ op: 'eq', value: v.value, valueLabel: v.label, text: `${f.label}: ${v.label} (${v.n})` }))
-        for (const opt of optionen) {
-          const chip = el('button', 'chip', opt.text); chip.type = 'button'
-          chip.addEventListener('click', () => {
-            zustand.filter.push({ attribute: f.key, op: opt.op, value: opt.value, label: f.label, valueLabel: opt.valueLabel || `${opt.value}${f.unit ? ' ' + f.unit : ''}` })
-            frage(zustand.q, false)
-          })
-          c.append(chip)
-        }
-      }
+      for (const f of facetten) for (const opt of optionen(f, true)) c.append(facettenChip(f, opt))
       return c
     }
 
@@ -191,16 +242,24 @@ tr.gleich td { color: var(--leise); }
       zustand.laeuft = true; senden.disabled = true
       if (alsBlase && q) blase(q, true)
       try {
-        const r = await rufe('/api/ask', { q, filter: zustand.filter.map(f => ({ attribute: f.attribute, op: f.op, value: f.value })), locale: sprache })
-        zustand.q = q
-        // die Bezeichnungen der Filter kommen vom Server zurück
-        for (const e of r.filter || []) { const f = zustand.filter.find(x => x.attribute === e.attribute && x.value === e.value); if (f) { f.label = e.label; f.valueLabel = e.valueLabel } }
+        const r = await rufe('/api/ask', {
+          q, woerter: zustand.woerter, verlauf: zustand.verlauf.slice(-6), locale: sprache,
+          filter: zustand.filter.map(f => ({ attribute: f.attribute, op: f.op, value: f.value })),
+        })
+        // was jetzt gilt, sagt der Server: die gesammelten Wörter und alle Filter, auch die aus dem Text erkannten — mit Bezeichnungen
+        if (Array.isArray(r.words)) zustand.woerter = r.words
+        if (Array.isArray(r.filter)) zustand.filter = r.filter.map(f => ({ attribute: f.attribute, op: f.op, value: f.value, label: f.label, valueLabel: f.valueLabel }))
+        if (q) zustand.verlauf.push(q)
         const antwort = el('div', 'karten')
-        const text = r.answer ? r.answer : (r.total ? T.treffer(r.total) : T.keine)
+        if (r.unknown && r.unknown.length) antwort.append(el('div', 'blase', T.unbekannt(r.unknown)))
+        const text = r.answer ? r.answer : (r.total ? (r.similar ? T.aehnlich(r.total) : T.treffer(r.total)) : T.keine)
         antwort.append(r.answer ? (() => { const b = el('div', 'blase', text); b.append(el('span', 'hinweis', T.ki)); return b })() : el('div', 'blase', text))
-        const fc = filterChips(); if (fc) antwort.append(fc)
+        const ac = angabenChips(); if (ac) antwort.append(ac)
+        const lo = r.total ? null : lockernChips(r.relax); if (lo) antwort.append(lo)
         for (const h of r.hits || []) antwort.append(karte(h))
-        const fa = facettenChips(r.facets); if (fa) antwort.append(fa)
+        const [erste, ...weitere] = r.facets || []
+        if (erste) antwort.append(rueckfrage(erste))
+        const fa = facettenChips(weitere); if (fa) antwort.append(fa)
         verlauf.append(antwort); verlauf.scrollTop = verlauf.scrollHeight
       } catch (e) { blase(e.message) }
       finally { zustand.laeuft = false; senden.disabled = false }
@@ -247,8 +306,7 @@ tr.gleich td { color: var(--leise); }
       const q = eingabe.value.trim()
       if (!q) return
       eingabe.value = ''
-      zustand.filter = []
-      frage(q, true)
+      frage(q, true)   // ergänzt die bisherigen Angaben — „Neue Suche“ fängt von vorn an
     })
 
     // Begrüssung und Bezeichnung des Beraters

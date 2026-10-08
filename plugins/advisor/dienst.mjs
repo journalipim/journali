@@ -133,7 +133,9 @@ export function erstelle(o) {
       }
       const b = await koerper(req)
       const r = pfad === '/api/ask'
-        ? await journali('ask', { q: String(b.q ?? '').slice(0, 300), filter: Array.isArray(b.filter) ? b.filter.slice(0, 10) : [], locale: b.locale, take: b.take })
+        ? await journali('ask', { q: String(b.q ?? '').slice(0, 300), filter: Array.isArray(b.filter) ? b.filter.slice(0, 10) : [], locale: b.locale, take: b.take,
+            // ein Gespräch: die gesammelten Wörter und die früheren Eingaben (08.10.2026)
+            woerter: Array.isArray(b.woerter) ? b.woerter.slice(-12).map(w => String(w).slice(0, 40)) : [], verlauf: Array.isArray(b.verlauf) ? b.verlauf.slice(-6).map(v => String(v).slice(0, 300)) : [] })
         : await journali('compare', { ids: Array.isArray(b.ids) ? b.ids.slice(0, 4) : [], locale: b.locale })
       return sende(res, r.status, r.json, cors)
     } catch (e) {

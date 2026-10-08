@@ -2551,9 +2551,32 @@ aktuellen, auch unter einem eingefrorenen Stand einer Rubrik — der Stand entsc
    Fusion); finden sie nichts, zählen die 40 nächsten nach Sinn;
 3. **Facetten**: Attribute der Sicht vom Typ Liste, ja/nein und Zahl, nach denen sich die Treffer unterscheiden — mit Anzahl je
    Wert, bei Zahlen mit kleinstem und grösstem Wert und einer Mitte zum Teilen („bis 550 W“, „ab 550 W“). Vorn steht, was die
-   Treffer am gleichmässigsten teilt. Das ist die Beratung: das Fenster fragt nicht nach, es bietet an, wonach sich noch
-   unterscheiden lässt;
+   Treffer am gleichmässigsten teilt. Das Fenster stellt die erste als Rückfrage mit Knöpfen („Farbe?“), die übrigen bietet es zum
+   Eingrenzen an;
 4. **Vergleich** von zwei bis vier Produkten, Zeile für Zeile, gleiche Werte gekennzeichnet.
+
+**Ein Gespräch — entschieden (08.10.2026, ersetzt „das Fenster fragt nicht nach“).** Jede Eingabe ergänzt die bisherigen Angaben,
+statt sie zu ersetzen: „Zelt“, dann „für zwei“, dann „unter 3 kg“ sucht mit allem zusammen.
+
+- **Gesammelt** werden Suchwörter und Filter. Sie stehen im Fenster als Chips, jeder einzeln zu entfernen; „Neue Suche“ fängt von
+  vorn an. Die Anfrage trägt sie mit (`woerter`, `filter`, dazu `verlauf`: die letzten sechs Eingaben im Wortlaut, nur für die KI);
+  Server und Dienst merken sich nichts, das Fenster hält sie nur im Arbeitsspeicher der Seite — kein Cookie, kein Speicher im Browser.
+- **Angaben im Text, ohne KI** (`AdvisorApi.Erkenne`): eine Zahl mit Einheit nach „unter, bis, höchstens, ab, über, mindestens …“
+  wird ein Filter auf das Zahlenattribut der Sicht mit dieser Einheit (haben mehrere dieselbe Einheit, entscheidet die Bezeichnung im
+  Text, sonst keiner); der Name eines Listenwerts wird ein Filter, wenn er genau ein Attribut und dort genau einen Wert trifft; die
+  Bezeichnung eines Ja/Nein-Attributs wird „ja“, mit „nicht, ohne, kein“ davor „nein“. Eine neue Angabe zum selben Attribut ersetzt die
+  alte. Der Rest bleibt Suchwort.
+- **Alle Wörter zusammen**: ein Produkt passt, wenn es jedes gesammelte Wort enthält. Ein Wort, das in keinem Produkt des Bestands
+  steht, wird genannt („„auto“ steht in keinem Produkt.“) und nicht gesammelt.
+- **Nach dem Sinn nur, was sich abhebt** (`AdvisorApi.SinnAuswahl`): finden die Wörter nichts, zählen nur die Produkte, die der Frage
+  deutlich näher sind als der Rest — der beste Abstand höchstens 0,25 und mindestens 0,02 unter der Mitte aller Abstände. Hebt sich
+  nichts ab, passt nichts. Das Fenster nennt solche Treffer „ähnliche Produkte“. Die Werte sind geschätzt, nicht gemessen.
+- **Nichts übrig**: dann sagt der Berater, welche Angabe zu eng ist — je Filter und je Wort, wie viele Produkte es ohne sie wären
+  (`relax`); ein Klick nimmt sie weg.
+- **Mit KI** (nur wenn der Berater sie erlaubt): was die Regeln nicht erkannt haben, übersetzt die KI in Filter — nur aus dem Vokabular
+  der Sicht (Attribute, Werte der Listen), als JSON, vom Server geprüft (`AngabenAusKi`); was nicht passt, fällt weg. Ihr Text zu den
+  Treffern bekommt den Verlauf mit. Werkzeuge bekommt sie weiterhin keine. Beides zählt bei `kiJeTag`.
+- **MCP** bleibt, wie es ist: ein KI-Agent führt sein Gespräch selbst und schickt Frage und Filter.
 
 Nur wenn der Berater es erlaubt (`ki`), schreibt die KI des gewählten Teams zwei bis vier Sätze zu den ersten fünf Treffern
 (`AiApi.AskAsync` mit `fuerTeam`, gezählt bei diesem Team). Sie bekommt nur die nummerierten Treffer mit ihren Werten und keine

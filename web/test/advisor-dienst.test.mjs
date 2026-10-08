@@ -70,6 +70,19 @@ test('eine Frage geht mit dem Token an journali, das Token kommt nie zurück', a
   } finally { await w.ende() }
 })
 
+test('ein Gespräch: die gesammelten Wörter und der Verlauf gehen mit, gekürzt', async () => {
+  const w = await welt()
+  try {
+    const woerter = Array.from({ length: 20 }, (_, i) => 'w' + i + 'x'.repeat(60))
+    const verlauf = Array.from({ length: 9 }, (_, i) => 'eingabe ' + i)
+    assert.equal((await post(w.url + '/api/ask', { q: 'rot', woerter, verlauf }, { origin: 'https://shop.example' })).status, 200)
+    const ruf = w.rufe.find(x => x.url.endsWith('/ask'))
+    assert.equal(ruf.body.woerter.length, 12, 'höchstens zwölf Wörter')
+    assert.ok(ruf.body.woerter.every(x => x.length <= 40), 'je Wort höchstens 40 Zeichen')
+    assert.deepEqual(ruf.body.verlauf, verlauf.slice(-6), 'die letzten sechs Eingaben')
+  } finally { await w.ende() }
+})
+
 test('eine Website, die der Berater nicht nennt, bekommt 403 — eine genannte die Freigabe für den Browser', async () => {
   const w = await welt()
   try {
