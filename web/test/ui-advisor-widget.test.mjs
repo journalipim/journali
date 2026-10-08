@@ -87,7 +87,7 @@ test('eine Frage zeigt Treffer, fragt nach dem Merkmal, das sie am besten teilt,
   await w.frage('Bohrhammer')
   assert.equal(w.$('.blase.ich').textContent, 'Bohrhammer')
   assert.deepEqual(w.$$('.karte .name').map(e => e.textContent), ['Bohrhammer Pro', 'Akkuschrauber'])
-  assert.ok(w.$$('.blase').some(b => b.textContent === '2 Produkte passen.'))
+  assert.ok(w.$$('.blase').some(b => b.textContent === '2 Produkte passen zu „bohrhammer“.'))
   // die erste Facette als Rückfrage, die übrigen zum Eingrenzen
   assert.equal(w.$('.rueckfrage .blase').textContent, 'Farbe?')
   assert.deepEqual(w.$$('.rueckfrage .chip').map(c => c.textContent), ['Rot (1)', 'Blau (1)'])
@@ -164,7 +164,7 @@ test('englisch, wenn die Seite es sagt', async () => {
   await warte()
   await w.frage('drill')
   assert.equal(w.rufe.find(r => r.url.endsWith('/api/ask')).body.locale, 'en')
-  assert.ok(w.$$('.blase').some(b => b.textContent === '2 products match.'))
+  assert.ok(w.$$('.blase').some(b => b.textContent === '2 products match "drill".'))
   assert.equal(w.$('input[type=text]').placeholder, 'What are you looking for?')
 })
 
@@ -223,4 +223,30 @@ test('Treffer nur nach dem Sinn heissen ähnliche Produkte', async () => {
   await warte()
   await w.frage('warm schlafen')
   assert.ok(w.$$('.blase').some(b => b.textContent === '2 ähnliche Produkte.'))
+})
+
+// Die Führung steht oben (08.10.2026): Satz mit der Suche, darunter die Rückfrage, dann die ersten drei Karten — der Rest auf Wunsch
+test('die Rückfrage steht vor den Karten, gezeigt werden erst drei, der Rest mit „weitere zeigen“', async () => {
+  const fuenf = ['Brede Hose', 'Kilden Hose', 'Heia Hose', 'Selje Hose', 'Tind Hose'].map((n, i) => HIT('h' + i, n))
+  const w = starte({ ...STANDARD, '/api/ask': body => [200, { total: 17, hits: fuenf, filter: [], words: ['hose'],
+    facets: [{ key: 'size', label: 'Grösse', type: 'list', n: 5, values: [{ value: 'm', label: 'M', n: 3 }, { value: 'l', label: 'L', n: 2 }] }] }] })
+  await warte()
+  await w.frage('hose')
+  assert.ok(w.$$('.blase').some(b => b.textContent === '17 Produkte passen zu „hose“.'))
+  const antwort = w.$$('.karten').at(-1)
+  const kinder = [...antwort.children]
+  assert.ok(kinder.indexOf(antwort.querySelector('.rueckfrage')) < kinder.indexOf(antwort.querySelector('.karte')), 'die Rückfrage vor den Karten')
+  assert.equal(antwort.querySelectorAll('.karte').length, 3)
+  const mehr = antwort.querySelector('.mehr')
+  assert.equal(mehr.textContent, '2 weitere zeigen')
+  await w.klick(mehr)
+  assert.deepEqual([...antwort.querySelectorAll('.karte .name')].map(e => e.textContent), fuenf.map(h => h.name))
+  assert.equal(antwort.querySelector('.mehr'), null)
+})
+
+test('ohne Auswahl ist der Knopf zum Vergleichen nicht da — hidden gilt auch gegen die eigenen Regeln', async () => {
+  const w = starte()
+  await warte()
+  assert.equal(w.$('.leiste').hidden, true)
+  assert.match(w.$('style').textContent, /\[hidden\] \{ display: none !important; \}/)
 })

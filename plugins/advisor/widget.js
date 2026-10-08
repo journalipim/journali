@@ -16,6 +16,7 @@
       filterWeg: 'Filter entfernen', merkmal: 'Merkmal', gleich: 'gleich',
       aehnlich: n => n === 1 ? '1 ähnliches Produkt.' : `${n} ähnliche Produkte.`, unbekannt: w => `„${w.join('“, „')}“ steht in keinem Produkt.`,
       neu: 'Neue Suche', angabeWeg: 'Angabe entfernen', lockern: 'Ohne diese Angabe:', ohne: (l, n) => `ohne ${l} (${n})`, rueckfrage: l => `${l}?`,
+      trefferZu: (n, w) => n === 1 ? `1 Produkt passt zu „${w}“.` : `${n} Produkte passen zu „${w}“.`, weitere: n => `${n} weitere zeigen`,
     },
     en: {
       oeffnen: 'Product advice', schliessen: 'Close', frage: 'What are you looking for?', senden: 'Ask', treffer: n => n === 1 ? '1 product matches.' : `${n} products match.`,
@@ -24,6 +25,7 @@
       filterWeg: 'Remove filter', merkmal: 'Attribute', gleich: 'same',
       aehnlich: n => n === 1 ? '1 similar product.' : `${n} similar products.`, unbekannt: w => `"${w.join('", "')}" does not appear in any product.`,
       neu: 'New search', angabeWeg: 'Remove', lockern: 'Without:', ohne: (l, n) => `without ${l} (${n})`, rueckfrage: l => `${l}?`,
+      trefferZu: (n, w) => n === 1 ? `1 product matches "${w}".` : `${n} products match "${w}".`, weitere: n => `Show ${n} more`,
     },
   }
 
@@ -31,6 +33,7 @@
 :host { all: initial; --akzent: #0b6e4f; --text: #1d1d1f; --leise: #6b6b70; --linie: #d9d9de; --flaeche: #ffffff; --blase: #f2f3f5; font: 14px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; color: var(--text); }
 @media (prefers-color-scheme: dark) { :host { --text: #ececf0; --leise: #a0a0a8; --linie: #3a3a40; --flaeche: #1c1c1f; --blase: #2a2a2e; } }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 button { font: inherit; cursor: pointer; }
 .knopf { position: fixed; right: 16px; bottom: 16px; z-index: 2147483000; border: 0; border-radius: 22px; padding: 10px 16px; background: var(--akzent); color: #fff; box-shadow: 0 4px 16px rgba(0,0,0,.2); }
 .fenster { display: flex; flex-direction: column; background: var(--flaeche); color: var(--text); border: 1px solid var(--linie); border-radius: 12px; overflow: hidden; }
@@ -39,7 +42,7 @@ button { font: inherit; cursor: pointer; }
 .kopf { display: flex; align-items: center; gap: 8px; padding: 10px 12px; background: var(--akzent); color: #fff; }
 .kopf .titel { flex: 1; font-weight: 600; }
 .kopf button { background: transparent; border: 0; color: #fff; font-size: 18px; line-height: 1; }
-.verlauf { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+.verlauf { position: relative; flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
 .blase { max-width: 90%; padding: 8px 10px; border-radius: 10px; background: var(--blase); white-space: pre-wrap; }
 .blase.ich { align-self: flex-end; background: var(--akzent); color: #fff; }
 .blase .hinweis { display: block; margin-top: 4px; font-size: 11px; color: var(--leise); }
@@ -56,6 +59,7 @@ button { font: inherit; cursor: pointer; }
 .chip.an { background: var(--akzent); border-color: var(--akzent); color: #fff; }
 .leise { color: var(--leise); font-size: 12px; }
 .chip.wort { border-style: dashed; }
+.mehr { align-self: flex-start; border: 1px solid var(--linie); background: transparent; color: var(--text); border-radius: 8px; padding: 4px 10px; font-size: 12px; }
 .chip.neu { margin-left: auto; }
 .rueckfrage { display: flex; flex-direction: column; gap: 6px; }
 form { display: flex; gap: 6px; padding: 10px; border-top: 1px solid var(--linie); }
@@ -76,6 +80,9 @@ tr.gleich td { color: var(--leise); }
     if (text !== undefined && text !== null) e.textContent = String(text)
     return e
   }
+
+  /// So viele Karten zeigt eine Antwort zuerst — darüber steht die Rückfrage, die eingrenzt
+  const ZUERST = 3
 
   function start(o) {
     const basis = o.base.replace(/\/+$/, '')
@@ -252,15 +259,25 @@ tr.gleich td { color: var(--leise); }
         if (q) zustand.verlauf.push(q)
         const antwort = el('div', 'karten')
         if (r.unknown && r.unknown.length) antwort.append(el('div', 'blase', T.unbekannt(r.unknown)))
-        const text = r.answer ? r.answer : (r.total ? (r.similar ? T.aehnlich(r.total) : T.treffer(r.total)) : T.keine)
+        // die Antwort nennt die Suche; gleich darunter die Rückfrage — erst dann die Karten, die ersten drei, der Rest auf Wunsch
+        const wort = zustand.woerter.join(' ')
+        const text = r.answer ? r.answer : (r.total ? (r.similar ? T.aehnlich(r.total) : wort ? T.trefferZu(r.total, wort) : T.treffer(r.total)) : T.keine)
         antwort.append(r.answer ? (() => { const b = el('div', 'blase', text); b.append(el('span', 'hinweis', T.ki)); return b })() : el('div', 'blase', text))
         const ac = angabenChips(); if (ac) antwort.append(ac)
         const lo = r.total ? null : lockernChips(r.relax); if (lo) antwort.append(lo)
-        for (const h of r.hits || []) antwort.append(karte(h))
         const [erste, ...weitere] = r.facets || []
         if (erste) antwort.append(rueckfrage(erste))
+        const hits = r.hits || []
+        for (const h of hits.slice(0, ZUERST)) antwort.append(karte(h))
+        if (hits.length > ZUERST) {
+          const rest = hits.slice(ZUERST)
+          const mehr = el('button', 'mehr', T.weitere(rest.length)); mehr.type = 'button'
+          mehr.addEventListener('click', () => { const k = rest.map(karte); mehr.replaceWith(...k) })
+          antwort.append(mehr)
+        }
         const fa = facettenChips(weitere); if (fa) antwort.append(fa)
-        verlauf.append(antwort); verlauf.scrollTop = verlauf.scrollHeight
+        verlauf.append(antwort)
+        verlauf.scrollTop = Math.max(0, antwort.offsetTop - 8)   // an den Anfang der Antwort, nicht ans Ende der Karten
       } catch (e) { blase(e.message) }
       finally { zustand.laeuft = false; senden.disabled = false }
     }
