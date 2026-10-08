@@ -25,6 +25,7 @@ async function welt({ info = INFO, unten = false } = {}) {
     if (pfad.startsWith('product/')) return antwort(404, { error: 'Produkt x gibt es hier nicht.' })
     if (pfad === 'compare') return antwort(200, { products: [{ id: 'p1', name: 'A' }, { id: 'p2', name: 'B' }], rows: [{ key: 'leistung', label: 'Leistung', values: ['800 W', '300 W'], same: false }] })
     if (pfad.startsWith('image/m1')) return { status: 200, headers: new Headers({ 'content-type': 'image/webp' }), arrayBuffer: async () => new Uint8Array([7, 8, 9]).buffer, text: async () => '' }
+    if (pfad === 'doc/d1') return { status: 200, headers: new Headers({ 'content-type': 'application/pdf', 'content-disposition': "inline; filename*=UTF-8''Pflege.pdf" }), arrayBuffer: async () => new TextEncoder().encode('%PDF').buffer, text: async () => '' }
     return antwort(404, { error: 'nicht da' })
   }
   let t = Date.UTC(2026, 9, 8, 10, 0, 0)
@@ -125,6 +126,13 @@ test('Produkt, Vergleich und Bild gehen durch, ein unbekannter Weg nicht', async
     const b = await fetch(w.url + '/api/image/m1')
     assert.equal(b.headers.get('content-type'), 'image/webp')
     assert.deepEqual([...new Uint8Array(await b.arrayBuffer())], [7, 8, 9])
+    // ein Dokument der Unterlagen: durchgereicht, zum Ansehen, ohne Skripte
+    const d = await fetch(w.url + '/api/doc/d1')
+    assert.equal(d.headers.get('content-type'), 'application/pdf')
+    assert.equal(d.headers.get('content-disposition'), "inline; filename*=UTF-8''Pflege.pdf")
+    assert.equal(d.headers.get('content-security-policy'), 'sandbox')
+    assert.equal(await d.text(), '%PDF')
+    assert.equal((await fetch(w.url + '/api/doc/x')).status, 404)
     assert.equal((await fetch(w.url + '/api/tree')).status, 404)
     assert.equal((await fetch(w.url + '/api/ask')).status, 404, 'eine Frage ist ein POST')
   } finally { await w.ende() }

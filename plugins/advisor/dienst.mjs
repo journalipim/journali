@@ -7,6 +7,7 @@
 //   GET  /api/variant/{id}    eine Variante ganz (08.10.2026)
 //   POST /api/compare         zwei bis vier Produkte nebeneinander
 //   GET  /api/image/{id}      ein Bild eines Produkts
+//   GET  /api/doc/{id}        ein Dokument aus den Unterlagen des Beraters (09.10.2026) — PDF zum Ansehen, ohne Skripte
 //   POST /mcp                 MCP (Streamable HTTP, mcp.mjs) mit denselben Fragen als Werkzeuge
 //   GET  /health              ob journali antwortet
 // Je Besucher (Adresse) zählt der Dienst Fragen je Minute und Tag; die Tagesgrenze des Beraters zählt journali. Websites, die das Chat-Fenster
@@ -126,6 +127,14 @@ export function erstelle(o) {
         const r = await holen(basis + 'image/' + encodeURIComponent(decodeURIComponent(bild[1])) + (url.searchParams.get('gross') ? '?gross=true' : ''), { headers: kopf })
         if (r.status !== 200) return sende(res, r.status === 404 ? 404 : 502, { error: 'Bild nicht verfügbar.' }, cors)
         res.writeHead(200, { 'content-type': r.headers.get('content-type') ?? 'application/octet-stream', 'cache-control': 'public, max-age=86400', 'x-content-type-options': 'nosniff', ...cors })
+        return res.end(Buffer.from(await r.arrayBuffer()))
+      }
+      const dok = /^\/api\/doc\/([^/]+)$/.exec(pfad)
+      if (req.method === 'GET' && dok) {
+        const r = await holen(basis + 'doc/' + encodeURIComponent(decodeURIComponent(dok[1])), { headers: kopf })
+        if (r.status !== 200) return sende(res, r.status === 404 ? 404 : 502, { error: 'Dokument nicht verfügbar.' }, cors)
+        res.writeHead(200, { 'content-type': r.headers.get('content-type') ?? 'application/octet-stream', 'content-disposition': r.headers.get('content-disposition') ?? 'attachment',
+          'content-security-policy': 'sandbox', 'cache-control': 'public, max-age=3600', 'x-content-type-options': 'nosniff', ...cors })
         return res.end(Buffer.from(await r.arrayBuffer()))
       }
       const produkt = /^\/api\/(product|variant)\/([^/]+)$/.exec(pfad)

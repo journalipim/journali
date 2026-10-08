@@ -263,6 +263,36 @@ test('wechselt das Thema, fragt das Fenster, ob es stattdessen danach sucht — 
   assert.ok([...w.$$('.ergebnis').at(-1).querySelectorAll('button')].every(b => !b.disabled))
 })
 
+// Unterlagen (09.10.2026): Abschnitte aus Pflege, Reparatur und häufigen Fragen stehen zuerst, mit Quelle und dem Dokument
+test('passen Abschnitte aus den Unterlagen, stehen sie zuerst — der erste ganz, die weiteren gekürzt, je mit „Dokument öffnen“', async () => {
+  const lang = 'Klemmt der Reißverschluss, reiben Sie die Zähne mit Kerzenwachs ein. '.repeat(8)
+  const w = starte({
+    ...STANDARD,
+    '/api/ask': [200, { total: 17, hits: [HIT('h1', 'Kilden Hose')], facets: [], filter: [], words: ['hose'], unknown: ['reissverschluss', 'kaputt'],
+      docs: [{ n: 1, media: 'm-1', name: 'Pflege – Hosen.pdf', page: 1, heading: 'Reparatur: Reißverschluss', text: 'Schieber mit einer Zange <b>zusammendrücken</b>.', node: { id: 'g-1', label: 'Hosen' } },
+             { n: 2, media: 'm/2', name: 'Häufige Fragen – Hosen.pdf', page: 2, heading: null, text: lang, node: null }] }],
+  })
+  await warte()
+  await w.frage('reissverschluss an hose ist kaputt')
+  const antwort = w.$$('.antwort').at(-1)
+  assert.ok(antwort.firstElementChild.classList.contains('unterlagen'), 'die Unterlagen zuerst')
+  const [a, b] = antwort.querySelectorAll('.auszug')
+  assert.equal(a.querySelector('.titel').textContent, 'Reparatur: Reißverschluss')
+  assert.equal(a.querySelector('.quelle').textContent, 'Pflege – Hosen.pdf · S. 1 · Hosen')
+  assert.equal(a.querySelector('.text').textContent, 'Schieber mit einer Zange <b>zusammendrücken</b>.', 'Text, nie HTML')
+  assert.ok(!a.querySelector('.text b'))
+  assert.ok(!a.querySelector('.ganz'), 'der erste steht ganz da')
+  assert.equal(a.querySelector('a').getAttribute('href'), 'https://advisor.test/api/doc/m-1')
+  assert.equal(a.querySelector('a').getAttribute('rel'), 'noopener')
+  // der zweite gekürzt, ohne Überschrift heisst er nach dem Dokument; ein Klick zeigt ihn ganz
+  assert.equal(b.querySelector('.titel').textContent, 'Häufige Fragen – Hosen.pdf')
+  assert.ok(b.querySelector('.text').textContent.endsWith(' …'))
+  assert.equal(b.querySelector('a').getAttribute('href'), 'https://advisor.test/api/doc/m%2F2')
+  await w.klick(b.querySelector('.ganz'))
+  assert.equal(b.querySelector('.text').textContent, lang)
+  assert.ok(!b.querySelector('.ganz'))
+})
+
 test('Treffer nur nach dem Sinn heissen ähnliche Produkte', async () => {
   const w = starte({ ...STANDARD, '/api/ask': [200, { total: 2, similar: true, hits: [HIT('p1', 'Schlafsack'), HIT('p2', 'Decke')], facets: [], filter: [], words: [] }] })
   await warte()

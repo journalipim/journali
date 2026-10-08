@@ -6,6 +6,7 @@
 // Ein Gespräch (08.10.2026): jede Eingabe ergänzt die bisherigen Angaben (Wörter und Filter, als Chips über den Treffern, einzeln zu entfernen);
 // die Anfrage trägt sie mit, der Server merkt sich nichts. Das Merkmal, das die Treffer am besten teilt, steht als Rückfrage da.
 // Wechselt das Thema (zusammen nichts, die neue Eingabe allein schon), fragt das Fenster, ob es stattdessen danach sucht.
+// Passen Abschnitte aus den Unterlagen (Pflege, Reparatur, häufige Fragen) zur Frage, stehen sie zuerst — mit Quelle und „Dokument öffnen“.
 // Die gesammelten Angaben und was sich lockern lässt, stehen in der Blase der Antwort; die Knöpfe älterer Antworten sind aus. Die letzte Frage
 // des Beraters steht direkt über der Eingabe.
 // Eine Variante lässt sich ganz öffnen; Produkte und Varianten kommen auf einen Merkzettel (☆ im Kopf) — beides nur im Arbeitsspeicher der Seite.
@@ -19,6 +20,7 @@
     de: {
       oeffnen: 'Produktberatung', schliessen: 'Schliessen', frage: 'Wonach suchen Sie?', senden: 'Fragen', treffer: n => n === 1 ? '1 Produkt passt.' : `${n} Produkte passen.`,
       keine: 'Kein Produkt passt dazu.', eingrenzen: 'Eingrenzen:', bis: 'bis', ab: 'ab', details: 'Details', vergleichen: 'Vergleichen', vergleich: n => `${n} vergleichen`,
+      unterlagen: 'Aus den Unterlagen:', dokOeffnen: 'Dokument öffnen', seite: n => `S. ${n}`, ganz: 'ganzer Abschnitt',
       zurueck: 'Zurück', fehler: 'Der Berater antwortet gerade nicht.', zuviel: 'Zu viele Fragen in kurzer Zeit.', varianten: n => `${n} Ausführungen`, ki: 'Text von einer KI erstellt',
       filterWeg: 'Filter entfernen', merkmal: 'Merkmal', gleich: 'gleich',
       aehnlich: n => n === 1 ? '1 ähnliches Produkt.' : `${n} ähnliche Produkte.`, unbekannt: w => `„${w.join('“, „')}“ steht in keinem Produkt.`,
@@ -32,6 +34,7 @@
     en: {
       oeffnen: 'Product advice', schliessen: 'Close', frage: 'What are you looking for?', senden: 'Ask', treffer: n => n === 1 ? '1 product matches.' : `${n} products match.`,
       keine: 'No product matches.', eingrenzen: 'Narrow down:', bis: 'up to', ab: 'from', details: 'Details', vergleichen: 'Compare', vergleich: n => `Compare ${n}`,
+      unterlagen: 'From the documentation:', dokOeffnen: 'Open document', seite: n => `p. ${n}`, ganz: 'whole section',
       zurueck: 'Back', fehler: 'The advisor is not answering right now.', zuviel: 'Too many questions in a short time.', varianten: n => `${n} versions`, ki: 'Text written by an AI',
       filterWeg: 'Remove filter', merkmal: 'Attribute', gleich: 'same',
       aehnlich: n => n === 1 ? '1 similar product.' : `${n} similar products.`, unbekannt: w => `"${w.join('", "')}" does not appear in any product.`,
@@ -59,6 +62,14 @@ button { font: inherit; cursor: pointer; }
 .kopf button { background: transparent; border: 0; color: #fff; font-size: 18px; line-height: 1; }
 .verlauf { position: relative; flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 14px; }
 .blase { max-width: 90%; padding: 8px 10px; border-radius: 10px; background: var(--blase); white-space: pre-wrap; }
+.unterlagen { white-space: normal; display: flex; flex-direction: column; gap: 8px; }
+.auszug { border-top: 1px solid var(--linie); padding-top: 8px; display: flex; flex-direction: column; gap: 4px; }
+.auszug .titel { font-weight: 600; }
+.auszug .quelle { font-size: 11px; color: var(--leise); }
+.auszug .text { white-space: pre-wrap; }
+.auszug .zeile { display: flex; gap: 10px; align-items: center; font-size: 12px; }
+.auszug a { color: var(--akzent); }
+.auszug .ganz { border: 0; background: transparent; color: var(--akzent); padding: 0; font-size: 12px; }
 .blase.ich { align-self: flex-end; background: var(--akzent); color: #fff; }
 .blase .hinweis { display: block; margin-top: 4px; font-size: 11px; color: var(--leise); }
 .karten { display: flex; flex-direction: column; gap: 8px; }
@@ -352,6 +363,32 @@ tr.gleich td { color: var(--leise); }
       return chip
     }
 
+    /// Abschnitte aus den Unterlagen: der erste ganz, die weiteren gekürzt mit „ganzer Abschnitt“ — je mit Überschrift, Quelle und dem Dokument
+    function unterlagenBlase(docs) {
+      if (!docs || !docs.length) return null
+      const b = el('div', 'blase unterlagen')
+      b.append(el('div', 'leise', T.unterlagen))
+      docs.forEach((d, i) => {
+        const a = el('div', 'auszug')
+        a.append(el('div', 'titel', d.heading || d.name))
+        a.append(el('div', 'quelle', [d.name, d.page ? T.seite(d.page) : null, d.node ? d.node.label : null].filter(Boolean).join(' · ')))
+        const kurz = i > 0 && d.text.length > 240
+        const t = el('div', 'text', kurz ? d.text.slice(0, 240).replace(/\s+\S*$/, '') + ' …' : d.text)
+        a.append(t)
+        const zeile = el('div', 'zeile')
+        if (kurz) {
+          const g = el('button', 'ganz', T.ganz); g.type = 'button'
+          g.addEventListener('click', () => { t.textContent = d.text; g.remove() })
+          zeile.append(g)
+        }
+        const link = el('a', '', T.dokOeffnen); link.href = `${basis}/api/doc/${encodeURIComponent(d.media)}`; link.target = '_blank'; link.rel = 'noopener'
+        zeile.append(link)
+        a.append(zeile)
+        b.append(a)
+      })
+      return b
+    }
+
     /// Das Thema hat gewechselt: zusammen mit dem Bisherigen passt nichts, die neue Eingabe allein schon — ja sucht nur noch danach
     function stattChips(s) {
       if (!s || !s.n) return null
@@ -415,6 +452,7 @@ tr.gleich td { color: var(--leise); }
         if (Array.isArray(r.filter)) zustand.filter = r.filter.map(f => ({ attribute: f.attribute, op: f.op, value: f.value, label: f.label, valueLabel: f.valueLabel }))
         if (q) zustand.verlauf.push(q)
         const antwort = el('div', 'karten antwort')
+        const ub = unterlagenBlase(r.docs); if (ub) antwort.append(ub)   // beantworten die Unterlagen die Frage, steht das zuerst
         if (r.unknown && r.unknown.length) antwort.append(el('div', 'blase', T.unbekannt(r.unknown)))
         // die Antwort nennt die Suche; gleich darunter die Rückfrage — erst dann die Karten, die ersten drei, der Rest auf Wunsch
         const wort = zustand.woerter.join(' ')

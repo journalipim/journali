@@ -18,7 +18,7 @@ export const WERKZEUGE = [
   {
     name: 'search_products',
     title: 'Search products',
-    description: 'Search the product catalogue of this shop. Returns the best matching products with key attributes, the total number of matches, and facets: attributes in which the matches differ, with their values and counts. Pass a facet value back in `filters` to narrow the result. An empty query lists all products.',
+    description: 'Search the product catalogue of this shop. Returns the best matching products with key attributes, the total number of matches, and facets: attributes in which the matches differ, with their values and counts. Pass a facet value back in `filters` to narrow the result. An empty query lists all products. Questions about care, use, sizing or a problem (a stuck zip, a leaking tent) also return matching passages from the product documentation.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -68,6 +68,10 @@ export function alsText(name, r) {
       const keys = Object.values(h.keys ?? {}).join(', ')
       const werte = (h.values ?? []).map(v => `${v.label}: ${v.value}`).join('; ')
       zeilen.push(`${i + 1}. ${h.name}${keys ? ` (${keys})` : ''} [id ${h.id}]${werte ? ` — ${werte}` : ''}`)
+    }
+    if (r.docs?.length) {
+      zeilen.push('From the product documentation:')
+      for (const d of r.docs) zeilen.push(`[U${d.n}] ${d.heading ?? d.name} (${d.name}${d.page ? `, p. ${d.page}` : ''}${d.node ? `, ${d.node.label}` : ''}): ${d.text}`)
     }
     if (r.facets?.length) {
       zeilen.push('Narrow by:')

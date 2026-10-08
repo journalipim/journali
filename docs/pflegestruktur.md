@@ -2610,6 +2610,32 @@ und ihre Zahl; was wegfällt, steht im Tooltip. „ohne pullover (17)“ las sic
 dem Namen (`texts`), nicht als Zeile der Tabelle. Absatz, Zeilenumbruch und Listenpunkt werden zu Leerzeilen, alles andere an
 Auszeichnung fällt weg (`Absaetze`); das Fenster setzt den Text als Text, nie als HTML.
 
+**Unterlagen — der Berater schlägt in den Dokumenten nach (09.10.2026).** Was in keinem Attribut steht — wie man einen klemmenden
+Reißverschluss gängig macht, warum ein Zelt innen nass wird, wie man eine Jacke neu imprägniert —, steht in den Dokumenten an den Knoten.
+Der Berater nutzt dafür, was es schon gibt: den Dokumentindex (Job `docs`, Abschnitte mit Seite und Überschrift, Abschnitt 32) und die
+Vektoren der Abschnitte (Job `embed`, Abschnitt 35). Kein eigener Index, keine Kopie.
+
+- **Welche Dokumente.** Die Unterlagen eines Beraters sind die Medien an seinen Produkten, deren Varianten und den Gruppen darüber
+  (`Bestand.Dokumente`, jede Relation ausser `image`, kein Bild) — eine Pflegeanleitung an der Gruppe „Hosen“ gilt für jede Hose. Gezeigt
+  wird nur, was heute gilt, freigegeben ist und die Rolle des Beraters sieht (`Unterlagen`), wie bei den Bildern.
+- **Welche Abschnitte.** Nach dem Sinn: Kosinusabstand höchstens 0,145 und höchstens 0,03 hinter dem besten, drei Abschnitte, gleicher
+  Text aus zwei Dokumenten einmal. Die Grenze ist gemessen, nicht geschätzt: an 499 Abschnitten der Demo-Unterlagen lagen die besten
+  Treffer von acht Fragen zu Pflege und Reparatur bei 0,095–0,137, die von vier Fragen ohne Bezug bei 0,158–0,192. Die Wortsuche ist nur
+  der Rückfall ohne Vektoren — sie findet „reissverschluss“ nicht in „Reißverschluss“.
+- **Die Antwort.** `docs` nennt je Abschnitt Nummer, Dokument, Seite, Überschrift, Text (höchstens 1 200 Zeichen) und den Knoten, an dem
+  das Dokument hängt. Mit KI gehen die Abschnitte als `[U1]` … in den Auftrag: bei Fragen nach Pflege, Gebrauch, Grösse oder einem
+  Problem antwortet sie zuerst daraus und nennt den Abschnitt; steht die Antwort nicht darin, sagt sie das. Ohne KI steht der beste
+  Abschnitt ganz da, die weiteren gekürzt. Im Fenster stehen die Unterlagen zuerst — beantworten sie die Frage, ist das die Antwort.
+- **Das Dokument selbst.** `GET /api/advisor/{key}/doc/{media}` (am Dienst `/api/doc/{id}`) gibt nur ein Dokument aus den Unterlagen
+  heraus; ein PDF zum Ansehen, alles andere als Download, immer mit `Content-Security-Policy: sandbox` — ein HTML-Dokument führt auf
+  dieser Adresse kein Skript aus.
+- **MCP.** `search_products` liefert die Abschnitte mit; ein fremder KI-Agent bekommt dieselben Auszüge.
+
+Testdaten dafür bringt `tools/demo_master_tree.py` mit (`--anreichern` für einen vorhandenen Katalog): je Produkt Beschreibung, Merkmale,
+technische Daten, Pflegehinweise, GEO-Texte und ein Datenblatt; je Untergruppe „Pflege, Reparatur und häufige Fragen“ und „Häufige Fragen“
+aus der Wissensbasis `tools/tannwald_faq.md` (210 Fragen, je Frage ein Abschnitt); je Obergruppe ein Ratgeber; an der Marke „Garantie und
+Service“; die Sicht „Onlineshop“ mit allen Gruppen.
+
 **Eine Antwort, eine Blase (08.10.2026).** Die Blase der Antwort enthält den Satz, die gesammelten Angaben (Wörter, Filter, Neue Suche) und,
 ohne Treffer, was sich lockern lässt. Darauf folgen Rückfrage und Eingrenzen, dann die Karten; ohne Treffer zuletzt die Frage nach dem
 Themenwechsel — die letzte Frage des Beraters steht direkt über der Eingabe. Kommt eine neue Antwort, sind die Knöpfe der älteren aus: sie

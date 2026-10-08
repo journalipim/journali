@@ -44,6 +44,7 @@ public class AdvisorTests
             b.Services.AddSingleton(w.C); b.Services.AddSingleton(new Vectors(null));
             b.Services.AddSingleton(new Embedder(w.Dir, Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance) { Eingeschaltet = () => false });
             b.Services.AddSingleton<IMediaStore>(new FileMediaStore(w.Medien));
+            b.Services.AddSingleton(new DocText(null));   // ohne Datenbank: kein Dokumentindex, die Unterlagen bleiben leer
             w.App = b.Build();
             if (anmeldung) w.App.Use(Auth.Middleware(w.C, w.Dir));
             else w.App.Use(async (ctx, next) => { ctx.Request.Headers["X-Actor"] = "u"; await next(); });
@@ -120,6 +121,23 @@ public class AdvisorTests
                 write("t", m, Types.MediaCreated, new MediaCreated(sha, 3, "image/png", "bild.png"), null);
                 if (bisGestern) write("t", m, Types.AttributeSet, new AttributeSet(Model.ValidUntil, null, null, DateTime.Now.AddDays(-1).ToString("yyyy-MM-dd")), null);
                 write("t", Journali.Core.Entries.Ids.Relation(), Types.RelationCreated, new RelationCreated("image", Ids[produkt], m), null);
+                return 0;
+            });
+            return m;
+        }
+
+        /// <summary>Ein PDF als Unterlage am Knoten (Relation document); <paramref name="bisGestern"/>: seine Frist ist abgelaufen.</summary>
+        public string Dokument(string knoten, bool bisGestern = false, string name = "Pflege.pdf")
+        {
+            var sha = Convert.ToHexString(Guid.NewGuid().ToByteArray()).ToLowerInvariant() + Convert.ToHexString(Guid.NewGuid().ToByteArray()).ToLowerInvariant();
+            var m = Journali.Core.Entries.Ids.Media();
+            Directory.CreateDirectory(Path.Combine(Medien, sha[..2]));
+            File.WriteAllBytes(Path.Combine(Medien, sha[..2], sha), "%PDF-1.4 Test"u8.ToArray());
+            C.With((_, _, write) =>
+            {
+                write("t", m, Types.MediaCreated, new MediaCreated(sha, 13, "application/pdf", name), null);
+                if (bisGestern) write("t", m, Types.AttributeSet, new AttributeSet(Model.ValidUntil, null, null, DateTime.Now.AddDays(-1).ToString("yyyy-MM-dd")), null);
+                write("t", Journali.Core.Entries.Ids.Relation(), Types.RelationCreated, new RelationCreated("document", Ids.GetValueOrDefault(knoten, knoten), m), null);
                 return 0;
             });
             return m;
@@ -400,6 +418,7 @@ public class AdvisorTests
     [InlineData("POST", "/api/advisor/werkzeug/compare", true)]
     [InlineData("GET", "/api/advisor/werkzeug/product/p-1", true)]
     [InlineData("GET", "/api/advisor/werkzeug/image/m-1", true)]
+    [InlineData("GET", "/api/advisor/werkzeug/doc/m-1", true)]
     [InlineData("GET", "/API/ADVISOR/WERKZEUG/INFO", true)]
     [InlineData("GET", "/api/advisor/werkzeug/product/p-1/x", false)]
     [InlineData("GET", "/api/advisor/werkzeug/ask", false)]
@@ -542,6 +561,50 @@ public class AdvisorTests
         Assert.Equal(0, r.GetProperty("total").GetInt32());
         Assert.Equal(JsonValueKind.Null, r.GetProperty("instead").ValueKind);
         Assert.Contains(r.GetProperty("relax").EnumerateArray(), x => x.GetProperty("kind").GetString() == "word");
+    }
+
+    // ---- Unterlagen (09.10.2026): Dokumente am Bestand, ihre Abschnitte in der Antwort, das Dokument selbst
+
+    [Fact]
+    public async Task Die_Unterlagen_sind_die_Dokumente_an_Produkten_und_Gruppen_die_gelten_und_die_Rolle_sieht()
+    {
+        await using var w = await Welt.Neu();
+        var amProdukt = w.Dokument("bohr", name: "Datenblatt.pdf");
+        var anGruppe = w.Dokument("g", name: "Pflege.pdf");
+        var abgelaufen = w.Dokument("schrauber", bisGestern: true);
+        var ausserhalb = w.Dokument("neu");   // nicht freigegeben, nicht im Bestand
+        w.Bild("bohr");                         // ein Bild ist keine Unterlage
+        var d = AdvisorApi.Definition.Read(AdvisorApi.Alle(w.C).Single(x => x.Key == "werkzeug").Value).Def!;
+        var b = AdvisorApi.BestandVon(w.C, "werkzeug", d, "de");
+        Assert.Equal(w.Ids["bohr"], b.Dokumente[amProdukt]);
+        Assert.Equal(w.Ids["g"], b.Dokumente[anGruppe]);
+        Assert.False(b.Dokumente.ContainsKey(ausserhalb));
+        Assert.Equal(3, b.Dokumente.Count);
+        var gelten = w.C.Lesen((_, _) => AdvisorApi.Unterlagen(w.C, b, "reader", false));
+        Assert.Equal(new[] { amProdukt, anGruppe }.Order(), gelten.Order());
+
+        // das Dokument selbst: nur eines aus den Unterlagen, PDF zum Ansehen, ohne Skripte
+        using var r = await w.Http.GetAsync(w.Url + $"/api/advisor/werkzeug/doc/{amProdukt}");
+        Assert.Equal(HttpStatusCode.OK, r.StatusCode);
+        Assert.Equal("application/pdf", r.Content.Headers.ContentType?.MediaType);
+        Assert.StartsWith("inline", r.Content.Headers.ContentDisposition?.ToString() ?? r.Headers.GetValues("Content-Disposition").First());
+        Assert.Equal("sandbox", r.Headers.GetValues("Content-Security-Policy").Single());
+        Assert.Equal("%PDF-1.4 Test", await r.Content.ReadAsStringAsync());
+        foreach (var m in new[] { abgelaufen, ausserhalb, "m-gibtsnicht" })
+            Assert.Equal(HttpStatusCode.NotFound, (await w.Http.GetAsync(w.Url + $"/api/advisor/werkzeug/doc/{m}")).StatusCode);
+
+        // ohne Dokumentindex (keine Datenbank) bleibt die Antwort ohne Abschnitte — und sie fehlt nicht
+        var (_, j) = await w.Frage("""{"q":"Bohrhammer"}""");
+        Assert.Empty(j.GetProperty("docs").EnumerateArray());
+    }
+
+    [Fact]
+    public void Die_KI_bekommt_die_Auszuege_mit_Nummer_und_Quelle()
+    {
+        var (system, user) = AdvisorApi.Prompt("reissverschluss kaputt", [], [], null, [("Pflege – Hosen · Reparatur: Reißverschluss · Hosen", "Schieber zusammendrücken.")]);
+        Assert.Contains("[U1]", system);
+        Assert.Contains("[U1] Pflege – Hosen · Reparatur: Reißverschluss · Hosen\nSchieber zusammendrücken.", user);
+        Assert.DoesNotContain("Auszüge", AdvisorApi.Prompt("x", [], []).User);
     }
 
     [Fact]
