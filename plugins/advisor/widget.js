@@ -75,7 +75,9 @@ button { font: inherit; cursor: pointer; }
 .tafelkopf .zu { background: transparent; border: 0; color: var(--leise); font-size: 18px; line-height: 1; padding: 0 2px; }
 .facette { border-style: dashed; }
 .facette.offen { border-style: solid; border-color: var(--akzent); }
-.tafel { gap: 0; border: 1px solid var(--linie); border-radius: 10px; overflow: hidden; }
+/* flex: none — sonst staucht die Ansicht (eine Flex-Spalte) die Tafel auf ihre Höhe, overflow: hidden schneidet den Rest ab, und es gibt
+   nichts zu scrollen (08.10.2026: Tafel 477 px, Inhalt 1230 px, Ansicht 503 von 503 px) */
+.tafel { flex: none; gap: 0; border: 1px solid var(--linie); border-radius: 10px; overflow: hidden; }
 .tafelkopf { display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: var(--blase); border-bottom: 1px solid var(--linie); }
 .tafelkopf .art { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--leise); flex: none; }
 .tafelkopf .name { flex: 1; min-width: 0; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

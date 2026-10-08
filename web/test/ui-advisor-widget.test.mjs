@@ -298,6 +298,15 @@ test('ohne Auswahl ist der Knopf zum Vergleichen nicht da — hidden gilt auch g
   assert.match(w.$('style').textContent, /\[hidden\] \{ display: none !important; \}/)
 })
 
+// happy-dom rechnet kein Layout: geprüft wird die Regel — ohne flex: none staucht die Ansicht die Tafel, und der Rest ist nicht zu erreichen
+test('eine Tafel wird in der Ansicht nicht gestaucht, die Ansicht scrollt', async () => {
+  const w = starte()
+  await warte()
+  const stil = w.$('style').textContent
+  assert.match(stil, /\.tafel \{ flex: none;/)
+  assert.match(stil, /\.ansicht \{[^}]*overflow-y: auto;/)
+})
+
 // ---- Variante ganz öffnen, Merkzettel (08.10.2026) — der Merkzettel liegt nur im Arbeitsspeicher der Seite
 
 const MIT_VARIANTEN = {
