@@ -2601,7 +2601,10 @@ Die weiteren Merkmale zum Eingrenzen stehen als je ein Knopf („Farbe ▾“) d
 **Themenwechsel (08.10.2026).** Findet eine Eingabe zusammen mit den gesammelten Angaben nichts, für sich allein aber schon, und bringt
 sie ein neues Wort, fragt der Berater: „Stattdessen nach „pullover“ suchen?“ (`instead`: Wörter, Filter aus ihrem Text, Zahl). Ja sucht nur
 noch danach, die früheren Angaben fallen weg. Eine Angabe ohne neues Wort („rot“ zum Akkuschrauber) grenzt ein und wechselt kein Thema;
-dafür bleibt das Lockern. Was der Wechsel wäre, steht nicht noch einmal unter „Ohne diese Angabe“.
+dafür bleibt das Lockern. Was der Wechsel wäre, steht nicht noch einmal unter „Mit weniger Angaben“.
+
+**Lockern nennt, was bleibt (08.10.2026).** „Mit weniger Angaben: hose (17)“ — der Knopf nennt die Angaben, die nach dem Klick gelten,
+und ihre Zahl; was wegfällt, steht im Tooltip. „ohne pullover (17)“ las sich wie „mit pullover“.
 
 **Eine Antwort, eine Blase (08.10.2026).** Die Blase der Antwort enthält den Satz, die gesammelten Angaben (Wörter, Filter, Neue Suche) und,
 ohne Treffer, was sich lockern lässt. Darauf folgen Rückfrage und Eingrenzen, dann die Karten; ohne Treffer zuletzt die Frage nach dem

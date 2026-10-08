@@ -22,7 +22,7 @@
       zurueck: 'Zurück', fehler: 'Der Berater antwortet gerade nicht.', zuviel: 'Zu viele Fragen in kurzer Zeit.', varianten: n => `${n} Ausführungen`, ki: 'Text von einer KI erstellt',
       filterWeg: 'Filter entfernen', merkmal: 'Merkmal', gleich: 'gleich',
       aehnlich: n => n === 1 ? '1 ähnliches Produkt.' : `${n} ähnliche Produkte.`, unbekannt: w => `„${w.join('“, „')}“ steht in keinem Produkt.`,
-      neu: 'Neue Suche', angabeWeg: 'Angabe entfernen', lockern: 'Ohne diese Angabe:', ohne: (l, n) => `ohne ${l} (${n})`, rueckfrage: l => `${l}?`,
+      neu: 'Neue Suche', angabeWeg: 'Angabe entfernen', lockern: 'Mit weniger Angaben:', ohne: (l, n) => `${l} (${n})`, alle: 'alle Produkte', rueckfrage: l => `${l}?`,
       trefferZu: (n, w) => n === 1 ? `1 Produkt passt zu „${w}“.` : `${n} Produkte passen zu „${w}“.`, weitere: n => `${n} weitere zeigen`,
       oeffnenVariante: 'Öffnen', merken: '☆ Merken', gemerkt: '★ Gemerkt', merkzettel: n => `☆ ${n}`, merkzettelTitel: 'Merkzettel', merkzettelLeer: 'Der Merkzettel ist leer.',
       ausMerkzettel: 'Vom Merkzettel nehmen', zumProdukt: 'Zum Produkt', variante: 'Variante',
@@ -35,7 +35,7 @@
       zurueck: 'Back', fehler: 'The advisor is not answering right now.', zuviel: 'Too many questions in a short time.', varianten: n => `${n} versions`, ki: 'Text written by an AI',
       filterWeg: 'Remove filter', merkmal: 'Attribute', gleich: 'same',
       aehnlich: n => n === 1 ? '1 similar product.' : `${n} similar products.`, unbekannt: w => `"${w.join('", "')}" does not appear in any product.`,
-      neu: 'New search', angabeWeg: 'Remove', lockern: 'Without:', ohne: (l, n) => `without ${l} (${n})`, rueckfrage: l => `${l}?`,
+      neu: 'New search', angabeWeg: 'Remove', lockern: 'With fewer criteria:', ohne: (l, n) => `${l} (${n})`, alle: 'all products', rueckfrage: l => `${l}?`,
       trefferZu: (n, w) => n === 1 ? `1 product matches "${w}".` : `${n} products match "${w}".`, weitere: n => `Show ${n} more`,
       oeffnenVariante: 'Open', merken: '☆ Save', gemerkt: '★ Saved', merkzettel: n => `☆ ${n}`, merkzettelTitel: 'Saved items', merkzettelLeer: 'Nothing saved yet.',
       ausMerkzettel: 'Remove', zumProdukt: 'To the product', variante: 'Variant',
@@ -308,14 +308,19 @@ tr.gleich td { color: var(--leise); }
       return c
     }
 
-    /// Nichts gefunden: welche Angabe zu eng ist — ein Klick nimmt sie weg
+    /// Nichts gefunden: welche Angabe zu eng ist — ein Klick nimmt sie weg. Der Knopf nennt, was dann bleibt („hose (17)“), nicht, was
+    /// wegfällt: „ohne pullover“ liest sich wie „mit pullover“ (08.10.2026)
     function lockernChips(lockern) {
       if (!lockern || !lockern.length) return null
       const c = el('div', 'chips lockern')
       c.append(el('span', 'leise', T.lockern))
       for (const l of lockern) {
-        const text = l.kind === 'word' ? l.word : filterText(l)
-        const chip = el('button', 'chip', T.ohne(text, l.n)); chip.type = 'button'
+        const bleibt = [
+          ...zustand.woerter.filter(w => !(l.kind === 'word' && w === l.word)),
+          ...zustand.filter.filter(f => !(l.kind !== 'word' && f.attribute === l.attribute && f.op === l.op && f.value === l.value)).map(filterText),
+        ]
+        const chip = el('button', 'chip', T.ohne(bleibt.length ? bleibt.join(' + ') : T.alle, l.n)); chip.type = 'button'
+        chip.title = `${T.angabeWeg}: ${l.kind === 'word' ? l.word : filterText(l)}`
         chip.addEventListener('click', () => {
           if (l.kind === 'word') zustand.woerter = zustand.woerter.filter(x => x !== l.word)
           else zustand.filter = zustand.filter.filter(x => !(x.attribute === l.attribute && x.op === l.op && x.value === l.value))

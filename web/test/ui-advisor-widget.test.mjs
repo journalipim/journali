@@ -218,7 +218,10 @@ test('ein Wort, das in keinem Produkt steht, wird genannt; ist nichts übrig, l�
   assert.ok(blasen.includes('„auto“ steht in keinem Produkt.'))
   assert.ok(blasen.includes('Kein Produkt passt dazu.'))
   const ohne = w.$$('.lockern .chip')
-  assert.deepEqual(ohne.map(c => c.textContent), ['ohne blau (3)'])
+  // der Knopf nennt, was bleibt, nicht, was wegfällt
+  assert.deepEqual(ohne.map(c => c.textContent), ['zelt (3)'])
+  assert.equal(ohne[0].title, 'Angabe entfernen: blau')
+  assert.ok(w.$$('.lockern .leise').some(s => s.textContent === 'Mit weniger Angaben:'))
   await w.klick(ohne[0])
   const letzte = w.rufe.filter(r => r.url.endsWith('/api/ask')).at(-1)
   assert.deepEqual([letzte.body.q, letzte.body.woerter], ['', ['zelt']], 'die zu enge Angabe ist weg')
