@@ -6,6 +6,8 @@
 // Ein Gespräch (08.10.2026): jede Eingabe ergänzt die bisherigen Angaben (Wörter und Filter, als Chips über den Treffern, einzeln zu entfernen);
 // die Anfrage trägt sie mit, der Server merkt sich nichts. Das Merkmal, das die Treffer am besten teilt, steht als Rückfrage da.
 // Eine Variante lässt sich ganz öffnen; Produkte und Varianten kommen auf einen Merkzettel (☆ im Kopf) — beides nur im Arbeitsspeicher der Seite.
+// Produkt, Variante, Merkzettel und Vergleich öffnen in einer Ansicht neben dem Gespräch; das schwebende Fenster wird dafür breiter, ist es zu
+// schmal, deckt die Ansicht das Gespräch ab. × schliesst sie.
 (function () {
   'use strict'
 
@@ -20,6 +22,7 @@
       trefferZu: (n, w) => n === 1 ? `1 Produkt passt zu „${w}“.` : `${n} Produkte passen zu „${w}“.`, weitere: n => `${n} weitere zeigen`,
       oeffnenVariante: 'Öffnen', merken: '☆ Merken', gemerkt: '★ Gemerkt', merkzettel: n => `☆ ${n}`, merkzettelTitel: 'Merkzettel', merkzettelLeer: 'Der Merkzettel ist leer.',
       ausMerkzettel: 'Vom Merkzettel nehmen', zumProdukt: 'Zum Produkt', variante: 'Variante',
+      produkt: 'Produkt', vergleichTitel: 'Vergleich', werte: 'Werte', gesucht: 'Gesucht:', ansichtZu: 'Ansicht schliessen',
     },
     en: {
       oeffnen: 'Product advice', schliessen: 'Close', frage: 'What are you looking for?', senden: 'Ask', treffer: n => n === 1 ? '1 product matches.' : `${n} products match.`,
@@ -31,6 +34,7 @@
       trefferZu: (n, w) => n === 1 ? `1 product matches "${w}".` : `${n} products match "${w}".`, weitere: n => `Show ${n} more`,
       oeffnenVariante: 'Open', merken: '☆ Save', gemerkt: '★ Saved', merkzettel: n => `☆ ${n}`, merkzettelTitel: 'Saved items', merkzettelLeer: 'Nothing saved yet.',
       ausMerkzettel: 'Remove', zumProdukt: 'To the product', variante: 'Variant',
+      produkt: 'Product', vergleichTitel: 'Comparison', werte: 'Details', gesucht: 'Searching for:', ansichtZu: 'Close view',
     },
   }
 
@@ -42,16 +46,33 @@
 button { font: inherit; cursor: pointer; }
 .knopf { position: fixed; right: 16px; bottom: 16px; z-index: 2147483000; border: 0; border-radius: 22px; padding: 10px 16px; background: var(--akzent); color: #fff; box-shadow: 0 4px 16px rgba(0,0,0,.2); }
 .fenster { display: flex; flex-direction: column; background: var(--flaeche); color: var(--text); border: 1px solid var(--linie); border-radius: 12px; overflow: hidden; }
+.schwebend.breit { width: min(860px, calc(100vw - 32px)); }
 .schwebend { position: fixed; right: 16px; bottom: 16px; z-index: 2147483000; width: min(400px, calc(100vw - 32px)); height: min(620px, calc(100vh - 32px)); box-shadow: 0 8px 32px rgba(0,0,0,.25); }
 .eingebettet { width: 100%; height: 100%; min-height: 420px; }
 .kopf { display: flex; align-items: center; gap: 8px; padding: 10px 12px; background: var(--akzent); color: #fff; }
 .kopf .titel { flex: 1; font-weight: 600; }
 .kopf button { background: transparent; border: 0; color: #fff; font-size: 18px; line-height: 1; }
-.verlauf { position: relative; flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+.verlauf { position: relative; flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 14px; }
 .blase { max-width: 90%; padding: 8px 10px; border-radius: 10px; background: var(--blase); white-space: pre-wrap; }
 .blase.ich { align-self: flex-end; background: var(--akzent); color: #fff; }
 .blase .hinweis { display: block; margin-top: 4px; font-size: 11px; color: var(--leise); }
 .karten { display: flex; flex-direction: column; gap: 8px; }
+/* was zu einer Antwort gehört, steht an einer Linie; Produkt, Variante, Merkzettel und Vergleich sind Tafeln mit Kopfzeile (08.10.2026) */
+.antwort { border-left: 3px solid var(--akzent); padding-left: 10px; }
+.koerper { flex: 1; display: flex; min-height: 0; }
+.gespraech { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.ansicht { flex: 1.25; min-width: 0; overflow-y: auto; border-left: 1px solid var(--linie); padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+.eng .gespraech { display: none; }
+.eng .ansicht { border-left: 0; }
+.tafelkopf .zu { background: transparent; border: 0; color: var(--leise); font-size: 18px; line-height: 1; padding: 0 2px; }
+.facette { border-style: dashed; }
+.facette.offen { border-style: solid; border-color: var(--akzent); }
+.tafel { gap: 0; border: 1px solid var(--linie); border-radius: 10px; overflow: hidden; }
+.tafelkopf { display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: var(--blase); border-bottom: 1px solid var(--linie); }
+.tafelkopf .art { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--leise); flex: none; }
+.tafelkopf .name { flex: 1; min-width: 0; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tafelinhalt { padding: 8px 10px; display: flex; flex-direction: column; gap: 8px; }
+.zwischen { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--leise); margin-top: 4px; }
 .karte { display: flex; gap: 10px; padding: 8px; border: 1px solid var(--linie); border-radius: 10px; }
 .karte img, .karte .ohne { width: 64px; height: 64px; object-fit: contain; border-radius: 6px; background: var(--blase); flex: none; }
 .karte .inhalt { flex: 1; min-width: 0; }
@@ -128,7 +149,11 @@ tr.gleich td { color: var(--leise); }
     const eingabe = el('input'); eingabe.type = 'text'; eingabe.maxLength = 300; eingabe.placeholder = T.frage; eingabe.setAttribute('aria-label', T.frage)
     const senden = el('button', '', T.senden); senden.type = 'submit'
     formular.append(eingabe, senden)
-    fenster.append(kopf, verlauf, leiste, formular)
+    const koerper = el('div', 'koerper'), gespraech = el('div', 'gespraech'), ansicht = el('div', 'ansicht')
+    ansicht.hidden = true
+    gespraech.append(verlauf, leiste, formular)
+    koerper.append(gespraech, ansicht)
+    fenster.append(kopf, koerper)
 
     if (ziel) schatten.append(fenster)
     else { schatten.append(knopf); fenster.hidden = true; schatten.append(fenster) }
@@ -179,9 +204,8 @@ tr.gleich td { color: var(--leise); }
 
     /// Der Merkzettel: jeder Eintrag zum Öffnen und zum Wegnehmen; angehakt lassen sie sich vergleichen
     merkKnopf.addEventListener('click', () => {
-      const b = el('div', 'karten merkzettel')
-      b.append(el('div', 'name', T.merkzettelTitel))
-      if (!zustand.merkzettel.size) b.append(el('div', 'leise', T.merkzettelLeer))
+      const { t: b, inhalt } = tafel('merkzettel', T.merkzettelTitel, String(zustand.merkzettel.size))
+      if (!zustand.merkzettel.size) inhalt.append(el('div', 'leise', T.merkzettelLeer))
       const t = el('table'), tb = el('tbody')
       for (const m of zustand.merkzettel.values()) {
         const tr = el('tr'), name = el('td', '', m.name), aktion = el('td', 'aktion')
@@ -198,9 +222,35 @@ tr.gleich td { color: var(--leise); }
         aktion.append(wahl, auf, weg)
         tr.append(name, aktion); tb.append(tr)
       }
-      t.append(tb); b.append(t)
-      verlauf.append(b); verlauf.scrollTop = Math.max(0, b.offsetTop - 8)
+      t.append(tb); inhalt.append(t)
+      zeige(b)
     })
+
+    /// Eine Tafel: Rahmen, Kopfzeile mit Art und Name, darunter der Inhalt — Produkt, Variante, Merkzettel, Vergleich
+    function tafel(klasse, art, name) {
+      const t = el('div', 'karten tafel ' + klasse)
+      const kopf = el('div', 'tafelkopf')
+      kopf.append(el('span', 'art', art))
+      if (name !== undefined) kopf.append(el('span', 'name', name))
+      const inhalt = el('div', 'tafelinhalt')
+      t.append(kopf, inhalt)
+      return { t, kopf, inhalt }
+    }
+    /// Eine Tafel in der Ansicht neben dem Gespräch: das schwebende Fenster wird breiter; ist es dann noch zu schmal, deckt die Ansicht das Gespräch ab
+    function zeige(block) {
+      const zu = el('button', 'zu', '×'); zu.type = 'button'; zu.title = T.ansichtZu; zu.setAttribute('aria-label', T.ansichtZu)
+      zu.addEventListener('click', schliesseAnsicht)
+      block.querySelector('.tafelkopf')?.append(zu)
+      ansicht.replaceChildren(block)
+      ansicht.hidden = false
+      fenster.classList.add('breit')
+      fenster.classList.toggle('eng', (fenster.getBoundingClientRect().width || 0) > 0 && fenster.getBoundingClientRect().width < 640)
+      ansicht.scrollTop = 0
+    }
+    function schliesseAnsicht() {
+      ansicht.hidden = true; ansicht.replaceChildren()
+      fenster.classList.remove('breit', 'eng')
+    }
 
     function karte(h) {
       const k = el('div', 'karte')
@@ -231,6 +281,7 @@ tr.gleich td { color: var(--leise); }
     function angabenChips() {
       if (!zustand.filter.length && !zustand.woerter.length) return null
       const c = el('div', 'chips angaben')
+      c.append(el('span', 'leise', T.gesucht))
       for (const w of zustand.woerter) {
         const chip = el('button', 'chip an wort', `${w} ×`); chip.type = 'button'; chip.title = T.angabeWeg
         chip.addEventListener('click', () => { zustand.woerter = zustand.woerter.filter(x => x !== w); frage('', false) })
@@ -290,12 +341,27 @@ tr.gleich td { color: var(--leise); }
       return r
     }
 
+    /// Die weiteren Merkmale zum Eingrenzen: je Merkmal ein Knopf („Farbe ▾“), seine Werte erst auf Klick — sonst stünden alle Werte aller Merkmale da
     function facettenChips(facetten) {
       if (!facetten || !facetten.length) return null
+      const block = el('div', 'eingrenzen')
       const c = el('div', 'chips')
       c.append(el('span', 'leise', T.eingrenzen))
-      for (const f of facetten) for (const opt of optionen(f, true)) c.append(facettenChip(f, opt))
-      return c
+      const werte = el('div', 'chips werte'); werte.hidden = true
+      for (const f of facetten) {
+        const k = el('button', 'chip facette', `${f.label} ▾`); k.type = 'button'
+        k.addEventListener('click', () => {
+          const offen = k.classList.contains('offen')
+          for (const x of c.querySelectorAll('.facette')) x.classList.remove('offen')
+          werte.replaceChildren(); werte.hidden = offen
+          if (offen) return
+          k.classList.add('offen')
+          for (const opt of optionen(f, false)) werte.append(facettenChip(f, opt))
+        })
+        c.append(k)
+      }
+      block.append(c, werte)
+      return block
     }
 
     async function frage(q, alsBlase) {
@@ -311,7 +377,7 @@ tr.gleich td { color: var(--leise); }
         if (Array.isArray(r.words)) zustand.woerter = r.words
         if (Array.isArray(r.filter)) zustand.filter = r.filter.map(f => ({ attribute: f.attribute, op: f.op, value: f.value, label: f.label, valueLabel: f.valueLabel }))
         if (q) zustand.verlauf.push(q)
-        const antwort = el('div', 'karten')
+        const antwort = el('div', 'karten antwort')
         if (r.unknown && r.unknown.length) antwort.append(el('div', 'blase', T.unbekannt(r.unknown)))
         // die Antwort nennt die Suche; gleich darunter die Rückfrage — erst dann die Karten, die ersten drei, der Rest auf Wunsch
         const wort = zustand.woerter.join(' ')
@@ -339,12 +405,12 @@ tr.gleich td { color: var(--leise); }
     async function zeigeProdukt(id) {
       try {
         const p = await rufe(`/api/product/${encodeURIComponent(id)}?locale=${sprache}`)
-        const b = el('div', 'karten produkt')
-        b.append(el('div', 'name', p.name), merkenKnopf(p.id, p.name, 'produkt'))
-        if (p.images && p.images.length) { const g = el('div', 'galerie'); for (const i of p.images) g.append(bild(i, true)); b.append(g) }
+        const { t: b, kopf, inhalt } = tafel('produkt', T.produkt, p.name)
+        kopf.append(merkenKnopf(p.id, p.name, 'produkt'))
+        if (p.images && p.images.length) { const g = el('div', 'galerie'); for (const i of p.images) g.append(bild(i, true)); inhalt.append(g) }
         const t = el('table'), tb = el('tbody')
         for (const v of p.values || []) { const tr = el('tr'); tr.append(el('th', '', v.label), el('td', '', v.value)); tb.append(tr) }
-        t.append(tb); b.append(t)
+        t.append(tb); inhalt.append(el('div', 'zwischen', T.werte), t)
         if (p.variants && p.variants.length > 1) {
           const vt = el('table'), vb = el('tbody')
           for (const v of p.variants) {
@@ -354,9 +420,9 @@ tr.gleich td { color: var(--leise); }
             aktion.append(auf)
             tr.append(el('th', '', v.name), el('td', '', (v.values || []).map(x => `${x.label}: ${x.value}`).join(', ')), aktion); vb.append(tr)
           }
-          vt.append(vb); b.append(el('div', 'leise', T.varianten(p.variants.length)), vt)
+          vt.append(vb); inhalt.append(el('div', 'zwischen', T.varianten(p.variants.length)), vt)
         }
-        verlauf.append(b); verlauf.scrollTop = verlauf.scrollHeight
+        zeige(b)
       } catch (e) { blase(e.message) }
     }
 
@@ -364,19 +430,18 @@ tr.gleich td { color: var(--leise); }
     async function zeigeVariante(id) {
       try {
         const v = await rufe(`/api/variant/${encodeURIComponent(id)}?locale=${sprache}`)
-        const b = el('div', 'karten variante')
-        b.append(el('div', 'leise', T.variante), el('div', 'name', v.name))
+        const { t: b, inhalt } = tafel('variante', T.variante, v.name)
         const knoepfe = el('div', 'chips')
         const zurueck = el('button', 'chip', T.zumProdukt); zurueck.type = 'button'
         zurueck.addEventListener('click', () => zeigeProdukt(v.product.id))
         knoepfe.append(merkenKnopf(v.id, v.name, 'variante'), zurueck)
-        b.append(knoepfe)
-        if (v.images && v.images.length) { const g = el('div', 'galerie'); for (const i of v.images) g.append(bild(i, true)); b.append(g) }
+        inhalt.append(knoepfe)
+        if (v.images && v.images.length) { const g = el('div', 'galerie'); for (const i of v.images) g.append(bild(i, true)); inhalt.append(g) }
         const t = el('table'), tb = el('tbody')
         for (const k of Object.entries(v.keys || {})) { const tr = el('tr'); tr.append(el('th', '', k[0].toUpperCase()), el('td', '', k[1])); tb.append(tr) }
         for (const x of v.values || []) { const tr = el('tr'); tr.append(el('th', '', x.label), el('td', '', x.value)); tb.append(tr) }
-        t.append(tb); b.append(t)
-        verlauf.append(b); verlauf.scrollTop = Math.max(0, b.offsetTop - 8)
+        t.append(tb); inhalt.append(el('div', 'zwischen', T.werte), t)
+        zeige(b)
       } catch (e) { blase(e.message) }
     }
 
@@ -394,7 +459,9 @@ tr.gleich td { color: var(--leise); }
           if (z.same) tr.title = T.gleich
           tb.append(tr)
         }
-        t.append(tb); verlauf.append(t); verlauf.scrollTop = verlauf.scrollHeight
+        const { t: rahmen, inhalt } = tafel('vergleichtafel', T.vergleichTitel, String((v.products || []).length))
+        t.append(tb); inhalt.append(t)
+        zeige(rahmen)
       } catch (e) { blase(e.message) }
     })
 

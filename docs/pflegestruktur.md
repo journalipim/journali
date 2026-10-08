@@ -2591,6 +2591,11 @@ erreicht den Weg wie `product/`. Im Fenster öffnet „Öffnen“ in den Details
 Merkzettel (☆ im Kopf, mit Zahl): öffnen, wegnehmen, anhaken zum Vergleich. Er liegt nur im Arbeitsspeicher der Seite und ist beim
 Neuladen leer — das Fenster speichert nichts im Browser.
 
+**Tafeln und Ansicht (08.10.2026).** Was zu einer Antwort gehört, steht an einer Linie. Produkt, Variante, Merkzettel und Vergleich sind
+Tafeln mit Kopfzeile (Art und Name) und öffnen in einer Ansicht neben dem Gespräch; das schwebende Fenster wird dafür breiter (bis 860 px).
+Ist es dann schmaler als 640 px, deckt die Ansicht das Gespräch ab. × in der Kopfzeile schliesst sie, eine neue Tafel ersetzt die alte.
+Die weiteren Merkmale zum Eingrenzen stehen als je ein Knopf („Farbe ▾“) da, ihre Werte erst auf Klick.
+
 Nur wenn der Berater es erlaubt (`ki`), schreibt die KI des gewählten Teams zwei bis vier Sätze zu den ersten fünf Treffern
 (`AiApi.AskAsync` mit `fuerTeam`, gezählt bei diesem Team). Sie bekommt nur die nummerierten Treffer mit ihren Werten und keine
 Werkzeuge; ein Satz in den Produktdaten, der wie eine Anweisung aussieht, kann darum nichts auslösen. Das Fenster kennzeichnet den

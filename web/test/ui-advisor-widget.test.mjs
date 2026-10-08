@@ -91,8 +91,11 @@ test('eine Frage zeigt Treffer, fragt nach dem Merkmal, das sie am besten teilt,
   // die erste Facette als Rückfrage, die übrigen zum Eingrenzen
   assert.equal(w.$('.rueckfrage .blase').textContent, 'Farbe?')
   assert.deepEqual(w.$$('.rueckfrage .chip').map(c => c.textContent), ['Rot (1)', 'Blau (1)'])
-  const chips = w.$$('.chip').map(c => c.textContent)
-  assert.ok(chips.includes('Leistung bis 550 W') && chips.includes('Leistung ab 550 W'), 'eine Zahl teilt sich in bis und ab')
+  // die weiteren Merkmale: je eines ein Knopf, die Werte auf Klick
+  assert.ok(w.$$('.eingrenzen .facette').some(c => c.textContent === 'Leistung ▾'))
+  assert.equal(w.$('.eingrenzen .werte').hidden, true)
+  await w.klick(w.$$('.eingrenzen .facette').find(c => c.textContent === 'Leistung ▾'))
+  assert.deepEqual(w.$$('.eingrenzen .werte .chip').map(c => c.textContent), ['bis 550 W', 'ab 550 W'], 'eine Zahl teilt sich in bis und ab')
   await w.klick(w.$$('.rueckfrage .chip').find(c => c.textContent === 'Rot (1)'))
   const letzte = w.rufe.filter(r => r.url.endsWith('/api/ask')).at(-1)
   assert.equal(letzte.body.q, '', 'keine neue Eingabe')
@@ -278,7 +281,8 @@ test('eine Variante lässt sich aus den Details ganz öffnen: Name mit Achsen, S
   assert.equal(v.querySelectorAll('.galerie img').length, 1)
   // zurück zum Produkt
   await w.klick([...v.querySelectorAll('.chip')].find(c => c.textContent === 'Zum Produkt'))
-  assert.equal(w.$$('.produkt').length, 2)
+  assert.equal(w.$$('.produkt').length, 1, 'die Ansicht zeigt eines — das Produkt ersetzt die Variante')
+  assert.equal(w.$('.variante'), null)
 })
 
 test('Produkte und Varianten kommen auf den Merkzettel; er steht im Kopf, öffnet und nimmt weg', async () => {
@@ -306,4 +310,27 @@ test('Produkte und Varianten kommen auf den Merkzettel; er steht im Kopf, öffne
   await w.klick([...zettel.querySelectorAll('tr')[0].querySelectorAll('td.aktion button')].find(b => b.textContent === '×'))
   assert.equal(w.$('.kopf .merk').textContent, '☆ 1')
   assert.equal(zettel.querySelectorAll('tr').length, 1)
+})
+
+// Öffnen erweitert das Fenster (08.10.2026): die Ansicht steht neben dem Gespräch, das schwebende Fenster wird breiter, × schliesst sie
+test('Details öffnen in einer Ansicht neben dem Gespräch, das Fenster wird breiter; × schliesst sie', async () => {
+  const w = starte(MIT_VARIANTEN)
+  await warte()
+  await w.klick(w.$('.knopf'))
+  await w.frage('hose')
+  assert.equal(w.$('.ansicht').hidden, true)
+  assert.equal(w.$('.fenster').classList.contains('breit'), false)
+  await w.klick(w.$$('.karte .details')[0])
+  assert.equal(w.$('.ansicht').hidden, false)
+  assert.ok(w.$('.fenster').classList.contains('breit'))
+  assert.ok(w.$('.ansicht .produkt'), 'das Produkt steht in der Ansicht, nicht im Gespräch')
+  assert.equal(w.$('.verlauf .produkt'), null)
+  assert.equal(w.$('.ansicht .tafelkopf .art').textContent, 'Produkt')
+  await w.klick(w.$('.ansicht .tafelkopf .zu'))
+  assert.equal(w.$('.ansicht').hidden, true)
+  assert.equal(w.$('.fenster').classList.contains('breit'), false)
+  // der Merkzettel öffnet ebenfalls dort
+  await w.klick(w.$$('.karte .merken')[0])
+  await w.klick(w.$('.kopf .merk'))
+  assert.ok(w.$('.ansicht .merkzettel'))
 })
