@@ -2603,6 +2603,11 @@ sie ein neues Wort, fragt der Berater: „Stattdessen nach „pullover“ suchen
 noch danach, die früheren Angaben fallen weg. Eine Angabe ohne neues Wort („rot“ zum Akkuschrauber) grenzt ein und wechselt kein Thema;
 dafür bleibt das Lockern. Was der Wechsel wäre, steht nicht noch einmal unter „Ohne diese Angabe“.
 
+**Eine Antwort, eine Blase (08.10.2026).** Die Blase der Antwort enthält den Satz, die gesammelten Angaben (Wörter, Filter, Neue Suche) und,
+ohne Treffer, was sich lockern lässt. Darauf folgen Rückfrage und Eingrenzen, dann die Karten; ohne Treffer zuletzt die Frage nach dem
+Themenwechsel — die letzte Frage des Beraters steht direkt über der Eingabe. Kommt eine neue Antwort, sind die Knöpfe der älteren aus: sie
+zeigen, was damals gesucht wurde, und ändern nichts mehr.
+
 Nur wenn der Berater es erlaubt (`ki`), schreibt die KI des gewählten Teams zwei bis vier Sätze zu den ersten fünf Treffern
 (`AiApi.AskAsync` mit `fuerTeam`, gezählt bei diesem Team). Sie bekommt nur die nummerierten Treffer mit ihren Werten und keine
 Werkzeuge; ein Satz in den Produktdaten, der wie eine Anweisung aussieht, kann darum nichts auslösen. Das Fenster kennzeichnet den

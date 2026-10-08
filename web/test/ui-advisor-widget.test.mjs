@@ -7,6 +7,7 @@ import vm from 'node:vm'
 import { win } from './ui.mjs'
 
 const quelle = fs.readFileSync(new URL('../../plugins/advisor/widget.js', import.meta.url), 'utf8')
+const satz = b => (b.querySelector('.satz') ?? b).textContent   // der Satz einer Antwort, ohne ihre Knöpfe
 const warte = async () => { for (let i = 0; i < 6; i++) await new Promise(r => setTimeout(r, 0)) }
 
 function laden() {
@@ -76,9 +77,9 @@ test('eingebettet in ein Element gibt es keinen Knopf und kein Schliessen', asyn
   const b = win.journaliAdvisor.start({ base: 'https://advisor.test', fetch: d.fetch, locale: 'de', target: '#advisor' })
   await warte()
   assert.ok(ziel.contains(b.wirt))
-  assert.equal(b.schatten.querySelector('.knopf'), null)
+  assert.ok(!b.schatten.querySelector('.knopf'))
   assert.ok(b.schatten.querySelector('.fenster.eingebettet'))
-  assert.equal(b.schatten.querySelector('.kopf .zu'), null)
+  assert.ok(!b.schatten.querySelector('.kopf .zu'))
 })
 
 test('eine Frage zeigt Treffer, fragt nach dem Merkmal, das sie am besten teilt, und bietet die weiteren an; ein Klick grenzt ein, ein zweiter nimmt es zurück', async () => {
@@ -87,7 +88,7 @@ test('eine Frage zeigt Treffer, fragt nach dem Merkmal, das sie am besten teilt,
   await w.frage('Bohrhammer')
   assert.equal(w.$('.blase.ich').textContent, 'Bohrhammer')
   assert.deepEqual(w.$$('.karte .name').map(e => e.textContent), ['Bohrhammer Pro', 'Akkuschrauber'])
-  assert.ok(w.$$('.blase').some(b => b.textContent === '2 Produkte passen zu „bohrhammer“.'))
+  assert.ok(w.$$('.blase').some(b => satz(b) === '2 Produkte passen zu „bohrhammer“.'))
   // die erste Facette als Rückfrage, die übrigen zum Eingrenzen
   assert.equal(w.$('.rueckfrage .blase').textContent, 'Farbe?')
   assert.deepEqual(w.$$('.rueckfrage .chip').map(c => c.textContent), ['Rot (1)', 'Blau (1)'])
@@ -155,7 +156,7 @@ test('zu viele Fragen und ein Ausfall stehen als Satz im Verlauf', async () => {
   const w = starte({ ...STANDARD, '/api/ask': [429, { error: 'x' }] })
   await warte()
   await w.frage('a')
-  assert.ok(w.$$('.blase').some(b => b.textContent === 'Zu viele Fragen in kurzer Zeit.'))
+  assert.ok(w.$$('.blase').some(b => satz(b) === 'Zu viele Fragen in kurzer Zeit.'))
   const w2 = starte({ ...STANDARD, '/api/ask': [502, { error: 'x' }] })
   await warte()
   await w2.frage('a')
@@ -167,7 +168,7 @@ test('englisch, wenn die Seite es sagt', async () => {
   await warte()
   await w.frage('drill')
   assert.equal(w.rufe.find(r => r.url.endsWith('/api/ask')).body.locale, 'en')
-  assert.ok(w.$$('.blase').some(b => b.textContent === '2 products match "drill".'))
+  assert.ok(w.$$('.blase').some(b => satz(b) === '2 products match "drill".'))
   assert.equal(w.$('input[type=text]').placeholder, 'What are you looking for?')
 })
 
@@ -184,10 +185,12 @@ test('eine zweite Eingabe ergänzt die erste: Wörter, Filter und Verlauf gehen 
   assert.deepEqual(letzte.body.woerter, ['bohrhammer'])
   assert.deepEqual(letzte.body.filter, [{ attribute: 'color', op: 'eq', value: 'red' }], 'der Filter bleibt')
   assert.deepEqual(letzte.body.verlauf, ['Bohrhammer'])
-  // die Angaben stehen als Chips da, ein Wort lässt sich einzeln entfernen
-  const woerter = w.$$('.angaben .chip.wort').map(c => c.textContent)
-  assert.deepEqual(woerter.slice(-2), ['bohrhammer ×', 'leise ×'])
-  await w.klick(w.$$('.angaben .chip.wort').find(c => c.textContent === 'bohrhammer ×'))
+  // die Angaben stehen als Chips in der Blase der letzten Antwort, ein Wort lässt sich einzeln entfernen; die der älteren sind aus
+  const letzteBlase = w.$$('.ergebnis').at(-1)
+  const woerter = [...letzteBlase.querySelectorAll('.angaben .chip.wort')]
+  assert.deepEqual(woerter.map(c => c.textContent), ['bohrhammer ×', 'leise ×'])
+  assert.ok([...w.$$('.ergebnis')[0].querySelectorAll('.angaben .chip')].every(c => c.disabled))
+  await w.klick(woerter.find(c => c.textContent === 'bohrhammer ×'))
   assert.deepEqual(w.rufe.filter(r => r.url.endsWith('/api/ask')).at(-1).body.woerter, ['leise'])
 })
 
@@ -196,7 +199,7 @@ test('„Neue Suche“ fängt von vorn an', async () => {
   await warte()
   await w.frage('Bohrhammer')
   await w.klick(w.$$('.chip.neu').at(-1))
-  assert.ok(w.$$('.blase').some(b => b.textContent === 'Neue Suche'))
+  assert.ok(w.$$('.blase').some(b => satz(b) === 'Neue Suche'))
   await w.frage('Schrauber')
   const letzte = w.rufe.filter(r => r.url.endsWith('/api/ask')).at(-1)
   assert.deepEqual([letzte.body.woerter, letzte.body.filter, letzte.body.verlauf], [[], [], []])
@@ -211,7 +214,7 @@ test('ein Wort, das in keinem Produkt steht, wird genannt; ist nichts übrig, l�
   })
   await warte()
   await w.frage('auto')
-  const blasen = w.$$('.blase').map(b => b.textContent)
+  const blasen = w.$$('.blase').map(satz)
   assert.ok(blasen.includes('„auto“ steht in keinem Produkt.'))
   assert.ok(blasen.includes('Kein Produkt passt dazu.'))
   const ohne = w.$$('.lockern .chip')
@@ -232,19 +235,29 @@ test('wechselt das Thema, fragt das Fenster, ob es stattdessen danach sucht — 
   await warte()
   await w.frage('pullover')
   assert.ok(w.$$('.statt .blase').some(b => b.textContent === 'Stattdessen nach „pullover“ suchen?'))
+  // die Frage steht zuletzt, direkt über der Eingabe; was gesucht wird und das Lockern stehen in der Blase der Antwort
+  const antwort = w.$$('.antwort').at(-1)
+  assert.ok(antwort.lastElementChild === w.$('.statt'), 'die Frage zuletzt')
+  const sb = antwort.querySelector('.ergebnis')
+  assert.equal(satz(sb), 'Kein Produkt passt dazu.')
+  assert.deepEqual([...sb.querySelectorAll('.angaben .chip.an')].map(c => c.textContent), ['hose ×', 'pullover ×', 'Farbe: Grün ×'])
+  assert.ok(sb.querySelector('.lockern .chip'))
   const ja = w.$('.statt .ja')
   assert.equal(ja.textContent, 'Ja, 17 Produkte')
   await w.klick(ja)
   const letzte = w.rufe.filter(r => r.url.endsWith('/api/ask')).at(-1)
   assert.deepEqual([letzte.body.q, letzte.body.woerter, letzte.body.filter, letzte.body.verlauf], ['', ['pullover'], [], ['pullover']], 'die alten Angaben sind weg')
-  assert.ok(w.$$('.blase').some(b => b.textContent === '17 Produkte passen zu „pullover“.'))
+  assert.ok(w.$$('.blase').some(b => satz(b) === '17 Produkte passen zu „pullover“.'))
+  // die Knöpfe der älteren Antwort gelten nicht mehr
+  assert.ok([...sb.querySelectorAll('button')].every(b => b.disabled))
+  assert.ok([...w.$$('.ergebnis').at(-1).querySelectorAll('button')].every(b => !b.disabled))
 })
 
 test('Treffer nur nach dem Sinn heissen ähnliche Produkte', async () => {
   const w = starte({ ...STANDARD, '/api/ask': [200, { total: 2, similar: true, hits: [HIT('p1', 'Schlafsack'), HIT('p2', 'Decke')], facets: [], filter: [], words: [] }] })
   await warte()
   await w.frage('warm schlafen')
-  assert.ok(w.$$('.blase').some(b => b.textContent === '2 ähnliche Produkte.'))
+  assert.ok(w.$$('.blase').some(b => satz(b) === '2 ähnliche Produkte.'))
 })
 
 // Die Führung steht oben (08.10.2026): Satz mit der Suche, darunter die Rückfrage, dann die ersten drei Karten — der Rest auf Wunsch
@@ -254,16 +267,18 @@ test('die Rückfrage steht vor den Karten, gezeigt werden erst drei, der Rest mi
     facets: [{ key: 'size', label: 'Grösse', type: 'list', n: 5, values: [{ value: 'm', label: 'M', n: 3 }, { value: 'l', label: 'L', n: 2 }] }] }] })
   await warte()
   await w.frage('hose')
-  assert.ok(w.$$('.blase').some(b => b.textContent === '17 Produkte passen zu „hose“.'))
+  assert.ok(w.$$('.blase').some(b => satz(b) === '17 Produkte passen zu „hose“.'))
   const antwort = w.$$('.karten').at(-1)
   const kinder = [...antwort.children]
   assert.ok(kinder.indexOf(antwort.querySelector('.rueckfrage')) < kinder.indexOf(antwort.querySelector('.karte')), 'die Rückfrage vor den Karten')
+  // die gesammelten Angaben stehen in der Blase der Antwort
+  assert.deepEqual([...antwort.querySelectorAll('.ergebnis .angaben .chip.wort')].map(c => c.textContent), ['hose ×'])
   assert.equal(antwort.querySelectorAll('.karte').length, 3)
   const mehr = antwort.querySelector('.mehr')
   assert.equal(mehr.textContent, '2 weitere zeigen')
   await w.klick(mehr)
   assert.deepEqual([...antwort.querySelectorAll('.karte .name')].map(e => e.textContent), fuenf.map(h => h.name))
-  assert.equal(antwort.querySelector('.mehr'), null)
+  assert.ok(!antwort.querySelector('.mehr'))
 })
 
 test('ohne Auswahl ist der Knopf zum Vergleichen nicht da — hidden gilt auch gegen die eigenen Regeln', async () => {
@@ -301,7 +316,7 @@ test('eine Variante lässt sich aus den Details ganz öffnen: Name mit Achsen, S
   // zurück zum Produkt
   await w.klick([...v.querySelectorAll('.chip')].find(c => c.textContent === 'Zum Produkt'))
   assert.equal(w.$$('.produkt').length, 1, 'die Ansicht zeigt eines — das Produkt ersetzt die Variante')
-  assert.equal(w.$('.variante'), null)
+  assert.ok(!w.$('.variante'))
 })
 
 test('Produkte und Varianten kommen auf den Merkzettel; er steht im Kopf, öffnet und nimmt weg', async () => {
@@ -342,10 +357,10 @@ test('Details öffnen in einem eigenen Fenster neben dem Gespräch, das Gespräc
   await w.klick(w.$$('.karte .details')[0])
   assert.equal(w.$('.ansicht').hidden, false)
   assert.ok(w.$('.ansicht').classList.contains('daneben'), 'schwebend ein eigenes Fenster')
-  assert.equal(w.$('.fenster .ansicht'), null, 'nicht im Fenster des Gesprächs')
+  assert.ok(!w.$('.fenster .ansicht'), 'nicht im Fenster des Gesprächs')
   assert.equal(w.$('.fenster').className, vorher, 'das Gespräch ändert weder Breite noch Lage')
   assert.ok(w.$('.ansicht .produkt'), 'das Produkt steht in der Ansicht, nicht im Gespräch')
-  assert.equal(w.$('.verlauf .produkt'), null)
+  assert.ok(!w.$('.verlauf .produkt'))
   assert.equal(w.$('.ansicht .tafelkopf .art').textContent, 'Produkt')
   await w.klick(w.$('.ansicht .tafelkopf .zu'))
   assert.equal(w.$('.ansicht').hidden, true)

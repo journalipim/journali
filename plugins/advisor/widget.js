@@ -6,6 +6,8 @@
 // Ein Gespräch (08.10.2026): jede Eingabe ergänzt die bisherigen Angaben (Wörter und Filter, als Chips über den Treffern, einzeln zu entfernen);
 // die Anfrage trägt sie mit, der Server merkt sich nichts. Das Merkmal, das die Treffer am besten teilt, steht als Rückfrage da.
 // Wechselt das Thema (zusammen nichts, die neue Eingabe allein schon), fragt das Fenster, ob es stattdessen danach sucht.
+// Die gesammelten Angaben und was sich lockern lässt, stehen in der Blase der Antwort; die Knöpfe älterer Antworten sind aus. Die letzte Frage
+// des Beraters steht direkt über der Eingabe.
 // Eine Variante lässt sich ganz öffnen; Produkte und Varianten kommen auf einen Merkzettel (☆ im Kopf) — beides nur im Arbeitsspeicher der Seite.
 // Produkt, Variante, Merkzettel und Vergleich öffnen in einer Ansicht neben dem Gespräch. Schwebend ist sie ein eigenes Fenster links vom
 // Gespräch — das Gespräch bleibt, wo es ist; reicht die Breite nicht, liegt sie über dem Gespräch. Eingebettet steht sie im selben Rahmen
@@ -104,6 +106,8 @@ form { display: flex; gap: 6px; padding: 10px; border-top: 1px solid var(--linie
 input[type=text] { flex: 1; font: inherit; color: var(--text); background: var(--flaeche); border: 1px solid var(--linie); border-radius: 8px; padding: 8px 10px; min-width: 0; }
 form button, .leiste button { border: 0; border-radius: 8px; padding: 8px 12px; background: var(--akzent); color: #fff; }
 .leiste { padding: 0 10px 10px; display: flex; justify-content: flex-end; }
+.ergebnis .chips { margin-top: 8px; white-space: normal; }
+.chip:disabled { opacity: .5; cursor: default; }
 table { border-collapse: collapse; width: 100%; font-size: 12px; }
 th, td { text-align: left; vertical-align: top; padding: 4px 6px; border-bottom: 1px solid var(--linie); }
 tr.gleich td { color: var(--leise); }
@@ -403,12 +407,18 @@ tr.gleich td { color: var(--leise); }
         // die Antwort nennt die Suche; gleich darunter die Rückfrage — erst dann die Karten, die ersten drei, der Rest auf Wunsch
         const wort = zustand.woerter.join(' ')
         const text = r.answer ? r.answer : (r.total ? (r.similar ? T.aehnlich(r.total) : wort ? T.trefferZu(r.total, wort) : T.treffer(r.total)) : T.keine)
-        antwort.append(r.answer ? (() => { const b = el('div', 'blase', text); b.append(el('span', 'hinweis', T.ki)); return b })() : el('div', 'blase', text))
-        const st = r.total ? null : stattChips(r.instead); if (st) antwort.append(st)
-        const ac = angabenChips(); if (ac) antwort.append(ac)
-        const lo = r.total ? null : lockernChips(r.relax); if (lo) antwort.append(lo)
+        // eine Blase: der Satz, was gesucht wird, ohne Treffer was sich lockern lässt — die Knöpfe älterer Antworten gelten nicht mehr
+        for (const alt of verlauf.querySelectorAll('.ergebnis button')) alt.disabled = true
+        const sb = el('div', 'blase ergebnis')
+        sb.append(el('span', 'satz', text))
+        if (r.answer) sb.append(el('span', 'hinweis', T.ki))
+        const ac = angabenChips(); if (ac) sb.append(ac)
+        const lo = r.total ? null : lockernChips(r.relax); if (lo) sb.append(lo)
+        antwort.append(sb)
+        const st = r.total ? null : stattChips(r.instead); if (st) antwort.append(st)   // die Frage zuletzt, direkt über der Eingabe
         const [erste, ...weitere] = r.facets || []
         if (erste) antwort.append(rueckfrage(erste))
+        const fa = facettenChips(weitere); if (fa) antwort.append(fa)
         const hits = r.hits || []
         for (const h of hits.slice(0, ZUERST)) antwort.append(karte(h))
         if (hits.length > ZUERST) {
@@ -417,7 +427,6 @@ tr.gleich td { color: var(--leise); }
           mehr.addEventListener('click', () => { const k = rest.map(karte); mehr.replaceWith(...k) })
           antwort.append(mehr)
         }
-        const fa = facettenChips(weitere); if (fa) antwort.append(fa)
         verlauf.append(antwort)
         verlauf.scrollTop = Math.max(0, antwort.offsetTop - 8)   // an den Anfang der Antwort, nicht ans Ende der Karten
       } catch (e) { blase(e.message) }
