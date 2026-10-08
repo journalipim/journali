@@ -6,8 +6,9 @@
 // Ein Gespräch (08.10.2026): jede Eingabe ergänzt die bisherigen Angaben (Wörter und Filter, als Chips über den Treffern, einzeln zu entfernen);
 // die Anfrage trägt sie mit, der Server merkt sich nichts. Das Merkmal, das die Treffer am besten teilt, steht als Rückfrage da.
 // Eine Variante lässt sich ganz öffnen; Produkte und Varianten kommen auf einen Merkzettel (☆ im Kopf) — beides nur im Arbeitsspeicher der Seite.
-// Produkt, Variante, Merkzettel und Vergleich öffnen in einer Ansicht neben dem Gespräch; das schwebende Fenster wird dafür breiter, ist es zu
-// schmal, deckt die Ansicht das Gespräch ab. × schliesst sie.
+// Produkt, Variante, Merkzettel und Vergleich öffnen in einer Ansicht neben dem Gespräch. Schwebend ist sie ein eigenes Fenster links vom
+// Gespräch — das Gespräch bleibt, wo es ist; reicht die Breite nicht, liegt sie über dem Gespräch. Eingebettet steht sie im selben Rahmen
+// rechts. × schliesst sie.
 (function () {
   'use strict'
 
@@ -46,7 +47,6 @@
 button { font: inherit; cursor: pointer; }
 .knopf { position: fixed; right: 16px; bottom: 16px; z-index: 2147483000; border: 0; border-radius: 22px; padding: 10px 16px; background: var(--akzent); color: #fff; box-shadow: 0 4px 16px rgba(0,0,0,.2); }
 .fenster { display: flex; flex-direction: column; background: var(--flaeche); color: var(--text); border: 1px solid var(--linie); border-radius: 12px; overflow: hidden; }
-.schwebend.breit { width: min(860px, calc(100vw - 32px)); }
 .schwebend { position: fixed; right: 16px; bottom: 16px; z-index: 2147483000; width: min(400px, calc(100vw - 32px)); height: min(620px, calc(100vh - 32px)); box-shadow: 0 8px 32px rgba(0,0,0,.25); }
 .eingebettet { width: 100%; height: 100%; min-height: 420px; }
 .kopf { display: flex; align-items: center; gap: 8px; padding: 10px 12px; background: var(--akzent); color: #fff; }
@@ -62,8 +62,11 @@ button { font: inherit; cursor: pointer; }
 .koerper { flex: 1; display: flex; min-height: 0; }
 .gespraech { flex: 1; display: flex; flex-direction: column; min-width: 0; }
 .ansicht { flex: 1.25; min-width: 0; overflow-y: auto; border-left: 1px solid var(--linie); padding: 12px; display: flex; flex-direction: column; gap: 10px; }
-.eng .gespraech { display: none; }
-.eng .ansicht { border-left: 0; }
+/* schwebend: die Ansicht ist ein eigenes Fenster links vom Gespräch, gleich hoch; das Gespräch bewegt sich nicht (08.10.2026) */
+.ansicht.daneben { position: fixed; bottom: 16px; z-index: 2147483001; right: calc(16px + min(400px, calc(100vw - 32px)) + 12px);
+  width: min(480px, calc(100vw - min(400px, calc(100vw - 32px)) - 44px)); height: min(620px, calc(100vh - 32px));
+  background: var(--flaeche); color: var(--text); border: 1px solid var(--linie); border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,.25); }
+@media (max-width: 760px) { .ansicht.daneben { right: 16px; width: min(400px, calc(100vw - 32px)); } }
 .tafelkopf .zu { background: transparent; border: 0; color: var(--leise); font-size: 18px; line-height: 1; padding: 0 2px; }
 .facette { border-style: dashed; }
 .facette.offen { border-style: solid; border-color: var(--akzent); }
@@ -152,13 +155,14 @@ tr.gleich td { color: var(--leise); }
     const koerper = el('div', 'koerper'), gespraech = el('div', 'gespraech'), ansicht = el('div', 'ansicht')
     ansicht.hidden = true
     gespraech.append(verlauf, leiste, formular)
-    koerper.append(gespraech, ansicht)
+    koerper.append(gespraech)
     fenster.append(kopf, koerper)
+    if (ziel) koerper.append(ansicht); else ansicht.classList.add('daneben')
 
     if (ziel) schatten.append(fenster)
-    else { schatten.append(knopf); fenster.hidden = true; schatten.append(fenster) }
+    else { schatten.append(knopf); fenster.hidden = true; schatten.append(ansicht, fenster) }
     knopf.addEventListener('click', () => { fenster.hidden = false; knopf.hidden = true; eingabe.focus() })
-    zu.addEventListener('click', () => { fenster.hidden = true; knopf.hidden = false })
+    zu.addEventListener('click', () => { fenster.hidden = true; knopf.hidden = false; schliesseAnsicht() })
 
     async function rufe(pfad, body) {
       const r = await holen(basis + pfad, body === undefined ? {} : { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
@@ -236,20 +240,17 @@ tr.gleich td { color: var(--leise); }
       t.append(kopf, inhalt)
       return { t, kopf, inhalt }
     }
-    /// Eine Tafel in der Ansicht neben dem Gespräch: das schwebende Fenster wird breiter; ist es dann noch zu schmal, deckt die Ansicht das Gespräch ab
+    /// Eine Tafel in der Ansicht neben dem Gespräch; eine neue ersetzt die vorige
     function zeige(block) {
       const zu = el('button', 'zu', '×'); zu.type = 'button'; zu.title = T.ansichtZu; zu.setAttribute('aria-label', T.ansichtZu)
       zu.addEventListener('click', schliesseAnsicht)
       block.querySelector('.tafelkopf')?.append(zu)
       ansicht.replaceChildren(block)
       ansicht.hidden = false
-      fenster.classList.add('breit')
-      fenster.classList.toggle('eng', (fenster.getBoundingClientRect().width || 0) > 0 && fenster.getBoundingClientRect().width < 640)
       ansicht.scrollTop = 0
     }
     function schliesseAnsicht() {
       ansicht.hidden = true; ansicht.replaceChildren()
-      fenster.classList.remove('breit', 'eng')
     }
 
     function karte(h) {

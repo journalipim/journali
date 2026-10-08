@@ -312,25 +312,30 @@ test('Produkte und Varianten kommen auf den Merkzettel; er steht im Kopf, öffne
   assert.equal(zettel.querySelectorAll('tr').length, 1)
 })
 
-// Öffnen erweitert das Fenster (08.10.2026): die Ansicht steht neben dem Gespräch, das schwebende Fenster wird breiter, × schliesst sie
-test('Details öffnen in einer Ansicht neben dem Gespräch, das Fenster wird breiter; × schliesst sie', async () => {
+// Öffnen zeigt eine Ansicht neben dem Gespräch (08.10.2026): schwebend ein eigenes Fenster, das Gespräch bleibt unverändert; × schliesst sie
+test('Details öffnen in einem eigenen Fenster neben dem Gespräch, das Gespräch bleibt; × schliesst es', async () => {
   const w = starte(MIT_VARIANTEN)
   await warte()
   await w.klick(w.$('.knopf'))
   await w.frage('hose')
   assert.equal(w.$('.ansicht').hidden, true)
-  assert.equal(w.$('.fenster').classList.contains('breit'), false)
+  const vorher = w.$('.fenster').className
   await w.klick(w.$$('.karte .details')[0])
   assert.equal(w.$('.ansicht').hidden, false)
-  assert.ok(w.$('.fenster').classList.contains('breit'))
+  assert.ok(w.$('.ansicht').classList.contains('daneben'), 'schwebend ein eigenes Fenster')
+  assert.equal(w.$('.fenster .ansicht'), null, 'nicht im Fenster des Gesprächs')
+  assert.equal(w.$('.fenster').className, vorher, 'das Gespräch ändert weder Breite noch Lage')
   assert.ok(w.$('.ansicht .produkt'), 'das Produkt steht in der Ansicht, nicht im Gespräch')
   assert.equal(w.$('.verlauf .produkt'), null)
   assert.equal(w.$('.ansicht .tafelkopf .art').textContent, 'Produkt')
   await w.klick(w.$('.ansicht .tafelkopf .zu'))
   assert.equal(w.$('.ansicht').hidden, true)
-  assert.equal(w.$('.fenster').classList.contains('breit'), false)
+  assert.equal(w.$('.fenster').hidden, false, 'das Gespräch bleibt offen')
   // der Merkzettel öffnet ebenfalls dort
   await w.klick(w.$$('.karte .merken')[0])
   await w.klick(w.$('.kopf .merk'))
   assert.ok(w.$('.ansicht .merkzettel'))
+  // schliesst man das Gespräch, schliesst die Ansicht mit
+  await w.klick(w.$('.kopf .zu'))
+  assert.equal(w.$('.ansicht').hidden, true)
 })
