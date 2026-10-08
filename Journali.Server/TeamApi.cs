@@ -257,7 +257,7 @@ public static class TeamApi
             return Results.Ok(new
             {
                 team = key,
-                days = c.Teams.Days(key).Take(Math.Clamp(days, 1, 400)).Select(d => new { day = d.Day, d.Usage.Calls, bytesIn = d.Usage.BytesIn, bytesOut = d.Usage.BytesOut, bytes = d.Usage.Bytes, byProvider = d.Usage.ByProvider, byUser = d.Usage.ByUser, byPurpose = d.Usage.ByPurpose }).ToList(),
+                days = c.Teams.Days(key).Take(Math.Clamp(days, 1, 400)).Select(d => new { day = d.Day, d.Usage.Calls, bytesIn = d.Usage.BytesIn, bytesOut = d.Usage.BytesOut, bytes = d.Usage.Bytes, byProvider = d.Usage.ByProvider, byModel = d.Usage.ByModel, byUser = d.Usage.ByUser, byPurpose = d.Usage.ByPurpose }).ToList(),
                 dependents = c.Teams.Dependents(key).Where(t => t != key).ToList(),   // wer sonst noch auf diese Rechnung geht
             });
         }));

@@ -71,6 +71,8 @@ public sealed class UsageDay
     public Dictionary<string, long> ByProvider { get; } = new();
     public Dictionary<string, long> ByUser { get; } = new();
     public Dictionary<string, long> ByPurpose { get; } = new();
+    /// <summary>Je Anbieter und Modell („lokal/gemma3:4b“) — die Spalte Anbieter nennt das Modell im Tooltip (09.10.2026).</summary>
+    public Dictionary<string, long> ByModel { get; } = new();
 }
 
 /// <summary>
@@ -250,6 +252,7 @@ public sealed class Teams : IProjection
             u.BytesIn += d.BytesIn; u.BytesOut += d.BytesOut;
             var t = d.BytesIn + d.BytesOut;   // aufgeschlüsselt wird das Volumen; alte Einträge tragen hier 0
             if (!string.IsNullOrEmpty(d.Provider)) u.ByProvider[d.Provider] = u.ByProvider.GetValueOrDefault(d.Provider) + t;
+            if (!string.IsNullOrEmpty(d.Provider) && !string.IsNullOrEmpty(d.Model)) u.ByModel[d.Provider + "/" + d.Model] = u.ByModel.GetValueOrDefault(d.Provider + "/" + d.Model) + t;
             var who = string.IsNullOrEmpty(d.User) ? entry.Actor : d.User;
             if (!string.IsNullOrEmpty(who)) u.ByUser[who] = u.ByUser.GetValueOrDefault(who) + t;
             if (!string.IsNullOrEmpty(d.Purpose)) u.ByPurpose[d.Purpose] = u.ByPurpose.GetValueOrDefault(d.Purpose) + t;

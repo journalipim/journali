@@ -66,6 +66,7 @@ public class TeamTests
         Assert.Equal(1000, tag.ByUser["pablo"]);
         Assert.Equal(400, tag.ByUser["u1"]);
         Assert.Equal(1400, tag.ByProvider["anthropic"]);
+        Assert.Equal(1400, tag.ByModel["anthropic/claude-sonnet-5"]);   // je Modell — der Tooltip der Spalte Anbieter
         Assert.Equal(1000, tag.ByPurpose["uebersetzung"]);
         Assert.Equal(1400, c.With((_, _, _) => c.Teams.Month(Model.InitTeam, DateTime.Today.ToString("yyyy-MM"))));
     }

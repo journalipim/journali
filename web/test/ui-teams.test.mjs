@@ -24,7 +24,7 @@ function server(teams = TEAMS) {
     calls.push({ path, method: opts.method ?? 'GET', body: opts.body ? JSON.parse(opts.body) : null })
     const body = path.endsWith('/members') ? MITGLIEDER
       : path.endsWith('/tokens') ? [{ id: 'abc123def456', user: 'gast', label: 'Excel Laptop', at: '2026-09-20T08:00:00Z' }]
-      : path.endsWith('/usage') ? { team: 'init', days: [{ day: '2026-09-23', calls: 7, bytesIn: 2_097_152, bytesOut: 131_072, bytes: 2_228_224, byProvider: { anthropic: 2_228_224 }, byUser: { gast: 2_000_000 }, byPurpose: { 'Übersetzung': 2_000_000, Editor: 228_224 } }], dependents: ['es'] }
+      : path.endsWith('/usage') ? { team: 'init', days: [{ day: '2026-09-23', calls: 7, bytesIn: 2_097_152, bytesOut: 131_072, bytes: 2_228_224, byProvider: { anthropic: 2_097_152, lokal: 131_072 }, byModel: { 'anthropic/claude-sonnet-5-5': 2_097_152, 'lokal/gemma3:4b': 131_072 }, byUser: { gast: 2_000_000 }, byPurpose: { 'Übersetzung': 2_000_000, Editor: 228_224 } }], dependents: ['es'] }
       : path.endsWith('/tokens/journali') ? { team: 'init', payer: 'init', payerLabel: 'Init Team', limits: { week: 20000, month: 100000 }, used: { week: 5913, month: 5981, day: 1526 }, mine: { week: 0, month: 0 }, head: 74939, today: '2026-09-23', resetWeek: '2026-09-28', resetMonth: '2026-10-01', history: [{ start: '2026-09-23', count: 1526, all: 1526 }] }
       : path === '/api/usage' ? { week: { used: 1, max: 10 }, month: { used: 2, max: 20 }, history: [] }
       : path === '/api/teams/free' ? [{ key: 'neu', name: 'Neu Person', role: 'editor' }]
@@ -78,6 +78,10 @@ test('das Austauschvolumen steht hin und zurück getrennt da — in Bytes, nie i
   assert.match(t, /2mb/, 'was hingeschickt wurde')
   assert.match(t, /128kb/, 'und was zurückkam')
   assert.match(t, /Übersetzung/, 'der Anlass steht dabei')
+  // der Anbieter je Tag, das Modell im Tooltip
+  const zelle = w.find('td.anbieter')
+  assert.equal(zelle.text(), 'Anthropic 2mb · lokal 128kb')
+  assert.equal(zelle.attributes('title'), 'anthropic · claude-sonnet-5-5 2mb\nlokal · gemma3:4b 128kb')
   assert.ok(!/KI-Token|Token verbraucht|Token diesen Monat/.test(t), 'eine Tokenzahl des Anbieters steht nirgends')
   await ruhe(); w.unmount()
 })

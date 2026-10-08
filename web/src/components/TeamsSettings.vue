@@ -36,6 +36,7 @@ const kb = b => {
 }
 // lokal: statt eines Schlüssels steht die Adresse des Dienstes mit der Ollama-Schnittstelle (der Server prüft http:// oder https://)
 const ANBIETER = [['anthropic', t_('Anthropic')], ['openai', t_('OpenAI')], ['lokal', t_('lokal')]]
+const anbieterName = k => ANBIETER.find(([x]) => x === k)?.[1] ?? k
 
 const team = computed(() => teams.value.find(t => t.key === gewaehlt.value) ?? null)
 const meinTeam = computed(() => teams.value.find(t => t.key === store.auth?.team) ?? null)
@@ -278,13 +279,14 @@ async function austragen(m) {
 
     <div class="section">
       <h2 :title="$t('Was journali an den Anbieter geschickt und von ihm zurückbekommen hat; über Tokens und Kosten sagt journali nichts.')">{{ $t("✧ KI Austauschvolumen") }}</h2>
-      <table v-if="tage.length" class="grid" style="width:auto"><thead><tr><th style="width:110px">{{ $t("Tag") }}</th><th class="num" style="width:70px">{{ $t("Aufrufe") }}</th><th class="num" style="width:90px" :title="$t('hingeschickt')">{{ $t("↑ hin") }}</th><th class="num" style="width:90px" :title="$t('zurückbekommen')">{{ $t("↓ zurück") }}</th><th class="num" style="width:90px">Σ</th><th>{{ $t("Anlass") }}</th></tr></thead><tbody>
+      <table v-if="tage.length" class="grid" style="width:auto"><thead><tr><th style="width:110px">{{ $t("Tag") }}</th><th class="num" style="width:70px">{{ $t("Aufrufe") }}</th><th class="num" style="width:90px" :title="$t('hingeschickt')">{{ $t("↑ hin") }}</th><th class="num" style="width:90px" :title="$t('zurückbekommen')">{{ $t("↓ zurück") }}</th><th class="num" style="width:90px">Σ</th><th>{{ $t("Anbieter") }}</th><th>{{ $t("Anlass") }}</th></tr></thead><tbody>
         <tr v-for="t in tage" :key="t.day" class="row">
           <td class="mono">{{ t.day }}</td>
           <td class="num mono">{{ t.calls }}</td>
           <td class="num mono">{{ kb(t.bytesIn) }}</td>
           <td class="num mono">{{ kb(t.bytesOut) }}</td>
           <td class="num mono">{{ kb(t.bytes) }}</td>
+          <td class="anbieter" style="font-size:12px" :title="Object.entries(t.byModel ?? {}).map(([m, v]) => `${m.replace('/', ' · ')} ${kb(v)}`).join('\n')">{{ Object.entries(t.byProvider ?? {}).map(([a, v]) => `${anbieterName(a)} ${kb(v)}`).join(' · ') }}</td>
           <td class="muted" style="font-size:12px">{{ Object.entries(t.byPurpose ?? {}).map(([a, v]) => `${a} ${kb(v)}`).join(' · ') }}</td>
         </tr>
       </tbody></table>
