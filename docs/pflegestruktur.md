@@ -2525,7 +2525,7 @@ Tarif mit den Servern. Den Reiter ⧉ Server gibt es erst, wenn mehr als ein Ser
 
 **Offen:** Die wartenden Eingänge im Fach `in/` eines Jobs liegen auf der Platte seines Servers; die anderen zeigen dafür „auf Server …“, nicht die Dateien.
 
-## 42. Produktberater (`berater`) — Fragen von Website-Besuchern an einen Publikationsbaum (08.10.2026, gebaut)
+## 42. Produktberater (`advisor`) — Fragen von Website-Besuchern an einen Publikationsbaum (08.10.2026, gebaut)
 
 Ein Kunde baut auf seiner Website ein Chat-Fenster ein, in dem Besucher nach Produkten fragen: „Bohrhammer für Beton, nicht
 zu schwer“. Dieselben Fragen sollen fremde KI-Agenten über MCP stellen können. Der Berater antwortet aus den Produkten eines
@@ -2562,18 +2562,18 @@ Text als „Text von einer KI erstellt“. Fehlt der Schlüssel oder ist die Tag
 
 **Bauform — entschieden, wie in 31.** Zwei Teile:
 
-- **Im Server** (`BeraterApi.cs`): die Definition als Plugin-Daten `def:<schlüssel>` von `berater` (Journal), der Bestand je
-  Berater und Sprache einmal je Journalstand gerechnet, die Fragen unter `/api/berater/{key}/…` (`info`, `frage`, `produkt/{id}`,
-  `vergleich`, `bild/{media}`) und die Token (`tokens`).
-- **Der Dienst** (`plugins/berater/serve.mjs`, `dienst.mjs`, `mcp.mjs`): ein eigener Container aus dem Image `node:22-alpine` mit dem
+- **Im Server** (`AdvisorApi.cs`): die Definition als Plugin-Daten `def:<schlüssel>` von `advisor` (Journal), der Bestand je
+  Berater und Sprache einmal je Journalstand gerechnet, die Fragen unter `/api/advisor/{key}/…` (`info`, `ask`, `product/{id}`,
+  `compare`, `image/{media}`) und die Token (`tokens`).
+- **Der Dienst** (`plugins/advisor/serve.mjs`, `dienst.mjs`, `mcp.mjs`): ein eigener Container aus dem Image `node:22-alpine` mit dem
   Verzeichnis des Plugins, ohne npm-Pakete. Er ist das einzige Stück, das von aussen erreichbar ist, spricht ausgehend mit journali
   und hält nichts ausser dem Token und einer Zählung je Besucher im Arbeitsspeicher. Er liefert das Chat-Fenster (`widget.js`), die
   Fragen für das Fenster und einen MCP-Server.
 
 **Das Token des Dienstes — entschieden.** Ein Berater hat keine Person, die fragt — anders als in 31, wo jeder Aufruf mit dem
-Token einer Person kommt. Sein Token (`jb_…`, im Tresor als Hash, Stück `auth`) gehört dem Berater: es liest mit dessen Rolle und
-erreicht **nur** dessen fünf Fragen (`BeraterApi.FuerToken`), nicht `/api/tree`, nicht die Definition, nicht die Token, keinen
-anderen Berater — auch nichts, was die Rolle sonst lesen dürfte. Im Journal steht als Akteur `berater:<schlüssel>` (nur beim
+Token einer Person kommt. Sein Token (`ja_…`, im Tresor als Hash, Stück `auth`) gehört dem Berater: es liest mit dessen Rolle und
+erreicht **nur** dessen fünf Fragen (`AdvisorApi.FuerToken`), nicht `/api/tree`, nicht die Definition, nicht die Token, keinen
+anderen Berater — auch nichts, was die Rolle sonst lesen dürfte. Im Journal steht als Akteur `advisor:<schlüssel>` (nur beim
 Verbrauch der KI). Ausgeben und widerrufen darf, wer Plugins verwaltet; die Vorschau in der Ansicht fragt mit diesem Recht statt mit
 dem Token. In der Demo gilt kein Berater-Token.
 
@@ -2599,7 +2599,7 @@ Ob ein Berater MCP anbietet, steht an ihm (`mcp`).
 
 **Das Chat-Fenster.** Ein `<script>`-Tag, kein Paket: Shadow DOM, damit Seite und Fenster sich nicht gegenseitig gestalten;
 Werte aus den Produktdaten nur als Text (`textContent`), nie als HTML; kein Cookie, kein Speicher im Browser. Schwebend mit Knopf
-oder mit `data-ziel` in ein Element der Seite; Sprache aus `data-sprache` oder dem Browser (deutsch, sonst englisch).
+oder mit `data-target` in ein Element der Seite; Sprache aus `data-locale` oder dem Browser (deutsch, sonst englisch).
 
 **Hinweis vor dem Einschalten.** Das Plugin trägt einen Hinweis (Manifest `acknowledge`): was ein Berater zeigt, ist öffentlich;
 die Wahl von Baum, Rolle und Sicht und die Angaben auf der Website verantwortet der Betreiber; Texte der KI gehen an deren

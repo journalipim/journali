@@ -1,4 +1,4 @@
-(function(){const s=document.createElement('style');s.textContent="\n.seiten[data-v-163aca5f] { display: flex; gap: 0; flex: 1; min-height: 0;\n}\n.liste[data-v-163aca5f] { width: 260px; border-right: 1px solid var(--line); overflow-y: auto;\n}\n.rechts[data-v-163aca5f] { flex: 1; overflow-y: auto; min-width: 0;\n}\n.kopf[data-v-163aca5f] { display: flex; gap: 6px; align-items: center; padding: 6px 8px;\n}\n.kopf .bez[data-v-163aca5f] { flex: 1;\n}\n.neu[data-v-163aca5f] { display: flex; gap: 4px; padding: 6px 8px;\n}\n.neu input[data-v-163aca5f] { flex: 1; min-width: 0;\n}\n.form[data-v-163aca5f] { width: 100%;\n}\n.form td[data-v-163aca5f] { height: 30px; vertical-align: middle; white-space: normal; padding: 2px 4px;\n}\n.form td.attr[data-v-163aca5f] { color: var(--muted); white-space: nowrap; padding-left: 8px;\n}\n.row[data-v-163aca5f] { display: flex; gap: 8px; align-items: center; flex-wrap: wrap;\n}\n.zahl[data-v-163aca5f] { width: 70px;\n}\n.code[data-v-163aca5f] { margin: 2px 0 8px; padding: 6px 8px; background: var(--bg2, rgba(127,127,127,.08)); border-radius: 4px; white-space: pre-wrap; word-break: break-all; font-size: 12px;\n}\n.neues-token[data-v-163aca5f] { user-select: all; word-break: break-all;\n}\n.fehler[data-v-163aca5f] { margin: 4px 8px; padding-left: 16px;\n}\n.treffer[data-v-163aca5f] { margin: 4px 0; padding-left: 20px;\n}\n";document.head.append(s)})();
+(function(){const s=document.createElement('style');s.textContent="\n.seiten[data-v-a6e2ba9e] { display: flex; gap: 0; flex: 1; min-height: 0;\n}\n.liste[data-v-a6e2ba9e] { width: 260px; border-right: 1px solid var(--line); overflow-y: auto;\n}\n.rechts[data-v-a6e2ba9e] { flex: 1; overflow-y: auto; min-width: 0;\n}\n.kopf[data-v-a6e2ba9e] { display: flex; gap: 6px; align-items: center; padding: 6px 8px;\n}\n.kopf .bez[data-v-a6e2ba9e] { flex: 1;\n}\n.neu[data-v-a6e2ba9e] { display: flex; gap: 4px; padding: 6px 8px;\n}\n.neu input[data-v-a6e2ba9e] { flex: 1; min-width: 0;\n}\n.form[data-v-a6e2ba9e] { width: 100%;\n}\n.form td[data-v-a6e2ba9e] { height: 30px; vertical-align: middle; white-space: normal; padding: 2px 4px;\n}\n.form td.attr[data-v-a6e2ba9e] { color: var(--muted); white-space: nowrap; padding-left: 8px;\n}\n.row[data-v-a6e2ba9e] { display: flex; gap: 8px; align-items: center; flex-wrap: wrap;\n}\n.zahl[data-v-a6e2ba9e] { width: 70px;\n}\n.code[data-v-a6e2ba9e] { margin: 2px 0 8px; padding: 6px 8px; background: var(--bg2, rgba(127,127,127,.08)); border-radius: 4px; white-space: pre-wrap; word-break: break-all; font-size: 12px;\n}\n.neues-token[data-v-a6e2ba9e] { user-select: all; word-break: break-all;\n}\n.fehler[data-v-a6e2ba9e] { margin: 4px 8px; padding-left: 16px;\n}\n.treffer[data-v-a6e2ba9e] { margin: 4px 0; padding-left: 20px;\n}\n";document.head.append(s)})();
 const m = window.journali.vue;
 const Fragment = m.Fragment;
 const computed = m.computed;
@@ -171,7 +171,7 @@ const _sfc_main = {
     }
     async function ladeListe() {
       try {
-        liste.value = await api.get("/api/berater") ?? [];
+        liste.value = await api.get("/api/advisor") ?? [];
         meldung.value = "";
       } catch (e) {
         liste.value = [];
@@ -194,7 +194,7 @@ const _sfc_main = {
     });
     async function oeffne(key) {
       try {
-        const d = await api.get("/api/plugins/berater/data/" + encodeURIComponent("def:" + key)) ?? {};
+        const d = await api.get("/api/plugins/advisor/data/" + encodeURIComponent("def:" + key)) ?? {};
         def.value = { label: "", pub: "", role: "", view: "", locales: [], greeting: {}, ki: false, team: "", mcp: true, origins: [], limits: {}, ...JSON.parse(JSON.stringify(d)) };
         def.value.limits ??= {};
         def.value.greeting ??= {};
@@ -209,7 +209,7 @@ const _sfc_main = {
       }
     }
     async function schreibe(key, d) {
-      await api.post("/api/plugins/berater/data/" + encodeURIComponent("def:" + key), sauber(d), "PUT");
+      await api.post("/api/plugins/advisor/data/" + encodeURIComponent("def:" + key), sauber(d), "PUT");
     }
     async function anlegen() {
       if (!keyOk.value) return;
@@ -239,8 +239,8 @@ const _sfc_main = {
       const ok = await dialog.confirm({ title: t("Berater entfernen"), text: t("{0} — sein Dienst antwortet danach nicht mehr.", [def.value?.label || key]), ok: t("Entfernen"), danger: true });
       if (!ok) return;
       try {
-        for (const tk of tokens.value) await api.del(`/api/berater/${encodeURIComponent(key)}/tokens/${encodeURIComponent(tk.id)}`);
-        await api.del("/api/plugins/berater/data/" + encodeURIComponent("def:" + key));
+        for (const tk of tokens.value) await api.del(`/api/advisor/${encodeURIComponent(key)}/tokens/${encodeURIComponent(tk.id)}`);
+        await api.del("/api/plugins/advisor/data/" + encodeURIComponent("def:" + key));
         cur.value = "";
         def.value = null;
         tokens.value = [];
@@ -257,14 +257,14 @@ const _sfc_main = {
     const grussSprachen = computed(() => def.value?.locales?.length ? def.value.locales : [leitsprache.value]);
     async function ladeTokens() {
       try {
-        tokens.value = await api.get(`/api/berater/${encodeURIComponent(cur.value)}/tokens`) ?? [];
+        tokens.value = await api.get(`/api/advisor/${encodeURIComponent(cur.value)}/tokens`) ?? [];
       } catch {
         tokens.value = [];
       }
     }
     async function tokenAusgeben() {
       try {
-        const r = await api.post(`/api/berater/${encodeURIComponent(cur.value)}/tokens`, { label: t("Dienst") });
+        const r = await api.post(`/api/advisor/${encodeURIComponent(cur.value)}/tokens`, { label: t("Dienst") });
         neuesToken.value = r.token;
         await ladeTokens();
       } catch (e) {
@@ -275,7 +275,7 @@ const _sfc_main = {
       const ok = await dialog.confirm({ title: t("Token widerrufen"), text: t("Der Dienst mit diesem Token bekommt danach keine Antwort mehr."), ok: t("Widerrufen"), danger: true });
       if (!ok) return;
       try {
-        await api.del(`/api/berater/${encodeURIComponent(cur.value)}/tokens/${encodeURIComponent(id)}`);
+        await api.del(`/api/advisor/${encodeURIComponent(cur.value)}/tokens/${encodeURIComponent(id)}`);
         await ladeTokens();
       } catch (e) {
         store.toast(e.message);
@@ -283,21 +283,21 @@ const _sfc_main = {
     }
     async function fragen() {
       try {
-        vorschau.value = await api.post(`/api/berater/${encodeURIComponent(cur.value)}/frage`, { q: vorschauFrage.value, locale: grussSprachen.value[0], ki: false });
+        vorschau.value = await api.post(`/api/advisor/${encodeURIComponent(cur.value)}/ask`, { q: vorschauFrage.value, locale: grussSprachen.value[0], ki: false });
       } catch (e) {
         vorschau.value = { error: e.message };
       }
     }
-    const einbinden = computed(() => `<script src="https://berater.example.com/widget.js" async><\/script>`);
+    const einbinden = computed(() => `<script src="https://advisor.example.com/widget.js" async><\/script>`);
     const compose = computed(() => [
-      `  berater-${cur.value}:`,
+      `  advisor-${cur.value}:`,
       "    image: node:22-alpine",
-      '    command: ["node", "/berater/serve.mjs"]',
-      '    volumes: ["./plugins/berater:/berater:ro"]',
+      '    command: ["node", "/advisor/serve.mjs"]',
+      '    volumes: ["./plugins/advisor:/advisor:ro"]',
       "    environment:",
       "      JOURNALI: http://server:8080",
-      `      JOURNALI_BERATER: ${cur.value}`,
-      "      JOURNALI_BERATER_TOKEN: ${JOURNALI_BERATER_TOKEN}",
+      `      JOURNALI_ADVISOR: ${cur.value}`,
+      "      JOURNALI_ADVISOR_TOKEN: ${JOURNALI_ADVISOR_TOKEN}",
       '    ports: ["127.0.0.1:8090:8090"]'
     ].join("\n"));
     return (_ctx, _cache) => {
@@ -920,7 +920,7 @@ const _sfc_main = {
               neuesToken.value ? (openBlock(), createElementBlock("code", {
                 key: 0,
                 class: "neues-token",
-                title: _ctx.$t("nur jetzt sichtbar — als JOURNALI_BERATER_TOKEN des Dienstes")
+                title: _ctx.$t("nur jetzt sichtbar — als JOURNALI_ADVISOR_TOKEN des Dienstes")
               }, toDisplayString(neuesToken.value), 9, _hoisted_53)) : createCommentVNode("v-if", true)
             ]),
             createElementVNode("div", {
@@ -1035,7 +1035,7 @@ const _sfc_main = {
               _cache[20] || (_cache[20] = createElementVNode(
                 "pre",
                 { class: "code" },
-                "https://berater.example.com/mcp",
+                "https://advisor.example.com/mcp",
                 -1
                 /* CACHED */
               )),
@@ -1060,9 +1060,9 @@ const _sfc_main = {
     };
   }
 };
-const View = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-163aca5f"]]);
+const View = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-a6e2ba9e"]]);
 const entry = {
-  views: [{ path: "berater", topic: "export", order: 50, label: t("Produktberatung"), icon: "✆", hint: t("Fragen von Besuchern einer Website an die Produkte eines Publikationsbaums — als Chat-Fenster und für KI-Agenten"), component: View }]
+  views: [{ path: "advisor", topic: "export", order: 50, label: t("Produktberatung"), icon: "✆", hint: t("Fragen von Besuchern einer Website an die Produkte eines Publikationsbaums — als Chat-Fenster und für KI-Agenten"), component: View }]
 };
 export {
   entry as default

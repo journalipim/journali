@@ -121,7 +121,7 @@ public static class Tarife
     /// </summary>
     public static readonly IReadOnlyList<(string Key, string Label)> Katalog =
     [
-        ("backup", "Sicherung"), ("berater", "Produktberatung"), ("configurator", "Konfigurator"), ("csv", "CSV / TSV"), ("da", "Datenanalyse"), ("datasheet", "Datenblatt"),
+        ("backup", "Sicherung"), ("advisor", "Produktberatung"), ("configurator", "Konfigurator"), ("csv", "CSV / TSV"), ("da", "Datenanalyse"), ("datasheet", "Datenblatt"),
         ("derive", "Vorschauen rechnen"), ("docs", "Dokumente durchsuchbar machen"), ("dpp", "Digitaler Produktpass"), ("driver", "Zugänge"),
         ("embed", "Einbettungen (Vektoren)"), ("empco", "Werbeaussagen (EmpCo)"), ("enrich", "Anreicherung"), ("etim", "ETIM"), ("excel", "Excel"),
         ("exceladdin", "Excel-Add-in"), ("geo", "GEO-Texte (KI)"), ("gpc", "GPC"), ("ixp", "IXP"), ("json", "JSON"), ("ocr", "Texterkennung (OCR)"),

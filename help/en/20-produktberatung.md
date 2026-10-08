@@ -26,7 +26,7 @@ With AI: if "Text about the hits" is switched on, the AI of the chosen team writ
 2. Choose the publication tree, role and view, enter the languages and a greeting per language.
 3. Under Websites enter the addresses of the pages that embed the window, one per line (`https://www.example.com`).
 4. Save. The preview asks the same question as a visitor.
-5. ＋ Token: the token is visible only now and belongs in the environment of the service (`JOURNALI_BERATER_TOKEN`).
+5. ＋ Token: the token is visible only now and belongs in the environment of the service (`JOURNALI_ADVISOR_TOKEN`).
 
 If a setting is missing, ✗ appears in the list with the reason below it; the advisor then does not answer.
 
@@ -35,10 +35,10 @@ If a setting is missing, ✗ appears in the list with the reason below it; the a
 Visitors do not reach journali but the service of the advisor, a separate container that talks to journali only via the interface. The setup is described in `docs/betrieb.md` under "Produktberater". On the website one tag is enough:
 
 ```html
-<script src="https://berater.example.com/widget.js" async></script>
+<script src="https://advisor.example.com/widget.js" async></script>
 ```
 
-AI agents reach the same service at `https://berater.example.com/mcp`, with the tools `search_products`, `get_product` and `compare_products`. All three only read.
+AI agents reach the same service at `https://advisor.example.com/mcp`, with the tools `search_products`, `get_product` and `compare_products`. All three only read.
 
 ## Limits
 

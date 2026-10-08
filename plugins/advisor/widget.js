@@ -1,6 +1,6 @@
 // Das Chat-Fenster des Produktberaters (docs/pflegestruktur.md 42) — eingebunden mit einem Tag auf der Website:
-//   <script src="https://berater.example.com/widget.js" async></script>
-// Wahlweise: data-sprache="en" (sonst die des Browsers), data-ziel="#berater" (in dieses Element statt schwebend), data-farbe="#0a6" (Akzent).
+//   <script src="https://advisor.example.com/widget.js" async></script>
+// Wahlweise: data-locale="en" (sonst die des Browsers), data-target="#advisor" (in dieses Element statt schwebend), data-color="#0a6" (Akzent).
 // Kein Paket, kein Framework; alles im Shadow DOM, damit die Seite und das Fenster sich nicht gegenseitig gestalten. Werte aus den Produktdaten
 // kommen nur als Text in die Seite (textContent), nie als HTML. Gespeichert wird nichts — kein Cookie, kein Speicher im Browser.
 (function () {
@@ -69,18 +69,18 @@ tr.gleich td { color: var(--leise); }
   }
 
   function start(o) {
-    const basis = o.basis.replace(/\/+$/, '')
+    const basis = o.base.replace(/\/+$/, '')
     const holen = o.fetch || window.fetch.bind(window)
-    const sprache = (String(o.sprache || navigator.language || 'de').slice(0, 2).toLowerCase() === 'de') ? 'de' : 'en'
+    const sprache = (String(o.locale || navigator.language || 'de').slice(0, 2).toLowerCase() === 'de') ? 'de' : 'en'
     const T = TEXTE[sprache]
     const zustand = { q: '', filter: [], auswahl: new Set(), info: null, laeuft: false }
 
     const wirt = document.createElement('div')
-    wirt.setAttribute('data-journali-berater', '')
-    const ziel = o.ziel ? document.querySelector(o.ziel) : null
+    wirt.setAttribute('data-journali-advisor', '')
+    const ziel = o.target ? document.querySelector(o.target) : null
     ;(ziel || document.body).appendChild(wirt)
     const schatten = wirt.attachShadow({ mode: 'open' })
-    const stil = el('style'); stil.textContent = STIL + (o.farbe && /^#[0-9a-f]{3,8}$/i.test(o.farbe) ? `:host { --akzent: ${o.farbe}; }` : '')
+    const stil = el('style'); stil.textContent = STIL + (o.color && /^#[0-9a-f]{3,8}$/i.test(o.color) ? `:host { --akzent: ${o.color}; }` : '')
     schatten.appendChild(stil)
 
     const knopf = el('button', 'knopf', T.oeffnen)
@@ -122,7 +122,7 @@ tr.gleich td { color: var(--leise); }
 
     function bild(id, gross) {
       if (!id) return el('div', 'ohne')
-      const i = el('img'); i.alt = ''; i.loading = 'lazy'; i.src = `${basis}/api/bild/${encodeURIComponent(id)}${gross ? '?gross=1' : ''}`
+      const i = el('img'); i.alt = ''; i.loading = 'lazy'; i.src = `${basis}/api/image/${encodeURIComponent(id)}${gross ? '?gross=1' : ''}`
       return i
     }
 
@@ -191,7 +191,7 @@ tr.gleich td { color: var(--leise); }
       zustand.laeuft = true; senden.disabled = true
       if (alsBlase && q) blase(q, true)
       try {
-        const r = await rufe('/api/frage', { q, filter: zustand.filter.map(f => ({ attribute: f.attribute, op: f.op, value: f.value })), locale: sprache })
+        const r = await rufe('/api/ask', { q, filter: zustand.filter.map(f => ({ attribute: f.attribute, op: f.op, value: f.value })), locale: sprache })
         zustand.q = q
         // die Bezeichnungen der Filter kommen vom Server zurück
         for (const e of r.filter || []) { const f = zustand.filter.find(x => x.attribute === e.attribute && x.value === e.value); if (f) { f.label = e.label; f.valueLabel = e.valueLabel } }
@@ -208,7 +208,7 @@ tr.gleich td { color: var(--leise); }
 
     async function zeigeProdukt(id) {
       try {
-        const p = await rufe(`/api/produkt/${encodeURIComponent(id)}?locale=${sprache}`)
+        const p = await rufe(`/api/product/${encodeURIComponent(id)}?locale=${sprache}`)
         const b = el('div', 'karten produkt')
         b.append(el('div', 'name', p.name))
         if (p.images && p.images.length) { const g = el('div', 'galerie'); for (const i of p.images) g.append(bild(i, true)); b.append(g) }
@@ -226,7 +226,7 @@ tr.gleich td { color: var(--leise); }
 
     vergleichKnopf.addEventListener('click', async () => {
       try {
-        const v = await rufe('/api/vergleich', { ids: [...zustand.auswahl], locale: sprache })
+        const v = await rufe('/api/compare', { ids: [...zustand.auswahl], locale: sprache })
         const t = el('table', 'vergleich'), kopfzeile = el('tr'), tb = el('tbody')
         kopfzeile.append(el('th', '', T.merkmal))
         for (const p of v.products || []) kopfzeile.append(el('th', '', p.name))
@@ -262,11 +262,11 @@ tr.gleich td { color: var(--leise); }
     return { wirt, schatten, frage: q => frage(q, true), oeffnen: () => knopf.click() }
   }
 
-  window.journaliBerater = { start, TEXTE }
+  window.journaliAdvisor = { start, TEXTE }
   const skript = document.currentScript
   if (skript && skript.src) {
     const ds = skript.dataset || {}
-    const go = () => start({ basis: skript.src.replace(/\/widget\.js(\?.*)?$/, ''), sprache: ds.sprache, ziel: ds.ziel, farbe: ds.farbe })
+    const go = () => start({ base: skript.src.replace(/\/widget\.js(\?.*)?$/, ''), locale: ds.locale, target: ds.target, color: ds.color })
     document.readyState === 'loading' ? document.addEventListener('DOMContentLoaded', go) : go()
   }
 })()

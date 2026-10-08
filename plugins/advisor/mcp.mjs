@@ -9,7 +9,7 @@
 
 export const MODERN = ['2026-07-28']
 export const LEGACY = ['2025-11-25', '2025-06-18', '2025-03-26']
-export const SERVER_INFO = { name: 'journali-berater', version: '1.0.0' }
+export const SERVER_INFO = { name: 'journali-advisor', version: '1.0.0' }
 
 const META = 'io.modelcontextprotocol/'
 
@@ -90,9 +90,9 @@ export function alsText(name, r) {
 async function werkzeug(name, args, frage) {
   const a = args && typeof args === 'object' ? args : {}
   let r
-  if (name === 'search_products') r = await frage('frage', { q: String(a.query ?? ''), filter: Array.isArray(a.filters) ? a.filters : [], locale: a.locale, take: a.limit, ki: false })
-  else if (name === 'get_product') { if (typeof a.id !== 'string' || !a.id) return { fehlt: 'id' }; r = await frage('produkt', { id: a.id, locale: a.locale }) }
-  else if (name === 'compare_products') { if (!Array.isArray(a.ids)) return { fehlt: 'ids' }; r = await frage('vergleich', { ids: a.ids, locale: a.locale }) }
+  if (name === 'search_products') r = await frage('ask', { q: String(a.query ?? ''), filter: Array.isArray(a.filters) ? a.filters : [], locale: a.locale, take: a.limit, ki: false })
+  else if (name === 'get_product') { if (typeof a.id !== 'string' || !a.id) return { fehlt: 'id' }; r = await frage('product', { id: a.id, locale: a.locale }) }
+  else if (name === 'compare_products') { if (!Array.isArray(a.ids)) return { fehlt: 'ids' }; r = await frage('compare', { ids: a.ids, locale: a.locale }) }
   else return { unbekannt: true }
   if (r.status !== 200) return { result: { content: [{ type: 'text', text: r.json?.error ?? `HTTP ${r.status}` }], isError: true } }
   return { result: { content: [{ type: 'text', text: alsText(name, r.json) }], structuredContent: r.json, isError: false } }

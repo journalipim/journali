@@ -1,7 +1,7 @@
 <script setup>
 // ⇪ Export → Produktberatung (docs/pflegestruktur.md 42, 08.10.2026): die Berater dieser Instanz. Ein Berater ist ein Publikationsbaum, eine Rolle,
 // eine Sicht und ein paar Grenzen — als Plugin-Daten def:<schlüssel> im Journal. Hier wird er angelegt, sein Dienst bekommt ein Token, und die
-// Vorschau stellt dieselbe Frage wie ein Besucher (POST /api/berater/<schlüssel>/frage, mit dem Recht Plugins statt des Tokens).
+// Vorschau stellt dieselbe Frage wie ein Besucher (POST /api/advisor/<schlüssel>/ask, mit dem Recht Plugins statt des Tokens).
 import { ref, computed, onMounted } from 'vue'
 import { api, store, dialog, L, t } from 'journali'
 
@@ -39,7 +39,7 @@ function sauber(d) {
 }
 
 async function ladeListe() {
-  try { liste.value = await api.get('/api/berater') ?? []; meldung.value = '' }
+  try { liste.value = await api.get('/api/advisor') ?? []; meldung.value = '' }
   catch (e) { liste.value = []; meldung.value = '✗ ' + e.message }
 }
 async function ladeAuswahl() {
@@ -50,7 +50,7 @@ onMounted(() => { ladeListe(); ladeAuswahl() })
 
 async function oeffne(key) {
   try {
-    const d = await api.get('/api/plugins/berater/data/' + encodeURIComponent('def:' + key)) ?? {}
+    const d = await api.get('/api/plugins/advisor/data/' + encodeURIComponent('def:' + key)) ?? {}
     def.value = { label: '', pub: '', role: '', view: '', locales: [], greeting: {}, ki: false, team: '', mcp: true, origins: [], limits: {}, ...JSON.parse(JSON.stringify(d)) }
     def.value.limits ??= {}; def.value.greeting ??= {}; def.value.locales ??= []
     basis.value = JSON.stringify(sauber(def.value))
@@ -59,7 +59,7 @@ async function oeffne(key) {
   } catch (e) { store.toast(e.message) }
 }
 
-async function schreibe(key, d) { await api.post('/api/plugins/berater/data/' + encodeURIComponent('def:' + key), sauber(d), 'PUT') }
+async function schreibe(key, d) { await api.post('/api/plugins/advisor/data/' + encodeURIComponent('def:' + key), sauber(d), 'PUT') }
 
 async function anlegen() {
   if (!keyOk.value) return
@@ -80,8 +80,8 @@ async function entfernen() {
   const ok = await dialog.confirm({ title: t('Berater entfernen'), text: t('{0} — sein Dienst antwortet danach nicht mehr.', [def.value?.label || key]), ok: t('Entfernen'), danger: true })
   if (!ok) return
   try {
-    for (const tk of tokens.value) await api.del(`/api/berater/${encodeURIComponent(key)}/tokens/${encodeURIComponent(tk.id)}`)
-    await api.del('/api/plugins/berater/data/' + encodeURIComponent('def:' + key))
+    for (const tk of tokens.value) await api.del(`/api/advisor/${encodeURIComponent(key)}/tokens/${encodeURIComponent(tk.id)}`)
+    await api.del('/api/plugins/advisor/data/' + encodeURIComponent('def:' + key))
     cur.value = ''; def.value = null; tokens.value = []
     await ladeListe()
   } catch (e) { store.toast(e.message) }
@@ -94,34 +94,34 @@ function sprache(c) {
 const grussSprachen = computed(() => def.value?.locales?.length ? def.value.locales : [leitsprache.value])
 
 async function ladeTokens() {
-  try { tokens.value = await api.get(`/api/berater/${encodeURIComponent(cur.value)}/tokens`) ?? [] } catch { tokens.value = [] }
+  try { tokens.value = await api.get(`/api/advisor/${encodeURIComponent(cur.value)}/tokens`) ?? [] } catch { tokens.value = [] }
 }
 async function tokenAusgeben() {
-  try { const r = await api.post(`/api/berater/${encodeURIComponent(cur.value)}/tokens`, { label: t('Dienst') }); neuesToken.value = r.token; await ladeTokens() }
+  try { const r = await api.post(`/api/advisor/${encodeURIComponent(cur.value)}/tokens`, { label: t('Dienst') }); neuesToken.value = r.token; await ladeTokens() }
   catch (e) { store.toast(e.message) }
 }
 async function tokenWiderrufen(id) {
   const ok = await dialog.confirm({ title: t('Token widerrufen'), text: t('Der Dienst mit diesem Token bekommt danach keine Antwort mehr.'), ok: t('Widerrufen'), danger: true })
   if (!ok) return
-  try { await api.del(`/api/berater/${encodeURIComponent(cur.value)}/tokens/${encodeURIComponent(id)}`); await ladeTokens() }
+  try { await api.del(`/api/advisor/${encodeURIComponent(cur.value)}/tokens/${encodeURIComponent(id)}`); await ladeTokens() }
   catch (e) { store.toast(e.message) }
 }
 
 async function fragen() {
-  try { vorschau.value = await api.post(`/api/berater/${encodeURIComponent(cur.value)}/frage`, { q: vorschauFrage.value, locale: grussSprachen.value[0], ki: false }) }
+  try { vorschau.value = await api.post(`/api/advisor/${encodeURIComponent(cur.value)}/ask`, { q: vorschauFrage.value, locale: grussSprachen.value[0], ki: false }) }
   catch (e) { vorschau.value = { error: e.message } }
 }
 
-const einbinden = computed(() => `<script src="https://berater.example.com/widget.js" async><` + `/script>`)
+const einbinden = computed(() => `<script src="https://advisor.example.com/widget.js" async><` + `/script>`)
 const compose = computed(() => [
-  `  berater-${cur.value}:`,
+  `  advisor-${cur.value}:`,
   '    image: node:22-alpine',
-  '    command: ["node", "/berater/serve.mjs"]',
-  '    volumes: ["./plugins/berater:/berater:ro"]',
+  '    command: ["node", "/advisor/serve.mjs"]',
+  '    volumes: ["./plugins/advisor:/advisor:ro"]',
   '    environment:',
   '      JOURNALI: http://server:8080',
-  `      JOURNALI_BERATER: ${cur.value}`,
-  '      JOURNALI_BERATER_TOKEN: ${JOURNALI_BERATER_TOKEN}',
+  `      JOURNALI_ADVISOR: ${cur.value}`,
+  '      JOURNALI_ADVISOR_TOKEN: ${JOURNALI_ADVISOR_TOKEN}',
   '    ports: ["127.0.0.1:8090:8090"]',
 ].join('\n'))
 </script>
@@ -188,7 +188,7 @@ const compose = computed(() => [
         </tbody></table>
         <div class="row" style="padding:4px 8px">
           <button type="button" class="token-neu" :disabled="geaendert" :title="geaendert ? $t('ungespeicherte Änderungen') : $t('ein neues Token für den Dienst')" @click="tokenAusgeben">{{ $t('＋ Token') }}</button>
-          <code v-if="neuesToken" class="neues-token" :title="$t('nur jetzt sichtbar — als JOURNALI_BERATER_TOKEN des Dienstes')">{{ neuesToken }}</code>
+          <code v-if="neuesToken" class="neues-token" :title="$t('nur jetzt sichtbar — als JOURNALI_ADVISOR_TOKEN des Dienstes')">{{ neuesToken }}</code>
         </div>
 
         <div class="step-band" :title="$t('dieselbe Frage, die ein Besucher stellt — ohne Text der KI')">{{ $t('Vorschau') }}</div>
@@ -208,7 +208,7 @@ const compose = computed(() => [
         <div class="step-band" :title="$t('der Dienst läuft im eigenen Container und spricht nur über /api mit journali — docs/betrieb.md')">{{ $t('Einbinden') }}</div>
         <div style="padding:4px 8px" class="einbinden">
           <div class="muted">{{ $t('Website') }}</div><pre class="code">{{ einbinden }}</pre>
-          <div class="muted">{{ $t('MCP') }}</div><pre class="code">https://berater.example.com/mcp</pre>
+          <div class="muted">{{ $t('MCP') }}</div><pre class="code">https://advisor.example.com/mcp</pre>
           <div class="muted">compose.yaml</div><pre class="code">{{ compose }}</pre>
         </div>
       </div>

@@ -10,7 +10,7 @@ namespace Journali.Server;
 
 /// <summary>
 /// Der Produktberater (docs/pflegestruktur.md 42, 08.10.2026): Fragen von Besuchern einer Website an die Produkte eines Publikationsbaums. Die Website
-/// erreicht nie diesen Server, sondern den Dienst des Plugins <c>berater</c> (<c>plugins/berater/serve.mjs</c>, eigener Container); der fragt hier mit
+/// erreicht nie diesen Server, sondern den Dienst des Plugins <c>advisor</c> (<c>plugins/advisor/serve.mjs</c>, eigener Container); der fragt hier mit
 /// einem Berater-Token an und bietet dasselbe als Chat-Fenster und als MCP-Werkzeuge an.
 /// <para><b>Was ein Berater zeigt</b>: die Produkte, die sein Publikationsbaum ausleitet (Freigabe für den Kanal, Markt — <see cref="Publication"/>),
 /// davon nur, was seine Rolle sieht (<see cref="Tree.Visible"/>), und an ihnen nur die Attribute seiner Sicht. Bilder nur, wenn sie heute gelten,
@@ -18,11 +18,11 @@ namespace Journali.Server;
 /// <para><b>Ohne KI zuerst</b>: Wörter und — wenn das Plugin <c>embed</c> läuft — die Vektoren der Knoten finden die Produkte, die Facetten sagen, wonach
 /// sich die Treffer noch unterscheiden. Nur wenn der Berater es erlaubt, schreibt die KI des gewählten Teams einen kurzen Text dazu, aus genau diesen
 /// Treffern; sie bekommt keine Werkzeuge.</para>
-/// <para>Die Definitionen stehen als Plugin-Daten von <c>berater</c> im Journal (<c>def:&lt;key&gt;</c>), gepflegt in der Ansicht des Plugins.</para>
+/// <para>Die Definitionen stehen als Plugin-Daten von <c>advisor</c> im Journal (<c>def:&lt;key&gt;</c>), gepflegt in der Ansicht des Plugins.</para>
 /// </summary>
-public static partial class BeraterApi
+public static partial class AdvisorApi
 {
-    public const string Plugin = "berater";
+    public const string Plugin = "advisor";
     public const string Prefix = "def:";
     /// <summary>So lang darf eine Frage sein (Zeichen).</summary>
     public const int MaxFrage = 300;
@@ -97,20 +97,20 @@ public static partial class BeraterApi
     public static bool FuerToken(string path, string method, string key)
     {
         var p = path.TrimEnd('/');
-        var vorn = "/api/berater/" + key + "/";
+        var vorn = "/api/advisor/" + key + "/";
         if (!p.StartsWith(vorn, StringComparison.OrdinalIgnoreCase)) return false;
         var rest = p[vorn.Length..].ToLowerInvariant();
         return (method, rest) switch
         {
             ("GET", "info") => true,
-            ("POST", "frage") => true,
-            ("POST", "vergleich") => true,
-            ("GET", _) when rest.StartsWith("produkt/") || rest.StartsWith("bild/") => rest.Count(ch => ch == '/') == 1,
+            ("POST", "ask") => true,
+            ("POST", "compare") => true,
+            ("GET", _) when rest.StartsWith("product/") || rest.StartsWith("image/") => rest.Count(ch => ch == '/') == 1,
             _ => false,
         };
     }
 
-    /// <summary>Das Recht je Weg unter /api/berater: die Token verwaltet, wer Plugins verwaltet; alles andere liest.</summary>
+    /// <summary>Das Recht je Weg unter /api/advisor: die Token verwaltet, wer Plugins verwaltet; alles andere liest.</summary>
     public static string Recht(string path, string method) =>
         path.Contains("/tokens", StringComparison.OrdinalIgnoreCase) ? Rights.Plugins : Rights.Read;
 
@@ -394,7 +394,7 @@ public static partial class BeraterApi
     public static void Map(RouteGroupBuilder api, string dataDir, string jobsDir)
     {
         // Die Berater dieser Instanz — mit dem, was an ihnen nicht stimmt
-        api.MapGet("/berater", (Catalog c) =>
+        api.MapGet("/advisor", (Catalog c) =>
         {
             if (Bereit(c) is { } nein) return nein;
             var liste = Alle(c);
@@ -406,7 +406,7 @@ public static partial class BeraterApi
         });
 
         // Der Stand für die Ansicht und den Dienst: Bezeichnung, Sprachen, Begrüssung, Grenzen, Websites — und wie viele Produkte er zeigt
-        api.MapGet("/berater/{key}/info", (string key, HttpRequest req, Catalog c, string? locale = null) =>
+        api.MapGet("/advisor/{key}/info", (string key, HttpRequest req, Catalog c, string? locale = null) =>
         {
             if (Zugang(req, c, key, out var d, out var nein)) return nein!;
             var loc = Sprache(c, d!, locale);
@@ -420,7 +420,7 @@ public static partial class BeraterApi
         });
 
         // Die Frage: Treffer, Facetten und — wenn erlaubt — ein Text der KI dazu
-        api.MapPost("/berater/{key}/frage", async (string key, Frage body, HttpRequest req, Catalog c, Vectors vectors, Embedder embedder, CancellationToken ct) =>
+        api.MapPost("/advisor/{key}/ask", async (string key, Frage body, HttpRequest req, Catalog c, Vectors vectors, Embedder embedder, CancellationToken ct) =>
         {
             if (Zugang(req, c, key, out var d, out var nein)) return nein!;
             var q = (body.Q ?? "").Trim();
@@ -485,14 +485,14 @@ public static partial class BeraterApi
             {
                 var merkmale = facetten.Select(f => f.Label).ToList();
                 var (system, user) = Prompt(q, fuerKi, merkmale);
-                var r = await AiApi.AskAsync(req, c, jobsDir, null, null, system, user, 600, false, 1, "berater", ct, fuerTeam: d.Team);
+                var r = await AiApi.AskAsync(req, c, jobsDir, null, null, system, user, 600, false, 1, "advisor", ct, fuerTeam: d.Team);
                 if (r.Fehler is null) text = r.Text; else warnung ??= "KI nicht verfügbar";
             }
             return Results.Ok(new { locale = loc, total, hits = treffer, facets = facetten, filter = filterEcho, answer = text, warning = warnung });
         });
 
         // Ein Produkt mit allen Werten der Sicht, seinen Bildern und den Varianten, die sich unterscheiden
-        api.MapGet("/berater/{key}/produkt/{id}", (string key, string id, HttpRequest req, Catalog c, string? locale = null) =>
+        api.MapGet("/advisor/{key}/product/{id}", (string key, string id, HttpRequest req, Catalog c, string? locale = null) =>
         {
             if (Zugang(req, c, key, out var d, out var nein)) return nein!;
             var loc = Sprache(c, d!, locale);
@@ -519,7 +519,7 @@ public static partial class BeraterApi
         });
 
         // Zwei bis vier Produkte nebeneinander: die Zeilen der Sicht, in denen mindestens eines einen Wert hat
-        api.MapPost("/berater/{key}/vergleich", (string key, Vergleich body, HttpRequest req, Catalog c) =>
+        api.MapPost("/advisor/{key}/compare", (string key, Vergleich body, HttpRequest req, Catalog c) =>
         {
             if (Zugang(req, c, key, out var d, out var nein)) return nein!;
             var ids = (body.Ids ?? []).Where(x => !string.IsNullOrWhiteSpace(x)).Distinct().ToList();
@@ -540,7 +540,7 @@ public static partial class BeraterApi
         });
 
         // Ein Bild eines Produkts dieses Beraters — die Kachel, mit gross=true die Web-Ableitung, wenn es sie gibt
-        api.MapGet("/berater/{key}/bild/{media}", async (string key, string media, HttpRequest req, HttpResponse res, Catalog c, IMediaStore store, CancellationToken ct, bool gross = false) =>
+        api.MapGet("/advisor/{key}/image/{media}", async (string key, string media, HttpRequest req, HttpResponse res, Catalog c, IMediaStore store, CancellationToken ct, bool gross = false) =>
         {
             if (Zugang(req, c, key, out var d, out var nein)) return nein!;
             var loc = Sprache(c, d!, null);
@@ -569,17 +569,17 @@ public static partial class BeraterApi
         });
 
         // Token des Dienstes: je Berater beliebig viele, nur beim Anlegen sichtbar, jederzeit zu widerrufen
-        api.MapGet("/berater/{key}/tokens", (string key, Catalog c) =>
-            Von(c, key) is null ? Unbekannt(key) : Results.Ok(Auth.BeraterTokens(dataDir, key).Select(t => new { id = t.Id, label = t.Label, at = t.At }).ToList()));
-        api.MapPost("/berater/{key}/tokens", (string key, TokenBody body, Catalog c) =>
+        api.MapGet("/advisor/{key}/tokens", (string key, Catalog c) =>
+            Von(c, key) is null ? Unbekannt(key) : Results.Ok(Auth.AdvisorTokens(dataDir, key).Select(t => new { id = t.Id, label = t.Label, at = t.At }).ToList()));
+        api.MapPost("/advisor/{key}/tokens", (string key, TokenBody body, Catalog c) =>
         {
             if (Bereit(c) is { } nein) return nein;
             if (Von(c, key) is null) return Unbekannt(key);
             var label = string.IsNullOrWhiteSpace(body.Label) ? "Dienst" : body.Label.Trim();
-            return Results.Ok(new { token = Auth.BeraterTokenAusgeben(dataDir, key, label), label });
+            return Results.Ok(new { token = Auth.AdvisorTokenAusgeben(dataDir, key, label), label });
         });
-        api.MapDelete("/berater/{key}/tokens/{id}", (string key, string id) =>
-            Auth.BeraterTokenWiderrufen(dataDir, key, id) > 0 ? Results.Ok(new { removed = true }) : Results.NotFound());
+        api.MapDelete("/advisor/{key}/tokens/{id}", (string key, string id) =>
+            Auth.AdvisorTokenWiderrufen(dataDir, key, id) > 0 ? Results.Ok(new { removed = true }) : Results.NotFound());
     }
 
     /// <summary>Eine Karte für die Trefferliste: Name, Kennungen, Bild, die ersten Werte der Sicht.</summary>
@@ -610,7 +610,7 @@ public static partial class BeraterApi
     {
         d = null;
         if (Bereit(c) is { } b) { nein = b; return true; }
-        var token = req.HttpContext.Items["berater"] as string;
+        var token = req.HttpContext.Items["advisor"] as string;
         if (token is not null && token != key) { nein = Results.Json(ModelApi.Err("Der Zugang gilt für einen anderen Berater."), statusCode: 403); return true; }
         if (token is null && !Auth.Has(req, c, Rights.Plugins)) { nein = Results.Json(ModelApi.Err("Den Berater fragt sein Dienst; die Vorschau braucht das Recht Plugins."), statusCode: 403); return true; }
         d = Von(c, key);

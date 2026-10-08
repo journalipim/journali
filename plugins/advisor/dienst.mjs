@@ -2,10 +2,10 @@
 // Token seines Beraters, und fragt journali über /api — ausgehend, nie umgekehrt. Nach aussen bietet er:
 //   GET  /widget.js           das Chat-Fenster zum Einbinden (ein <script>-Tag)
 //   GET  /api/info            Bezeichnung, Begrüssung, Sprachen
-//   POST /api/frage           Treffer, Facetten, Text — die Frage eines Besuchers
-//   GET  /api/produkt/{id}    ein Produkt
-//   POST /api/vergleich       zwei bis vier Produkte nebeneinander
-//   GET  /api/bild/{id}       ein Bild eines Produkts
+//   POST /api/ask             Treffer, Facetten, Text — die Frage eines Besuchers
+//   GET  /api/product/{id}    ein Produkt
+//   POST /api/compare         zwei bis vier Produkte nebeneinander
+//   GET  /api/image/{id}      ein Bild eines Produkts
 //   POST /mcp                 MCP (Streamable HTTP, mcp.mjs) mit denselben Fragen als Werkzeuge
 //   GET  /health              ob journali antwortet
 // Je Besucher (Adresse) zählt der Dienst Fragen je Minute und Tag; die Tagesgrenze des Beraters zählt journali. Websites, die das Chat-Fenster
@@ -17,13 +17,13 @@ export const MAX_KOERPER = 16 * 1024
 const VORGABE = { jeBesucherMinute: 20, jeBesucherTag: 300 }
 
 /**
- * @param {{ journali: string, berater: string, token: string, widget?: string, fetch?: typeof fetch, proxy?: boolean, jetzt?: () => number, infoDauer?: number }} o
+ * @param {{ journali: string, advisor: string, token: string, widget?: string, fetch?: typeof fetch, proxy?: boolean, jetzt?: () => number, infoDauer?: number }} o
  * @returns {(req: import('node:http').IncomingMessage, res: import('node:http').ServerResponse) => Promise<void>}
  */
 export function erstelle(o) {
   const holen = o.fetch ?? globalThis.fetch
   const jetzt = o.jetzt ?? Date.now
-  const basis = o.journali.replace(/\/+$/, '') + '/api/berater/' + encodeURIComponent(o.berater) + '/'
+  const basis = o.journali.replace(/\/+$/, '') + '/api/advisor/' + encodeURIComponent(o.advisor) + '/'
   const kopf = { authorization: 'Bearer ' + o.token }
   let info = null, infoAm = 0
   const besucher = new Map()   // Adresse → { minute, nMinute, tag, nTag }
@@ -82,7 +82,7 @@ export function erstelle(o) {
     const pfad = url.pathname
     try {
       if (req.method === 'GET' && pfad === '/health') {
-        try { const i = await holeInfo(); return sende(res, 200, { ok: true, berater: i.key, products: i.products }) }
+        try { const i = await holeInfo(); return sende(res, 200, { ok: true, advisor: i.key, products: i.products }) }
         catch (e) { return sende(res, 503, { ok: false, error: e.message }) }
       }
       if (req.method === 'GET' && pfad === '/widget.js') {
@@ -106,7 +106,7 @@ export function erstelle(o) {
         const warten = zaehle(adresse(req), i.limits)
         if (warten) return sende(res, 429, { jsonrpc: '2.0', error: { code: -32000, message: 'Too many requests' } }, { 'retry-after': String(warten) })
         const nachricht = await koerper(req)
-        const frage = (art, a) => art === 'produkt' ? journali('produkt/' + encodeURIComponent(a.id) + (a.locale ? '?locale=' + encodeURIComponent(a.locale) : '')) : journali(art, a)
+        const frage = (art, a) => art === 'product' ? journali('product/' + encodeURIComponent(a.id) + (a.locale ? '?locale=' + encodeURIComponent(a.locale) : '')) : journali(art, a)
         const r = await verarbeite(nachricht, name => req.headers[name], frage)
         return sende(res, r.status, r.json, cors)
       }
@@ -114,31 +114,31 @@ export function erstelle(o) {
       // Chat-Fenster
       if (req.method === 'GET' && pfad === '/api/info')
         return sende(res, 200, { label: i.label, greeting: i.greeting, locales: i.locales, locale: i.locale, ki: i.ki, products: i.products }, cors)
-      const bild = /^\/api\/bild\/([^/]+)$/.exec(pfad)
+      const bild = /^\/api\/image\/([^/]+)$/.exec(pfad)
       if (req.method === 'GET' && bild) {
-        const r = await holen(basis + 'bild/' + encodeURIComponent(decodeURIComponent(bild[1])) + (url.searchParams.get('gross') ? '?gross=true' : ''), { headers: kopf })
+        const r = await holen(basis + 'image/' + encodeURIComponent(decodeURIComponent(bild[1])) + (url.searchParams.get('gross') ? '?gross=true' : ''), { headers: kopf })
         if (r.status !== 200) return sende(res, r.status === 404 ? 404 : 502, { error: 'Bild nicht verfügbar.' }, cors)
         res.writeHead(200, { 'content-type': r.headers.get('content-type') ?? 'application/octet-stream', 'cache-control': 'public, max-age=86400', 'x-content-type-options': 'nosniff', ...cors })
         return res.end(Buffer.from(await r.arrayBuffer()))
       }
-      const produkt = /^\/api\/produkt\/([^/]+)$/.exec(pfad)
-      const wege = { '/api/frage': 'POST', '/api/vergleich': 'POST' }
+      const produkt = /^\/api\/product\/([^/]+)$/.exec(pfad)
+      const wege = { '/api/ask': 'POST', '/api/compare': 'POST' }
       if (!(req.method === 'GET' && produkt) && wege[pfad] !== req.method) return sende(res, 404, { error: 'Nicht gefunden.' }, cors)
       const warten = zaehle(adresse(req), i.limits)
       if (warten) return sende(res, 429, { error: 'Zu viele Fragen in kurzer Zeit.' }, { ...cors, 'retry-after': String(warten) })
       if (produkt) {
         const loc = url.searchParams.get('locale')
-        const r = await journali('produkt/' + encodeURIComponent(decodeURIComponent(produkt[1])) + (loc ? '?locale=' + encodeURIComponent(loc) : ''))
+        const r = await journali('product/' + encodeURIComponent(decodeURIComponent(produkt[1])) + (loc ? '?locale=' + encodeURIComponent(loc) : ''))
         return sende(res, r.status, r.json, cors)
       }
       const b = await koerper(req)
-      const r = pfad === '/api/frage'
-        ? await journali('frage', { q: String(b.q ?? '').slice(0, 300), filter: Array.isArray(b.filter) ? b.filter.slice(0, 10) : [], locale: b.locale, take: b.take })
-        : await journali('vergleich', { ids: Array.isArray(b.ids) ? b.ids.slice(0, 4) : [], locale: b.locale })
+      const r = pfad === '/api/ask'
+        ? await journali('ask', { q: String(b.q ?? '').slice(0, 300), filter: Array.isArray(b.filter) ? b.filter.slice(0, 10) : [], locale: b.locale, take: b.take })
+        : await journali('compare', { ids: Array.isArray(b.ids) ? b.ids.slice(0, 4) : [], locale: b.locale })
       return sende(res, r.status, r.json, cors)
     } catch (e) {
       const status = e.status ?? 502
-      if (status >= 500) console.error(`berater: ${req.method} ${pfad}: ${e.message}`)
+      if (status >= 500) console.error(`advisor: ${req.method} ${pfad}: ${e.message}`)
       return sende(res, status, { error: status >= 500 ? 'journali ist nicht erreichbar.' : e.message })
     }
   }

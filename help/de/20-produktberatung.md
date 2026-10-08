@@ -26,7 +26,7 @@ Mit KI: Ist „Text zu den Treffern“ eingeschaltet, schreibt die KI des gewäh
 2. Publikationsbaum, Rolle und Sicht wählen, die Sprachen und eine Begrüssung je Sprache eintragen.
 3. Unter Websites die Adressen der Seiten eintragen, die das Fenster einbinden, je Zeile eine (`https://www.example.com`).
 4. Speichern. Die Vorschau stellt dieselbe Frage wie ein Besucher.
-5. ＋ Token: Das Token ist nur jetzt sichtbar und gehört in die Umgebung des Dienstes (`JOURNALI_BERATER_TOKEN`).
+5. ＋ Token: Das Token ist nur jetzt sichtbar und gehört in die Umgebung des Dienstes (`JOURNALI_ADVISOR_TOKEN`).
 
 Fehlt eine Angabe, steht ✗ in der Liste und der Grund darunter; der Berater antwortet dann nicht.
 
@@ -35,10 +35,10 @@ Fehlt eine Angabe, steht ✗ in der Liste und der Grund darunter; der Berater an
 Besucher erreichen nicht journali, sondern den Dienst des Beraters, einen eigenen Container, der nur über die Schnittstelle mit journali spricht. Die Einrichtung steht in `docs/betrieb.md` unter „Produktberater“. Auf der Website genügt ein Tag:
 
 ```html
-<script src="https://berater.example.com/widget.js" async></script>
+<script src="https://advisor.example.com/widget.js" async></script>
 ```
 
-KI-Agenten erreichen denselben Dienst unter `https://berater.example.com/mcp`, mit den Werkzeugen `search_products`, `get_product` und `compare_products`. Alle drei lesen nur.
+KI-Agenten erreichen denselben Dienst unter `https://advisor.example.com/mcp`, mit den Werkzeugen `search_products`, `get_product` und `compare_products`. Alle drei lesen nur.
 
 ## Grenzen
 

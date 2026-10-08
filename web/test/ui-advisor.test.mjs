@@ -1,4 +1,4 @@
-// ⇪ Export → Produktberatung (plugins/berater/src/View.vue): Berater anlegen, einrichten, speichern; ein Token für den Dienst; die Vorschau stellt
+// ⇪ Export → Produktberatung (plugins/advisor/src/View.vue): Berater anlegen, einrichten, speichern; ein Token für den Dienst; die Vorschau stellt
 // dieselbe Frage wie ein Besucher. Der Server ist vorgetäuscht (api.get/post/del).
 import test from 'node:test'
 import assert from 'node:assert/strict'
@@ -16,25 +16,25 @@ async function welt({ daten = {}, fehler = [] } = {}) {
   const gespeichert = { 'def:shop': { label: 'Shop', pub: 'r1', role: 'reader', view: 'sellable', locales: ['de'], greeting: { de: 'Hallo' }, ki: false, mcp: true, origins: ['https://shop.example'], limits: { jeTag: 500 } }, ...daten }
   let tokens = [{ id: 'abcdef123456', label: 'Dienst', at: '2026-10-08T10:00:00Z' }]
   api.get = async p => {
-    if (p === '/api/berater') return Object.keys(gespeichert).map(k => ({ key: k.slice(4), label: gespeichert[k].label, pub: gespeichert[k].pub, errors: k === 'def:shop' ? fehler : [] }))
+    if (p === '/api/advisor') return Object.keys(gespeichert).map(k => ({ key: k.slice(4), label: gespeichert[k].label, pub: gespeichert[k].pub, errors: k === 'def:shop' ? fehler : [] }))
     if (p === '/api/pub') return [{ id: 'r1', label: 'Online-Shop', channel: 'web', market: null }, { id: 'r2', label: 'Katalog', channel: 'print', market: 'de' }]
     if (p === '/api/auth/roles') return [{ key: 'admin', label: 'Administrator' }, { key: 'reader', label: 'Leser' }]
     if (p === '/api/teams') return [{ key: 'init', label: 'Init Team' }]
-    if (p.startsWith('/api/plugins/berater/data/')) return gespeichert[decodeURIComponent(p.split('/').pop())] ?? null
-    if (p === '/api/berater/shop/tokens') return tokens
+    if (p.startsWith('/api/plugins/advisor/data/')) return gespeichert[decodeURIComponent(p.split('/').pop())] ?? null
+    if (p === '/api/advisor/shop/tokens') return tokens
     return []
   }
   api.post = async (p, body, m = 'POST') => {
     gesendet.push([m, p, body])
-    if (m === 'PUT' && p.startsWith('/api/plugins/berater/data/')) { gespeichert[decodeURIComponent(p.split('/').pop())] = body; return {} }
-    if (p === '/api/berater/shop/tokens') { tokens = [...tokens, { id: '999999aaaaaa', label: body.label, at: '2026-10-08T11:00:00Z' }]; return { token: 'jb_neu', label: body.label } }
-    if (p === '/api/berater/shop/frage') return { total: 2, hits: [{ id: 'p1', name: 'Bohrhammer Pro', values: [{ label: 'Leistung', value: '800 W' }] }, { id: 'p2', name: 'Akkuschrauber', values: [] }], facets: [{ key: 'color', label: 'Farbe' }], warning: 'Plugin embed ist aus.' }
+    if (m === 'PUT' && p.startsWith('/api/plugins/advisor/data/')) { gespeichert[decodeURIComponent(p.split('/').pop())] = body; return {} }
+    if (p === '/api/advisor/shop/tokens') { tokens = [...tokens, { id: '999999aaaaaa', label: body.label, at: '2026-10-08T11:00:00Z' }]; return { token: 'ja_neu', label: body.label } }
+    if (p === '/api/advisor/shop/ask') return { total: 2, hits: [{ id: 'p1', name: 'Bohrhammer Pro', values: [{ label: 'Leistung', value: '800 W' }] }, { id: 'p2', name: 'Akkuschrauber', values: [] }], facets: [{ key: 'color', label: 'Farbe' }], warning: 'Plugin embed ist aus.' }
     return {}
   }
-  api.del = async p => { gesendet.push(['DELETE', p]); if (p.startsWith('/api/plugins/berater/data/')) delete gespeichert[decodeURIComponent(p.split('/').pop())]; return {} }
+  api.del = async p => { gesendet.push(['DELETE', p]); if (p.startsWith('/api/plugins/advisor/data/')) delete gespeichert[decodeURIComponent(p.split('/').pop())]; return {} }
   dialog.confirm = async () => true
   store.model = { ...(store.model ?? {}), masterLocale: 'de', locales: [{ code: 'de' }, { code: 'en' }], views: [{ key: 'sellable', label: { de: 'Verkaufbares' } }, { key: 'beratung', label: { de: 'Beratung' } }], attributes: store.model?.attributes ?? [] }
-  const { default: View } = await import('../../plugins/berater/src/View.vue')
+  const { default: View } = await import('../../plugins/advisor/src/View.vue')
   const w = mount(View, { attachTo: win.document.body })
   await warte(w)
   return { w, gesendet, gespeichert, ende: () => { w.unmount(); api.get = get; api.post = post; api.del = del; dialog.confirm = confirm } }
@@ -56,7 +56,7 @@ test('die Liste zeigt die Berater mit ihrem Zustand; ein Klick öffnet einen mit
     assert.deepEqual(w.findAll('ul.fehler li').map(l => l.text()), ['✗ keine Sicht'])
     assert.match(w.find('.token').text(), /abcdef123456/)
     assert.ok(w.find('pre.code').text().includes('widget.js'))
-    assert.ok(w.text().includes('JOURNALI_BERATER: shop'))
+    assert.ok(w.text().includes('JOURNALI_ADVISOR: shop'))
   } finally { ende() }
 })
 
@@ -73,7 +73,7 @@ test('speichern schreibt die aufgeräumte Definition als Plugin-Daten', async ()
     await w.find('input.je-tag').setValue('')
     await w.find('button.speichern').trigger('click'); await warte(w)
     const [m, p, body] = gesendet.find(g => g[0] === 'PUT')
-    assert.equal(m, 'PUT'); assert.equal(p, '/api/plugins/berater/data/' + encodeURIComponent('def:shop'))
+    assert.equal(m, 'PUT'); assert.equal(p, '/api/plugins/advisor/data/' + encodeURIComponent('def:shop'))
     assert.equal(body.view, 'beratung')
     assert.deepEqual(body.locales, ['de', 'en'])
     assert.equal(body.ki, true); assert.equal(body.team, 'init')
@@ -92,7 +92,7 @@ test('anlegen nur mit gültigem, neuem Schlüssel — mit Vorschlägen für Baum
     await w.find('input.neu-key').setValue('katalog'); assert.equal(knopf.attributes('disabled'), undefined)
     await w.find('form.neu').trigger('submit'); await warte(w)
     const [, p, body] = gesendet.find(g => g[0] === 'PUT')
-    assert.equal(p, '/api/plugins/berater/data/' + encodeURIComponent('def:katalog'))
+    assert.equal(p, '/api/plugins/advisor/data/' + encodeURIComponent('def:katalog'))
     assert.deepEqual([body.pub, body.role, body.view], ['r1', 'reader', 'sellable'])
     assert.equal(w.findAll('tr.berater').length, 2)
   } finally { ende() }
@@ -103,10 +103,10 @@ test('ein Token für den Dienst ist nur einmal sichtbar; widerrufen fragt nach',
   try {
     await w.find('tr.berater').trigger('click'); await warte(w)
     await button(w, '＋ Token').trigger('click'); await warte(w)
-    assert.equal(w.find('code.neues-token').text(), 'jb_neu')
+    assert.equal(w.find('code.neues-token').text(), 'ja_neu')
     assert.equal(w.findAll('tr.token').length, 2)
     await w.find('button.widerrufen').trigger('click'); await warte(w)
-    assert.ok(gesendet.some(g => g[0] === 'DELETE' && g[1] === '/api/berater/shop/tokens/abcdef123456'))
+    assert.ok(gesendet.some(g => g[0] === 'DELETE' && g[1] === '/api/advisor/shop/tokens/abcdef123456'))
   } finally { ende() }
 })
 
@@ -116,8 +116,8 @@ test('die Vorschau stellt die Frage eines Besuchers ohne KI und zeigt Treffer un
     await w.find('tr.berater').trigger('click'); await warte(w)
     await w.find('input.vorschau-frage').setValue('Bohrhammer')
     await w.find('form.row').trigger('submit'); await warte(w)
-    const [, p, body] = gesendet.find(g => g[1] === '/api/berater/shop/frage')
-    assert.equal(p, '/api/berater/shop/frage')
+    const [, p, body] = gesendet.find(g => g[1] === '/api/advisor/shop/ask')
+    assert.equal(p, '/api/advisor/shop/ask')
     assert.deepEqual(body, { q: 'Bohrhammer', locale: 'de', ki: false })
     assert.deepEqual(w.findAll('ol.treffer li').map(l => l.text().split(' ')[0]), ['Bohrhammer', 'Akkuschrauber'])
     assert.match(w.find('.vorschau').text(), /2 Treffer · nur Wortsuche/)
@@ -130,7 +130,7 @@ test('entfernen nimmt die Token und die Definition weg', async () => {
   try {
     await w.find('tr.berater').trigger('click'); await warte(w)
     await w.find('button.entfernen').trigger('click'); await warte(w)
-    assert.deepEqual(gesendet.filter(g => g[0] === 'DELETE').map(g => g[1]), ['/api/berater/shop/tokens/abcdef123456', '/api/plugins/berater/data/' + encodeURIComponent('def:shop')])
+    assert.deepEqual(gesendet.filter(g => g[0] === 'DELETE').map(g => g[1]), ['/api/advisor/shop/tokens/abcdef123456', '/api/plugins/advisor/data/' + encodeURIComponent('def:shop')])
     assert.equal(w.findAll('tr.berater').length, 0)
   } finally { ende() }
 })

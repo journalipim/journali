@@ -421,7 +421,7 @@ verlangt eine neue Bestätigung. Die Saat (`autoInstall`) installiert solche Plu
 | Plugin | Hinweis |
 |---|---|
 | `dpp`, `ppwr`, `empco` | Hilfsmittel, keine Rechtsberatung: keine Gewähr für Vollständigkeit, Richtigkeit und Aktualität; ob und wie Pflichten erfüllt sind, prüft und entscheidet der Betreiber |
-| `berater` | Was ein Berater zeigt, ist öffentlich (Website, MCP); die Wahl von Publikationsbaum, Rolle und Sicht, die Produktdaten und die Angaben auf der Website (Datenschutz, Kennzeichnung) verantwortet der Betreiber; Texte der KI gehen an deren Anbieter und können falsch sein |
+| `advisor` | Was ein Berater zeigt, ist öffentlich (Website, MCP); die Wahl von Publikationsbaum, Rolle und Sicht, die Produktdaten und die Angaben auf der Website (Datenschutz, Kennzeichnung) verantwortet der Betreiber; Texte der KI gehen an deren Anbieter und können falsch sein |
 | MCP (geplant) | Zugriff für fremde KI-Agenten: sie arbeiten mit dem Token einer Person, lesend und, wenn die Rolle es erlaubt, schreibend; was ein Agent liest, geht an seinen Anbieter, was er schreibt, steht unter der Person im Journal; ob und welchem Agenten Zugriff gegeben wird, entscheidet und verantwortet der Betreiber |
 
 ### Was beim ersten Lauf nachgeladen wird
@@ -444,7 +444,7 @@ im Image.
 Lizenzen: `LICENSE` (journali) und `THIRD-PARTY-NOTICES.md` (alles Fremde, mit Quelle) liegen im Repo und im Image
 unter `/app`.
 
-## Produktberater (Plugin berater)
+## Produktberater (Plugin advisor)
 
 Ein Berater beantwortet Fragen von Besuchern einer Website zu den Produkten eines Publikationsbaums (`docs/pflegestruktur.md` 42).
 Angelegt wird er unter ⇪ Export → Produktberatung: Publikationsbaum, Rolle, Sicht, Sprachen, Begrüssung, wahlweise KI mit Team,
@@ -454,37 +454,37 @@ Der Dienst läuft im **eigenen Container**, ohne eigenes Image: `node:22-alpine`
 Er braucht nur HTTP zu journali, keine Datenbank, keinen Medienspeicher. Neben `compose.yaml`:
 
 ```yaml
-  berater-shop:
+  advisor-shop:
     image: node:22-alpine
-    command: ["node", "/berater/serve.mjs"]
-    volumes: ["./plugins/berater:/berater:ro"]
+    command: ["node", "/advisor/serve.mjs"]
+    volumes: ["./plugins/advisor:/advisor:ro"]
     environment:
       JOURNALI: http://server:8080
-      JOURNALI_BERATER: shop
-      JOURNALI_BERATER_TOKEN: ${JOURNALI_BERATER_TOKEN}   # in .env, oder JOURNALI_BERATER_TOKEN_FILE
+      JOURNALI_ADVISOR: shop
+      JOURNALI_ADVISOR_TOKEN: ${JOURNALI_ADVISOR_TOKEN}   # in .env, oder JOURNALI_ADVISOR_TOKEN_FILE
       JOURNALI_PROXY: "1"                               # nur hinter einem Reverse Proxy
     ports: ["127.0.0.1:8090:8090"]
     restart: unless-stopped
 ```
 
-Der Reverse Proxy (TLS) gibt **nur diesen Port** nach aussen, etwa als `https://berater.example.com`; der journali-Server bleibt
+Der Reverse Proxy (TLS) gibt **nur diesen Port** nach aussen, etwa als `https://advisor.example.com`; der journali-Server bleibt
 innen. `JOURNALI_PROXY=1` liest die Adresse des Besuchers aus `X-Forwarded-For` — nur setzen, wenn der Port allein am Proxy hängt
 (wie bei `127.0.0.1:8090`), sonst kann jeder Besucher eine Adresse vortäuschen und die Grenze je Besucher umgehen.
 
 Auf der Website:
 
 ```html
-<script src="https://berater.example.com/widget.js" async></script>
+<script src="https://advisor.example.com/widget.js" async></script>
 ```
 
-`data-sprache="en"`, `data-ziel="#berater"` (in ein Element statt schwebend) und `data-farbe="#0b6e4f"` sind wählbar. Die Adresse
+`data-locale="en"`, `data-target="#advisor"` (in ein Element statt schwebend) und `data-color="#0b6e4f"` sind wählbar. Die Adresse
 der Website gehört in die Liste „Websites“ des Beraters, sonst antwortet der Dienst dem Browser mit 403. KI-Agenten erreichen
-denselben Dienst unter `https://berater.example.com/mcp` (MCP, Streamable HTTP; 2026-07-28 und die Versionen mit `initialize`).
+denselben Dienst unter `https://advisor.example.com/mcp` (MCP, Streamable HTTP; 2026-07-28 und die Versionen mit `initialize`).
 
 | Weg am Dienst | was |
 |---|---|
 | `GET /widget.js` | das Chat-Fenster |
-| `GET /api/info`, `POST /api/frage`, `GET /api/produkt/{id}`, `POST /api/vergleich`, `GET /api/bild/{id}` | die Fragen des Fensters |
+| `GET /api/info`, `POST /api/ask`, `GET /api/product/{id}`, `POST /api/compare`, `GET /api/image/{id}` | die Fragen des Fensters |
 | `POST /mcp` | MCP: `search_products`, `get_product`, `compare_products` |
 | `GET /health` | 200, wenn journali mit dem Token antwortet |
 
