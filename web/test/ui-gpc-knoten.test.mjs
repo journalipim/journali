@@ -111,7 +111,7 @@ test('der Menüpunkt am Knoten öffnet den Dialog als Fenster; Esc schliesst ihn
   assert.ok(fenster, 'der Dialog steht über der Oberfläche')
   assert.match(fenster.textContent, /GPC-Klasse/); assert.match(fenster.textContent, /Stehlampe/)
   document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); await ruhe()
-  assert.equal(document.body.querySelector('.klasse.modal'), null)
+  assert.ok(!document.body.querySelector('.klasse.modal'))
 })
 
 test('das Plugin trägt Ansicht, Band und Menüpunkt im Thema Klassifikation — keine Sammelgruppe mit Abschnitten mehr', () => {

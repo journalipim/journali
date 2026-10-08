@@ -21,7 +21,7 @@ const auf = async () => { const w = mount(HelpPanel); await flushPromises(); awa
 test('geschlossen steht nichts im Dokument; öffnen zeigt Kapitel und Text', async () => {
   server(); closeHelp(); hilfe.chapter = ''
   const w = await auf()
-  assert.equal(document.querySelector('.help-overlay'), null, 'zu und trotzdem da')
+  assert.ok(!document.querySelector('.help-overlay'), 'zu und trotzdem da')
   openHelp('baum')
   await flushPromises(); await flushPromises()
   const kasten = document.querySelector('.help-overlay')
@@ -30,7 +30,7 @@ test('geschlossen steht nichts im Dokument; öffnen zeigt Kapitel und Text', asy
   assert.match(kasten.querySelector('.help-text').innerHTML, /Text zu baum/)
   assert.equal(kasten.querySelector('.help-chapter.on').textContent.trim(), '04 Der Baum')
   closeHelp(); await flushPromises()
-  assert.equal(document.querySelector('.help-overlay'), null, 'es blieb offen')
+  assert.ok(!document.querySelector('.help-overlay'), 'es blieb offen')
   w.unmount()
 })
 

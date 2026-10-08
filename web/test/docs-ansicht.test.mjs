@@ -67,7 +67,7 @@ test('die Frage an die Dokumente: Antwort mit nummerierten Quellen, Dokument, Se
   assert.equal(rufe.at(-1).p, '/tree/p1')
   // schliessen
   root.querySelector('.ask button.x').dispatchEvent(new win.Event('click')); await tick()
-  assert.equal(root.querySelector('.answer'), null)
+  assert.ok(!root.querySelector('.answer'))
 })
 
 test('nichts in den Dokumenten: die Antwort sagt das, ohne Ratschlag', async () => {
@@ -76,5 +76,5 @@ test('nichts in den Dokumenten: die Antwort sagt das, ohne Ratschlag', async () 
   const frage = root.querySelector('.ask input'); frage.value = 'x'; frage.dispatchEvent(new win.Event('input'))
   ;[...root.querySelectorAll('.ask button')].find(b => b.textContent === 'Fragen').dispatchEvent(new win.Event('click')); await tick(); await tick()
   assert.match(root.querySelector('.answer-text').textContent, /^Nichts in den Dokumenten dazu$/)
-  assert.equal(root.querySelector('.ki-label'), null, 'ohne Antwort der KI kein Hinweis')
+  assert.ok(!root.querySelector('.ki-label'), 'ohne Antwort der KI kein Hinweis')
 })

@@ -1,6 +1,8 @@
 // Prüfstand für Oberflächenteile.
 // Gilt für alle Dialoge und Fenster, die wir anfassen: hier steht der Rahmen, die Prüfungen je Bauteil stehen in ui-*.test.mjs.
 // Ein echtes DOM (happy-dom) und die Vue-Testwerkzeuge — die Bauteile werden wirklich gezeichnet und bedient.
+// Kein DOM-Element in assert.equal/deepEqual (etwa `assert.equal(el.querySelector('.x'), null)`): schlägt der Vergleich fehl,
+// gibt node:assert das Element samt happy-dom-Fenster aus — Minuten und viele Gigabyte. Wahrheitswerte vergleichen: `assert.ok(!el.querySelector('.x'))`.
 import { Window } from 'happy-dom'
 
 const win = new Window({ url: 'http://localhost:5000/' })

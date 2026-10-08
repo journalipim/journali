@@ -22,7 +22,7 @@ test('editorOeffnen: der Editor steht im Dokument mit Titel, Übernehmen ruft on
     uebernehmen.dispatchEvent(new win.MouseEvent('click', { bubbles: true })); await warte(20)
     assert.deepEqual(gespeichert, ['{name}'])
     assert.deepEqual(zu, [true])
-    assert.equal(document.querySelector('.overlay'), null, 'der Editor ist wieder weg')
+    assert.ok(!document.querySelector('.overlay'), 'der Editor ist wieder weg')
   } finally { api.post = post }
 })
 
@@ -98,7 +98,7 @@ test('Ansicht: Klick auf eine leere Zelle der Matrix öffnet den Editor statt de
     assert.ok(zelle, 'eine leere Zelle der Matrix')
     await klick(zelle); await warte(30)
     assert.ok(document.querySelector('.overlay textarea'), 'der Editor ist offen')
-    assert.equal(document.querySelector('.dlg input.cell-input'), null, 'keine Eingabezeile')
+    assert.ok(!document.querySelector('.dlg input.cell-input'), 'keine Eingabezeile')
     await schreibeUndSpeichere('{name}')
     assert.ok(a.gepostet.some(g => /\/nodes\/g1\/attributes$/.test(g.p) && g.body.value === '{name}'))
   } finally { a.zurueck() }

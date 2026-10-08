@@ -36,6 +36,6 @@ test('liefert die Aktion eine neue Liste, bleibt das Menü offen und zeigt sie',
 test('ohne end gibt es kein Zeichen am Ende', async () => {
   const w = mount(ContextMenu, { attachTo: document.body })
   oeffnen([{ label: 'Nur ein Eintrag', action() {} }]); await flushPromises()
-  assert.equal(document.body.querySelector('.ctx .end'), null)
+  assert.ok(!document.body.querySelector('.ctx .end'))
   w.unmount()
 })
