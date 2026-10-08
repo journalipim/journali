@@ -238,3 +238,12 @@ test('MCP: Bausteine — Base64 im Kopf, Werkzeuge mit Schema', async () => {
   const r = await verarbeite({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'loeschen', arguments: {} } }, () => undefined, async () => ({ status: 200, json: {} }))
   assert.equal(r.json.error.code, -32602)
 })
+
+test('eine Variante geht durch wie ein Produkt', async () => {
+  const w = await welt()
+  try {
+    await fetch(w.url + '/api/variant/v1?locale=de')
+    assert.ok(w.rufe.some(x => x.url.endsWith('/variant/v1?locale=de')), 'an journali als variant/<id>')
+    assert.equal((await fetch(w.url + '/api/variant/v1/mehr')).status, 404, 'nur genau eine Kennung')
+  } finally { await w.ende() }
+})

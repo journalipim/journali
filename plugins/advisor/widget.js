@@ -5,6 +5,7 @@
 // kommen nur als Text in die Seite (textContent), nie als HTML. Gespeichert wird nichts — kein Cookie, kein Speicher im Browser.
 // Ein Gespräch (08.10.2026): jede Eingabe ergänzt die bisherigen Angaben (Wörter und Filter, als Chips über den Treffern, einzeln zu entfernen);
 // die Anfrage trägt sie mit, der Server merkt sich nichts. Das Merkmal, das die Treffer am besten teilt, steht als Rückfrage da.
+// Eine Variante lässt sich ganz öffnen; Produkte und Varianten kommen auf einen Merkzettel (☆ im Kopf) — beides nur im Arbeitsspeicher der Seite.
 (function () {
   'use strict'
 
@@ -17,6 +18,8 @@
       aehnlich: n => n === 1 ? '1 ähnliches Produkt.' : `${n} ähnliche Produkte.`, unbekannt: w => `„${w.join('“, „')}“ steht in keinem Produkt.`,
       neu: 'Neue Suche', angabeWeg: 'Angabe entfernen', lockern: 'Ohne diese Angabe:', ohne: (l, n) => `ohne ${l} (${n})`, rueckfrage: l => `${l}?`,
       trefferZu: (n, w) => n === 1 ? `1 Produkt passt zu „${w}“.` : `${n} Produkte passen zu „${w}“.`, weitere: n => `${n} weitere zeigen`,
+      oeffnenVariante: 'Öffnen', merken: '☆ Merken', gemerkt: '★ Gemerkt', merkzettel: n => `☆ ${n}`, merkzettelTitel: 'Merkzettel', merkzettelLeer: 'Der Merkzettel ist leer.',
+      ausMerkzettel: 'Vom Merkzettel nehmen', zumProdukt: 'Zum Produkt', variante: 'Variante',
     },
     en: {
       oeffnen: 'Product advice', schliessen: 'Close', frage: 'What are you looking for?', senden: 'Ask', treffer: n => n === 1 ? '1 product matches.' : `${n} products match.`,
@@ -26,6 +29,8 @@
       aehnlich: n => n === 1 ? '1 similar product.' : `${n} similar products.`, unbekannt: w => `"${w.join('", "')}" does not appear in any product.`,
       neu: 'New search', angabeWeg: 'Remove', lockern: 'Without:', ohne: (l, n) => `without ${l} (${n})`, rueckfrage: l => `${l}?`,
       trefferZu: (n, w) => n === 1 ? `1 product matches "${w}".` : `${n} products match "${w}".`, weitere: n => `Show ${n} more`,
+      oeffnenVariante: 'Open', merken: '☆ Save', gemerkt: '★ Saved', merkzettel: n => `☆ ${n}`, merkzettelTitel: 'Saved items', merkzettelLeer: 'Nothing saved yet.',
+      ausMerkzettel: 'Remove', zumProdukt: 'To the product', variante: 'Variant',
     },
   }
 
@@ -59,6 +64,11 @@ button { font: inherit; cursor: pointer; }
 .chip.an { background: var(--akzent); border-color: var(--akzent); color: #fff; }
 .leise { color: var(--leise); font-size: 12px; }
 .chip.wort { border-style: dashed; }
+.kopf .merk { font-size: 13px; border: 1px solid rgba(255,255,255,.6); border-radius: 12px; padding: 1px 8px; }
+.merken { border: 1px solid var(--linie); background: transparent; color: var(--text); border-radius: 6px; padding: 2px 8px; font-size: 12px; }
+.merken.an { background: var(--akzent); border-color: var(--akzent); color: #fff; }
+td.aktion { white-space: nowrap; text-align: right; }
+td.aktion button { border: 1px solid var(--linie); background: transparent; color: var(--text); border-radius: 6px; padding: 1px 6px; font-size: 12px; }
 .mehr { align-self: flex-start; border: 1px solid var(--linie); background: transparent; color: var(--text); border-radius: 8px; padding: 4px 10px; font-size: 12px; }
 .chip.neu { margin-left: auto; }
 .rueckfrage { display: flex; flex-direction: column; gap: 6px; }
@@ -90,7 +100,8 @@ tr.gleich td { color: var(--leise); }
     const sprache = (String(o.locale || navigator.language || 'de').slice(0, 2).toLowerCase() === 'de') ? 'de' : 'en'
     const T = TEXTE[sprache]
     // das Gespräch: gesammelte Wörter und Filter, die früheren Eingaben — nur im Arbeitsspeicher der Seite
-    const zustand = { woerter: [], filter: [], verlauf: [], auswahl: new Set(), info: null, laeuft: false }
+    // merkzettel: id → { id, name, art: 'produkt' | 'variante' } — in der Reihenfolge des Merkens
+    const zustand = { woerter: [], filter: [], verlauf: [], auswahl: new Set(), merkzettel: new Map(), info: null, laeuft: false }
 
     const wirt = document.createElement('div')
     wirt.setAttribute('data-journali-advisor', '')
@@ -106,8 +117,9 @@ tr.gleich td { color: var(--leise); }
     fenster.setAttribute('role', 'dialog')
     const kopf = el('div', 'kopf')
     const titel = el('span', 'titel', T.oeffnen)
-    const zu = el('button', '', '×'); zu.type = 'button'; zu.setAttribute('aria-label', T.schliessen)
-    kopf.append(titel)
+    const zu = el('button', 'zu', '×'); zu.type = 'button'; zu.setAttribute('aria-label', T.schliessen)
+    const merkKnopf = el('button', 'merk', T.merkzettel(0)); merkKnopf.type = 'button'; merkKnopf.title = T.merkzettelTitel; merkKnopf.hidden = true
+    kopf.append(titel, merkKnopf)
     if (!ziel) kopf.append(zu)
     const verlauf = el('div', 'verlauf'); verlauf.setAttribute('role', 'log'); verlauf.setAttribute('aria-live', 'polite')
     const leiste = el('div', 'leiste')
@@ -148,6 +160,48 @@ tr.gleich td { color: var(--leise); }
       vergleichKnopf.textContent = T.vergleich(zustand.auswahl.size)
     }
 
+    /// Der Knopf „Merken“ für ein Produkt oder eine Variante — zeigt, ob es schon auf dem Merkzettel steht
+    function merkenKnopf(id, name, art) {
+      const k = el('button', 'merken'); k.type = 'button'
+      const zeige = () => { const an = zustand.merkzettel.has(id); k.textContent = an ? T.gemerkt : T.merken; k.classList.toggle('an', an) }
+      k.addEventListener('click', () => {
+        zustand.merkzettel.has(id) ? zustand.merkzettel.delete(id) : zustand.merkzettel.set(id, { id, name, art })
+        zeige(); aktualisiereMerkzettel()
+      })
+      zeige()
+      return k
+    }
+
+    function aktualisiereMerkzettel() {
+      merkKnopf.hidden = zustand.merkzettel.size === 0
+      merkKnopf.textContent = T.merkzettel(zustand.merkzettel.size)
+    }
+
+    /// Der Merkzettel: jeder Eintrag zum Öffnen und zum Wegnehmen; angehakt lassen sie sich vergleichen
+    merkKnopf.addEventListener('click', () => {
+      const b = el('div', 'karten merkzettel')
+      b.append(el('div', 'name', T.merkzettelTitel))
+      if (!zustand.merkzettel.size) b.append(el('div', 'leise', T.merkzettelLeer))
+      const t = el('table'), tb = el('tbody')
+      for (const m of zustand.merkzettel.values()) {
+        const tr = el('tr'), name = el('td', '', m.name), aktion = el('td', 'aktion')
+        const auf = el('button', '', T.oeffnenVariante); auf.type = 'button'
+        auf.addEventListener('click', () => m.art === 'variante' ? zeigeVariante(m.id) : zeigeProdukt(m.id))
+        const weg = el('button', '', '×'); weg.type = 'button'; weg.title = T.ausMerkzettel
+        weg.addEventListener('click', () => { zustand.merkzettel.delete(m.id); tr.remove(); aktualisiereMerkzettel() })
+        const wahl = el('input'); wahl.type = 'checkbox'; wahl.title = T.vergleichen; wahl.checked = zustand.auswahl.has(m.id)
+        wahl.addEventListener('change', () => {
+          if (wahl.checked && zustand.auswahl.size >= 4) { wahl.checked = false; return }
+          wahl.checked ? zustand.auswahl.add(m.id) : zustand.auswahl.delete(m.id)
+          aktualisiereLeiste()
+        })
+        aktion.append(wahl, auf, weg)
+        tr.append(name, aktion); tb.append(tr)
+      }
+      t.append(tb); b.append(t)
+      verlauf.append(b); verlauf.scrollTop = Math.max(0, b.offsetTop - 8)
+    })
+
     function karte(h) {
       const k = el('div', 'karte')
       const inhalt = el('div', 'inhalt')
@@ -165,7 +219,7 @@ tr.gleich td { color: var(--leise); }
         aktualisiereLeiste()
       })
       wahl.append(box, document.createTextNode(' ' + T.vergleichen))
-      aktion.append(details, wahl)
+      aktion.append(details, merkenKnopf(h.id, h.name, 'produkt'), wahl)
       inhalt.append(aktion)
       k.append(bild(h.image), inhalt)
       return k
@@ -286,17 +340,43 @@ tr.gleich td { color: var(--leise); }
       try {
         const p = await rufe(`/api/product/${encodeURIComponent(id)}?locale=${sprache}`)
         const b = el('div', 'karten produkt')
-        b.append(el('div', 'name', p.name))
+        b.append(el('div', 'name', p.name), merkenKnopf(p.id, p.name, 'produkt'))
         if (p.images && p.images.length) { const g = el('div', 'galerie'); for (const i of p.images) g.append(bild(i, true)); b.append(g) }
         const t = el('table'), tb = el('tbody')
         for (const v of p.values || []) { const tr = el('tr'); tr.append(el('th', '', v.label), el('td', '', v.value)); tb.append(tr) }
         t.append(tb); b.append(t)
         if (p.variants && p.variants.length > 1) {
           const vt = el('table'), vb = el('tbody')
-          for (const v of p.variants) { const tr = el('tr'); tr.append(el('th', '', v.name), el('td', '', (v.values || []).map(x => `${x.label}: ${x.value}`).join(', '))); vb.append(tr) }
+          for (const v of p.variants) {
+            const tr = el('tr'), aktion = el('td', 'aktion')
+            const auf = el('button', '', T.oeffnenVariante); auf.type = 'button'
+            auf.addEventListener('click', () => zeigeVariante(v.id))
+            aktion.append(auf)
+            tr.append(el('th', '', v.name), el('td', '', (v.values || []).map(x => `${x.label}: ${x.value}`).join(', ')), aktion); vb.append(tr)
+          }
           vt.append(vb); b.append(el('div', 'leise', T.varianten(p.variants.length)), vt)
         }
         verlauf.append(b); verlauf.scrollTop = verlauf.scrollHeight
+      } catch (e) { blase(e.message) }
+    }
+
+    /// Eine Variante ganz: Name mit den Achsen, Kennungen, alle Werte, Bilder — zum Merken und zurück zum Produkt
+    async function zeigeVariante(id) {
+      try {
+        const v = await rufe(`/api/variant/${encodeURIComponent(id)}?locale=${sprache}`)
+        const b = el('div', 'karten variante')
+        b.append(el('div', 'leise', T.variante), el('div', 'name', v.name))
+        const knoepfe = el('div', 'chips')
+        const zurueck = el('button', 'chip', T.zumProdukt); zurueck.type = 'button'
+        zurueck.addEventListener('click', () => zeigeProdukt(v.product.id))
+        knoepfe.append(merkenKnopf(v.id, v.name, 'variante'), zurueck)
+        b.append(knoepfe)
+        if (v.images && v.images.length) { const g = el('div', 'galerie'); for (const i of v.images) g.append(bild(i, true)); b.append(g) }
+        const t = el('table'), tb = el('tbody')
+        for (const k of Object.entries(v.keys || {})) { const tr = el('tr'); tr.append(el('th', '', k[0].toUpperCase()), el('td', '', k[1])); tb.append(tr) }
+        for (const x of v.values || []) { const tr = el('tr'); tr.append(el('th', '', x.label), el('td', '', x.value)); tb.append(tr) }
+        t.append(tb); b.append(t)
+        verlauf.append(b); verlauf.scrollTop = Math.max(0, b.offsetTop - 8)
       } catch (e) { blase(e.message) }
     }
 

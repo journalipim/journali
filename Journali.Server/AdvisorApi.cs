@@ -106,7 +106,7 @@ public static partial class AdvisorApi
             ("GET", "info") => true,
             ("POST", "ask") => true,
             ("POST", "compare") => true,
-            ("GET", _) when rest.StartsWith("product/") || rest.StartsWith("image/") => rest.Count(ch => ch == '/') == 1,
+            ("GET", _) when rest.StartsWith("product/") || rest.StartsWith("variant/") || rest.StartsWith("image/") => rest.Count(ch => ch == '/') == 1,
             _ => false,
         };
     }
@@ -203,13 +203,38 @@ public static partial class AdvisorApi
         return aus;
     }
 
+    /// <summary>
+    /// Die Attribute, die ein Berater zeigt: die der Sicht, dazu die Achsen der Produkte seines Bestands (08.10.2026) — sie unterscheiden die Varianten
+    /// (Farbe, Grösse) und benennen sie; ohne sie hiessen alle Varianten wie ihr Produkt. Ein internes Attribut bleibt draussen, es ist keine Achse.
+    /// </summary>
+    public static List<AttributeDefinition> AttributeMitAchsen(ModelCatalog model, string view, Bestand b)
+    {
+        var aus = Attribute(model, view);
+        foreach (var ax in b.Produkte.SelectMany(e => e.Product.Axes).Distinct(StringComparer.Ordinal))
+            if (model.Attributes.TryGetValue(ax, out var def) && aus.All(a => a.Key != ax)) aus.Add(def);
+        return aus;
+    }
+
+    /// <summary>Der Wert an einem Knoten: sein Wert (geerbt, gerechnet), bei einer Variante sonst ihr Wert auf der Achse.</summary>
+    public static string? WertAm(Tree tree, ModelCatalog model, Node n, AttributeDefinition def, string locale, string channel) =>
+        Roh(tree, model, n, def, locale, channel) is { Length: > 0 } w ? w : n.AxisValues.GetValueOrDefault(def.Key) is { Length: > 0 } a ? a : null;
+
+    /// <summary>Der Name einer Variante: der Name des Produkts mit ihren Werten auf den Achsen („Skjold Hose · Orange · M“), ohne Achsen mit der SKU.</summary>
+    public static string VariantenName(Tree tree, ModelCatalog model, Node v, Node produkt, string locale, string channel)
+    {
+        var name = Name(tree, model, produkt, locale, channel);   // der Name des Produkts — der einer Variante ist oft nur ihre SKU
+        var achsen = produkt.Axes.Select(ax => model.Attributes.TryGetValue(ax, out var d) && WertAm(tree, model, v, d, locale, channel) is { } w ? Anzeige(model, d, w, locale) : null).OfType<string>().ToList();
+        if (achsen.Count > 0) return name + " · " + string.Join(" · ", achsen);
+        return tree.KeysOf(model, v) is { Count: > 0 } k ? name + " · " + string.Join(" · ", k.Values) : name;
+    }
+
     /// <summary>Die Werte eines Produkts: am Produkt, sonst die verschiedenen Werte seiner Varianten — roh, ein Wert je Eintrag der Liste.</summary>
     public static List<string> Werte(Tree tree, ModelCatalog model, Eintrag e, AttributeDefinition def, string locale, string channel)
     {
         if (Roh(tree, model, e.Product, def, locale, channel) is { Length: > 0 } eigen) return def.Multiple || def.Type == AttributeTypes.Enum ? Teile(eigen).ToList() : [eigen];
         var aus = new List<string>();
         foreach (var v in e.Varianten)
-            if (Roh(tree, model, v, def, locale, channel) is { Length: > 0 } w)
+            if (WertAm(tree, model, v, def, locale, channel) is { Length: > 0 } w)
                 foreach (var x in def.Multiple || def.Type == AttributeTypes.Enum ? Teile(w) : [w]) if (!aus.Contains(x)) aus.Add(x);
         return aus;
     }
@@ -393,9 +418,11 @@ public static partial class AdvisorApi
         foreach (var def in attr.Where(a => a.Type == AttributeTypes.Enum && a.List is not null && Frei(a)))
         {
             if (!model.Lists.TryGetValue(def.List!, out var list) || list.Values.Count > 500) continue;
+            // ein Wert aus einem Zeichen (Grösse „M“) nur, wenn die Bezeichnung des Attributs im Text steht — sonst wäre jedes „a“ ein Filter
+            var mitBezeichnung = Namen(def.Label).Any(n => Ganz(q, n) >= 0);
             foreach (var (wert, lv) in list.Values)
             {
-                var texte = Namen(lv.Label).Append(wert).Where(x => x.Length >= 2 && !x.All(char.IsDigit) && !Fuellwoerter.Contains(x.ToLowerInvariant()));
+                var texte = Namen(lv.Label).Append(wert).Where(x => (x.Length >= 2 || x.Length == 1 && mitBezeichnung && char.IsLetter(x[0])) && !x.All(char.IsDigit) && !Fuellwoerter.Contains(x.ToLowerInvariant()));
                 if (texte.FirstOrDefault(x => Ganz(rest, x) >= 0) is { } t) funde.Add((def, wert, t));
             }
         }
@@ -417,6 +444,9 @@ public static partial class AdvisorApi
                 rest = Weg(rest, nein ? davor.Index : i, (i + n.Length) - (nein ? davor.Index : i));
                 break;
             }
+        // die Bezeichnung eines erkannten Attributs („Grösse M“, „Breite bis 50 cm“) ist kein Suchwort
+        foreach (var n in aus.SelectMany(x => Namen(x.Def.Label)).Distinct(StringComparer.OrdinalIgnoreCase))
+            for (var i = Ganz(rest, n); i >= 0; i = Ganz(rest, n)) rest = Weg(rest, i, n.Length);
         return (aus, Leer().Replace(rest, " ").Trim());
     }
 
@@ -606,7 +636,7 @@ public static partial class AdvisorApi
             // Filter der Anfrage und die Angaben der neuen Eingabe
             var (attr, filter, rest, vokabular) = c.Lesen((model, _) =>
             {
-                var a = Attribute(model, d.View!);
+                var a = AttributeMitAchsen(model, d.View!, b);
                 var nachKey = a.ToDictionary(x => x.Key);
                 var f = new List<Angabe>();
                 foreach (var x in body.Filter ?? [])
@@ -728,21 +758,41 @@ public static partial class AdvisorApi
             if (!b.NachId.TryGetValue(id, out var e)) return Results.Json(ModelApi.Err("Produkt {0} gibt es hier nicht.", id), statusCode: 404);
             return Results.Ok(c.Lesen((model, tree) =>
             {
-                var attr = Attribute(model, d!.View!);
+                var attr = AttributeMitAchsen(model, d!.View!, b);
                 var role = d.Role!; var admin = c.Users.RightsOf(role).Contains(Rights.Users);
                 var werte = attr.Select(a => (a, Werte(tree, model, e, a, loc, b.Channel))).Where(x => x.Item2.Count > 0)
                     .Select(x => new { key = x.a.Key, label = Bez(x.a.Label, loc, model) ?? x.a.Key, value = AlsText(model, x.a, x.Item2, loc) }).ToList();
-                // je Variante nur die Werte, die nicht bei allen gleich sind
-                var unterschied = attr.Where(a => e.Varianten.Select(v => Roh(tree, model, v, a, loc, b.Channel) ?? "").Distinct().Count() > 1).ToList();
+                // je Variante nur die Werte, die nicht bei allen gleich sind — die Achsen gehören immer dazu
+                var unterschied = attr.Where(a => e.Product.Axes.Contains(a.Key) || e.Varianten.Select(v => WertAm(tree, model, v, a, loc, b.Channel) ?? "").Distinct().Count() > 1).ToList();
                 var varianten = e.Varianten.Select(v => new
                 {
-                    id = v.Id, name = Name(tree, model, v, loc, b.Channel), keys = tree.KeysOf(model, v),
-                    values = unterschied.Select(a => (a, Roh(tree, model, v, a, loc, b.Channel))).Where(x => x.Item2 is { Length: > 0 })
+                    id = v.Id, name = VariantenName(tree, model, v, e.Product, loc, b.Channel), keys = tree.KeysOf(model, v),
+                    values = unterschied.Select(a => (a, WertAm(tree, model, v, a, loc, b.Channel))).Where(x => x.Item2 is { Length: > 0 })
                         .Select(x => new { key = x.a.Key, label = Bez(x.a.Label, loc, model) ?? x.a.Key, value = Anzeige(model, x.a, x.Item2!, loc) }).ToList(),
                 }).ToList();
                 var bilder = Bilder(c, tree, model, e.Product, role, admin);
                 foreach (var v in e.Varianten) foreach (var bild in Bilder(c, tree, model, v, role, admin)) if (!bilder.Contains(bild)) bilder.Add(bild);
                 return new { id = e.Product.Id, name = e.Name, keys = tree.KeysOf(model, e.Product), images = bilder.Take(8).ToList(), values = werte, variants = varianten };
+            }));
+        });
+
+        // Eine Variante ganz (08.10.2026): ihr Name mit den Achsen, Kennungen, alle Werte der Sicht an ihr (geerbt, auf der Achse) und ihre Bilder —
+        // eigene und vom Pfad geerbte, sonst die des Produkts
+        api.MapGet("/advisor/{key}/variant/{id}", (string key, string id, HttpRequest req, Catalog c, string? locale = null) =>
+        {
+            if (Zugang(req, c, key, out var d, out var nein)) return nein!;
+            var loc = Sprache(c, d!, locale);
+            var b = BestandVon(c, key, d!, loc);
+            if (!b.NachId.TryGetValue(id, out var e) || e.Varianten.FirstOrDefault(v => v.Id == id) is not { } v) return Results.Json(ModelApi.Err("Variante {0} gibt es hier nicht.", id), statusCode: 404);
+            return Results.Ok(c.Lesen((model, tree) =>
+            {
+                var attr = AttributeMitAchsen(model, d!.View!, b);
+                var role = d.Role!; var admin = c.Users.RightsOf(role).Contains(Rights.Users);
+                var werte = attr.Select(a => (a, WertAm(tree, model, v, a, loc, b.Channel))).Where(x => x.Item2 is { Length: > 0 })
+                    .Select(x => new { key = x.a.Key, label = Bez(x.a.Label, loc, model) ?? x.a.Key, value = AlsText(model, x.a, (x.a.Multiple || x.a.Type == AttributeTypes.Enum ? Teile(x.Item2!) : [x.Item2!]).ToList(), loc), axis = e.Product.Axes.Contains(x.a.Key) }).ToList();
+                var bilder = Bilder(c, tree, model, v, role, admin);
+                if (bilder.Count == 0) bilder = Bilder(c, tree, model, e.Product, role, admin);
+                return new { id = v.Id, product = new { id = e.Product.Id, name = e.Name }, name = VariantenName(tree, model, v, e.Product, loc, b.Channel), keys = tree.KeysOf(model, v), images = bilder.Take(8).ToList(), values = werte };
             }));
         });
 
@@ -758,7 +808,7 @@ public static partial class AdvisorApi
             var eintraege = ids.Select(x => b.NachId[x]).DistinctBy(e => e.Product.Id).ToList();
             return Results.Ok(c.Lesen((model, tree) =>
             {
-                var attr = Attribute(model, d!.View!);
+                var attr = AttributeMitAchsen(model, d!.View!, b);
                 var role = d.Role!; var admin = c.Users.RightsOf(role).Contains(Rights.Users);
                 var zeilen = attr.Select(a => (a, w: eintraege.Select(e => AlsText(model, a, Werte(tree, model, e, a, loc, b.Channel), loc)).ToList()))
                     .Where(z => z.w.Any(x => x.Length > 0))

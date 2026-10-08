@@ -2578,6 +2578,19 @@ statt sie zu ersetzen: „Zelt“, dann „für zwei“, dann „unter 3 kg“ s
   Treffern bekommt den Verlauf mit. Werkzeuge bekommt sie weiterhin keine. Beides zählt bei `kiJeTag`.
 - **MCP** bleibt, wie es ist: ein KI-Agent führt sein Gespräch selbst und schickt Frage und Filter.
 
+**Achsen zählen zur Sicht — entschieden (08.10.2026).** Die Achsen der Produkte im Bestand (Farbe, Grösse) gehören zu dem, was ein Berater
+zeigt, auch wenn die Sicht sie nicht nennt (`AttributeMitAchsen`): sie unterscheiden die Varianten und benennen sie. Ohne sie hiessen alle
+Varianten wie ihr Produkt, und keine Rückfrage nach Grösse wäre möglich. Ein Achswert steht am Knoten getrennt von den übrigen Werten
+(`Node.AxisValues`); der Berater liest beides (`WertAm`). Eine Variante heisst nach dem Produkt und ihren Achsen („Skjold Hose · Braun · M“),
+ohne Achsen nach dem Produkt und ihrer SKU. Ein internes Attribut bleibt draussen — es ist keine Achse. Ein Wert aus einem Zeichen
+(Grösse „M“) wird im Text nur erkannt, wenn die Bezeichnung des Attributs dabeisteht („Grösse M“).
+
+**Eine Variante ganz, ein Merkzettel (08.10.2026).** `GET /api/advisor/{key}/variant/{id}` liefert eine Variante mit Name, Kennungen, allen
+Werten der Sicht an ihr (geerbt, auf der Achse; `axis` kennzeichnet die Achsen) und ihren Bildern, sonst denen des Produkts; das Token
+erreicht den Weg wie `product/`. Im Fenster öffnet „Öffnen“ in den Details eine Variante. Produkte und Varianten kommen auf einen
+Merkzettel (☆ im Kopf, mit Zahl): öffnen, wegnehmen, anhaken zum Vergleich. Er liegt nur im Arbeitsspeicher der Seite und ist beim
+Neuladen leer — das Fenster speichert nichts im Browser.
+
 Nur wenn der Berater es erlaubt (`ki`), schreibt die KI des gewählten Teams zwei bis vier Sätze zu den ersten fünf Treffern
 (`AiApi.AskAsync` mit `fuerTeam`, gezählt bei diesem Team). Sie bekommt nur die nummerierten Treffer mit ihren Werten und keine
 Werkzeuge; ein Satz in den Produktdaten, der wie eine Anweisung aussieht, kann darum nichts auslösen. Das Fenster kennzeichnet den

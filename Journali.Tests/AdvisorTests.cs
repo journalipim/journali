@@ -372,6 +372,7 @@ public class AdvisorTests
     [Theory]
     [InlineData("GET", "/api/advisor/werkzeug/info", true)]
     [InlineData("POST", "/api/advisor/werkzeug/ask", true)]
+    [InlineData("GET", "/api/advisor/werkzeug/variant/v-1", true)]
     [InlineData("POST", "/api/advisor/werkzeug/compare", true)]
     [InlineData("GET", "/api/advisor/werkzeug/product/p-1", true)]
     [InlineData("GET", "/api/advisor/werkzeug/image/m-1", true)]
@@ -530,5 +531,69 @@ public class AdvisorTests
     {
         var (_, user) = AdvisorApi.Prompt("rot", [("Bohrhammer Pro", [("Leistung", "800 W")])], [], ["Bohrhammer", "unter 1000 W"]);
         Assert.StartsWith("Früher gesagt: Bohrhammer | unter 1000 W", user);
+    }
+    // ---- Varianten (08.10.2026): die Achsen zählen zur Sicht, eine Variante lässt sich ganz öffnen
+
+    /// <summary>Eine Jacke mit der Achse Grösse (S, M) — die Grösse steht in keiner Gruppe der Sicht.</summary>
+    static (string Produkt, string S, string M) Jacke(Welt w) => w.C.With((_, _, write) =>
+    {
+        write("t", Model.ListStream + "groesse", Types.ListDefined, new ListDefinition("groesse", Labels.Of("Grösse", "Size")), null);
+        write("t", Model.ListStream + "groesse", Types.ListValueDefined, new ListValueDefinition("s", Labels.Of("S", "S"), null, 1), null);
+        write("t", Model.ListStream + "groesse", Types.ListValueDefined, new ListValueDefinition("m", Labels.Of("M", "M"), null, 2), null);
+        write("t", Model.AttributeStream + "groesse", Types.AttributeDefined, new AttributeDefinition("groesse", Labels.Of("Grösse", "Size"), AttributeTypes.Enum, Group: "intern", List: "groesse"), null);
+        var p = Journali.Core.Entries.Ids.New(Roles.Product);
+        write("t", p, Types.ProductCreated, new ProductCreated(w.Ids["g"], Axes: ["groesse"]), null);
+        write("t", p, Types.AttributeSet, new AttributeSet("name", "de", null, "Regenjacke"), null);
+        write("t", p, Types.AttributeSet, new AttributeSet("leistung", null, null, "0"), null);
+        var ids = new List<string>();
+        foreach (var g in new[] { "s", "m" })
+        {
+            var v = Journali.Core.Entries.Ids.New(Roles.Variant); ids.Add(v);
+            write("t", v, Types.VariantCreated, new VariantCreated(p, new() { ["groesse"] = g }), null);
+            write("t", v, Types.AttributeSet, new AttributeSet(Model.SkuAttribute, null, null, "JACKE-" + g.ToUpperInvariant()), null);
+            write("t", v, Types.AttributeSet, new AttributeSet("color", null, null, g == "s" ? "red" : "blue"), null);
+            write("t", v, Types.ReleaseGranted, new ReleaseGranted("web", null), null);
+        }
+        return (p, ids[0], ids[1]);
+    });
+
+    [Fact]
+    public async Task Die_Achsen_zaehlen_zur_Sicht_und_benennen_die_Varianten()
+    {
+        await using var w = await Welt.Neu();
+        var (p, _, _) = Jacke(w);
+        var (_, prod) = await w.Get($"/api/advisor/werkzeug/product/{p}");
+        Assert.Equal(["Regenjacke · S", "Regenjacke · M"], prod.GetProperty("variants").EnumerateArray().Select(v => v.GetProperty("name").GetString()).ToList());
+        Assert.Contains(prod.GetProperty("variants")[0].GetProperty("values").EnumerateArray(), x => x.GetProperty("key").GetString() == "groesse" && x.GetProperty("value").GetString() == "S");
+        // die Grösse wird Facette und Filter, obwohl die Sicht sie nicht nennt; das Einkaufsattribut bleibt draussen
+        var (_, j) = await w.Frage("""{"q":"Regenjacke"}""");
+        var (_, m) = await w.Frage("""{"q":"Regenjacke","filter":[{"attribute":"groesse","op":"eq","value":"m"}]}""");
+        Assert.Equal(["Regenjacke"], Namen(m));
+        var (_, x) = await w.Frage("""{"q":"Regenjacke","filter":[{"attribute":"einkauf","op":"le","value":"20"}]}""");
+        Assert.Empty(x.GetProperty("filter").EnumerateArray());
+        // im Text erkannt: „Grösse M“
+        var (_, t) = await w.Frage("""{"q":"Regenjacke Grösse M"}""");
+        Assert.Contains(t.GetProperty("filter").EnumerateArray(), f => f.GetProperty("attribute").GetString() == "groesse" && f.GetProperty("value").GetString() == "m");
+        Assert.Empty(t.GetProperty("unknown").EnumerateArray());   // „Grösse“ ist kein Suchwort
+    }
+
+    [Fact]
+    public async Task Eine_Variante_laesst_sich_ganz_oeffnen()
+    {
+        await using var w = await Welt.Neu();
+        var (p, s, _) = Jacke(w);
+        var (status, v) = await w.Get($"/api/advisor/werkzeug/variant/{s}");
+        Assert.Equal(HttpStatusCode.OK, status);
+        Assert.Equal("Regenjacke · S", v.GetProperty("name").GetString());
+        Assert.Equal(p, v.GetProperty("product").GetProperty("id").GetString());
+        Assert.Equal("JACKE-S", v.GetProperty("keys").GetProperty("sku").GetString());
+        var werte = v.GetProperty("values").EnumerateArray().ToDictionary(x => x.GetProperty("key").GetString()!, x => (x.GetProperty("value").GetString(), x.GetProperty("axis").GetBoolean()));
+        Assert.Equal(("S", true), werte["groesse"]);
+        Assert.Equal(("Rot", false), werte["color"]);
+        Assert.Equal(("0 W", false), werte["leistung"]);   // vom Produkt geerbt
+        Assert.False(werte.ContainsKey("einkauf"));
+        // ein Produkt ist keine Variante, eine fremde Variante gibt es hier nicht
+        Assert.Equal(HttpStatusCode.NotFound, (await w.Get($"/api/advisor/werkzeug/variant/{p}")).Status);
+        Assert.Equal(HttpStatusCode.NotFound, (await w.Get($"/api/advisor/werkzeug/variant/{w.Ids["neu-v"]}")).Status);
     }
 }

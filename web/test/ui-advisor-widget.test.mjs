@@ -64,7 +64,7 @@ test('der Knopf öffnet das Fenster mit Bezeichnung und Begrüssung des Beraters
   assert.equal(w.$('.fenster').hidden, false)
   assert.equal(w.$('.titel').textContent, 'Werkzeugberater')
   assert.equal(w.$('.blase').textContent, 'Wobei darf ich helfen?')
-  await w.klick(w.$('.kopf button'))
+  await w.klick(w.$('.kopf .zu'))
   assert.equal(w.$('.fenster').hidden, true, '× schliesst')
 })
 
@@ -78,7 +78,7 @@ test('eingebettet in ein Element gibt es keinen Knopf und kein Schliessen', asyn
   assert.ok(ziel.contains(b.wirt))
   assert.equal(b.schatten.querySelector('.knopf'), null)
   assert.ok(b.schatten.querySelector('.fenster.eingebettet'))
-  assert.equal(b.schatten.querySelector('.kopf button'), null)
+  assert.equal(b.schatten.querySelector('.kopf .zu'), null)
 })
 
 test('eine Frage zeigt Treffer, fragt nach dem Merkmal, das sie am besten teilt, und bietet die weiteren an; ein Klick grenzt ein, ein zweiter nimmt es zurück', async () => {
@@ -249,4 +249,61 @@ test('ohne Auswahl ist der Knopf zum Vergleichen nicht da — hidden gilt auch g
   await warte()
   assert.equal(w.$('.leiste').hidden, true)
   assert.match(w.$('style').textContent, /\[hidden\] \{ display: none !important; \}/)
+})
+
+// ---- Variante ganz öffnen, Merkzettel (08.10.2026) — der Merkzettel liegt nur im Arbeitsspeicher der Seite
+
+const MIT_VARIANTEN = {
+  ...STANDARD,
+  '/api/product/p1': [200, { id: 'p1', name: 'Skjold Hose', images: [], values: [{ label: 'Gewicht', value: '0.40 kg' }],
+    variants: [{ id: 'v1', name: 'Skjold Hose · Braun · M', values: [{ label: 'Grösse', value: 'M' }] }, { id: 'v2', name: 'Skjold Hose · Braun · L', values: [{ label: 'Grösse', value: 'L' }] }] }],
+  '/api/variant/v1': [200, { id: 'v1', product: { id: 'p1', name: 'Skjold Hose' }, name: 'Skjold Hose · Braun · M', keys: { sku: 'TW-1-M' }, images: ['m1'],
+    values: [{ key: 'size', label: 'Grösse', value: 'M', axis: true }, { key: 'weight', label: 'Gewicht', value: '0.40 kg', axis: false }] }],
+}
+
+test('eine Variante lässt sich aus den Details ganz öffnen: Name mit Achsen, SKU, alle Werte, Bilder', async () => {
+  const w = starte(MIT_VARIANTEN)
+  await warte()
+  await w.frage('hose')
+  await w.klick(w.$$('.karte .details')[0])
+  const zeilen = w.$$('.produkt tr')
+  const m = zeilen.find(tr => tr.textContent.includes('Skjold Hose · Braun · M'))
+  assert.ok(m, 'die Varianten heissen nach ihren Achsen')
+  await w.klick(m.querySelector('td.aktion button'))
+  assert.ok(w.rufe.some(r => r.url.endsWith('/api/variant/v1?locale=de')))
+  const v = w.$('.variante')
+  assert.equal(v.querySelector('.name').textContent, 'Skjold Hose · Braun · M')
+  const tabelle = [...v.querySelectorAll('tr')].map(tr => [...tr.children].map(c => c.textContent))
+  assert.deepEqual(tabelle, [['SKU', 'TW-1-M'], ['Grösse', 'M'], ['Gewicht', '0.40 kg']])
+  assert.equal(v.querySelectorAll('.galerie img').length, 1)
+  // zurück zum Produkt
+  await w.klick([...v.querySelectorAll('.chip')].find(c => c.textContent === 'Zum Produkt'))
+  assert.equal(w.$$('.produkt').length, 2)
+})
+
+test('Produkte und Varianten kommen auf den Merkzettel; er steht im Kopf, öffnet und nimmt weg', async () => {
+  const w = starte(MIT_VARIANTEN)
+  await warte()
+  assert.equal(w.$('.kopf .merk').hidden, true, 'leer: kein Merkzettel im Kopf')
+  await w.frage('hose')
+  const merken = w.$$('.karte .merken')[0]
+  assert.equal(merken.textContent, '☆ Merken')
+  await w.klick(merken)
+  assert.equal(merken.textContent, '★ Gemerkt')
+  assert.equal(w.$('.kopf .merk').textContent, '☆ 1')
+  // die Variante dazu
+  await w.klick(w.$$('.karte .details')[0])
+  await w.klick(w.$$('.produkt tr').find(tr => tr.textContent.includes('Braun · M')).querySelector('td.aktion button'))
+  await w.klick(w.$('.variante .merken'))
+  assert.equal(w.$('.kopf .merk').textContent, '☆ 2')
+  // der Merkzettel: zwei Einträge, öffnen, wegnehmen
+  await w.klick(w.$('.kopf .merk'))
+  const zettel = w.$$('.merkzettel').at(-1)
+  assert.deepEqual([...zettel.querySelectorAll('tr td:first-child')].map(td => td.textContent), ['Bohrhammer Pro', 'Skjold Hose · Braun · M'])
+  const vorher = w.rufe.length
+  await w.klick(zettel.querySelectorAll('tr')[1].querySelector('td.aktion button'))
+  assert.ok(w.rufe.slice(vorher).some(r => r.url.endsWith('/api/variant/v1?locale=de')), 'eine gemerkte Variante öffnet als Variante')
+  await w.klick([...zettel.querySelectorAll('tr')[0].querySelectorAll('td.aktion button')].find(b => b.textContent === '×'))
+  assert.equal(w.$('.kopf .merk').textContent, '☆ 1')
+  assert.equal(zettel.querySelectorAll('tr').length, 1)
 })

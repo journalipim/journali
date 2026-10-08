@@ -483,8 +483,8 @@ denselben Dienst unter `https://advisor.example.com/mcp` (MCP, Streamable HTTP; 
 
 | Weg am Dienst | was |
 |---|---|
-| `GET /widget.js` | das Chat-Fenster |
-| `GET /api/info`, `POST /api/ask`, `GET /api/product/{id}`, `POST /api/compare`, `GET /api/image/{id}` | die Fragen des Fensters |
+| `GET /widget.js` | das Chat-Fenster — mit Fingerabdruck (ETag), der Browser fragt jedes Mal nach |
+| `GET /api/info`, `POST /api/ask`, `GET /api/product/{id}`, `GET /api/variant/{id}`, `POST /api/compare`, `GET /api/image/{id}` | die Fragen des Fensters |
 | `POST /mcp` | MCP: `search_products`, `get_product`, `compare_products` |
 | `GET /health` | 200, wenn journali mit dem Token antwortet |
 

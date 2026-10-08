@@ -4,6 +4,7 @@
 //   GET  /api/info            Bezeichnung, Begrüssung, Sprachen
 //   POST /api/ask             Treffer, Facetten, Text — die Frage eines Besuchers
 //   GET  /api/product/{id}    ein Produkt
+//   GET  /api/variant/{id}    eine Variante ganz (08.10.2026)
 //   POST /api/compare         zwei bis vier Produkte nebeneinander
 //   GET  /api/image/{id}      ein Bild eines Produkts
 //   POST /mcp                 MCP (Streamable HTTP, mcp.mjs) mit denselben Fragen als Werkzeuge
@@ -127,14 +128,14 @@ export function erstelle(o) {
         res.writeHead(200, { 'content-type': r.headers.get('content-type') ?? 'application/octet-stream', 'cache-control': 'public, max-age=86400', 'x-content-type-options': 'nosniff', ...cors })
         return res.end(Buffer.from(await r.arrayBuffer()))
       }
-      const produkt = /^\/api\/product\/([^/]+)$/.exec(pfad)
+      const produkt = /^\/api\/(product|variant)\/([^/]+)$/.exec(pfad)
       const wege = { '/api/ask': 'POST', '/api/compare': 'POST' }
       if (!(req.method === 'GET' && produkt) && wege[pfad] !== req.method) return sende(res, 404, { error: 'Nicht gefunden.' }, cors)
       const warten = zaehle(adresse(req), i.limits)
       if (warten) return sende(res, 429, { error: 'Zu viele Fragen in kurzer Zeit.' }, { ...cors, 'retry-after': String(warten) })
       if (produkt) {
         const loc = url.searchParams.get('locale')
-        const r = await journali('product/' + encodeURIComponent(decodeURIComponent(produkt[1])) + (loc ? '?locale=' + encodeURIComponent(loc) : ''))
+        const r = await journali(produkt[1] + '/' + encodeURIComponent(decodeURIComponent(produkt[2])) + (loc ? '?locale=' + encodeURIComponent(loc) : ''))
         return sende(res, r.status, r.json, cors)
       }
       const b = await koerper(req)
