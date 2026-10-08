@@ -48,6 +48,12 @@ test('das Chat-Fenster kommt als Skript, für jede Website', async () => {
     assert.equal(r.status, 200)
     assert.match(r.headers.get('content-type'), /javascript/)
     assert.equal(await r.text(), '/* widget */')
+    // der Browser fragt jedes Mal nach und bekommt 304, solange es dasselbe ist — nach einem Update sofort das neue
+    assert.equal(r.headers.get('cache-control'), 'no-cache')
+    const tag = r.headers.get('etag')
+    assert.match(tag, /^"[0-9a-f]{16}"$/)
+    assert.equal((await fetch(w.url + '/widget.js', { headers: { 'if-none-match': tag } })).status, 304)
+    assert.equal((await fetch(w.url + '/widget.js', { headers: { 'if-none-match': '"alt"' } })).status, 200)
   } finally { await w.ende() }
 })
 

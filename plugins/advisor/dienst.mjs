@@ -11,6 +11,7 @@
 // Je Besucher (Adresse) zählt der Dienst Fragen je Minute und Tag; die Tagesgrenze des Beraters zählt journali. Websites, die das Chat-Fenster
 // einbinden dürfen, nennt die Definition des Beraters (CORS); ein fremder Origin bekommt 403, auch am MCP-Endpunkt (Schutz vor DNS-Rebinding).
 // Protokolliert wird kein Inhalt einer Frage.
+import { createHash } from 'node:crypto'
 import { verarbeite } from './mcp.mjs'
 
 export const MAX_KOERPER = 16 * 1024
@@ -28,6 +29,7 @@ export function erstelle(o) {
   let info = null, infoAm = 0
   const besucher = new Map()   // Adresse → { minute, nMinute, tag, nTag }
 
+  const widgetTag = '"' + createHash('sha256').update(o.widget ?? '').digest('hex').slice(0, 16) + '"'
   async function journali(pfad, body, methode = body === undefined ? 'GET' : 'POST') {
     const r = await holen(basis + pfad, { method: methode, headers: body === undefined ? kopf : { ...kopf, 'content-type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body) })
     const text = await r.text()
@@ -85,8 +87,12 @@ export function erstelle(o) {
         try { const i = await holeInfo(); return sende(res, 200, { ok: true, advisor: i.key, products: i.products }) }
         catch (e) { return sende(res, 503, { ok: false, error: e.message }) }
       }
+      // Das Fenster mit dem Fingerabdruck seines Inhalts: der Browser fragt bei jedem Laden nach (no-cache) und bekommt 304, solange es dasselbe ist —
+      // nach einem Update sofort das neue (08.10.2026; vorher eine Stunde lang das alte)
       if (req.method === 'GET' && pfad === '/widget.js') {
-        res.writeHead(200, { 'content-type': 'text/javascript; charset=utf-8', 'cache-control': 'public, max-age=3600', 'x-content-type-options': 'nosniff', 'access-control-allow-origin': '*' })
+        const kopf = { 'content-type': 'text/javascript; charset=utf-8', 'cache-control': 'no-cache', etag: widgetTag, 'x-content-type-options': 'nosniff', 'access-control-allow-origin': '*' }
+        if (req.headers['if-none-match'] === widgetTag) { res.writeHead(304, kopf); return res.end() }
+        res.writeHead(200, kopf)
         return res.end(o.widget ?? '')
       }
       const istApi = pfad.startsWith('/api/'), istMcp = pfad === '/mcp'
