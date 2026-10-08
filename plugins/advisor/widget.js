@@ -112,6 +112,7 @@ table { border-collapse: collapse; width: 100%; font-size: 12px; }
 th, td { text-align: left; vertical-align: top; padding: 4px 6px; border-bottom: 1px solid var(--linie); }
 tr.gleich td { color: var(--leise); }
 .galerie { display: flex; gap: 6px; overflow-x: auto; }
+.absatz { white-space: pre-wrap; line-height: 1.5; }
 .galerie img { height: 120px; border-radius: 6px; background: var(--blase); }
 `
 
@@ -238,6 +239,10 @@ tr.gleich td { color: var(--leise); }
       zeige(b)
     })
 
+    /// Die Texte (Beschreibung) als Absätze unter dem Namen — die Bezeichnung steht im Tooltip
+    function absaetze(inhalt, texte) {
+      for (const x of texte || []) { const a = el('div', 'absatz', x.value); a.title = x.label; inhalt.append(a) }
+    }
     /// Eine Tafel: Rahmen, Kopfzeile mit Art und Name, darunter der Inhalt — Produkt, Variante, Merkzettel, Vergleich
     function tafel(klasse, art, name) {
       const t = el('div', 'karten tafel ' + klasse)
@@ -442,6 +447,7 @@ tr.gleich td { color: var(--leise); }
       try {
         const p = await rufe(`/api/product/${encodeURIComponent(id)}?locale=${sprache}`)
         const { t: b, kopf, inhalt } = tafel('produkt', T.produkt, p.name)
+        absaetze(inhalt, p.texts)
         kopf.append(merkenKnopf(p.id, p.name, 'produkt'))
         if (p.images && p.images.length) { const g = el('div', 'galerie'); for (const i of p.images) g.append(bild(i, true)); inhalt.append(g) }
         const t = el('table'), tb = el('tbody')
@@ -472,6 +478,7 @@ tr.gleich td { color: var(--leise); }
         zurueck.addEventListener('click', () => zeigeProdukt(v.product.id))
         knoepfe.append(merkenKnopf(v.id, v.name, 'variante'), zurueck)
         inhalt.append(knoepfe)
+        absaetze(inhalt, v.texts)
         if (v.images && v.images.length) { const g = el('div', 'galerie'); for (const i of v.images) g.append(bild(i, true)); inhalt.append(g) }
         const t = el('table'), tb = el('tbody')
         for (const k of Object.entries(v.keys || {})) { const tr = el('tr'); tr.append(el('th', '', k[0].toUpperCase()), el('td', '', k[1])); tb.append(tr) }

@@ -43,7 +43,8 @@ const STANDARD = {
     words: [...new Set([...(body.woerter || []), ...(body.q ? [body.q.toLowerCase()] : [])])],
   }],
   '/api/compare': [200, { products: [{ id: 'p1', name: 'Bohrhammer Pro' }, { id: 'p2', name: 'Akkuschrauber' }], rows: [{ key: 'leistung', label: 'Leistung', values: ['800 W', '300 W'], same: false }, { key: 'color', label: 'Farbe', values: ['Rot', 'Rot'], same: true }] }],
-  '/api/product/p1': [200, { id: 'p1', name: 'Bohrhammer Pro', images: ['m1'], values: [{ label: 'Leistung', value: '800 W' }], variants: [] }],
+  '/api/product/p1': [200, { id: 'p1', name: 'Bohrhammer Pro', images: ['m1'], texts: [{ key: 'description', label: 'Beschreibung', value: 'Schlägt <b>kräftig</b>.\n\nMit Koffer.' }],
+    values: [{ label: 'Leistung', value: '800 W' }], variants: [] }],
 }
 
 function starte(antworten = STANDARD, o = {}) {
@@ -149,6 +150,12 @@ test('Details zeigen die Werte und die Bilder über den Dienst', async () => {
   const produkt = w.$('.produkt')
   assert.equal(produkt.querySelector('.name').textContent, 'Bohrhammer Pro')
   assert.equal(produkt.querySelector('img').getAttribute('src'), 'https://advisor.test/api/image/m1?gross=1')
+  // die Beschreibung steht als Absatz gleich unter dem Kopf, als Text — nie als HTML
+  const absatz = produkt.querySelector('.tafelinhalt').firstElementChild
+  assert.ok(absatz.classList.contains('absatz'))
+  assert.equal(absatz.textContent, 'Schlägt <b>kräftig</b>.\n\nMit Koffer.')
+  assert.ok(!absatz.querySelector('b'))
+  assert.equal(absatz.title, 'Beschreibung')
   assert.deepEqual([...produkt.querySelectorAll('tr')].map(t => t.textContent), ['Leistung800 W'])
 })
 

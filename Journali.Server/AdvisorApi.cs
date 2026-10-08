@@ -170,6 +170,8 @@ public static partial class AdvisorApi
         : tree.Resolve(model, n, def.Key, def.PerLocale ? locale : null, def.PerChannel ? channel : null).Value;
 
     [GeneratedRegex("<[^>]+>")] private static partial Regex Tags();
+    [GeneratedRegex(@"<\s*(?:br\s*/?|/\s*(?:p|div|li|h[1-6]|tr))\s*>", RegexOptions.IgnoreCase)] private static partial Regex Umbruch();
+    [GeneratedRegex(@"<\s*/\s*(?:td|th)\s*>", RegexOptions.IgnoreCase)] private static partial Regex Zelle();
     [GeneratedRegex(@"\s+")] private static partial Regex Leer();
 
     /// <summary>Ein roher Wert, wie ihn ein Besucher liest: Listenwerte mit Bezeichnung, ja/nein, HTML als Text, Zahl mit Einheit.</summary>
@@ -182,6 +184,18 @@ public static partial class AdvisorApi
         if (def.Type == AttributeTypes.Html) return Leer().Replace(Tags().Replace(raw, " "), " ").Trim().Replace("&nbsp;", " ").Replace("&amp;", "&");
         return string.IsNullOrEmpty(def.Unit) ? raw : raw + " " + def.Unit;
     }
+
+    /// <summary>Ein HTML-Wert als Absätze: Absatz, Zeilenumbruch und Listenpunkt werden zu Leerzeilen, das Ende einer Zelle zu einem
+    /// Leerzeichen, alles andere an Auszeichnung fällt ersatzlos weg — das Fenster zeigt Text, nie HTML.</summary>
+    public static string Absaetze(string raw) =>
+        string.Join("\n\n", System.Net.WebUtility.HtmlDecode(Tags().Replace(Zelle().Replace(Umbruch().Replace(raw, "\n"), " "), ""))
+            .Split('\n').Select(z => Leer().Replace(z, " ").Trim()).Where(z => z.Length > 0));
+
+    /// <summary>Die Texte eines Produkts oder einer Variante: die HTML-Attribute der Sicht (Beschreibung), als Absätze unter dem Namen statt als
+    /// Zeile der Tabelle (08.10.2026).</summary>
+    static List<object> Texte(ModelCatalog model, IEnumerable<(AttributeDefinition Def, string? Roh)> werte, string locale) =>
+        werte.Where(x => x.Def.Type == AttributeTypes.Html && x.Roh is { Length: > 0 }).Select(x => (x.Def, Text: Absaetze(x.Roh!))).Where(x => x.Text.Length > 0)
+            .Select(x => (object)new { key = x.Def.Key, label = Bez(x.Def.Label, locale, model) ?? x.Def.Key, value = x.Text }).ToList();
 
     private static IEnumerable<string> Teile(string raw) => raw.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
@@ -775,10 +789,11 @@ public static partial class AdvisorApi
             {
                 var attr = AttributeMitAchsen(model, d!.View!, b);
                 var role = d.Role!; var admin = c.Users.RightsOf(role).Contains(Rights.Users);
-                var werte = attr.Select(a => (a, Werte(tree, model, e, a, loc, b.Channel))).Where(x => x.Item2.Count > 0)
+                var werte = attr.Where(a => a.Type != AttributeTypes.Html).Select(a => (a, Werte(tree, model, e, a, loc, b.Channel))).Where(x => x.Item2.Count > 0)
                     .Select(x => new { key = x.a.Key, label = Bez(x.a.Label, loc, model) ?? x.a.Key, value = AlsText(model, x.a, x.Item2, loc) }).ToList();
+                var texte = Texte(model, attr.Select(a => (a, Werte(tree, model, e, a, loc, b.Channel).FirstOrDefault())), loc);
                 // je Variante nur die Werte, die nicht bei allen gleich sind — die Achsen gehören immer dazu
-                var unterschied = attr.Where(a => e.Product.Axes.Contains(a.Key) || e.Varianten.Select(v => WertAm(tree, model, v, a, loc, b.Channel) ?? "").Distinct().Count() > 1).ToList();
+                var unterschied = attr.Where(a => a.Type != AttributeTypes.Html).Where(a => e.Product.Axes.Contains(a.Key) || e.Varianten.Select(v => WertAm(tree, model, v, a, loc, b.Channel) ?? "").Distinct().Count() > 1).ToList();
                 var varianten = e.Varianten.Select(v => new
                 {
                     id = v.Id, name = VariantenName(tree, model, v, e.Product, loc, b.Channel), keys = tree.KeysOf(model, v),
@@ -787,7 +802,7 @@ public static partial class AdvisorApi
                 }).ToList();
                 var bilder = Bilder(c, tree, model, e.Product, role, admin);
                 foreach (var v in e.Varianten) foreach (var bild in Bilder(c, tree, model, v, role, admin)) if (!bilder.Contains(bild)) bilder.Add(bild);
-                return new { id = e.Product.Id, name = e.Name, keys = tree.KeysOf(model, e.Product), images = bilder.Take(8).ToList(), values = werte, variants = varianten };
+                return new { id = e.Product.Id, name = e.Name, keys = tree.KeysOf(model, e.Product), images = bilder.Take(8).ToList(), texts = texte, values = werte, variants = varianten };
             }));
         });
 
@@ -803,11 +818,12 @@ public static partial class AdvisorApi
             {
                 var attr = AttributeMitAchsen(model, d!.View!, b);
                 var role = d.Role!; var admin = c.Users.RightsOf(role).Contains(Rights.Users);
-                var werte = attr.Select(a => (a, WertAm(tree, model, v, a, loc, b.Channel))).Where(x => x.Item2 is { Length: > 0 })
+                var texte = Texte(model, attr.Select(a => (a, WertAm(tree, model, v, a, loc, b.Channel))), loc);
+                var werte = attr.Where(a => a.Type != AttributeTypes.Html).Select(a => (a, WertAm(tree, model, v, a, loc, b.Channel))).Where(x => x.Item2 is { Length: > 0 })
                     .Select(x => new { key = x.a.Key, label = Bez(x.a.Label, loc, model) ?? x.a.Key, value = AlsText(model, x.a, (x.a.Multiple || x.a.Type == AttributeTypes.Enum ? Teile(x.Item2!) : [x.Item2!]).ToList(), loc), axis = e.Product.Axes.Contains(x.a.Key) }).ToList();
                 var bilder = Bilder(c, tree, model, v, role, admin);
                 if (bilder.Count == 0) bilder = Bilder(c, tree, model, e.Product, role, admin);
-                return new { id = v.Id, product = new { id = e.Product.Id, name = e.Name }, name = VariantenName(tree, model, v, e.Product, loc, b.Channel), keys = tree.KeysOf(model, v), images = bilder.Take(8).ToList(), values = werte };
+                return new { id = v.Id, product = new { id = e.Product.Id, name = e.Name }, name = VariantenName(tree, model, v, e.Product, loc, b.Channel), keys = tree.KeysOf(model, v), images = bilder.Take(8).ToList(), texts = texte, values = werte };
             }));
         });
 

@@ -230,6 +230,30 @@ public class AdvisorTests
     }
 
     [Fact]
+    public void Ein_HTML_Wert_wird_zu_Absaetzen_ohne_Auszeichnung()
+    {
+        Assert.Equal("Schlägt kräftig.\n\nMit Koffer & Bohrer.", AdvisorApi.Absaetze("<p>Schlägt <b>kräftig</b>.</p>\n<p>Mit Koffer &amp; Bohrer.</p>"));
+        Assert.Equal("eins\n\nzwei", AdvisorApi.Absaetze("eins<br/>zwei"));
+        Assert.Equal("", AdvisorApi.Absaetze("<p> </p>"));
+    }
+
+    [Fact]
+    public async Task Die_Beschreibung_steht_als_Absatz_nicht_in_der_Tabelle()
+    {
+        await using var w = await Welt.Neu();
+        w.C.With((_, _, write) => write("t", w.Ids["bohr"], Types.AttributeSet, new AttributeSet("description", "de", null, "<p>Schlägt <b>kräftig</b>.</p><p>Mit Koffer.</p>"), null));
+        var (_, p) = await w.Get($"/api/advisor/werkzeug/product/{w.Ids["bohr"]}");
+        var t = p.GetProperty("texts").EnumerateArray().Single();
+        Assert.Equal(("description", "Beschreibung", "Schlägt kräftig.\n\nMit Koffer."), (t.GetProperty("key").GetString(), t.GetProperty("label").GetString(), t.GetProperty("value").GetString()));
+        Assert.DoesNotContain(p.GetProperty("values").EnumerateArray(), v => v.GetProperty("key").GetString() == "description");
+        // eine Variante mit eigener Beschreibung (die der Saat ist nicht vererbbar)
+        w.C.With((_, _, write) => write("t", w.Ids["bohr-v"], Types.AttributeSet, new AttributeSet("description", "de", null, "<p>Im Koffer.</p>"), null));
+        var (_, v) = await w.Get($"/api/advisor/werkzeug/variant/{w.Ids["bohr-v"]}");
+        Assert.Equal("Im Koffer.", v.GetProperty("texts")[0].GetProperty("value").GetString());
+        Assert.DoesNotContain(v.GetProperty("values").EnumerateArray(), x => x.GetProperty("key").GetString() == "description");
+    }
+
+    [Fact]
     public async Task Ein_Produkt_zeigt_die_Sicht_und_eines_ausserhalb_des_Bestands_gibt_es_nicht()
     {
         await using var w = await Welt.Neu();

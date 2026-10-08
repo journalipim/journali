@@ -2606,6 +2606,10 @@ dafür bleibt das Lockern. Was der Wechsel wäre, steht nicht noch einmal unter 
 **Lockern nennt, was bleibt (08.10.2026).** „Mit weniger Angaben: hose (17)“ — der Knopf nennt die Angaben, die nach dem Klick gelten,
 und ihre Zahl; was wegfällt, steht im Tooltip. „ohne pullover (17)“ las sich wie „mit pullover“.
 
+**Beschreibung als Absatz (08.10.2026).** Die HTML-Attribute der Sicht (Beschreibung) stehen bei Produkt und Variante als Absätze unter
+dem Namen (`texts`), nicht als Zeile der Tabelle. Absatz, Zeilenumbruch und Listenpunkt werden zu Leerzeilen, alles andere an
+Auszeichnung fällt weg (`Absaetze`); das Fenster setzt den Text als Text, nie als HTML.
+
 **Eine Antwort, eine Blase (08.10.2026).** Die Blase der Antwort enthält den Satz, die gesammelten Angaben (Wörter, Filter, Neue Suche) und,
 ohne Treffer, was sich lockern lässt. Darauf folgen Rückfrage und Eingrenzen, dann die Karten; ohne Treffer zuletzt die Frage nach dem
 Themenwechsel — die letzte Frage des Beraters steht direkt über der Eingabe. Kommt eine neue Antwort, sind die Knöpfe der älteren aus: sie
