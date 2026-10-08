@@ -12,6 +12,16 @@ Schreibt ausschliesslich über /api (Catalog ist der einzige Schreibpfad, Regel 
      mit Achsen, darunter Varianten (POST /api/variants)
   3. Werte je Knoten (POST /api/nodes/{id}/attributes), Status (POST /api/nodes/{id}/status)
   4. Bild je Produkt: PNG mit Pillow, POST /api/media, Relation image mit inherit=true
+  5. Shopangaben je Produkt (tannwald_inhalt.py): Beschreibung in drei Absätzen, Merkmale, Einsatzbereich, Pflegehinweise und die
+     technischen Merkmale seiner Untergruppe (eigene Attributgruppe je Untergruppe; ein Attribut, das mehrere brauchen, gilt in allen);
+     dazu die Sicht „Onlineshop“ (MasterGroup, Shopangaben, Technik) — die Sicht für einen Produktberater
+  6. Unterlagen als PDF (pdf_einfach.py), Relation document: ein Datenblatt je Produkt, „Pflege, Reparatur und häufige Fragen“ und
+     „Häufige Fragen“ (aus der Wissensbasis tannwald_faq.md, je Frage ein Abschnitt) je Untergruppe, ein Ratgeber je Obergruppe,
+     „Garantie und Service“ an der Marke. Der Job docs liest sie, embed rechnet die Vektoren —
+     danach findet der Produktberater darin Antworten (Reißverschluss klemmt, Zelt wird innen nass, Jacke neu imprägnieren).
+     Ein PDF hat keinen Zeitstempel: derselbe Inhalt ergibt dieselbe Datei, ein zweiter Lauf hängt nichts doppelt an.
+  7. GEO-Texte je Produkt, wenn das Plugin geo seine Attribute angelegt hat: Definition, Beschreibung, Suchbegriffe und häufige Fragen —
+     zwei mit den Werten des Produkts, drei allgemeine mit hoher Priorität aus der Wissensbasis.
 
 Aufruf: tools\\demo-daten.cmd (Windows, aus jedem Verzeichnis, ohne Parameter) oder python tools/demo_master_tree.py.
   Ohne Angaben fragt das Skript: Adresse (Vorgabe http://localhost:5000), Anwender und Passwort, wenn die Instanz eine Anmeldung
@@ -25,14 +35,17 @@ Liegt unter der Wurzel schon eine Gruppe „Tannwald Outdoor“ (ein abgebrochen
 Produkte mit derselben Bezeichnung werden wiederverwendet, nicht doppelt angelegt. Gelten die Attributgruppen der Demo-Attribute
 (etwa die von ean oder price) auf dem Pfad nicht, hängt das Skript sie an seine Demo-Gruppe.
 
+--anreichern: vorhandene Tannwald-Produkte bekommen 5 und 6 nachträglich (Beschreibung und Material werden überschrieben); ohne den
+Schalter bekommen nur neue Produkte ihre Shopangaben, die Unterlagen der Gruppen kommen in jedem Lauf dazu, wenn sie fehlen.
+
 Dazu zwei Beispiele für die Plugins (je übersprungen, wenn es sie schon gibt oder das Plugin fehlt, aus ist oder nicht zum Tarif gehört):
-  5. Konfigurator: die Gruppe „Server-Konfigurator (Demo)“ mit Mainboards, Prozessoren, Arbeitsspeicher, Kühlpaste, Karten, einer
+  a. Konfigurator: die Gruppe „Server-Konfigurator (Demo)“ mit Mainboards, Prozessoren, Arbeitsspeicher, Kühlpaste, Karten, einer
      Grafikkarte und einem Netzteil; Konfiguratorgruppen (group:…), die Zeilen der Teile (member:…) und der Konfigurator „server“
      (def:server) mit Regeln und einer Grenze — als Plugin-Daten von configurator. Am Ende fragt das Skript den Endpunkt einmal.
-  6. Skript: „Konfiguratorgruppen: Mitglieder je Gruppe“ (scriptum), freigegeben für das Recht „read“.
+  b. Skript: „Konfiguratorgruppen: Mitglieder je Gruppe“ (scriptum), freigegeben für das Recht „read“.
 
-  --nur-beispiele      nur 5 und 6 (der Tannwald-Teil läuft schon); legt das Modell nur an, was die Beispiele brauchen
-  --ohne-beispiele     nur 1 bis 4
+  --nur-beispiele      nur die Beispiele (der Tannwald-Teil läuft schon); legt das Modell nur an, was die Beispiele brauchen
+  --ohne-beispiele     nur der Tannwald-Teil
 """
 from __future__ import annotations
 
@@ -51,6 +64,11 @@ try:
 except ImportError as e:
     sys.exit(f"Es fehlt ein Python-Paket ({e.name}): python -m pip install requests pillow — tools\\demo-daten.cmd erledigt das selbst.")
 import getpass
+from urllib.parse import quote
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import tannwald_inhalt as INHALT   # noqa: E402 — die Texte der Marke, neben diesem Skript
+from pdf_einfach import Pdf        # noqa: E402
 
 ROOT = "g-mastertree"
 BRAND = "Tannwald"
@@ -62,6 +80,9 @@ COLOR_HEX = {
     "turquoise": "#1c9aa6", "green": "#3b7a3b", "mint": "#5fc3a8", "red": "#c0392b", "orange": "#e67e22",
     "yellow": "#e6b422", "brown": "#7b4a2d", "beige": "#d6c3a1", "white": "#f2f2f2", "purple": "#6f3d8a",
 }
+FARBE_DE = {"black": "Schwarz", "anthracite": "Anthrazit", "grey": "Grau", "navy": "Marine", "blue": "Blau", "turquoise": "Türkis",
+            "green": "Grün", "mint": "Mint", "red": "Rot", "orange": "Orange", "yellow": "Gelb", "brown": "Braun", "beige": "Beige",
+            "white": "Weiß", "purple": "Lila"}
 PALETTE_TECH = ["black", "anthracite", "navy", "red", "orange", "green", "blue", "turquoise"]
 PALETTE_NATURE = ["green", "brown", "beige", "anthracite", "navy", "orange"]
 PALETTE_BRIGHT = ["red", "orange", "yellow", "turquoise", "mint", "purple", "blue"]
@@ -91,7 +112,7 @@ SUBGROUPS = {
     ],
     "footwear": [
         ("Wanderschuhe", "Hiking boots", ["color", "shoe_size"], 16, "Wanderschuh", "Hiking boot", PALETTE_NATURE, (119, 259), (0.48, 0.72),
-         ("Nubukleder, wasserdichte Membran, Vibram-ähnliche Sohle", "Nubuck leather, waterproof membrane, lugged sole"), "boot"),
+         ("Nubukleder, wasserdichte Membran, Profilsohle aus Gummi", "Nubuck leather, waterproof membrane, rubber lug sole"), "boot"),
         ("Trailrunning", "Trail running", ["color", "shoe_size"], 12, "Trailschuh", "Trail shoe", PALETTE_BRIGHT, (99, 179), (0.26, 0.34),
          ("Mesh-Obermaterial, 4 mm Profil, Zehenschutz", "Mesh upper, 4 mm lugs, toe cap"), "boot"),
         ("Sandalen", "Sandals", ["color", "shoe_size"], 8, "Sandale", "Sandal", PALETTE_NATURE, (49, 99), (0.22, 0.31),
@@ -109,7 +130,7 @@ SUBGROUPS = {
         ("Zelte", "Tents", ["color"], 10, "Zelt", "Tent", PALETTE_NATURE, (199, 599), (1.4, 3.8),
          ("Silikonbeschichtetes Nylon, Aluminiumgestänge, 3000 mm Wassersäule", "Silicone-coated nylon, aluminium poles, 3000 mm hydrostatic head"), "tent"),
         ("Schlafsäcke", "Sleeping bags", ["color", "size"], 10, "Schlafsack", "Sleeping bag", PALETTE_TECH, (89, 349), (0.7, 1.9),
-         ("Daune 800 cuin, RDS-zertifiziert", "800 fill-power down, RDS certified"), "sleepingbag"),
+         ("Daune 800 cuin, aus zertifizierter Herkunft", "800 fill-power down from certified sources"), "sleepingbag"),
         ("Isomatten", "Sleeping pads", ["color", "size"], 8, "Isomatte", "Sleeping pad", PALETTE_TECH, (49, 189), (0.35, 0.9),
          ("TPU-laminiertes Polyester, R-Wert 3,5", "TPU-laminated polyester, R-value 3.5"), "pad"),
         ("Kocher", "Stoves", [], 8, "Kocher", "Stove", PALETTE_TECH, (29, 129), (0.08, 0.35),
@@ -347,6 +368,169 @@ TANNWALD_ATTRS = ["name", "description", "material", "weight", "brand", "sku", "
 SERVER_ATTRS = ["name", "sku", "ean", "price"]
 
 
+# ---------------------------------------------------------------- Shopangaben und Unterlagen (tannwald_inhalt.py, pdf_einfach.py)
+
+def ensure_shop_model(api: Api) -> bool:
+    """Einheiten, Attributgruppen und Attribute der Shopangaben und der Technik je Untergruppe, dazu die Sicht „Onlineshop“. Legt an, was
+    fehlt; ein Attribut, das mehrere Untergruppen brauchen, gilt in all ihren Gruppen (n:m). Ein vorhandenes Attribut mit anderem Typ bleibt,
+    wie es ist — seine Werte werden dann übersprungen. Gibt zurück, ob es die Relation document gibt (ohne sie keine Unterlagen)."""
+    model = api.get("/api/model")
+    as_list = lambda x: x if isinstance(x, list) else list((x or {}).values())
+    einheiten = {u["key"] for u in as_list(model.get("units"))}
+    for sym, de, en, groesse in INHALT.EINHEITEN:
+        if sym not in einheiten:
+            api.call("PUT", f"/api/model/units/{quote(sym, safe='')}", soft=True, json={"key": sym, "label": labels(de, en), "quantity": groesse, "factor": 1})
+    definiert = {g["key"] for g in as_list(model.get("groups")) if isinstance(g, dict) and g.get("defined")}
+    gruppen = [INHALT.SHOP_GRUPPE] + list(dict.fromkeys(k["gruppe"] for k in INHALT.K.values()))
+    for key, de, en in gruppen:
+        if key not in definiert:
+            api.put(f"/api/model/groups/{key}", {"key": key, "label": labels(de, en)})
+    # je Attribut: Heimatgruppe (die erste, die es nennt) und alle Gruppen, in denen es gilt
+    soll: dict[str, tuple] = {}
+    for spec in INHALT.SHOP_ATTRS:
+        soll[spec[0]] = (spec, INHALT.SHOP_GRUPPE[0], {INHALT.SHOP_GRUPPE[0]})
+    for k in INHALT.K.values():
+        for spec in k["attrs"]:
+            if spec[0] in soll:
+                soll[spec[0]][2].add(k["gruppe"][0])
+            else:
+                soll[spec[0]] = (spec, k["gruppe"][0], {k["gruppe"][0]})
+    da = {a["key"]: a for a in as_list(model.get("attributes"))}
+    for key, ((_, de, en, typ, extra), heimat, alle) in soll.items():
+        if key not in da:
+            body = {"key": key, "label": labels(de, en), "type": typ, "group": heimat, **extra}
+            if alle - {heimat}:
+                body["groups"] = sorted(alle - {heimat})
+            api.call("PUT", f"/api/model/attributes/{key}", soft=True, json=body)
+            continue
+        a = da[key]
+        if a.get("type") != typ:
+            api.fehler[f"Attribut {key} gibt es schon als {a.get('type')}"] = 1
+            continue
+        hat = set(a.get("groups") or [a.get("group")])
+        if not alle <= hat:
+            api.call("PUT", f"/api/model/attributes/{key}", soft=True, json={**a, "groups": sorted((hat | alle) - {a.get("group")})})
+    # die Sicht „Onlineshop“: MasterGroup, Shopangaben, die Technik aller Untergruppen
+    vkey, vde, ven = INHALT.SICHT
+    da_gruppen = {g["key"] for g in as_list(api.get("/api/model").get("groups")) if isinstance(g, dict)}
+    items = [g for g in ["mastergroup"] + [k for k, _, _ in gruppen] if g in da_gruppen]
+    sicht = next((v for v in as_list(model.get("views")) if v.get("key") == vkey), None)
+    if sicht is None:
+        api.call("PUT", f"/api/model/views/{vkey}", soft=True, json={"key": vkey, "label": labels(vde, ven), "items": [{"group": g} for g in items], "level": "product"})
+    elif (fehlt := [g for g in items if g not in {i.get("group") for i in sicht.get("items") or []}]):
+        api.call("PUT", f"/api/model/views/{vkey}", soft=True, json={**sicht, "items": (sicht.get("items") or []) + [{"group": g} for g in fehlt]})
+    print(f"Shopangaben: {len(soll)} Attribute in {len(gruppen)} Gruppen, Sicht „{vde}“")
+    return any(r.get("key") == "document" for r in as_list(model.get("relationTypes")))
+
+
+def gruppen_dazu(api: Api, node: str, keys: list[str]) -> None:
+    """Hängt die Attributgruppen an den Knoten, die er noch nicht trägt."""
+    eigen = [x for x in (next((n.get("groups") for n in api.get("/api/tree") if n["id"] == node), None) or "").split(",") if x]
+    dazu = [k for k in keys if k not in eigen]
+    if dazu:
+        api.put(f"/api/nodes/{node}/groups", {"groups": eigen + dazu})
+
+
+WISSEN: dict = {}     # die Wissensbasis (tannwald_faq.md) — gelesen in build
+MIT_GEO = False       # gibt es die GEO-Attribute (Plugin geo)?
+
+
+def shopangaben(api: Api, product: str, kat: str, name_de: str, name_en: str, material: tuple[str, str], gewicht: float) -> dict | None:
+    """Schreibt Beschreibung, Merkmale, Einsatzbereich, Pflege, die technischen Werte und — mit dem Plugin geo — die GEO-Texte an das Produkt;
+    gibt die Angaben zurück (fürs Datenblatt)."""
+    info = INHALT.produkt(kat, name_de, name_en, material, gewicht)
+    if not info:
+        return None
+    if MIT_GEO:
+        for key, texte in INHALT.geo_texte(kat, info, info["ctx"], WISSEN).items():
+            for loc, text in zip(("de", "en"), texte):
+                if text:
+                    api.set_value(product, key, text, locale=loc)
+    for i, loc in enumerate(("de", "en")):
+        api.set_value(product, "description", info["beschreibung"][i], locale=loc, channel="web")
+        api.set_value(product, "features", info["merkmale_html"][i], locale=loc)
+        api.set_value(product, "use_case", info["einsatz"][i], locale=loc)
+        api.set_value(product, "care", f"<p>{info['pflege'][i]}</p>", locale=loc)
+        api.set_value(product, "material", material[i], locale=loc)
+    for key, v in info["werte"].items():
+        if isinstance(v, tuple):
+            api.set_value(product, key, v[0], locale="de")
+            api.set_value(product, key, v[1], locale="en")
+        else:
+            api.set_value(product, key, str(v))
+    return info
+
+
+def pdf_aus(titel: str, kopf: str, abschnitte: list) -> bytes:
+    """Ein Dokument aus Abschnitten: (Überschrift, [Absatz | [Punkt, …]])."""
+    d = Pdf(titel, kopf)
+    d.h1(titel)
+    for ueberschrift, teile in abschnitte:
+        d.h2(ueberschrift)
+        for t in teile:
+            d.punkte(t) if isinstance(t, list) else d.p(t)
+    return d.bytes()
+
+
+def datenblatt(kat: str, top_de: str, name_de: str, info: dict, material: tuple[str, str], gewicht: float, varianten: list[dict]) -> bytes:
+    k = INHALT.K[kat]
+    d = Pdf(f"Datenblatt {name_de}", f"{BRAND} Outdoor · {top_de} · {kat}")
+    d.h1(f"Datenblatt {name_de}")
+    d.h2("Beschreibung")
+    for a in info["absaetze"][0]:
+        d.p(a)
+    d.h2("Merkmale")
+    d.punkte([m[0] for m in info["merkmale"]])
+    d.h2("Technische Daten")
+    zeilen = [("Material", material[0]), ("Gewicht", f"{INHALT.zahl(gewicht)} kg"), ("Einsatzbereich", info["einsatz"][0])]
+    zeilen += [(spec[1], INHALT.wert_text(spec, info["werte"][spec[0]])) for spec in k["attrs"] if spec[0] in info["werte"]]
+    d.tabelle(zeilen)
+    if varianten:
+        d.h2("Ausführungen")
+        d.tabelle([(v["sku"], " · ".join(x for x in (v.get("farbe"), v.get("groesse"), f"EAN {v['ean']}" if v.get("ean") else None) if x))
+                   for v in varianten])
+    d.h2("Pflege")
+    d.p(info["pflege"][0])
+    d.h2("Garantie und Service")
+    d.p("Fünf Jahre Garantie auf Material- und Verarbeitungsfehler. Ersatzteile wie Schieber, Schnallen und Endklemmen schicken wir kostenlos; "
+        "was sich reparieren lässt, reparieren wir in unserer Werkstatt. Einzelheiten stehen in „Garantie und Service“.")
+    return d.bytes()
+
+
+def dokument(api: Api, node: str, dateiname: str, pdf: bytes, ablage: str | None) -> bool:
+    """Lädt das PDF hoch und hängt es als Relation document an den Knoten. Hängt dort schon dieselbe Datei, bleibt alles, wie es ist;
+    hängt dort ein Dokument gleichen Namens mit anderem Inhalt (ein neues Datenblatt), endet dessen Relation — das Medium bleibt im
+    Bestand, am Knoten hängt danach nur die neue Fassung. True: neu angehängt."""
+    if ablage:
+        with open(os.path.join(ablage, dateiname), "wb") as f:
+            f.write(pdf)
+    media = api.call("POST", "/api/media", soft=True, files={"file": (dateiname, pdf, "application/pdf")})
+    if not media:
+        return False
+    mid = media.get("id") or media.get("Id")
+    rel = api.get(f"/api/nodes/{node}/relations") or {}
+    docs = [r for r in rel.get("out") or [] if r.get("type") == "document"]
+    if any(r.get("to") == mid for r in docs):
+        return False
+    for r in docs:
+        if (r.get("other") or {}).get("label") == dateiname:
+            api.call("DELETE", f"/api/relations/{r['id']}", soft=True)
+    return api.call("POST", "/api/relations", soft=True, json={"type": "document", "from": node, "to": mid}) is not None
+
+
+def varianten_von(api: Api, product: str) -> tuple[float | None, list[dict]]:
+    """Gewicht des Produkts und seine Varianten (SKU, Farbe, Grösse, EAN) — für das Datenblatt eines vorhandenen Produkts."""
+    t = api.call("GET", f"/api/nodes/{product}/table?self=true&sparse=true&attributes=weight,sku,ean,color,size,shoe_size,capacity", soft=True) or {}
+    rows = t.get("rows") or []
+    wert = lambda r, a: ((r.get("values") or {}).get(a) or {}).get("value")
+    gewicht = next((float(w) for r in rows[:1] if (w := wert(r, "weight"))), None)
+    groessen = dict(SIZES) | dict(SHOE_SIZES) | {k: de for k, de, _ in CAPACITIES}
+    varianten = [{"sku": wert(r, "sku"), "ean": wert(r, "ean"), "farbe": FARBE_DE.get(wert(r, "color") or "", wert(r, "color")),
+                  "groesse": groessen.get(wert(r, "size") or wert(r, "shoe_size") or wert(r, "capacity") or "")}
+                 for r in rows[1:] if wert(r, "sku")]
+    return gewicht, varianten
+
+
 # ---------------------------------------------------------------- Bilder
 
 def font(size: int):
@@ -452,17 +636,32 @@ def description(de_type: str, en_type: str, model: str, mat: tuple[str, str], rn
     return de, en
 
 
-def build(api: Api, out_dir: str | None, want: int) -> None:
+def build(api: Api, out_dir: str | None, want: int, anreichern: bool = False, pdf_dir: str | None = None) -> None:
     rnd = random.Random(SEED)
     ensure_model(api)
+    mit_dokumenten = ensure_shop_model(api)
+    global WISSEN, MIT_GEO
+    WISSEN = INHALT.faq_lesen()
+    as_list = lambda x: x if isinstance(x, list) else list((x or {}).values())
+    MIT_GEO = any(a.get("key") == "geo_faq" for a in as_list(api.get("/api/model").get("attributes")))
+    print(f"Wissensbasis: {sum(len(v) for v in WISSEN.values())} Fragen in {len(WISSEN)} Gruppen; GEO-Texte: {'ja' if MIT_GEO else 'nein (Plugin geo aus)'}")
+    if not mit_dokumenten:
+        print("  Die Relation document gibt es in dieser Instanz nicht — keine Unterlagen.")
     baum = Baum(api)
     wurzel()
     da = baum.kind(ROOT, "group", f"{BRAND} Outdoor")
     brand_group = baum.gruppe(ROOT, f"{BRAND} Outdoor", f"{BRAND} Outdoor")
     print(f"Gruppe {BRAND} Outdoor: {brand_group}" + (" (vorhanden, der Lauf knüpft an)" if da else ""))
     gruppen_anhaengen(api, brand_group, TANNWALD_ATTRS)
+    gruppen_dazu(api, brand_group, [INHALT.SHOP_GRUPPE[0]])
     api.set_value(brand_group, "brand", BRAND)
+    api.set_value(brand_group, "warranty_years", "5")
     skipped = 0
+    angereichert = 0
+    unterlagen = 0
+    if mit_dokumenten and dokument(api, brand_group, "Garantie und Service.pdf",
+                                   pdf_aus(INHALT.GARANTIE[0], f"{BRAND} Outdoor", INHALT.GARANTIE[1]), pdf_dir):
+        unterlagen += 1
 
     scale = want / sum(sg[3] for group in SUBGROUPS.values() for sg in group)
     counts = {"groups": 1, "products": 0, "variants": 0, "media": 0}
@@ -472,9 +671,21 @@ def build(api: Api, out_dir: str | None, want: int) -> None:
     for top_key, (top_de, top_en) in TOPGROUPS.items():
         top = baum.gruppe(brand_group, top_de, top_en)
         counts["groups"] += 1
+        if mit_dokumenten and top_de in INHALT.RATGEBER:
+            titel, abschnitte = INHALT.RATGEBER[top_de]
+            unterlagen += dokument(api, top, f"{titel.split(':')[0]}.pdf", pdf_aus(titel, f"{BRAND} Outdoor · {top_de}", abschnitte), pdf_dir)
         for (sg_de, sg_en, axes, n, type_de, type_en, palette, price_range, weight_range, material, shape) in SUBGROUPS[top_key]:
             sub = baum.gruppe(top, sg_de, sg_en)
             counts["groups"] += 1
+            if sg_de in INHALT.K:
+                gruppen_dazu(api, sub, [INHALT.K[sg_de]["gruppe"][0]])
+                if mit_dokumenten:
+                    titel = f"Pflege, Reparatur und häufige Fragen – {sg_de}"
+                    unterlagen += dokument(api, sub, f"{titel}.pdf", pdf_aus(titel, f"{BRAND} Outdoor · {top_de} · {sg_de}", INHALT.K[sg_de]["doc"]), pdf_dir)
+                    if WISSEN.get(sg_de):
+                        titel = f"Häufige Fragen – {sg_de}"
+                        unterlagen += dokument(api, sub, f"{titel}.pdf",
+                                               pdf_aus(titel, f"{BRAND} Outdoor · {top_de} · {sg_de}", INHALT.faq_dokument(sg_de, WISSEN[sg_de])), pdf_dir)
             n = max(1, round(n * scale))
             prefix = "".join(w[0] for w in sg_en.split() if w[0].isalpha()).upper()[:3]
             for k in range(n):
@@ -482,22 +693,36 @@ def build(api: Api, out_dir: str | None, want: int) -> None:
                 model_i += 1
                 name_de, name_en = f"{model} {type_de}", f"{model} {type_en}"
                 # dieselben Zufallszahlen wie im ersten Lauf: auch ein übersprungenes Produkt zieht seine Beschreibung
-                if baum.kind(sub, "product", name_de):
+                if (vorhanden := baum.kind(sub, "product", name_de)):
                     description(type_de, type_en, model, material, rnd)
                     skipped += 1
+                    if anreichern:
+                        gewicht, varianten = varianten_von(api, vorhanden)
+                        gewicht = gewicht or sum(weight_range) / 2
+                        info = shopangaben(api, vorhanden, sg_de, name_de, name_en, material, gewicht)
+                        if info:
+                            angereichert += 1
+                            if mit_dokumenten:
+                                unterlagen += dokument(api, vorhanden, f"Datenblatt {name_de}.pdf",
+                                                       datenblatt(sg_de, top_de, name_de, info, material, gewicht, varianten), pdf_dir)
+                        if angereichert % 10 == 0:
+                            print(f"  {angereichert} Produkte angereichert, {unterlagen} Unterlagen, {api.calls} Aufrufe", flush=True)
                     continue
-                achsen = [x for x in axes if x != "color" or colors != [None]]
+                achsen = [x for x in axes if x != "color" or COLORS]   # die Farbachse nur, wenn die Liste Farben kennt
                 product = api.created("/api/products", {"group": sub, "axes": achsen or None})
                 baum.merke(product, sub, "product", name_de)
                 counts["products"] += 1
                 api.set_value(product, "name", name_de, locale="de")
                 api.set_value(product, "name", name_en, locale="en")
-                de, en = description(type_de, type_en, model, material, rnd)
-                api.set_value(product, "description", de, locale="de", channel="web")
-                api.set_value(product, "description", en, locale="en", channel="web")
-                api.set_value(product, "material", material[0], locale="de")
-                api.set_value(product, "material", material[1], locale="en")
-                api.set_value(product, "weight", f"{rnd.uniform(*weight_range):.2f}")
+                de, en = description(type_de, type_en, model, material, rnd)   # zieht den Zufall wie bisher; der Text kommt aus INHALT
+                gewicht = round(rnd.uniform(*weight_range), 2)
+                api.set_value(product, "weight", f"{gewicht:.2f}")
+                info = shopangaben(api, product, sg_de, name_de, name_en, material, gewicht)
+                if not info:
+                    api.set_value(product, "description", de, locale="de", channel="web")
+                    api.set_value(product, "description", en, locale="en", channel="web")
+                    api.set_value(product, "material", material[0], locale="de")
+                    api.set_value(product, "material", material[1], locale="en")
                 status = rnd.choices(["active", "draft", "discontinued"], weights=[85, 10, 5])[0]
                 if status != "draft":
                     api.soft_post(f"/api/nodes/{product}/status", {"status": status})
@@ -516,6 +741,7 @@ def build(api: Api, out_dir: str | None, want: int) -> None:
                 second_axis = next((a for a in axes if a != "color"), None)
                 base_price = round(rnd.uniform(*price_range)) - 0.05
                 combos = [(c, s) for c in colors for s in seconds][:6]
+                fuers_blatt = []
                 for color, second in combos:
                     axis_values = {}
                     if color: axis_values["color"] = color
@@ -528,6 +754,8 @@ def build(api: Api, out_dir: str | None, want: int) -> None:
                     api.set_value(variant, "ean", ean13(sku))
                     surcharge = 0 if second in (None, "xs", "s", "m", "c050", "c075") else 5
                     api.set_value(variant, "price", f"{base_price + surcharge:.2f}")
+                    fuers_blatt.append({"sku": sku, "ean": ean13(sku), "farbe": FARBE_DE.get(color or "", color),
+                                        "groesse": (dict(SIZES) | dict(SHOE_SIZES) | {k: d for k, d, _ in CAPACITIES}).get(second or "")})
 
                 # Bild je Produkt in der ersten Farbe, an die Varianten vererbt
                 first_color = colors[0] or "anthracite"
@@ -546,11 +774,18 @@ def build(api: Api, out_dir: str | None, want: int) -> None:
                     api.soft_post(f"/api/relations/{rel['stream']}/attributes", {"attribute": "inherit", "value": "true"})
                     api.soft_post(f"/api/relations/{rel['stream']}/attributes", {"attribute": "position", "value": "1"})
 
+                if info and mit_dokumenten:
+                    unterlagen += dokument(api, product, f"Datenblatt {name_de}.pdf",
+                                           datenblatt(sg_de, top_de, name_de, info, material, gewicht, fuers_blatt), pdf_dir)
+
                 if counts["products"] % 10 == 0:
                     print(f"  {counts['products']} Produkte, {counts['variants']} Varianten, {api.calls} Aufrufe", flush=True)
 
     print(f"fertig: {counts['groups']} Gruppen, {counts['products']} Produkte, {counts['variants']} Varianten, "
-          f"{counts['media']} Bilder, {api.calls} Aufrufe" + (f"; {skipped} Produkte gab es schon" if skipped else ""))
+          f"{counts['media']} Bilder, {unterlagen} Unterlagen, {api.calls} Aufrufe" + (f"; {skipped} Produkte gab es schon" if skipped else "")
+          + (f", {angereichert} davon angereichert" if angereichert else ""))
+    if unterlagen:
+        print("Die Unterlagen liest der Job docs, die Vektoren rechnet embed — beide starten von selbst; ihr Stand steht unter ⌕ Dokumente.")
     health = api.get("/api/health")
     print(f"Journal-Kopf jetzt #{health.get('head')}, Knoten {health.get('nodes')}")
 
@@ -750,6 +985,9 @@ def main() -> None:
     p.add_argument("--actor", default="demo", help="Kopf X-Actor (offene Instanz ohne Anwender)")
     p.add_argument("--products", type=int, default=200, help="ungefähre Anzahl Produkte (Vorgabe 200)")
     p.add_argument("--images-dir", help="generierte PNGs zusätzlich hier ablegen")
+    p.add_argument("--pdf-dir", help="die Unterlagen (PDF) zusätzlich hier ablegen")
+    p.add_argument("--anreichern", action="store_true",
+                   help="vorhandene Tannwald-Produkte bekommen Beschreibung, Merkmale, technische Daten und Datenblatt (überschreibt Beschreibung und Material)")
     p.add_argument("--log", help="jede Anfrage mit Antwort in diese Datei schreiben")
     p.add_argument("--nur-beispiele", action="store_true", help="nur das Konfigurator-Beispiel und das Beispielskript (der Tannwald-Teil läuft schon)")
     p.add_argument("--ohne-beispiele", action="store_true", help="nur den Tannwald-Teil")
@@ -785,10 +1023,12 @@ def main() -> None:
     print(f"Instanz {url}: Version {health.get('version')}, Journal-Kopf #{health.get('head')}, Knoten {health.get('nodes')}")
     if a.images_dir:
         os.makedirs(a.images_dir, exist_ok=True)
+    if a.pdf_dir:
+        os.makedirs(a.pdf_dir, exist_ok=True)
     if a.nur_beispiele:
         ensure_model(api)   # die Beispiele brauchen price (und die Listen daneben)
     else:
-        build(api, a.images_dir, a.products)
+        build(api, a.images_dir, a.products, a.anreichern, a.pdf_dir)
     if not a.ohne_beispiele:
         build_konfigurator(api)
         build_skript(api)
