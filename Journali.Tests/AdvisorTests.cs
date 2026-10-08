@@ -497,6 +497,30 @@ public class AdvisorTests
     }
 
     [Fact]
+    public async Task Wechselt_das_Thema_fragt_der_Berater_ob_er_stattdessen_danach_sucht()
+    {
+        await using var w = await Welt.Neu();
+        // erst Bohrhammer, dann Akkuschrauber: zusammen nichts, Akkuschrauber allein schon
+        var (_, j) = await w.Frage("""{"q":"Akkuschrauber","woerter":["bohrhammer"]}""");
+        Assert.Equal(0, j.GetProperty("total").GetInt32());
+        var statt = j.GetProperty("instead");
+        Assert.Equal(["akkuschrauber"], statt.GetProperty("words").EnumerateArray().Select(x => x.GetString()).ToList());
+        Assert.Empty(statt.GetProperty("filter").EnumerateArray());
+        Assert.Equal(1, statt.GetProperty("n").GetInt32());
+        // „ohne bohrhammer“ wäre dasselbe — es steht nur einmal da
+        Assert.DoesNotContain(j.GetProperty("relax").EnumerateArray(), x => x.GetProperty("kind").GetString() == "word" && x.GetProperty("word").GetString() == "bohrhammer");
+
+        // ohne frühere Angaben ist nichts ein Wechsel
+        var (_, k) = await w.Frage("""{"q":"Akkuschrauber rot"}""");
+        Assert.Equal(JsonValueKind.Null, k.GetProperty("instead").ValueKind);
+        // eine Angabe zum gesammelten Wort, die nichts findet, wechselt kein Thema: „rot“ zum Akkuschrauber — dafür ist das Lockern da
+        var (_, r) = await w.Frage("""{"q":"rot","woerter":["akkuschrauber"]}""");
+        Assert.Equal(0, r.GetProperty("total").GetInt32());
+        Assert.Equal(JsonValueKind.Null, r.GetProperty("instead").ValueKind);
+        Assert.Contains(r.GetProperty("relax").EnumerateArray(), x => x.GetProperty("kind").GetString() == "word");
+    }
+
+    [Fact]
     public void Nach_dem_Sinn_zaehlt_nur_was_sich_vom_Rest_abhebt()
     {
         // alle gleich weit weg: nichts hebt sich ab

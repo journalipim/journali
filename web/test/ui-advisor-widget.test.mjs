@@ -221,6 +221,25 @@ test('ein Wort, das in keinem Produkt steht, wird genannt; ist nichts übrig, l�
   assert.deepEqual([letzte.body.q, letzte.body.woerter], ['', ['zelt']], 'die zu enge Angabe ist weg')
 })
 
+test('wechselt das Thema, fragt das Fenster, ob es stattdessen danach sucht — ja sucht nur noch danach', async () => {
+  const w = starte({
+    ...STANDARD,
+    '/api/ask': body => body.q === 'pullover'
+      ? [200, { total: 0, hits: [], facets: [], filter: [{ attribute: 'color', op: 'eq', value: 'green', label: 'Farbe', valueLabel: 'Grün' }], words: ['hose', 'pullover'],
+          relax: [{ kind: 'word', word: 'pullover', label: 'pullover', n: 23 }], instead: { words: ['pullover'], filter: [], n: 17 } }]
+      : [200, { total: 17, hits: [HIT('u1', 'Pullover')], facets: [], filter: [], words: body.woerter ?? [] }],
+  })
+  await warte()
+  await w.frage('pullover')
+  assert.ok(w.$$('.statt .blase').some(b => b.textContent === 'Stattdessen nach „pullover“ suchen?'))
+  const ja = w.$('.statt .ja')
+  assert.equal(ja.textContent, 'Ja, 17 Produkte')
+  await w.klick(ja)
+  const letzte = w.rufe.filter(r => r.url.endsWith('/api/ask')).at(-1)
+  assert.deepEqual([letzte.body.q, letzte.body.woerter, letzte.body.filter, letzte.body.verlauf], ['', ['pullover'], [], ['pullover']], 'die alten Angaben sind weg')
+  assert.ok(w.$$('.blase').some(b => b.textContent === '17 Produkte passen zu „pullover“.'))
+})
+
 test('Treffer nur nach dem Sinn heissen ähnliche Produkte', async () => {
   const w = starte({ ...STANDARD, '/api/ask': [200, { total: 2, similar: true, hits: [HIT('p1', 'Schlafsack'), HIT('p2', 'Decke')], facets: [], filter: [], words: [] }] })
   await warte()

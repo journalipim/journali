@@ -633,7 +633,8 @@ public static partial class AdvisorApi
             var take = Math.Clamp(body.Take ?? 6, 1, MaxTreffer);
             var verlauf = (body.Verlauf ?? []).Where(x => !string.IsNullOrWhiteSpace(x)).Select(x => x.Trim()).Select(x => x.Length > MaxFrage ? x[..MaxFrage] : x).TakeLast(MaxVerlauf).ToList();
 
-            // Filter der Anfrage und die Angaben der neuen Eingabe
+            // Filter der Anfrage und die Angaben der neuen Eingabe; welche neu sind, merkt sich neuAngaben (für den Themenwechsel)
+            var neuAngaben = new HashSet<Angabe>();
             var (attr, filter, rest, vokabular) = c.Lesen((model, _) =>
             {
                 var a = AttributeMitAchsen(model, d.View!, b);
@@ -643,7 +644,7 @@ public static partial class AdvisorApi
                     if (x.Attribute is { } ak && nachKey.TryGetValue(ak, out var fd) && IstFacette(fd) && x.Value is { Length: > 0 } fv && f.All(y => y.Def.Key != fd.Key || y.Op != (x.Op is "le" or "ge" ? x.Op : "eq")))
                         f.Add(new Angabe(fd, x.Op is "le" or "ge" ? x.Op : "eq", fv));
                 var (erkannt, r) = Erkenne(model, a, q, loc);
-                foreach (var e in erkannt) { f.RemoveAll(y => y.Def.Key == e.Def.Key && (y.Op == e.Op || e.Op == "eq")); f.Add(e); }   // die neue Angabe ersetzt die alte zum selben Attribut
+                foreach (var e in erkannt) { f.RemoveAll(y => y.Def.Key == e.Def.Key && (y.Op == e.Op || e.Op == "eq")); f.Add(e); neuAngaben.Add(e); }   // die neue Angabe ersetzt die alte zum selben Attribut
                 return (a, f, r, Vokabular(model, a, loc));
             });
 
@@ -662,7 +663,7 @@ public static partial class AdvisorApi
                         var n = AngabenAusKi(r.Text, model, attr);
                         return (n, n.SelectMany(e => new[] { e.Value, Anzeige(model, e.Def, e.Value, loc), Bez(e.Def.Label, loc, model) ?? "" }).Where(x => x.Length > 0).ToList());
                     });
-                    foreach (var e in neu.Where(e => filter.All(y => y.Def.Key != e.Def.Key))) filter.Add(e);
+                    foreach (var e in neu.Where(e => filter.All(y => y.Def.Key != e.Def.Key))) { filter.Add(e); neuAngaben.Add(e); }
                     foreach (var w in namen) if (Ganz(rest, w) is var i and >= 0) rest = Weg(rest, i, w.Length).Trim();
                 }
                 else warnung = "KI nicht verfügbar";
@@ -672,6 +673,10 @@ public static partial class AdvisorApi
             var alle = (body.Woerter ?? []).Select(x => x.Trim().ToLowerInvariant()).Where(x => x.Length is > 0 and <= 40).Concat(Woerter(rest)).Distinct().TakeLast(MaxWoerter).ToList();
             var bekannt = alle.Where(w => b.Produkte.Any(e => Punkte(e, [w]) > 0)).ToList();
             var unbekannt = Woerter(rest).Where(w => !bekannt.Contains(w)).ToList();
+            // Themenwechsel: was diese Eingabe neu bringt — Wörter, die nicht schon gesammelt waren, und die Angaben aus ihrem Text
+            var vorher = (body.Woerter ?? []).Select(x => x.Trim().ToLowerInvariant()).ToHashSet();
+            var neueWoerter = Woerter(rest).Where(w => bekannt.Contains(w) && !vorher.Contains(w)).ToList();
+            var gab = vorher.Count > 0 || (body.Filter ?? []).Count > 0;
 
             // Die Sinnsuche läuft ausserhalb der Lesesperre — sie fragt den Einbetter und die Datenbank; nur, wenn die Wörter nichts finden
             List<string> sinn = [];
@@ -690,7 +695,7 @@ public static partial class AdvisorApi
                 catch (Exception e) { warnung ??= e.Message; }
             }
 
-            var (treffer, total, aehnlich, facetten, fuerKi, filterEcho, lockern) = c.Lesen((model, tree) =>
+            var (treffer, total, aehnlich, facetten, fuerKi, filterEcho, lockern, statt) = c.Lesen((model, tree) =>
             {
                 var f = filter.Select(x => (x.Def, x.Op, x.Value)).ToList();
                 bool AlleWoerter(Eintrag e, IReadOnlyList<string> ws) => ws.All(w => Punkte(e, [w]) > 0);
@@ -715,15 +720,25 @@ public static partial class AdvisorApi
                 }
                 else reihe = kandidaten;
 
-                // Nichts gefunden: welche Angabe zu eng ist — ohne sie, wie viele es wären
+                // Nichts gefunden, aber die neue Eingabe allein fände etwas: das Thema hat gewechselt — der Berater fragt, ob er stattdessen
+                // danach sucht (08.10.2026). Nur, wenn es vorher Angaben gab und die Eingabe ein neues Wort bringt — eine Angabe allein
+                // („rot“) grenzt ein und wechselt kein Thema; dafür ist das Lockern da.
+                var neuF = f.Where(x => neuAngaben.Contains(new Angabe(x.Def, x.Op, x.Value))).ToList();
+                bool IstNeu(IReadOnlyList<(AttributeDefinition Def, string Op, string Value)> fs, IReadOnlyList<string> ws) =>
+                    fs.Count == neuF.Count && fs.All(neuF.Contains) && ws.ToHashSet().SetEquals(neueWoerter);
+                object? stattdessen = null;
+                if (reihe.Count == 0 && gab && neueWoerter.Count > 0 && Suche(neuF, neueWoerter).Count is var sn and > 0)
+                    stattdessen = new { words = neueWoerter, filter = neuF.Select(x => new { attribute = x.Def.Key, op = x.Op, value = x.Value, label = Bez(x.Def.Label, loc, model) ?? x.Def.Key, valueLabel = Anzeige(model, x.Def, x.Value, loc) }).ToList(), n = sn };
+
+                // Nichts gefunden: welche Angabe zu eng ist — ohne sie, wie viele es wären; was genau der Themenwechsel wäre, steht dort und nicht hier
                 var weg = new List<object>();
                 if (reihe.Count == 0 && f.Count + bekannt.Count > 0)
                 {
                     foreach (var x in f)
-                        if (Suche(f.Where(y => y != x).ToList(), bekannt).Count is var n and > 0)
+                        if (f.Where(y => y != x).ToList() is var ohne && !(stattdessen is not null && IstNeu(ohne, bekannt)) && Suche(ohne, bekannt).Count is var n and > 0)
                             weg.Add(new { kind = "filter", attribute = x.Def.Key, op = x.Op, value = x.Value, label = Bez(x.Def.Label, loc, model) ?? x.Def.Key, valueLabel = Anzeige(model, x.Def, x.Value, loc), n });
                     foreach (var w in bekannt)
-                        if (Suche(f, bekannt.Where(y => y != w).ToList()).Count is var n and > 0) weg.Add(new { kind = "word", word = w, label = w, n });
+                        if (bekannt.Where(y => y != w).ToList() is var ohne && !(stattdessen is not null && IstNeu(f, ohne)) && Suche(f, ohne).Count is var n and > 0) weg.Add(new { kind = "word", word = w, label = w, n });
                     weg = weg.OrderByDescending(x => (int)x.GetType().GetProperty("n")!.GetValue(x)!).Take(MaxLockern).ToList();
                 }
 
@@ -735,7 +750,7 @@ public static partial class AdvisorApi
                 var ki = oben.Take(5).Select(e => (e.Name, (IReadOnlyList<(string, string)>)attr.Select(a => (a, Werte(tree, model, e, a, loc, b.Channel))).Where(x => x.Item2.Count > 0)
                     .Take(12).Select(x => (Bez(x.a.Label, loc, model) ?? x.a.Key, AlsText(model, x.a, x.Item2, loc))).ToList())).ToList();
                 var echo = f.Select(x => new { attribute = x.Def.Key, op = x.Op, value = x.Value, label = Bez(x.Def.Label, loc, model) ?? x.Def.Key, valueLabel = Anzeige(model, x.Def, x.Value, loc) }).ToList();
-                return (karten, reihe.Count, nurSinn, fac, ki, echo, weg);
+                return (karten, reihe.Count, nurSinn, fac, ki, echo, weg, stattdessen);
             });
 
             string? text = null;
@@ -746,7 +761,7 @@ public static partial class AdvisorApi
                 var r = await AiApi.AskAsync(req, c, jobsDir, null, null, system, user, 600, false, 1, "advisor", ct, fuerTeam: d.Team);
                 if (r.Fehler is null) text = r.Text; else warnung ??= "KI nicht verfügbar";
             }
-            return Results.Ok(new { locale = loc, total, hits = treffer, facets = facetten, filter = filterEcho, words = bekannt, unknown = unbekannt, similar = aehnlich, relax = lockern, answer = text, warning = warnung });
+            return Results.Ok(new { locale = loc, total, hits = treffer, facets = facetten, filter = filterEcho, words = bekannt, unknown = unbekannt, similar = aehnlich, relax = lockern, instead = statt, answer = text, warning = warnung });
         });
 
         // Ein Produkt mit allen Werten der Sicht, seinen Bildern und den Varianten, die sich unterscheiden

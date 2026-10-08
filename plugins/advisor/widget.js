@@ -5,6 +5,7 @@
 // kommen nur als Text in die Seite (textContent), nie als HTML. Gespeichert wird nichts — kein Cookie, kein Speicher im Browser.
 // Ein Gespräch (08.10.2026): jede Eingabe ergänzt die bisherigen Angaben (Wörter und Filter, als Chips über den Treffern, einzeln zu entfernen);
 // die Anfrage trägt sie mit, der Server merkt sich nichts. Das Merkmal, das die Treffer am besten teilt, steht als Rückfrage da.
+// Wechselt das Thema (zusammen nichts, die neue Eingabe allein schon), fragt das Fenster, ob es stattdessen danach sucht.
 // Eine Variante lässt sich ganz öffnen; Produkte und Varianten kommen auf einen Merkzettel (☆ im Kopf) — beides nur im Arbeitsspeicher der Seite.
 // Produkt, Variante, Merkzettel und Vergleich öffnen in einer Ansicht neben dem Gespräch. Schwebend ist sie ein eigenes Fenster links vom
 // Gespräch — das Gespräch bleibt, wo es ist; reicht die Breite nicht, liegt sie über dem Gespräch. Eingebettet steht sie im selben Rahmen
@@ -24,6 +25,7 @@
       oeffnenVariante: 'Öffnen', merken: '☆ Merken', gemerkt: '★ Gemerkt', merkzettel: n => `☆ ${n}`, merkzettelTitel: 'Merkzettel', merkzettelLeer: 'Der Merkzettel ist leer.',
       ausMerkzettel: 'Vom Merkzettel nehmen', zumProdukt: 'Zum Produkt', variante: 'Variante',
       produkt: 'Produkt', vergleichTitel: 'Vergleich', werte: 'Werte', gesucht: 'Gesucht:', ansichtZu: 'Ansicht schliessen',
+      statt: w => `Stattdessen nach „${w}“ suchen?`, stattJa: n => n === 1 ? 'Ja, 1 Produkt' : `Ja, ${n} Produkte`,
     },
     en: {
       oeffnen: 'Product advice', schliessen: 'Close', frage: 'What are you looking for?', senden: 'Ask', treffer: n => n === 1 ? '1 product matches.' : `${n} products match.`,
@@ -36,6 +38,7 @@
       oeffnenVariante: 'Open', merken: '☆ Save', gemerkt: '★ Saved', merkzettel: n => `☆ ${n}`, merkzettelTitel: 'Saved items', merkzettelLeer: 'Nothing saved yet.',
       ausMerkzettel: 'Remove', zumProdukt: 'To the product', variante: 'Variant',
       produkt: 'Product', vergleichTitel: 'Comparison', werte: 'Details', gesucht: 'Searching for:', ansichtZu: 'Close view',
+      statt: w => `Search for "${w}" instead?`, stattJa: n => n === 1 ? 'Yes, 1 product' : `Yes, ${n} products`,
     },
   }
 
@@ -96,6 +99,7 @@ td.aktion button { border: 1px solid var(--linie); background: transparent; colo
 .mehr { align-self: flex-start; border: 1px solid var(--linie); background: transparent; color: var(--text); border-radius: 8px; padding: 4px 10px; font-size: 12px; }
 .chip.neu { margin-left: auto; }
 .rueckfrage { display: flex; flex-direction: column; gap: 6px; }
+.statt .ja { background: var(--akzent); border-color: var(--akzent); color: #fff; }
 form { display: flex; gap: 6px; padding: 10px; border-top: 1px solid var(--linie); }
 input[type=text] { flex: 1; font: inherit; color: var(--text); background: var(--flaeche); border: 1px solid var(--linie); border-radius: 8px; padding: 8px 10px; min-width: 0; }
 form button, .leiste button { border: 0; border-radius: 8px; padding: 8px 12px; background: var(--akzent); color: #fff; }
@@ -332,6 +336,22 @@ tr.gleich td { color: var(--leise); }
       return chip
     }
 
+    /// Das Thema hat gewechselt: zusammen mit dem Bisherigen passt nichts, die neue Eingabe allein schon — ja sucht nur noch danach
+    function stattChips(s) {
+      if (!s || !s.n) return null
+      const r = el('div', 'rueckfrage statt')
+      r.append(el('div', 'blase', T.statt([...(s.words || []), ...(s.filter || []).map(filterText)].join(', '))))
+      const ja = el('button', 'chip ja', T.stattJa(s.n)); ja.type = 'button'
+      ja.addEventListener('click', () => {
+        zustand.woerter = [...(s.words || [])]
+        zustand.filter = (s.filter || []).map(f => ({ attribute: f.attribute, op: f.op, value: f.value, label: f.label, valueLabel: f.valueLabel }))
+        zustand.verlauf = zustand.verlauf.slice(-1)   // nur die Eingabe, die das neue Thema gebracht hat
+        frage('', false)
+      })
+      const c = el('div', 'chips'); c.append(ja); r.append(c)
+      return r
+    }
+
     /// Die Rückfrage: das Merkmal, das die Treffer am besten teilt, als Frage mit Knöpfen
     function rueckfrage(f) {
       const r = el('div', 'rueckfrage')
@@ -384,6 +404,7 @@ tr.gleich td { color: var(--leise); }
         const wort = zustand.woerter.join(' ')
         const text = r.answer ? r.answer : (r.total ? (r.similar ? T.aehnlich(r.total) : wort ? T.trefferZu(r.total, wort) : T.treffer(r.total)) : T.keine)
         antwort.append(r.answer ? (() => { const b = el('div', 'blase', text); b.append(el('span', 'hinweis', T.ki)); return b })() : el('div', 'blase', text))
+        const st = r.total ? null : stattChips(r.instead); if (st) antwort.append(st)
         const ac = angabenChips(); if (ac) antwort.append(ac)
         const lo = r.total ? null : lockernChips(r.relax); if (lo) antwort.append(lo)
         const [erste, ...weitere] = r.facets || []

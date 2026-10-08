@@ -2598,6 +2598,11 @@ anderer Stelle. Ist der Bildschirm schmaler als 760 px, liegt die Ansicht über 
 rechts. × in der Kopfzeile schliesst sie, eine neue Tafel ersetzt die alte, das Schliessen des Gesprächs schliesst sie mit.
 Die weiteren Merkmale zum Eingrenzen stehen als je ein Knopf („Farbe ▾“) da, ihre Werte erst auf Klick.
 
+**Themenwechsel (08.10.2026).** Findet eine Eingabe zusammen mit den gesammelten Angaben nichts, für sich allein aber schon, und bringt
+sie ein neues Wort, fragt der Berater: „Stattdessen nach „pullover“ suchen?“ (`instead`: Wörter, Filter aus ihrem Text, Zahl). Ja sucht nur
+noch danach, die früheren Angaben fallen weg. Eine Angabe ohne neues Wort („rot“ zum Akkuschrauber) grenzt ein und wechselt kein Thema;
+dafür bleibt das Lockern. Was der Wechsel wäre, steht nicht noch einmal unter „Ohne diese Angabe“.
+
 Nur wenn der Berater es erlaubt (`ki`), schreibt die KI des gewählten Teams zwei bis vier Sätze zu den ersten fünf Treffern
 (`AiApi.AskAsync` mit `fuerTeam`, gezählt bei diesem Team). Sie bekommt nur die nummerierten Treffer mit ihren Werten und keine
 Werkzeuge; ein Satz in den Produktdaten, der wie eine Anweisung aussieht, kann darum nichts auslösen. Das Fenster kennzeichnet den
