@@ -2693,3 +2693,48 @@ Anbieter und können falsch sein. Ohne Bestätigung antwortet kein Berater.
 
 **Offen.** Preise und Verfügbarkeit kennt der Berater nur, soweit sie Attribute der Sicht sind. Ein Verweis vom Treffer in den
 Shop (Adresse je Produkt) fehlt; er käme als Attribut der Sicht oder als Vorlage an der Definition.
+
+## 43. Fremde Quellen für den Produktberater — journali fragt, der Berater nicht (09.10.2026, Entwurf)
+
+**Der Bedarf.** Ein Berater soll später auch Auskunft geben, die nicht im PIM steht: Preise und Verfügbarkeit aus der
+Warenwirtschaft, kundenspezifische Angaben (Kundenpreis, Bestellstatus). Solche Systeme bieten zunehmend einen MCP-Server an.
+
+**Entschieden (09.10.2026): die einzige Quelle des Beraters ist journali.** Das Chat-Fenster und sein Dienst sprechen nur mit
+journali (`/api/advisor/{key}/…`), nie mit einem fremden System. Fremde MCP-Server bindet **journali** an: dort stehen Adresse,
+Anmeldung und welche Werkzeuge ein Berater nutzen darf; dort ruft die KI die Werkzeuge auf; dort steht im Journal, was gerufen
+wurde. Gründe:
+
+- Ein Geheimnis gehört zum Server (Abschnitt 38) — der Dienst steht an der Website und hält nur das Token seines Beraters.
+- Rechte, Grenzen und Protokoll gibt es einmal, in journali — nicht je Website noch einmal.
+- Fremde Antworten gehen durch dieselbe Stelle wie die eigenen Daten: sie sind Daten, keine Anweisungen an die KI.
+
+**Das Stück, das es schon gibt.** Der Dienst bietet selbst einen MCP-**Server** an (`/mcp`, Abschnitt 42): fremde KI-Agenten
+fragen darüber den Katalog. Das ist die andere Richtung und bleibt davon unberührt — siehe „Offen“.
+
+**Entwurf, in zwei Schritten.**
+
+1. **Ein Zugang der Art `mcp`** im Plugin `driver`, wie `http` (Abschnitt 38): Adresse des MCP-Servers, Anmeldung (Bearer,
+   eigener Kopf, OAuth Client Credentials), das Geheimnis im Tresor. journali liest beim Einrichten die Werkzeugliste
+   (`tools/list`) und zeigt sie an. Am Berater steht, **welche** Werkzeuge welcher Zugänge er nutzen darf — eine Freigabeliste,
+   nur lesende Werkzeuge, mit Grenze je Besucher und Tag. Die KI des Beraters bekommt die freigegebenen Werkzeuge als
+   Werkzeuge angeboten; ruft sie eines, führt journali den Aufruf aus (`tools/call`) und gibt ihr das Ergebnis. Ein Eintrag je
+   Aufruf (Berater, Zugang, Werkzeug, Dauer, Ergebnis ja/nein — ohne Inhalt) macht nachvollziehbar, was geschah. Damit gehen
+   Preise und Verfügbarkeit für alle Besucher gleich: ein Dienstkonto, keine Kundendaten.
+2. **Kundenspezifisch.** Dafür muss feststehen, wer fragt — der Besucher ist im Shop angemeldet, nicht in journali. Vorschlag:
+   die Website gibt dem Chat-Fenster einen kurzlebigen, vom Shop signierten Nachweis mit (Kundennummer, Ablauf; `data-customer`
+   oder ein Aufruf `journaliAdvisor.kunde(token)`); der Dienst reicht ihn durch, journali prüft die Signatur mit dem
+   öffentlichen Schlüssel des Shops (am Berater hinterlegt) und gibt ihn an das fremde Werkzeug weiter oder tauscht ihn dort
+   gegen ein Token (OAuth Token Exchange, wie die MCP-Spezifikation die Anmeldung vorsieht). Ein Passwort oder Schlüssel des
+   Kunden geht nie durch den Chat, und ohne gültigen Nachweis bietet journali die kundenspezifischen Werkzeuge gar nicht an.
+
+**Offen.**
+
+- Ob der MCP-Server des Dienstes (`/mcp`, für fremde KI-Agenten) bleibt. Er gibt heute nur, was die Website zeigt, und kennt
+  keine Anmeldung; mit Schritt 2 dürfte er kundenspezifische Werkzeuge nie anbieten.
+- Wo der Aufruf läuft: im Server (`AdvisorApi`, MCP über HTTP braucht kein Paket) oder als Prozess-Plugin. Für den Server spricht,
+  dass die KI-Schleife ohnehin dort läuft und das Geheimnis dort bleibt; dagegen, dass ein langsamer fremder Server die Anfrage
+  aufhält — eine Zeitgrenze je Aufruf ist in beiden Fällen nötig.
+- Welche Modelle Werkzeuge zuverlässig aufrufen. Das lokale Modell (gemma3:4b) kann es nur eingeschränkt; ohne Werkzeugaufruf
+  antwortet der Berater wie heute.
+- Schritt 2 hängt am Shop: wie er seine Kunden anmeldet und ob er einen signierten Nachweis ausstellen kann. Erst mit einem
+  konkreten Shop und einem konkreten Fremdsystem.
