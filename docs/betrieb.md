@@ -499,6 +499,21 @@ trägt keine Person; ein Neustart des Containers vergisst alles. Den Inhalt eine
 Containers schreibt er nur, wenn journali nicht erreichbar ist. Ist die KI an, gehen Frage und Treffer an den Anbieter des Teams —
 das gehört in die Datenschutzerklärung der Website, ebenso die Adresse des Besuchers beim Dienst.
 
+**Auf dem PC** (Entwicklung) startet `tools\berater` den Dienst und eine Testseite, ohne Container:
+
+```bash
+tools\berater token shop ja_…
+```
+
+```bash
+tools\berater start shop
+```
+
+Das Token liegt danach in `%USERPROFILE%\.journali\advisor-shop.token`, nie im Repo. `start` braucht einen laufenden journali
+(`tools\server start`), startet den Dienst (`localhost:8090`) und die Testseite (`localhost:8091`, `tools/berater-testseite.mjs`:
+schwebend, `?eingebettet`, `?en`) in eigenen Fenstern und öffnet sie im Browser. Am Berater gehört `http://localhost:8091` unter
+„Websites“. `tools\berater stop` beendet beides, `status` fragt den Dienst, `pruefen shop` spielt den Prüfstand.
+
 **Der Kern** (`plugins/advisor/kern/`, `docs/pflegestruktur.md` 44) versteht die Eingabe und führt das Gespräch; journali wählt aus
 (`/api/advisor/{key}/vocabulary`, `select`, `docs`, `ki`). Derselbe Kern läuft in journali als Kindprozess für die Vorschau unter
 ⇪ Produktberatung (`node plugins/advisor/kern/prozess.mjs`, gestartet beim ersten Bedarf, wie der Einbetter); er erreicht journali
