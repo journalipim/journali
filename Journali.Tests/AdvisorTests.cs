@@ -578,6 +578,37 @@ public class AdvisorTests
     }
 
     [Fact]
+    public async Task Was_verkauft_ihr_nennt_die_Gruppen_des_Publikationsbaums_ein_Klick_grenzt_ein()
+    {
+        // Fall aus der Bedienung (09.10.2026): „was verkauft ihr?“ war ein unbekanntes Wort und „kein Produkt passt“
+        await using var w = await Welt.Neu();
+        w.C.With((_, _, write) =>
+        {
+            // zwei Rubriken unter dem Shop: das Sortiment steht eine Ebene unter der Wurzel
+            foreach (var (k, name, produkt) in new[] { ("r-bohren", "Bohren", "bohr"), ("r-schleifen", "Schleifen", "schleifer") })
+            {
+                var r = w.Ids[k] = Journali.Core.Entries.Ids.New(Roles.Rubric);
+                write("t", r, Types.RubricCreated, new RubricCreated(w.Pub, Labels.Of(name, name), name), null);
+                write("t", r, Types.NodePlaced, new NodePlaced(w.Ids[produkt]), null);
+            }
+            return 0;
+        });
+        var (_, vok) = await w.Get("/api/advisor/werkzeug/vocabulary");
+        var gruppen = vok.GetProperty("groups").EnumerateArray().Select(g => (g.GetProperty("label").GetString(), g.GetProperty("n").GetInt32())).ToList();
+        Assert.Equal([("Werkzeug", 3), ("Bohren", 1), ("Schleifen", 1)], gruppen);
+        var j = await w.Sag("was verkauft ihr?");
+        Assert.Equal(["Werkzeug", "Bohren", "Schleifen"], j.GetProperty("sortiment").EnumerateArray().Select(g => g.GetProperty("label").GetString()).ToList());
+        Assert.Equal("Im Angebot sind 3 Produkte in 3 Bereichen:", j.GetProperty("texte").GetProperty("satz").GetString());
+        var bohren = w.Ids["r-bohren"];
+        var k2 = await w.Sag("", new { art = "gruppe", key = bohren, label = "Bohren" });
+        Assert.Equal(["Bohrhammer Pro"], Namen(k2));
+        Assert.Equal("1 Produkt in „Bohren“.", k2.GetProperty("texte").GetProperty("satz").GetString());
+        Assert.Equal("Bohren", k2.GetProperty("group").GetProperty("label").GetString());
+        // eine unbekannte Gruppe grenzt nicht ein
+        Assert.Equal(3, (await w.Auswahl(new { gruppe = "k-gibtsnicht" })).Json.GetProperty("total").GetInt32());
+    }
+
+    [Fact]
     public async Task Eine_Frage_zu_den_gezeigten_Produkten_beantworten_ihre_Angaben()
     {
         // Fall aus der Bedienung (09.10.2026): „sind die wasserdicht?“ nach mehreren Treffern wurde ein Suchwort statt einer Antwort
@@ -621,13 +652,13 @@ public class AdvisorTests
     [Fact]
     public void Die_Art_grenzt_ein_jedes_andere_Wort_ordnet()
     {
-        AdvisorApi.Eintrag E(string name, string text) => new(new Node { Id = "p-" + name, Role = Roles.Product }, [], name, (name + "\n" + text).ToLowerInvariant());
+        AdvisorApi.Eintrag E(string name, string text) => new(new Node { Id = "p-" + name, Role = Roles.Product }, [], name, (name + "\n" + text).ToLowerInvariant(), []);
         var dicht = E("Odda Zelt", "Wassersäule 5000 mm, wasserdicht.");
         var luftig = E("Ravik Zelt", "Leicht und luftig.");
         var matte = E("Heia Isomatte", "Wasserdicht verschweisst.");
         var lampe = E("Bjørk Stirnlampe", "Rotlicht blendet niemanden im Zelt.");   // „Zelt“ als ganzes Wort, aber nicht im Namen
         List<AdvisorApi.Eintrag> alle = [luftig, matte, dicht, lampe];
-        var b = new AdvisorApi.Bestand(null!, 0, "", "de", "web", alle, alle.ToDictionary(e => e.Product.Id), new(), new());
+        var b = new AdvisorApi.Bestand(null!, 0, "", "de", "web", alle, alle.ToDictionary(e => e.Product.Id), new(), new(), []);
         List<string> Wahl(string[] art, string[] ordnen) => AdvisorApi.Waehle(null!, null!, b, [], art, ordnen).Select(e => e.Name).ToList();
         // die Art (im Namen) grenzt ein, „wasserdicht“ ordnet — beide Zelte, das wasserdichte zuerst, die Matte nicht
         Assert.Equal(["Odda Zelt", "Ravik Zelt"], Wahl(["zelt"], ["wasserdicht"]));
@@ -642,7 +673,7 @@ public class AdvisorTests
     [Fact]
     public void Name_vor_ganzem_Wort_vor_Wortanfang_gebeugte_Formen_zaehlen_mit()
     {
-        AdvisorApi.Eintrag E(string name, string text) => new(new Node { Id = "p-" + name, Role = Roles.Product }, [], name, (name + "\n" + text).ToLowerInvariant());
+        AdvisorApi.Eintrag E(string name, string text) => new(new Node { Id = "p-" + name, Role = Roles.Product }, [], name, (name + "\n" + text).ToLowerInvariant(), []);
         var zelt = E("Brenna 5 Zelt", "Ein Kuppelzelt für zwei Personen.");
         var matte = E("Selje 5 Isomatte", "Einsatzbereich: Trekking und Zelten");
         var schrauber = E("Akkuschrauber kompakt", "Leicht.");

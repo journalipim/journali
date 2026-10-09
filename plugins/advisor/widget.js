@@ -147,6 +147,7 @@ tr.gleich td { color: var(--leise); }
 .galerie { display: flex; gap: 6px; overflow-x: auto; }
 .absatz { white-space: pre-wrap; line-height: 1.5; }
 /* eine Frage zu den gezeigten Produkten: je Produkt sein Name (öffnet es) und was in seinen Angaben dazu steht */
+.sortiment .chips { margin-top: 8px; white-space: normal; }
 .stelle { display: flex; flex-direction: column; gap: 2px; margin-top: 8px; white-space: normal; }
 .stelle .name { align-self: flex-start; border: 0; background: transparent; padding: 0; color: var(--akzent); font-weight: 600; text-align: left; }
 .galerie img { height: 120px; border-radius: 6px; background: var(--blase); }
@@ -170,7 +171,7 @@ tr.gleich td { color: var(--leise); }
     const T = TEXTE[sprache]
     // das Gespräch führt der Kern im Dienst; hier stehen nur seine Kennung und — zum Anzeigen — die gesammelten Wörter und Filter der letzten Antwort
     // merkzettel: id → { id, name, art: 'produkt' | 'variante' } — in der Reihenfolge des Merkens; alles nur im Arbeitsspeicher der Seite
-    const zustand = { gespraech: kennung(), woerter: [], filter: [], auswahl: new Set(), merkzettel: new Map(), info: null, laeuft: false }
+    const zustand = { gespraech: kennung(), woerter: [], filter: [], gruppe: null, auswahl: new Set(), merkzettel: new Map(), info: null, laeuft: false }
 
     const wirt = document.createElement('div')
     wirt.setAttribute('data-journali-advisor', '')
@@ -351,9 +352,14 @@ tr.gleich td { color: var(--leise); }
     }
 
     function angabenChips(mitNeu) {
-      if (!zustand.filter.length && !zustand.woerter.length) return null
+      if (!zustand.filter.length && !zustand.woerter.length && !zustand.gruppe) return null
       const c = el('div', 'chips angaben')
       c.append(el('span', 'leise', T.gesucht))
+      if (zustand.gruppe) {
+        const chip = el('button', 'chip an gruppe', `${zustand.gruppe.label} ×`); chip.type = 'button'; chip.title = T.angabeWeg
+        chip.addEventListener('click', () => schritt({ art: 'weg', kind: 'gruppe' }))
+        c.append(chip)
+      }
       for (const w of zustand.woerter) {
         const chip = el('button', 'chip an wort', `${w} ×`); chip.type = 'button'; chip.title = T.angabeWeg
         chip.addEventListener('click', () => schritt({ art: 'weg', kind: 'word', word: w }))
@@ -499,6 +505,25 @@ tr.gleich td { color: var(--leise); }
       verlauf.scrollTop = Math.max(0, antwort.offsetTop - 8)
     }
 
+    /// Das Sortiment (09.10.2026): die Gruppen des Publikationsbaums mit Anzahl — ein Klick zeigt die Produkte einer Gruppe
+    function antwortSortiment(r) {
+      const antwort = el('div', 'karten antwort')
+      const b = el('div', 'blase sortiment')
+      b.append(el('span', 'satz', r.texte?.satz || ''))
+      if (r.sortiment.length) {
+        const c = el('div', 'chips')
+        for (const g of r.sortiment) {
+          const chip = el('button', 'chip', `${g.label} (${g.n})`); chip.type = 'button'
+          chip.addEventListener('click', () => schritt({ art: 'gruppe', key: g.key, label: g.label }))
+          c.append(chip)
+        }
+        b.append(c)
+      }
+      antwort.append(b)
+      verlauf.append(antwort)
+      verlauf.scrollTop = Math.max(0, antwort.offsetTop - 8)
+    }
+
     /// Die Antwort auf eine Frage zu den Produkten der letzten Antwort (09.10.2026): je Produkt, was in seinen Angaben dazu steht
     function antwortZuDenTreffern(r) {
       const antwort = el('div', 'karten antwort')
@@ -535,12 +560,13 @@ tr.gleich td { color: var(--leise); }
         const r = await rufe('/api/ask', { gespraech: zustand.gespraech, locale: sprache, ...inhalt })
         // die Knöpfe älterer Antworten gelten nicht mehr
         for (const alt of verlauf.querySelectorAll('.ergebnis button, .abschluss .neu, .karte .nicht')) alt.disabled = true
-        if (r.reset) { zustand.woerter = []; zustand.filter = []; blase(r.texte?.satz || T.neu); eingabe.focus(); return }
+        if (r.reset) { zustand.woerter = []; zustand.filter = []; zustand.gruppe = null; blase(r.texte?.satz || T.neu); eingabe.focus(); return }
         if (r.kurz) { blase(r.texte?.satz || ''); return }   // Gruss, Dank, Abschied
         if (r.about) { antwortZumProdukt(r); return }   // eine Frage zum Produkt im Blick: seine Werte, seine Unterlagen
         if (r.antworten) { antwortZuDenTreffern(r); return }   // eine Frage zu den gezeigten Produkten
+        if (r.sortiment) { antwortSortiment(r); return }   // eine Frage nach dem Sortiment
         // was jetzt gilt, sagt der Kern: die gesammelten Wörter und alle Filter, auch die aus dem Text erkannten — mit Bezeichnungen
-        if (Array.isArray(r.words)) zustand.woerter = r.words
+        if (Array.isArray(r.words)) { zustand.woerter = r.words; zustand.gruppe = r.group ?? null }
         if (Array.isArray(r.filter)) zustand.filter = r.filter.map(f => ({ attribute: f.attribute, op: f.op, value: f.value, label: f.label, valueLabel: f.valueLabel }))
         const antwort = el('div', 'karten antwort')
         const ub = unterlagenBlase(r.docs); if (ub) antwort.append(ub)   // beantworten die Unterlagen die Frage, steht das zuerst

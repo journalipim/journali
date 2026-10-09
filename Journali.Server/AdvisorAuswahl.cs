@@ -10,8 +10,8 @@ namespace Journali.Server;
 /// (<c>plugins/advisor/kern/</c>) macht aus einer Eingabe eine genaue Anfrage und führt das Gespräch; hier steht nur, was Rechte, Sicht, Werte, Vektoren
 /// und Geheimnisse braucht:
 /// <list type="bullet">
-/// <item><c>GET vocabulary</c> — Attribute der Sicht (Bezeichnungen, Typ, Einheit und ihre Grösse, Listenwerte), die Wörter der Produktnamen mit Anzahl;
-/// ETag aus Journalstand, Definition und Sprache.</item>
+/// <item><c>GET vocabulary</c> — Attribute der Sicht (Bezeichnungen, Typ, Einheit und ihre Grösse, Listenwerte), die Wörter der Produktnamen mit Anzahl,
+/// die Gruppen des Sortiments (<see cref="Uebersicht"/>); ETag aus Journalstand, Definition und Sprache.</item>
 /// <item><c>POST select</c> — Auswahl: die Art (Wörter im Namen) grenzt ein, Angaben filtern, weitere Wörter und der Satz ordnen; Merkmale zum
 /// Eingrenzen, auf Wunsch was eine Angabe zu eng macht; zu einem Produkt im Blick die Werte, die eine Frage beantworten.</item>
 /// <item><c>POST docs</c> — Abschnitte aus den Unterlagen.</item>
@@ -21,9 +21,10 @@ namespace Journali.Server;
 public static partial class AdvisorApi
 {
     /// <summary>Eine Anfrage an die Auswahl. <paramref name="Hinten"/>: Produkte, die nicht nach vorn sollen (abgelehnt);
-    /// <paramref name="Probe"/>: eine Nachfrage des Kerns (Tippfehler, Themenwechsel) — sie zählt nicht als Frage.</param>
+    /// <paramref name="Probe"/>: eine Nachfrage des Kerns (Tippfehler, Themenwechsel) — sie zählt nicht als Frage;
+    /// <paramref name="Gruppe"/>: nur Produkte dieser Gruppe des Publikationsbaums (<see cref="Gruppe.Key"/>, 09.10.2026).</param>
     public sealed record Auswahl(List<string>? Art = null, List<Filter>? Angaben = null, List<string>? Ordnen = null, string? Satz = null, string? Fokus = null,
-        int? Take = null, int? Skip = null, string? Locale = null, bool? Lockern = null, List<string>? Hinten = null, bool? Probe = null);
+        int? Take = null, int? Skip = null, string? Locale = null, bool? Lockern = null, List<string>? Hinten = null, bool? Probe = null, string? Gruppe = null);
     public sealed record DocsAnfrage(string? Satz = null, List<string>? Art = null, string? Fokus = null, string? Locale = null);
     public sealed record KiUnterlage(string? Quelle, string? Text);
     /// <param name="Auftrag"><c>angaben</c> (übersetze den Satz in Angaben) oder <c>antwort</c> (ein Text zu den Treffern oder zum Produkt im Blick)</param>
@@ -64,6 +65,17 @@ public static partial class AdvisorApi
         if (art.Count > 0 || ordnen.Count > 0)
             gefunden = gefunden.OrderByDescending(e => ordnen.Sum(w => Staerke(e, w))).ThenByDescending(e => Punkte(e, art)).ToList();
         return Relativ(tree, model, gefunden, f, b.Locale, b.Channel);
+    }
+
+    /// <summary>
+    /// Das Sortiment in einer Ebene (09.10.2026): die oberste Ebene des Publikationsbaums mit mindestens zwei Gruppen — eine einzige Gruppe unter der
+    /// Wurzel („Outdoor“) sagt nichts, darunter stehen die Bereiche. In Baumfolge, höchstens <paramref name="max"/>.
+    /// </summary>
+    public static List<Gruppe> Uebersicht(Bestand b, int max = 20)
+    {
+        foreach (var t in b.Gruppen.Select(g => g.Tiefe).Distinct().Order())
+            if (b.Gruppen.Where(g => g.Tiefe == t).ToList() is { Count: >= 2 } ebene) return ebene.Take(max).ToList();
+        return b.Gruppen.Where(g => g.Tiefe == 1).Take(max).ToList();
     }
 
     /// <summary>Der ETag des Vokabulars: Journalstand, Definition und Sprache.</summary>
@@ -112,6 +124,7 @@ public static partial class AdvisorApi
                     locale = loc, locales = sprachen, etag, products = b.Produkte.Count, ki = d.Ki,
                     attributes = AttributeMitAchsen(model, d.View!, b).Select(a => Vokabel(model, a, loc, achsen.Contains(a.Key))).ToList(),
                     words = NamenZaehlung(b).Select(x => new { word = x.Wort, n = x.N }).ToList(),
+                    groups = Uebersicht(b).Select(g => new { key = g.Key, label = g.Label, n = g.N }).ToList(),
                 };
             }));
         });
@@ -126,6 +139,9 @@ public static partial class AdvisorApi
             if (body.Probe != true && !Zaehle(key, 0, d!.Limits?.JeTag)) return Results.Json(ModelApi.Err("Berater {0}: Tagesgrenze der Fragen erreicht.", key), statusCode: 429);
             var loc = Sprache(c, d!, body.Locale);
             var b = BestandVon(c, key, d!, loc);
+            // eine Gruppe des Sortiments grenzt ein, bevor etwas anderes zählt — eine unbekannte zählt nicht
+            var gruppe = body.Gruppe is { Length: > 0 } gk ? b.Gruppen.FirstOrDefault(g => g.Key == gk) : null;
+            if (gruppe is not null) b = b with { Produkte = b.Produkte.Where(e => e.Gruppen.Contains(gruppe.Key)).ToList() };
             var take = Math.Clamp(body.Take ?? 6, 1, MaxTreffer);
             var skip = Math.Clamp(body.Skip ?? 0, 0, MaxSkip);
             var art = SaubereWoerter(body.Art);
@@ -215,6 +231,7 @@ public static partial class AdvisorApi
                 {
                     locale = loc, total = reihe.Count, skip, hits = karten, facets = fac, similar = nurSinn, relax = lockern, present = vorhanden, words = woerter,
                     filter = filter.Select(x => Echo(model, x, loc)).ToList(), focus = fokus, warning = warnung,
+                    group = gruppe is null ? null : new { key = gruppe.Key, label = gruppe.Label },
                 };
             });
             return Results.Ok(antwort);

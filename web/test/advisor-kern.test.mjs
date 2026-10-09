@@ -26,14 +26,15 @@ const VOK = {
     { key: 'leistung', label: 'Leistung', labels: { de: 'Leistung', en: 'Power' }, type: 'decimal', unit: 'W', unitLabels: [], quantity: null, facet: true },
     { key: 'wasserdicht', label: 'Wasserdicht', labels: { de: 'Wasserdicht', en: 'Waterproof' }, type: 'boolean', facet: true },
   ],
+  groups: [{ key: 'k-schlafen', label: 'Schlafen', n: 3 }, { key: 'k-kleidung', label: 'Kleidung', n: 2 }],
   words: [{ word: 'zelt', n: 2 }, { word: 'schlafsack', n: 1 }, { word: 'hose', n: 2 }, { word: 'odda', n: 1 }, { word: 'ravik', n: 1 }, { word: 'kilden', n: 1 }, { word: 'brede', n: 1 }, { word: 'varm', n: 1 }],
 }
 const KATALOG = [
-  { id: 'z1', name: 'Odda Zelt', text: 'wasserdicht kuppel', werte: { color: 'red', gewicht: '2.4' } },
-  { id: 'z2', name: 'Ravik Zelt', text: 'leicht luftig', werte: { color: 'blue', gewicht: '1.4' } },
-  { id: 's1', name: 'Varm Schlafsack', text: 'warm winter', werte: { color: 'red', groesse: 'm' } },
-  { id: 'h1', name: 'Kilden Hose', text: 'wandern', werte: { color: 'blue', groesse: 'm' } },
-  { id: 'h2', name: 'Brede Hose', text: 'wandern regen', werte: { color: 'red', groesse: 's' } },
+  { id: 'z1', name: 'Odda Zelt', text: 'wasserdicht kuppel', werte: { color: 'red', gewicht: '2.4' }, gruppe: 'k-schlafen' },
+  { id: 'z2', name: 'Ravik Zelt', text: 'leicht luftig', werte: { color: 'blue', gewicht: '1.4' }, gruppe: 'k-schlafen' },
+  { id: 's1', name: 'Varm Schlafsack', text: 'warm winter', werte: { color: 'red', groesse: 'm' }, gruppe: 'k-schlafen' },
+  { id: 'h1', name: 'Kilden Hose', text: 'wandern', werte: { color: 'blue', groesse: 'm' }, gruppe: 'k-kleidung' },
+  { id: 'h2', name: 'Brede Hose', text: 'wandern regen', werte: { color: 'red', groesse: 's' }, gruppe: 'k-kleidung' },
 ]
 // was GET product/{id} liefert: alle Werte und Texte — die Antwort steht oft im Wert oder in der Beschreibung, nicht in einer Bezeichnung
 const PRODUKTE = {
@@ -54,7 +55,7 @@ const label = a => {
 function journali({ ki = null } = {}) {
   const rufe = []
   const waehle = b => {
-    let r = KATALOG.filter(p => (b.angaben ?? []).every(a => passt(p, a)))
+    let r = KATALOG.filter(p => (!b.gruppe || p.gruppe === b.gruppe) && (b.angaben ?? []).every(a => passt(p, a)))
     if (b.art?.length) r = r.filter(p => b.art.every(w => imNamen(p, w)))
     else if (b.ordnen?.length) r = r.filter(p => b.ordnen.some(w => imText(p, w)))
     return r
@@ -83,6 +84,7 @@ function journali({ ki = null } = {}) {
         locale: 'de', total: r.length, hits: r.slice(0, body.take ?? 6).map(p => ({ id: p.id, name: p.name, values: [] })), facets: [], similar: false, relax,
         present: [...new Set(r.flatMap(p => Object.keys(p.werte)))], filter: angaben.map(label),
         words: [...(body.art ?? []), ...(body.ordnen ?? [])].map(w => ({ word: w, n: KATALOG.filter(p => imText(p, w)).length, name: KATALOG.filter(p => imNamen(p, w)).length })),
+        group: VOK.groups.find(g => g.key === body.gruppe) ? { key: body.gruppe, label: VOK.groups.find(g => g.key === body.gruppe).label } : null,
         focus: fokus ? { id: fokus.id, name: fokus.name, values: /wasserdicht/.test(body.satz) ? [{ key: 'wasserdicht', label: 'Wasserdicht', value: fokus.text.includes('wasserdicht') ? 'ja' : 'nein' }] : [] } : null,
         warning: null,
       },
@@ -339,6 +341,33 @@ test('ein Produkt im Blick: nennen die Bezeichnungen nichts, antworten seine Wer
   const h = await kern.antworte({ gespraech: G, q: 'ist es wasserfest?' })
   assert.equal(h.texte.ueber, 'Zu „wasserfest“ konkret habe ich bei „Odda Zelt“ nichts gefunden, aber diese Merkmale geben Hinweise:')
   assert.deepEqual(h.about.values.map(v => v.label), ['Material', 'Beschreibung'])
+})
+
+// Fall aus der Bedienung (09.10.2026): „was verkauft ihr?“ und „welche artikel habt ihr im angebot?“ waren unbekannte Wörter
+test('eine Frage nach dem Sortiment nennt die Gruppen; ein Klick grenzt ein, ein neues Thema ausserhalb fragt ohne die Gruppe', async () => {
+  const j = journali()
+  const kern = erstelleKern({ journali: j.fn })
+  for (const q of ['was verkauft ihr?', 'Welche Artikel habt ihr im Angebot?', 'what do you sell?']) {
+    const a = await kern.antworte({ gespraech: G, q })
+    assert.deepEqual(a.sortiment.map(g => g.label), ['Schlafen', 'Kleidung'], q)
+    assert.equal(a.texte.satz, 'Im Angebot sind 5 Produkte in 2 Bereichen:')
+  }
+  assert.equal(j.auswahlen().length, 0, 'keine Auswahl')
+  const g = await kern.antworte({ gespraech: G, schritt: { art: 'gruppe', key: 'k-kleidung', label: 'Kleidung' } })
+  assert.deepEqual([g.hits.map(h => h.id), g.group, g.texte.satz], [['h1', 'h2'], { key: 'k-kleidung', label: 'Kleidung' }, '2 Produkte in „Kleidung“.'])
+  assert.deepEqual((await kern.antworte({ gespraech: G, q: 'rot' })).hits.map(h => h.id), ['h2'], 'die Gruppe gilt weiter')
+  // ein Zelt gibt es in der Kleidung nicht: der Kern fragt ohne die Gruppe nach dem Wechsel
+  const zelt = await kern.antworte({ gespraech: G, q: 'Zelt' })
+  assert.equal(zelt.total, 0)
+  assert.deepEqual(zelt.instead.words, ['zelt'])
+  const ja = await kern.antworte({ gespraech: G, schritt: { art: 'statt' } })
+  assert.equal(ja.group, null)
+  assert.ok(ja.hits.some(h => h.id === 'z1'))
+  await kern.antworte({ gespraech: G, schritt: { art: 'gruppe', key: 'k-schlafen', label: 'Schlafen' } })
+  assert.equal((await kern.antworte({ gespraech: G, schritt: { art: 'weg', kind: 'gruppe' } })).total, 5, '× nimmt die Gruppe weg')
+  assert.equal((await kern.antworte({ gespraech: G, schritt: { art: 'gruppe', key: 'k-gibtsnicht', label: 'X' } })).group, null, 'was journali nicht kennt, fällt weg')
+  // ein Wort ausser den allgemeinen ist eine Suche
+  assert.ok(!(await kern.antworte({ gespraech: 'anders-0001', q: 'welche zelte habt ihr?' })).sortiment)
 })
 
 test('Gruss, Dank und Abschied bekommen eine kurze Antwort, keine Suche', async () => {

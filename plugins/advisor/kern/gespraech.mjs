@@ -28,6 +28,12 @@ const BEZUG = new Set(['diese', 'dieser', 'dieses', 'diesen', 'beide', 'beiden',
 const SUCHT = /^(gibt es|gibts|habt ihr|haben sie|hast du|führt ihr|fuehrt ihr|is there|are there|do you have|have you got)(?![\p{L}])/iu
 // Verben, die nach einem Wert fragen, dessen Bezeichnung nicht in der Frage steht: „wie viel wiegen die?“ → Gewicht
 const NACH_WERT = { wiegt: 'gewicht', wiegen: 'gewicht', weigh: 'weight', weighs: 'weight', kostet: 'preis', kosten: 'preis', teuer: 'preis', cost: 'price', costs: 'price' }
+// Eine Frage nach dem Sortiment (09.10.2026): „was verkauft ihr?“, „welche Artikel habt ihr im Angebot?“ — besteht die Eingabe nur aus solchen
+// Wörtern (nach den Füllwörtern), nennt der Berater die Gruppen des Publikationsbaums
+const ALLGEMEIN = new Set(['verkauft', 'verkaufen', 'verkaufst', 'führt', 'fuehrt', 'führen', 'fuehren', 'bietet', 'bieten', 'anbieten', 'angebot', 'angeboten',
+  'sortiment', 'artikel', 'produkte', 'produkt', 'waren', 'sachen', 'alles', 'alle', 'katalog', 'euch', 'eigentlich', 'denn', 'überhaupt', 'ueberhaupt',
+  'gibts', 'shop', 'laden', 'sell', 'selling', 'offer', 'products', 'product', 'items', 'range', 'catalog', 'catalogue', 'stuff', 'everything', 'all',
+  'carry', 'store'])
 // Gruss, Dank, Abschied: eine kurze Antwort, keine Suche — nur, wenn sonst nichts in der Eingabe steht
 const KURZ = [
   ['gruss', /^(hallo|hi|hey|moin|servus|guten (morgen|tag|abend)|grüß gott|gruess gott|hello|good (morning|afternoon|evening))(?![\p{L}])/iu],
@@ -62,7 +68,7 @@ export function erstelleKern(o) {
   }
 
   function neuerZustand() {
-    return { woerter: [], angaben: [], verlauf: [], fokus: null, fokusName: null, statt: null, vorlieben: {}, abgelehnt: [], gesehen: [], art: [], zuletzt: [], am: jetzt() }
+    return { woerter: [], angaben: [], verlauf: [], fokus: null, fokusName: null, statt: null, vorlieben: {}, abgelehnt: [], gesehen: [], art: [], zuletzt: [], gruppe: null, am: jetzt() }
   }
 
   /// Das Gespräch zu einer Kennung — ohne gültige Kennung eines, das nicht gemerkt wird
@@ -93,6 +99,8 @@ export function erstelleKern(o) {
     const r = await journali('select', {
       art: a.art ?? [], ordnen: a.ordnen ?? [], angaben: (a.angaben ?? z.angaben).map(nurAngabe), satz: a.satz ?? '', locale: loc,
       take: a.take ?? 6, lockern: a.lockern ?? false, probe: a.probe ?? false, hinten: z.abgelehnt, ...(a.fokus ? { fokus: a.fokus } : {}),
+      // die Gruppe des Sortiments, die der Besucher gewählt hat — eine Probe für einen Themenwechsel fragt ohne sie (gruppe: null)
+      ...((a.gruppe !== undefined ? a.gruppe : z.gruppe?.key) ? { gruppe: a.gruppe !== undefined ? a.gruppe : z.gruppe.key } : {}),
     })
     if (r.status !== 200) throw fehler(r)
     return r.json
@@ -181,7 +189,8 @@ export function erstelleKern(o) {
 
   /**
    * Eine Eingabe oder ein Klick. `schritt`: { art: 'neu' } · { art: 'filter', attribute, op, value } · { art: 'weg', kind: 'word', word } ·
-   * { art: 'weg', kind: 'filter', attribute, op, value } · { art: 'statt' } · { art: 'ablehnen', id, name }
+   * { art: 'weg', kind: 'filter', attribute, op, value } · { art: 'weg', kind: 'gruppe' } · { art: 'statt' } · { art: 'ablehnen', id, name } ·
+   * { art: 'gruppe', key, label } (eine Gruppe des Sortiments)
    */
   async function antworte({ gespraech = null, q = '', schritt = null, locale = null, ki = true, take = 6 } = {}) {
     const { z, id } = hole(gespraech)
@@ -194,10 +203,15 @@ export function erstelleKern(o) {
 
     // ---- Klicks: ändern die gesammelten Angaben, eine Suche folgt
     if (schritt?.art === 'neu') {
-      Object.assign(z, { woerter: [], angaben: [], verlauf: [], fokus: null, fokusName: null, statt: null, art: [], zuletzt: [] })   // Vorlieben, Gesehenes und Abgelehntes bleiben
+      Object.assign(z, { woerter: [], angaben: [], verlauf: [], fokus: null, fokusName: null, statt: null, art: [], zuletzt: [], gruppe: null })   // Vorlieben, Gesehenes und Abgelehntes bleiben
       if (!eingabe) return { gespraech: id, locale: loc, reset: true, texte: { satz: T.neu, hinweise: [] } }
     } else if (schritt?.art === 'filter' && schritt.attribute) {
       setze(z, { attribute: String(schritt.attribute), op: ['le', 'ge', 'low', 'high'].includes(schritt.op) ? schritt.op : 'eq', value: String(schritt.value ?? ''), quelle: 'geklickt' })
+    } else if (schritt?.art === 'gruppe' && typeof schritt.key === 'string') {
+      // eine Gruppe des Sortiments: ein neues Thema in dieser Gruppe — Vorlieben, Gesehenes und Abgelehntes bleiben
+      Object.assign(z, { woerter: [], angaben: [], fokus: null, fokusName: null, statt: null, art: [], gruppe: { key: schritt.key.slice(0, 80), label: String(schritt.label ?? '').slice(0, 120) } })
+    } else if (schritt?.art === 'weg' && schritt.kind === 'gruppe') {
+      z.gruppe = null
     } else if (schritt?.art === 'weg') {
       if (schritt.kind === 'word') z.woerter = z.woerter.filter(w => w !== schritt.word)
       else { z.angaben = z.angaben.filter(a => !gleich(a, schritt)); if (z.vorlieben[schritt.attribute] && gleich(z.vorlieben[schritt.attribute], schritt)) delete z.vorlieben[schritt.attribute] }
@@ -206,6 +220,7 @@ export function erstelleKern(o) {
       z.angaben = z.statt.filter.map(a => ({ ...a, quelle: 'gesagt' }))
       z.verlauf = z.verlauf.slice(-1)   // nur die Eingabe, die das neue Thema gebracht hat
       z.statt = null
+      z.gruppe = null   // die Probe für den Wechsel fragte ohne Gruppe
     } else if (schritt?.art === 'ablehnen' && typeof schritt.id === 'string') {
       if (!z.abgelehnt.includes(schritt.id)) z.abgelehnt = [...z.abgelehnt, schritt.id].slice(-MAX_ABGELEHNT)
       if (schritt.name) hinweise.push(T.abgelehnt(String(schritt.name).slice(0, 120)))
@@ -220,6 +235,16 @@ export function erstelleKern(o) {
     if (eingabe && !schritt) for (const [art, re] of KURZ) {
       const m = re.exec(eingabe)
       if (m && !woerter(eingabe.slice(m[0].length)).length) return { gespraech: id, locale: loc, kurz: true, texte: { satz: T[art], hinweise: [] } }
+    }
+
+    // ---- eine Frage nach dem Sortiment: die Gruppen des Publikationsbaums, ein Klick grenzt auf eine ein
+    if (eingabe && !schritt) {
+      const ws = woerter(eingabe)
+      if (ws.length && ws.every(w => ALLGEMEIN.has(w))) {
+        const gruppen = vok.groups ?? []
+        return { gespraech: id, locale: loc, total: vok.products ?? 0, hits: [], facets: [], sortiment: gruppen,
+          texte: { satz: gruppen.length ? T.sortiment(vok.products ?? 0, gruppen.length) : T.sortimentOhne(vok.products ?? 0), hinweise: [] } }
+      }
     }
 
     // ---- eine Frage zu den Produkten der letzten Antwort: „sind die wasserdicht?“ — keine andere Art, und sie fragt nach etwas
@@ -295,12 +320,13 @@ export function erstelleKern(o) {
     }
     if (art.length) z.art = art
     uebernimmBezeichnungen(z, sel.filter)
+    if (z.gruppe) z.gruppe = sel.group ? { key: sel.group.key, label: sel.group.label } : null   // was journali nicht kennt, fällt weg
 
     // ---- Themenwechsel: zusammen nichts, die neue Eingabe allein schon, und sie bringt ein neues Wort — dann fragt der Berater
     let statt = null
     if (sel.total === 0 && hatteVorher && neueWoerter.length) {
       const t = teile(neueWoerter, namen)
-      const p = await waehle(z, loc, { art: t.art, ordnen: t.weich, angaben: neueAngaben, satz: eingabe, probe: true, take: 1 })
+      const p = await waehle(z, loc, { art: t.art, ordnen: t.weich, angaben: neueAngaben, satz: eingabe, probe: true, take: 1, gruppe: null })
       if (p.total > 0) statt = { words: neueWoerter, filter: (p.filter ?? []).map(f => ({ ...f })), n: p.total }
     }
     z.statt = statt
@@ -340,13 +366,14 @@ export function erstelleKern(o) {
     const ranked = weich.filter(w => z.woerter.includes(w))
     const wort = z.woerter.join(' ')
     const satz = sel.total
-      ? (sel.similar ? T.aehnlich(sel.total) : ranked.length ? T.trefferVorn(sel.total, art.join(' '), ranked.join(' ')) : wort ? T.trefferZu(sel.total, wort) : T.treffer(sel.total))
+      ? (sel.similar ? T.aehnlich(sel.total) : ranked.length ? T.trefferVorn(sel.total, art.join(' '), ranked.join(' ')) : wort ? T.trefferZu(sel.total, wort)
+        : z.gruppe ? T.trefferIn(sel.total, z.gruppe.label) : T.treffer(sel.total))
       : T.keine
     for (const k of corrected) hinweise.unshift(T.gelesen(k.from, k.to))
     if (unknown.length) hinweise.push(T.unbekannt(unknown))
     if (uebernommen.length) hinweise.push(T.uebernommen(uebernommen))
     return {
-      gespraech: id, locale: loc, total: sel.total, hits, facets: sel.facets ?? [], filter: z.angaben, words: z.woerter, ranked, unknown, corrected,
+      gespraech: id, locale: loc, total: sel.total, hits, facets: sel.facets ?? [], filter: z.angaben, words: z.woerter, group: z.gruppe, ranked, unknown, corrected,
       similar: !!sel.similar, relax, instead: statt, docs, answer, warning, uebernommen,
       texte: {
         satz, hinweise,

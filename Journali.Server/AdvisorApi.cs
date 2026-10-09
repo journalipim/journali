@@ -117,14 +117,18 @@ public static partial class AdvisorApi
 
     // ---- Bestand: was ein Berater zeigt, einmal je Journalstand gerechnet ----
 
-    /// <summary>Ein Produkt des Bestands: das Produkt, seine ausgeleiteten Varianten und der Text zum Suchen (klein geschrieben).</summary>
-    public sealed record Eintrag(Node Product, List<Node> Varianten, string Name, string Text);
+    /// <summary>Ein Produkt des Bestands: das Produkt, seine ausgeleiteten Varianten, der Text zum Suchen (klein geschrieben) und die Gruppen des
+    /// Publikationsbaums, in denen es hängt (Schlüssel von <see cref="Gruppe"/>).</summary>
+    public sealed record Eintrag(Node Product, List<Node> Varianten, string Name, string Text, IReadOnlyList<string> Gruppen);
+    /// <summary>Eine Gruppe des Publikationsbaums unter seiner Wurzel (09.10.2026): Rubrik, verwiesene Pflegegruppe oder Gliederung einer Regel —
+    /// woraus der Berater auf „was verkauft ihr?“ das Sortiment nennt. <paramref name="Tiefe"/> 1 liegt direkt unter der Wurzel.</summary>
+    public sealed record Gruppe(string Key, string Label, int Tiefe, int N);
     /// <param name="Dokumente">die Unterlagen (09.10.2026): Medium → der Knoten, an dem es hängt — Dokumente an den Produkten, ihren Varianten
     /// und den Gruppen darüber (Relation eines anderen Typs als image, kein Bild). Ob eines heute gilt und die Rolle es sieht, fragt
     /// <see cref="Unterlagen"/> je Anfrage.</param>
     /// <param name="NamenWoerter">die Wörter der Produktnamen (ab vier Zeichen) — die Kandidaten für einen Tippfehler (<see cref="Korrektur"/>)</param>
     public sealed record Bestand(Catalog Von, long Head, string Json, string Locale, string Channel, List<Eintrag> Produkte, Dictionary<string, Eintrag> NachId,
-        Dictionary<string, string> Dokumente, HashSet<string> NamenWoerter);
+        Dictionary<string, string> Dokumente, HashSet<string> NamenWoerter, List<Gruppe> Gruppen);
 
     private static readonly ConcurrentDictionary<(string Key, string Locale), Bestand> _bestand = new();
 
@@ -148,9 +152,28 @@ public static partial class AdvisorApi
                     if (model.Attributes.TryGetValue(k, out var ad)) sb.Append(Anzeige(model, ad, w, locale)).Append('\n');
                 return sb.ToString();
             }
+            // die Gruppen je Produkt: jedes Glied des Pfads unter der Wurzel, in Baumfolge; ein Produkt in zwei Rubriken gehört zu beiden
+            var gruppenVon = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+            var gruppen = new Dictionary<string, (string Label, int Tiefe)>(StringComparer.Ordinal);
+            var folge = new List<string>();
+            List<string> Merke(string pid, IReadOnlyList<Publication.PathItem> pfad)
+            {
+                if (!gruppenVon.TryGetValue(pid, out var l)) gruppenVon[pid] = l = [];
+                var weg = "";
+                for (var i = 1; i < pfad.Count; i++)
+                {
+                    var g = pfad[i];
+                    weg += "/" + (g.Id.Length > 0 ? g.Id : g.Label);
+                    var k = g.Id.Length > 0 ? g.Id : "v:" + weg;   // eine Gliederung nach Attributwert hat keinen Knoten
+                    if (!gruppen.ContainsKey(k)) { gruppen[k] = (g.Label, i); folge.Add(k); }
+                    if (!l.Contains(k)) l.Add(k);
+                }
+                return l;
+            }
             foreach (var r in Publication.Export(tree, model, root, locale, c.AsOf))
             {
-                if (!r.In || !gesehen.Add(r.Product.Id) || !tree.Visible(r.Product, role, admin)) continue;
+                if (!r.In || !tree.Visible(r.Product, role, admin)) continue;
+                if (!gesehen.Add(r.Product.Id)) { if (gruppenVon.ContainsKey(r.Product.Id)) Merke(r.Product.Id, r.Rubrics); continue; }
                 var varianten = r.Variants.Where(v => v.Verdict.In && tree.Visible(v.Variant, role, admin)).Select(v => v.Variant).ToList();
                 if (varianten.Count == 0) continue;
                 var name = Name(tree, model, r.Product, locale, root.Channel);
@@ -158,7 +181,7 @@ public static partial class AdvisorApi
                 // Sonst passte ein Zelt zu „undicht“, weil seine häufigen Fragen (GEO-Texte) „Warum ist mein Zelt undicht?“ enthalten.
                 var text = new StringBuilder(name).Append('\n').Append(SichtText(r.Product));
                 foreach (var v in varianten) text.Append('\n').Append(SichtText(v));
-                produkte.Add(new Eintrag(r.Product, varianten, name, text.ToString().ToLowerInvariant()));
+                produkte.Add(new Eintrag(r.Product, varianten, name, text.ToString().ToLowerInvariant(), Merke(r.Product.Id, r.Rubrics)));
             }
             var nachId = new Dictionary<string, Eintrag>(StringComparer.Ordinal);
             foreach (var e in produkte) { nachId[e.Product.Id] = e; foreach (var v in e.Varianten) nachId.TryAdd(v.Id, e); }
@@ -176,7 +199,8 @@ public static partial class AdvisorApi
                 foreach (var a in tree.Ancestors(e.Product)) Dok(a);
             }
             var namenWoerter = produkte.SelectMany(e => Woerter(e.Name)).Where(w => w.Length >= 4 && !w.All(char.IsDigit)).ToHashSet(StringComparer.Ordinal);
-            return new Bestand(c, head, json, locale, root.Channel ?? "", produkte, nachId, dokumente, namenWoerter);
+            var gruppenListe = folge.Select(k => new Gruppe(k, gruppen[k].Label, gruppen[k].Tiefe, produkte.Count(e => e.Gruppen.Contains(k)))).Where(g => g.N > 0).ToList();
+            return new Bestand(c, head, json, locale, root.Channel ?? "", produkte, nachId, dokumente, namenWoerter, gruppenListe);
         });
         _bestand[(key, locale)] = neu;
         return neu;

@@ -2874,8 +2874,14 @@ ein. Der Kern holt jedes Produkt (`product/{id}`) und nennt je Produkt die Stell
 Bezeichnung **und Inhalt**, Sätze aus den Texten (`kern/stellen.mjs`); ein Eigenschaftswort nennt das Attribut („schwer“ → Gewicht).
 Die gesammelten Angaben ändern sich dabei nicht. Dieselben Stellen beantworten die Frage zum Produkt im Blick, wenn die
 Bezeichnungen seiner Werte nichts nennen — in vielen Daten steht die Antwort im Wert („Material: … 3000 mm Wassersäule“) oder in
-der Beschreibung. Mit KI am Berater schreibt sie aus den Stellen einen Text. Gruss, Dank und Abschied bekommen einen kurzen Satz
-statt einer Suche.
+der Beschreibung. Mit KI am Berater schreibt sie aus den Stellen einen Text. Nennt keine Stelle das Gefragte selbst, sagt der Satz,
+dass die Merkmale Hinweise sind. Gruss, Dank und Abschied bekommen einen kurzen Satz statt einer Suche.
+
+**Das Sortiment (gebaut 09.10.2026).** Besteht eine Eingabe nach den Füllwörtern nur aus allgemeinen Wörtern („was verkauft ihr?“,
+„welche Artikel habt ihr im Angebot?“), nennt der Berater die Gruppen des Publikationsbaums mit ihrer Zahl an Produkten: die oberste
+Ebene unter der Wurzel mit mindestens zwei Gruppen (`groups` im Vokabular, `AdvisorApi.Uebersicht`) — Rubriken, verwiesene
+Pflegegruppen, Gliederungen einer Regel. Ein Klick wählt eine Gruppe; `select` nimmt sie als `gruppe` und grenzt ein, bevor etwas
+anderes zählt. Sie gilt im Gespräch weiter und steht als Angabe zum Wegnehmen da; ein Themenwechsel wird ohne sie geprüft.
 
 Die Kennung ist zufällig und trägt keine Person; ohne sie (ein Agent über MCP) gibt es kein Gedächtnis, jede Frage steht für sich.
 

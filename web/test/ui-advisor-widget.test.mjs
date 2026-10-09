@@ -424,6 +424,26 @@ test('eine Frage zu den gezeigten Produkten: je Produkt sein Name, der es öffne
   assert.ok(w.rufe.some(r => r.url.includes('/api/product/p1')), 'der Name öffnet das Produkt')
 })
 
+test('das Sortiment: je Gruppe ein Chip mit Anzahl, ein Klick schickt die Gruppe; sie steht danach als Angabe zum Wegnehmen da', async () => {
+  let n = 0
+  const w = starte({
+    ...standard(),
+    '/api/ask': body => ++n === 1
+      ? antwort({ total: 5, sortiment: [{ key: 'k-1', label: 'Zelte', n: 3 }, { key: 'k-2', label: 'Hosen', n: 2 }] }, { satz: 'Im Angebot sind 5 Produkte in 2 Bereichen:' })
+      : antwort({ total: 3, hits: [HIT('p1', 'Bohrhammer Pro')], words: [], group: { key: 'k-1', label: 'Zelte' } }, { satz: '3 Produkte in „Zelte“.' }),
+  })
+  await warte()
+  await w.frage('was verkauft ihr?')
+  const chips = w.$$('.sortiment .chip')
+  assert.deepEqual(chips.map(x => x.textContent), ['Zelte (3)', 'Hosen (2)'])
+  await w.klick(chips[0])
+  assert.deepEqual(w.fragen().at(-1).body.schritt, { art: 'gruppe', key: 'k-1', label: 'Zelte' })
+  const g = w.$$('.chip.gruppe').at(-1)
+  assert.equal(g.textContent, 'Zelte ×')
+  await w.klick(g)
+  assert.deepEqual(w.fragen().at(-1).body.schritt, { art: 'weg', kind: 'gruppe' })
+})
+
 test('Gruss, Dank und Abschied: eine Blase mit dem Satz des Kerns', async () => {
   const w = starte({ ...standard(), '/api/ask': [200, { kurz: true, texte: { satz: 'Gern geschehen.', hinweise: [] } }] })
   await warte()
