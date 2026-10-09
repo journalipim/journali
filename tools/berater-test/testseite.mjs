@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 // Der Testaufbau des Produktberaters (tools/berater-test, gestartet mit tools\berater.cmd start): eine Testseite auf dem PC: eine leere Shop-Seite, die das Chat-Fenster des lokalen Dienstes
-// einbindet — so, wie eine Website es täte. Ihre Adresse (http://localhost:8091) gehört unter „Websites“ des Beraters, sonst antwortet der
+// einbindet — so, wie eine Website es täte. Ihre Adresse (http://localhost:8191) gehört unter „Websites“ des Beraters, sonst antwortet der
 // Dienst dem Browser mit 403.
 //
-//   node tools/berater-test/testseite.mjs [--port 8091] [--dienst http://localhost:8090]
+//   node tools/berater-test/testseite.mjs [--port 8191] [--dienst http://localhost:8190]
 import http from 'node:http'
 
 /// Die Seite: schwebend unten rechts, dazu ein eingebetteter Berater unter ?eingebettet, englisch mit ?en
@@ -30,7 +30,7 @@ function argument(name, vorgabe) {
 }
 
 if (process.argv[1]?.replace(/\\/g, '/').endsWith('berater-test/testseite.mjs')) {
-  const port = Number(argument('port', 8091)), dienst = argument('dienst', 'http://localhost:8090')
+  const port = Number(argument('port', 8191)), dienst = argument('dienst', 'http://localhost:8190')
   http.createServer((req, res) => {
     const url = new URL(req.url ?? '/', 'http://seite')
     if (url.pathname !== '/') { res.writeHead(404); return res.end() }

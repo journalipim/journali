@@ -41,7 +41,7 @@ Commit je Thema, sofort nach `origin`, dann `github`; Plugin nach Änderung hoch
 
 ## Zum Ausprobieren auf einem Rechner
 
-- `tools\berater token shop ja_…` (einmal), dann `tools\berater start shop`: Dienst auf `localhost:8090`, Testaufbau `tools\berater-test` auf `localhost:8091`
+- `tools\berater token shop ja_…` (einmal), dann `tools\berater`: Dienst auf `localhost:8190`, Testaufbau `tools\berater-test` auf `localhost:8191`
   (am Berater unter „Websites“ eintragen); `tools\berater pruefen shop` spielt den Prüfstand, `tools\berater stop` beendet.
 
 - journali nach jeder Server-Änderung neu starten; nach Änderungen an `widget.js` oder am Kern auch den Berater-Dienst (er liest beides nur

@@ -510,8 +510,8 @@ tools\berater start shop
 ```
 
 Das Token liegt danach in `%USERPROFILE%\.journali\advisor-shop.token`, nie im Repo. `start` braucht einen laufenden journali
-(`tools\server start`), startet den Dienst (`localhost:8090`) und die Testseite (`localhost:8091`, Testaufbau `tools/berater-test`:
-schwebend, `?eingebettet`, `?en`) in eigenen Fenstern und öffnet sie im Browser. Am Berater gehört `http://localhost:8091` unter
+(`tools\server start`), startet den Dienst (`localhost:8190`) und die Testseite (`localhost:8191`, Testaufbau `tools/berater-test`:
+schwebend, `?eingebettet`, `?en`) in eigenen Fenstern und öffnet sie im Browser. Am Berater gehört `http://localhost:8191` unter
 „Websites“. `tools\berater stop` beendet beides, `status` fragt den Dienst, `pruefen shop` spielt den Prüfstand.
 
 **Der Kern** (`plugins/advisor/kern/`, `docs/pflegestruktur.md` 44) versteht die Eingabe und führt das Gespräch; journali wählt aus
