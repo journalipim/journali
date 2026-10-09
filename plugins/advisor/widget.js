@@ -111,8 +111,14 @@ button { font: inherit; cursor: pointer; }
 .karte .inhalt { flex: 1; min-width: 0; }
 .karte .name { font-weight: 600; }
 .karte .wert { font-size: 12px; color: var(--leise); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.karte .aktion { display: flex; gap: 8px; align-items: center; margin-top: 4px; font-size: 12px; }
-.karte .aktion button { border: 1px solid var(--linie); background: transparent; color: var(--text); border-radius: 6px; padding: 2px 8px; }
+.karte .aktion { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 4px; font-size: 12px; }
+/* die vier Bedienelemente einer Karte sehen gleich aus (09.10.2026): „Vergleichen“ ist ein Kästchen in einem Rahmen wie die Knöpfe,
+   kein Text bricht um, und „★ Gemerkt“ bekommt seine Farbe auch hier — vorher galt die Regel für Knöpfe der Karte vor .merken.an */
+.tat { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; line-height: 1.4; border: 1px solid var(--linie); background: transparent; color: var(--text); border-radius: 6px; padding: 2px 8px; font-size: 12px; cursor: pointer; }
+.tat input { margin: 0; }
+.tat.an, .tat:has(input:checked) { background: var(--akzent); border-color: var(--akzent); color: #fff; }
+.tat:disabled { opacity: .5; cursor: default; }
+button:focus-visible, .tat:focus-within { outline: 2px solid var(--akzent); outline-offset: 1px; }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12px; }
 .chip { border: 1px solid var(--linie); background: transparent; color: var(--text); border-radius: 14px; padding: 3px 10px; }
 .chip.an { background: var(--akzent); border-color: var(--akzent); color: #fff; }
@@ -312,19 +318,20 @@ tr.gleich td { color: var(--leise); }
       if (h.variants > 1) inhalt.append(el('div', 'wert', T.varianten(h.variants)))
       if (h.seen) inhalt.append(el('div', 'wert gesehen', T.angesehen))
       const aktion = el('div', 'aktion')
-      const details = el('button', 'details', T.details); details.type = 'button'
+      const details = el('button', 'tat details', T.details); details.type = 'button'
       details.addEventListener('click', () => zeigeProdukt(h.id))
-      const wahl = el('label')
+      const wahl = el('label', 'tat wahl')
       const box = el('input'); box.type = 'checkbox'; box.checked = zustand.auswahl.has(h.id)
       box.addEventListener('change', () => {
         if (box.checked && zustand.auswahl.size >= 4) { box.checked = false; return }
         box.checked ? zustand.auswahl.add(h.id) : zustand.auswahl.delete(h.id)
         aktualisiereLeiste()
       })
-      wahl.append(box, document.createTextNode(' ' + T.vergleichen))
-      const nicht = el('button', 'nicht', T.nichtDas); nicht.type = 'button'; nicht.title = T.nichtDasTitel
+      wahl.append(box, document.createTextNode(T.vergleichen))
+      const nicht = el('button', 'tat nicht', T.nichtDas); nicht.type = 'button'; nicht.title = T.nichtDasTitel
       nicht.addEventListener('click', () => schritt({ art: 'ablehnen', id: h.id, name: h.name }))
-      aktion.append(details, merkenKnopf(h.id, h.name, 'produkt'), wahl, nicht)
+      const merken = merkenKnopf(h.id, h.name, 'produkt'); merken.classList.add('tat')
+      aktion.append(details, merken, wahl, nicht)
       inhalt.append(aktion)
       k.append(bild(h.image), inhalt)
       return k

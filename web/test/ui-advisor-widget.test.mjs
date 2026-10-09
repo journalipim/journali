@@ -402,6 +402,25 @@ test('ohne Auswahl ist der Knopf zum Vergleichen nicht da — hidden gilt auch g
   assert.match(w.$('style').textContent, /\[hidden\] \{ display: none !important; \}/)
 })
 
+// Fall aus der Bedienung (09.10.2026): an der Karte sah „Details“ anders aus als „☆ Merken“ und „Nicht das“ (die brachen um),
+// „Vergleichen“ war ein blosses Kästchen mit Text — alle vier tragen jetzt dieselbe Regel
+test('die Bedienelemente einer Karte sehen gleich aus und brechen nicht um', async () => {
+  const w = starte()
+  await warte()
+  await w.frage('Bohrhammer')
+  const teile = [...w.$('.karte .aktion').children]
+  assert.deepEqual(teile.map(t => t.textContent), ['Details', '☆ Merken', 'Vergleichen', 'Nicht das'])
+  assert.ok(teile.every(t => t.classList.contains('tat')), teile.map(t => t.className).join(' | '))
+  const stil = w.$('style').textContent
+  assert.match(stil, /\.tat \{[^}]*white-space: nowrap;[^}]*border: 1px solid var\(--linie\);/)
+  assert.match(stil, /\.karte \.aktion \{[^}]*flex-wrap: wrap;/)
+  assert.doesNotMatch(stil, /\.karte \.aktion button \{/, 'eine Regel nur für Knöpfe lässt das Kästchen aussen vor und überdeckt .an')
+  const merken = teile[1]
+  await w.klick(merken)
+  assert.ok(merken.classList.contains('an'))
+  assert.match(stil, /\.tat\.an, \.tat:has\(input:checked\) \{ background: var\(--akzent\);/)
+})
+
 // happy-dom rechnet kein Layout: geprüft wird die Regel — ohne flex: none staucht die Ansicht die Tafel, und der Rest ist nicht zu erreichen
 test('eine Tafel wird in der Ansicht nicht gestaucht, die Ansicht scrollt', async () => {
   const w = starte()
