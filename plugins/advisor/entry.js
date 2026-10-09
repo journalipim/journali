@@ -1,4 +1,4 @@
-(function(){const s=document.createElement('style');s.textContent="\n.seiten[data-v-4c66063c] { display: flex; gap: 0; flex: 1; min-height: 0;\n}\n.liste[data-v-4c66063c] { width: 260px; border-right: 1px solid var(--line); overflow-y: auto;\n}\n.rechts[data-v-4c66063c] { flex: 1; overflow-y: auto; min-width: 0;\n}\n.kopf[data-v-4c66063c] { display: flex; gap: 6px; align-items: center; padding: 6px 8px;\n}\n.kopf .bez[data-v-4c66063c] { flex: 1;\n}\n.neu[data-v-4c66063c] { display: flex; gap: 4px; padding: 6px 8px;\n}\n.neu input[data-v-4c66063c] { flex: 1; min-width: 0;\n}\n.form[data-v-4c66063c] { width: 100%;\n}\n.form td[data-v-4c66063c] { height: 30px; vertical-align: middle; white-space: normal; padding: 2px 4px;\n}\n.form td.attr[data-v-4c66063c] { color: var(--muted); white-space: nowrap; padding-left: 8px;\n}\n.row[data-v-4c66063c] { display: flex; gap: 8px; align-items: center; flex-wrap: wrap;\n}\n.zahl[data-v-4c66063c] { width: 70px;\n}\n.code[data-v-4c66063c] { margin: 2px 0 8px; padding: 6px 8px; background: var(--bg2, rgba(127,127,127,.08)); border-radius: 4px; white-space: pre-wrap; word-break: break-all; font-size: 12px;\n}\n.neues-token[data-v-4c66063c] { user-select: all; word-break: break-all;\n}\n.fehler[data-v-4c66063c] { margin: 4px 8px; padding-left: 16px;\n}\n.treffer[data-v-4c66063c] { margin: 4px 0; padding-left: 20px;\n}\n";document.head.append(s)})();
+(function(){const s=document.createElement('style');s.textContent="\n.seiten[data-v-0be73fe9] { display: flex; gap: 0; flex: 1; min-height: 0;\n}\n.liste[data-v-0be73fe9] { width: 260px; border-right: 1px solid var(--line); overflow-y: auto;\n}\n.rechts[data-v-0be73fe9] { flex: 1; overflow-y: auto; min-width: 0;\n}\n.kopf[data-v-0be73fe9] { display: flex; gap: 6px; align-items: center; padding: 6px 8px;\n}\n.kopf .bez[data-v-0be73fe9] { flex: 1;\n}\n.neu[data-v-0be73fe9] { display: flex; gap: 4px; padding: 6px 8px;\n}\n.neu input[data-v-0be73fe9] { flex: 1; min-width: 0;\n}\n.form[data-v-0be73fe9] { width: 100%;\n}\n.form td[data-v-0be73fe9] { height: 30px; vertical-align: middle; white-space: normal; padding: 2px 4px;\n}\n.form td.attr[data-v-0be73fe9] { color: var(--muted); white-space: nowrap; padding-left: 8px;\n}\n.row[data-v-0be73fe9] { display: flex; gap: 8px; align-items: center; flex-wrap: wrap;\n}\n.zahl[data-v-0be73fe9] { width: 70px;\n}\n.code[data-v-0be73fe9] { margin: 2px 0 8px; padding: 6px 8px; background: var(--bg2, rgba(127,127,127,.08)); border-radius: 4px; white-space: pre-wrap; word-break: break-all; font-size: 12px;\n}\n.neues-token[data-v-0be73fe9] { user-select: all; word-break: break-all;\n}\n.fehler[data-v-0be73fe9] { margin: 4px 8px; padding-left: 16px;\n}\n.treffer[data-v-0be73fe9] { margin: 4px 0; padding-left: 20px;\n}\n";document.head.append(s)})();
 const m = window.journali.vue;
 const Fragment = m.Fragment;
 const computed = m.computed;
@@ -317,11 +317,12 @@ const _sfc_main = {
       `  advisor-${cur.value}:`,
       "    image: node:22-alpine",
       '    command: ["node", "/advisor/serve.mjs"]',
-      '    volumes: ["./plugins/advisor:/advisor:ro"]',
+      `    volumes: ["./plugins/advisor:/advisor:ro", "advisor-${cur.value}-daten:/daten"]`,
       "    environment:",
       "      JOURNALI: http://server:8080",
       `      JOURNALI_ADVISOR: ${cur.value}`,
       "      JOURNALI_ADVISOR_TOKEN: ${JOURNALI_ADVISOR_TOKEN}",
+      "      JOURNALI_ADVISOR_DATA: /daten",
       '    ports: ["127.0.0.1:8090:8090"]'
     ].join("\n"));
     return (_ctx, _cache) => {
@@ -1175,7 +1176,7 @@ const _sfc_main = {
     };
   }
 };
-const View = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-4c66063c"]]);
+const View = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-0be73fe9"]]);
 const entry = {
   views: [{ path: "advisor", topic: "export", order: 50, label: t("Produktberatung"), icon: "✆", hint: t("Fragen von Besuchern einer Website an die Produkte eines Publikationsbaums — als Chat-Fenster und für KI-Agenten"), component: View }]
 };

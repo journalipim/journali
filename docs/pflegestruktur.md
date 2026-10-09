@@ -2785,14 +2785,16 @@ fragen darüber den Katalog. Das ist die andere Richtung und bleibt davon unber�
 - Schritt 2 hängt am Shop: wie er seine Kunden anmeldet und ob er einen signierten Nachweis ausstellen kann. Erst mit einem
   konkreten Shop und einem konkreten Fremdsystem.
 
-## 44. Berater und journali — der Berater versteht, journali wählt aus (09.10.2026, Schritte 1–4 gebaut)
+## 44. Berater und journali — der Berater versteht, journali wählt aus (09.10.2026, Schritte 1–4 und das Lernen gebaut)
 
 **Stand (09.10.2026).** Gebaut: die Schnittstelle Version 2 (`AdvisorAuswahl.cs`: `vocabulary`, `select`, `docs`, `ki`); der Kern im
 Plugin (`plugins/advisor/kern/`: `woerter.mjs`, `verstehen.mjs`, `texte.mjs`, `gespraech.mjs`); er läuft im Dienst und in journali als
 Kindprozess für die Vorschau (`AdvisorKern.cs`, `kern/prozess.mjs`, Weg `preview`, ein Token je Berater nur im Arbeitsspeicher); das
 Fenster zeigt nur noch an; das Gedächtnis der Gespräche mit Vorlieben, Gesehenem und Abgelehntem im Dienst; `search_products` (MCP) fragt
 den Kern ohne Gespräch. `/ask` ist weg. Der Prüfstand steht in `tools/berater-dialoge/` (`spiele.mjs`, `pruefe.mjs`, die Dialoge als
-JSON mit Erwartung und Vorbild). Die Abschnitte unten sind die Entscheidung; was davon wo steht, sagt der Code.
+JSON mit Erwartung und Vorbild). Das Lernen zählt im Dienst (`kern/lernen.mjs`, Datei `lernen.json` mit `JOURNALI_ADVISOR_DATA`), die Vorschläge
+zeigt `plugins/advisor/vorschlaege.mjs` — ob sie später in journali als Liste erscheinen, ist weiter offen. Die Abschnitte unten sind die
+Entscheidung; was davon wo steht, sagt der Code.
 
 **Die Lage.** Die Abwägung des Produktberaters steckt heute im Server (`AdvisorApi.cs`, Abschnitt 42): Wörter, Angaben,
 Eigenschaftswörter, Tippfehler, Produkt im Blick, Rückfrage. Das Fenster hält das Gespräch (gesammelte Wörter und Angaben,

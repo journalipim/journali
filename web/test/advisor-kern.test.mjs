@@ -8,6 +8,10 @@ import { woerter, formen, korrektur, abstand } from '../../plugins/advisor/kern/
 import { erkenne, fragt, istArt, namenWoerter } from '../../plugins/advisor/kern/verstehen.mjs'
 import { erstelleKern } from '../../plugins/advisor/kern/gespraech.mjs'
 import { erstelleLernen, vorschlaege } from '../../plugins/advisor/kern/lernen.mjs'
+import { alsText } from '../../plugins/advisor/vorschlaege.mjs'
+import fs from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
 
 // ---- ein kleiner Katalog und eine Auswahl wie in journali
 
@@ -308,4 +312,30 @@ test('Lernen zählt Wörter ohne Treffer, gelesene Tippfehler und Wörter vor de
   assert.deepEqual(v.korrektur.map(x => [x.von, x.zu, x.n]), [['zeit', 'zelt', 3]])
   assert.deepEqual(v.gemerkt.map(x => [x.wort, x.id, x.n]), [['zelt', 'z2', 3]])
   assert.deepEqual(vorschlaege(lernen.stand(), { ab: 4 }).ohneTreffer, [], 'erst ab einer Zahl ein Vorschlag')
+})
+
+test('das Gelernte liegt in einer Datei des Dienstes, überlebt einen Neustart und wird als Vorschläge lesbar', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'advisor-lernen-'))
+  const datei = path.join(dir, 'daten', 'lernen.json')
+  let t = 0
+  try {
+    const l = erstelleLernen({ datei, jetzt: () => t, schreibenNach: 60_000 })
+    l.notiere('ohneTreffer', { wort: 'auto' })
+    assert.ok(!fs.existsSync(datei), 'nicht nach jedem Wort — höchstens einmal je Minute')
+    t += 61_000
+    l.notiere('ohneTreffer', { wort: 'auto' })
+    assert.ok(fs.existsSync(datei))
+    l.notiere('korrektur', { from: 'zeit', to: 'zelt' })
+    l.schreibe()
+    const nach = erstelleLernen({ datei })   // ein Neustart
+    assert.equal(nach.stand().ohneTreffer.auto.n, 2)
+    assert.equal(nach.stand().korrektur['zeit → zelt'].n, 1)
+    const text = alsText(vorschlaege(nach.stand(), { ab: 1 }))
+    assert.match(text, /Wörter ohne Treffer\n  2×  „auto“ — Synonym im Wörterbuch oder Attribut in der Sicht/)
+    assert.match(text, /„zeit“ → „zelt“/)
+    assert.equal(alsText(vorschlaege({}, {})), 'Noch keine Vorschläge.')
+    // eine kaputte Datei fängt von vorn an, statt den Dienst anzuhalten
+    fs.writeFileSync(datei, '{ kaputt')
+    assert.deepEqual(erstelleLernen({ datei }).stand().ohneTreffer, {})
+  } finally { fs.rmSync(dir, { recursive: true, force: true }) }
 })

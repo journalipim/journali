@@ -457,12 +457,13 @@ Er braucht nur HTTP zu journali, keine Datenbank, keinen Medienspeicher. Neben `
   advisor-shop:
     image: node:22-alpine
     command: ["node", "/advisor/serve.mjs"]
-    volumes: ["./plugins/advisor:/advisor:ro"]
     environment:
       JOURNALI: http://server:8080
       JOURNALI_ADVISOR: shop
       JOURNALI_ADVISOR_TOKEN: ${JOURNALI_ADVISOR_TOKEN}   # in .env, oder JOURNALI_ADVISOR_TOKEN_FILE
       JOURNALI_PROXY: "1"                               # nur hinter einem Reverse Proxy
+      JOURNALI_ADVISOR_DATA: /daten                     # wahlweise: das Lernen in /daten/lernen.json
+    volumes: ["./plugins/advisor:/advisor:ro", "advisor-shop-daten:/daten"]
     ports: ["127.0.0.1:8090:8090"]
     restart: unless-stopped
 ```
@@ -490,7 +491,7 @@ denselben Dienst unter `https://advisor.example.com/mcp` (MCP, Streamable HTTP; 
 | `POST /mcp` | MCP: `search_products`, `get_product`, `compare_products` |
 | `GET /health` | 200, wenn journali mit dem Token antwortet |
 
-**Was der Dienst speichert:** nichts auf Platte. Im Arbeitsspeicher die Zahl der Fragen je Besucheradresse für Minute und Tag
+**Was der Dienst speichert:** auf Platte nur, wenn `JOURNALI_ADVISOR_DATA` gesetzt ist, das Lernen (unten). Im Arbeitsspeicher die Zahl der Fragen je Besucheradresse für Minute und Tag
 (danach verworfen), die Angaben des Beraters für eine Minute, das Vokabular für 30 Sekunden und **das Gedächtnis der Gespräche**: je
 zufälliger Kennung, die das Fenster beim Laden der Seite erzeugt, die gesammelten Angaben, Vorlieben, gesehene und abgelehnte Produkte,
 das Produkt im Blick und die letzten sechs Eingaben — 30 Minuten nach der letzten Eingabe weg, höchstens 20 000 Gespräche. Die Kennung
@@ -503,6 +504,17 @@ das gehört in die Datenschutzerklärung der Website, ebenso die Adresse des Bes
 ⇪ Produktberatung (`node plugins/advisor/kern/prozess.mjs`, gestartet beim ersten Bedarf, wie der Einbetter); er erreicht journali
 über die Adresse der Jobs mit einem Token, das journali nur im Arbeitsspeicher hält. Ohne `node` gibt es keine Vorschau, der Dienst
 an der Website ist davon nicht betroffen.
+
+**Lernen** (`docs/pflegestruktur.md` 44): der Dienst zählt ohne Gespräch und ohne Kennung Wörter ohne Treffer, gelesene Tippfehler,
+Eingaben ohne Ergebnis und die Wörter vor dem Öffnen, Merken oder Ablehnen eines Produkts — mit `JOURNALI_ADVISOR_DATA` in
+`lernen.json` (höchstens einmal je Minute und beim Beenden geschrieben, je Art höchstens 5 000 Einträge), sonst nur im Arbeitsspeicher.
+Darin stehen Wörter, Produkt-Ids und Anzahlen, keine Adresse und kein Gespräch. Die Vorschläge daraus:
+
+```bash
+docker compose exec advisor-shop node /advisor/vorschlaege.mjs /daten/lernen.json
+```
+
+Übernommen wird nichts von selbst — ein Synonym, ein Attribut in der Sicht oder ein Stichwort trägt ein Mensch in journali ein.
 
 **Der Prüfstand** (`tools/berater-dialoge/`): Dialoge als JSON — je Schritt eine Eingabe, ein Klick, „Öffnen“ oder „Nicht das“, dazu
 was erwartet wird (Treffer, Angaben, Hinweise, Frage, Unterlagen …) und ein Vorbild, wie ein Berater antworten würde. Gespielt werden sie

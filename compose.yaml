@@ -91,12 +91,13 @@ services:
   # advisor-shop:
   #   image: node:22-alpine
   #   command: ["node", "/advisor/serve.mjs"]
-  #   volumes: ["./plugins/advisor:/advisor:ro"]
+  #   volumes: ["./plugins/advisor:/advisor:ro", "advisor-shop-daten:/daten"]   # /daten: das Lernen (JOURNALI_ADVISOR_DATA)
   #   environment:
   #     JOURNALI: http://server:8080
   #     JOURNALI_ADVISOR: shop
   #     JOURNALI_ADVISOR_TOKEN: ${JOURNALI_ADVISOR_TOKEN}
   #     JOURNALI_PROXY: "1"
+  #     JOURNALI_ADVISOR_DATA: /daten
   #   ports: ["127.0.0.1:8090:8090"]
   #   restart: unless-stopped
 

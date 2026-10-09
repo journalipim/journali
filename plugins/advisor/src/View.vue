@@ -125,11 +125,12 @@ const compose = computed(() => [
   `  advisor-${cur.value}:`,
   '    image: node:22-alpine',
   '    command: ["node", "/advisor/serve.mjs"]',
-  '    volumes: ["./plugins/advisor:/advisor:ro"]',
+  `    volumes: ["./plugins/advisor:/advisor:ro", "advisor-${cur.value}-daten:/daten"]`,
   '    environment:',
   '      JOURNALI: http://server:8080',
   `      JOURNALI_ADVISOR: ${cur.value}`,
   '      JOURNALI_ADVISOR_TOKEN: ${JOURNALI_ADVISOR_TOKEN}',
+  '      JOURNALI_ADVISOR_DATA: /daten',
   '    ports: ["127.0.0.1:8090:8090"]',
 ].join('\n'))
 </script>

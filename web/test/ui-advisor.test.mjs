@@ -59,6 +59,7 @@ test('die Liste zeigt die Berater mit ihrem Zustand; ein Klick öffnet einen mit
     assert.match(w.find('.token').text(), /abcdef123456/)
     assert.ok(w.find('pre.code').text().includes('widget.js'))
     assert.ok(w.text().includes('JOURNALI_ADVISOR: shop'))
+    assert.ok(w.text().includes('advisor-shop-daten:/daten'), 'das Lernen bekommt ein Volume')
   } finally { ende() }
 })
 
