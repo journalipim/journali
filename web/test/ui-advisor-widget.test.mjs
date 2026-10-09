@@ -293,6 +293,26 @@ test('passen Abschnitte aus den Unterlagen, stehen sie zuerst — der erste ganz
   assert.ok(!b.querySelector('.ganz'))
 })
 
+test('weiche Wörter grenzen nicht ein, sie ordnen — der Satz sagt beides', async () => {
+  const w = starte({ ...STANDARD, '/api/ask': [200, { total: 10, hits: [HIT('z1', 'Odda Zelt')], facets: [], filter: [], words: ['zelt', 'wasserdicht'], ranked: ['wasserdicht'] }] })
+  await warte()
+  await w.frage('zelt wasserdicht')
+  assert.equal(satz(w.$$('.ergebnis').at(-1)), '10 Produkte passen zu „zelt“; zuerst, was zu „wasserdicht“ passt.')
+  const v = starte({ ...STANDARD, '/api/ask': [200, { total: 4, hits: [HIT('z1', 'Odda Zelt')], facets: [], filter: [], words: ['wasserdicht'], ranked: ['wasserdicht'] }] })
+  await warte()
+  await v.frage('wasserdicht')
+  assert.equal(satz(v.$$('.ergebnis').at(-1)), '4 Produkte passen zu „wasserdicht“, die passendsten zuerst.')
+})
+
+test('einen Tippfehler liest der Berater als Produktnamen und sagt es in der Antwort', async () => {
+  const w = starte({ ...STANDARD, '/api/ask': [200, { total: 10, hits: [HIT('z1', 'Brenna 5 Zelt')], facets: [], filter: [], words: ['zelt'], corrected: [{ from: 'zeit', to: 'zelt' }] }] })
+  await warte()
+  await w.frage('das zeit soll leicht sein')
+  const sb = w.$$('.ergebnis').at(-1)
+  assert.equal(sb.querySelector('.gelesen').textContent, '„zeit“ habe ich als „zelt“ gelesen.')
+  assert.equal(satz(sb), '10 Produkte passen zu „zelt“.')
+})
+
 test('Treffer nur nach dem Sinn heissen ähnliche Produkte', async () => {
   const w = starte({ ...STANDARD, '/api/ask': [200, { total: 2, similar: true, hits: [HIT('p1', 'Schlafsack'), HIT('p2', 'Decke')], facets: [], filter: [], words: [] }] })
   await warte()

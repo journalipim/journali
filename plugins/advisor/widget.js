@@ -26,6 +26,9 @@
       aehnlich: n => n === 1 ? '1 ähnliches Produkt.' : `${n} ähnliche Produkte.`, unbekannt: w => `„${w.join('“, „')}“ steht in keinem Produkt.`,
       neu: 'Neue Suche', angabeWeg: 'Angabe entfernen', lockern: 'Mit weniger Angaben:', ohne: (l, n) => `${l} (${n})`, alle: 'alle Produkte',
       abschluss: l => l ? `Passt eines davon? Oder soll ich nach ${l} eingrenzen?` : 'Passt eines davon?',
+      gelesen: (von, zu) => `„${von}“ habe ich als „${zu}“ gelesen.`,
+      trefferVorn: (n, hart, weich) => hart ? `${n === 1 ? '1 Produkt passt' : `${n} Produkte passen`} zu „${hart}“; zuerst, was zu „${weich}“ passt.`
+        : `${n === 1 ? '1 Produkt passt' : `${n} Produkte passen`} zu „${weich}“, die passendsten zuerst.`,
       trefferZu: (n, w) => n === 1 ? `1 Produkt passt zu „${w}“.` : `${n} Produkte passen zu „${w}“.`, weitere: n => `${n} weitere zeigen`,
       oeffnenVariante: 'Öffnen', merken: '☆ Merken', gemerkt: '★ Gemerkt', merkzettel: n => `☆ ${n}`, merkzettelTitel: 'Merkzettel', merkzettelLeer: 'Der Merkzettel ist leer.',
       ausMerkzettel: 'Vom Merkzettel nehmen', zumProdukt: 'Zum Produkt', variante: 'Variante',
@@ -41,6 +44,9 @@
       aehnlich: n => n === 1 ? '1 similar product.' : `${n} similar products.`, unbekannt: w => `"${w.join('", "')}" does not appear in any product.`,
       neu: 'New search', angabeWeg: 'Remove', lockern: 'With fewer criteria:', ohne: (l, n) => `${l} (${n})`, alle: 'all products',
       abschluss: l => l ? `Does one of these fit? Or shall I narrow it down by ${l}?` : 'Does one of these fit?',
+      gelesen: (von, zu) => `I read "${von}" as "${zu}".`,
+      trefferVorn: (n, hart, weich) => hart ? `${n === 1 ? '1 product matches' : `${n} products match`} "${hart}"; those matching "${weich}" first.`
+        : `${n === 1 ? '1 product matches' : `${n} products match`} "${weich}", best matches first.`,
       trefferZu: (n, w) => n === 1 ? `1 product matches "${w}".` : `${n} products match "${w}".`, weitere: n => `Show ${n} more`,
       oeffnenVariante: 'Open', merken: '☆ Save', gemerkt: '★ Saved', merkzettel: n => `☆ ${n}`, merkzettelTitel: 'Saved items', merkzettelLeer: 'Nothing saved yet.',
       ausMerkzettel: 'Remove', zumProdukt: 'To the product', variante: 'Variant',
@@ -464,10 +470,14 @@ tr.gleich td { color: var(--leise); }
         if (r.unknown && r.unknown.length) antwort.append(el('div', 'blase', T.unbekannt(r.unknown)))
         // die Antwort nennt die Suche, dann die ersten drei Karten; zuletzt, direkt über der Eingabe, die Frage des Beraters (09.10.2026)
         const wort = zustand.woerter.join(' ')
-        const text = r.answer ? r.answer : (r.total ? (r.similar ? T.aehnlich(r.total) : wort ? T.trefferZu(r.total, wort) : T.treffer(r.total)) : T.keine)
+        // weiche Wörter (09.10.2026) grenzen nicht ein, sie ordnen — der Satz sagt beides
+        const weich = (r.ranked || []).filter(w => zustand.woerter.includes(w)), hart = zustand.woerter.filter(w => !weich.includes(w))
+        const gefunden = weich.length ? T.trefferVorn(r.total, hart.join(' '), weich.join(' ')) : wort ? T.trefferZu(r.total, wort) : T.treffer(r.total)
+        const text = r.answer ? r.answer : (r.total ? (r.similar ? T.aehnlich(r.total) : gefunden) : T.keine)
         // eine Blase: der Satz, was gesucht wird, ohne Treffer was sich lockern lässt — die Knöpfe älterer Antworten gelten nicht mehr
         for (const alt of verlauf.querySelectorAll('.ergebnis button')) alt.disabled = true
         const sb = el('div', 'blase ergebnis')
+        for (const k of r.corrected || []) sb.append(el('div', 'gelesen leise', T.gelesen(k.from, k.to)))   // ein Tippfehler: was der Berater gelesen hat
         sb.append(el('span', 'satz', text))
         if (r.answer) sb.append(el('span', 'hinweis', T.ki))
         const ac = angabenChips(); if (ac) sb.append(ac)

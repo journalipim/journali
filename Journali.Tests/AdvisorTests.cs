@@ -520,6 +520,83 @@ public class AdvisorTests
     }
 
     [Fact]
+    public void Leicht_ist_wenig_Masse_am_Zahlenattribut_dessen_Einheit_Masse_misst()
+    {
+        var katalog = new Catalog(new MemoryJournal()); katalog.Rebuild(); katalog.SeedMissing();
+        var model = katalog.Lesen((m, _) => m);   // die Saat kennt kg (mass) und l (volume)
+        AttributeDefinition gewicht = new("gewicht", Labels.Of("Gewicht", "Weight"), AttributeTypes.Decimal, Unit: "kg");
+        AttributeDefinition volumen = new("volumen", Labels.Of("Volumen", "Volume"), AttributeTypes.Integer, Unit: "l");
+        var (f, rest) = AdvisorApi.Erkenne(model, [gewicht, volumen], "ein leichtes Zelt, eher gross", "de");
+        Assert.Equal([("gewicht", "low", "leichtes"), ("volumen", "high", "gross")], f.Select(x => (x.Def.Key, x.Op, x.Value)).ToList());
+        Assert.Equal(["zelt", "eher"], AdvisorApi.Woerter(rest));
+        Assert.Empty(AdvisorApi.Erkenne(model, [volumen], "leicht", "de").Filter);   // ohne Attribut für Masse kein Filter
+        Assert.Equal("leichtes", AdvisorApi.AngabeText(model, gewicht, "low", "leichtes", "de"));
+    }
+
+    [Fact]
+    public async Task Leicht_sind_die_leichtere_Haelfte_der_Treffer_die_leichtesten_zuerst()
+    {
+        await using var w = await Welt.Neu();
+        w.C.With((_, _, write) =>
+        {
+            write("t", Model.AttributeStream + "gewicht", Types.AttributeDefined, new AttributeDefinition("gewicht", Labels.Of("Gewicht", "Weight"), AttributeTypes.Decimal, Unit: "kg", Group: "technik"), null);
+            foreach (var (k, kg) in new[] { ("bohr", "3.2"), ("schrauber", "1.1"), ("schleifer", "2.0") })
+                write("t", w.Ids[k], Types.AttributeSet, new AttributeSet("gewicht", null, null, kg), null);
+            return 0;
+        });
+        var (_, j) = await w.Frage("""{"q":"leicht"}""");
+        Assert.Equal(["Akkuschrauber kompakt", "Winkelschleifer"], Namen(j));
+        var echo = j.GetProperty("filter").EnumerateArray().Single();
+        Assert.Equal(("gewicht", "low", "leicht"), (echo.GetProperty("attribute").GetString(), echo.GetProperty("op").GetString(), echo.GetProperty("valueLabel").GetString()));
+        // die Angabe geht mit der nächsten Frage zurück und gilt weiter
+        var (_, k2) = await w.Frage("""{"q":"","filter":[{"attribute":"gewicht","op":"low","value":"leicht"}]}""");
+        Assert.Equal(["Akkuschrauber kompakt", "Winkelschleifer"], Namen(k2));
+    }
+
+    [Fact]
+    public void Ein_Tippfehler_wird_zum_naechsten_Wort_eines_Produktnamens()
+    {
+        var namen = new HashSet<string> { "zelt", "hose", "isomatte", "bohrhammer" };
+        Assert.Equal("zelt", AdvisorApi.Korrektur("zeit", namen));
+        Assert.Equal("bohrhammer", AdvisorApi.Korrektur("bohrhamer", namen));
+        Assert.Equal("isomatte", AdvisorApi.Korrektur("isomtate", namen));   // zwei Nachbarn vertauscht
+        Assert.Null(AdvisorApi.Korrektur("zelte", namen));                   // gebeugt steht es im Namen
+        Assert.Null(AdvisorApi.Korrektur("hut", namen));                     // zu kurz
+        Assert.Null(AdvisorApi.Korrektur("hoxe", new HashSet<string> { "hose", "hole" }));   // zwei gleich nah
+    }
+
+    [Fact]
+    public async Task Ein_Wort_in_keinem_Produkt_liest_der_Berater_als_Produktname_und_sagt_es()
+    {
+        await using var w = await Welt.Neu();
+        var (_, j) = await w.Frage("""{"q":"bohrhanmer"}""");
+        Assert.Contains("Bohrhammer Pro", Namen(j));
+        var k = j.GetProperty("corrected").EnumerateArray().Single();
+        Assert.Equal(("bohrhanmer", "bohrhammer"), (k.GetProperty("from").GetString(), k.GetProperty("to").GetString()));
+        Assert.Empty(j.GetProperty("unknown").EnumerateArray());
+        Assert.Contains("bohrhammer", j.GetProperty("words").EnumerateArray().Select(x => x.GetString()));
+    }
+
+    [Fact]
+    public void Die_Art_grenzt_ein_jedes_andere_Wort_ordnet()
+    {
+        AdvisorApi.Eintrag E(string name, string text) => new(new Node { Id = "p-" + name, Role = Roles.Product }, [], name, (name + "\n" + text).ToLowerInvariant());
+        var dicht = E("Odda Zelt", "Wassersäule 5000 mm, wasserdicht.");
+        var luftig = E("Ravik Zelt", "Leicht und luftig.");
+        var matte = E("Heia Isomatte", "Wasserdicht verschweisst.");
+        IReadOnlyList<AdvisorApi.Eintrag> alle = [luftig, matte, dicht];
+        // „zelt“ steht in Namen: hart; „wasserdicht“ in keinem Namen: weich — beide Zelte, das wasserdichte zuerst, die Matte nicht
+        Assert.Equal(["Odda Zelt", "Ravik Zelt"], AdvisorApi.Finde(alle, alle, ["zelt", "wasserdicht"]).Select(e => e.Name).ToList());
+        // nur weiche Wörter: was mindestens eines trägt
+        Assert.Equal(["Heia Isomatte", "Odda Zelt"], AdvisorApi.Finde(alle, alle, ["wasserdicht"]).Select(e => e.Name).Order().ToList());
+        // zwei harte Wörter grenzen zusammen ein
+        Assert.Empty(AdvisorApi.Finde(alle, alle, ["zelt", "isomatte"]));
+        var (hart, weich) = AdvisorApi.HartWeich(alle, ["zelt", "wasserdicht"]);
+        Assert.Equal(["zelt"], hart);
+        Assert.Equal(["wasserdicht"], weich);
+    }
+
+    [Fact]
     public void Name_vor_ganzem_Wort_vor_Wortanfang_gebeugte_Formen_zaehlen_mit()
     {
         AdvisorApi.Eintrag E(string name, string text) => new(new Node { Id = "p-" + name, Role = Roles.Product }, [], name, (name + "\n" + text).ToLowerInvariant());

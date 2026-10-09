@@ -122,8 +122,9 @@ public static partial class AdvisorApi
     /// <param name="Dokumente">die Unterlagen (09.10.2026): Medium → der Knoten, an dem es hängt — Dokumente an den Produkten, ihren Varianten
     /// und den Gruppen darüber (Relation eines anderen Typs als image, kein Bild). Ob eines heute gilt und die Rolle es sieht, fragt
     /// <see cref="Unterlagen"/> je Anfrage.</param>
+    /// <param name="NamenWoerter">die Wörter der Produktnamen (ab vier Zeichen) — die Kandidaten für einen Tippfehler (<see cref="Korrektur"/>)</param>
     public sealed record Bestand(Catalog Von, long Head, string Json, string Locale, string Channel, List<Eintrag> Produkte, Dictionary<string, Eintrag> NachId,
-        Dictionary<string, string> Dokumente);
+        Dictionary<string, string> Dokumente, HashSet<string> NamenWoerter);
 
     private static readonly ConcurrentDictionary<(string Key, string Locale), Bestand> _bestand = new();
 
@@ -174,7 +175,8 @@ public static partial class AdvisorApi
                 foreach (var v in e.Varianten) Dok(v);
                 foreach (var a in tree.Ancestors(e.Product)) Dok(a);
             }
-            return new Bestand(c, head, json, locale, root.Channel ?? "", produkte, nachId, dokumente);
+            var namenWoerter = produkte.SelectMany(e => Woerter(e.Name)).Where(w => w.Length >= 4 && !w.All(char.IsDigit)).ToHashSet(StringComparer.Ordinal);
+            return new Bestand(c, head, json, locale, root.Channel ?? "", produkte, nachId, dokumente, namenWoerter);
         });
         _bestand[(key, locale)] = neu;
         return neu;
@@ -345,6 +347,27 @@ public static partial class AdvisorApi
     }
 
     /// <summary>
+    /// Harte und weiche Wörter (09.10.2026). Hart ist ein Wort, das im Namen eines Produkts steht — die Art („zelt“, „hose“, „isomatte“); es
+    /// grenzt ein, wie bisher alle Wörter zusammen. Weich ist jedes andere („wasserdicht“, „winter“, „warm“): es grenzt nicht ein, es ordnet —
+    /// wer es trägt, steht vorn, und die Sinnsuche ordnet mit. Gibt es kein hartes Wort, sind es die Produkte, zu denen mindestens ein weiches
+    /// passt. Vorher musste jedes Wort passen: „zelt wasserdicht“ fand nichts, statt die Zelte nach „wasserdicht“ zu ordnen.
+    /// </summary>
+    public static List<Eintrag> Finde(IReadOnlyList<Eintrag> bestand, IEnumerable<Eintrag> kandidaten, IReadOnlyList<string> woerter)
+    {
+        var (hart, weich) = HartWeich(bestand, woerter);
+        var basis = hart.Count > 0 ? MitWoertern(kandidaten, hart)
+            : weich.Count > 0 ? kandidaten.Where(e => weich.Any(w => Staerke(e, w) > 0)).ToList()
+            : kandidaten.ToList();
+        return basis.OrderByDescending(e => weich.Sum(w => Staerke(e, w))).ThenByDescending(e => Punkte(e, hart)).ToList();
+    }
+
+    public static (List<string> Hart, List<string> Weich) HartWeich(IReadOnlyList<Eintrag> bestand, IReadOnlyList<string> woerter)
+    {
+        var hart = woerter.Where(w => bestand.Any(e => Staerke(e, w) >= 2)).ToList();
+        return (hart, woerter.Where(w => !hart.Contains(w)).ToList());
+    }
+
+    /// <summary>
     /// Die Produkte, zu denen alle Wörter passen. Passt ein Wort bei einem Teil im Namen oder als ganzes Wort, fallen die weg, bei denen
     /// es nur ein Wortanfang ist — „zelte“ findet die Zelte, nicht die Isomatten „für Trekking und Zelten“; „akku“ findet weiter
     /// „Akkuschrauber“, weil es dort nichts Besseres gibt.
@@ -374,6 +397,7 @@ public static partial class AdvisorApi
             {
                 "le" => Zahl(value) is { } g && werte.Any(w => Zahl(w) is { } z && z <= g),
                 "ge" => Zahl(value) is { } g && werte.Any(w => Zahl(w) is { } z && z >= g),
+                "low" or "high" => true,   // „leicht“: entscheidet Relativ über alle Treffer, nicht ein Produkt allein
                 _ => werte.Contains(value, StringComparer.OrdinalIgnoreCase),
             };
             if (!ok) return false;
@@ -453,6 +477,77 @@ public static partial class AdvisorApi
     /// <summary>Eine erkannte Angabe: ein Filter auf ein Attribut der Sicht.</summary>
     public sealed record Angabe(AttributeDefinition Def, string Op, string Value);
 
+    /// <summary>
+    /// Eigenschaftswörter je Grösse einer Einheit (09.10.2026): „leicht“ ist wenig Masse, „gross“ viel Volumen, „hell“ viel Lichtstrom. Gebunden an die
+    /// Grösse (<see cref="UnitDefinition.Quantity"/>), nicht an ein Attribut — so gilt es für jedes Modell. „wenig“ heisst die Hälfte der Treffer mit
+    /// den kleineren Werten, „viel“ die mit den grösseren (<see cref="Relativ"/>).
+    /// </summary>
+    private static readonly Dictionary<string, (string[] Wenig, string[] Viel)> Eigenschaften = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["mass"] = (["leicht", "leichte", "leichter", "leichtes", "leichten", "leichteste", "light", "lightweight", "lighter"],
+                    ["schwer", "schwere", "schwerer", "schweres", "heavy", "heavier"]),
+        ["volume"] = (["klein", "kleine", "kleiner", "kleines", "small", "smaller"],
+                      ["groß", "große", "großer", "großes", "gross", "grosse", "grosser", "grosses", "geräumig", "large", "big", "bigger", "roomy"]),
+        ["power"] = (["schwach", "schwache", "weak"], ["stark", "starke", "starker", "leistungsstark", "powerful", "strong"]),
+        ["luminous flux"] = (["dunkel"], ["hell", "helle", "heller", "hellste", "bright", "brighter"]),
+    };
+
+    /// <summary>Wie eine Angabe heisst: ein Eigenschaftswort steht, wie es gesagt wurde („leicht“), sonst der Wert mit Bezeichnung und Einheit.</summary>
+    public static string AngabeText(ModelCatalog model, AttributeDefinition def, string op, string value, string locale) =>
+        op is "low" or "high" ? value : Anzeige(model, def, value, locale);
+
+    /// <summary>
+    /// „leicht“, „hell“ (op low/high): die Hälfte der Treffer mit den kleineren beziehungsweise grösseren Werten, danach geordnet — ein Produkt ohne Wert
+    /// fällt weg. Eine Grenze in Zahlen gibt es dafür nicht: leicht ist ein Zelt mit 1,4 kg, eine Stirnlampe nicht.
+    /// </summary>
+    public static List<Eintrag> Relativ(Tree tree, ModelCatalog model, IReadOnlyList<Eintrag> liste, IReadOnlyList<(AttributeDefinition Def, string Op, string Value)> filter, string locale, string channel)
+    {
+        var aus = liste.ToList();
+        foreach (var (def, op, _) in filter.Where(x => x.Op is "low" or "high"))
+        {
+            var mit = aus.Select(e => (e, z: Werte(tree, model, e, def, locale, channel).Select(Zahl).OfType<decimal>().ToList()))
+                .Where(x => x.z.Count > 0).Select(x => (x.e, z: op == "low" ? x.z.Min() : x.z.Max())).ToList();
+            if (mit.Count == 0) { aus = []; continue; }
+            var sortiert = mit.Select(x => x.z).Order().ToList();
+            aus = op == "low"
+                ? mit.Where(x => x.z <= sortiert[(sortiert.Count - 1) / 2]).OrderBy(x => x.z).Select(x => x.e).ToList()
+                : mit.Where(x => x.z >= sortiert[sortiert.Count / 2]).OrderByDescending(x => x.z).Select(x => x.e).ToList();
+        }
+        return aus;
+    }
+
+    /// <summary>
+    /// Ein Tippfehler (09.10.2026): das Wort aus den Produktnamen, das eine Änderung entfernt liegt (ab acht Zeichen zwei) — „zeit“ → „zelt“. Nur, wenn
+    /// genau eines am nächsten liegt; ein Wort, das selbst (oder gebeugt) in einem Namen steht, ist kein Tippfehler.
+    /// </summary>
+    public static string? Korrektur(string w, IReadOnlySet<string> namen)
+    {
+        if (w.Length < 4 || w.All(char.IsDigit) || Formen(w).Any(namen.Contains)) return null;
+        var grenze = w.Length >= 8 ? 2 : 1;
+        var nah = namen.Select(n => (n, d: Abstand(w, n, grenze))).Where(x => x.d <= grenze).ToList();
+        if (nah.Count == 0) return null;
+        var min = nah.Min(x => x.d);
+        var beste = nah.Where(x => x.d == min).Select(x => x.n).ToList();
+        return beste.Count == 1 ? beste[0] : null;
+    }
+
+    /// <summary>Editierabstand (Einfügen, Löschen, Ersetzen, zwei Nachbarn vertauscht); über <paramref name="max"/> hinaus nur „zu weit“.</summary>
+    public static int Abstand(string a, string b, int max)
+    {
+        if (Math.Abs(a.Length - b.Length) > max) return max + 1;
+        var d = new int[a.Length + 1, b.Length + 1];
+        for (var i = 0; i <= a.Length; i++) d[i, 0] = i;
+        for (var j = 0; j <= b.Length; j++) d[0, j] = j;
+        for (var i = 1; i <= a.Length; i++)
+            for (var j = 1; j <= b.Length; j++)
+            {
+                var k = a[i - 1] == b[j - 1] ? 0 : 1;
+                d[i, j] = Math.Min(Math.Min(d[i - 1, j] + 1, d[i, j - 1] + 1), d[i - 1, j - 1] + k);
+                if (i > 1 && j > 1 && a[i - 1] == b[j - 2] && a[i - 2] == b[j - 1]) d[i, j] = Math.Min(d[i, j], d[i - 2, j - 2] + 1);
+            }
+        return d[a.Length, b.Length];
+    }
+
     private static readonly string[] Unter = ["bis zu", "höchstens", "hoechstens", "maximal", "max.", "max", "weniger als", "kleiner als", "unter", "bis", "up to", "at most", "less than", "under", "below", "<=", "<", "≤"];
     private static readonly string[] Ueber = ["mindestens", "mind.", "mehr als", "größer als", "groesser als", "über", "ueber", "ab", "at least", "more than", "over", "above", "from", ">=", ">", "≥"];
     private static readonly HashSet<string> Nein = new(StringComparer.OrdinalIgnoreCase) { "nicht", "ohne", "kein", "keine", "not", "no", "without", "non" };
@@ -500,6 +595,20 @@ public static partial class AdvisorApi
                 aus.Add(new Angabe(defs[0], op, m.Groups["n"].Value.Replace(',', '.')));
                 rest = Weg(rest, m.Index, m.Length);
             }
+        }
+
+        // Eigenschaftswörter (09.10.2026): „leicht“ heisst wenig Gewicht — am ersten Zahlenattribut der Sicht, dessen Einheit diese Grösse misst
+        foreach (var (groesse, (wenig, viel)) in Eigenschaften)
+        {
+            var def = attr.FirstOrDefault(a => IstZahl(a) && Frei(a) && a.Unit is { } u && model.Units.TryGetValue(u, out var ud) && string.Equals(ud.Quantity, groesse, StringComparison.OrdinalIgnoreCase));
+            if (def is null) continue;
+            foreach (var (woerter, op) in new[] { (wenig, "low"), (viel, "high") })
+                if (woerter.OrderByDescending(x => x.Length).FirstOrDefault(x => Ganz(rest, x) >= 0) is { } wort)
+                {
+                    aus.Add(new Angabe(def, op, wort.ToLowerInvariant()));
+                    rest = Weg(rest, Ganz(rest, wort), wort.Length);
+                    break;
+                }
         }
 
         // Werte von Listen: nur, was genau ein Attribut trifft und dort genau einen Wert
@@ -812,8 +921,8 @@ public static partial class AdvisorApi
                 var nachKey = a.ToDictionary(x => x.Key);
                 var f = new List<Angabe>();
                 foreach (var x in body.Filter ?? [])
-                    if (x.Attribute is { } ak && nachKey.TryGetValue(ak, out var fd) && IstFacette(fd) && x.Value is { Length: > 0 } fv && f.All(y => y.Def.Key != fd.Key || y.Op != (x.Op is "le" or "ge" ? x.Op : "eq")))
-                        f.Add(new Angabe(fd, x.Op is "le" or "ge" ? x.Op : "eq", fv));
+                    if (x.Attribute is { } ak && nachKey.TryGetValue(ak, out var fd) && IstFacette(fd) && x.Value is { Length: > 0 } fv && f.All(y => y.Def.Key != fd.Key || y.Op != (x.Op is "le" or "ge" or "low" or "high" ? x.Op : "eq")))
+                        f.Add(new Angabe(fd, x.Op is "le" or "ge" or "low" or "high" ? x.Op : "eq", fv));
                 var (erkannt, r) = Erkenne(model, a, q, loc);
                 foreach (var e in erkannt) { f.RemoveAll(y => y.Def.Key == e.Def.Key && (y.Op == e.Op || e.Op == "eq")); f.Add(e); neuAngaben.Add(e); }   // die neue Angabe ersetzt die alte zum selben Attribut
                 return (a, f, r, Vokabular(model, a, loc));
@@ -844,14 +953,40 @@ public static partial class AdvisorApi
             var alle = (body.Woerter ?? []).Select(x => x.Trim().ToLowerInvariant()).Where(x => x.Length is > 0 and <= 40).Concat(Woerter(rest)).Distinct().TakeLast(MaxWoerter).ToList();
             var bekannt = alle.Where(w => b.Produkte.Any(e => Punkte(e, [w]) > 0)).ToList();
             var unbekannt = Woerter(rest).Where(w => !bekannt.Contains(w)).ToList();
+            // Tippfehler (09.10.2026): ein Wort, das in keinem Produkt steht, oder eines, mit dem zusammen nichts passt, liest der Berater als das
+            // nächste Wort eines Produktnamens — und sagt es („„zeit“ habe ich als „zelt“ gelesen.“)
+            var korrigiert = new List<(string Von, string Zu)>();
+            foreach (var u in unbekannt.ToList())
+                if (Korrektur(u, b.NamenWoerter) is { } k)
+                {
+                    korrigiert.Add((u, k)); unbekannt.Remove(u);
+                    if (!bekannt.Contains(k)) bekannt.Add(k);
+                }
+            if (bekannt.Count > 0)
+                c.Lesen((model, tree) =>
+                {
+                    var f0 = filter.Select(x => (x.Def, x.Op, x.Value)).ToList();
+                    var kand = b.Produkte.Where(e => Passt(tree, model, e, f0, loc, b.Channel)).ToList();
+                    if (Finde(b.Produkte, kand, bekannt).Count > 0) return 0;
+                    foreach (var w in Woerter(rest).Where(bekannt.Contains).ToList())
+                        if (Korrektur(w, b.NamenWoerter) is { } k && bekannt.Select(x => x == w ? k : x).Distinct().ToList() is var probe && Finde(b.Produkte, kand, probe).Count > 0)
+                        {
+                            bekannt = probe; korrigiert.Add((w, k));
+                            break;
+                        }
+                    return 0;
+                });
+            var ersetzt = korrigiert.ToDictionary(k => k.Von, k => k.Zu);
             // Themenwechsel: was diese Eingabe neu bringt — Wörter, die nicht schon gesammelt waren, und die Angaben aus ihrem Text
             var vorher = (body.Woerter ?? []).Select(x => x.Trim().ToLowerInvariant()).ToHashSet();
-            var neueWoerter = Woerter(rest).Where(w => bekannt.Contains(w) && !vorher.Contains(w)).ToList();
+            var neueWoerter = Woerter(rest).Select(w => ersetzt.GetValueOrDefault(w, w)).Where(w => bekannt.Contains(w) && !vorher.Contains(w)).Distinct().ToList();
             var gab = vorher.Count > 0 || (body.Filter ?? []).Count > 0;
 
             // Die Sinnsuche läuft ausserhalb der Lesesperre — sie fragt den Einbetter und die Datenbank; nur, wenn die Wörter nichts finden
             List<string> sinn = [];
-            var sinnText = string.Join(" ", alle.Concat(Woerter(rest)).Distinct());
+            // der ganze Satz, mit gelesenen Tippfehlern, dazu die gesammelten Wörter — „zelt für den winter“ trägt mehr als „zelt winter“
+            var satz = ersetzt.Aggregate(q, (t, k) => Regex.Replace(t, $@"(?<![\p{{L}}\p{{N}}]){Regex.Escape(k.Key)}(?![\p{{L}}\p{{N}}])", k.Value, RegexOptions.IgnoreCase));
+            var sinnText = string.Join(" ", vorher.Where(w => !satz.Contains(w, StringComparison.OrdinalIgnoreCase)).Append(satz)).Trim();
             if (sinnText.Length > 0 && b.Produkte.Count > 0)
             {
                 if (!vectors.Ready) warnung ??= vectors.Reason;
@@ -874,26 +1009,32 @@ public static partial class AdvisorApi
             var (treffer, total, aehnlich, facetten, fuerKi, filterEcho, lockern, statt) = c.Lesen((model, tree) =>
             {
                 var f = filter.Select(x => (x.Def, x.Op, x.Value)).ToList();
-                List<Eintrag> Suche(IReadOnlyList<(AttributeDefinition, string, string)> fs, IReadOnlyList<string> ws) =>
-                    MitWoertern(b.Produkte.Where(e => Passt(tree, model, e, fs, loc, b.Channel)), ws);
+                List<Eintrag> Suche(IReadOnlyList<(AttributeDefinition Def, string Op, string Value)> fs, IReadOnlyList<string> ws) =>
+                    Relativ(tree, model, Finde(b.Produkte, b.Produkte.Where(e => Passt(tree, model, e, fs, loc, b.Channel)), ws), fs, loc, b.Channel);
+                var relativ = f.Any(x => x.Op is "low" or "high");
                 var kandidaten = b.Produkte.Where(e => Passt(tree, model, e, f, loc, b.Channel)).ToList();
                 List<Eintrag> reihe; var nurSinn = false;
                 if (bekannt.Count > 0)
                 {
-                    // alle gesammelten Wörter zusammen; der Sinn ordnet nur um
-                    var wort = MitWoertern(kandidaten, bekannt).OrderByDescending(e => Punkte(e, bekannt)).Select(e => e.Product.Id).ToList();
-                    var ids = SemanticApi.Rrf(wort.Select(id => (id, 0)), sinn.Where(wort.Contains).Select(id => (id, 0))).Select(x => x.Key.Media).ToList();
-                    ids = ids.Concat(wort.Where(id => !ids.Contains(id))).ToList();
-                    reihe = ids.Select(id => b.NachId[id]).ToList();
+                    // die harten Wörter grenzen ein, die weichen ordnen, der Sinn ordnet mit (Finde)
+                    var gefunden = Finde(b.Produkte, kandidaten, bekannt);
+                    if (relativ) reihe = Relativ(tree, model, gefunden, f, loc, b.Channel);   // „leicht“ ordnet nach dem Wert, nicht nach dem Sinn
+                    else
+                    {
+                        var wort = gefunden.Select(e => e.Product.Id).ToList();
+                        var ids = SemanticApi.Rrf(wort.Select(id => (id, 0)), sinn.Where(wort.Contains).Select(id => (id, 0))).Select(x => x.Key.Media).ToList();
+                        ids = ids.Concat(wort.Where(id => !ids.Contains(id))).ToList();
+                        reihe = ids.Select(id => b.NachId[id]).ToList();
+                    }
                 }
                 else if (unbekannt.Count > 0)
                 {
                     // die Wörter finden nichts: nur, was sich nach dem Sinn abhebt
                     var drin = kandidaten.Select(e => e.Product.Id).ToHashSet();
-                    reihe = sinn.Where(drin.Contains).Select(id => b.NachId[id]).ToList();
+                    reihe = Relativ(tree, model, sinn.Where(drin.Contains).Select(id => b.NachId[id]).ToList(), f, loc, b.Channel);
                     nurSinn = reihe.Count > 0;
                 }
-                else reihe = kandidaten;
+                else reihe = Relativ(tree, model, kandidaten, f, loc, b.Channel);
 
                 // Nichts gefunden, aber die neue Eingabe allein fände etwas: das Thema hat gewechselt — der Berater fragt, ob er stattdessen
                 // danach sucht (08.10.2026). Nur, wenn es vorher Angaben gab und die Eingabe ein neues Wort bringt — eine Angabe allein
@@ -903,7 +1044,7 @@ public static partial class AdvisorApi
                     fs.Count == neuF.Count && fs.All(neuF.Contains) && ws.ToHashSet().SetEquals(neueWoerter);
                 object? stattdessen = null;
                 if (reihe.Count == 0 && gab && neueWoerter.Count > 0 && Suche(neuF, neueWoerter).Count is var sn and > 0)
-                    stattdessen = new { words = neueWoerter, filter = neuF.Select(x => new { attribute = x.Def.Key, op = x.Op, value = x.Value, label = Bez(x.Def.Label, loc, model) ?? x.Def.Key, valueLabel = Anzeige(model, x.Def, x.Value, loc) }).ToList(), n = sn };
+                    stattdessen = new { words = neueWoerter, filter = neuF.Select(x => new { attribute = x.Def.Key, op = x.Op, value = x.Value, label = Bez(x.Def.Label, loc, model) ?? x.Def.Key, valueLabel = AngabeText(model, x.Def, x.Op, x.Value, loc) }).ToList(), n = sn };
 
                 // Nichts gefunden: welche Angabe zu eng ist — ohne sie, wie viele es wären; was genau der Themenwechsel wäre, steht dort und nicht hier
                 var weg = new List<object>();
@@ -911,7 +1052,7 @@ public static partial class AdvisorApi
                 {
                     foreach (var x in f)
                         if (f.Where(y => y != x).ToList() is var ohne && !(stattdessen is not null && IstNeu(ohne, bekannt)) && Suche(ohne, bekannt).Count is var n and > 0)
-                            weg.Add(new { kind = "filter", attribute = x.Def.Key, op = x.Op, value = x.Value, label = Bez(x.Def.Label, loc, model) ?? x.Def.Key, valueLabel = Anzeige(model, x.Def, x.Value, loc), n });
+                            weg.Add(new { kind = "filter", attribute = x.Def.Key, op = x.Op, value = x.Value, label = Bez(x.Def.Label, loc, model) ?? x.Def.Key, valueLabel = AngabeText(model, x.Def, x.Op, x.Value, loc), n });
                     foreach (var w in bekannt)
                         if (bekannt.Where(y => y != w).ToList() is var ohne && !(stattdessen is not null && IstNeu(f, ohne)) && Suche(f, ohne).Count is var n and > 0) weg.Add(new { kind = "word", word = w, label = w, n });
                     weg = weg.OrderByDescending(x => (int)x.GetType().GetProperty("n")!.GetValue(x)!).Take(MaxLockern).ToList();
@@ -924,7 +1065,7 @@ public static partial class AdvisorApi
                 var karten = oben.Select(e => Karte(c, tree, model, e, attr, loc, b.Channel, role, admin, 4)).ToList();
                 var ki = oben.Take(5).Select(e => (e.Name, (IReadOnlyList<(string, string)>)attr.Select(a => (a, Werte(tree, model, e, a, loc, b.Channel))).Where(x => x.Item2.Count > 0)
                     .Take(12).Select(x => (Bez(x.a.Label, loc, model) ?? x.a.Key, AlsText(model, x.a, x.Item2, loc))).ToList())).ToList();
-                var echo = f.Select(x => new { attribute = x.Def.Key, op = x.Op, value = x.Value, label = Bez(x.Def.Label, loc, model) ?? x.Def.Key, valueLabel = Anzeige(model, x.Def, x.Value, loc) }).ToList();
+                var echo = f.Select(x => new { attribute = x.Def.Key, op = x.Op, value = x.Value, label = Bez(x.Def.Label, loc, model) ?? x.Def.Key, valueLabel = AngabeText(model, x.Def, x.Op, x.Value, loc) }).ToList();
                 return (karten, reihe.Count, nurSinn, fac, ki, echo, weg, stattdessen);
             });
 
@@ -944,7 +1085,7 @@ public static partial class AdvisorApi
                 var r = await AiApi.AskAsync(req, c, jobsDir, null, null, system, user, 600, false, 1, "advisor", ct, fuerTeam: d.Team);
                 if (r.Fehler is null) text = r.Text; else warnung ??= KiNichtVerfuegbar(req, r.Fehler);
             }
-            return Results.Ok(new { locale = loc, total, hits = treffer, facets = facetten, filter = filterEcho, words = bekannt, unknown = unbekannt, similar = aehnlich, relax = lockern, instead = statt, docs = unterlagen, answer = text, warning = warnung });
+            return Results.Ok(new { locale = loc, total, hits = treffer, facets = facetten, filter = filterEcho, words = bekannt, ranked = HartWeich(b.Produkte, bekannt).Weich, unknown = unbekannt, corrected = korrigiert.Select(k => new { from = k.Von, to = k.Zu }).ToList(), similar = aehnlich, relax = lockern, instead = statt, docs = unterlagen, answer = text, warning = warnung });
         });
 
         // Ein Produkt mit allen Werten der Sicht, seinen Bildern und den Varianten, die sich unterscheiden

@@ -2619,6 +2619,22 @@ Treffer am besten teilt, die weiteren Merkmale und „weitere zeigen“ (die wei
 ganzes Wort, fallen die weg, bei denen es nur ein Wortanfang ist (`MitWoertern`): „zelte“ fand vorher zuerst Isomatten „für Trekking und
 Zelten“; „akku“ findet weiter „Akkuschrauber“.
 
+**Die Art grenzt ein, jedes andere Wort ordnet (09.10.2026).** Hart ist ein Wort, das im Namen eines Produkts steht — die Art („zelt“,
+„hose“); es grenzt ein. Weich ist jedes andere („wasserdicht“, „winter“, „warm“): es grenzt nicht ein, es ordnet — wer es trägt, steht vorn,
+die Sinnsuche ordnet mit; ohne hartes Wort sind es die Produkte, zu denen mindestens ein weiches passt (`Finde`, `ranked` in der Antwort).
+Die Sinnsuche bekommt den ganzen Satz („zelt für den winter“) mit gelesenen Tippfehlern und den gesammelten Wörtern. Vorher musste jedes
+Wort passen: „zelt wasserdicht“ fand nichts, statt die Zelte nach „wasserdicht“ zu ordnen. Ein Berater soll verbinden, was zusammengehört —
+nicht jedes Wort muss ein Attribut sein.
+
+**„leicht“, „hell“, „gross“ (09.10.2026).** Eigenschaftswörter werden eine Angabe am ersten Zahlenattribut der Sicht, dessen Einheit die
+passende Grösse misst — Masse (leicht, schwer), Volumen (klein, gross), Leistung (schwach, stark), Lichtstrom (hell). Gebunden an die Grösse
+der Einheit im Modell, nicht an einen Attributnamen. Eine Grenze in Zahlen gibt es dafür nicht: „leicht“ (op `low`) ist die Hälfte der
+Treffer mit den kleineren Werten, die leichtesten zuerst (`Relativ`); ein Zelt mit 1,4 kg ist leicht, eine Stirnlampe nicht.
+
+**Tippfehler (09.10.2026).** Ein Wort, das in keinem Produkt steht, oder eines, mit dem zusammen nichts passt, liest der Berater als das
+nächste Wort eines Produktnamens — eine Änderung entfernt, ab acht Zeichen zwei, nur wenn genau eines am nächsten liegt (`Korrektur`).
+Er sagt es in der Antwort: „„zeit“ habe ich als „zelt“ gelesen.“ (`corrected`).
+
 **Gesucht wird, was die Sicht zeigt (09.10.2026).** Die Wörter einer Frage werden im Namen, in den Attributen der Sicht und in den
 Achsen eines Produkts gesucht — nicht in allen Texten am Knoten. Sonst passte ein Zelt zu „undicht“, weil seine häufigen Fragen
 (GEO-Texte) „Warum ist mein Zelt undicht?“ enthalten; Fragen nach einem Problem beantworten die Unterlagen.
