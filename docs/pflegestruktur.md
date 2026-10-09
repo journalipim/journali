@@ -2610,6 +2610,15 @@ und ihre Zahl; was wegfällt, steht im Tooltip. „ohne pullover (17)“ las sic
 dem Namen (`texts`), nicht als Zeile der Tabelle. Absatz, Zeilenumbruch und Listenpunkt werden zu Leerzeilen, alles andere an
 Auszeichnung fällt weg (`Absaetze`); das Fenster setzt den Text als Text, nie als HTML.
 
+**Die Antwort endet mit einer Frage (09.10.2026).** Oben steht, was gefunden wurde, dann die ersten drei Karten; zuletzt, direkt über
+der Eingabe, fragt der Berater: „Passt eines davon? Oder soll ich nach Gewicht eingrenzen?“ — darunter die Werte des Merkmals, das die
+Treffer am besten teilt, die weiteren Merkmale und „weitere zeigen“ (die weiteren Karten kommen vor die Frage). So fragt er auch ohne KI nach.
+
+**Name vor ganzem Wort vor Wortanfang (09.10.2026).** Ein Wort passt im Namen mit 2, als ganzes Wort im Text mit 1, nur als Wortanfang mit
+0,5 (`Staerke`); gebeugte Formen zählen mit („zelte“ findet „Zelt“, `Formen`). Passt ein Wort bei einem Teil der Produkte im Namen oder als
+ganzes Wort, fallen die weg, bei denen es nur ein Wortanfang ist (`MitWoertern`): „zelte“ fand vorher zuerst Isomatten „für Trekking und
+Zelten“; „akku“ findet weiter „Akkuschrauber“.
+
 **Gesucht wird, was die Sicht zeigt (09.10.2026).** Die Wörter einer Frage werden im Namen, in den Attributen der Sicht und in den
 Achsen eines Produkts gesucht — nicht in allen Texten am Knoten. Sonst passte ein Zelt zu „undicht“, weil seine häufigen Fragen
 (GEO-Texte) „Warum ist mein Zelt undicht?“ enthalten; Fragen nach einem Problem beantworten die Unterlagen.

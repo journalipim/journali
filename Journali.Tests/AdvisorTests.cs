@@ -520,6 +520,22 @@ public class AdvisorTests
     }
 
     [Fact]
+    public void Name_vor_ganzem_Wort_vor_Wortanfang_gebeugte_Formen_zaehlen_mit()
+    {
+        AdvisorApi.Eintrag E(string name, string text) => new(new Node { Id = "p-" + name, Role = Roles.Product }, [], name, (name + "\n" + text).ToLowerInvariant());
+        var zelt = E("Brenna 5 Zelt", "Ein Kuppelzelt für zwei Personen.");
+        var matte = E("Selje 5 Isomatte", "Einsatzbereich: Trekking und Zelten");
+        var schrauber = E("Akkuschrauber kompakt", "Leicht.");
+        Assert.Equal(2, AdvisorApi.Staerke(zelt, "zelte"));          // „zelte“ → Zelt im Namen
+        Assert.Equal(0.5, AdvisorApi.Staerke(matte, "zelte"));       // nur der Anfang von „Zelten“
+        Assert.Equal(["zelte", "zelt"], AdvisorApi.Formen("zelte"));
+        Assert.Equal(["akku"], AdvisorApi.Formen("akku"));           // zu kurz für eine Grundform
+        // wo es Besseres gibt, fällt der Wortanfang weg — wo nicht, zählt er
+        Assert.Equal(["Brenna 5 Zelt"], AdvisorApi.MitWoertern([matte, zelt], ["zelte"]).Select(e => e.Name).ToList());
+        Assert.Equal(["Akkuschrauber kompakt"], AdvisorApi.MitWoertern([schrauber, zelt], ["akku"]).Select(e => e.Name).ToList());
+    }
+
+    [Fact]
     public async Task Gesucht_wird_nur_in_dem_was_die_Sicht_zeigt()
     {
         await using var w = await Welt.Neu();

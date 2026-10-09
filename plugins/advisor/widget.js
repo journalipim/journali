@@ -24,7 +24,8 @@
       zurueck: 'Zurück', fehler: 'Der Berater antwortet gerade nicht.', zuviel: 'Zu viele Fragen in kurzer Zeit.', varianten: n => `${n} Ausführungen`, ki: 'Text von einer KI erstellt',
       filterWeg: 'Filter entfernen', merkmal: 'Merkmal', gleich: 'gleich',
       aehnlich: n => n === 1 ? '1 ähnliches Produkt.' : `${n} ähnliche Produkte.`, unbekannt: w => `„${w.join('“, „')}“ steht in keinem Produkt.`,
-      neu: 'Neue Suche', angabeWeg: 'Angabe entfernen', lockern: 'Mit weniger Angaben:', ohne: (l, n) => `${l} (${n})`, alle: 'alle Produkte', rueckfrage: l => `${l}?`,
+      neu: 'Neue Suche', angabeWeg: 'Angabe entfernen', lockern: 'Mit weniger Angaben:', ohne: (l, n) => `${l} (${n})`, alle: 'alle Produkte',
+      abschluss: l => l ? `Passt eines davon? Oder soll ich nach ${l} eingrenzen?` : 'Passt eines davon?',
       trefferZu: (n, w) => n === 1 ? `1 Produkt passt zu „${w}“.` : `${n} Produkte passen zu „${w}“.`, weitere: n => `${n} weitere zeigen`,
       oeffnenVariante: 'Öffnen', merken: '☆ Merken', gemerkt: '★ Gemerkt', merkzettel: n => `☆ ${n}`, merkzettelTitel: 'Merkzettel', merkzettelLeer: 'Der Merkzettel ist leer.',
       ausMerkzettel: 'Vom Merkzettel nehmen', zumProdukt: 'Zum Produkt', variante: 'Variante',
@@ -38,7 +39,8 @@
       zurueck: 'Back', fehler: 'The advisor is not answering right now.', zuviel: 'Too many questions in a short time.', varianten: n => `${n} versions`, ki: 'Text written by an AI',
       filterWeg: 'Remove filter', merkmal: 'Attribute', gleich: 'same',
       aehnlich: n => n === 1 ? '1 similar product.' : `${n} similar products.`, unbekannt: w => `"${w.join('", "')}" does not appear in any product.`,
-      neu: 'New search', angabeWeg: 'Remove', lockern: 'With fewer criteria:', ohne: (l, n) => `${l} (${n})`, alle: 'all products', rueckfrage: l => `${l}?`,
+      neu: 'New search', angabeWeg: 'Remove', lockern: 'With fewer criteria:', ohne: (l, n) => `${l} (${n})`, alle: 'all products',
+      abschluss: l => l ? `Does one of these fit? Or shall I narrow it down by ${l}?` : 'Does one of these fit?',
       trefferZu: (n, w) => n === 1 ? `1 product matches "${w}".` : `${n} products match "${w}".`, weitere: n => `Show ${n} more`,
       oeffnenVariante: 'Open', merken: '☆ Save', gemerkt: '★ Saved', merkzettel: n => `☆ ${n}`, merkzettelTitel: 'Saved items', merkzettelLeer: 'Nothing saved yet.',
       ausMerkzettel: 'Remove', zumProdukt: 'To the product', variante: 'Variant',
@@ -406,12 +408,18 @@ tr.gleich td { color: var(--leise); }
     }
 
     /// Die Rückfrage: das Merkmal, das die Treffer am besten teilt, als Frage mit Knöpfen
-    function rueckfrage(f) {
-      const r = el('div', 'rueckfrage')
-      r.append(el('div', 'blase', T.rueckfrage(f.label)))
-      const c = el('div', 'chips')
-      for (const opt of optionen(f, false)) c.append(facettenChip(f, opt))
-      r.append(c)
+    /// Der Abschluss einer Antwort (09.10.2026): nach den Karten die Frage des Beraters, direkt über der Eingabe — passt eines, oder nach dem
+    /// Merkmal eingrenzen, das die Treffer am besten teilt; darunter seine Werte, die weiteren Merkmale und „weitere zeigen“
+    function rueckfrage(f, weitere, mehr) {
+      const r = el('div', 'rueckfrage abschluss')
+      r.append(el('div', 'blase', T.abschluss(f ? f.label : null)))
+      if (f) {
+        const c = el('div', 'chips')
+        for (const opt of optionen(f, false)) c.append(facettenChip(f, opt))
+        r.append(c)
+      }
+      const fa = facettenChips(weitere); if (fa) r.append(fa)
+      if (mehr) r.append(mehr)
       return r
     }
 
@@ -454,7 +462,7 @@ tr.gleich td { color: var(--leise); }
         const antwort = el('div', 'karten antwort')
         const ub = unterlagenBlase(r.docs); if (ub) antwort.append(ub)   // beantworten die Unterlagen die Frage, steht das zuerst
         if (r.unknown && r.unknown.length) antwort.append(el('div', 'blase', T.unbekannt(r.unknown)))
-        // die Antwort nennt die Suche; gleich darunter die Rückfrage — erst dann die Karten, die ersten drei, der Rest auf Wunsch
+        // die Antwort nennt die Suche, dann die ersten drei Karten; zuletzt, direkt über der Eingabe, die Frage des Beraters (09.10.2026)
         const wort = zustand.woerter.join(' ')
         const text = r.answer ? r.answer : (r.total ? (r.similar ? T.aehnlich(r.total) : wort ? T.trefferZu(r.total, wort) : T.treffer(r.total)) : T.keine)
         // eine Blase: der Satz, was gesucht wird, ohne Treffer was sich lockern lässt — die Knöpfe älterer Antworten gelten nicht mehr
@@ -467,15 +475,18 @@ tr.gleich td { color: var(--leise); }
         antwort.append(sb)
         const st = r.total ? null : stattChips(r.instead); if (st) antwort.append(st)   // die Frage zuletzt, direkt über der Eingabe
         const [erste, ...weitere] = r.facets || []
-        if (erste) antwort.append(rueckfrage(erste))
-        const fa = facettenChips(weitere); if (fa) antwort.append(fa)
         const hits = r.hits || []
         for (const h of hits.slice(0, ZUERST)) antwort.append(karte(h))
+        let mehr = null
         if (hits.length > ZUERST) {
           const rest = hits.slice(ZUERST)
-          const mehr = el('button', 'mehr', T.weitere(rest.length)); mehr.type = 'button'
-          mehr.addEventListener('click', () => { const k = rest.map(karte); mehr.replaceWith(...k) })
-          antwort.append(mehr)
+          mehr = el('button', 'mehr', T.weitere(rest.length)); mehr.type = 'button'
+        }
+        if (hits.length) {
+          const ab = rueckfrage(erste, weitere, mehr)
+          // „weitere zeigen“: die Karten kommen vor die Frage, die Frage bleibt zuletzt
+          if (mehr) mehr.addEventListener('click', () => { for (const h of hits.slice(ZUERST)) antwort.insertBefore(karte(h), ab); mehr.remove() })
+          antwort.append(ab)
         }
         verlauf.append(antwort)
         verlauf.scrollTop = Math.max(0, antwort.offsetTop - 8)   // an den Anfang der Antwort, nicht ans Ende der Karten

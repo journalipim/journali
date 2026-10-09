@@ -91,8 +91,8 @@ test('eine Frage zeigt Treffer, fragt nach dem Merkmal, das sie am besten teilt,
   assert.deepEqual(w.$$('.karte .name').map(e => e.textContent), ['Bohrhammer Pro', 'Akkuschrauber'])
   assert.ok(w.$$('.blase').some(b => satz(b) === '2 Produkte passen zu „bohrhammer“.'))
   // die erste Facette als Rückfrage, die übrigen zum Eingrenzen
-  assert.equal(w.$('.rueckfrage .blase').textContent, 'Farbe?')
-  assert.deepEqual(w.$$('.rueckfrage .chip').map(c => c.textContent), ['Rot (1)', 'Blau (1)'])
+  assert.equal(w.$('.rueckfrage .blase').textContent, 'Passt eines davon? Oder soll ich nach Farbe eingrenzen?')
+  assert.deepEqual(w.$$('.rueckfrage > .chips .chip').map(c => c.textContent), ['Rot (1)', 'Blau (1)'])
   // die weiteren Merkmale: je eines ein Knopf, die Werte auf Klick
   assert.ok(w.$$('.eingrenzen .facette').some(c => c.textContent === 'Leistung ▾'))
   assert.equal(w.$('.eingrenzen .werte').hidden, true)
@@ -300,8 +300,8 @@ test('Treffer nur nach dem Sinn heissen ähnliche Produkte', async () => {
   assert.ok(w.$$('.blase').some(b => satz(b) === '2 ähnliche Produkte.'))
 })
 
-// Die Führung steht oben (08.10.2026): Satz mit der Suche, darunter die Rückfrage, dann die ersten drei Karten — der Rest auf Wunsch
-test('die Rückfrage steht vor den Karten, gezeigt werden erst drei, der Rest mit „weitere zeigen“', async () => {
+// Oben der Satz mit der Suche, dann die ersten drei Karten, zuletzt die Frage des Beraters mit Auswahl und „weitere zeigen“ (09.10.2026)
+test('nach den Karten fragt der Berater, ob eines passt oder wonach er eingrenzen soll — die Frage bleibt zuletzt', async () => {
   const fuenf = ['Brede Hose', 'Kilden Hose', 'Heia Hose', 'Selje Hose', 'Tind Hose'].map((n, i) => HIT('h' + i, n))
   const w = starte({ ...STANDARD, '/api/ask': body => [200, { total: 17, hits: fuenf, filter: [], words: ['hose'],
     facets: [{ key: 'size', label: 'Grösse', type: 'list', n: 5, values: [{ value: 'm', label: 'M', n: 3 }, { value: 'l', label: 'L', n: 2 }] }] }] })
@@ -310,7 +310,9 @@ test('die Rückfrage steht vor den Karten, gezeigt werden erst drei, der Rest mi
   assert.ok(w.$$('.blase').some(b => satz(b) === '17 Produkte passen zu „hose“.'))
   const antwort = w.$$('.karten').at(-1)
   const kinder = [...antwort.children]
-  assert.ok(kinder.indexOf(antwort.querySelector('.rueckfrage')) < kinder.indexOf(antwort.querySelector('.karte')), 'die Rückfrage vor den Karten')
+  assert.ok(kinder.indexOf(antwort.querySelector('.rueckfrage')) > kinder.indexOf(antwort.querySelector('.karte')), 'die Frage nach den Karten')
+  assert.ok(antwort.lastElementChild === antwort.querySelector('.rueckfrage.abschluss'), 'die Frage zuletzt, direkt über der Eingabe')
+  assert.equal(antwort.querySelector('.abschluss .blase').textContent, 'Passt eines davon? Oder soll ich nach Grösse eingrenzen?')
   // die gesammelten Angaben stehen in der Blase der Antwort
   assert.deepEqual([...antwort.querySelectorAll('.ergebnis .angaben .chip.wort')].map(c => c.textContent), ['hose ×'])
   assert.equal(antwort.querySelectorAll('.karte').length, 3)
@@ -319,6 +321,7 @@ test('die Rückfrage steht vor den Karten, gezeigt werden erst drei, der Rest mi
   await w.klick(mehr)
   assert.deepEqual([...antwort.querySelectorAll('.karte .name')].map(e => e.textContent), fuenf.map(h => h.name))
   assert.ok(!antwort.querySelector('.mehr'))
+  assert.ok(antwort.lastElementChild === antwort.querySelector('.abschluss'), 'die weiteren Karten kommen vor die Frage')
 })
 
 test('ohne Auswahl ist der Knopf zum Vergleichen nicht da — hidden gilt auch gegen die eigenen Regeln', async () => {

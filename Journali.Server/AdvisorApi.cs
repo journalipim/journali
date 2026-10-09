@@ -312,16 +312,49 @@ public static partial class AdvisorApi
         Wort().Matches(q.ToLowerInvariant()).Select(m => m.Value.Trim('-')).Where(w => w.Length >= 2 && !Fuellwoerter.Contains(w) || (w.Length > 0 && char.IsDigit(w[0]))).Distinct().ToList();
 
     /// <summary>Wie gut ein Text zu den Wörtern passt: je Wort, das am Anfang eines Worts im Text steht, einen Punkt; im Namen einen dazu.</summary>
-    public static double Punkte(Eintrag e, IReadOnlyList<string> woerter)
+    public static double Punkte(Eintrag e, IReadOnlyList<string> woerter) => woerter.Sum(w => Staerke(e, w));
+
+    /// <summary>
+    /// Wie gut ein Wort zu einem Produkt passt (09.10.2026): im Namen 2, als ganzes Wort im Text 1, nur als Wortanfang 0,5 („akku“ in
+    /// „Akkuschrauber“), sonst 0. Gebeugte Formen zählen mit: „zelte“ findet „Zelt“, „jacken“ „Jacke“. Vorher zählte der Wortanfang so viel
+    /// wie das ganze Wort und der Name nur ungebeugt — „zelte“ fand zuerst Isomatten („Trekking und Zelten“) statt der Zelte.
+    /// </summary>
+    public static double Staerke(Eintrag e, string w)
     {
-        double p = 0; var name = e.Name.ToLowerInvariant();
+        var formen = Formen(w);
+        var name = e.Name.ToLowerInvariant();
+        if (formen.Any(f => AmWortanfang(name, f))) return 2;
+        if (formen.Any(f => GanzesWort(e.Text, f))) return 1;
+        return formen.Any(f => AmWortanfang(e.Text, f)) ? 0.5 : 0;
+    }
+
+    /// <summary>Das Wort und seine Grundformen ohne die häufigsten Endungen (-e, -n, -en, -er, -s) — nur, wenn mindestens vier Zeichen bleiben.</summary>
+    public static List<string> Formen(string w)
+    {
+        var aus = new List<string> { w };
+        foreach (var endung in new[] { "en", "er", "e", "n", "s" })
+            if (w.EndsWith(endung, StringComparison.Ordinal) && w.Length - endung.Length >= 4) aus.Add(w[..^endung.Length]);
+        return aus.Distinct().ToList();
+    }
+
+    private static bool GanzesWort(string text, string w)
+    {
+        for (var i = text.IndexOf(w, StringComparison.Ordinal); i >= 0; i = text.IndexOf(w, i + 1, StringComparison.Ordinal))
+            if ((i == 0 || !char.IsLetterOrDigit(text[i - 1])) && (i + w.Length == text.Length || !char.IsLetterOrDigit(text[i + w.Length]))) return true;
+        return false;
+    }
+
+    /// <summary>
+    /// Die Produkte, zu denen alle Wörter passen. Passt ein Wort bei einem Teil im Namen oder als ganzes Wort, fallen die weg, bei denen
+    /// es nur ein Wortanfang ist — „zelte“ findet die Zelte, nicht die Isomatten „für Trekking und Zelten“; „akku“ findet weiter
+    /// „Akkuschrauber“, weil es dort nichts Besseres gibt.
+    /// </summary>
+    public static List<Eintrag> MitWoertern(IEnumerable<Eintrag> kandidaten, IReadOnlyList<string> woerter)
+    {
+        var aus = kandidaten.Where(e => woerter.All(w => Staerke(e, w) > 0)).ToList();
         foreach (var w in woerter)
-        {
-            if (AmWortanfang(e.Text, w)) p += 1;
-            else if (w.Length >= 5 && AmWortanfang(e.Text, w[..^1])) p += 0.5;   // Mehrzahl, Beugung: „klebstoffe“ findet „Klebstoff“
-            if (AmWortanfang(name, w)) p += 1;
-        }
-        return p;
+            if (aus.Count > 0 && aus.Max(e => Staerke(e, w)) >= 1) aus = aus.Where(e => Staerke(e, w) >= 1).ToList();
+        return aus;
     }
 
     private static bool AmWortanfang(string text, string w)
@@ -841,15 +874,14 @@ public static partial class AdvisorApi
             var (treffer, total, aehnlich, facetten, fuerKi, filterEcho, lockern, statt) = c.Lesen((model, tree) =>
             {
                 var f = filter.Select(x => (x.Def, x.Op, x.Value)).ToList();
-                bool AlleWoerter(Eintrag e, IReadOnlyList<string> ws) => ws.All(w => Punkte(e, [w]) > 0);
                 List<Eintrag> Suche(IReadOnlyList<(AttributeDefinition, string, string)> fs, IReadOnlyList<string> ws) =>
-                    b.Produkte.Where(e => Passt(tree, model, e, fs, loc, b.Channel) && AlleWoerter(e, ws)).ToList();
+                    MitWoertern(b.Produkte.Where(e => Passt(tree, model, e, fs, loc, b.Channel)), ws);
                 var kandidaten = b.Produkte.Where(e => Passt(tree, model, e, f, loc, b.Channel)).ToList();
                 List<Eintrag> reihe; var nurSinn = false;
                 if (bekannt.Count > 0)
                 {
                     // alle gesammelten Wörter zusammen; der Sinn ordnet nur um
-                    var wort = kandidaten.Where(e => AlleWoerter(e, bekannt)).OrderByDescending(e => Punkte(e, bekannt)).Select(e => e.Product.Id).ToList();
+                    var wort = MitWoertern(kandidaten, bekannt).OrderByDescending(e => Punkte(e, bekannt)).Select(e => e.Product.Id).ToList();
                     var ids = SemanticApi.Rrf(wort.Select(id => (id, 0)), sinn.Where(wort.Contains).Select(id => (id, 0))).Select(x => x.Key.Media).ToList();
                     ids = ids.Concat(wort.Where(id => !ids.Contains(id))).ToList();
                     reihe = ids.Select(id => b.NachId[id]).ToList();
