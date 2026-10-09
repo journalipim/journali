@@ -104,6 +104,12 @@ Liegt `origin` mehr als ein Stück Arbeit hinter dem Rechner, ist das ein Fehler
   Datenverzeichnis, `Einrichtung.cs`), im Paket kommt sie aus `.env`/`compose.yaml`; `.env` ist ignoriert. Nur als
   Paket betrieben — `dotnet run` ist Entwicklung.
 - Branch ist `master`. Git-Identität ist pro Repo gesetzt.
+- **Mehrere Rechner, ein Repo** (09.10.2026): gearbeitet wird an mehr als einem Rechner, und die Sitzungen dort sehen einander nicht —
+  gemeinsam ist nur das Repo (Erinnerungen einer Sitzung bleiben auf ihrem Rechner). Darum: **Startskripte liegen im Repo unter `tools\`**
+  und heissen nach der Sache, auf jedem Rechner gleich — `tools\server` (journali), `tools\berater` (Dienst und Testseite des
+  Produktberaters, Prüfstand), `tools\demo-daten`, `tools\site`. Keine Skripte ausserhalb des Repos, keine festen Pfade (`%~dp0`),
+  Geheimnisse in `%USERPROFILE%\.journali\`. Braucht ein Rechner ein Skript, kommt es hierher, oder ein vorhandenes bekommt einen Befehl
+  dazu. Ein angefangenes Thema steht in `docs/todo-<thema>.md` — dort liest die nächste Sitzung weiter, gleich an welchem Rechner.
 
 ## Aufbau
 
