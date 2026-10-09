@@ -38,7 +38,9 @@ const bester = (woerter, ...texte) => {
  * „wasserdicht“). Höchstens `max`, die genauen zuerst, sonst erst die Werte, dann die Sätze.
  * @returns {{ key: string, label: string, value: string, genau: boolean }[]}
  */
-export function stellen(p, { woerter = [], attribute = [], max = 3 } = {}) {
+export function stellen(p, { woerter = [], attribute = [], verwandt = [], max = 3 } = {}) {
+  // verwandte Wörter (Assoziationen: „winter“ → „frost“) geben höchstens einen Hinweis
+  const art = (...texte) => bester(woerter, ...texte) ?? (bester(verwandt, ...texte) ? 'hinweis' : null)
   const aus = [], schon = new Set()
   const dazu = (key, label, value, genau) => {
     const v = kuerze(String(value ?? '')), k = v.toLowerCase()
@@ -47,10 +49,10 @@ export function stellen(p, { woerter = [], attribute = [], max = 3 } = {}) {
   for (const v of p?.values ?? []) {
     if (v.key === 'name') continue
     if (attribute.includes(v.key)) { dazu(v.key, v.label, v.value, true); continue }
-    const r = bester(woerter, v.label, v.value)
+    const r = art(v.label, v.value)
     if (r) dazu(v.key, v.label, v.value, r === 'genau')
   }
-  for (const t of p?.texts ?? []) for (const s of saetze(t.value)) { const r = bester(woerter, s); if (r) dazu(t.key, t.label, s, r === 'genau') }
+  for (const t of p?.texts ?? []) for (const s of saetze(t.value)) { const r = art(s); if (r) dazu(t.key, t.label, s, r === 'genau') }
   return [...aus.filter(x => x.genau), ...aus.filter(x => !x.genau)].slice(0, max)
 }
 

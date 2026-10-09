@@ -8,6 +8,7 @@ import { woerter, formen, korrektur, abstand } from '../../plugins/advisor/kern/
 import { erkenne, fragt, istArt, namenWoerter } from '../../plugins/advisor/kern/verstehen.mjs'
 import { erstelleKern } from '../../plugins/advisor/kern/gespraech.mjs'
 import { stellen, trifft, treffer, saetze } from '../../plugins/advisor/kern/stellen.mjs'
+import { erstelleAssoziationen } from '../../plugins/advisor/kern/assoziationen.mjs'
 import { erstelleLernen, vorschlaege } from '../../plugins/advisor/kern/lernen.mjs'
 import { alsText } from '../../plugins/advisor/vorschlaege.mjs'
 import fs from 'node:fs'
@@ -298,7 +299,7 @@ test('Stellen eines Produkts: Werte und Sätze, in denen ein Wort der Frage steh
 
 test('„sind die wasserdicht?“ beantworten die Angaben der gezeigten Produkte — die gesammelten Angaben bleiben', async () => {
   const j = journali()
-  const kern = erstelleKern({ journali: j.fn })
+  const kern = erstelleKern({ journali: j.fn, assoziationen: {} })   // ohne verwandte Wörter: nur, was „wasserdicht“ selbst trifft
   await kern.antworte({ gespraech: G, q: 'Zelt' })
   const vorher = j.auswahlen().length
   const a = await kern.antworte({ gespraech: G, q: 'sind die wasserdicht?' })
@@ -394,13 +395,56 @@ test('Grundwissen: wer der Berater ist, was er kann, wie es ihm geht — ohne Su
 })
 
 test('eine Frage zum Shop (Versand, Rückgabe) und eine Frage ausserhalb führen auf das Sortiment zurück', async () => {
-  const kern = erstelleKern({ journali: journali().fn })
+  // ohne Assoziationen: mit der Grundausstattung sucht „Wetter“ nach Regenkleidung (wetterfest, regenjacke …)
+  const kern = erstelleKern({ journali: journali().fn, assoziationen: {} })
   const v = await kern.antworte({ gespraech: G, q: 'Wie lange dauert der Versand?' })
   assert.deepEqual([v.texte.hinweise, v.texte.satz, v.sortiment.length],
     [['Zu Versand, Lieferung, Bezahlung und Rückgabe kann ich keine Auskunft geben.'], 'Ich kann Ihnen mit den Produkten weiterhelfen, die wir im Angebot haben:', 2])
   assert.ok(!(await kern.antworte({ gespraech: 'anders-0002', q: 'Zelt mit schneller Lieferung' })).sortiment, 'mit einer Art eine Suche')
   const w = await kern.antworte({ gespraech: 'anders-0003', q: 'Wie wird das Wetter morgen?' })
   assert.deepEqual([w.texte.hinweise, w.texte.nachsatz], [[], 'Zu anderen Fragen kann ich leider keine Auskunft geben.'], 'eine Frage: ohne „steht in keinem Produkt“')
+})
+
+// ---- Assoziationen (kern/assoziationen.mjs, 09.10.2026): „winter“ → kalt, „wandern“ → sport
+
+const ASSOZ = { de: { januar: ['kalt', 'warm', 'frost', 'schnee'], nass: ['regen', 'wasserdicht'], sommer: ['luftig', 'leicht'] } }
+
+test('Assoziationen: je Sprache, auch gebeugt; die Grundausstattung liegt im Plugin', () => {
+  const a = erstelleAssoziationen(ASSOZ)
+  assert.deepEqual(a.zu('januar', 'de-DE'), ['kalt', 'warm', 'frost', 'schnee'])
+  assert.deepEqual(a.zu('Januars', 'de'), ['kalt', 'warm', 'frost', 'schnee'], 'gebeugt')
+  assert.deepEqual(a.zu('januar', 'en'), [], 'andere Sprache')
+  assert.deepEqual(erstelleAssoziationen({ de: { 'fußball': ['sport'] } }).zu('fussball', 'de'), ['sport'], 'ss für ß')
+  const g = erstelleAssoziationen()
+  assert.ok(g.groesse() >= 10_000, `Grundausstattung: ${g.groesse()} Assoziationen`)
+  for (const [w, nach] of [['winter', 'kalt'], ['tennis', 'sport'], ['fussball', 'sport'], ['wandern', 'sport'], ['regen', 'wasserdicht'], ['kälte', 'wärmend']])
+    assert.ok(g.zu(w, 'de').includes(nach), `${w} → ${nach}: ${g.zu(w, 'de').join(', ')}`)
+})
+
+test('ein Wort in keinem Produkt mit Assoziationen sucht über deren Wörter, die im Sortiment stehen — und bleibt als Angabe', async () => {
+  const j = journali()
+  const kern = erstelleKern({ journali: j.fn, assoziationen: ASSOZ })
+  const a = await kern.antworte({ gespraech: G, q: 'Januar' })
+  assert.deepEqual(a.words, ['januar'])
+  assert.deepEqual(a.hits.map(h => h.id), ['s1'], '„warm winter“ steht beim Schlafsack — von den Wörtern zu „januar“ steht nur „warm“ im Sortiment')
+  assert.deepEqual(a.texte.hinweise, ['Zu „januar“ suche ich nach „warm“.'])
+  assert.deepEqual(j.auswahlen().at(-1).body.ordnen, ['warm'])
+  // die nächste Eingabe: das Wort gilt weiter und ordnet weiter über „warm“
+  const rot = await kern.antworte({ gespraech: G, q: 'rot' })
+  assert.deepEqual([rot.words, rot.hits.map(h => h.id), j.auswahlen().at(-1).body.ordnen], [['januar'], ['s1'], ['warm']])
+  assert.deepEqual((await kern.antworte({ gespraech: G, schritt: { art: 'weg', kind: 'word', word: 'januar' } })).words, [])
+  // „sommer“ → „luftig“, „leicht“: das Ravik Zelt
+  assert.deepEqual((await kern.antworte({ gespraech: 'anders-0004', q: 'sommer' })).hits.map(h => h.id), ['z2'])
+  // ohne Assoziation bleibt es unbekannt, und das Grundwissen führt zurück
+  assert.ok((await kern.antworte({ gespraech: 'anders-0005', q: 'bundeskanzler' })).sortiment)
+})
+
+test('Fragen zu den gezeigten: assoziierte Wörter liefern Hinweise', async () => {
+  const kern = erstelleKern({ journali: journali().fn, assoziationen: ASSOZ })
+  await kern.antworte({ gespraech: G, q: 'Zelt' })
+  const a = await kern.antworte({ gespraech: G, q: 'werden die nass?' })
+  assert.equal(a.texte.satz, 'Zu „nass“ konkret habe ich nichts gefunden, aber diese Merkmale geben Hinweise:')
+  assert.deepEqual(a.antworten.map(x => x.values.length > 0), [true, false], '„wasserdicht“ … beim Odda Zelt')
 })
 
 test('Gruss, Dank und Abschied bekommen eine kurze Antwort, keine Suche', async () => {

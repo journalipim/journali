@@ -2893,6 +2893,30 @@ einem Produkt, nichts ist eine Angabe) und findet journali nichts — oder es is
 „Ich kann Ihnen mit den Produkten weiterhelfen, die wir im Angebot haben:“, die Gruppen des Sortiments, „Zu anderen Fragen kann ich
 leider keine Auskunft geben.“
 
+**Assoziationen (gebaut 09.10.2026, `kern/assoziationen.mjs`).** Ein Wort, das in keinem Produkt steht, sucht über die Wörter, die man
+damit verbindet: „winter“ → kalt, frost, gefüttert; „tennis“ → sport, training, rückschlagspiel; „festival“ → zelt, camping. Nur die
+assoziierten Wörter, die im Sortiment stehen, ordnen (höchstens sechs, in der Reihenfolge der Liste — nach Häufigkeit gewönnen allgemeine
+Wörter wie „atmungsaktiv“); das Wort selbst bleibt als Angabe stehen, und der Berater sagt, wonach er sucht („Zu „festival“ suche ich
+nach „zelt“, „camping“.“). Ein Tippfehler zu einem Produktnamen geht vor („zeit“ → „zelt“). Bei einer Frage zu den gezeigten Produkten
+geben assoziierte Wörter höchstens Hinweise. „fussball“ findet „fußball“. *Grenze:* ein Wort mit zwei Bedeutungen trifft beide —
+„katze“ → „futter“ findet das Innenfutter einer Mütze.
+
+Die Grundausstattung liegt im Plugin, je Sprache Stichwort → Wörter:
+
+- `wissen/assoziationen.json` — Eigenschaften, Einsatz, Anlässe, Wetter, Sport, Haushalt, Kleidung (über 25 000 Assoziationen, de und
+  en), zusammengeführt mit `tools/advisor-wissen/zusammenfuehren.mjs` (ohne Markennamen, englische Mehrwortbegriffe getrennt geschrieben,
+  weil der Server die Zeichenfolge sucht),
+- `wissen/themen.json` — 388 Oberthemen mit Wikidata-Kennung und den Wörtern, die dazu in Produkttexten stehen; wo die Suche den falschen
+  Begriff trifft („pet“ → Positronen-Emissions-Tomographie), steht die Kennung fest, Feste stehen ohne Wikidata (`"wikidata": false`),
+- `wissen/wikidata.json` — die Unterbegriffe der Oberthemen aus Wikidata (CC0), erzeugt mit `tools/advisor-wissen/wikidata.mjs`: je
+  Unterbegriff die Wörter seines Oberthemas und seine direkten Oberbegriffe. Aufgenommen wird nur ein Allgemeinbegriff (kleiner englischer
+  Name, kein Eigenname, keine Marke), die bekanntesten zuerst — rund 14 000 deutsche und 7 500 englische Stichwörter. Der Chat fragt
+  Wikidata nie; das Werkzeug läuft, wenn sich die Themen ändern.
+
+*Entscheidung:* Die Assoziationen sind Sprachwissen und gehören dem Plugin wie das Modell dem Plugin embed — kein Modell des Shops,
+darum nicht im Journal. Was ein Shop ergänzt, gehört ins Journal (offen). Quellen mit Share-Alike (OdeNet, DBpedia) und GermaNet
+(Weitergabe nur mit gekaufter Lizenz) kommen nicht ins Repo; wenn überhaupt, als Download beim Einschalten (`download` im Manifest).
+
 *Offen:* Allgemeinwissen über das Sortiment hinaus (Fragen, deren Wörter auch in Produkttexten stehen — „wie wird das Wetter?“ trifft
 „wetterfest“) unterscheidet nur der Sinn oder eine KI; ob die KI des Teams solche Fragen beantworten darf, ist eine Entscheidung je
 Berater.

@@ -40,6 +40,7 @@ export const TEXTE = {
     service: 'Zu Versand, Lieferung, Bezahlung und Rückgabe kann ich keine Auskunft geben.',
     helfen: mitGruppen => mitGruppen ? 'Ich kann Ihnen mit den Produkten weiterhelfen, die wir im Angebot haben:' : 'Ich kann Ihnen mit den Produkten weiterhelfen, die wir im Angebot haben.',
     andereFragen: 'Zu anderen Fragen kann ich leider keine Auskunft geben.',
+    assoziiert: (w, l) => `Zu „${w}“ suche ich nach „${l.join('“, „')}“.`,
   },
   en: {
     treffer: n => n === 1 ? '1 product matches.' : `${n} products match.`,
@@ -76,6 +77,7 @@ export const TEXTE = {
     service: 'I cannot give information on shipping, delivery, payment or returns.',
     helfen: mitGruppen => mitGruppen ? 'I can help you with the products we offer:' : 'I can help you with the products we offer.',
     andereFragen: 'Unfortunately I cannot answer other questions.',
+    assoziiert: (w, l) => `For "${w}" I search for "${l.join('", "')}".`,
   },
 }
 

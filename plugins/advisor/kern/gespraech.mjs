@@ -10,6 +10,7 @@ import { erkenne, fragt, namenWoerter, istArt, imNamen } from './verstehen.mjs'
 import { texte, angabeText } from './texte.mjs'
 import { stellen, genau } from './stellen.mjs'
 import { grundwissen, fragtShop } from './wissen.mjs'
+import { erstelleAssoziationen } from './assoziationen.mjs'
 
 export const DAUER = 30 * 60_000
 export const MAX_WOERTER = 12
@@ -38,12 +39,15 @@ const ALLGEMEIN = new Set(['verkauft', 'verkaufen', 'verkaufst', 'führt', 'fueh
 
 /**
  * @param {{ journali: (pfad: string, body?: any, kopf?: Record<string, string>) => Promise<{status: number, json: any}>, jetzt?: () => number,
- *           lernen?: { notiere: (art: string, daten: any) => void } | null, vokabularDauer?: number }} o
+ *           lernen?: { notiere: (art: string, daten: any) => void } | null, vokabularDauer?: number,
+ *           assoziationen?: Record<string, Record<string, string[]>> }} o — assoziationen: je Sprache Stichwort → Wörter, sonst die Grundausstattung
  */
 export function erstelleKern(o) {
   const journali = o.journali
   const jetzt = o.jetzt ?? Date.now
   const lernen = o.lernen ?? null
+  const assoz = erstelleAssoziationen(o.assoziationen ?? null)
+  const MAX_ASSOZ = 6
   const gespraeche = new Map()
   const vokabeln = new Map()
   let aufrufe = 0
@@ -63,7 +67,7 @@ export function erstelleKern(o) {
   }
 
   function neuerZustand() {
-    return { woerter: [], angaben: [], verlauf: [], fokus: null, fokusName: null, statt: null, vorlieben: {}, abgelehnt: [], gesehen: [], art: [], zuletzt: [], gruppe: null, am: jetzt() }
+    return { woerter: [], angaben: [], verlauf: [], fokus: null, fokusName: null, statt: null, vorlieben: {}, abgelehnt: [], gesehen: [], art: [], zuletzt: [], gruppe: null, assoz: {}, am: jetzt() }
   }
 
   /// Das Gespräch zu einer Kennung — ohne gültige Kennung eines, das nicht gemerkt wird
@@ -92,7 +96,8 @@ export function erstelleKern(o) {
 
   async function waehle(z, loc, a) {
     const r = await journali('select', {
-      art: a.art ?? [], ordnen: a.ordnen ?? [], angaben: (a.angaben ?? z.angaben).map(nurAngabe), satz: a.satz ?? '', locale: loc,
+      // ein gesammeltes Wort mit Assoziationen ordnet über deren Wörter („winter“ → kalt, frost)
+      art: a.art ?? [], ordnen: [...new Set((a.ordnen ?? []).flatMap(w => z.assoz?.[w] ?? [w]))], angaben: (a.angaben ?? z.angaben).map(nurAngabe), satz: a.satz ?? '', locale: loc,
       take: a.take ?? 6, lockern: a.lockern ?? false, probe: a.probe ?? false, hinten: z.abgelehnt, ...(a.fokus ? { fokus: a.fokus } : {}),
       // die Gruppe des Sortiments, die der Besucher gewählt hat — eine Probe für einen Themenwechsel fragt ohne sie (gruppe: null)
       ...((a.gruppe !== undefined ? a.gruppe : z.gruppe?.key) ? { gruppe: a.gruppe !== undefined ? a.gruppe : z.gruppe.key } : {}),
@@ -124,18 +129,20 @@ export function erstelleKern(o) {
     const ws = woerter(eingabe).filter(w => !BEZUG.has(w))
     const art = ws.filter(w => istArt(w, namen))
     const frage = ws.filter(w => !art.includes(w))
-    return { art, frage, suchwoerter: frage.map(w => NACH_WERT[w] ?? w), attribute: erkenne(vok, eingabe).angaben.map(a => a.attribute) }
+    const suchwoerter = frage.map(w => NACH_WERT[w] ?? w)
+    const verwandt = [...new Set(suchwoerter.flatMap(w => assoz.zu(w, vok.locale)))].filter(x => !suchwoerter.includes(x))
+    return { art, frage, suchwoerter, verwandt, attribute: erkenne(vok, eingabe).angaben.map(a => a.attribute) }
   }
 
   /// Eine Frage zu den Produkten der letzten Antwort: „sind die wasserdicht?“, „wie schwer ist das Skare?“ — je Produkt, was in seinen Werten
   /// und Texten dazu steht; mit KI ein Text daraus. Die gesammelten Angaben bleiben, wie sie sind.
   async function zuDenTreffern(z, id, loc, T, eingabe, ki, vok, liste, w) {
     const produkte = await Promise.all(liste.map(p => produkt(p.id, loc)))
-    const antworten = liste.map((p, i) => ({ id: p.id, name: produkte[i]?.name ?? p.name, values: produkte[i] ? stellen(produkte[i], { woerter: w.suchwoerter, attribute: w.attribute }) : [] }))
+    const antworten = liste.map((p, i) => ({ id: p.id, name: produkte[i]?.name ?? p.name, values: produkte[i] ? stellen(produkte[i], { woerter: w.suchwoerter, attribute: w.attribute, verwandt: w.verwandt }) : [] }))
     const gefunden = antworten.filter(a => a.values.length)
     // nichts bei den gezeigten, und das Gefragte steht in keinem Produkt des Sortiments („wer ist bundeskanzler?“): keine Frage zu ihnen
     if (!gefunden.length && !w.attribute.length) {
-      const probe = await waehle(z, loc, { art: [], ordnen: w.suchwoerter, angaben: [], probe: true, take: 1, gruppe: null })
+      const probe = await waehle(z, loc, { art: [], ordnen: [...w.suchwoerter, ...w.verwandt], angaben: [], probe: true, take: 1, gruppe: null })
       if ((probe.words ?? []).every(x => x.n === 0)) return null
     }
     let answer = null, warning = null
@@ -169,7 +176,7 @@ export function erstelleKern(o) {
       const p = await produkt(z.fokus, loc)
       if (p) {
         const w = wonach(vok, namen, eingabe)
-        const values = stellen(p, { woerter: w.suchwoerter, attribute: w.attribute })
+        const values = stellen(p, { woerter: w.suchwoerter, attribute: w.attribute, verwandt: w.verwandt })
         sel.focus = { id: z.fokus, name: p.name ?? z.fokusName, values }
         if (values.length && !genau(values) && w.frage.length) hinweisWort = w.frage.join(' ')
       }
@@ -203,7 +210,7 @@ export function erstelleKern(o) {
 
     // ---- Klicks: ändern die gesammelten Angaben, eine Suche folgt
     if (schritt?.art === 'neu') {
-      Object.assign(z, { woerter: [], angaben: [], verlauf: [], fokus: null, fokusName: null, statt: null, art: [], zuletzt: [], gruppe: null })   // Vorlieben, Gesehenes und Abgelehntes bleiben
+      Object.assign(z, { woerter: [], angaben: [], verlauf: [], fokus: null, fokusName: null, statt: null, art: [], zuletzt: [], gruppe: null, assoz: {} })   // Vorlieben, Gesehenes und Abgelehntes bleiben
       if (!eingabe) return { gespraech: id, locale: loc, reset: true, texte: { satz: T.neu, hinweise: [] } }
     } else if (schritt?.art === 'filter' && schritt.attribute) {
       setze(z, { attribute: String(schritt.attribute), op: ['le', 'ge', 'low', 'high'].includes(schritt.op) ? schritt.op : 'eq', value: String(schritt.value ?? ''), quelle: 'geklickt' })
@@ -285,18 +292,27 @@ export function erstelleKern(o) {
     let { art, weich } = teile(z.woerter, namen)
     let sel = await waehle(z, loc, { art, ordnen: weich, satz: sinnSatz(), lockern: true, take })
 
-    // Wörter, die in keinem Produkt stehen: ein Tippfehler wird zum nächsten Wort eines Namens, sonst wird das Wort genannt und nicht gesammelt
+    // Wörter, die in keinem Produkt stehen: ein Tippfehler wird zum nächsten Wort eines Namens; sonst ordnet ein Wort mit Assoziationen über
+    // deren Wörter, die im Sortiment stehen, und bleibt als Angabe stehen („winter“ → kalt, frost); sonst wird das Wort genannt und nicht
+    // gesammelt. Der Tippfehler geht vor: „zeit“ ist ein Wort der Sprache, in einem Shop mit Zelten aber meist „zelt“.
     const zahl = new Map((sel.words ?? []).map(x => [x.word, x.n]))
     const fremd = z.woerter.filter(w => zahl.get(w) === 0)
     if (fremd.length) {
       for (const u of fremd) {
         z.woerter = z.woerter.filter(x => x !== u)
         const k = korrektur(u, namen4)
+        const liste = k ? [] : assoz.zu(u, loc)
+        const probe = liste.length ? await waehle(z, loc, { art: [], ordnen: liste, angaben: [], probe: true, take: 1, gruppe: null }) : null
+        // in der Reihenfolge der Liste (die bedeutendsten zuerst) — nach Häufigkeit gewönnen allgemeine Wörter („atmungsaktiv“ für „tennis“)
+        const im = new Set((probe?.words ?? []).filter(x => x.n > 0).map(x => x.word))
+        const drin = liste.filter(x => im.has(x)).slice(0, MAX_ASSOZ)
         if (k) {
           corrected.push({ from: u, to: k })
           if (!z.woerter.some(x => gleichesWort(x, k))) z.woerter.push(k)
           eingabe = eingabe.replace(new RegExp(`(?<![\\p{L}\\p{N}])${u.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\p{L}\\p{N}])`, 'giu'), k)
           neueWoerter = neueWoerter.map(x => x === u ? k : x)
+        } else if (drin.length) {
+          z.assoz = { ...z.assoz, [u]: drin }; z.woerter.push(u); hinweise.push(T.assoziiert(u, drin))
         } else { unknown.push(u); neueWoerter = neueWoerter.filter(x => x !== u) }
       }
       ;({ art, weich } = teile(z.woerter, namen))

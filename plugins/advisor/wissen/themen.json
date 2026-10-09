@@ -1,0 +1,8527 @@
+[
+  {
+    "key": "sport",
+    "suche": "sport",
+    "de": [
+      "sport",
+      "sportlich",
+      "training",
+      "fitness",
+      "bewegung"
+    ],
+    "en": [
+      "sport",
+      "sports",
+      "training",
+      "fitness",
+      "athletic"
+    ],
+    "wikidata": "Q349",
+    "gefunden": "sport — form of event or activity involving competition; series of activities that provides challenges for an individual or team/s of participants"
+  },
+  {
+    "key": "ball-game",
+    "suche": "ball game",
+    "de": [
+      "ballsport",
+      "ball",
+      "spiel",
+      "mannschaft",
+      "training",
+      "sport"
+    ],
+    "en": [
+      "ball",
+      "game",
+      "team",
+      "sports",
+      "training",
+      "match"
+    ],
+    "wikidata": "Q877517",
+    "gefunden": "ball game — any form of game or sport which feature a ball as part of play"
+  },
+  {
+    "key": "team-sport",
+    "suche": "team sport",
+    "de": [
+      "mannschaftssport",
+      "mannschaft",
+      "team",
+      "verein",
+      "training",
+      "sport"
+    ],
+    "en": [
+      "team",
+      "club",
+      "squad",
+      "training",
+      "sports",
+      "match"
+    ],
+    "wikidata": "Q216048",
+    "gefunden": "team sport — type of sport"
+  },
+  {
+    "key": "racket-sport",
+    "suche": "racket sport",
+    "de": [
+      "schlägersport",
+      "schläger",
+      "ball",
+      "platz",
+      "training",
+      "sport"
+    ],
+    "en": [
+      "racket",
+      "racquet",
+      "ball",
+      "court",
+      "training",
+      "sports"
+    ],
+    "wikidata": "Q2426135",
+    "gefunden": "racket sport — game in which players use rackets to hit a ball or other object"
+  },
+  {
+    "key": "water-sport",
+    "suche": "water sport",
+    "de": [
+      "wassersport",
+      "wasser",
+      "wasserdicht",
+      "nass",
+      "schwimmen",
+      "sport"
+    ],
+    "en": [
+      "watersports",
+      "water",
+      "waterproof",
+      "wet",
+      "swimming",
+      "sports"
+    ],
+    "wikidata": "Q61065",
+    "gefunden": "water sport — sports that take place in or on water"
+  },
+  {
+    "key": "winter-sport",
+    "suche": "winter sport",
+    "de": [
+      "wintersport",
+      "winter",
+      "schnee",
+      "kalt",
+      "warm",
+      "ski"
+    ],
+    "en": [
+      "wintersports",
+      "winter",
+      "snow",
+      "cold",
+      "warm",
+      "ski"
+    ],
+    "wikidata": "Q204686",
+    "gefunden": "winter sport — sport mainly practiced during the wintertime, often on snow or ice"
+  },
+  {
+    "key": "combat-sport",
+    "suche": "combat sport",
+    "de": [
+      "kampfsport",
+      "kampf",
+      "training",
+      "schutz",
+      "polster",
+      "sport"
+    ],
+    "en": [
+      "combat",
+      "fighting",
+      "training",
+      "protection",
+      "padding",
+      "sports"
+    ],
+    "wikidata": "Q7128792",
+    "gefunden": "combat sport — competitive contact sport involving combat"
+  },
+  {
+    "key": "martial-art",
+    "suche": "martial arts",
+    "de": [
+      "kampfkunst",
+      "kampfsport",
+      "selbstverteidigung",
+      "training",
+      "anzug",
+      "gürtel"
+    ],
+    "en": [
+      "martial-arts",
+      "self-defense",
+      "training",
+      "uniform",
+      "belt",
+      "combat"
+    ],
+    "wikidata": "Q11417",
+    "gefunden": "martial arts — codified systems and traditions of combat practices"
+  },
+  {
+    "key": "cycling",
+    "suche": "cycling",
+    "de": [
+      "radsport",
+      "fahrrad",
+      "rad",
+      "radfahren",
+      "radtour",
+      "sport"
+    ],
+    "en": [
+      "cycling",
+      "bicycle",
+      "bike",
+      "riding",
+      "ride",
+      "sports"
+    ],
+    "wikidata": "Q53121",
+    "gefunden": "cycling — riding a bicycle (transportation, sport, exercise, recreation...)"
+  },
+  {
+    "key": "athletics",
+    "suche": "athletics",
+    "de": [
+      "leichtathletik",
+      "laufen",
+      "springen",
+      "werfen",
+      "training",
+      "sport"
+    ],
+    "en": [
+      "athletics",
+      "track",
+      "running",
+      "jumping",
+      "throwing",
+      "training"
+    ],
+    "wikidata": "Q542",
+    "gefunden": "athletics — sports involving running, jumping, throwing and walking"
+  },
+  {
+    "key": "gymnastics",
+    "suche": "gymnastics",
+    "de": [
+      "turnen",
+      "gymnastik",
+      "beweglich",
+      "training",
+      "matte",
+      "sport"
+    ],
+    "en": [
+      "gymnastics",
+      "flexible",
+      "training",
+      "mat",
+      "exercise",
+      "sports"
+    ],
+    "wikidata": "Q43450",
+    "gefunden": "gymnastics — sport; includes artistic, rhythmic, trampoline, and other versions"
+  },
+  {
+    "key": "equestrian",
+    "suche": "equestrian sport",
+    "de": [
+      "reitsport",
+      "reiten",
+      "pferd",
+      "reiter",
+      "stall",
+      "sattel"
+    ],
+    "en": [
+      "equestrian",
+      "riding",
+      "horse",
+      "rider",
+      "stable",
+      "saddle"
+    ],
+    "wikidata": "Q902378",
+    "gefunden": "equestrian sport — part of the field of sport that encompasses all sports that are practiced with the horse as a partner"
+  },
+  {
+    "key": "motorsport",
+    "suche": "motorsport",
+    "de": [
+      "motorsport",
+      "rennen",
+      "motor",
+      "geschwindigkeit",
+      "helm",
+      "rennsport"
+    ],
+    "en": [
+      "motorsport",
+      "racing",
+      "motor",
+      "speed",
+      "helmet",
+      "race"
+    ],
+    "wikidata": "Q5367",
+    "gefunden": "motorsport — sporting competition and recreation activities which primarily involve the use of motorised vehicles"
+  },
+  {
+    "key": "extreme-sport",
+    "suche": "extreme sport",
+    "de": [
+      "extremsport",
+      "abenteuer",
+      "adrenalin",
+      "outdoor",
+      "robust",
+      "sport"
+    ],
+    "en": [
+      "extreme",
+      "adventure",
+      "adrenaline",
+      "outdoor",
+      "rugged",
+      "sports"
+    ],
+    "wikidata": "Q309162",
+    "gefunden": "extreme sport — class of sports"
+  },
+  {
+    "key": "mountaineering",
+    "suche": "mountaineering",
+    "de": [
+      "bergsteigen",
+      "berg",
+      "alpin",
+      "klettern",
+      "wandern",
+      "outdoor"
+    ],
+    "en": [
+      "mountaineering",
+      "mountain",
+      "alpine",
+      "climbing",
+      "hiking",
+      "outdoor"
+    ],
+    "wikidata": "Q36908",
+    "gefunden": "mountaineering — sport of mountain climbing"
+  },
+  {
+    "key": "climbing",
+    "suche": "climbing",
+    "de": [
+      "klettern",
+      "seil",
+      "sicherung",
+      "fels",
+      "griff",
+      "gurt"
+    ],
+    "en": [
+      "climbing",
+      "rope",
+      "belay",
+      "rock",
+      "grip",
+      "harness"
+    ],
+    "wikidata": "Q22857",
+    "gefunden": "climbing — activity to ascend a steep object"
+  },
+  {
+    "key": "running",
+    "suche": "running",
+    "de": [
+      "laufen",
+      "joggen",
+      "läufer",
+      "ausdauer",
+      "atmungsaktiv",
+      "sport"
+    ],
+    "en": [
+      "running",
+      "jogging",
+      "runner",
+      "endurance",
+      "breathable",
+      "sports"
+    ],
+    "wikidata": "Q912985",
+    "gefunden": "running back — position in American and Canadian football"
+  },
+  {
+    "key": "swimming",
+    "suche": "swimming",
+    "de": [
+      "schwimmen",
+      "wasser",
+      "schwimmbad",
+      "badeanzug",
+      "chlorbeständig",
+      "sport"
+    ],
+    "en": [
+      "swimming",
+      "water",
+      "pool",
+      "swimsuit",
+      "chlorine-resistant",
+      "sports"
+    ],
+    "wikidata": "Q31920",
+    "gefunden": "competitive swimming — water-based sport"
+  },
+  {
+    "key": "board-sport",
+    "suche": "boardsport",
+    "de": [
+      "brettsport",
+      "brett",
+      "board",
+      "balance",
+      "wellen",
+      "sport"
+    ],
+    "en": [
+      "boardsport",
+      "board",
+      "balance",
+      "waves",
+      "riding",
+      "sports"
+    ],
+    "wikidata": "Q911069",
+    "gefunden": "boardsport — sports that are practiced with some sort of board as the primary equipment"
+  },
+  {
+    "key": "shooting-sport",
+    "suche": "shooting sport",
+    "de": [
+      "schießsport",
+      "zielen",
+      "ziel",
+      "präzision",
+      "schuss",
+      "sport"
+    ],
+    "en": [
+      "shooting",
+      "aim",
+      "target",
+      "precision",
+      "shot",
+      "sports"
+    ],
+    "wikidata": "Q206989",
+    "gefunden": "shooting sports — sports involving firearms used to hit targets"
+  },
+  {
+    "key": "strength-training",
+    "suche": "strength training",
+    "de": [
+      "krafttraining",
+      "kraft",
+      "muskeln",
+      "gewicht",
+      "hantel",
+      "fitness"
+    ],
+    "en": [
+      "strength",
+      "muscle",
+      "weight",
+      "dumbbell",
+      "workout",
+      "fitness"
+    ],
+    "wikidata": "Q12834857",
+    "gefunden": "strength training — performance of physical exercises designed to improve strength"
+  },
+  {
+    "key": "physical-exercise",
+    "suche": "physical exercise",
+    "de": [
+      "übung",
+      "training",
+      "fitness",
+      "bewegung",
+      "gesund",
+      "ausdauer"
+    ],
+    "en": [
+      "exercise",
+      "workout",
+      "fitness",
+      "movement",
+      "healthy",
+      "endurance"
+    ],
+    "wikidata": "Q219067",
+    "gefunden": "physical exercise — bodily activity that enhances or maintains physical fitness and overall health and wellness"
+  },
+  {
+    "key": "dance",
+    "suche": "dance",
+    "de": [
+      "tanz",
+      "tanzen",
+      "musik",
+      "bewegung",
+      "rhythmus",
+      "tanzschuh"
+    ],
+    "en": [
+      "dance",
+      "dancing",
+      "music",
+      "movement",
+      "rhythm",
+      "shoes"
+    ],
+    "wikidata": "Q11639",
+    "gefunden": "dance — rhythmic movement of the body"
+  },
+  {
+    "key": "yoga",
+    "suche": "yoga",
+    "de": [
+      "yoga",
+      "matte",
+      "entspannung",
+      "dehnen",
+      "meditation",
+      "ruhe"
+    ],
+    "en": [
+      "yoga",
+      "mat",
+      "relaxation",
+      "stretching",
+      "meditation",
+      "calm"
+    ],
+    "wikidata": "Q9350",
+    "gefunden": "yoga — group of physical, mental and spiritual practices originating from ancient India"
+  },
+  {
+    "key": "hiking",
+    "suche": "hiking",
+    "de": [
+      "wandern",
+      "wanderung",
+      "outdoor",
+      "trekking",
+      "rucksack",
+      "natur"
+    ],
+    "en": [
+      "hiking",
+      "hike",
+      "outdoor",
+      "trekking",
+      "backpack",
+      "nature"
+    ],
+    "wikidata": "Q12014035",
+    "gefunden": "hiking — walking as a hobby, sport, or leisure activity"
+  },
+  {
+    "key": "camping",
+    "suche": "camping",
+    "de": [
+      "camping",
+      "zelt",
+      "outdoor",
+      "schlafsack",
+      "natur",
+      "draußen"
+    ],
+    "en": [
+      "camping",
+      "tent",
+      "outdoor",
+      "sleeping-bag",
+      "nature",
+      "campsite"
+    ],
+    "wikidata": "Q455550",
+    "gefunden": "camping — outdoor recreational activity"
+  },
+  {
+    "key": "fishing",
+    "suche": "fishing",
+    "de": [
+      "angeln",
+      "angel",
+      "fisch",
+      "köder",
+      "see",
+      "fluss"
+    ],
+    "en": [
+      "fishing",
+      "rod",
+      "fish",
+      "bait",
+      "lake",
+      "river"
+    ],
+    "wikidata": "Q14373",
+    "gefunden": "fishing — activity of trying to catch fish"
+  },
+  {
+    "key": "hunting",
+    "suche": "hunting",
+    "de": [
+      "jagd",
+      "jäger",
+      "wald",
+      "tarnung",
+      "wild",
+      "outdoor"
+    ],
+    "en": [
+      "hunting",
+      "hunter",
+      "forest",
+      "camouflage",
+      "game",
+      "outdoor"
+    ],
+    "wikidata": "Q36963",
+    "gefunden": "hunting — human activity of searching for, pursuing, and catching wild animals"
+  },
+  {
+    "key": "skating",
+    "suche": "skating",
+    "de": [
+      "skaten",
+      "rollen",
+      "eislaufen",
+      "inliner",
+      "balance",
+      "sport"
+    ],
+    "en": [
+      "skating",
+      "rolling",
+      "ice-skating",
+      "inline",
+      "balance",
+      "sports"
+    ],
+    "wikidata": "Q779272",
+    "gefunden": "ice skating — activity on ice, either outdoors or indoors at a skating rink"
+  },
+  {
+    "key": "outdoor-recreation",
+    "suche": "outdoor recreation",
+    "de": [
+      "outdoor",
+      "draußen",
+      "natur",
+      "freizeit",
+      "wetterfest",
+      "abenteuer"
+    ],
+    "en": [
+      "outdoor",
+      "outdoors",
+      "nature",
+      "leisure",
+      "weatherproof",
+      "adventure"
+    ],
+    "wikidata": "Q968907",
+    "gefunden": "outdoor recreation — recreation engaged out of doors"
+  },
+  {
+    "key": "football",
+    "suche": "football",
+    "de": [
+      "fußball",
+      "ball",
+      "tor",
+      "rasen",
+      "mannschaft",
+      "stollen"
+    ],
+    "en": [
+      "football",
+      "soccer",
+      "ball",
+      "goal",
+      "pitch",
+      "team"
+    ],
+    "wikidata": "Q2736",
+    "gefunden": "association football — sport that is practiced between two teams of eleven players"
+  },
+  {
+    "key": "bat-and-ball",
+    "suche": "bat-and-ball game",
+    "de": [
+      "schlagball",
+      "schläger",
+      "ball",
+      "werfen",
+      "fangen",
+      "sport"
+    ],
+    "en": [
+      "bat",
+      "ball",
+      "pitch",
+      "throwing",
+      "catching",
+      "sports"
+    ],
+    "wikidata": "Q2238071",
+    "gefunden": "bat-and-ball game — field games played by two opposing teams"
+  },
+  {
+    "key": "sports-equipment",
+    "suche": "sports equipment",
+    "de": [
+      "sportgerät",
+      "ausrüstung",
+      "sport",
+      "training",
+      "zubehör",
+      "fitness"
+    ],
+    "en": [
+      "equipment",
+      "gear",
+      "sports",
+      "training",
+      "accessories",
+      "fitness"
+    ],
+    "wikidata": "Q768186",
+    "gefunden": "sports equipment — object used for sport or exercise"
+  },
+  {
+    "key": "exercise-equipment",
+    "suche": "exercise equipment",
+    "de": [
+      "fitnessgerät",
+      "heimtrainer",
+      "training",
+      "fitness",
+      "gewicht",
+      "kraft"
+    ],
+    "en": [
+      "exercise",
+      "trainer",
+      "training",
+      "fitness",
+      "weights",
+      "strength"
+    ],
+    "wikidata": "Q352222",
+    "gefunden": "exercise equipment — consists of one or more items and is used for applying a sport"
+  },
+  {
+    "key": "hobby",
+    "suche": "hobby",
+    "de": [
+      "hobby",
+      "freizeit",
+      "zeitvertreib",
+      "basteln",
+      "sammeln",
+      "spaß"
+    ],
+    "en": [
+      "hobby",
+      "leisure",
+      "pastime",
+      "crafting",
+      "collecting",
+      "fun"
+    ],
+    "wikidata": "Q47728",
+    "gefunden": "hobby — regular leisure activity that is done usually for enjoyment"
+  },
+  {
+    "key": "game",
+    "suche": "game",
+    "de": [
+      "spiel",
+      "spielen",
+      "spieler",
+      "spaß",
+      "regeln",
+      "familie"
+    ],
+    "en": [
+      "game",
+      "play",
+      "player",
+      "fun",
+      "rules",
+      "family"
+    ],
+    "wikidata": "Q11410",
+    "gefunden": "game — structured form of play"
+  },
+  {
+    "key": "board-game",
+    "suche": "board game",
+    "de": [
+      "brettspiel",
+      "spielbrett",
+      "figuren",
+      "würfel",
+      "familie",
+      "spieleabend"
+    ],
+    "en": [
+      "boardgame",
+      "board",
+      "pieces",
+      "dice",
+      "family",
+      "game-night"
+    ],
+    "wikidata": "Q131436",
+    "gefunden": "board game — game that involves counters or pieces moved or placed on a pre-marked surface or \"board\", according to a set of rules"
+  },
+  {
+    "key": "card-game",
+    "suche": "card game",
+    "de": [
+      "kartenspiel",
+      "karten",
+      "spielkarten",
+      "mischen",
+      "spiel",
+      "familie"
+    ],
+    "en": [
+      "card",
+      "cards",
+      "deck",
+      "shuffle",
+      "game",
+      "family"
+    ],
+    "wikidata": "Q142714",
+    "gefunden": "card game — game using playing cards as the primary device"
+  },
+  {
+    "key": "role-playing-game",
+    "suche": "role-playing game",
+    "de": [
+      "rollenspiel",
+      "abenteuer",
+      "fantasy",
+      "würfel",
+      "charakter",
+      "spiel"
+    ],
+    "en": [
+      "roleplaying",
+      "adventure",
+      "fantasy",
+      "dice",
+      "character",
+      "game"
+    ],
+    "wikidata": "Q744038",
+    "gefunden": "role-playing video game — video game genre"
+  },
+  {
+    "key": "video-game",
+    "suche": "video game genre",
+    "de": [
+      "videospiel",
+      "spiel",
+      "konsole",
+      "gaming",
+      "zocken",
+      "spieler"
+    ],
+    "en": [
+      "videogame",
+      "game",
+      "console",
+      "gaming",
+      "gamer",
+      "player"
+    ],
+    "wikidata": "Q659563",
+    "gefunden": "video game genre — video game term; categorization of video games"
+  },
+  {
+    "key": "puzzle",
+    "suche": "puzzle",
+    "de": [
+      "puzzle",
+      "rätsel",
+      "knobeln",
+      "denken",
+      "teile",
+      "geduld"
+    ],
+    "en": [
+      "puzzle",
+      "riddle",
+      "brainteaser",
+      "thinking",
+      "pieces",
+      "patience"
+    ],
+    "wikidata": "Q54767",
+    "gefunden": "puzzle video game — video game genre"
+  },
+  {
+    "key": "toy",
+    "suche": "toy",
+    "de": [
+      "spielzeug",
+      "spielen",
+      "kinder",
+      "spaß",
+      "geschenk",
+      "kinderzimmer"
+    ],
+    "en": [
+      "toy",
+      "play",
+      "kids",
+      "children",
+      "fun",
+      "gift"
+    ],
+    "wikidata": "Q11422",
+    "gefunden": "toy — object intended to be played with"
+  },
+  {
+    "key": "doll",
+    "suche": "doll",
+    "de": [
+      "puppe",
+      "puppen",
+      "spielzeug",
+      "kleidung",
+      "spielen",
+      "kinder"
+    ],
+    "en": [
+      "doll",
+      "dolls",
+      "toy",
+      "outfit",
+      "play",
+      "children"
+    ],
+    "wikidata": "Q168658",
+    "gefunden": "doll — model of a character or a human being, often used as a toy for children or an artistic hobby for adults"
+  },
+  {
+    "key": "construction-toy",
+    "suche": "construction toy",
+    "de": [
+      "baukasten",
+      "bausteine",
+      "bauen",
+      "konstruieren",
+      "kreativ",
+      "spielzeug"
+    ],
+    "en": [
+      "building",
+      "blocks",
+      "construction",
+      "build",
+      "creative",
+      "toy"
+    ],
+    "wikidata": "Q2617664",
+    "gefunden": "construction set — set of standardized pieces that allow for the construction of a variety of different models"
+  },
+  {
+    "key": "educational-toy",
+    "suche": "educational toy",
+    "de": [
+      "lernspielzeug",
+      "lernen",
+      "fördern",
+      "kinder",
+      "pädagogisch",
+      "spielzeug"
+    ],
+    "en": [
+      "educational",
+      "learning",
+      "development",
+      "kids",
+      "montessori",
+      "toy"
+    ],
+    "wikidata": "Q5341305",
+    "gefunden": "educational toy — type of play object to stimulate learning"
+  },
+  {
+    "key": "collecting",
+    "suche": "collecting",
+    "de": [
+      "sammeln",
+      "sammlung",
+      "sammler",
+      "selten",
+      "vitrine",
+      "hobby"
+    ],
+    "en": [
+      "collecting",
+      "collection",
+      "collector",
+      "rare",
+      "display",
+      "hobby"
+    ],
+    "wikidata": "Q208165",
+    "gefunden": "collecting — activity of seeking out and acquiring items of interest"
+  },
+  {
+    "key": "handicraft",
+    "suche": "handicraft",
+    "de": [
+      "handarbeit",
+      "basteln",
+      "handwerk",
+      "selbstgemacht",
+      "kreativ",
+      "hobby"
+    ],
+    "en": [
+      "handicraft",
+      "crafting",
+      "craft",
+      "handmade",
+      "creative",
+      "hobby"
+    ],
+    "wikidata": "Q877729",
+    "gefunden": "handicraft — field of work where useful and decorative objects are made completely by hand or by using only simple tools"
+  },
+  {
+    "key": "textile-arts",
+    "suche": "textile arts",
+    "de": [
+      "nähen",
+      "stricken",
+      "häkeln",
+      "sticken",
+      "garn",
+      "stoff"
+    ],
+    "en": [
+      "sewing",
+      "knitting",
+      "crochet",
+      "embroidery",
+      "yarn",
+      "fabric"
+    ],
+    "wikidata": false
+  },
+  {
+    "key": "painting",
+    "suche": "painting",
+    "de": [
+      "malen",
+      "malerei",
+      "farbe",
+      "pinsel",
+      "leinwand",
+      "kunst"
+    ],
+    "en": [
+      "painting",
+      "paint",
+      "colour",
+      "brush",
+      "canvas",
+      "art"
+    ],
+    "wikidata": "Q3305213",
+    "gefunden": "painting — visual artwork, surface artistically covered with paint"
+  },
+  {
+    "key": "photography",
+    "suche": "photography",
+    "de": [
+      "fotografie",
+      "foto",
+      "kamera",
+      "objektiv",
+      "bild",
+      "fotografieren"
+    ],
+    "en": [
+      "photography",
+      "photo",
+      "camera",
+      "lens",
+      "picture",
+      "shooting"
+    ],
+    "wikidata": "Q11633",
+    "gefunden": "photography — art, science, and practice of creating durable images by recording light or other electromagnetic radiation"
+  },
+  {
+    "key": "scale-model",
+    "suche": "scale model",
+    "de": [
+      "modellbau",
+      "modell",
+      "maßstab",
+      "bausatz",
+      "kleben",
+      "sammeln"
+    ],
+    "en": [
+      "model",
+      "scale",
+      "kit",
+      "modelling",
+      "glue",
+      "collecting"
+    ],
+    "wikidata": "Q6498959",
+    "gefunden": "scale model — physical model with an explicit scale ratio to a prototype"
+  },
+  {
+    "key": "gardening",
+    "suche": "gardening",
+    "de": [
+      "gärtnern",
+      "garten",
+      "pflanzen",
+      "erde",
+      "säen",
+      "gießen"
+    ],
+    "en": [
+      "gardening",
+      "garden",
+      "plants",
+      "soil",
+      "sowing",
+      "watering"
+    ],
+    "wikidata": "Q124946",
+    "gefunden": "gardening — practice of growing and cultivating plants"
+  },
+  {
+    "key": "cooking",
+    "suche": "cooking",
+    "de": [
+      "kochen",
+      "küche",
+      "rezept",
+      "zubereiten",
+      "braten",
+      "garen"
+    ],
+    "en": [
+      "cooking",
+      "kitchen",
+      "recipe",
+      "preparation",
+      "frying",
+      "simmering"
+    ],
+    "wikidata": "Q38695",
+    "gefunden": "cooking — preparing food for consumption by the application of heat"
+  },
+  {
+    "key": "baking",
+    "suche": "baking",
+    "de": [
+      "backen",
+      "backofen",
+      "teig",
+      "rezept",
+      "mehl",
+      "kuchen"
+    ],
+    "en": [
+      "baking",
+      "oven",
+      "dough",
+      "recipe",
+      "flour",
+      "cake"
+    ],
+    "wikidata": "Q720398",
+    "gefunden": "baking — food production method using prolonged dry heat acting by convection"
+  },
+  {
+    "key": "do-it-yourself",
+    "suche": "do it yourself",
+    "de": [
+      "heimwerken",
+      "selbermachen",
+      "werkstatt",
+      "renovieren",
+      "reparieren",
+      "werkzeug"
+    ],
+    "en": [
+      "diy",
+      "homemade",
+      "workshop",
+      "renovation",
+      "repair",
+      "tools"
+    ],
+    "wikidata": "Q26384",
+    "gefunden": "do it yourself — building, modifying, or repairing something without the aid of experts or professionals"
+  },
+  {
+    "key": "music",
+    "suche": "music",
+    "de": [
+      "musik",
+      "klang",
+      "hören",
+      "musizieren",
+      "melodie",
+      "rhythmus"
+    ],
+    "en": [
+      "music",
+      "sound",
+      "listening",
+      "musician",
+      "melody",
+      "rhythm"
+    ],
+    "wikidata": "Q638",
+    "gefunden": "music — art using sound"
+  },
+  {
+    "key": "music-genre",
+    "suche": "music genre",
+    "de": [
+      "musikrichtung",
+      "musik",
+      "stil",
+      "album",
+      "konzert",
+      "hören"
+    ],
+    "en": [
+      "genre",
+      "music",
+      "style",
+      "album",
+      "concert",
+      "listening"
+    ],
+    "wikidata": "Q188451",
+    "gefunden": "music genre — category that identifies pieces of music as belonging to a shared tradition or set of conventions"
+  },
+  {
+    "key": "musical-instrument",
+    "suche": "musical instrument",
+    "de": [
+      "instrument",
+      "musik",
+      "spielen",
+      "klang",
+      "musizieren",
+      "musiker"
+    ],
+    "en": [
+      "instrument",
+      "music",
+      "play",
+      "sound",
+      "musician",
+      "tone"
+    ],
+    "wikidata": "Q34379",
+    "gefunden": "musical instrument — device created or adapted to make musical sounds"
+  },
+  {
+    "key": "string-instrument",
+    "suche": "string instrument",
+    "de": [
+      "saiteninstrument",
+      "saiten",
+      "stimmen",
+      "klang",
+      "instrument",
+      "musik"
+    ],
+    "en": [
+      "string",
+      "strings",
+      "tuning",
+      "sound",
+      "instrument",
+      "music"
+    ],
+    "wikidata": "Q1798603",
+    "gefunden": "string instrument — musical instrument that generates tones by one or more strings stretched between two points"
+  },
+  {
+    "key": "wind-instrument",
+    "suche": "wind instrument",
+    "de": [
+      "blasinstrument",
+      "blasen",
+      "mundstück",
+      "atem",
+      "orchester",
+      "musik"
+    ],
+    "en": [
+      "wind",
+      "blowing",
+      "mouthpiece",
+      "breath",
+      "orchestra",
+      "music"
+    ],
+    "wikidata": "Q173453",
+    "gefunden": "wind instrument — class of musical instruments"
+  },
+  {
+    "key": "brass-instrument",
+    "suche": "brass instrument",
+    "de": [
+      "blechblasinstrument",
+      "blech",
+      "messing",
+      "trompete",
+      "mundstück",
+      "musik"
+    ],
+    "en": [
+      "brass",
+      "trumpet",
+      "mouthpiece",
+      "valve",
+      "band",
+      "music"
+    ],
+    "wikidata": "Q180744",
+    "gefunden": "brass instrument — class of musical instruments"
+  },
+  {
+    "key": "woodwind-instrument",
+    "suche": "woodwind instrument",
+    "de": [
+      "holzblasinstrument",
+      "holz",
+      "flöte",
+      "klarinette",
+      "blatt",
+      "musik"
+    ],
+    "en": [
+      "woodwind",
+      "wood",
+      "flute",
+      "clarinet",
+      "reed",
+      "music"
+    ],
+    "wikidata": "Q181247",
+    "gefunden": "woodwind instrument — family of musical wind instruments"
+  },
+  {
+    "key": "percussion-instrument",
+    "suche": "percussion instrument",
+    "de": [
+      "schlaginstrument",
+      "schlagzeug",
+      "trommel",
+      "rhythmus",
+      "takt",
+      "musik"
+    ],
+    "en": [
+      "percussion",
+      "drums",
+      "drum",
+      "rhythm",
+      "beat",
+      "music"
+    ],
+    "wikidata": "Q133163",
+    "gefunden": "percussion instrument — type of musical instrument that produces a sound by directly hitting it"
+  },
+  {
+    "key": "keyboard-instrument",
+    "suche": "keyboard instrument",
+    "de": [
+      "tasteninstrument",
+      "tasten",
+      "klavier",
+      "keyboard",
+      "spielen",
+      "musik"
+    ],
+    "en": [
+      "keyboard",
+      "keys",
+      "piano",
+      "playing",
+      "pedal",
+      "music"
+    ],
+    "wikidata": "Q52954",
+    "gefunden": "keyboard instrument — class of musical instrument which is played using a musical keyboard"
+  },
+  {
+    "key": "clothing",
+    "suche": "clothing",
+    "de": [
+      "kleidung",
+      "bekleidung",
+      "mode",
+      "anziehen",
+      "größe",
+      "passform"
+    ],
+    "en": [
+      "clothing",
+      "apparel",
+      "fashion",
+      "wear",
+      "size",
+      "fit"
+    ],
+    "wikidata": "Q11460",
+    "gefunden": "clothing — covering worn on the body"
+  },
+  {
+    "key": "outerwear",
+    "suche": "outerwear",
+    "de": [
+      "oberbekleidung",
+      "draußen",
+      "wetterfest",
+      "warm",
+      "winddicht",
+      "wasserdicht"
+    ],
+    "en": [
+      "outerwear",
+      "outdoor",
+      "weatherproof",
+      "warm",
+      "windproof",
+      "waterproof"
+    ],
+    "wikidata": "Q4388799",
+    "gefunden": "outerwear — clothing worn over street dress for warmth and protection"
+  },
+  {
+    "key": "coat",
+    "suche": "coat",
+    "de": [
+      "mantel",
+      "jacke",
+      "warm",
+      "winter",
+      "lang",
+      "kragen"
+    ],
+    "en": [
+      "coat",
+      "jacket",
+      "warm",
+      "winter",
+      "long",
+      "collar"
+    ],
+    "wikidata": "Q152574",
+    "gefunden": "coat — outer garment for the upper body, worn by any gender for warmth or style"
+  },
+  {
+    "key": "jacket",
+    "suche": "jacket",
+    "de": [
+      "jacke",
+      "kleidung",
+      "reißverschluss",
+      "kapuze",
+      "warm",
+      "leicht"
+    ],
+    "en": [
+      "jacket",
+      "clothing",
+      "zipper",
+      "hood",
+      "warm",
+      "lightweight"
+    ],
+    "wikidata": "Q849964",
+    "gefunden": "jacket — clothing for the upper body"
+  },
+  {
+    "key": "trousers",
+    "suche": "trousers",
+    "de": [
+      "hose",
+      "beine",
+      "bund",
+      "taschen",
+      "länge",
+      "kleidung"
+    ],
+    "en": [
+      "trousers",
+      "pants",
+      "legs",
+      "waistband",
+      "pockets",
+      "clothing"
+    ],
+    "wikidata": "Q39908",
+    "gefunden": "trousers — clothing for the legs and lower body"
+  },
+  {
+    "key": "dress",
+    "suche": "dress",
+    "de": [
+      "kleid",
+      "damen",
+      "elegant",
+      "sommer",
+      "anlass",
+      "kleidung"
+    ],
+    "en": [
+      "dress",
+      "women",
+      "elegant",
+      "summer",
+      "occasion",
+      "clothing"
+    ],
+    "wikidata": "Q11460",
+    "gefunden": "clothing — covering worn on the body"
+  },
+  {
+    "key": "shirt",
+    "suche": "shirt",
+    "de": [
+      "hemd",
+      "shirt",
+      "kragen",
+      "ärmel",
+      "knöpfe",
+      "oberteil"
+    ],
+    "en": [
+      "shirt",
+      "collar",
+      "sleeves",
+      "buttons",
+      "top",
+      "clothing"
+    ],
+    "wikidata": "Q76768",
+    "gefunden": "shirt — fabric garment worn on the upper part of the body"
+  },
+  {
+    "key": "sweater",
+    "suche": "sweater",
+    "de": [
+      "pullover",
+      "pulli",
+      "strick",
+      "warm",
+      "wolle",
+      "kuschelig"
+    ],
+    "en": [
+      "sweater",
+      "jumper",
+      "knit",
+      "warm",
+      "wool",
+      "cozy"
+    ],
+    "wikidata": "Q232191",
+    "gefunden": "sweater — Knitted garments worn on the upper body which extend to the waist or below."
+  },
+  {
+    "key": "underwear",
+    "suche": "undergarment",
+    "de": [
+      "unterwäsche",
+      "wäsche",
+      "baumwolle",
+      "bequem",
+      "hautfreundlich",
+      "unterhose"
+    ],
+    "en": [
+      "underwear",
+      "lingerie",
+      "cotton",
+      "comfortable",
+      "skin-friendly",
+      "briefs"
+    ],
+    "wikidata": "Q198763",
+    "gefunden": "undergarment — clothes worn under other clothes"
+  },
+  {
+    "key": "nightwear",
+    "suche": "nightwear",
+    "de": [
+      "nachtwäsche",
+      "schlafanzug",
+      "pyjama",
+      "schlafen",
+      "bequem",
+      "weich"
+    ],
+    "en": [
+      "nightwear",
+      "pajamas",
+      "sleepwear",
+      "sleeping",
+      "comfortable",
+      "soft"
+    ],
+    "wikidata": "Q1187616",
+    "gefunden": "nightwear — garments worn at night, especially to sleep in"
+  },
+  {
+    "key": "swimwear",
+    "suche": "swimwear",
+    "de": [
+      "bademode",
+      "badeanzug",
+      "badehose",
+      "bikini",
+      "strand",
+      "schwimmen"
+    ],
+    "en": [
+      "swimwear",
+      "swimsuit",
+      "trunks",
+      "bikini",
+      "beach",
+      "swimming"
+    ],
+    "wikidata": "Q212989",
+    "gefunden": "swimsuit — clothing worn for swimming"
+  },
+  {
+    "key": "sportswear",
+    "suche": "sportswear",
+    "de": [
+      "sportbekleidung",
+      "funktion",
+      "atmungsaktiv",
+      "elastisch",
+      "training",
+      "sport"
+    ],
+    "en": [
+      "sportswear",
+      "activewear",
+      "breathable",
+      "stretch",
+      "training",
+      "sports"
+    ],
+    "wikidata": "Q645292",
+    "gefunden": "sportswear — clothing, including footwear, worn for sport or physical exercise"
+  },
+  {
+    "key": "workwear",
+    "suche": "workwear",
+    "de": [
+      "arbeitskleidung",
+      "arbeit",
+      "robust",
+      "strapazierfähig",
+      "schutz",
+      "handwerk"
+    ],
+    "en": [
+      "workwear",
+      "work",
+      "rugged",
+      "durable",
+      "protection",
+      "trade"
+    ],
+    "wikidata": "Q828980",
+    "gefunden": "workwear — clothing that is worn in the exercise of a service profession, a craft or an engineering profession"
+  },
+  {
+    "key": "uniform",
+    "suche": "uniform",
+    "de": [
+      "uniform",
+      "dienst",
+      "einheitlich",
+      "abzeichen",
+      "beruf",
+      "kleidung"
+    ],
+    "en": [
+      "uniform",
+      "service",
+      "badge",
+      "duty",
+      "profession",
+      "clothing"
+    ],
+    "wikidata": "Q7434",
+    "gefunden": "uniform — similar clothing worn by a group of people"
+  },
+  {
+    "key": "protective-clothing",
+    "suche": "protective clothing",
+    "de": [
+      "schutzkleidung",
+      "schutz",
+      "sicherheit",
+      "reißfest",
+      "feuerfest",
+      "warnschutz"
+    ],
+    "en": [
+      "protective",
+      "protection",
+      "safety",
+      "tear-resistant",
+      "flame-retardant",
+      "hi-vis"
+    ],
+    "wikidata": "Q1333024",
+    "gefunden": "personal protective equipment — protective clothing or equipment designed to help protect an individual from injury, Noise, infection, or other hazards"
+  },
+  {
+    "key": "rainwear",
+    "suche": "rainwear",
+    "de": [
+      "regenbekleidung",
+      "regen",
+      "wasserdicht",
+      "regenjacke",
+      "nass",
+      "wetter"
+    ],
+    "en": [
+      "rainwear",
+      "rain",
+      "waterproof",
+      "raincoat",
+      "wet",
+      "weather"
+    ],
+    "wikidata": "Q2137353",
+    "gefunden": "rainwear — protective clothing for wet weather"
+  },
+  {
+    "key": "children-clothing",
+    "suche": "children's clothing",
+    "de": [
+      "kinderkleidung",
+      "kinder",
+      "robust",
+      "waschbar",
+      "bunt",
+      "wachsen"
+    ],
+    "en": [
+      "kidswear",
+      "kids",
+      "children",
+      "durable",
+      "washable",
+      "colourful"
+    ],
+    "wikidata": "Q2471487",
+    "gefunden": "children's clothing — clothing worn by children"
+  },
+  {
+    "key": "infant-clothing",
+    "suche": "infant clothing",
+    "de": [
+      "babykleidung",
+      "baby",
+      "strampler",
+      "weich",
+      "body",
+      "neugeboren"
+    ],
+    "en": [
+      "babywear",
+      "baby",
+      "romper",
+      "soft",
+      "bodysuit",
+      "newborn"
+    ],
+    "wikidata": "Q17152912",
+    "gefunden": "infant clothing — clothing worn by infants"
+  },
+  {
+    "key": "costume",
+    "suche": "costume",
+    "de": [
+      "kostüm",
+      "verkleidung",
+      "fasching",
+      "karneval",
+      "party",
+      "maske"
+    ],
+    "en": [
+      "costume",
+      "dress-up",
+      "carnival",
+      "halloween",
+      "party",
+      "mask"
+    ],
+    "wikidata": "Q11460",
+    "gefunden": "clothing — covering worn on the body"
+  },
+  {
+    "key": "footwear",
+    "suche": "footwear",
+    "de": [
+      "schuhwerk",
+      "schuhe",
+      "sohle",
+      "fuß",
+      "größe",
+      "bequem"
+    ],
+    "en": [
+      "footwear",
+      "shoes",
+      "sole",
+      "foot",
+      "size",
+      "comfortable"
+    ],
+    "wikidata": "Q22676",
+    "gefunden": "shoe — footwear"
+  },
+  {
+    "key": "shoe",
+    "suche": "shoe",
+    "de": [
+      "schuh",
+      "schuhe",
+      "sohle",
+      "schnürung",
+      "fuß",
+      "leder"
+    ],
+    "en": [
+      "shoe",
+      "shoes",
+      "sole",
+      "laces",
+      "foot",
+      "leather"
+    ],
+    "wikidata": "Q22676",
+    "gefunden": "shoe — footwear"
+  },
+  {
+    "key": "boot",
+    "suche": "boot",
+    "de": [
+      "stiefel",
+      "schaft",
+      "wasserdicht",
+      "warm",
+      "profil",
+      "schuh"
+    ],
+    "en": [
+      "boot",
+      "boots",
+      "shaft",
+      "waterproof",
+      "warm",
+      "tread"
+    ],
+    "wikidata": "Q190868",
+    "gefunden": "boot — type of footwear extending above the ankle joint"
+  },
+  {
+    "key": "athletic-shoe",
+    "suche": "athletic shoe",
+    "de": [
+      "sportschuh",
+      "turnschuh",
+      "dämpfung",
+      "laufen",
+      "leicht",
+      "training"
+    ],
+    "en": [
+      "sneaker",
+      "trainer",
+      "cushioning",
+      "running",
+      "lightweight",
+      "training"
+    ],
+    "wikidata": "Q815554",
+    "gefunden": "athletic shoe — type of shoe"
+  },
+  {
+    "key": "sock",
+    "suche": "sock",
+    "de": [
+      "socke",
+      "socken",
+      "strumpf",
+      "baumwolle",
+      "warm",
+      "fuß"
+    ],
+    "en": [
+      "sock",
+      "socks",
+      "stocking",
+      "cotton",
+      "warm",
+      "foot"
+    ],
+    "wikidata": "Q43663",
+    "gefunden": "sock — garment worn on foot and leg; made from materials like cotton, wool, or synthetics, they provide protection, warmth, comfort, and reduce friction inside shoes"
+  },
+  {
+    "key": "headgear",
+    "suche": "headgear",
+    "de": [
+      "kopfbedeckung",
+      "kopf",
+      "mütze",
+      "hut",
+      "schutz",
+      "sonne"
+    ],
+    "en": [
+      "headwear",
+      "head",
+      "cap",
+      "hat",
+      "protection",
+      "sun"
+    ],
+    "wikidata": "Q14952",
+    "gefunden": "headgear — any covering for the head; element of clothing which is worn on one's head"
+  },
+  {
+    "key": "hat",
+    "suche": "hat",
+    "de": [
+      "hut",
+      "krempe",
+      "sonne",
+      "kopf",
+      "kopfbedeckung",
+      "sommer"
+    ],
+    "en": [
+      "hat",
+      "brim",
+      "sun",
+      "head",
+      "headwear",
+      "summer"
+    ],
+    "wikidata": "Q80151",
+    "gefunden": "hat — shaped head covering, having a brim and a crown, or one of these"
+  },
+  {
+    "key": "cap",
+    "suche": "cap",
+    "de": [
+      "mütze",
+      "kappe",
+      "schirm",
+      "kopf",
+      "warm",
+      "kopfbedeckung"
+    ],
+    "en": [
+      "cap",
+      "beanie",
+      "visor",
+      "head",
+      "warm",
+      "headwear"
+    ],
+    "wikidata": false
+  },
+  {
+    "key": "helmet",
+    "suche": "helmet",
+    "de": [
+      "helm",
+      "schutz",
+      "kopf",
+      "sicherheit",
+      "aufprall",
+      "belüftung"
+    ],
+    "en": [
+      "helmet",
+      "protection",
+      "head",
+      "safety",
+      "impact",
+      "ventilation"
+    ],
+    "wikidata": "Q173603",
+    "gefunden": "helmet — protective headwear"
+  },
+  {
+    "key": "glove",
+    "suche": "glove",
+    "de": [
+      "handschuh",
+      "handschuhe",
+      "hand",
+      "finger",
+      "warm",
+      "griff"
+    ],
+    "en": [
+      "glove",
+      "gloves",
+      "hand",
+      "fingers",
+      "warm",
+      "grip"
+    ],
+    "wikidata": "Q169031",
+    "gefunden": "glove — covering worn on the hand"
+  },
+  {
+    "key": "scarf",
+    "suche": "scarf",
+    "de": [
+      "schal",
+      "tuch",
+      "hals",
+      "warm",
+      "winter",
+      "weich"
+    ],
+    "en": [
+      "scarf",
+      "shawl",
+      "neck",
+      "warm",
+      "winter",
+      "soft"
+    ],
+    "wikidata": "Q2002752",
+    "gefunden": "headscarf — piece of cloth worn on one's head"
+  },
+  {
+    "key": "fashion-accessory",
+    "suche": "fashion accessory",
+    "de": [
+      "accessoire",
+      "mode",
+      "zubehör",
+      "stil",
+      "schmuck",
+      "tasche"
+    ],
+    "en": [
+      "accessory",
+      "fashion",
+      "style",
+      "jewellery",
+      "bag",
+      "look"
+    ],
+    "wikidata": "Q1065579",
+    "gefunden": "fashion accessory — item carried or worn which is used to contribute to the wearer's outfit"
+  },
+  {
+    "key": "bag",
+    "suche": "bag",
+    "de": [
+      "tasche",
+      "beutel",
+      "tragen",
+      "henkel",
+      "fach",
+      "stauraum"
+    ],
+    "en": [
+      "bag",
+      "pouch",
+      "carry",
+      "handle",
+      "compartment",
+      "storage"
+    ],
+    "wikidata": "Q467505",
+    "gefunden": "handbag (fest)"
+  },
+  {
+    "key": "handbag",
+    "suche": "handbag",
+    "de": [
+      "handtasche",
+      "damen",
+      "tasche",
+      "leder",
+      "schultergurt",
+      "elegant"
+    ],
+    "en": [
+      "handbag",
+      "purse",
+      "women",
+      "leather",
+      "shoulder-strap",
+      "elegant"
+    ],
+    "wikidata": "Q467505",
+    "gefunden": "handbag — handled medium-to-large bag that is often fashionably designed, typically used by women, to hold personal items"
+  },
+  {
+    "key": "backpack",
+    "suche": "backpack",
+    "de": [
+      "rucksack",
+      "tragen",
+      "rücken",
+      "fächer",
+      "wandern",
+      "schule"
+    ],
+    "en": [
+      "backpack",
+      "rucksack",
+      "carry",
+      "back",
+      "compartments",
+      "hiking"
+    ],
+    "wikidata": "Q5843",
+    "gefunden": "backpack (fest)"
+  },
+  {
+    "key": "luggage",
+    "suche": "luggage",
+    "de": [
+      "gepäck",
+      "koffer",
+      "reise",
+      "rollen",
+      "handgepäck",
+      "urlaub"
+    ],
+    "en": [
+      "luggage",
+      "suitcase",
+      "travel",
+      "wheels",
+      "carry-on",
+      "trip"
+    ],
+    "wikidata": "Q865054",
+    "gefunden": "baggage — cases or container for storing traveler's items"
+  },
+  {
+    "key": "jewellery",
+    "suche": "jewellery",
+    "de": [
+      "schmuck",
+      "kette",
+      "ring",
+      "ohrringe",
+      "gold",
+      "silber"
+    ],
+    "en": [
+      "jewellery",
+      "jewelry",
+      "necklace",
+      "ring",
+      "earrings",
+      "gold"
+    ],
+    "wikidata": "Q161439",
+    "gefunden": "jewelry — creation of objects of personal adornment, which may fulfill both decorative and functional purposes"
+  },
+  {
+    "key": "watch",
+    "suche": "watch",
+    "de": [
+      "uhr",
+      "armbanduhr",
+      "zeit",
+      "armband",
+      "zifferblatt",
+      "wasserdicht"
+    ],
+    "en": [
+      "watch",
+      "wristwatch",
+      "time",
+      "strap",
+      "dial",
+      "waterproof"
+    ],
+    "wikidata": "Q376",
+    "gefunden": "clock — instrument that measures the passage of time"
+  },
+  {
+    "key": "eyewear",
+    "suche": "eyewear",
+    "de": [
+      "brille",
+      "gläser",
+      "augen",
+      "sehen",
+      "fassung",
+      "schutz"
+    ],
+    "en": [
+      "eyewear",
+      "glasses",
+      "lenses",
+      "eyes",
+      "vision",
+      "frame"
+    ],
+    "wikidata": "Q37501",
+    "gefunden": "glasses — accessories that improve human vision"
+  },
+  {
+    "key": "sunglasses",
+    "suche": "sunglasses",
+    "de": [
+      "sonnenbrille",
+      "sonne",
+      "uv-schutz",
+      "getönt",
+      "polarisiert",
+      "sommer"
+    ],
+    "en": [
+      "sunglasses",
+      "sun",
+      "uv-protection",
+      "tinted",
+      "polarized",
+      "summer"
+    ],
+    "wikidata": "Q217541",
+    "gefunden": "sunglasses — protective eyewear designed to protect the eyes from bright sunlight and ultraviolet rays"
+  },
+  {
+    "key": "textile",
+    "suche": "textile",
+    "de": [
+      "textil",
+      "stoff",
+      "gewebe",
+      "faser",
+      "waschbar",
+      "material"
+    ],
+    "en": [
+      "textile",
+      "fabric",
+      "cloth",
+      "fibre",
+      "washable",
+      "material"
+    ],
+    "wikidata": "Q28823",
+    "gefunden": "textile — various fiber-based materials"
+  },
+  {
+    "key": "textile-fibre",
+    "suche": "textile fibre",
+    "de": [
+      "faser",
+      "fasern",
+      "garn",
+      "textil",
+      "material",
+      "stoff"
+    ],
+    "en": [
+      "fibre",
+      "fiber",
+      "yarn",
+      "textile",
+      "material",
+      "fabric"
+    ],
+    "wikidata": "Q10282072",
+    "gefunden": "textile fiber —"
+  },
+  {
+    "key": "natural-fibre",
+    "suche": "natural fiber",
+    "de": [
+      "naturfaser",
+      "natürlich",
+      "baumwolle",
+      "wolle",
+      "leinen",
+      "nachhaltig"
+    ],
+    "en": [
+      "natural",
+      "cotton",
+      "wool",
+      "linen",
+      "organic",
+      "sustainable"
+    ],
+    "wikidata": "Q1192049",
+    "gefunden": "natural fiber — any fibre derived from natural sources such as plants, animals or minerals"
+  },
+  {
+    "key": "synthetic-fibre",
+    "suche": "synthetic fiber",
+    "de": [
+      "kunstfaser",
+      "synthetisch",
+      "polyester",
+      "polyamid",
+      "schnelltrocknend",
+      "pflegeleicht"
+    ],
+    "en": [
+      "synthetic",
+      "polyester",
+      "polyamide",
+      "nylon",
+      "quick-dry",
+      "easy-care"
+    ],
+    "wikidata": "Q5856",
+    "gefunden": "synthetic fiber — artificially manufactured fibres, often based on polymers"
+  },
+  {
+    "key": "leather",
+    "suche": "leather",
+    "de": [
+      "leder",
+      "echtleder",
+      "glattleder",
+      "wildleder",
+      "gegerbt",
+      "robust"
+    ],
+    "en": [
+      "leather",
+      "genuine",
+      "suede",
+      "tanned",
+      "hide",
+      "durable"
+    ],
+    "wikidata": "Q286",
+    "gefunden": "leather — durable and flexible material created by the tanning of animal rawhide and skin"
+  },
+  {
+    "key": "wool",
+    "suche": "wool",
+    "de": [
+      "wolle",
+      "schurwolle",
+      "merino",
+      "warm",
+      "kratzfrei",
+      "strick"
+    ],
+    "en": [
+      "wool",
+      "merino",
+      "virgin",
+      "warm",
+      "itch-free",
+      "knit"
+    ],
+    "wikidata": "Q42329",
+    "gefunden": "wool — natural fibre from the soft hair of sheep or other mammals"
+  },
+  {
+    "key": "material",
+    "suche": "material",
+    "de": [
+      "material",
+      "werkstoff",
+      "stoff",
+      "qualität",
+      "beschaffenheit",
+      "oberfläche"
+    ],
+    "en": [
+      "material",
+      "substance",
+      "quality",
+      "texture",
+      "surface",
+      "made"
+    ],
+    "wikidata": "Q214609",
+    "gefunden": "material — substance that can occur in different amounts, all with some similar [mixture of some] characteristics, and with which objects can be made"
+  },
+  {
+    "key": "metal",
+    "suche": "metal",
+    "de": [
+      "metall",
+      "metallisch",
+      "stabil",
+      "robust",
+      "rostfrei",
+      "glänzend"
+    ],
+    "en": [
+      "metal",
+      "metallic",
+      "sturdy",
+      "robust",
+      "rustproof",
+      "shiny"
+    ],
+    "wikidata": "Q11426",
+    "gefunden": "metal — element, compound, or alloy that is a good conductor of both electricity and heat"
+  },
+  {
+    "key": "steel",
+    "suche": "steel",
+    "de": [
+      "stahl",
+      "edelstahl",
+      "rostfrei",
+      "hart",
+      "stabil",
+      "metall"
+    ],
+    "en": [
+      "steel",
+      "stainless",
+      "rustproof",
+      "hard",
+      "sturdy",
+      "metal"
+    ],
+    "wikidata": "Q11427",
+    "gefunden": "steel — alloy made by combining iron and other elements"
+  },
+  {
+    "key": "precious-metal",
+    "suche": "precious metal",
+    "de": [
+      "edelmetall",
+      "gold",
+      "silber",
+      "platin",
+      "wertvoll",
+      "schmuck"
+    ],
+    "en": [
+      "precious",
+      "gold",
+      "silver",
+      "platinum",
+      "valuable",
+      "jewellery"
+    ],
+    "wikidata": "Q271449",
+    "gefunden": "precious metal — rare, naturally occurring metallic chemical element of high economic and cultural value"
+  },
+  {
+    "key": "wood",
+    "suche": "wood",
+    "de": [
+      "holz",
+      "massivholz",
+      "natur",
+      "maserung",
+      "geölt",
+      "nachhaltig"
+    ],
+    "en": [
+      "wood",
+      "wooden",
+      "solid-wood",
+      "natural",
+      "grain",
+      "sustainable"
+    ],
+    "wikidata": "Q287",
+    "gefunden": "wood — fibrous material from trees or other plants"
+  },
+  {
+    "key": "plastic",
+    "suche": "plastic",
+    "de": [
+      "kunststoff",
+      "plastik",
+      "leicht",
+      "bruchfest",
+      "abwaschbar",
+      "spritzguss"
+    ],
+    "en": [
+      "plastic",
+      "polymer",
+      "lightweight",
+      "shatterproof",
+      "wipeable",
+      "moulded"
+    ],
+    "wikidata": "Q11474",
+    "gefunden": "plastic — material of a wide range of synthetic or semi-synthetic organic solids"
+  },
+  {
+    "key": "elastomer",
+    "suche": "elastomer",
+    "de": [
+      "gummi",
+      "elastisch",
+      "dehnbar",
+      "rutschfest",
+      "silikon",
+      "dichtung"
+    ],
+    "en": [
+      "rubber",
+      "elastic",
+      "stretchy",
+      "non-slip",
+      "silicone",
+      "seal"
+    ],
+    "wikidata": "Q252266",
+    "gefunden": "elastomer — any elastically deformable, rubbery plastic material"
+  },
+  {
+    "key": "glass",
+    "suche": "glass",
+    "de": [
+      "glas",
+      "durchsichtig",
+      "klar",
+      "zerbrechlich",
+      "gehärtet",
+      "spülmaschinenfest"
+    ],
+    "en": [
+      "glass",
+      "transparent",
+      "clear",
+      "fragile",
+      "tempered",
+      "dishwasher-safe"
+    ],
+    "wikidata": "Q11469",
+    "gefunden": "glass — amorphous solid that exhibits a glass transition when heated towards the liquid state"
+  },
+  {
+    "key": "ceramic",
+    "suche": "ceramic",
+    "de": [
+      "keramik",
+      "porzellan",
+      "steingut",
+      "glasiert",
+      "gebrannt",
+      "ton"
+    ],
+    "en": [
+      "ceramic",
+      "porcelain",
+      "stoneware",
+      "glazed",
+      "fired",
+      "clay"
+    ],
+    "wikidata": "Q45621",
+    "gefunden": "ceramic — inorganic, nonmetallic solid prepared by the action of heat"
+  },
+  {
+    "key": "building-material",
+    "suche": "building material",
+    "de": [
+      "baustoff",
+      "bauen",
+      "baustelle",
+      "material",
+      "stabil",
+      "renovieren"
+    ],
+    "en": [
+      "building",
+      "construction",
+      "material",
+      "site",
+      "sturdy",
+      "renovation"
+    ],
+    "wikidata": "Q206615",
+    "gefunden": "building material — material used for construction purposes"
+  },
+  {
+    "key": "paper",
+    "suche": "paper",
+    "de": [
+      "papier",
+      "blatt",
+      "bogen",
+      "recycling",
+      "druck",
+      "schreiben"
+    ],
+    "en": [
+      "paper",
+      "sheet",
+      "recycled",
+      "print",
+      "writing",
+      "pulp"
+    ],
+    "wikidata": "Q11472",
+    "gefunden": "paper — thin, flexible material mainly used for writing upon, printing upon, drawing or for packaging"
+  },
+  {
+    "key": "paint",
+    "suche": "paint",
+    "de": [
+      "farbe",
+      "lack",
+      "anstrich",
+      "streichen",
+      "deckend",
+      "pinsel"
+    ],
+    "en": [
+      "paint",
+      "lacquer",
+      "coating",
+      "painting",
+      "opaque",
+      "brush"
+    ],
+    "wikidata": "Q174219",
+    "gefunden": "paint — pigmented liquid applied over a surface that dries as a solid film"
+  },
+  {
+    "key": "adhesive",
+    "suche": "adhesive",
+    "de": [
+      "klebstoff",
+      "kleber",
+      "kleben",
+      "haftend",
+      "leim",
+      "befestigen"
+    ],
+    "en": [
+      "adhesive",
+      "glue",
+      "bonding",
+      "sticky",
+      "cement",
+      "fixing"
+    ],
+    "wikidata": "Q131790",
+    "gefunden": "adhesive — material which is used for bonding of various materials"
+  },
+  {
+    "key": "tool",
+    "suche": "tool",
+    "de": [
+      "werkzeug",
+      "arbeiten",
+      "handwerk",
+      "werkstatt",
+      "reparatur",
+      "heimwerken"
+    ],
+    "en": [
+      "tool",
+      "tools",
+      "work",
+      "workshop",
+      "repair",
+      "diy"
+    ],
+    "wikidata": "Q39546",
+    "gefunden": "physical tool — physical item that can be used to achieve a goal"
+  },
+  {
+    "key": "hand-tool",
+    "suche": "hand tool",
+    "de": [
+      "handwerkzeug",
+      "werkzeug",
+      "griff",
+      "hand",
+      "handwerk",
+      "werkstatt"
+    ],
+    "en": [
+      "hand-tool",
+      "tool",
+      "handle",
+      "hand",
+      "trade",
+      "workshop"
+    ],
+    "wikidata": "Q2578402",
+    "gefunden": "hand tool — tool held and powered manually"
+  },
+  {
+    "key": "power-tool",
+    "suche": "power tool",
+    "de": [
+      "elektrowerkzeug",
+      "akku",
+      "maschine",
+      "leistung",
+      "watt",
+      "werkzeug"
+    ],
+    "en": [
+      "power-tool",
+      "cordless",
+      "battery",
+      "machine",
+      "power",
+      "tool"
+    ],
+    "wikidata": "Q1327701",
+    "gefunden": "power tool — tool that is actuated by an additional power source and mechanism other than by hand alone"
+  },
+  {
+    "key": "measuring-instrument",
+    "suche": "measuring instrument",
+    "de": [
+      "messgerät",
+      "messen",
+      "genau",
+      "anzeige",
+      "präzision",
+      "skala"
+    ],
+    "en": [
+      "measuring",
+      "measure",
+      "accurate",
+      "display",
+      "precision",
+      "scale"
+    ],
+    "wikidata": "Q2041172",
+    "gefunden": "measuring instrument — device for measuring a physical quantity"
+  },
+  {
+    "key": "garden-tool",
+    "suche": "garden tool",
+    "de": [
+      "gartengerät",
+      "garten",
+      "graben",
+      "schneiden",
+      "rasen",
+      "werkzeug"
+    ],
+    "en": [
+      "garden",
+      "gardening",
+      "digging",
+      "pruning",
+      "lawn",
+      "tool"
+    ],
+    "wikidata": "Q1494647",
+    "gefunden": "garden tool — item that is used to maintain gardens and yards"
+  },
+  {
+    "key": "knife",
+    "suche": "knife",
+    "de": [
+      "messer",
+      "klinge",
+      "scharf",
+      "schneiden",
+      "griff",
+      "stahl"
+    ],
+    "en": [
+      "knife",
+      "blade",
+      "sharp",
+      "cutting",
+      "handle",
+      "steel"
+    ],
+    "wikidata": "Q32489",
+    "gefunden": "knife — tool with a cutting edge or blade"
+  },
+  {
+    "key": "fastener",
+    "suche": "fastener",
+    "de": [
+      "befestigung",
+      "schraube",
+      "dübel",
+      "nagel",
+      "verbinden",
+      "montage"
+    ],
+    "en": [
+      "fastener",
+      "screw",
+      "anchor",
+      "nail",
+      "fixing",
+      "mounting"
+    ],
+    "wikidata": "Q2002016",
+    "gefunden": "fastener — hardware device that mechanically joins or affixes two or more objects or components together"
+  },
+  {
+    "key": "machine",
+    "suche": "machine",
+    "de": [
+      "maschine",
+      "antrieb",
+      "leistung",
+      "motor",
+      "betrieb",
+      "technik"
+    ],
+    "en": [
+      "machine",
+      "drive",
+      "power",
+      "motor",
+      "operation",
+      "engineering"
+    ],
+    "wikidata": "Q11019",
+    "gefunden": "machine (fest)"
+  },
+  {
+    "key": "agricultural-machinery",
+    "suche": "agricultural machinery",
+    "de": [
+      "landmaschine",
+      "landwirtschaft",
+      "feld",
+      "traktor",
+      "ernte",
+      "acker"
+    ],
+    "en": [
+      "agricultural",
+      "farming",
+      "field",
+      "tractor",
+      "harvest",
+      "farm"
+    ],
+    "wikidata": "Q16000047",
+    "gefunden": "agricultural machinery — machinery used for growing food"
+  },
+  {
+    "key": "construction-equipment",
+    "suche": "construction equipment",
+    "de": [
+      "baumaschine",
+      "baustelle",
+      "bagger",
+      "bauen",
+      "schwer",
+      "erdbewegung"
+    ],
+    "en": [
+      "construction",
+      "site",
+      "excavator",
+      "building",
+      "heavy-duty",
+      "earthmoving"
+    ],
+    "wikidata": "Q874311",
+    "gefunden": "heavy equipment — vehicles designed for executing construction tasks"
+  },
+  {
+    "key": "pump",
+    "suche": "pump",
+    "de": [
+      "pumpe",
+      "pumpen",
+      "fördern",
+      "druck",
+      "wasser",
+      "leistung"
+    ],
+    "en": [
+      "pump",
+      "pumping",
+      "flow",
+      "pressure",
+      "water",
+      "capacity"
+    ],
+    "wikidata": "Q134574",
+    "gefunden": "pump — device that moves fluids (liquids or gases) by mechanical action"
+  },
+  {
+    "key": "engine",
+    "suche": "engine",
+    "de": [
+      "motor",
+      "antrieb",
+      "verbrenner",
+      "leistung",
+      "kraftstoff",
+      "ps"
+    ],
+    "en": [
+      "engine",
+      "drive",
+      "combustion",
+      "power",
+      "fuel",
+      "horsepower"
+    ],
+    "wikidata": "Q44167",
+    "gefunden": "engine (fest)"
+  },
+  {
+    "key": "cleaning-equipment",
+    "suche": "cleaning tool",
+    "de": [
+      "reinigungsgerät",
+      "putzen",
+      "reinigen",
+      "sauber",
+      "besen",
+      "wischen"
+    ],
+    "en": [
+      "cleaning",
+      "clean",
+      "cleaner",
+      "broom",
+      "mop",
+      "wipe"
+    ],
+    "wikidata": "Q26270576",
+    "gefunden": "cleaning tool — object used for cleaning"
+  },
+  {
+    "key": "plumbing-fixture",
+    "suche": "plumbing fixture",
+    "de": [
+      "sanitär",
+      "armatur",
+      "wasserhahn",
+      "bad",
+      "dusche",
+      "installation"
+    ],
+    "en": [
+      "plumbing",
+      "fixture",
+      "faucet",
+      "bathroom",
+      "shower",
+      "installation"
+    ],
+    "wikidata": "Q2024731",
+    "gefunden": "plumbing fixture — exchangeable device which can be connected to a plumbing system to deliver and drain water"
+  },
+  {
+    "key": "electrical-installation",
+    "suche": "electrical wiring",
+    "de": [
+      "elektroinstallation",
+      "strom",
+      "kabel",
+      "steckdose",
+      "schalter",
+      "elektriker"
+    ],
+    "en": [
+      "electrical",
+      "wiring",
+      "cable",
+      "socket",
+      "switch",
+      "electrician"
+    ],
+    "wikidata": "Q192043",
+    "gefunden": "electrical wiring — electrical installation of cabling and associated devices such as switches in a structure"
+  },
+  {
+    "key": "personal-protective-equipment",
+    "suche": "personal protective equipment",
+    "de": [
+      "schutzausrüstung",
+      "schutz",
+      "sicherheit",
+      "arbeitsschutz",
+      "norm",
+      "zertifiziert"
+    ],
+    "en": [
+      "ppe",
+      "protection",
+      "safety",
+      "protective",
+      "standard",
+      "certified"
+    ],
+    "wikidata": "Q1333024",
+    "gefunden": "personal protective equipment — protective clothing or equipment designed to help protect an individual from injury, Noise, infection, or other hazards"
+  },
+  {
+    "key": "security-system",
+    "suche": "security system",
+    "de": [
+      "sicherheitstechnik",
+      "alarm",
+      "überwachung",
+      "kamera",
+      "einbruchschutz",
+      "sensor"
+    ],
+    "en": [
+      "security",
+      "alarm",
+      "surveillance",
+      "camera",
+      "anti-theft",
+      "sensor"
+    ],
+    "wikidata": "Q1497831",
+    "gefunden": "security alarm — system that detects unauthorised entry or hazards, often including sensors, cameras, and control units, and may be professionally monitored"
+  },
+  {
+    "key": "door",
+    "suche": "door",
+    "de": [
+      "tür",
+      "türen",
+      "zarge",
+      "griff",
+      "eingang",
+      "öffnen"
+    ],
+    "en": [
+      "door",
+      "doors",
+      "frame",
+      "handle",
+      "entrance",
+      "opening"
+    ],
+    "wikidata": "Q36794",
+    "gefunden": "door — flat, movable structure used to open and close an entrance"
+  },
+  {
+    "key": "window",
+    "suche": "window",
+    "de": [
+      "fenster",
+      "glas",
+      "rahmen",
+      "verglasung",
+      "lüften",
+      "licht"
+    ],
+    "en": [
+      "window",
+      "glass",
+      "frame",
+      "glazing",
+      "ventilation",
+      "light"
+    ],
+    "wikidata": "Q835016",
+    "gefunden": "window — visual area containing some kind of user interface"
+  },
+  {
+    "key": "flooring",
+    "suche": "flooring",
+    "de": [
+      "bodenbelag",
+      "boden",
+      "parkett",
+      "laminat",
+      "fliesen",
+      "verlegen"
+    ],
+    "en": [
+      "flooring",
+      "floor",
+      "parquet",
+      "laminate",
+      "tiles",
+      "installation"
+    ],
+    "wikidata": "Q1433006",
+    "gefunden": "flooring — permanent cover for a floor (distinct from a decorative, non-permanent cover: see \"floor covering\")"
+  },
+  {
+    "key": "roof",
+    "suche": "roof",
+    "de": [
+      "dach",
+      "dachziegel",
+      "regen",
+      "abdichtung",
+      "dämmung",
+      "haus"
+    ],
+    "en": [
+      "roof",
+      "roofing",
+      "rain",
+      "sealing",
+      "insulation",
+      "house"
+    ],
+    "wikidata": "Q83180",
+    "gefunden": "roof — top covering of a building"
+  },
+  {
+    "key": "heating",
+    "suche": "heating system",
+    "de": [
+      "heizung",
+      "heizen",
+      "wärme",
+      "warm",
+      "heizkörper",
+      "energie"
+    ],
+    "en": [
+      "heating",
+      "heat",
+      "warmth",
+      "warm",
+      "radiator",
+      "energy"
+    ],
+    "wikidata": "Q11880006",
+    "gefunden": "heating equipment — heating of air in buildings or vehicles"
+  },
+  {
+    "key": "photovoltaics",
+    "suche": "photovoltaic system",
+    "de": [
+      "photovoltaik",
+      "solar",
+      "solarmodul",
+      "sonne",
+      "strom",
+      "erneuerbar"
+    ],
+    "en": [
+      "photovoltaic",
+      "solar",
+      "panel",
+      "sun",
+      "electricity",
+      "renewable"
+    ],
+    "wikidata": "Q1897785",
+    "gefunden": "photovoltaic system — power system designed to supply usable solar power"
+  },
+  {
+    "key": "energy-source",
+    "suche": "energy source",
+    "de": [
+      "energie",
+      "energiequelle",
+      "strom",
+      "verbrauch",
+      "effizient",
+      "versorgung"
+    ],
+    "en": [
+      "energy",
+      "source",
+      "power",
+      "consumption",
+      "efficient",
+      "supply"
+    ],
+    "wikidata": "Q1522115",
+    "gefunden": "energy source — physical or chemical phenomenon from which one can extract energy"
+  },
+  {
+    "key": "fuel",
+    "suche": "fuel",
+    "de": [
+      "brennstoff",
+      "kraftstoff",
+      "treibstoff",
+      "tanken",
+      "brennen",
+      "heizen"
+    ],
+    "en": [
+      "fuel",
+      "petrol",
+      "diesel",
+      "refuel",
+      "burning",
+      "heating"
+    ],
+    "wikidata": "Q42501",
+    "gefunden": "fuel — any material that stores energy that can later be extracted, in presence of a oxidizer or a catalyser, or under the effect of a tool, but which is not conserved after the reaction"
+  },
+  {
+    "key": "irrigation",
+    "suche": "irrigation",
+    "de": [
+      "bewässerung",
+      "gießen",
+      "wasser",
+      "schlauch",
+      "sprinkler",
+      "garten"
+    ],
+    "en": [
+      "irrigation",
+      "watering",
+      "water",
+      "hose",
+      "sprinkler",
+      "garden"
+    ],
+    "wikidata": "Q11453",
+    "gefunden": "agricultural irrigation — artificial application of water to cultivated land"
+  },
+  {
+    "key": "swimming-pool",
+    "suche": "swimming pool",
+    "de": [
+      "pool",
+      "schwimmbecken",
+      "wasser",
+      "baden",
+      "filter",
+      "sommer"
+    ],
+    "en": [
+      "pool",
+      "swimming",
+      "water",
+      "bathing",
+      "filter",
+      "summer"
+    ],
+    "wikidata": "Q1501",
+    "gefunden": "swimming pool — excavation or containment structure filled with water and used for swimming"
+  },
+  {
+    "key": "barbecue",
+    "suche": "barbecue grill",
+    "de": [
+      "grill",
+      "grillen",
+      "holzkohle",
+      "gas",
+      "garten",
+      "sommer"
+    ],
+    "en": [
+      "grill",
+      "barbecue",
+      "charcoal",
+      "gas",
+      "garden",
+      "summer"
+    ],
+    "wikidata": "Q853185",
+    "gefunden": "barbecue grill — device for barbecueing or grilling"
+  },
+  {
+    "key": "fence",
+    "suche": "fence",
+    "de": [
+      "zaun",
+      "garten",
+      "grenze",
+      "sichtschutz",
+      "pfosten",
+      "tor"
+    ],
+    "en": [
+      "fence",
+      "garden",
+      "boundary",
+      "privacy",
+      "post",
+      "gate"
+    ],
+    "wikidata": "Q148571",
+    "gefunden": "fence — freestanding structure preventing movement across a boundary"
+  },
+  {
+    "key": "home-appliance",
+    "suche": "home appliance",
+    "de": [
+      "haushaltsgerät",
+      "haushalt",
+      "gerät",
+      "elektrisch",
+      "energieeffizient",
+      "küche"
+    ],
+    "en": [
+      "appliance",
+      "household",
+      "device",
+      "electric",
+      "energy-efficient",
+      "kitchen"
+    ],
+    "wikidata": "Q212920",
+    "gefunden": "home appliance — machine for household use"
+  },
+  {
+    "key": "kitchen-appliance",
+    "suche": "kitchen appliance",
+    "de": [
+      "küchengerät",
+      "küche",
+      "kochen",
+      "zubereiten",
+      "elektrisch",
+      "haushalt"
+    ],
+    "en": [
+      "kitchen",
+      "appliance",
+      "cooking",
+      "preparation",
+      "electric",
+      "household"
+    ],
+    "wikidata": "Q116285062",
+    "gefunden": "kitchen appliance lift — tiltable shelf so that household appliances can be easily taken out for use and stowed away under a bench"
+  },
+  {
+    "key": "cooking-appliance",
+    "suche": "cooking appliance",
+    "de": [
+      "kochgerät",
+      "herd",
+      "backofen",
+      "kochfeld",
+      "hitze",
+      "garen"
+    ],
+    "en": [
+      "cooker",
+      "stove",
+      "oven",
+      "hob",
+      "heat",
+      "cooking"
+    ],
+    "wikidata": "Q57583712",
+    "gefunden": "cooking appliance — appliance used for preparing food"
+  },
+  {
+    "key": "kitchenware",
+    "suche": "kitchenware",
+    "de": [
+      "küchenzubehör",
+      "küche",
+      "kochen",
+      "praktisch",
+      "spülmaschinenfest",
+      "haushalt"
+    ],
+    "en": [
+      "kitchenware",
+      "kitchen",
+      "cooking",
+      "handy",
+      "dishwasher-safe",
+      "household"
+    ],
+    "wikidata": "Q3773693",
+    "gefunden": "kitchen utensil — small hand-held tool used for food preparation"
+  },
+  {
+    "key": "cookware",
+    "suche": "cookware",
+    "de": [
+      "kochgeschirr",
+      "topf",
+      "pfanne",
+      "induktion",
+      "antihaft",
+      "kochen"
+    ],
+    "en": [
+      "cookware",
+      "pot",
+      "pan",
+      "induction",
+      "non-stick",
+      "cooking"
+    ],
+    "wikidata": "Q1521410",
+    "gefunden": "kitchenware — tools, utensils, appliances, dishes, and cookware, that can be used in the process of food preparation, cooking or baking, or the serving of food, or to hold or store food before or after preparation"
+  },
+  {
+    "key": "bakeware",
+    "suche": "bakeware",
+    "de": [
+      "backform",
+      "backblech",
+      "backen",
+      "kuchen",
+      "ofenfest",
+      "silikon"
+    ],
+    "en": [
+      "bakeware",
+      "tin",
+      "tray",
+      "baking",
+      "ovenproof",
+      "silicone"
+    ],
+    "wikidata": "Q154038",
+    "gefunden": "cookware and bakeware — types of food preparation containers for use on stovetops or in ovens; cooking pots, casseroles, saucepans, frying pans, baking tins, stockpots, etc."
+  },
+  {
+    "key": "kitchen-utensil",
+    "suche": "kitchen utensil",
+    "de": [
+      "küchenhelfer",
+      "küche",
+      "rühren",
+      "schneiden",
+      "kochen",
+      "zubehör"
+    ],
+    "en": [
+      "utensil",
+      "kitchen",
+      "stirring",
+      "cutting",
+      "cooking",
+      "gadget"
+    ],
+    "wikidata": "Q3773693",
+    "gefunden": "kitchen utensil — small hand-held tool used for food preparation"
+  },
+  {
+    "key": "tableware",
+    "suche": "tableware",
+    "de": [
+      "geschirr",
+      "teller",
+      "tisch",
+      "essen",
+      "porzellan",
+      "spülmaschinenfest"
+    ],
+    "en": [
+      "tableware",
+      "dinnerware",
+      "plate",
+      "table",
+      "dining",
+      "porcelain"
+    ],
+    "wikidata": "Q851782",
+    "gefunden": "tableware — items used for setting a table and serving food"
+  },
+  {
+    "key": "cutlery",
+    "suche": "cutlery",
+    "de": [
+      "besteck",
+      "gabel",
+      "löffel",
+      "messer",
+      "edelstahl",
+      "essen"
+    ],
+    "en": [
+      "cutlery",
+      "fork",
+      "spoon",
+      "knife",
+      "stainless",
+      "dining"
+    ],
+    "wikidata": "Q81944",
+    "gefunden": "cutlery — kitchen utensil used for eating food"
+  },
+  {
+    "key": "drinkware",
+    "suche": "drinkware",
+    "de": [
+      "trinkgefäß",
+      "glas",
+      "becher",
+      "tasse",
+      "trinken",
+      "getränk"
+    ],
+    "en": [
+      "drinkware",
+      "glass",
+      "mug",
+      "cup",
+      "drinking",
+      "beverage"
+    ],
+    "wikidata": "Q2453629",
+    "gefunden": "drinking vessel — class of container from which you drink"
+  },
+  {
+    "key": "vacuum-cleaner",
+    "suche": "vacuum cleaner",
+    "de": [
+      "staubsauger",
+      "saugen",
+      "saugkraft",
+      "beutellos",
+      "boden",
+      "staub"
+    ],
+    "en": [
+      "vacuum",
+      "hoover",
+      "suction",
+      "bagless",
+      "floor",
+      "dust"
+    ],
+    "wikidata": "Q101674",
+    "gefunden": "vacuum cleaner — device that uses air to suck up dirt and other substances"
+  },
+  {
+    "key": "laundry",
+    "suche": "laundry",
+    "de": [
+      "wäsche",
+      "waschen",
+      "waschmaschine",
+      "trockner",
+      "bügeln",
+      "waschmittel"
+    ],
+    "en": [
+      "laundry",
+      "washing",
+      "washer",
+      "dryer",
+      "ironing",
+      "detergent"
+    ],
+    "wikidata": "Q852100",
+    "gefunden": "laundry — process of washing textiles"
+  },
+  {
+    "key": "cleaning-product",
+    "suche": "cleaning agent",
+    "de": [
+      "reinigungsmittel",
+      "putzmittel",
+      "reinigen",
+      "sauber",
+      "fettlösend",
+      "hygiene"
+    ],
+    "en": [
+      "cleaner",
+      "cleaning",
+      "detergent",
+      "clean",
+      "degreasing",
+      "hygiene"
+    ],
+    "wikidata": "Q1974312",
+    "gefunden": "cleaning product — substance used to remove dirt or other contaminants"
+  },
+  {
+    "key": "air-conditioning",
+    "suche": "air conditioner",
+    "de": [
+      "klimagerät",
+      "klimaanlage",
+      "kühlen",
+      "kühl",
+      "hitze",
+      "sommer"
+    ],
+    "en": [
+      "air-conditioner",
+      "cooling",
+      "cool",
+      "heat",
+      "summer",
+      "climate"
+    ],
+    "wikidata": "Q1265533",
+    "gefunden": "air conditioner — device used to cool air"
+  },
+  {
+    "key": "furniture",
+    "suche": "furniture",
+    "de": [
+      "möbel",
+      "einrichtung",
+      "wohnen",
+      "montage",
+      "massiv",
+      "design"
+    ],
+    "en": [
+      "furniture",
+      "furnishing",
+      "living",
+      "assembly",
+      "solid",
+      "design"
+    ],
+    "wikidata": "Q14745",
+    "gefunden": "furniture — movable objects used to equip households, offices, or shops for purposes such as storage, seating, sleeping"
+  },
+  {
+    "key": "seat",
+    "suche": "seat",
+    "de": [
+      "sitzmöbel",
+      "sitzen",
+      "sitz",
+      "bequem",
+      "polster",
+      "lehne"
+    ],
+    "en": [
+      "seating",
+      "sitting",
+      "seat",
+      "comfortable",
+      "upholstered",
+      "backrest"
+    ],
+    "wikidata": "Q15026",
+    "gefunden": "chair — piece of furniture for sitting on"
+  },
+  {
+    "key": "chair",
+    "suche": "chair",
+    "de": [
+      "stuhl",
+      "sitzen",
+      "lehne",
+      "beine",
+      "esszimmer",
+      "stapelbar"
+    ],
+    "en": [
+      "chair",
+      "sitting",
+      "backrest",
+      "legs",
+      "dining",
+      "stackable"
+    ],
+    "wikidata": "Q140686",
+    "gefunden": "chairperson — leading or presiding officer of an organized group"
+  },
+  {
+    "key": "table",
+    "suche": "table",
+    "de": [
+      "tisch",
+      "tischplatte",
+      "beine",
+      "ausziehbar",
+      "esstisch",
+      "arbeitsfläche"
+    ],
+    "en": [
+      "table",
+      "tabletop",
+      "legs",
+      "extendable",
+      "dining",
+      "surface"
+    ],
+    "wikidata": "Q14748",
+    "gefunden": "table — piece of furniture with a flat top"
+  },
+  {
+    "key": "bed",
+    "suche": "bed",
+    "de": [
+      "bett",
+      "schlafen",
+      "lattenrost",
+      "schlafzimmer",
+      "liegefläche",
+      "matratze"
+    ],
+    "en": [
+      "bed",
+      "sleeping",
+      "slatted",
+      "bedroom",
+      "frame",
+      "mattress"
+    ],
+    "wikidata": "Q42177",
+    "gefunden": "bed — piece of furniture used as a place to sleep or relax"
+  },
+  {
+    "key": "sofa",
+    "suche": "couch",
+    "de": [
+      "sofa",
+      "couch",
+      "polster",
+      "sitzen",
+      "wohnzimmer",
+      "bequem"
+    ],
+    "en": [
+      "sofa",
+      "couch",
+      "upholstered",
+      "sitting",
+      "living-room",
+      "comfortable"
+    ],
+    "wikidata": "Q131514",
+    "gefunden": "couch — piece of furniture for seating two or more persons in the form of a bench with armrests"
+  },
+  {
+    "key": "cabinet",
+    "suche": "cabinet",
+    "de": [
+      "schrank",
+      "türen",
+      "fächer",
+      "stauraum",
+      "aufbewahrung",
+      "möbel"
+    ],
+    "en": [
+      "cabinet",
+      "cupboard",
+      "doors",
+      "shelves",
+      "storage",
+      "furniture"
+    ],
+    "wikidata": "Q640506",
+    "gefunden": "cabinet — group of high ranking officials, usually representing the executive branch of government"
+  },
+  {
+    "key": "shelf",
+    "suche": "shelf",
+    "de": [
+      "regal",
+      "ablage",
+      "fächer",
+      "wand",
+      "bücher",
+      "aufbewahrung"
+    ],
+    "en": [
+      "shelf",
+      "shelving",
+      "rack",
+      "wall",
+      "books",
+      "storage"
+    ],
+    "wikidata": "Q2637814",
+    "gefunden": "rack with shelves (fest)"
+  },
+  {
+    "key": "garden-furniture",
+    "suche": "garden furniture",
+    "de": [
+      "gartenmöbel",
+      "garten",
+      "terrasse",
+      "balkon",
+      "wetterfest",
+      "draußen"
+    ],
+    "en": [
+      "garden",
+      "patio",
+      "terrace",
+      "balcony",
+      "weatherproof",
+      "outdoor"
+    ],
+    "wikidata": "Q2744736",
+    "gefunden": "garden furniture — weather-resistant furniture for use out of doors"
+  },
+  {
+    "key": "office-furniture",
+    "suche": "office furniture",
+    "de": [
+      "büromöbel",
+      "büro",
+      "schreibtisch",
+      "bürostuhl",
+      "ergonomisch",
+      "arbeitsplatz"
+    ],
+    "en": [
+      "office",
+      "desk",
+      "office-chair",
+      "ergonomic",
+      "workspace",
+      "furniture"
+    ],
+    "wikidata": "Q1021677",
+    "gefunden": "office furniture — furniture designed for use in workplaces"
+  },
+  {
+    "key": "bedding",
+    "suche": "bedding",
+    "de": [
+      "bettwäsche",
+      "bettdecke",
+      "kissen",
+      "bezug",
+      "schlafen",
+      "baumwolle"
+    ],
+    "en": [
+      "bedding",
+      "duvet",
+      "pillow",
+      "cover",
+      "sleeping",
+      "cotton"
+    ],
+    "wikidata": "Q1762457",
+    "gefunden": "bedding — the materials laid above the mattress of a bed for hygiene, warmth, to protect the mattress, and for decorative effect"
+  },
+  {
+    "key": "household-linen",
+    "suche": "household linen",
+    "de": [
+      "heimtextilien",
+      "wäsche",
+      "tischdecke",
+      "handtuch",
+      "textil",
+      "waschbar"
+    ],
+    "en": [
+      "linen",
+      "textiles",
+      "tablecloth",
+      "towel",
+      "fabric",
+      "washable"
+    ],
+    "wikidata": "Q796635",
+    "gefunden": "linens — household textiles and (historically) personal clothing"
+  },
+  {
+    "key": "carpet",
+    "suche": "carpet",
+    "de": [
+      "teppich",
+      "boden",
+      "flor",
+      "weich",
+      "wohnzimmer",
+      "läufer"
+    ],
+    "en": [
+      "carpet",
+      "rug",
+      "floor",
+      "pile",
+      "soft",
+      "runner"
+    ],
+    "wikidata": "Q163446",
+    "gefunden": "carpet — textile floor covering"
+  },
+  {
+    "key": "decoration",
+    "suche": "decoration",
+    "de": [
+      "dekoration",
+      "deko",
+      "schmücken",
+      "wohnen",
+      "stimmung",
+      "geschenk"
+    ],
+    "en": [
+      "decoration",
+      "decor",
+      "decorative",
+      "home",
+      "ambience",
+      "gift"
+    ],
+    "wikidata": "Q11796413",
+    "gefunden": "decoration — item worn to signify possession of an honour"
+  },
+  {
+    "key": "candle",
+    "suche": "candle",
+    "de": [
+      "kerze",
+      "wachs",
+      "docht",
+      "flamme",
+      "duft",
+      "gemütlich"
+    ],
+    "en": [
+      "candle",
+      "wax",
+      "wick",
+      "flame",
+      "scented",
+      "cozy"
+    ],
+    "wikidata": "Q12888135",
+    "gefunden": "candle — solid block of wax with embedded wick, used as lighting or fragrance"
+  },
+  {
+    "key": "food",
+    "suche": "food",
+    "de": [
+      "lebensmittel",
+      "essen",
+      "nahrung",
+      "genuss",
+      "frisch",
+      "zutaten"
+    ],
+    "en": [
+      "food",
+      "eating",
+      "nutrition",
+      "taste",
+      "fresh",
+      "ingredients"
+    ],
+    "wikidata": "Q2095",
+    "gefunden": "food — any substance consumed to provide nutritional support for the body; form of energy stored in chemical"
+  },
+  {
+    "key": "dish",
+    "suche": "dish",
+    "de": [
+      "gericht",
+      "speise",
+      "mahlzeit",
+      "rezept",
+      "kochen",
+      "essen"
+    ],
+    "en": [
+      "dish",
+      "meal",
+      "recipe",
+      "cooking",
+      "eating",
+      "serving"
+    ],
+    "wikidata": "Q746549",
+    "gefunden": "dish — specific food preparation with cooking finished, and ready to eat, or be served"
+  },
+  {
+    "key": "fruit",
+    "suche": "fruit",
+    "de": [
+      "obst",
+      "frucht",
+      "früchte",
+      "frisch",
+      "süß",
+      "vitamine"
+    ],
+    "en": [
+      "fruit",
+      "fruits",
+      "fresh",
+      "sweet",
+      "vitamins",
+      "juicy"
+    ],
+    "wikidata": "Q3314483",
+    "gefunden": "fruit — typically sweet and/or sour, edible part/s of a plant that resembles seed-bearing fruit"
+  },
+  {
+    "key": "berry",
+    "suche": "berry",
+    "de": [
+      "beere",
+      "beeren",
+      "fruchtig",
+      "süß",
+      "sommer",
+      "obst"
+    ],
+    "en": [
+      "berry",
+      "berries",
+      "fruity",
+      "sweet",
+      "summer",
+      "fruit"
+    ],
+    "wikidata": "Q13184",
+    "gefunden": "berry — botanical fruit with fleshy pericarp, containing one or many seeds"
+  },
+  {
+    "key": "vegetable",
+    "suche": "vegetable",
+    "de": [
+      "gemüse",
+      "frisch",
+      "gesund",
+      "vitamine",
+      "vegetarisch",
+      "ernte"
+    ],
+    "en": [
+      "vegetable",
+      "vegetables",
+      "fresh",
+      "healthy",
+      "vitamins",
+      "vegetarian"
+    ],
+    "wikidata": "Q11004",
+    "gefunden": "vegetable — edible plant or part of a plant"
+  },
+  {
+    "key": "nut",
+    "suche": "nut",
+    "de": [
+      "nuss",
+      "nüsse",
+      "kerne",
+      "knackig",
+      "snack",
+      "allergen"
+    ],
+    "en": [
+      "nut",
+      "nuts",
+      "kernels",
+      "crunchy",
+      "snack",
+      "allergen"
+    ],
+    "wikidata": "Q11009",
+    "gefunden": "nut — dry fruit (fest)"
+  },
+  {
+    "key": "cereal",
+    "suche": "cereal",
+    "de": [
+      "getreide",
+      "korn",
+      "vollkorn",
+      "mehl",
+      "müsli",
+      "ballaststoffe"
+    ],
+    "en": [
+      "cereal",
+      "grain",
+      "wholegrain",
+      "flour",
+      "muesli",
+      "fibre"
+    ],
+    "wikidata": "Q12117",
+    "gefunden": "cereal — grass cultivated for its edible grain"
+  },
+  {
+    "key": "bread",
+    "suche": "bread",
+    "de": [
+      "brot",
+      "brötchen",
+      "backen",
+      "bäckerei",
+      "kruste",
+      "vollkorn"
+    ],
+    "en": [
+      "bread",
+      "roll",
+      "baking",
+      "bakery",
+      "crust",
+      "wholegrain"
+    ],
+    "wikidata": "Q7802",
+    "gefunden": "bread — baked food made of flour, water and other ingredients"
+  },
+  {
+    "key": "pastry",
+    "suche": "pastry",
+    "de": [
+      "gebäck",
+      "teig",
+      "blätterteig",
+      "süß",
+      "backen",
+      "bäckerei"
+    ],
+    "en": [
+      "pastry",
+      "dough",
+      "puff",
+      "sweet",
+      "baking",
+      "bakery"
+    ],
+    "wikidata": "Q477248",
+    "gefunden": "pastry — various baked products made of dough"
+  },
+  {
+    "key": "cake",
+    "suche": "cake",
+    "de": [
+      "kuchen",
+      "torte",
+      "backen",
+      "süß",
+      "geburtstag",
+      "kaffee"
+    ],
+    "en": [
+      "cake",
+      "gateau",
+      "baking",
+      "sweet",
+      "birthday",
+      "dessert"
+    ],
+    "wikidata": "Q13276",
+    "gefunden": "cake — baked dessert"
+  },
+  {
+    "key": "dessert",
+    "suche": "dessert",
+    "de": [
+      "dessert",
+      "nachtisch",
+      "nachspeise",
+      "süß",
+      "creme",
+      "pudding"
+    ],
+    "en": [
+      "dessert",
+      "pudding",
+      "sweet",
+      "cream",
+      "treat",
+      "afters"
+    ],
+    "wikidata": "Q182940",
+    "gefunden": "dessert — course that concludes a meal, usually sweet"
+  },
+  {
+    "key": "confectionery",
+    "suche": "confectionery",
+    "de": [
+      "süßwaren",
+      "süßigkeiten",
+      "bonbons",
+      "naschen",
+      "zucker",
+      "süß"
+    ],
+    "en": [
+      "confectionery",
+      "sweets",
+      "candy",
+      "treats",
+      "sugar",
+      "sweet"
+    ],
+    "wikidata": "Q5159627",
+    "gefunden": "confectionery — elaborate sweets or baked goods"
+  },
+  {
+    "key": "chocolate",
+    "suche": "chocolate",
+    "de": [
+      "schokolade",
+      "kakao",
+      "praline",
+      "zartbitter",
+      "vollmilch",
+      "süß"
+    ],
+    "en": [
+      "chocolate",
+      "cocoa",
+      "praline",
+      "dark",
+      "milk",
+      "sweet"
+    ],
+    "wikidata": "Q195",
+    "gefunden": "chocolate — nutritionally dense or sweet food product from the seed of Theobroma cacao - cocoa bean"
+  },
+  {
+    "key": "snack",
+    "suche": "snack food",
+    "de": [
+      "snack",
+      "knabbern",
+      "chips",
+      "zwischendurch",
+      "salzig",
+      "unterwegs"
+    ],
+    "en": [
+      "snack",
+      "snacking",
+      "crisps",
+      "chips",
+      "salty",
+      "on-the-go"
+    ],
+    "wikidata": "Q749316",
+    "gefunden": "snack — small portion of food eaten between meals"
+  },
+  {
+    "key": "dairy",
+    "suche": "dairy product",
+    "de": [
+      "milchprodukt",
+      "milch",
+      "joghurt",
+      "quark",
+      "kühl",
+      "laktose"
+    ],
+    "en": [
+      "dairy",
+      "milk",
+      "yoghurt",
+      "curd",
+      "chilled",
+      "lactose"
+    ],
+    "wikidata": "Q185217",
+    "gefunden": "dairy product — food produced from or containing the milk of mammals"
+  },
+  {
+    "key": "cheese",
+    "suche": "cheese",
+    "de": [
+      "käse",
+      "gereift",
+      "milch",
+      "würzig",
+      "schnittkäse",
+      "weichkäse"
+    ],
+    "en": [
+      "cheese",
+      "aged",
+      "milk",
+      "savoury",
+      "sliced",
+      "soft"
+    ],
+    "wikidata": "Q10943",
+    "gefunden": "cheese — yellow or white, creamy or solid food made from the pressed curds of milk"
+  },
+  {
+    "key": "meat",
+    "suche": "meat",
+    "de": [
+      "fleisch",
+      "rind",
+      "schwein",
+      "geflügel",
+      "braten",
+      "grillen"
+    ],
+    "en": [
+      "meat",
+      "beef",
+      "pork",
+      "poultry",
+      "roast",
+      "grilling"
+    ],
+    "wikidata": "Q10990",
+    "gefunden": "meat — culinary name for animal flesh eaten as food"
+  },
+  {
+    "key": "sausage",
+    "suche": "sausage",
+    "de": [
+      "wurst",
+      "würstchen",
+      "aufschnitt",
+      "geräuchert",
+      "fleisch",
+      "grillen"
+    ],
+    "en": [
+      "sausage",
+      "sausages",
+      "cold-cuts",
+      "smoked",
+      "meat",
+      "grilling"
+    ],
+    "wikidata": "Q131419",
+    "gefunden": "sausage — food usually made from ground meat with a skin around it"
+  },
+  {
+    "key": "seafood",
+    "suche": "seafood",
+    "de": [
+      "meeresfrüchte",
+      "fisch",
+      "garnelen",
+      "muscheln",
+      "meer",
+      "frisch"
+    ],
+    "en": [
+      "seafood",
+      "fish",
+      "shrimp",
+      "mussels",
+      "sea",
+      "fresh"
+    ],
+    "wikidata": "Q192935",
+    "gefunden": "seafood — food from the sea, e.g. fish, shrimp, crab, mussel, seaweed"
+  },
+  {
+    "key": "spice",
+    "suche": "spice",
+    "de": [
+      "gewürz",
+      "würzen",
+      "scharf",
+      "aroma",
+      "pfeffer",
+      "kochen"
+    ],
+    "en": [
+      "spice",
+      "seasoning",
+      "spicy",
+      "aroma",
+      "pepper",
+      "cooking"
+    ],
+    "wikidata": "Q42527",
+    "gefunden": "spice — dried seed, fruit, root, bark, or vegetable substance primarily used for flavoring, coloring or preserving food"
+  },
+  {
+    "key": "culinary-herb",
+    "suche": "culinary herb",
+    "de": [
+      "kräuter",
+      "küchenkräuter",
+      "frisch",
+      "aroma",
+      "würzen",
+      "garten"
+    ],
+    "en": [
+      "herbs",
+      "herb",
+      "fresh",
+      "aroma",
+      "seasoning",
+      "garden"
+    ],
+    "wikidata": false
+  },
+  {
+    "key": "pasta",
+    "suche": "pasta",
+    "de": [
+      "nudeln",
+      "pasta",
+      "teigwaren",
+      "hartweizen",
+      "kochen",
+      "italienisch"
+    ],
+    "en": [
+      "pasta",
+      "noodles",
+      "durum",
+      "wheat",
+      "cooking",
+      "italian"
+    ],
+    "wikidata": "Q178",
+    "gefunden": "pasta — Italian food made from flour, eggs and water and shaped in different forms, usually cooked and served with a sauce"
+  },
+  {
+    "key": "legume",
+    "suche": "legume",
+    "de": [
+      "hülsenfrucht",
+      "bohnen",
+      "linsen",
+      "erbsen",
+      "eiweiß",
+      "vegan"
+    ],
+    "en": [
+      "legume",
+      "beans",
+      "lentils",
+      "peas",
+      "protein",
+      "vegan"
+    ],
+    "wikidata": "Q145909",
+    "gefunden": "legume — plant in the family Fabaceae"
+  },
+  {
+    "key": "edible-mushroom",
+    "suche": "edible mushroom",
+    "de": [
+      "pilz",
+      "pilze",
+      "champignon",
+      "wald",
+      "herbst",
+      "kochen"
+    ],
+    "en": [
+      "mushroom",
+      "mushrooms",
+      "fungi",
+      "forest",
+      "autumn",
+      "cooking"
+    ],
+    "wikidata": "Q654236",
+    "gefunden": "edible mushroom — edible fungi fruit bodies"
+  },
+  {
+    "key": "baby-food",
+    "suche": "baby food",
+    "de": [
+      "babynahrung",
+      "baby",
+      "brei",
+      "milchpulver",
+      "beikost",
+      "säugling"
+    ],
+    "en": [
+      "baby-food",
+      "baby",
+      "puree",
+      "formula",
+      "weaning",
+      "infant"
+    ],
+    "wikidata": "Q797971",
+    "gefunden": "baby food — food made especially for infants"
+  },
+  {
+    "key": "pet-food",
+    "suche": "pet food",
+    "de": [
+      "tierfutter",
+      "futter",
+      "hund",
+      "katze",
+      "nassfutter",
+      "trockenfutter"
+    ],
+    "en": [
+      "pet-food",
+      "feed",
+      "dog",
+      "cat",
+      "wet-food",
+      "dry-food"
+    ],
+    "wikidata": "Q6648982",
+    "gefunden": "pet food — food for domestic animals"
+  },
+  {
+    "key": "vegetarian",
+    "suche": "vegetarian cuisine",
+    "de": [
+      "vegetarisch",
+      "vegan",
+      "pflanzlich",
+      "fleischlos",
+      "gemüse",
+      "veggie"
+    ],
+    "en": [
+      "vegetarian",
+      "vegan",
+      "plant-based",
+      "meatless",
+      "vegetables",
+      "veggie"
+    ],
+    "wikidata": "Q638022",
+    "gefunden": "vegetarian cuisine — preparation of food without meat or other animal flesh"
+  },
+  {
+    "key": "dietary-supplement",
+    "suche": "dietary supplement",
+    "de": [
+      "nahrungsergänzung",
+      "vitamine",
+      "mineralstoffe",
+      "kapseln",
+      "tabletten",
+      "gesundheit"
+    ],
+    "en": [
+      "supplement",
+      "vitamins",
+      "minerals",
+      "capsules",
+      "tablets",
+      "health"
+    ],
+    "wikidata": "Q645858",
+    "gefunden": "dietary supplement — Product intended to supplement the diet with vitamins, minerals, herbs, amino acids, or enzymes"
+  },
+  {
+    "key": "beverage",
+    "suche": "drink",
+    "de": [
+      "getränk",
+      "trinken",
+      "durst",
+      "flasche",
+      "erfrischend",
+      "kalt"
+    ],
+    "en": [
+      "drink",
+      "beverage",
+      "drinking",
+      "thirst",
+      "bottle",
+      "refreshing"
+    ],
+    "wikidata": "Q40050",
+    "gefunden": "drink (fest)"
+  },
+  {
+    "key": "alcoholic-beverage",
+    "suche": "alcoholic beverage",
+    "de": [
+      "alkohol",
+      "alkoholisch",
+      "prozent",
+      "genuss",
+      "feiern",
+      "spirituose"
+    ],
+    "en": [
+      "alcohol",
+      "alcoholic",
+      "abv",
+      "enjoyment",
+      "celebration",
+      "spirits"
+    ],
+    "wikidata": "Q154",
+    "gefunden": "alcoholic beverage — drink containing alcohols, typically ethanol"
+  },
+  {
+    "key": "beer",
+    "suche": "beer",
+    "de": [
+      "bier",
+      "brauerei",
+      "hopfen",
+      "malz",
+      "kühl",
+      "flasche"
+    ],
+    "en": [
+      "beer",
+      "brewery",
+      "hops",
+      "malt",
+      "chilled",
+      "bottle"
+    ],
+    "wikidata": "Q44",
+    "gefunden": "beer — alcoholic beverage obtained by fermenting starchy materials and not distilled"
+  },
+  {
+    "key": "wine",
+    "suche": "wine",
+    "de": [
+      "wein",
+      "rotwein",
+      "weißwein",
+      "traube",
+      "jahrgang",
+      "trocken"
+    ],
+    "en": [
+      "wine",
+      "red",
+      "white",
+      "grape",
+      "vintage",
+      "dry"
+    ],
+    "wikidata": "Q282",
+    "gefunden": "wine — alcoholic drink typically made from grapes through the fermentation process"
+  },
+  {
+    "key": "spirit",
+    "suche": "distilled beverage",
+    "de": [
+      "spirituose",
+      "schnaps",
+      "destilliert",
+      "brand",
+      "likör",
+      "alkohol"
+    ],
+    "en": [
+      "spirit",
+      "liquor",
+      "distilled",
+      "brandy",
+      "liqueur",
+      "alcohol"
+    ],
+    "wikidata": "Q56139",
+    "gefunden": "liquor — alcoholic drink obtained by distillation"
+  },
+  {
+    "key": "soft-drink",
+    "suche": "soft drink",
+    "de": [
+      "erfrischungsgetränk",
+      "limonade",
+      "kohlensäure",
+      "süß",
+      "kalt",
+      "erfrischend"
+    ],
+    "en": [
+      "soft-drink",
+      "soda",
+      "lemonade",
+      "fizzy",
+      "sweet",
+      "refreshing"
+    ],
+    "wikidata": "Q147538",
+    "gefunden": "soft drink — non-alcoholic drink, often carbonated (sparkling)"
+  },
+  {
+    "key": "juice",
+    "suche": "juice",
+    "de": [
+      "saft",
+      "fruchtsaft",
+      "gepresst",
+      "direktsaft",
+      "vitamine",
+      "frucht"
+    ],
+    "en": [
+      "juice",
+      "fruit-juice",
+      "pressed",
+      "squeezed",
+      "vitamins",
+      "fruit"
+    ],
+    "wikidata": "Q8492",
+    "gefunden": "juice (fest)"
+  },
+  {
+    "key": "tea",
+    "suche": "tea",
+    "de": [
+      "tee",
+      "teebeutel",
+      "lose",
+      "aufguss",
+      "kräutertee",
+      "heiß"
+    ],
+    "en": [
+      "tea",
+      "teabag",
+      "loose-leaf",
+      "infusion",
+      "herbal",
+      "hot"
+    ],
+    "wikidata": "Q6097",
+    "gefunden": "tea — brewed drink made from tea leaves"
+  },
+  {
+    "key": "coffee",
+    "suche": "coffee drink",
+    "de": [
+      "kaffee",
+      "espresso",
+      "bohnen",
+      "röstung",
+      "koffein",
+      "aroma"
+    ],
+    "en": [
+      "coffee",
+      "espresso",
+      "beans",
+      "roast",
+      "caffeine",
+      "aroma"
+    ],
+    "wikidata": "Q37756327",
+    "gefunden": "coffee drink — beverage containing coffee"
+  },
+  {
+    "key": "cocktail",
+    "suche": "cocktail",
+    "de": [
+      "cocktail",
+      "mixgetränk",
+      "mixen",
+      "bar",
+      "party",
+      "eis"
+    ],
+    "en": [
+      "cocktail",
+      "mixed-drink",
+      "mixing",
+      "bar",
+      "party",
+      "ice"
+    ],
+    "wikidata": "Q134768",
+    "gefunden": "cocktail — alcoholic mixed drink"
+  },
+  {
+    "key": "plant",
+    "suche": "plant",
+    "de": [
+      "pflanze",
+      "pflanzen",
+      "grün",
+      "wachsen",
+      "gießen",
+      "erde"
+    ],
+    "en": [
+      "plant",
+      "plants",
+      "green",
+      "growing",
+      "watering",
+      "soil"
+    ],
+    "wikidata": "Q756",
+    "gefunden": "plant — living thing in the kingdom of photosynthetic eukaryotes"
+  },
+  {
+    "key": "flowering-plant",
+    "suche": "flowering plant",
+    "de": [
+      "blühpflanze",
+      "blüte",
+      "blühen",
+      "blume",
+      "farbe",
+      "garten"
+    ],
+    "en": [
+      "flowering",
+      "bloom",
+      "blossom",
+      "flower",
+      "colour",
+      "garden"
+    ],
+    "wikidata": "Q886167",
+    "gefunden": "flowering plant — plant grown for showy or decorative flowers"
+  },
+  {
+    "key": "tree",
+    "suche": "tree",
+    "de": [
+      "baum",
+      "bäume",
+      "stamm",
+      "laub",
+      "holz",
+      "schatten"
+    ],
+    "en": [
+      "tree",
+      "trees",
+      "trunk",
+      "foliage",
+      "wood",
+      "shade"
+    ],
+    "wikidata": "Q10884",
+    "gefunden": "tree — perennial woody plant"
+  },
+  {
+    "key": "shrub",
+    "suche": "shrub",
+    "de": [
+      "strauch",
+      "busch",
+      "hecke",
+      "garten",
+      "schnitt",
+      "pflanze"
+    ],
+    "en": [
+      "shrub",
+      "bush",
+      "hedge",
+      "garden",
+      "pruning",
+      "plant"
+    ],
+    "wikidata": "Q42295",
+    "gefunden": "shrub — small- or medium-sized perennial woody plant"
+  },
+  {
+    "key": "houseplant",
+    "suche": "houseplant",
+    "de": [
+      "zimmerpflanze",
+      "topfpflanze",
+      "pflegeleicht",
+      "innen",
+      "grün",
+      "topf"
+    ],
+    "en": [
+      "houseplant",
+      "potted",
+      "low-maintenance",
+      "indoor",
+      "green",
+      "pot"
+    ],
+    "wikidata": "Q203834",
+    "gefunden": "houseplant — plant that is grown indoors"
+  },
+  {
+    "key": "ornamental-plant",
+    "suche": "ornamental plant",
+    "de": [
+      "zierpflanze",
+      "garten",
+      "beet",
+      "balkon",
+      "dekorativ",
+      "blüte"
+    ],
+    "en": [
+      "ornamental",
+      "garden",
+      "bed",
+      "balcony",
+      "decorative",
+      "bloom"
+    ],
+    "wikidata": "Q199182",
+    "gefunden": "ornamental plant — plant that is grown for decorative purposes"
+  },
+  {
+    "key": "flower",
+    "suche": "flower",
+    "de": [
+      "blume",
+      "blumen",
+      "blüte",
+      "strauß",
+      "duft",
+      "frisch"
+    ],
+    "en": [
+      "flower",
+      "flowers",
+      "bloom",
+      "bouquet",
+      "fragrance",
+      "fresh"
+    ],
+    "wikidata": "Q506",
+    "gefunden": "flower — sexual reproductive structure found on flowering plants"
+  },
+  {
+    "key": "succulent",
+    "suche": "succulent plant",
+    "de": [
+      "sukkulente",
+      "kaktus",
+      "trocken",
+      "pflegeleicht",
+      "sonnig",
+      "topf"
+    ],
+    "en": [
+      "succulent",
+      "cactus",
+      "dry",
+      "low-maintenance",
+      "sunny",
+      "pot"
+    ],
+    "wikidata": "Q189939",
+    "gefunden": "succulent plant — Plants having some parts that are more than normally thickened and fleshy"
+  },
+  {
+    "key": "crop",
+    "suche": "crop",
+    "de": [
+      "nutzpflanze",
+      "anbau",
+      "ernte",
+      "feld",
+      "landwirtschaft",
+      "saat"
+    ],
+    "en": [
+      "crop",
+      "cultivation",
+      "harvest",
+      "field",
+      "agriculture",
+      "seed"
+    ],
+    "wikidata": "Q235352",
+    "gefunden": "crop — plant cultivated for food, animal feed, fiber, or other uses"
+  },
+  {
+    "key": "garden",
+    "suche": "garden",
+    "de": [
+      "garten",
+      "beet",
+      "rasen",
+      "terrasse",
+      "draußen",
+      "gärtnern"
+    ],
+    "en": [
+      "garden",
+      "bed",
+      "lawn",
+      "patio",
+      "outdoor",
+      "gardening"
+    ],
+    "wikidata": "Q1107656",
+    "gefunden": "garden — planned space set aside for the display, cultivation and enjoyment of plants"
+  },
+  {
+    "key": "animal",
+    "suche": "animal",
+    "de": [
+      "tier",
+      "tiere",
+      "tierisch",
+      "natur",
+      "lebewesen",
+      "fell"
+    ],
+    "en": [
+      "animal",
+      "animals",
+      "creature",
+      "nature",
+      "wildlife",
+      "fur"
+    ],
+    "wikidata": "Q729",
+    "gefunden": "animal — kingdom of multicellular eukaryotic organisms"
+  },
+  {
+    "key": "pet",
+    "suche": "pet",
+    "de": [
+      "haustier",
+      "tier",
+      "tierhaltung",
+      "pflege",
+      "futter",
+      "zubehör"
+    ],
+    "en": [
+      "pet",
+      "animal",
+      "pet-owner",
+      "care",
+      "food",
+      "supplies"
+    ],
+    "wikidata": "Q39201",
+    "gefunden": "pet (fest)"
+  },
+  {
+    "key": "livestock",
+    "suche": "livestock",
+    "de": [
+      "nutztier",
+      "vieh",
+      "landwirtschaft",
+      "hof",
+      "stall",
+      "weide"
+    ],
+    "en": [
+      "livestock",
+      "cattle",
+      "farming",
+      "farm",
+      "barn",
+      "pasture"
+    ],
+    "wikidata": "Q103459",
+    "gefunden": "livestock — domesticated animals raised in an agricultural setting to produce commodities such as food, fiber and labor"
+  },
+  {
+    "key": "dog",
+    "suche": "dog",
+    "de": [
+      "hund",
+      "hunde",
+      "welpe",
+      "leine",
+      "gassi",
+      "halsband"
+    ],
+    "en": [
+      "dog",
+      "dogs",
+      "puppy",
+      "leash",
+      "walk",
+      "collar"
+    ],
+    "wikidata": "Q144",
+    "gefunden": "dog — domesticated mammal of the family Canidae"
+  },
+  {
+    "key": "cat",
+    "suche": "cat",
+    "de": [
+      "katze",
+      "katzen",
+      "kätzchen",
+      "kratzbaum",
+      "katzenstreu",
+      "stubentiger"
+    ],
+    "en": [
+      "cat",
+      "cats",
+      "kitten",
+      "scratching-post",
+      "litter",
+      "feline"
+    ],
+    "wikidata": "Q146",
+    "gefunden": "cat (fest)"
+  },
+  {
+    "key": "horse",
+    "suche": "horse",
+    "de": [
+      "pferd",
+      "pferde",
+      "pony",
+      "reiten",
+      "stall",
+      "sattel"
+    ],
+    "en": [
+      "horse",
+      "horses",
+      "pony",
+      "riding",
+      "stable",
+      "saddle"
+    ],
+    "wikidata": "Q726",
+    "gefunden": "horse — domesticated four-footed mammal from the equine family"
+  },
+  {
+    "key": "bird",
+    "suche": "bird",
+    "de": [
+      "vogel",
+      "vögel",
+      "käfig",
+      "vogelfutter",
+      "nistkasten",
+      "federn"
+    ],
+    "en": [
+      "bird",
+      "birds",
+      "cage",
+      "birdseed",
+      "nest-box",
+      "feathers"
+    ],
+    "wikidata": "Q5113",
+    "gefunden": "bird — class of vertebrates characterized by wings, a feather-covered body and a beak"
+  },
+  {
+    "key": "fish-animal",
+    "suche": "aquarium fish",
+    "de": [
+      "fisch",
+      "fische",
+      "aquarium",
+      "zierfisch",
+      "teich",
+      "wasser"
+    ],
+    "en": [
+      "fish",
+      "aquarium",
+      "tropical",
+      "pond",
+      "water",
+      "tank"
+    ],
+    "wikidata": "Q1448518",
+    "gefunden": "aquarium fish — fish for the aquarium"
+  },
+  {
+    "key": "reptile",
+    "suche": "reptile",
+    "de": [
+      "reptil",
+      "reptilien",
+      "terrarium",
+      "schlange",
+      "echse",
+      "wärmelampe"
+    ],
+    "en": [
+      "reptile",
+      "reptiles",
+      "terrarium",
+      "snake",
+      "lizard",
+      "heat-lamp"
+    ],
+    "wikidata": "Q10811",
+    "gefunden": "Reptilia (fest)"
+  },
+  {
+    "key": "insect",
+    "suche": "insect",
+    "de": [
+      "insekt",
+      "insekten",
+      "käfer",
+      "biene",
+      "schädling",
+      "insektenschutz"
+    ],
+    "en": [
+      "insect",
+      "insects",
+      "beetle",
+      "bee",
+      "pest",
+      "insect-repellent"
+    ],
+    "wikidata": "Q1390",
+    "gefunden": "insect — class of arthropods"
+  },
+  {
+    "key": "poultry",
+    "suche": "poultry",
+    "de": [
+      "geflügel",
+      "huhn",
+      "hühner",
+      "eier",
+      "stall",
+      "federvieh"
+    ],
+    "en": [
+      "poultry",
+      "chicken",
+      "hens",
+      "eggs",
+      "coop",
+      "fowl"
+    ],
+    "wikidata": "Q178559",
+    "gefunden": "poultry — domesticated birds kept by humans for their eggs, meat, or feathers"
+  },
+  {
+    "key": "vehicle",
+    "suche": "vehicle",
+    "de": [
+      "fahrzeug",
+      "fahren",
+      "mobilität",
+      "verkehr",
+      "unterwegs",
+      "transport"
+    ],
+    "en": [
+      "vehicle",
+      "driving",
+      "mobility",
+      "traffic",
+      "on-the-road",
+      "transport"
+    ],
+    "wikidata": "Q42889",
+    "gefunden": "vehicle — mobile machine used for transport, whether it has an engine or not (eg, towed or prime mover), including wheeled and tracked vehicles, aircraft, watercraft, and spacecraft"
+  },
+  {
+    "key": "motor-vehicle",
+    "suche": "motor vehicle",
+    "de": [
+      "kraftfahrzeug",
+      "auto",
+      "motor",
+      "fahren",
+      "werkstatt",
+      "kfz"
+    ],
+    "en": [
+      "motor-vehicle",
+      "car",
+      "engine",
+      "driving",
+      "garage",
+      "automotive"
+    ],
+    "wikidata": "Q752870",
+    "gefunden": "motor vehicle — self-propelled wheeled vehicle"
+  },
+  {
+    "key": "car",
+    "suche": "car",
+    "de": [
+      "auto",
+      "pkw",
+      "fahren",
+      "autofahrt",
+      "kofferraum",
+      "kfz"
+    ],
+    "en": [
+      "car",
+      "automobile",
+      "driving",
+      "drive",
+      "boot",
+      "automotive"
+    ],
+    "wikidata": "Q1420",
+    "gefunden": "car — motorized road vehicle designed to carry one to eight people rather than primarily goods"
+  },
+  {
+    "key": "truck",
+    "suche": "truck",
+    "de": [
+      "lkw",
+      "lastwagen",
+      "transport",
+      "ladung",
+      "nutzfahrzeug",
+      "spedition"
+    ],
+    "en": [
+      "truck",
+      "lorry",
+      "transport",
+      "cargo",
+      "commercial",
+      "haulage"
+    ],
+    "wikidata": "Q43193",
+    "gefunden": "truck — commercial or utilitarian large motor vehicle"
+  },
+  {
+    "key": "motorcycle",
+    "suche": "motorcycle",
+    "de": [
+      "motorrad",
+      "biker",
+      "helm",
+      "fahren",
+      "zweirad",
+      "motor"
+    ],
+    "en": [
+      "motorcycle",
+      "motorbike",
+      "biker",
+      "helmet",
+      "riding",
+      "engine"
+    ],
+    "wikidata": "Q34493",
+    "gefunden": "motorcycle — two- or three-wheeled motor vehicle"
+  },
+  {
+    "key": "bicycle",
+    "suche": "bicycle",
+    "de": [
+      "fahrrad",
+      "rad",
+      "radfahren",
+      "pedal",
+      "rahmen",
+      "gangschaltung"
+    ],
+    "en": [
+      "bicycle",
+      "bike",
+      "cycling",
+      "pedal",
+      "frame",
+      "gears"
+    ],
+    "wikidata": "Q11442",
+    "gefunden": "bicycle — pedal-driven two-wheel vehicle"
+  },
+  {
+    "key": "electric-vehicle",
+    "suche": "electric vehicle",
+    "de": [
+      "elektrofahrzeug",
+      "elektro",
+      "akku",
+      "laden",
+      "reichweite",
+      "emissionsfrei"
+    ],
+    "en": [
+      "electric",
+      "ev",
+      "battery",
+      "charging",
+      "range",
+      "zero-emission"
+    ],
+    "wikidata": "Q13629441",
+    "gefunden": "electric vehicle — vehicle propelled by one or more electric motors"
+  },
+  {
+    "key": "watercraft",
+    "suche": "watercraft",
+    "de": [
+      "wasserfahrzeug",
+      "boot",
+      "schiff",
+      "wasser",
+      "see",
+      "hafen"
+    ],
+    "en": [
+      "watercraft",
+      "boat",
+      "ship",
+      "water",
+      "sea",
+      "harbour"
+    ],
+    "wikidata": "Q1229765",
+    "gefunden": "watercraft — vehicles that are intended for locomotion on or in the water"
+  },
+  {
+    "key": "boat",
+    "suche": "boat",
+    "de": [
+      "boot",
+      "wasser",
+      "rudern",
+      "segeln",
+      "paddeln",
+      "see"
+    ],
+    "en": [
+      "boat",
+      "water",
+      "rowing",
+      "sailing",
+      "paddling",
+      "lake"
+    ],
+    "wikidata": "Q35872",
+    "gefunden": "boat — smaller watercraft"
+  },
+  {
+    "key": "aircraft",
+    "suche": "aircraft",
+    "de": [
+      "luftfahrzeug",
+      "flugzeug",
+      "fliegen",
+      "luftfahrt",
+      "flug",
+      "himmel"
+    ],
+    "en": [
+      "aircraft",
+      "airplane",
+      "flying",
+      "aviation",
+      "flight",
+      "sky"
+    ],
+    "wikidata": "Q11436",
+    "gefunden": "aircraft — machine that is able to fly by gaining support from the air other than the reactions of the air against the earth’s surface"
+  },
+  {
+    "key": "rail-vehicle",
+    "suche": "rail vehicle",
+    "de": [
+      "schienenfahrzeug",
+      "zug",
+      "bahn",
+      "eisenbahn",
+      "lokomotive",
+      "gleis"
+    ],
+    "en": [
+      "rail",
+      "train",
+      "railway",
+      "locomotive",
+      "track",
+      "tram"
+    ],
+    "wikidata": "Q10541872",
+    "gefunden": "rail vehicle — single powered or non-powered railway vehicle"
+  },
+  {
+    "key": "recreational-vehicle",
+    "suche": "recreational vehicle",
+    "de": [
+      "wohnmobil",
+      "wohnwagen",
+      "camping",
+      "reise",
+      "urlaub",
+      "unterwegs"
+    ],
+    "en": [
+      "campervan",
+      "caravan",
+      "camping",
+      "travel",
+      "holiday",
+      "motorhome"
+    ],
+    "wikidata": "Q746448",
+    "gefunden": "recreational vehicle — category of motor vehicle or trailer which provides living accommodations"
+  },
+  {
+    "key": "personal-transporter",
+    "suche": "personal transporter",
+    "de": [
+      "roller",
+      "scooter",
+      "e-scooter",
+      "mobilität",
+      "pendeln",
+      "stadt"
+    ],
+    "en": [
+      "scooter",
+      "e-scooter",
+      "kickboard",
+      "mobility",
+      "commuting",
+      "city"
+    ],
+    "wikidata": "Q11329821",
+    "gefunden": "personal transporter — compact portable electrically-powered electric vehicle for transporting an individual"
+  },
+  {
+    "key": "baby-transport",
+    "suche": "baby transport",
+    "de": [
+      "kinderwagen",
+      "buggy",
+      "babytrage",
+      "baby",
+      "schieben",
+      "unterwegs"
+    ],
+    "en": [
+      "pram",
+      "stroller",
+      "buggy",
+      "carrier",
+      "baby",
+      "on-the-go"
+    ],
+    "wikidata": "Q55304203",
+    "gefunden": "baby transport — methods of transporting young children"
+  },
+  {
+    "key": "vehicle-part",
+    "suche": "automotive part",
+    "de": [
+      "autoteil",
+      "ersatzteil",
+      "kfz",
+      "werkstatt",
+      "einbau",
+      "zubehör"
+    ],
+    "en": [
+      "part",
+      "spare-part",
+      "automotive",
+      "garage",
+      "fitting",
+      "accessories"
+    ],
+    "wikidata": "Q6405028",
+    "gefunden": "automotive part — any piece of a motor vehicle"
+  },
+  {
+    "key": "consumer-electronics",
+    "suche": "consumer electronics",
+    "de": [
+      "unterhaltungselektronik",
+      "elektronik",
+      "gerät",
+      "multimedia",
+      "digital",
+      "zuhause"
+    ],
+    "en": [
+      "electronics",
+      "device",
+      "gadget",
+      "multimedia",
+      "digital",
+      "home"
+    ],
+    "wikidata": "Q581105",
+    "gefunden": "consumer electronics — electronic equipment intended for everyday use, typically in private homes"
+  },
+  {
+    "key": "electronic-device",
+    "suche": "electronic device",
+    "de": [
+      "elektronisches",
+      "gerät",
+      "elektronik",
+      "akku",
+      "digital",
+      "strom"
+    ],
+    "en": [
+      "electronic",
+      "device",
+      "electronics",
+      "battery",
+      "digital",
+      "power"
+    ],
+    "wikidata": "Q2858615",
+    "gefunden": "electronic device — electric device where the main functionality is provided by electronic circuits"
+  },
+  {
+    "key": "computer",
+    "suche": "computer",
+    "de": [
+      "computer",
+      "rechner",
+      "pc",
+      "prozessor",
+      "arbeitsspeicher",
+      "software"
+    ],
+    "en": [
+      "computer",
+      "pc",
+      "processor",
+      "memory",
+      "software",
+      "desktop"
+    ],
+    "wikidata": "Q68",
+    "gefunden": "computer — general-purpose device for performing arithmetic or logical operations"
+  },
+  {
+    "key": "portable-computer",
+    "suche": "portable computer",
+    "de": [
+      "laptop",
+      "notebook",
+      "tragbar",
+      "akku",
+      "mobil",
+      "bildschirm"
+    ],
+    "en": [
+      "laptop",
+      "notebook",
+      "portable",
+      "battery",
+      "mobile",
+      "screen"
+    ],
+    "wikidata": "Q1820120",
+    "gefunden": "portable computer — self-contained computer that is designed to be moved from one place to another"
+  },
+  {
+    "key": "mobile-phone",
+    "suche": "mobile phone",
+    "de": [
+      "handy",
+      "smartphone",
+      "telefon",
+      "mobilfunk",
+      "display",
+      "akku"
+    ],
+    "en": [
+      "phone",
+      "smartphone",
+      "mobile",
+      "cellular",
+      "display",
+      "battery"
+    ],
+    "wikidata": "Q17517",
+    "gefunden": "mobile phone — portable device to make telephone calls using a radio link"
+  },
+  {
+    "key": "computer-hardware",
+    "suche": "computer hardware",
+    "de": [
+      "hardware",
+      "komponente",
+      "pc",
+      "grafikkarte",
+      "prozessor",
+      "speicher"
+    ],
+    "en": [
+      "hardware",
+      "component",
+      "pc",
+      "graphics",
+      "processor",
+      "storage"
+    ],
+    "wikidata": "Q3966",
+    "gefunden": "computer hardware — physical components of a computer"
+  },
+  {
+    "key": "data-storage",
+    "suche": "data storage device",
+    "de": [
+      "speicher",
+      "festplatte",
+      "speicherkarte",
+      "usb-stick",
+      "daten",
+      "kapazität"
+    ],
+    "en": [
+      "storage",
+      "drive",
+      "memory-card",
+      "flash-drive",
+      "data",
+      "capacity"
+    ],
+    "wikidata": "Q193395",
+    "gefunden": "recording medium — physical storage medium for recording information"
+  },
+  {
+    "key": "display-device",
+    "suche": "display device",
+    "de": [
+      "bildschirm",
+      "monitor",
+      "display",
+      "auflösung",
+      "zoll",
+      "anzeige"
+    ],
+    "en": [
+      "display",
+      "monitor",
+      "screen",
+      "resolution",
+      "inch",
+      "panel"
+    ],
+    "wikidata": "Q327065",
+    "gefunden": "display device — output device for presentation of information in visual form"
+  },
+  {
+    "key": "printer",
+    "suche": "printer",
+    "de": [
+      "drucker",
+      "drucken",
+      "tinte",
+      "toner",
+      "scannen",
+      "papier"
+    ],
+    "en": [
+      "printer",
+      "printing",
+      "ink",
+      "toner",
+      "scanning",
+      "paper"
+    ],
+    "wikidata": "Q175151",
+    "gefunden": "printer — person involved in manufacturing printed materials; operator of a printing press"
+  },
+  {
+    "key": "camera",
+    "suche": "camera",
+    "de": [
+      "kamera",
+      "fotografieren",
+      "objektiv",
+      "sensor",
+      "megapixel",
+      "video"
+    ],
+    "en": [
+      "camera",
+      "photography",
+      "lens",
+      "sensor",
+      "megapixel",
+      "video"
+    ],
+    "wikidata": "Q15328",
+    "gefunden": "camera — optical device for recording or transmitting photographic images or videos"
+  },
+  {
+    "key": "audio-equipment",
+    "suche": "audio equipment",
+    "de": [
+      "audio",
+      "klang",
+      "sound",
+      "lautsprecher",
+      "verstärker",
+      "musik"
+    ],
+    "en": [
+      "audio",
+      "sound",
+      "hi-fi",
+      "speaker",
+      "amplifier",
+      "music"
+    ],
+    "wikidata": "Q15190726",
+    "gefunden": "audio equipment — device that processes encoded sound"
+  },
+  {
+    "key": "loudspeaker",
+    "suche": "loudspeaker",
+    "de": [
+      "lautsprecher",
+      "box",
+      "bass",
+      "bluetooth",
+      "klang",
+      "musik"
+    ],
+    "en": [
+      "speaker",
+      "loudspeaker",
+      "bass",
+      "bluetooth",
+      "sound",
+      "music"
+    ],
+    "wikidata": "Q570",
+    "gefunden": "loudspeaker — electroacoustic transducer that converts an electrical audio signal into a corresponding sound"
+  },
+  {
+    "key": "headphones",
+    "suche": "headphones",
+    "de": [
+      "kopfhörer",
+      "ohrhörer",
+      "kabellos",
+      "geräuschunterdrückung",
+      "musik",
+      "hören"
+    ],
+    "en": [
+      "headphones",
+      "earbuds",
+      "wireless",
+      "noise-cancelling",
+      "music",
+      "listening"
+    ],
+    "wikidata": "Q186819",
+    "gefunden": "headphone — small loudspeakers worn on the head for listening to music or for communications purposes"
+  },
+  {
+    "key": "television",
+    "suche": "television set",
+    "de": [
+      "fernseher",
+      "fernsehen",
+      "tv",
+      "bildschirm",
+      "streaming",
+      "zoll"
+    ],
+    "en": [
+      "television",
+      "tv",
+      "screen",
+      "streaming",
+      "inch",
+      "smart-tv"
+    ],
+    "wikidata": "Q8075",
+    "gefunden": "television set — device that combines a tuner, display, and speakers for the purpose of viewing television"
+  },
+  {
+    "key": "game-console",
+    "suche": "video game console",
+    "de": [
+      "spielkonsole",
+      "konsole",
+      "gaming",
+      "controller",
+      "videospiel",
+      "zocken"
+    ],
+    "en": [
+      "console",
+      "gaming",
+      "controller",
+      "videogame",
+      "gamer",
+      "handheld"
+    ],
+    "wikidata": "Q8076",
+    "gefunden": "video game console — dedicated electronic device designed primarily for playing video games, typically connected to a display"
+  },
+  {
+    "key": "networking-hardware",
+    "suche": "networking hardware",
+    "de": [
+      "netzwerk",
+      "router",
+      "wlan",
+      "internet",
+      "verbindung",
+      "lan"
+    ],
+    "en": [
+      "network",
+      "router",
+      "wifi",
+      "internet",
+      "connection",
+      "ethernet"
+    ],
+    "wikidata": "Q1546066",
+    "gefunden": "networking hardware — devices that mediate data in a computer network"
+  },
+  {
+    "key": "electrical-cable",
+    "suche": "electrical cable",
+    "de": [
+      "kabel",
+      "leitung",
+      "stecker",
+      "verlängerung",
+      "anschluss",
+      "strom"
+    ],
+    "en": [
+      "cable",
+      "wire",
+      "plug",
+      "extension",
+      "connection",
+      "power"
+    ],
+    "wikidata": "Q1939150",
+    "gefunden": "power cable — electrical cable primarily used to transmit power"
+  },
+  {
+    "key": "battery",
+    "suche": "electric battery",
+    "de": [
+      "batterie",
+      "akku",
+      "laden",
+      "kapazität",
+      "mah",
+      "lithium"
+    ],
+    "en": [
+      "battery",
+      "rechargeable",
+      "charging",
+      "capacity",
+      "mah",
+      "lithium"
+    ],
+    "wikidata": "Q267298",
+    "gefunden": "battery — assembly of one or more electrochemical cells, used to provide devices with stored electrical energy"
+  },
+  {
+    "key": "home-automation",
+    "suche": "home automation",
+    "de": [
+      "smarthome",
+      "automatisch",
+      "steuern",
+      "app",
+      "vernetzt",
+      "zuhause"
+    ],
+    "en": [
+      "smart-home",
+      "automation",
+      "control",
+      "app",
+      "connected",
+      "home"
+    ],
+    "wikidata": "Q848436",
+    "gefunden": "home automation — building automation for a home"
+  },
+  {
+    "key": "wearable",
+    "suche": "wearable computer",
+    "de": [
+      "wearable",
+      "smartwatch",
+      "fitnesstracker",
+      "tragbar",
+      "schritte",
+      "puls"
+    ],
+    "en": [
+      "wearable",
+      "smartwatch",
+      "tracker",
+      "worn",
+      "steps",
+      "heart-rate"
+    ],
+    "wikidata": "Q1334829",
+    "gefunden": "wearable computer — small computing devices (nowadays usually electronic) that are worn under, with, or on top of clothing"
+  },
+  {
+    "key": "software",
+    "suche": "software",
+    "de": [
+      "software",
+      "programm",
+      "lizenz",
+      "anwendung",
+      "installation",
+      "digital"
+    ],
+    "en": [
+      "software",
+      "program",
+      "licence",
+      "application",
+      "installation",
+      "digital"
+    ],
+    "wikidata": "Q7397",
+    "gefunden": "software — non-tangible executable component of a computer"
+  },
+  {
+    "key": "drone",
+    "suche": "unmanned aerial vehicle",
+    "de": [
+      "drohne",
+      "fliegen",
+      "kamera",
+      "luftaufnahme",
+      "fernsteuerung",
+      "propeller"
+    ],
+    "en": [
+      "drone",
+      "flying",
+      "camera",
+      "aerial",
+      "remote",
+      "propeller"
+    ],
+    "wikidata": "Q484000",
+    "gefunden": "unmanned aerial vehicle — aircraft intended for use without onboard human crew members"
+  },
+  {
+    "key": "robot",
+    "suche": "robot",
+    "de": [
+      "roboter",
+      "automatisch",
+      "programmierbar",
+      "saugroboter",
+      "mähroboter",
+      "technik"
+    ],
+    "en": [
+      "robot",
+      "automatic",
+      "programmable",
+      "robotic",
+      "autonomous",
+      "technology"
+    ],
+    "wikidata": "Q11012",
+    "gefunden": "robot — machine capable of carrying out a complex series of actions automatically"
+  },
+  {
+    "key": "optical-instrument",
+    "suche": "optical instrument",
+    "de": [
+      "optik",
+      "fernglas",
+      "vergrößerung",
+      "linse",
+      "beobachten",
+      "teleskop"
+    ],
+    "en": [
+      "optics",
+      "binoculars",
+      "magnification",
+      "lens",
+      "observation",
+      "telescope"
+    ],
+    "wikidata": "Q1751850",
+    "gefunden": "optical instrument — instrument using light waves for image viewing"
+  },
+  {
+    "key": "lighting",
+    "suche": "lighting",
+    "de": [
+      "beleuchtung",
+      "licht",
+      "hell",
+      "lampe",
+      "leuchte",
+      "dimmbar"
+    ],
+    "en": [
+      "lighting",
+      "light",
+      "bright",
+      "lamp",
+      "luminaire",
+      "dimmable"
+    ],
+    "wikidata": "Q210064",
+    "gefunden": "lighting — deliberate use of light to achieve a practical or aesthetic effect"
+  },
+  {
+    "key": "lamp",
+    "suche": "lamp",
+    "de": [
+      "lampe",
+      "leuchte",
+      "licht",
+      "schirm",
+      "fassung",
+      "wohnzimmer"
+    ],
+    "en": [
+      "lamp",
+      "light",
+      "shade",
+      "socket",
+      "lighting",
+      "living-room"
+    ],
+    "wikidata": "Q1138737",
+    "gefunden": "lamp — part of a light fixture that produces the light"
+  },
+  {
+    "key": "light-source",
+    "suche": "electric light",
+    "de": [
+      "leuchtmittel",
+      "glühbirne",
+      "led",
+      "lumen",
+      "lichtfarbe",
+      "sockel"
+    ],
+    "en": [
+      "bulb",
+      "lightbulb",
+      "led",
+      "lumen",
+      "colour-temperature",
+      "base"
+    ],
+    "wikidata": "Q1326621",
+    "gefunden": "electric light — any device that produces light from electricity"
+  },
+  {
+    "key": "flashlight",
+    "suche": "flashlight",
+    "de": [
+      "taschenlampe",
+      "stirnlampe",
+      "licht",
+      "leuchtweite",
+      "akku",
+      "dunkel"
+    ],
+    "en": [
+      "flashlight",
+      "torch",
+      "headlamp",
+      "light",
+      "beam",
+      "dark"
+    ],
+    "wikidata": "Q235783",
+    "gefunden": "flashlight — portable, hand-held electric light"
+  },
+  {
+    "key": "health",
+    "suche": "health",
+    "de": [
+      "gesundheit",
+      "gesund",
+      "wohlbefinden",
+      "vorsorge",
+      "körper",
+      "fit"
+    ],
+    "en": [
+      "health",
+      "healthy",
+      "wellbeing",
+      "prevention",
+      "body",
+      "fit"
+    ],
+    "wikidata": "Q12147",
+    "gefunden": "health — desirable level of functional or metabolic efficiency of a living being"
+  },
+  {
+    "key": "medication",
+    "suche": "medication",
+    "de": [
+      "medikament",
+      "arznei",
+      "tabletten",
+      "apotheke",
+      "wirkstoff",
+      "dosierung"
+    ],
+    "en": [
+      "medication",
+      "medicine",
+      "tablets",
+      "pharmacy",
+      "active-ingredient",
+      "dosage"
+    ],
+    "wikidata": "Q12140",
+    "gefunden": "medication — substance used to diagnose, cure, treat, or prevent disease"
+  },
+  {
+    "key": "medical-device",
+    "suche": "medical device",
+    "de": [
+      "medizinprodukt",
+      "medizinisch",
+      "messen",
+      "therapie",
+      "gesundheit",
+      "gerät"
+    ],
+    "en": [
+      "medical",
+      "device",
+      "measurement",
+      "therapy",
+      "health",
+      "clinical"
+    ],
+    "wikidata": "Q6554101",
+    "gefunden": "medical device — any device intended to be used for medical purposes"
+  },
+  {
+    "key": "disease",
+    "suche": "disease",
+    "de": [
+      "krankheit",
+      "erkrankung",
+      "beschwerden",
+      "symptome",
+      "behandlung",
+      "linderung"
+    ],
+    "en": [
+      "disease",
+      "illness",
+      "condition",
+      "symptoms",
+      "treatment",
+      "relief"
+    ],
+    "wikidata": "Q12136",
+    "gefunden": "disease — abnormal biological process in an organism driven by a specific pathophysiological mechanism"
+  },
+  {
+    "key": "injury",
+    "suche": "injury",
+    "de": [
+      "verletzung",
+      "wunde",
+      "verband",
+      "pflaster",
+      "heilung",
+      "schmerz"
+    ],
+    "en": [
+      "injury",
+      "wound",
+      "bandage",
+      "plaster",
+      "healing",
+      "pain"
+    ],
+    "wikidata": "Q193078",
+    "gefunden": "injury — physiological wound caused by an external source"
+  },
+  {
+    "key": "first-aid",
+    "suche": "first aid",
+    "de": [
+      "erste-hilfe",
+      "verbandskasten",
+      "notfall",
+      "pflaster",
+      "verband",
+      "sicherheit"
+    ],
+    "en": [
+      "first-aid",
+      "kit",
+      "emergency",
+      "plaster",
+      "bandage",
+      "safety"
+    ],
+    "wikidata": "Q133981",
+    "gefunden": "first aid — emergency first response medical treatment"
+  },
+  {
+    "key": "orthosis",
+    "suche": "orthosis",
+    "de": [
+      "bandage",
+      "orthese",
+      "stütze",
+      "gelenk",
+      "stabilisieren",
+      "entlastung"
+    ],
+    "en": [
+      "brace",
+      "orthosis",
+      "support",
+      "joint",
+      "stabilising",
+      "relief"
+    ],
+    "wikidata": "Q1410069",
+    "gefunden": "orthotic device — medical device used to modify the structural and functional characteristics of the neuromuscular and skeletal system"
+  },
+  {
+    "key": "mobility-aid",
+    "suche": "mobility aid",
+    "de": [
+      "gehhilfe",
+      "rollator",
+      "rollstuhl",
+      "mobilität",
+      "senioren",
+      "barrierefrei"
+    ],
+    "en": [
+      "mobility-aid",
+      "walker",
+      "wheelchair",
+      "mobility",
+      "seniors",
+      "accessible"
+    ],
+    "wikidata": "Q6887300",
+    "gefunden": "mobility aid — allows people with reduced mobility to be more moveable"
+  },
+  {
+    "key": "sleep",
+    "suche": "sleep",
+    "de": [
+      "schlaf",
+      "schlafen",
+      "erholsam",
+      "nacht",
+      "ruhe",
+      "müde"
+    ],
+    "en": [
+      "sleep",
+      "sleeping",
+      "restful",
+      "night",
+      "rest",
+      "tired"
+    ],
+    "wikidata": "Q35831",
+    "gefunden": "sleep — naturally recurring resting state of mind and body"
+  },
+  {
+    "key": "nutrition",
+    "suche": "nutrition",
+    "de": [
+      "ernährung",
+      "nährstoffe",
+      "gesund",
+      "kalorien",
+      "eiweiß",
+      "ausgewogen"
+    ],
+    "en": [
+      "nutrition",
+      "nutrients",
+      "healthy",
+      "calories",
+      "protein",
+      "balanced"
+    ],
+    "wikidata": "Q2138622",
+    "gefunden": "nutrition — the provision to cells and organisms to support life and growth"
+  },
+  {
+    "key": "diet",
+    "suche": "diet",
+    "de": [
+      "diät",
+      "ernährungsweise",
+      "abnehmen",
+      "glutenfrei",
+      "laktosefrei",
+      "low-carb"
+    ],
+    "en": [
+      "diet",
+      "dietary",
+      "weight-loss",
+      "gluten-free",
+      "lactose-free",
+      "low-carb"
+    ],
+    "wikidata": "Q474191",
+    "gefunden": "diet — sum of food consumed by an organism"
+  },
+  {
+    "key": "hygiene",
+    "suche": "hygiene",
+    "de": [
+      "hygiene",
+      "sauber",
+      "desinfektion",
+      "keimfrei",
+      "waschen",
+      "schutz"
+    ],
+    "en": [
+      "hygiene",
+      "clean",
+      "disinfection",
+      "antibacterial",
+      "washing",
+      "protection"
+    ],
+    "wikidata": "Q162297",
+    "gefunden": "hygiene — set of practices performed for the preservation of health"
+  },
+  {
+    "key": "personal-care",
+    "suche": "personal care",
+    "de": [
+      "körperpflege",
+      "pflege",
+      "hygiene",
+      "bad",
+      "haut",
+      "wohlfühlen"
+    ],
+    "en": [
+      "personal-care",
+      "care",
+      "hygiene",
+      "bathroom",
+      "skin",
+      "wellbeing"
+    ],
+    "wikidata": "Q3246832",
+    "gefunden": "personal care product — consumer product used in personal hygiene or for beautification"
+  },
+  {
+    "key": "cosmetics",
+    "suche": "cosmetics",
+    "de": [
+      "kosmetik",
+      "schönheit",
+      "pflege",
+      "beauty",
+      "haut",
+      "make-up"
+    ],
+    "en": [
+      "cosmetics",
+      "beauty",
+      "care",
+      "skin",
+      "makeup",
+      "glow"
+    ],
+    "wikidata": "Q131207",
+    "gefunden": "cosmetics — substances used to enhance the appearance or odor of the human body"
+  },
+  {
+    "key": "skin-care",
+    "suche": "skin care",
+    "de": [
+      "hautpflege",
+      "creme",
+      "feuchtigkeit",
+      "haut",
+      "empfindlich",
+      "gesicht"
+    ],
+    "en": [
+      "skincare",
+      "cream",
+      "moisturising",
+      "skin",
+      "sensitive",
+      "face"
+    ],
+    "wikidata": "Q1294114",
+    "gefunden": "skin care — grooming behavior"
+  },
+  {
+    "key": "hair-care",
+    "suche": "hair care",
+    "de": [
+      "haarpflege",
+      "haare",
+      "shampoo",
+      "spülung",
+      "kopfhaut",
+      "glanz"
+    ],
+    "en": [
+      "haircare",
+      "hair",
+      "shampoo",
+      "conditioner",
+      "scalp",
+      "shine"
+    ],
+    "wikidata": "Q3633540",
+    "gefunden": "hair care — hygiene and cosmetology involving human hair"
+  },
+  {
+    "key": "hairstyling",
+    "suche": "hairstyling",
+    "de": [
+      "styling",
+      "frisur",
+      "föhn",
+      "glätten",
+      "locken",
+      "haare"
+    ],
+    "en": [
+      "styling",
+      "hairstyle",
+      "hairdryer",
+      "straightening",
+      "curls",
+      "hair"
+    ],
+    "wikidata": "Q5639586",
+    "gefunden": "hairstyling product — Hairstyling products are used to change the texture or shape of hair"
+  },
+  {
+    "key": "perfume",
+    "suche": "perfume",
+    "de": [
+      "parfum",
+      "duft",
+      "eau-de-toilette",
+      "flakon",
+      "note",
+      "frisch"
+    ],
+    "en": [
+      "perfume",
+      "fragrance",
+      "scent",
+      "eau-de-toilette",
+      "notes",
+      "fresh"
+    ],
+    "wikidata": "Q131746",
+    "gefunden": "perfume — a substance, extract, or preparation for diffusing or imparting an agreeable or attractive smell, especially a fluid such as alcohol containing essential oils and/or aroma compounds"
+  },
+  {
+    "key": "shaving",
+    "suche": "shaving",
+    "de": [
+      "rasur",
+      "rasieren",
+      "rasierer",
+      "klinge",
+      "bart",
+      "haut"
+    ],
+    "en": [
+      "shaving",
+      "shave",
+      "razor",
+      "blade",
+      "beard",
+      "skin"
+    ],
+    "wikidata": "Q369570",
+    "gefunden": "shaving — removal of hair with a razor or other bladed implement"
+  },
+  {
+    "key": "makeup",
+    "suche": "makeup",
+    "de": [
+      "make-up",
+      "schminken",
+      "lippenstift",
+      "wimperntusche",
+      "puder",
+      "teint"
+    ],
+    "en": [
+      "makeup",
+      "lipstick",
+      "mascara",
+      "powder",
+      "foundation",
+      "complexion"
+    ],
+    "wikidata": "Q131207",
+    "gefunden": "cosmetics — substances used to enhance the appearance or odor of the human body"
+  },
+  {
+    "key": "oral-hygiene",
+    "suche": "oral hygiene",
+    "de": [
+      "mundpflege",
+      "zähne",
+      "zahnbürste",
+      "zahnpasta",
+      "zahnseide",
+      "frisch"
+    ],
+    "en": [
+      "oral-care",
+      "teeth",
+      "toothbrush",
+      "toothpaste",
+      "floss",
+      "fresh"
+    ],
+    "wikidata": "Q13445028",
+    "gefunden": "oral hygiene — the practice of keeping one's oral cavity clean and free of disease and other problems (e.g. bad breath) by regular brushing of the teeth (dental hygiene) and adopting good hygiene habits"
+  },
+  {
+    "key": "sunscreen",
+    "suche": "sunscreen",
+    "de": [
+      "sonnenschutz",
+      "sonnencreme",
+      "lichtschutzfaktor",
+      "uv",
+      "sonne",
+      "strand"
+    ],
+    "en": [
+      "sunscreen",
+      "sun-cream",
+      "spf",
+      "uv",
+      "sun",
+      "beach"
+    ],
+    "wikidata": "Q827658",
+    "gefunden": "sunscreen — topical skin product that helps protect against sunburn"
+  },
+  {
+    "key": "bathing",
+    "suche": "bathing",
+    "de": [
+      "baden",
+      "bad",
+      "badewanne",
+      "dusche",
+      "entspannen",
+      "badezusatz"
+    ],
+    "en": [
+      "bathing",
+      "bath",
+      "bathtub",
+      "shower",
+      "relaxing",
+      "bath-salts"
+    ],
+    "wikidata": "Q327651",
+    "gefunden": "bathing — washing of the body with a liquid"
+  },
+  {
+    "key": "weather",
+    "suche": "weather",
+    "de": [
+      "wetter",
+      "witterung",
+      "wetterfest",
+      "draußen",
+      "schutz",
+      "klima"
+    ],
+    "en": [
+      "weather",
+      "conditions",
+      "weatherproof",
+      "outdoor",
+      "protection",
+      "climate"
+    ],
+    "wikidata": "Q11663",
+    "gefunden": "weather — state of the atmosphere"
+  },
+  {
+    "key": "precipitation",
+    "suche": "precipitation",
+    "de": [
+      "niederschlag",
+      "regen",
+      "schnee",
+      "nass",
+      "wasserdicht",
+      "wetter"
+    ],
+    "en": [
+      "precipitation",
+      "rain",
+      "snow",
+      "wet",
+      "waterproof",
+      "weather"
+    ],
+    "wikidata": "Q25257",
+    "gefunden": "precipitation — liquid or solid water that falls to the ground"
+  },
+  {
+    "key": "rain",
+    "suche": "rain",
+    "de": [
+      "regen",
+      "regnerisch",
+      "nass",
+      "wasserdicht",
+      "regenschutz",
+      "schirm"
+    ],
+    "en": [
+      "rain",
+      "rainy",
+      "wet",
+      "waterproof",
+      "rain-cover",
+      "umbrella"
+    ],
+    "wikidata": "Q7925",
+    "gefunden": "rain — liquid water in the form of droplets that have condensed from atmospheric water vapor and then precipitated"
+  },
+  {
+    "key": "snow",
+    "suche": "snow",
+    "de": [
+      "schnee",
+      "schneefall",
+      "winter",
+      "kalt",
+      "rutschfest",
+      "schneeschuh"
+    ],
+    "en": [
+      "snow",
+      "snowfall",
+      "winter",
+      "cold",
+      "non-slip",
+      "snowshoe"
+    ],
+    "wikidata": "Q7561",
+    "gefunden": "snow — precipitation in the form of ice crystal flakes"
+  },
+  {
+    "key": "wind",
+    "suche": "wind",
+    "de": [
+      "wind",
+      "windig",
+      "winddicht",
+      "sturm",
+      "böen",
+      "windschutz"
+    ],
+    "en": [
+      "wind",
+      "windy",
+      "windproof",
+      "storm",
+      "gusts",
+      "windbreak"
+    ],
+    "wikidata": "Q8094",
+    "gefunden": "wind — flow of gases or air on a large scale"
+  },
+  {
+    "key": "storm",
+    "suche": "storm",
+    "de": [
+      "sturm",
+      "unwetter",
+      "gewitter",
+      "orkan",
+      "sturmfest",
+      "wetter"
+    ],
+    "en": [
+      "storm",
+      "severe-weather",
+      "thunderstorm",
+      "gale",
+      "stormproof",
+      "weather"
+    ],
+    "wikidata": "Q81054",
+    "gefunden": "storm — any disturbed state of an astronomical body's atmosphere"
+  },
+  {
+    "key": "heat",
+    "suche": "heat",
+    "de": [
+      "hitze",
+      "heiß",
+      "warm",
+      "sommer",
+      "kühlend",
+      "sonne"
+    ],
+    "en": [
+      "heat",
+      "hot",
+      "warm",
+      "summer",
+      "cooling",
+      "sun"
+    ],
+    "wikidata": "Q28128222",
+    "gefunden": "hot (fest)"
+  },
+  {
+    "key": "cold",
+    "suche": "cold",
+    "de": [
+      "kälte",
+      "kalt",
+      "frost",
+      "warm",
+      "isoliert",
+      "winter"
+    ],
+    "en": [
+      "cold",
+      "chilly",
+      "frost",
+      "warm",
+      "insulated",
+      "winter"
+    ],
+    "wikidata": "Q270952",
+    "gefunden": "cold (fest)"
+  },
+  {
+    "key": "sunlight",
+    "suche": "sunlight",
+    "de": [
+      "sonne",
+      "sonnenlicht",
+      "sonnig",
+      "uv-schutz",
+      "schatten",
+      "sommer"
+    ],
+    "en": [
+      "sun",
+      "sunlight",
+      "sunny",
+      "uv-protection",
+      "shade",
+      "summer"
+    ],
+    "wikidata": "Q193788",
+    "gefunden": "sunlight — electromagnetic radiation given off by the Sun"
+  },
+  {
+    "key": "season",
+    "suche": "season",
+    "de": [
+      "jahreszeit",
+      "saison",
+      "saisonal",
+      "frühling",
+      "sommer",
+      "winter"
+    ],
+    "en": [
+      "season",
+      "seasonal",
+      "spring",
+      "summer",
+      "autumn",
+      "winter"
+    ],
+    "wikidata": "Q24384",
+    "gefunden": "season (fest)"
+  },
+  {
+    "key": "spring",
+    "suche": "spring",
+    "de": [
+      "frühling",
+      "frühjahr",
+      "blühen",
+      "mild",
+      "übergang",
+      "ostern"
+    ],
+    "en": [
+      "spring",
+      "springtime",
+      "blooming",
+      "mild",
+      "transitional",
+      "easter"
+    ],
+    "wikidata": "Q1312",
+    "gefunden": "spring — season (fest)"
+  },
+  {
+    "key": "summer",
+    "suche": "summer",
+    "de": [
+      "sommer",
+      "sommerlich",
+      "heiß",
+      "sonne",
+      "leicht",
+      "urlaub"
+    ],
+    "en": [
+      "summer",
+      "summery",
+      "hot",
+      "sun",
+      "lightweight",
+      "holiday"
+    ],
+    "wikidata": "Q1313",
+    "gefunden": "summer (fest)"
+  },
+  {
+    "key": "autumn",
+    "suche": "autumn",
+    "de": [
+      "herbst",
+      "herbstlich",
+      "übergang",
+      "regen",
+      "wind",
+      "laub"
+    ],
+    "en": [
+      "autumn",
+      "fall",
+      "transitional",
+      "rain",
+      "wind",
+      "leaves"
+    ],
+    "wikidata": "Q1314",
+    "gefunden": "autumn — one of the Earth's four temperate seasons, occurring between summer and winter; one of the 8 Sámi seasons"
+  },
+  {
+    "key": "winter",
+    "suche": "winter",
+    "de": [
+      "winter",
+      "winterlich",
+      "kalt",
+      "warm",
+      "schnee",
+      "gefüttert"
+    ],
+    "en": [
+      "winter",
+      "wintry",
+      "cold",
+      "warm",
+      "snow",
+      "lined"
+    ],
+    "wikidata": "Q1311",
+    "gefunden": "winter — one of the Earth's four temperate seasons, occurring between autumn and spring; one of the 8 Sámi seasons"
+  },
+  {
+    "key": "landform",
+    "suche": "landform",
+    "de": [
+      "landschaft",
+      "gelände",
+      "natur",
+      "draußen",
+      "terrain",
+      "outdoor"
+    ],
+    "en": [
+      "landscape",
+      "terrain",
+      "nature",
+      "outdoors",
+      "land",
+      "outdoor"
+    ],
+    "wikidata": "Q271669",
+    "gefunden": "landform — natural or anthropogenic land feature on the solid surface of the Earth or other planetary body; geomorphological unit in the Earth sciences"
+  },
+  {
+    "key": "mountain",
+    "suche": "mountain",
+    "de": [
+      "berg",
+      "berge",
+      "gebirge",
+      "alpin",
+      "gipfel",
+      "wandern"
+    ],
+    "en": [
+      "mountain",
+      "mountains",
+      "alpine",
+      "summit",
+      "peak",
+      "hiking"
+    ],
+    "wikidata": "Q8502",
+    "gefunden": "mountain — large natural elevation of the Earth's surface"
+  },
+  {
+    "key": "body-of-water",
+    "suche": "body of water",
+    "de": [
+      "gewässer",
+      "wasser",
+      "see",
+      "fluss",
+      "meer",
+      "ufer"
+    ],
+    "en": [
+      "water",
+      "lake",
+      "river",
+      "sea",
+      "shore",
+      "waterside"
+    ],
+    "wikidata": "Q15324",
+    "gefunden": "body of water — any significant accumulation of water, generally on a planet's surface"
+  },
+  {
+    "key": "lake",
+    "suche": "lake",
+    "de": [
+      "see",
+      "badesee",
+      "ufer",
+      "wasser",
+      "angeln",
+      "baden"
+    ],
+    "en": [
+      "lake",
+      "lakeside",
+      "shore",
+      "water",
+      "fishing",
+      "swimming"
+    ],
+    "wikidata": "Q23397",
+    "gefunden": "lake — body of relatively still water, localized in a basin"
+  },
+  {
+    "key": "river",
+    "suche": "river",
+    "de": [
+      "fluss",
+      "bach",
+      "strömung",
+      "ufer",
+      "wasser",
+      "kanu"
+    ],
+    "en": [
+      "river",
+      "stream",
+      "current",
+      "bank",
+      "water",
+      "canoe"
+    ],
+    "wikidata": "Q4022",
+    "gefunden": "river — larger natural watercourse"
+  },
+  {
+    "key": "sea",
+    "suche": "sea",
+    "de": [
+      "meer",
+      "see",
+      "salzwasser",
+      "küste",
+      "wellen",
+      "strand"
+    ],
+    "en": [
+      "sea",
+      "ocean",
+      "saltwater",
+      "coast",
+      "waves",
+      "beach"
+    ],
+    "wikidata": "Q165",
+    "gefunden": "sea — large body of saline water"
+  },
+  {
+    "key": "coast",
+    "suche": "coast",
+    "de": [
+      "küste",
+      "ufer",
+      "meer",
+      "strand",
+      "wind",
+      "salzwasser"
+    ],
+    "en": [
+      "coast",
+      "shore",
+      "sea",
+      "beach",
+      "wind",
+      "saltwater"
+    ],
+    "wikidata": "Q93352",
+    "gefunden": "coast — area where land meets the sea or ocean"
+  },
+  {
+    "key": "beach",
+    "suche": "beach",
+    "de": [
+      "strand",
+      "sand",
+      "meer",
+      "sonne",
+      "baden",
+      "urlaub"
+    ],
+    "en": [
+      "beach",
+      "sand",
+      "sea",
+      "sun",
+      "swimming",
+      "holiday"
+    ],
+    "wikidata": "Q40080",
+    "gefunden": "beach — area of sand or small stones near the sea or another area of water such as a lake"
+  },
+  {
+    "key": "forest",
+    "suche": "forest",
+    "de": [
+      "wald",
+      "bäume",
+      "natur",
+      "wandern",
+      "pilze",
+      "tarnung"
+    ],
+    "en": [
+      "forest",
+      "woods",
+      "trees",
+      "nature",
+      "hiking",
+      "woodland"
+    ],
+    "wikidata": "Q4421",
+    "gefunden": "forest — subjective characterization of an area with trees"
+  },
+  {
+    "key": "desert",
+    "suche": "desert",
+    "de": [
+      "wüste",
+      "trocken",
+      "heiß",
+      "sand",
+      "sonne",
+      "hitze"
+    ],
+    "en": [
+      "desert",
+      "dry",
+      "hot",
+      "sand",
+      "sun",
+      "arid"
+    ],
+    "wikidata": "Q8514",
+    "gefunden": "desert — barren area of land where little precipitation occurs"
+  },
+  {
+    "key": "grassland",
+    "suche": "grassland",
+    "de": [
+      "wiese",
+      "weide",
+      "gras",
+      "steppe",
+      "feld",
+      "landschaft"
+    ],
+    "en": [
+      "grassland",
+      "meadow",
+      "pasture",
+      "grass",
+      "prairie",
+      "field"
+    ],
+    "wikidata": "Q1006733",
+    "gefunden": "grassland — area with vegetation dominated by grasses"
+  },
+  {
+    "key": "wetland",
+    "suche": "wetland",
+    "de": [
+      "feuchtgebiet",
+      "moor",
+      "sumpf",
+      "nass",
+      "matsch",
+      "gummistiefel"
+    ],
+    "en": [
+      "wetland",
+      "marsh",
+      "swamp",
+      "wet",
+      "mud",
+      "wellies"
+    ],
+    "wikidata": "Q170321",
+    "gefunden": "wetland — land area that is permanently or seasonally saturated with water"
+  },
+  {
+    "key": "island",
+    "suche": "island",
+    "de": [
+      "insel",
+      "inseln",
+      "meer",
+      "strand",
+      "urlaub",
+      "küste"
+    ],
+    "en": [
+      "island",
+      "islands",
+      "sea",
+      "beach",
+      "holiday",
+      "coast"
+    ],
+    "wikidata": "Q23442",
+    "gefunden": "island — piece of sub-continental land completely surrounded by water"
+  },
+  {
+    "key": "urban-area",
+    "suche": "urban area",
+    "de": [
+      "stadt",
+      "städtisch",
+      "urban",
+      "alltag",
+      "pendeln",
+      "straße"
+    ],
+    "en": [
+      "city",
+      "urban",
+      "town",
+      "everyday",
+      "commuting",
+      "street"
+    ],
+    "wikidata": "Q702492",
+    "gefunden": "urban area — large area with high population density and infrastructure of built environment"
+  },
+  {
+    "key": "rural-area",
+    "suche": "rural area",
+    "de": [
+      "land",
+      "ländlich",
+      "dorf",
+      "bauernhof",
+      "natur",
+      "feld"
+    ],
+    "en": [
+      "countryside",
+      "rural",
+      "village",
+      "farm",
+      "nature",
+      "field"
+    ],
+    "wikidata": "Q175185",
+    "gefunden": "rural area — geographic area that is located outside towns and cities"
+  },
+  {
+    "key": "holiday",
+    "suche": "holiday",
+    "de": [
+      "feiertag",
+      "fest",
+      "feiern",
+      "familie",
+      "geschenk",
+      "tradition"
+    ],
+    "en": [
+      "holiday",
+      "festive",
+      "celebration",
+      "family",
+      "gift",
+      "tradition"
+    ],
+    "wikidata": "Q1445650",
+    "gefunden": "holiday — festive day set aside by custom or by law"
+  },
+  {
+    "key": "festival",
+    "suche": "festival",
+    "de": [
+      "festival",
+      "fest",
+      "feiern",
+      "musik",
+      "zelt",
+      "sommer"
+    ],
+    "en": [
+      "festival",
+      "fest",
+      "celebration",
+      "music",
+      "tent",
+      "summer"
+    ],
+    "wikidata": "Q132241",
+    "gefunden": "festival — organized set of events or activities focused on a theme (cultural, religious or other) that recurs regularly (e.g. once a year) and lasts anywhere from several hours to weeks"
+  },
+  {
+    "key": "christmas",
+    "suche": "christmas",
+    "de": [
+      "weihnachten",
+      "weihnachtlich",
+      "advent",
+      "geschenk",
+      "festlich",
+      "dekoration"
+    ],
+    "en": [
+      "christmas",
+      "xmas",
+      "advent",
+      "gift",
+      "festive",
+      "decoration"
+    ],
+    "wikidata": false
+  },
+  {
+    "key": "easter",
+    "suche": "easter",
+    "de": [
+      "ostern",
+      "osterhase",
+      "ostereier",
+      "frühling",
+      "geschenk",
+      "dekoration"
+    ],
+    "en": [
+      "easter",
+      "bunny",
+      "eggs",
+      "spring",
+      "gift",
+      "decoration"
+    ],
+    "wikidata": false
+  },
+  {
+    "key": "birthday",
+    "suche": "birthday",
+    "de": [
+      "geburtstag",
+      "feier",
+      "geschenk",
+      "party",
+      "kuchen",
+      "überraschung"
+    ],
+    "en": [
+      "birthday",
+      "celebration",
+      "gift",
+      "party",
+      "cake",
+      "surprise"
+    ],
+    "wikidata": false
+  },
+  {
+    "key": "wedding",
+    "suche": "wedding",
+    "de": [
+      "hochzeit",
+      "braut",
+      "bräutigam",
+      "trauung",
+      "festlich",
+      "eleganz"
+    ],
+    "en": [
+      "wedding",
+      "bride",
+      "groom",
+      "ceremony",
+      "festive",
+      "elegant"
+    ],
+    "wikidata": "Q49836",
+    "gefunden": "wedding — ceremony where people are united in marriage"
+  },
+  {
+    "key": "party",
+    "suche": "party",
+    "de": [
+      "party",
+      "feier",
+      "feiern",
+      "gäste",
+      "dekoration",
+      "musik"
+    ],
+    "en": [
+      "party",
+      "celebration",
+      "celebrate",
+      "guests",
+      "decoration",
+      "music"
+    ],
+    "wikidata": "Q200538",
+    "gefunden": "party — social event"
+  },
+  {
+    "key": "anniversary",
+    "suche": "anniversary",
+    "de": [
+      "jubiläum",
+      "jahrestag",
+      "hochzeitstag",
+      "feier",
+      "erinnerung",
+      "geschenk"
+    ],
+    "en": [
+      "anniversary",
+      "jubilee",
+      "milestone",
+      "celebration",
+      "memory",
+      "gift"
+    ],
+    "wikidata": "Q47223",
+    "gefunden": "birthday — day on which one or more years ago someone appeared in the world"
+  },
+  {
+    "key": "new-year",
+    "suche": "new year",
+    "de": [
+      "silvester",
+      "neujahr",
+      "feuerwerk",
+      "jahreswechsel",
+      "party",
+      "sekt"
+    ],
+    "en": [
+      "new-year",
+      "nye",
+      "fireworks",
+      "countdown",
+      "party",
+      "champagne"
+    ],
+    "wikidata": false
+  },
+  {
+    "key": "halloween",
+    "suche": "halloween",
+    "de": [
+      "halloween",
+      "gruselig",
+      "kürbis",
+      "kostüm",
+      "verkleidung",
+      "herbst"
+    ],
+    "en": [
+      "halloween",
+      "spooky",
+      "pumpkin",
+      "costume",
+      "trick-or-treat",
+      "autumn"
+    ],
+    "wikidata": false
+  },
+  {
+    "key": "valentines-day",
+    "suche": "valentine's day",
+    "de": [
+      "valentinstag",
+      "liebe",
+      "romantisch",
+      "herz",
+      "rosen",
+      "geschenk"
+    ],
+    "en": [
+      "valentine",
+      "love",
+      "romantic",
+      "heart",
+      "roses",
+      "gift"
+    ],
+    "wikidata": false
+  },
+  {
+    "key": "carnival",
+    "suche": "carnival",
+    "de": [
+      "karneval",
+      "fasching",
+      "fastnacht",
+      "kostüm",
+      "umzug",
+      "verkleidung"
+    ],
+    "en": [
+      "carnival",
+      "mardi-gras",
+      "fancy-dress",
+      "costume",
+      "parade",
+      "dress-up"
+    ],
+    "wikidata": "Q259037",
+    "gefunden": "travelling carnival — moveable amusement park"
+  },
+  {
+    "key": "gift",
+    "suche": "gift",
+    "de": [
+      "geschenk",
+      "geschenkidee",
+      "verschenken",
+      "überraschung",
+      "anlass",
+      "gutschein"
+    ],
+    "en": [
+      "gift",
+      "present",
+      "gift-idea",
+      "surprise",
+      "occasion",
+      "voucher"
+    ],
+    "wikidata": "Q707482",
+    "gefunden": "gift — in law, voluntary transfer of property from one person (the donor or grantor) to another (the donee or grantee)"
+  },
+  {
+    "key": "travel",
+    "suche": "travel",
+    "de": [
+      "reise",
+      "reisen",
+      "urlaub",
+      "unterwegs",
+      "gepäck",
+      "ausflug"
+    ],
+    "en": [
+      "travel",
+      "travelling",
+      "trip",
+      "on-the-go",
+      "luggage",
+      "journey"
+    ],
+    "wikidata": "Q61509",
+    "gefunden": "travel — movement of people between geographical locations"
+  },
+  {
+    "key": "vacation",
+    "suche": "vacation",
+    "de": [
+      "urlaub",
+      "ferien",
+      "erholung",
+      "reise",
+      "strand",
+      "sommer"
+    ],
+    "en": [
+      "vacation",
+      "holiday",
+      "relaxation",
+      "trip",
+      "beach",
+      "summer"
+    ],
+    "wikidata": "Q116213",
+    "gefunden": "vacation — leave of absence from a regular occupation, or a specific trip or journey, usually for the purpose of recreation or tourism"
+  },
+  {
+    "key": "religious-holiday",
+    "suche": "religious holiday",
+    "de": [
+      "religiöses",
+      "fest",
+      "feiertag",
+      "tradition",
+      "glaube",
+      "familie"
+    ],
+    "en": [
+      "religious",
+      "holy-day",
+      "holiday",
+      "tradition",
+      "faith",
+      "family"
+    ],
+    "wikidata": "Q375011",
+    "gefunden": "religious holiday — time of special importance marked by adherents of some religion"
+  },
+  {
+    "key": "occupation",
+    "suche": "occupation",
+    "de": [
+      "beruf",
+      "arbeit",
+      "job",
+      "profi",
+      "professionell",
+      "arbeitsplatz"
+    ],
+    "en": [
+      "occupation",
+      "work",
+      "job",
+      "professional",
+      "pro",
+      "workplace"
+    ],
+    "wikidata": "Q12737077",
+    "gefunden": "occupation — label applied to a person based on an activity they participate in"
+  },
+  {
+    "key": "artisan",
+    "suche": "artisan",
+    "de": [
+      "handwerker",
+      "handwerk",
+      "meister",
+      "werkstatt",
+      "profi",
+      "robust"
+    ],
+    "en": [
+      "craftsman",
+      "trade",
+      "artisan",
+      "workshop",
+      "pro",
+      "rugged"
+    ],
+    "wikidata": "Q1294787",
+    "gefunden": "artisan — people who work in the arts, a handicraft, or a skilled trade, particularly when utilizing traditional or non-mechanized methods"
+  },
+  {
+    "key": "construction-worker",
+    "suche": "construction worker",
+    "de": [
+      "bauarbeiter",
+      "baustelle",
+      "bau",
+      "sicherheitsschuh",
+      "helm",
+      "robust"
+    ],
+    "en": [
+      "builder",
+      "construction",
+      "site",
+      "safety-boots",
+      "hard-hat",
+      "rugged"
+    ],
+    "wikidata": "Q811122",
+    "gefunden": "construction worker — person employed in the physical work during construction"
+  },
+  {
+    "key": "carpenter",
+    "suche": "carpenter",
+    "de": [
+      "tischler",
+      "schreiner",
+      "zimmermann",
+      "holz",
+      "werkstatt",
+      "säge"
+    ],
+    "en": [
+      "carpenter",
+      "joiner",
+      "woodworker",
+      "wood",
+      "workshop",
+      "saw"
+    ],
+    "wikidata": "Q154549",
+    "gefunden": "carpenter — profession; person who performs carpentry"
+  },
+  {
+    "key": "gardener",
+    "suche": "gardener",
+    "de": [
+      "gärtner",
+      "garten",
+      "landschaftsbau",
+      "pflanzen",
+      "rasen",
+      "pflege"
+    ],
+    "en": [
+      "gardener",
+      "garden",
+      "landscaping",
+      "plants",
+      "lawn",
+      "care"
+    ],
+    "wikidata": "Q758780",
+    "gefunden": "gardener — person who tends gardens"
+  },
+  {
+    "key": "farmer",
+    "suche": "farmer",
+    "de": [
+      "landwirt",
+      "bauer",
+      "hof",
+      "landwirtschaft",
+      "stall",
+      "feld"
+    ],
+    "en": [
+      "farmer",
+      "farm",
+      "agriculture",
+      "farming",
+      "barn",
+      "field"
+    ],
+    "wikidata": "Q131512",
+    "gefunden": "farmer — person engaged in agriculture, raising living organisms for food or raw materials"
+  },
+  {
+    "key": "cook",
+    "suche": "cook",
+    "de": [
+      "koch",
+      "köchin",
+      "küche",
+      "gastronomie",
+      "profi",
+      "kochen"
+    ],
+    "en": [
+      "cook",
+      "chef",
+      "kitchen",
+      "catering",
+      "professional",
+      "cooking"
+    ],
+    "wikidata": "Q156839",
+    "gefunden": "cook — occupation involving cooking food"
+  },
+  {
+    "key": "health-professional",
+    "suche": "health professional",
+    "de": [
+      "medizinisch",
+      "praxis",
+      "klinik",
+      "pflegepersonal",
+      "arzt",
+      "hygiene"
+    ],
+    "en": [
+      "healthcare",
+      "practice",
+      "clinic",
+      "medical-staff",
+      "doctor",
+      "hygiene"
+    ],
+    "wikidata": "Q11974939",
+    "gefunden": "health professional — individual who provides medical treatments and health advice"
+  },
+  {
+    "key": "nurse",
+    "suche": "nurse",
+    "de": [
+      "pflegekraft",
+      "pflege",
+      "krankenhaus",
+      "berufsbekleidung",
+      "schicht",
+      "bequem"
+    ],
+    "en": [
+      "nurse",
+      "nursing",
+      "hospital",
+      "scrubs",
+      "shift",
+      "comfortable"
+    ],
+    "wikidata": "Q186360",
+    "gefunden": "nurse — type of health care provider"
+  },
+  {
+    "key": "firefighter",
+    "suche": "firefighter",
+    "de": [
+      "feuerwehr",
+      "feuerwehrmann",
+      "einsatz",
+      "feuer",
+      "schutz",
+      "rettung"
+    ],
+    "en": [
+      "firefighter",
+      "fire-brigade",
+      "rescue",
+      "fire",
+      "protection",
+      "emergency"
+    ],
+    "wikidata": "Q107711",
+    "gefunden": "firefighter — rescuer trained to extinguish hazardous fires"
+  },
+  {
+    "key": "teacher",
+    "suche": "teacher",
+    "de": [
+      "lehrer",
+      "lehrerin",
+      "schule",
+      "unterricht",
+      "klasse",
+      "lernen"
+    ],
+    "en": [
+      "teacher",
+      "school",
+      "teaching",
+      "classroom",
+      "class",
+      "learning"
+    ],
+    "wikidata": "Q37226",
+    "gefunden": "teacher — person who helps others to acquire knowledge, competences or values"
+  },
+  {
+    "key": "student",
+    "suche": "student",
+    "de": [
+      "schüler",
+      "student",
+      "schule",
+      "studium",
+      "lernen",
+      "uni"
+    ],
+    "en": [
+      "student",
+      "pupil",
+      "school",
+      "study",
+      "learning",
+      "university"
+    ],
+    "wikidata": "Q48282",
+    "gefunden": "student — learner, or someone who attends an educational institution"
+  },
+  {
+    "key": "office-worker",
+    "suche": "office worker",
+    "de": [
+      "büro",
+      "büroarbeit",
+      "schreibtisch",
+      "homeoffice",
+      "arbeitsplatz",
+      "ergonomisch"
+    ],
+    "en": [
+      "office",
+      "desk",
+      "homeoffice",
+      "workplace",
+      "business",
+      "ergonomic"
+    ],
+    "wikidata": "Q31179608",
+    "gefunden": "office worker — person who works in an office"
+  },
+  {
+    "key": "artist",
+    "suche": "artist",
+    "de": [
+      "künstler",
+      "kunst",
+      "atelier",
+      "kreativ",
+      "malen",
+      "gestalten"
+    ],
+    "en": [
+      "artist",
+      "art",
+      "studio",
+      "creative",
+      "painting",
+      "design"
+    ],
+    "wikidata": "Q483501",
+    "gefunden": "artist — person who engages in any form of artistic creation or practice"
+  },
+  {
+    "key": "musician",
+    "suche": "musician",
+    "de": [
+      "musiker",
+      "musik",
+      "band",
+      "bühne",
+      "proberaum",
+      "instrument"
+    ],
+    "en": [
+      "musician",
+      "music",
+      "band",
+      "stage",
+      "rehearsal",
+      "instrument"
+    ],
+    "wikidata": "Q639669",
+    "gefunden": "musician — person who composes, conducts or performs music"
+  },
+  {
+    "key": "athlete",
+    "suche": "athlete",
+    "de": [
+      "sportler",
+      "athlet",
+      "profi",
+      "leistung",
+      "wettkampf",
+      "training"
+    ],
+    "en": [
+      "athlete",
+      "sportsman",
+      "pro",
+      "performance",
+      "competition",
+      "training"
+    ],
+    "wikidata": "Q2066131",
+    "gefunden": "athlete — person who participates regularly in a sport"
+  },
+  {
+    "key": "child",
+    "suche": "child",
+    "de": [
+      "kind",
+      "kinder",
+      "kindgerecht",
+      "sicher",
+      "spielen",
+      "familie"
+    ],
+    "en": [
+      "child",
+      "kids",
+      "children",
+      "child-friendly",
+      "safe",
+      "family"
+    ],
+    "wikidata": "Q7569",
+    "gefunden": "child — human between birth and puberty"
+  },
+  {
+    "key": "infant",
+    "suche": "infant",
+    "de": [
+      "baby",
+      "säugling",
+      "neugeboren",
+      "kleinkind",
+      "weich",
+      "sicher"
+    ],
+    "en": [
+      "baby",
+      "infant",
+      "newborn",
+      "toddler",
+      "soft",
+      "safe"
+    ],
+    "wikidata": "Q998",
+    "gefunden": "infant — very young offspring of a human"
+  },
+  {
+    "key": "adolescent",
+    "suche": "adolescent",
+    "de": [
+      "jugendlich",
+      "teenager",
+      "jugend",
+      "schule",
+      "trend",
+      "cool"
+    ],
+    "en": [
+      "teen",
+      "teenager",
+      "youth",
+      "school",
+      "trendy",
+      "cool"
+    ],
+    "wikidata": "Q1492760",
+    "gefunden": "teenager — young person (between 13 and 19 years old)"
+  },
+  {
+    "key": "elderly",
+    "suche": "old age",
+    "de": [
+      "senioren",
+      "älter",
+      "rentner",
+      "komfort",
+      "barrierefrei",
+      "einfach"
+    ],
+    "en": [
+      "seniors",
+      "elderly",
+      "older",
+      "comfort",
+      "accessible",
+      "easy"
+    ],
+    "wikidata": "Q191089",
+    "gefunden": "old age — consists of ages nearing or surpassing the life expectancy of human beings"
+  },
+  {
+    "key": "woman",
+    "suche": "woman",
+    "de": [
+      "damen",
+      "frau",
+      "frauen",
+      "weiblich",
+      "tailliert",
+      "damengröße"
+    ],
+    "en": [
+      "women",
+      "woman",
+      "ladies",
+      "female",
+      "fitted",
+      "womens"
+    ],
+    "wikidata": "Q467",
+    "gefunden": "woman (fest)"
+  },
+  {
+    "key": "man",
+    "suche": "man",
+    "de": [
+      "herren",
+      "mann",
+      "männer",
+      "männlich",
+      "herrengröße",
+      "lässig"
+    ],
+    "en": [
+      "men",
+      "man",
+      "gentlemen",
+      "male",
+      "mens",
+      "casual"
+    ],
+    "wikidata": "Q8441",
+    "gefunden": "man (fest)"
+  },
+  {
+    "key": "family",
+    "suche": "family",
+    "de": [
+      "familie",
+      "eltern",
+      "kinder",
+      "gemeinsam",
+      "familienfreundlich",
+      "zuhause"
+    ],
+    "en": [
+      "family",
+      "parents",
+      "kids",
+      "together",
+      "family-friendly",
+      "home"
+    ],
+    "wikidata": "Q8436",
+    "gefunden": "family — group of people (fest)"
+  },
+  {
+    "key": "container",
+    "suche": "container",
+    "de": [
+      "behälter",
+      "aufbewahrung",
+      "dose",
+      "deckel",
+      "füllen",
+      "lagern"
+    ],
+    "en": [
+      "container",
+      "storage",
+      "box",
+      "lid",
+      "filling",
+      "storing"
+    ],
+    "wikidata": "Q987767",
+    "gefunden": "container — device creating a partially or fully enclosed space that can be used to contain, store, and transport objects or materials"
+  },
+  {
+    "key": "packaging",
+    "suche": "packaging",
+    "de": [
+      "verpackung",
+      "verpackt",
+      "karton",
+      "versand",
+      "recycelbar",
+      "schutz"
+    ],
+    "en": [
+      "packaging",
+      "packed",
+      "carton",
+      "shipping",
+      "recyclable",
+      "protection"
+    ],
+    "wikidata": "Q207822",
+    "gefunden": "product packaging — products that enclose or protect other products for distribution, storage, and sale"
+  },
+  {
+    "key": "box",
+    "suche": "box",
+    "de": [
+      "box",
+      "kiste",
+      "schachtel",
+      "karton",
+      "deckel",
+      "aufbewahrung"
+    ],
+    "en": [
+      "box",
+      "crate",
+      "carton",
+      "case",
+      "lid",
+      "storage"
+    ],
+    "wikidata": "Q987767",
+    "gefunden": "container — device creating a partially or fully enclosed space that can be used to contain, store, and transport objects or materials"
+  },
+  {
+    "key": "bottle",
+    "suche": "bottle",
+    "de": [
+      "flasche",
+      "trinkflasche",
+      "verschluss",
+      "auslaufsicher",
+      "nachfüllbar",
+      "liter"
+    ],
+    "en": [
+      "bottle",
+      "water-bottle",
+      "cap",
+      "leakproof",
+      "refillable",
+      "litre"
+    ],
+    "wikidata": "Q80228",
+    "gefunden": "bottle — closable cylindrical container for transport and storage of liquids and gases"
+  },
+  {
+    "key": "basket",
+    "suche": "basket",
+    "de": [
+      "korb",
+      "geflochten",
+      "weide",
+      "henkel",
+      "aufbewahrung",
+      "einkaufen"
+    ],
+    "en": [
+      "basket",
+      "woven",
+      "wicker",
+      "handle",
+      "storage",
+      "shopping"
+    ],
+    "wikidata": "Q5372",
+    "gefunden": "basketball — team sport played on a court with baskets on either end"
+  },
+  {
+    "key": "storage-container",
+    "suche": "storage container",
+    "de": [
+      "aufbewahrungsbox",
+      "stapelbar",
+      "ordnung",
+      "deckel",
+      "lagern",
+      "stauraum"
+    ],
+    "en": [
+      "storage-box",
+      "stackable",
+      "organiser",
+      "lid",
+      "storing",
+      "space"
+    ],
+    "wikidata": "Q987767",
+    "gefunden": "container — device creating a partially or fully enclosed space that can be used to contain, store, and transport objects or materials"
+  },
+  {
+    "key": "food-container",
+    "suche": "food container",
+    "de": [
+      "frischhaltedose",
+      "brotdose",
+      "lunchbox",
+      "luftdicht",
+      "vorrat",
+      "lebensmittelecht"
+    ],
+    "en": [
+      "food-container",
+      "lunchbox",
+      "airtight",
+      "meal-prep",
+      "pantry",
+      "food-safe"
+    ],
+    "wikidata": "Q60739826",
+    "gefunden": "food storage container — container for storing food"
+  },
+  {
+    "key": "case",
+    "suche": "case",
+    "de": [
+      "etui",
+      "hülle",
+      "koffer",
+      "schutzhülle",
+      "tasche",
+      "schutz"
+    ],
+    "en": [
+      "case",
+      "cover",
+      "sleeve",
+      "protective-case",
+      "pouch",
+      "protection"
+    ],
+    "wikidata": "Q987767",
+    "gefunden": "container — device creating a partially or fully enclosed space that can be used to contain, store, and transport objects or materials"
+  },
+  {
+    "key": "waste-container",
+    "suche": "waste container",
+    "de": [
+      "mülleimer",
+      "abfall",
+      "müll",
+      "mülltrennung",
+      "deckel",
+      "recycling"
+    ],
+    "en": [
+      "bin",
+      "waste",
+      "trash",
+      "sorting",
+      "lid",
+      "recycling"
+    ],
+    "wikidata": "Q216530",
+    "gefunden": "waste container — container to collect and hold waste pending disposal"
+  },
+  {
+    "key": "office-supplies",
+    "suche": "office supplies",
+    "de": [
+      "bürobedarf",
+      "büro",
+      "ordner",
+      "papier",
+      "schreiben",
+      "organisieren"
+    ],
+    "en": [
+      "office-supplies",
+      "office",
+      "folder",
+      "paper",
+      "writing",
+      "organising"
+    ],
+    "wikidata": "Q2383811",
+    "gefunden": "office supply — items regularly used in offices by businesses and other organizations"
+  },
+  {
+    "key": "stationery",
+    "suche": "stationery",
+    "de": [
+      "schreibwaren",
+      "papeterie",
+      "notizbuch",
+      "briefpapier",
+      "stift",
+      "schreiben"
+    ],
+    "en": [
+      "stationery",
+      "notebook",
+      "notepaper",
+      "pen",
+      "writing",
+      "paper"
+    ],
+    "wikidata": "Q875696",
+    "gefunden": "stationery — variety of office or domestic supplies including paper"
+  },
+  {
+    "key": "writing-implement",
+    "suche": "writing implement",
+    "de": [
+      "schreibgerät",
+      "stift",
+      "kugelschreiber",
+      "füller",
+      "bleistift",
+      "schreiben"
+    ],
+    "en": [
+      "pen",
+      "ballpoint",
+      "fountain-pen",
+      "pencil",
+      "writing",
+      "ink"
+    ],
+    "wikidata": "Q121916",
+    "gefunden": "writing implement — tool used for writing"
+  },
+  {
+    "key": "school-supplies",
+    "suche": "school supplies",
+    "de": [
+      "schulbedarf",
+      "schule",
+      "heft",
+      "federmappe",
+      "lineal",
+      "schulranzen"
+    ],
+    "en": [
+      "school-supplies",
+      "school",
+      "exercise-book",
+      "pencil-case",
+      "ruler",
+      "schoolbag"
+    ],
+    "wikidata": "Q875696",
+    "gefunden": "stationery — variety of office or domestic supplies including paper"
+  },
+  {
+    "key": "art-supplies",
+    "suche": "art material",
+    "de": [
+      "künstlerbedarf",
+      "malen",
+      "farben",
+      "pinsel",
+      "leinwand",
+      "zeichnen"
+    ],
+    "en": [
+      "art-supplies",
+      "painting",
+      "paints",
+      "brushes",
+      "canvas",
+      "drawing"
+    ],
+    "wikidata": "Q15303351",
+    "gefunden": "art material — substance, raw ingredient, or tool that is utilized by an artist to create a work of art"
+  },
+  {
+    "key": "book",
+    "suche": "book",
+    "de": [
+      "buch",
+      "bücher",
+      "lesen",
+      "seiten",
+      "taschenbuch",
+      "gebunden"
+    ],
+    "en": [
+      "book",
+      "books",
+      "reading",
+      "pages",
+      "paperback",
+      "hardcover"
+    ],
+    "wikidata": "Q571",
+    "gefunden": "book — medium for recording information (words or images) typically on bound pages or more abstractly in electronic or audio form"
+  }
+]
