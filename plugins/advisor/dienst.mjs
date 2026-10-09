@@ -2,9 +2,11 @@
 // Token seines Beraters, und fragt journali über /api — ausgehend, nie umgekehrt. Nach aussen bietet er:
 //   GET  /widget.js           das Chat-Fenster zum Einbinden (ein <script>-Tag)
 //   GET  /api/info            Bezeichnung, Begrüssung, Sprachen
-//   POST /api/ask             Treffer, Facetten, Text — die Frage eines Besuchers
-//   GET  /api/product/{id}    ein Produkt
+//   POST /api/ask             eine Eingabe oder ein Klick im Gespräch — der Kern (kern/gespraech.mjs) versteht, journali wählt aus (09.10.2026)
+//   POST /api/event           ein Produkt gemerkt — für das Gedächtnis und das Lernen
+//   GET  /api/product/{id}    ein Produkt (mit ?gespraech=: es ist im Blick)
 //   GET  /api/variant/{id}    eine Variante ganz (08.10.2026)
+//   GET  /api/vocabulary, POST /api/select, POST /api/docs   die Schnittstelle Version 2, durchgereicht (pflegestruktur 44)
 //   POST /api/compare         zwei bis vier Produkte nebeneinander
 //   GET  /api/image/{id}      ein Bild eines Produkts
 //   GET  /api/doc/{id}        ein Dokument aus den Unterlagen des Beraters (09.10.2026) — PDF zum Ansehen, ohne Skripte
@@ -15,12 +17,14 @@
 // Protokolliert wird kein Inhalt einer Frage.
 import { createHash } from 'node:crypto'
 import { verarbeite } from './mcp.mjs'
+import { erstelleKern } from './kern/gespraech.mjs'
 
 export const MAX_KOERPER = 16 * 1024
 const VORGABE = { jeBesucherMinute: 20, jeBesucherTag: 300 }
 
 /**
- * @param {{ journali: string, advisor: string, token: string, widget?: string, fetch?: typeof fetch, proxy?: boolean, jetzt?: () => number, infoDauer?: number }} o
+ * @param {{ journali: string, advisor: string, token: string, widget?: string, fetch?: typeof fetch, proxy?: boolean, jetzt?: () => number, infoDauer?: number,
+ *           lernen?: { notiere: Function } | null }} o
  * @returns {(req: import('node:http').IncomingMessage, res: import('node:http').ServerResponse) => Promise<void>}
  */
 export function erstelle(o) {
@@ -32,12 +36,15 @@ export function erstelle(o) {
   const besucher = new Map()   // Adresse → { minute, nMinute, tag, nTag }
 
   const widgetTag = '"' + createHash('sha256').update(o.widget ?? '').digest('hex').slice(0, 16) + '"'
-  async function journali(pfad, body, methode = body === undefined ? 'GET' : 'POST') {
-    const r = await holen(basis + pfad, { method: methode, headers: body === undefined ? kopf : { ...kopf, 'content-type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body) })
+  async function journali(pfad, body, extra = {}) {
+    const r = await holen(basis + pfad, { method: body === undefined ? 'GET' : 'POST', headers: { ...kopf, ...(body === undefined ? {} : { 'content-type': 'application/json' }), ...extra }, body: body === undefined ? undefined : JSON.stringify(body) })
     const text = await r.text()
     let json = null; try { json = text ? JSON.parse(text) : null } catch { json = { error: text.slice(0, 200) } }
     return { status: r.status, json }
   }
+  // der Kern: versteht die Eingabe, hält das Gespräch (Arbeitsspeicher, 30 Minuten) und fragt journali über dieselbe Funktion
+  const kern = erstelleKern({ journali, jetzt, lernen: o.lernen ?? null })
+  const kennung = x => typeof x === 'string' && /^[A-Za-z0-9_-]{8,64}$/.test(x) ? x : null
 
   async function holeInfo() {
     if (info && jetzt() - infoAm < (o.infoDauer ?? 60_000)) return info
@@ -114,7 +121,9 @@ export function erstelle(o) {
         const warten = zaehle(adresse(req), i.limits)
         if (warten) return sende(res, 429, { jsonrpc: '2.0', error: { code: -32000, message: 'Too many requests' } }, { 'retry-after': String(warten) })
         const nachricht = await koerper(req)
-        const frage = (art, a) => art === 'product' ? journali('product/' + encodeURIComponent(a.id) + (a.locale ? '?locale=' + encodeURIComponent(a.locale) : '')) : journali(art, a)
+        // search_products über den Kern ohne Gespräch: ein Agent bringt sein Gedächtnis selbst mit
+        const frage = async (art, a) => art === 'ask' ? { status: 200, json: await kern.suche({ q: a.q, filter: a.filter, locale: a.locale, limit: a.take }) }
+          : art === 'product' ? journali('product/' + encodeURIComponent(a.id) + (a.locale ? '?locale=' + encodeURIComponent(a.locale) : '')) : journali(art, a)
         const r = await verarbeite(nachricht, name => req.headers[name], frage)
         return sende(res, r.status, r.json, cors)
       }
@@ -138,25 +147,39 @@ export function erstelle(o) {
         return res.end(Buffer.from(await r.arrayBuffer()))
       }
       const produkt = /^\/api\/(product|variant)\/([^/]+)$/.exec(pfad)
-      const wege = { '/api/ask': 'POST', '/api/compare': 'POST' }
+      const wege = { '/api/ask': 'POST', '/api/compare': 'POST', '/api/event': 'POST', '/api/select': 'POST', '/api/docs': 'POST', '/api/vocabulary': 'GET' }
       if (!(req.method === 'GET' && produkt) && wege[pfad] !== req.method) return sende(res, 404, { error: 'Nicht gefunden.' }, cors)
+      if (pfad === '/api/vocabulary') {
+        const loc = url.searchParams.get('locale')
+        const r = await journali('vocabulary' + (loc ? '?locale=' + encodeURIComponent(loc) : ''))
+        return sende(res, r.status, r.json, cors)
+      }
       const warten = zaehle(adresse(req), i.limits)
       if (warten) return sende(res, 429, { error: 'Zu viele Fragen in kurzer Zeit.' }, { ...cors, 'retry-after': String(warten) })
       if (produkt) {
         const loc = url.searchParams.get('locale')
         const r = await journali(produkt[1] + '/' + encodeURIComponent(decodeURIComponent(produkt[2])) + (loc ? '?locale=' + encodeURIComponent(loc) : ''))
+        // geöffnet: das Produkt ist im Blick des Gesprächs — eine Frage danach („ist es wasserdicht?“) gilt ihm
+        if (r.status === 200 && kennung(url.searchParams.get('gespraech'))) kern.merke(url.searchParams.get('gespraech'), { id: r.json?.id ?? decodeURIComponent(produkt[2]), name: r.json?.name ?? null })
         return sende(res, r.status, r.json, cors)
       }
       const b = await koerper(req)
-      const r = pfad === '/api/ask'
-        ? await journali('ask', { q: String(b.q ?? '').slice(0, 300), filter: Array.isArray(b.filter) ? b.filter.slice(0, 10) : [], locale: b.locale, take: b.take,
-            // ein Gespräch: die gesammelten Wörter und die früheren Eingaben (08.10.2026)
-            woerter: Array.isArray(b.woerter) ? b.woerter.slice(-12).map(w => String(w).slice(0, 40)) : [], verlauf: Array.isArray(b.verlauf) ? b.verlauf.slice(-6).map(v => String(v).slice(0, 300)) : [],
-            // das Produkt im Blick (09.10.2026): eine Frage dazu beantworten seine Werte
-            ...(typeof b.fokus === 'string' && b.fokus.length <= 80 ? { fokus: b.fokus } : {}) })
+      if (pfad === '/api/ask') {
+        const schritt = b.schritt && typeof b.schritt === 'object' && !Array.isArray(b.schritt) ? b.schritt : null
+        const antwort = await kern.antworte({ gespraech: kennung(b.gespraech), q: String(b.q ?? '').slice(0, 300), schritt, locale: typeof b.locale === 'string' ? b.locale.slice(0, 10) : null })
+        return sende(res, 200, antwort, cors)
+      }
+      if (pfad === '/api/event') {
+        if (kennung(b.gespraech) && typeof b.id === 'string' && b.id.length <= 80 && ['gemerkt'].includes(b.art)) kern.merke(b.gespraech, { id: b.id, name: typeof b.name === 'string' ? b.name.slice(0, 200) : null, art: b.art })
+        return sende(res, 204, undefined, cors)
+      }
+      // die Schnittstelle Version 2, durchgereicht — ohne KI (sie kostet), die nur der Kern fragt
+      const r = pfad === '/api/select' ? await journali('select', b)
+        : pfad === '/api/docs' ? await journali('docs', b)
         : await journali('compare', { ids: Array.isArray(b.ids) ? b.ids.slice(0, 4) : [], locale: b.locale })
       return sende(res, r.status, r.json, cors)
     } catch (e) {
+      if (e.status && e.status < 500 && e.json) return sende(res, e.status, e.json)   // eine Antwort von journali (Tagesgrenze, Fehler am Berater) geht durch
       const status = e.status ?? 502
       if (status >= 500) console.error(`advisor: ${req.method} ${pfad}: ${e.message}`)
       return sende(res, status, { error: status >= 500 ? 'journali ist nicht erreichbar.' : e.message })

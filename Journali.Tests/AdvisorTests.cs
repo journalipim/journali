@@ -29,6 +29,18 @@ public class AdvisorTests
         public string Medien => Path.Combine(Dir, "media");
         public Dictionary<string, string> Ids = new();
         public string Pub = "";
+        public AdvisorKern Kern = null!;
+        /// <summary>Die Kennung des Gesprächs, in dem <see cref="Sag"/> fragt — <see cref="NeuesGespraech"/> fängt ein neues an.</summary>
+        public string Gespraech = Guid.NewGuid().ToString("N");
+        public void NeuesGespraech() => Gespraech = Guid.NewGuid().ToString("N");
+
+        /// <summary>Das Verzeichnis plugins/ des Repos — dort liegt der Kern (plugins/advisor/kern/prozess.mjs).</summary>
+        public static string PluginVerzeichnis()
+        {
+            for (var d = new DirectoryInfo(AppContext.BaseDirectory); d is not null; d = d.Parent)
+                if (File.Exists(Path.Combine(d.FullName, "plugins", "advisor", "plugin.json"))) return Path.Combine(d.FullName, "plugins");
+            throw new DirectoryNotFoundException("plugins/advisor");
+        }
 
         /// <param name="anmeldung">mit Anwendern und der Sperre davor — sonst offen wie ein Server ohne Anwender</param>
         public static async Task<Welt> Neu(bool plugin = true, bool anmeldung = false, AdvisorApi.Definition? def = null)
@@ -45,6 +57,8 @@ public class AdvisorTests
             b.Services.AddSingleton(new Embedder(w.Dir, Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance) { Eingeschaltet = () => false });
             b.Services.AddSingleton<IMediaStore>(new FileMediaStore(w.Medien));
             b.Services.AddSingleton(new DocText(null));   // ohne Datenbank: kein Dokumentindex, die Unterlagen bleiben leer
+            w.Kern = new AdvisorKern(PluginVerzeichnis(), Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance);
+            b.Services.AddSingleton(w.Kern);
             w.App = b.Build();
             if (anmeldung) w.App.Use(Auth.Middleware(w.C, w.Dir));
             else w.App.Use(async (ctx, next) => { ctx.Request.Headers["X-Actor"] = "u"; await next(); });
@@ -161,11 +175,19 @@ public class AdvisorTests
             return (r.StatusCode, text.Length > 0 && (text.TrimStart().StartsWith('{') || text.TrimStart().StartsWith('[')) ? JsonDocument.Parse(text).RootElement : default);
         }
 
-        public Task<(HttpStatusCode Status, JsonElement Json)> Frage(string body, string? token = null) => Post("/api/advisor/werkzeug/ask", body, token);
+        public Task<(HttpStatusCode Status, JsonElement Json)> Auswahl(object body, string? token = null) => Post("/api/advisor/werkzeug/select", JsonSerializer.Serialize(body), token);
+
+        /// <summary>Eine Eingabe im Gespräch der Vorschau — der Kern als Kindprozess versteht sie und fragt journali, wie im Dienst.</summary>
+        public async Task<JsonElement> Sag(string q, object? schritt = null, string? locale = null)
+        {
+            var (status, j) = await Post("/api/advisor/werkzeug/preview", JsonSerializer.Serialize(new { gespraech = Gespraech, q, schritt, locale }));
+            Assert.True(status == HttpStatusCode.OK, $"Vorschau: {status} {j}");
+            return j;
+        }
 
         public async ValueTask DisposeAsync()
         {
-            await App.StopAsync(); await App.DisposeAsync(); Http.Dispose();
+            await App.StopAsync(); await App.DisposeAsync(); Http.Dispose(); Kern?.Dispose();
             try { Directory.Delete(Dir, true); } catch (IOException) { }
         }
     }
@@ -178,7 +200,7 @@ public class AdvisorTests
     public async Task Ohne_Frage_zeigt_er_was_der_Baum_ausleitet_und_die_Rolle_sieht()
     {
         await using var w = await Welt.Neu();
-        var (status, j) = await w.Frage("""{"q":""}""");
+        var (status, j) = await w.Auswahl(new { });
         Assert.Equal(HttpStatusCode.OK, status);
         Assert.Equal(3, j.GetProperty("total").GetInt32());
         Assert.Equal(["Akkuschrauber kompakt", "Bohrhammer Pro", "Winkelschleifer"], Namen(j).Order().ToList());   // nicht der Prototyp (Rolle), nicht der neue (Freigabe)
@@ -188,10 +210,11 @@ public class AdvisorTests
     public async Task Eine_Frage_findet_ueber_die_Woerter_und_der_Name_steht_vorn()
     {
         await using var w = await Welt.Neu();
-        var (_, j) = await w.Frage("""{"q":"Ich suche einen Bohrhammer"}""");
+        var j = await w.Sag("Ich suche einen Bohrhammer");
         Assert.Equal("Bohrhammer Pro", Namen(j).First());
         Assert.DoesNotContain("Prototyp Bohrhammer", Namen(j));
         Assert.DoesNotContain("Bohrhammer Neu", Namen(j));
+        Assert.Equal("1 Produkt passt zu „bohrhammer“.", j.GetProperty("texte").GetProperty("satz").GetString());
         // ohne Vektoren sagt die Antwort, warum es nur die Wörter waren
         Assert.Equal(JsonValueKind.String, j.GetProperty("warning").ValueKind);
     }
@@ -200,18 +223,19 @@ public class AdvisorTests
     public async Task Die_Sprache_waehlt_den_Namen_und_eine_unbekannte_faellt_auf_die_erste_zurueck()
     {
         await using var w = await Welt.Neu();
-        var (_, en) = await w.Frage("""{"q":"bohrhammer","locale":"en-GB"}""");
+        var en = await w.Sag("bohrhammer", locale: "en-GB");
         Assert.Equal("en", en.GetProperty("locale").GetString());
         Assert.Equal("Bohrhammer Pro EN", Namen(en).First());
-        var (_, fr) = await w.Frage("""{"q":"","locale":"fr"}""");
-        Assert.Equal("de", fr.GetProperty("locale").GetString());
+        Assert.Equal("1 product matches \"bohrhammer\".", en.GetProperty("texte").GetProperty("satz").GetString());
+        w.NeuesGespraech();
+        Assert.Equal("de", (await w.Sag("", locale: "fr")).GetProperty("locale").GetString());
     }
 
     [Fact]
     public async Task Die_Facetten_nennen_was_die_Treffer_unterscheidet_und_ein_Filter_grenzt_ein()
     {
         await using var w = await Welt.Neu();
-        var (_, j) = await w.Frage("""{"q":""}""");
+        var (_, j) = await w.Auswahl(new { });
         var facetten = j.GetProperty("facets").EnumerateArray().ToDictionary(f => f.GetProperty("key").GetString()!);
         Assert.Contains("color", facetten.Keys);
         Assert.Contains("leistung", facetten.Keys);
@@ -221,24 +245,20 @@ public class AdvisorTests
         Assert.Equal("Rot", rot.GetProperty("label").GetString());
         Assert.Equal("range", facetten["leistung"].GetProperty("type").GetString());
         Assert.Equal(300m, facetten["leistung"].GetProperty("min").GetDecimal());
-
-        var (_, nurRot) = await w.Frage("""{"q":"","filter":[{"attribute":"color","value":"red"}]}""");
+        // ein Klick auf einen Wert grenzt im Gespräch ein
+        var nurRot = await w.Sag("", new { art = "filter", attribute = "color", op = "eq", value = "red" });
         Assert.Equal(["Bohrhammer Pro", "Winkelschleifer"], Namen(nurRot).Order().ToList());
         Assert.DoesNotContain(nurRot.GetProperty("facets").EnumerateArray(), f => f.GetProperty("key").GetString() == "color");   // schon gefiltert
         Assert.Equal("Rot", nurRot.GetProperty("filter").EnumerateArray().Single().GetProperty("valueLabel").GetString());
-
-        var (_, klein) = await w.Frage("""{"q":"","filter":[{"attribute":"leistung","op":"le","value":"800"}]}""");
+        var (_, klein) = await w.Auswahl(new { angaben = new[] { new { attribute = "leistung", op = "le", value = "800" } } });
         Assert.Equal(["Akkuschrauber kompakt", "Bohrhammer Pro"], Namen(klein).Order().ToList());
-        // ein Filter auf ein Attribut ausserhalb der Sicht zählt nicht — er verrät nichts über interne Werte
-        var (_, intern) = await w.Frage("""{"q":"","filter":[{"attribute":"einkauf","value":"99"}]}""");
-        Assert.Equal(3, intern.GetProperty("total").GetInt32());
     }
 
     [Fact]
     public async Task Eine_Karte_zeigt_nur_Werte_der_Sicht()
     {
         await using var w = await Welt.Neu();
-        var (_, j) = await w.Frage("""{"q":"Winkelschleifer"}""");
+        var (_, j) = await w.Auswahl(new { art = new[] { "winkelschleifer" } });
         var karte = j.GetProperty("hits").EnumerateArray().First();
         var werte = karte.GetProperty("values").EnumerateArray().Select(v => v.GetProperty("key").GetString()).ToList();
         Assert.Contains("leistung", werte);
@@ -308,7 +328,7 @@ public class AdvisorTests
         var gilt = w.Bild("bohr");
         var abgelaufen = w.Bild("schleifer", bisGestern: true);
         var geheim = w.Bild("geheim");
-        var (_, j) = await w.Frage("""{"q":""}""");
+        var (_, j) = await w.Auswahl(new { });
         var bilder = j.GetProperty("hits").EnumerateArray().ToDictionary(h => h.GetProperty("name").GetString()!, h => h.GetProperty("image").ValueKind == JsonValueKind.String ? h.GetProperty("image").GetString() : null);
         Assert.Equal(gilt, bilder["Bohrhammer Pro"]);
         Assert.Null(bilder["Winkelschleifer"]);
@@ -326,9 +346,9 @@ public class AdvisorTests
     {
         await using var w = await Welt.Neu();
         w.Setze(w.Standard() with { Limits = new AdvisorApi.Grenzen(JeTag: 2) });
-        Assert.Equal(HttpStatusCode.OK, (await w.Frage("""{"q":"a"}""")).Status);
-        Assert.Equal(HttpStatusCode.OK, (await w.Frage("""{"q":"b"}""")).Status);
-        var (status, j) = await w.Frage("""{"q":"c"}""");
+        Assert.Equal(HttpStatusCode.OK, (await w.Auswahl(new { satz = "a" })).Status);
+        Assert.Equal(HttpStatusCode.OK, (await w.Auswahl(new { satz = "b" })).Status);
+        var (status, j) = await w.Auswahl(new { satz = "c" });
         Assert.Equal((HttpStatusCode)429, status);
         Assert.Contains("werkzeug", j.GetProperty("error").GetString());
     }
@@ -337,7 +357,7 @@ public class AdvisorTests
     public async Task Eine_zu_lange_Frage_wird_abgewiesen()
     {
         await using var w = await Welt.Neu();
-        var (status, _) = await w.Frage(JsonSerializer.Serialize(new { q = new string('x', AdvisorApi.MaxFrage + 1) }));
+        var (status, _) = await w.Auswahl(new { satz = new string('x', AdvisorApi.MaxFrage + 1) });
         Assert.Equal(HttpStatusCode.BadRequest, status);
     }
 
@@ -346,7 +366,7 @@ public class AdvisorTests
     {
         await using var w = await Welt.Neu();
         w.Setze(w.Standard() with { View = "gibtsnicht", Origins = ["https://shop.example/pfad"] });
-        var (status, j) = await w.Frage("""{"q":""}""");
+        var (status, j) = await w.Auswahl(new { });
         Assert.Equal(HttpStatusCode.BadRequest, status);
         Assert.Contains("keine Sicht", j.GetProperty("error").GetString());
         var liste = (await w.Get("/api/advisor")).Json.EnumerateArray().Single();
@@ -359,9 +379,9 @@ public class AdvisorTests
     public async Task Ohne_das_Plugin_gibt_es_keinen_Berater_und_einen_unbekannten_auch_nicht()
     {
         await using (var w = await Welt.Neu(plugin: false))
-            Assert.Equal(HttpStatusCode.BadRequest, (await w.Frage("""{"q":""}""")).Status);
+            Assert.Equal(HttpStatusCode.BadRequest, (await w.Auswahl(new { })).Status);
         await using var w2 = await Welt.Neu();
-        Assert.Equal(HttpStatusCode.NotFound, (await w2.Post("/api/advisor/gibtsnicht/ask", """{"q":""}""")).Status);
+        Assert.Equal(HttpStatusCode.NotFound, (await w2.Post("/api/advisor/gibtsnicht/select", "{}")).Status);
     }
 
     [Fact]
@@ -370,11 +390,11 @@ public class AdvisorTests
         await using var w = await Welt.Neu();
         var manifest = """{"key":"advisor","acknowledge":{"version":"2026-10-08","title":{"de":"Öffentlich"},"points":[{"de":"Punkt"}]}}""";
         w.C.With((_, _, write) => write("t", Plugins.Stream + AdvisorApi.Plugin, Types.PluginInstalled, new PluginInstalled("1", manifest), null));
-        var (status, j) = await w.Frage("""{"q":""}""");
+        var (status, j) = await w.Auswahl(new { });
         Assert.Equal(HttpStatusCode.BadRequest, status);
         Assert.Contains("Hinweis", j.GetProperty("error").GetString());
         w.C.With((_, _, write) => write("t", Plugins.Stream + AdvisorApi.Plugin, Types.PluginAcknowledged, new PluginAcknowledged("2026-10-08", "Öffentlich"), null));
-        Assert.Equal(HttpStatusCode.OK, (await w.Frage("""{"q":""}""")).Status);
+        Assert.Equal(HttpStatusCode.OK, (await w.Auswahl(new { })).Status);
     }
 
     // ---- KI: warum sie nicht antwortet, sieht die Vorschau, nicht der Besucher (09.10.2026)
@@ -382,11 +402,12 @@ public class AdvisorTests
     [Fact]
     public async Task Antwortet_die_KI_nicht_sieht_die_Vorschau_den_Grund_der_Besucher_nicht()
     {
-        // ein angemeldeter Anwender (die Vorschau): der Grund steht dabei — das Team hat keinen KI-Schlüssel
-        await using (var w = await Welt.Neu())
+        // die Vorschau (der Kern als Kindprozess): der Grund steht dabei — das Team hat keinen KI-Schlüssel
+        await using (var w = await Welt.Neu(anmeldung: true))
         {
             w.Setze(w.Standard() with { Ki = true, Team = "de" });
-            var (_, j) = await w.Frage("""{"q":"Bohrhammer"}""");
+            var p = Auth.AdvisorProzessToken("werkzeug");
+            var (_, j) = await w.Post("/api/advisor/werkzeug/ki", """{"auftrag":"antwort","satz":"Bohrhammer"}""", p);
             Assert.StartsWith("KI nicht verfügbar: ", j.GetProperty("warning").GetString());
             Assert.Contains("Deutschland", j.GetProperty("warning").GetString());
         }
@@ -394,7 +415,7 @@ public class AdvisorTests
         await using var v = await Welt.Neu(anmeldung: true);
         v.Setze(v.Standard() with { Ki = true, Team = "de" });
         var token = Auth.AdvisorTokenAusgeben(v.Dir, "werkzeug", "Dienst");
-        var (_, k) = await v.Frage("""{"q":"Bohrhammer"}""", token);
+        var (_, k) = await v.Post("/api/advisor/werkzeug/ki", """{"auftrag":"antwort","satz":"Bohrhammer"}""", token);
         Assert.Equal("KI nicht verfügbar", k.GetProperty("warning").GetString());
     }
 
@@ -406,19 +427,20 @@ public class AdvisorTests
         await using var w = await Welt.Neu(anmeldung: true);
         var token = Auth.AdvisorTokenAusgeben(w.Dir, "werkzeug", "Dienst");
         Assert.StartsWith("ja_", token);
-        Assert.Equal(HttpStatusCode.OK, (await w.Frage("""{"q":"bohrhammer"}""", token)).Status);
+        Assert.Equal(HttpStatusCode.OK, (await w.Auswahl(new { art = new[] { "bohrhammer" } }, token)).Status);
         Assert.Equal(HttpStatusCode.OK, (await w.Get("/api/advisor/werkzeug/info", token)).Status);
         Assert.Equal(HttpStatusCode.OK, (await w.Get($"/api/advisor/werkzeug/product/{w.Ids["bohr"]}", token)).Status);
-        // nichts sonst: nicht der Baum, nicht die Definitionen, nicht die Token, nicht ein anderer Berater
+        // nichts sonst: nicht der Baum, nicht die Definitionen, nicht die Token, nicht ein anderer Berater, nicht die Vorschau
         foreach (var pfad in new[] { "/api/tree", "/api/advisor", "/api/advisor/werkzeug/tokens", "/api/advisor/anderer/info", "/api/plugins/advisor/data" })
             Assert.Equal(HttpStatusCode.Forbidden, (await w.Get(pfad, token)).Status);
         Assert.Equal(HttpStatusCode.Forbidden, (await w.Post("/api/advisor/werkzeug/tokens", "{}", token)).Status);
+        Assert.Equal(HttpStatusCode.Forbidden, (await w.Post("/api/advisor/werkzeug/preview", "{}", token)).Status);
         // ohne Token keine Antwort, mit widerrufenem auch nicht
-        Assert.Equal(HttpStatusCode.Unauthorized, (await w.Frage("""{"q":""}""")).Status);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await w.Auswahl(new { })).Status);
         var id = Auth.AdvisorTokens(w.Dir, "werkzeug").Single().Id;
         Assert.Equal(1, Auth.AdvisorTokenWiderrufen(w.Dir, "werkzeug", id));
         Auth.Vergessen();
-        Assert.Equal(HttpStatusCode.Unauthorized, (await w.Frage("""{"q":""}""", token)).Status);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await w.Auswahl(new { }, token)).Status);
     }
 
     [Fact]
@@ -427,14 +449,15 @@ public class AdvisorTests
         await using var w = await Welt.Neu(anmeldung: true);
         w.Setze(w.Standard() with { Role = "admin" });
         var token = Auth.AdvisorTokenAusgeben(w.Dir, "werkzeug", "Dienst");
-        var (_, j) = await w.Frage("""{"q":""}""", token);
+        var (_, j) = await w.Auswahl(new { }, token);
         Assert.Contains("Prototyp Bohrhammer", Namen(j));                     // admin sieht den Prototyp — die Freigabe gilt trotzdem
         Assert.DoesNotContain("Bohrhammer Neu", Namen(j));
     }
 
     [Theory]
     [InlineData("GET", "/api/advisor/werkzeug/info", true)]
-    [InlineData("POST", "/api/advisor/werkzeug/ask", true)]
+    [InlineData("POST", "/api/advisor/werkzeug/ask", false)]
+    [InlineData("POST", "/api/advisor/werkzeug/preview", false)]
     [InlineData("GET", "/api/advisor/werkzeug/variant/v-1", true)]
     [InlineData("POST", "/api/advisor/werkzeug/compare", true)]
     [InlineData("GET", "/api/advisor/werkzeug/product/p-1", true)]
@@ -442,7 +465,7 @@ public class AdvisorTests
     [InlineData("GET", "/api/advisor/werkzeug/doc/m-1", true)]
     [InlineData("GET", "/API/ADVISOR/WERKZEUG/INFO", true)]
     [InlineData("GET", "/api/advisor/werkzeug/product/p-1/x", false)]
-    [InlineData("GET", "/api/advisor/werkzeug/ask", false)]
+    [InlineData("GET", "/api/advisor/werkzeug/select", false)]
     [InlineData("POST", "/api/advisor/werkzeug/tokens", false)]
     [InlineData("GET", "/api/advisor/werkzeug", false)]
     [InlineData("GET", "/api/advisor/werkzeugx/info", false)]
@@ -451,7 +474,8 @@ public class AdvisorTests
         Assert.Equal(erlaubt, AdvisorApi.FuerToken(pfad, methode, "werkzeug"));
 
     [Theory]
-    [InlineData("POST", "/api/advisor/werkzeug/ask", Rights.Read)]
+    [InlineData("POST", "/api/advisor/werkzeug/select", Rights.Read)]
+    [InlineData("POST", "/api/advisor/werkzeug/preview", Rights.Read)]
     [InlineData("POST", "/api/advisor/werkzeug/compare", Rights.Read)]
     [InlineData("GET", "/api/advisor", Rights.Read)]
     [InlineData("POST", "/api/advisor/werkzeug/tokens", Rights.Plugins)]
@@ -495,43 +519,9 @@ public class AdvisorTests
     static List<(string Attribute, string Op, string Value)> Filter(JsonElement j) =>
         j.GetProperty("filter").EnumerateArray().Select(f => (f.GetProperty("attribute").GetString()!, f.GetProperty("op").GetString()!, f.GetProperty("value").GetString()!)).ToList();
 
-    [Fact]
-    public void Angaben_im_Text_werden_Filter_der_Rest_bleibt_Suchwort()
-    {
-        var katalog = new Catalog(new MemoryJournal()); katalog.Rebuild(); katalog.SeedMissing();
-        var model = katalog.Lesen((m, _) => m);   // das Modell der Saat: Farben als Liste
-        AttributeDefinition leistung = new("leistung", Labels.Of("Leistung", "Power"), AttributeTypes.Decimal, Unit: "W");
-        AttributeDefinition dicht = new("wasserdicht", Labels.Of("Wasserdicht", "Waterproof"), AttributeTypes.Boolean);
-        var attr = new List<AttributeDefinition> { leistung, dicht, model.Attributes["color"] };
 
-        var (f, rest) = AdvisorApi.Erkenne(model, attr, "Bohrhammer unter 900 W, wasserdicht und rot", "de");
-        Assert.Equal([("leistung", "le", "900"), ("wasserdicht", "eq", "true"), ("color", "eq", "red")],
-            f.Select(x => (x.Def.Key, x.Op, x.Value)).OrderBy(x => x.Key == "leistung" ? 0 : x.Key == "wasserdicht" ? 1 : 2).ToList());
-        Assert.Equal(["bohrhammer"], AdvisorApi.Woerter(rest));
 
-        Assert.Equal(("wasserdicht", "false"), AdvisorApi.Erkenne(model, attr, "nicht wasserdicht", "de").Filter.Select(x => (x.Def.Key, x.Value)).Single());
-        Assert.Equal(("leistung", "ge", "1.5"), AdvisorApi.Erkenne(model, attr, "ab 1,5 W", "de").Filter.Select(x => (x.Def.Key, x.Op, x.Value)).Single());
-        Assert.Empty(AdvisorApi.Erkenne(model, attr, "900 W", "de").Filter);   // ohne „unter“ oder „ab“ ist eine Zahl kein Filter
 
-        // zwei Zahlenattribute mit derselben Einheit: nur mit Bezeichnung im Text
-        AttributeDefinition laenge = new("laenge", Labels.Of("Länge", "Length"), AttributeTypes.Decimal, Unit: "cm"), breite = new("breite", Labels.Of("Breite", "Width"), AttributeTypes.Decimal, Unit: "cm");
-        Assert.Empty(AdvisorApi.Erkenne(model, [laenge, breite], "bis 50 cm", "de").Filter);
-        Assert.Equal("breite", AdvisorApi.Erkenne(model, [laenge, breite], "Breite bis 50 cm", "de").Filter.Single().Def.Key);
-    }
-
-    [Fact]
-    public void Leicht_ist_wenig_Masse_am_Zahlenattribut_dessen_Einheit_Masse_misst()
-    {
-        var katalog = new Catalog(new MemoryJournal()); katalog.Rebuild(); katalog.SeedMissing();
-        var model = katalog.Lesen((m, _) => m);   // die Saat kennt kg (mass) und l (volume)
-        AttributeDefinition gewicht = new("gewicht", Labels.Of("Gewicht", "Weight"), AttributeTypes.Decimal, Unit: "kg");
-        AttributeDefinition volumen = new("volumen", Labels.Of("Volumen", "Volume"), AttributeTypes.Integer, Unit: "l");
-        var (f, rest) = AdvisorApi.Erkenne(model, [gewicht, volumen], "ein leichtes Zelt, eher gross", "de");
-        Assert.Equal([("gewicht", "low", "leichtes"), ("volumen", "high", "gross")], f.Select(x => (x.Def.Key, x.Op, x.Value)).ToList());
-        Assert.Equal(["zelt", "eher"], AdvisorApi.Woerter(rest));
-        Assert.Empty(AdvisorApi.Erkenne(model, [volumen], "leicht", "de").Filter);   // ohne Attribut für Masse kein Filter
-        Assert.Equal("leichtes", AdvisorApi.AngabeText(model, gewicht, "low", "leichtes", "de"));
-    }
 
     [Fact]
     public async Task Leicht_sind_die_leichtere_Haelfte_der_Treffer_die_leichtesten_zuerst()
@@ -544,56 +534,47 @@ public class AdvisorTests
                 write("t", w.Ids[k], Types.AttributeSet, new AttributeSet("gewicht", null, null, kg), null);
             return 0;
         });
-        var (_, j) = await w.Frage("""{"q":"leicht"}""");
+        var j = await w.Sag("leicht");
         Assert.Equal(["Akkuschrauber kompakt", "Winkelschleifer"], Namen(j));
         var echo = j.GetProperty("filter").EnumerateArray().Single();
         Assert.Equal(("gewicht", "low", "leicht"), (echo.GetProperty("attribute").GetString(), echo.GetProperty("op").GetString(), echo.GetProperty("valueLabel").GetString()));
-        // die Angabe geht mit der nächsten Frage zurück und gilt weiter
-        var (_, k2) = await w.Frage("""{"q":"","filter":[{"attribute":"gewicht","op":"low","value":"leicht"}]}""");
-        Assert.Equal(["Akkuschrauber kompakt", "Winkelschleifer"], Namen(k2));
-    }
-
-    [Fact]
-    public void Ein_Tippfehler_wird_zum_naechsten_Wort_eines_Produktnamens()
-    {
-        var namen = new HashSet<string> { "zelt", "hose", "isomatte", "bohrhammer" };
-        Assert.Equal("zelt", AdvisorApi.Korrektur("zeit", namen));
-        Assert.Equal("bohrhammer", AdvisorApi.Korrektur("bohrhamer", namen));
-        Assert.Equal("isomatte", AdvisorApi.Korrektur("isomtate", namen));   // zwei Nachbarn vertauscht
-        Assert.Null(AdvisorApi.Korrektur("zelte", namen));                   // gebeugt steht es im Namen
-        Assert.Null(AdvisorApi.Korrektur("hut", namen));                     // zu kurz
-        Assert.Null(AdvisorApi.Korrektur("hoxe", new HashSet<string> { "hose", "hole" }));   // zwei gleich nah
+        // die Angabe bleibt im Gespräch und gilt weiter
+        Assert.Equal(["Akkuschrauber kompakt", "Winkelschleifer"], Namen(await w.Sag("")));
     }
 
     [Fact]
     public async Task Ein_Wort_in_keinem_Produkt_liest_der_Berater_als_Produktname_und_sagt_es()
     {
         await using var w = await Welt.Neu();
-        var (_, j) = await w.Frage("""{"q":"bohrhanmer"}""");
+        var j = await w.Sag("bohrhanmer");
         Assert.Contains("Bohrhammer Pro", Namen(j));
         var k = j.GetProperty("corrected").EnumerateArray().Single();
         Assert.Equal(("bohrhanmer", "bohrhammer"), (k.GetProperty("from").GetString(), k.GetProperty("to").GetString()));
         Assert.Empty(j.GetProperty("unknown").EnumerateArray());
         Assert.Contains("bohrhammer", j.GetProperty("words").EnumerateArray().Select(x => x.GetString()));
+        Assert.Contains("„bohrhanmer“ habe ich als „bohrhammer“ gelesen.", j.GetProperty("texte").GetProperty("hinweise").EnumerateArray().Select(x => x.GetString()));
     }
 
     [Fact]
     public async Task Eine_Frage_zum_Produkt_im_Blick_beantworten_seine_Werte()
     {
         await using var w = await Welt.Neu();
-        var bohr = w.Ids["bohr"];
-        var (_, j) = await w.Frage(JsonSerializer.Serialize(new { q = "ist er wasserdicht?", fokus = bohr }));
+        var eins = await w.Sag("Bohrhammer");                                   // ein Treffer: er ist im Blick
+        Assert.Equal(1, eins.GetProperty("total").GetInt32());
+        var j = await w.Sag("ist er wasserdicht?");
         var about = j.GetProperty("about");
         Assert.Equal("Bohrhammer Pro", about.GetProperty("name").GetString());
         Assert.Equal([("Wasserdicht", "nein")], about.GetProperty("values").EnumerateArray().Select(v => (v.GetProperty("label").GetString(), v.GetProperty("value").GetString())).ToList());
-        Assert.Equal(JsonValueKind.Undefined, j.TryGetProperty("words", out var ww) ? ww.ValueKind : JsonValueKind.Undefined);   // die gesammelten Angaben bleiben
-        var (_, k) = await w.Frage(JsonSerializer.Serialize(new { q = "wie viel Leistung hat er?", fokus = bohr }));
+        Assert.Equal("Zu „Bohrhammer Pro“:", j.GetProperty("texte").GetProperty("ueber").GetString());
+        var k = await w.Sag("wie viel Leistung hat er?");
         Assert.Equal("800 W", k.GetProperty("about").GetProperty("values")[0].GetProperty("value").GetString());
+        // die gesammelten Angaben bleiben: eine Suche danach findet weiter den Bohrhammer
+        Assert.Equal(["bohrhammer"], (await w.Sag("")).GetProperty("words").EnumerateArray().Select(x => x.GetString()).ToList());
         // keine Frage, oder eine andere Art: eine Suche wie sonst
-        var (_, s1) = await w.Frage(JsonSerializer.Serialize(new { q = "Akkuschrauber", fokus = bohr }));
-        Assert.False(s1.TryGetProperty("about", out _));
-        var (_, s2) = await w.Frage(JsonSerializer.Serialize(new { q = "ist der Akkuschrauber wasserdicht?", fokus = bohr }));
-        Assert.False(s2.TryGetProperty("about", out _));
+        w.NeuesGespraech(); await w.Sag("Bohrhammer");
+        Assert.False((await w.Sag("Akkuschrauber")).TryGetProperty("about", out _));
+        w.NeuesGespraech(); await w.Sag("Bohrhammer");
+        Assert.False((await w.Sag("ist der Akkuschrauber wasserdicht?")).TryGetProperty("about", out _));
     }
 
     [Fact]
@@ -609,15 +590,14 @@ public class AdvisorTests
         // nach dem Sinn: der beste und, was höchstens 0,01 dahinter liegt — über der Grenze nichts
         Assert.Equal(["price"], AdvisorApi.PassendeWerte(model, zeilen, ["kostet"], [0.20, 0.19, 0.18, 0.159]).Select(z => z.Def.Key).ToList());
         Assert.Empty(AdvisorApi.PassendeWerte(model, zeilen, ["vorraum"], [0.17, 0.18, 0.19, 0.2]));
-        Assert.True(AdvisorApi.Fragt("ist das zelt wasserdicht")); Assert.True(AdvisorApi.Fragt("Zelt wasserdicht?")); Assert.False(AdvisorApi.Fragt("zelt wasserdicht"));
     }
 
     [Fact]
     public async Task Gebeugte_Formen_werden_einmal_gesammelt()
     {
         await using var w = await Welt.Neu();
-        var (_, j) = await w.Frage("""{"q":"bohrhammer","woerter":["bohrhammern"]}""");
-        Assert.Single(j.GetProperty("words").EnumerateArray());
+        await w.Sag("bohrhammer");
+        Assert.Single((await w.Sag("bohrhammern")).GetProperty("words").EnumerateArray());
     }
 
     [Fact]
@@ -628,18 +608,17 @@ public class AdvisorTests
         var luftig = E("Ravik Zelt", "Leicht und luftig.");
         var matte = E("Heia Isomatte", "Wasserdicht verschweisst.");
         var lampe = E("Bjørk Stirnlampe", "Rotlicht blendet niemanden im Zelt.");   // „Zelt“ als ganzes Wort, aber nicht im Namen
-        IReadOnlyList<AdvisorApi.Eintrag> alle = [luftig, matte, dicht, lampe];
-        // „zelt“ steht in Namen: hart; „wasserdicht“ in keinem Namen: weich — beide Zelte, das wasserdichte zuerst, die Matte nicht
-        Assert.Equal(["Odda Zelt", "Ravik Zelt"], AdvisorApi.Finde(alle, alle, ["zelt", "wasserdicht"]).Select(e => e.Name).ToList());
-        // nur weiche Wörter: was mindestens eines trägt
-        Assert.Equal(["Heia Isomatte", "Odda Zelt"], AdvisorApi.Finde(alle, alle, ["wasserdicht"]).Select(e => e.Name).Order().ToList());
+        List<AdvisorApi.Eintrag> alle = [luftig, matte, dicht, lampe];
+        var b = new AdvisorApi.Bestand(null!, 0, "", "de", "web", alle, alle.ToDictionary(e => e.Product.Id), new(), new());
+        List<string> Wahl(string[] art, string[] ordnen) => AdvisorApi.Waehle(null!, null!, b, [], art, ordnen).Select(e => e.Name).ToList();
+        // die Art (im Namen) grenzt ein, „wasserdicht“ ordnet — beide Zelte, das wasserdichte zuerst, die Matte nicht
+        Assert.Equal(["Odda Zelt", "Ravik Zelt"], Wahl(["zelt"], ["wasserdicht"]));
+        // nur Wörter zum Ordnen: was mindestens eines trägt
+        Assert.Equal(["Heia Isomatte", "Odda Zelt"], Wahl([], ["wasserdicht"]).Order().ToList());
         // steht das Wort in einem Namen, gelten nur die Namen — die Stirnlampe „im Zelt“ ist kein Zelt
-        Assert.Equal(["Odda Zelt", "Ravik Zelt"], AdvisorApi.Finde(alle, alle, ["zelt"]).Select(e => e.Name).Order().ToList());
-        // zwei harte Wörter grenzen zusammen ein
-        Assert.Empty(AdvisorApi.Finde(alle, alle, ["zelt", "isomatte"]));
-        var (hart, weich) = AdvisorApi.HartWeich(alle, ["zelt", "wasserdicht"]);
-        Assert.Equal(["zelt"], hart);
-        Assert.Equal(["wasserdicht"], weich);
+        Assert.Equal(["Odda Zelt", "Ravik Zelt"], Wahl(["zelt"], []).Order().ToList());
+        // zwei Arten grenzen zusammen ein
+        Assert.Empty(Wahl(["zelt", "isomatte"], []));
     }
 
     [Fact]
@@ -669,11 +648,11 @@ public class AdvisorTests
             write("t", w.Ids["bohr"], Types.AttributeSet, new AttributeSet("notiz", null, null, "Warum ist mein Bohrhammer undicht?"), null);
             return 0;
         });
-        var (_, j) = await w.Frage("""{"q":"undicht"}""");
+        var j = await w.Sag("undicht");
         Assert.Equal(0, j.GetProperty("total").GetInt32());
         Assert.Equal(["undicht"], j.GetProperty("unknown").EnumerateArray().Select(x => x.GetString()).ToList());
         // was die Sicht zeigt, zählt: die Leistung steht in der Gruppe technik
-        var (_, k) = await w.Frage("""{"q":"Bohrhammer"}""");
+        var (_, k) = await w.Auswahl(new { art = new[] { "bohrhammer" } });
         Assert.Contains("Bohrhammer Pro", Namen(k));
     }
 
@@ -689,25 +668,32 @@ public class AdvisorTests
     public async Task Ein_Gespraech_sammelt_die_Angaben_und_jede_Eingabe_ergaenzt_sie()
     {
         await using var w = await Welt.Neu();
-        var (_, eins) = await w.Frage("""{"q":"Bohrhammer"}""");
+        var eins = await w.Sag("Bohrhammer");
         Assert.Equal(["bohrhammer"], eins.GetProperty("words").EnumerateArray().Select(x => x.GetString()).ToList());
-        // die zweite Eingabe trägt die Wörter der ersten mit; „unter 1000 W“ wird ein Filter, „rot“ auch
-        var (_, zwei) = await w.Frage("""{"q":"rot und unter 1000 W","woerter":["bohrhammer"]}""");
+        // die zweite Eingabe ergänzt die erste; „unter 1000 W“ wird ein Filter, „rot“ auch
+        var zwei = await w.Sag("rot und unter 1000 W");
         Assert.Equal(["Bohrhammer Pro"], Namen(zwei));
         Assert.Contains(("leistung", "le", "1000"), Filter(zwei));
         Assert.Contains(("color", "eq", "red"), Filter(zwei));
         Assert.Equal(["bohrhammer"], zwei.GetProperty("words").EnumerateArray().Select(x => x.GetString()).ToList());
+        // ein Klick nimmt eine Angabe weg, „Neue Suche“ alle
+        var drei = await w.Sag("", new { art = "weg", kind = "filter", attribute = "color", op = "eq", value = "red" });
+        Assert.DoesNotContain(("color", "eq", "red"), Filter(drei));
+        var neu = await w.Sag("", new { art = "neu" });
+        Assert.True(neu.GetProperty("reset").GetBoolean());
+        Assert.Equal(3, (await w.Sag("")).GetProperty("total").GetInt32());
     }
 
     [Fact]
     public async Task Ein_Wort_das_in_keinem_Produkt_steht_findet_nichts_und_wird_genannt()
     {
         await using var w = await Welt.Neu();
-        var (_, j) = await w.Frage("""{"q":"auto"}""");
+        var j = await w.Sag("auto");
         Assert.Equal(0, j.GetProperty("total").GetInt32());
         Assert.Equal(["auto"], j.GetProperty("unknown").EnumerateArray().Select(x => x.GetString()).ToList());
         Assert.Empty(j.GetProperty("words").EnumerateArray());   // es wird nicht gesammelt
         Assert.False(j.GetProperty("similar").GetBoolean());
+        Assert.Contains("„auto“ steht in keinem Produkt.", j.GetProperty("texte").GetProperty("hinweise").EnumerateArray().Select(x => x.GetString()));
     }
 
     [Fact]
@@ -715,14 +701,16 @@ public class AdvisorTests
     {
         await using var w = await Welt.Neu();
         // den Akkuschrauber gibt es nur in Blau: „rot“ und „Akkuschrauber“ zusammen finden nichts
-        var (_, j) = await w.Frage("""{"q":"Akkuschrauber rot"}""");
+        var j = await w.Sag("Akkuschrauber rot");
         Assert.Equal(0, j.GetProperty("total").GetInt32());
         var lockern = j.GetProperty("relax").EnumerateArray().ToList();
         // ohne „Akkuschrauber“ blieben die zwei roten, ohne „rot“ der eine Akkuschrauber — die grössere Zahl zuerst
         Assert.Equal(("word", "akkuschrauber", 2), (lockern[0].GetProperty("kind").GetString(), lockern[0].GetProperty("word").GetString(), lockern[0].GetProperty("n").GetInt32()));
         Assert.Equal(("filter", "color", 1), (lockern[1].GetProperty("kind").GetString(), lockern[1].GetProperty("attribute").GetString(), lockern[1].GetProperty("n").GetInt32()));
+        Assert.Equal("Kein Produkt passt dazu.", j.GetProperty("texte").GetProperty("satz").GetString());
         // „unter 200 W“: ohne das Wort bliebe nichts — gelockert wird nur der Filter
-        var (_, k) = await w.Frage("""{"q":"Akkuschrauber unter 200 W"}""");
+        w.NeuesGespraech();
+        var k = await w.Sag("Akkuschrauber unter 200 W");
         Assert.Equal(["filter"], k.GetProperty("relax").EnumerateArray().Select(x => x.GetProperty("kind").GetString()).ToList());
     }
 
@@ -731,20 +719,28 @@ public class AdvisorTests
     {
         await using var w = await Welt.Neu();
         // erst Bohrhammer, dann Akkuschrauber: zusammen nichts, Akkuschrauber allein schon
-        var (_, j) = await w.Frage("""{"q":"Akkuschrauber","woerter":["bohrhammer"]}""");
+        await w.Sag("Bohrhammer");
+        var j = await w.Sag("Akkuschrauber");
         Assert.Equal(0, j.GetProperty("total").GetInt32());
         var statt = j.GetProperty("instead");
         Assert.Equal(["akkuschrauber"], statt.GetProperty("words").EnumerateArray().Select(x => x.GetString()).ToList());
         Assert.Empty(statt.GetProperty("filter").EnumerateArray());
         Assert.Equal(1, statt.GetProperty("n").GetInt32());
+        Assert.Equal("Stattdessen nach „akkuschrauber“ suchen?", j.GetProperty("texte").GetProperty("statt").GetString());
         // „ohne bohrhammer“ wäre dasselbe — es steht nur einmal da
         Assert.DoesNotContain(j.GetProperty("relax").EnumerateArray(), x => x.GetProperty("kind").GetString() == "word" && x.GetProperty("word").GetString() == "bohrhammer");
+        // ja: nur noch danach
+        var ja = await w.Sag("", new { art = "statt" });
+        Assert.Equal(["Akkuschrauber kompakt"], Namen(ja));
+        Assert.Equal(["akkuschrauber"], ja.GetProperty("words").EnumerateArray().Select(x => x.GetString()).ToList());
 
         // ohne frühere Angaben ist nichts ein Wechsel
-        var (_, k) = await w.Frage("""{"q":"Akkuschrauber rot"}""");
-        Assert.Equal(JsonValueKind.Null, k.GetProperty("instead").ValueKind);
+        w.NeuesGespraech();
+        Assert.Equal(JsonValueKind.Null, (await w.Sag("Akkuschrauber rot")).GetProperty("instead").ValueKind);
         // eine Angabe zum gesammelten Wort, die nichts findet, wechselt kein Thema: „rot“ zum Akkuschrauber — dafür ist das Lockern da
-        var (_, r) = await w.Frage("""{"q":"rot","woerter":["akkuschrauber"]}""");
+        w.NeuesGespraech();
+        await w.Sag("Akkuschrauber");
+        var r = await w.Sag("rot");
         Assert.Equal(0, r.GetProperty("total").GetInt32());
         Assert.Equal(JsonValueKind.Null, r.GetProperty("instead").ValueKind);
         Assert.Contains(r.GetProperty("relax").EnumerateArray(), x => x.GetProperty("kind").GetString() == "word");
@@ -781,8 +777,7 @@ public class AdvisorTests
             Assert.Equal(HttpStatusCode.NotFound, (await w.Http.GetAsync(w.Url + $"/api/advisor/werkzeug/doc/{m}")).StatusCode);
 
         // ohne Dokumentindex (keine Datenbank) bleibt die Antwort ohne Abschnitte — und sie fehlt nicht
-        var (_, j) = await w.Frage("""{"q":"Bohrhammer"}""");
-        Assert.Empty(j.GetProperty("docs").EnumerateArray());
+        Assert.Empty((await w.Sag("Bohrhammer")).GetProperty("docs").EnumerateArray());
     }
 
     [Fact]
@@ -1050,13 +1045,15 @@ public class AdvisorTests
         Assert.Equal(["Regenjacke · S", "Regenjacke · M"], prod.GetProperty("variants").EnumerateArray().Select(v => v.GetProperty("name").GetString()).ToList());
         Assert.Contains(prod.GetProperty("variants")[0].GetProperty("values").EnumerateArray(), x => x.GetProperty("key").GetString() == "groesse" && x.GetProperty("value").GetString() == "S");
         // die Grösse wird Facette und Filter, obwohl die Sicht sie nicht nennt; das Einkaufsattribut bleibt draussen
-        var (_, j) = await w.Frage("""{"q":"Regenjacke"}""");
-        var (_, m) = await w.Frage("""{"q":"Regenjacke","filter":[{"attribute":"groesse","op":"eq","value":"m"}]}""");
+        await w.Sag("Regenjacke");
+        var m = await w.Sag("", new { art = "filter", attribute = "groesse", op = "eq", value = "m" });
         Assert.Equal(["Regenjacke"], Namen(m));
-        var (_, x) = await w.Frage("""{"q":"Regenjacke","filter":[{"attribute":"einkauf","op":"le","value":"20"}]}""");
+        w.NeuesGespraech(); await w.Sag("Regenjacke");
+        var x = await w.Sag("", new { art = "filter", attribute = "einkauf", op = "le", value = "20" });
         Assert.Empty(x.GetProperty("filter").EnumerateArray());
         // im Text erkannt: „Grösse M“
-        var (_, t) = await w.Frage("""{"q":"Regenjacke Grösse M"}""");
+        w.NeuesGespraech();
+        var t = await w.Sag("Regenjacke Grösse M");
         Assert.Contains(t.GetProperty("filter").EnumerateArray(), f => f.GetProperty("attribute").GetString() == "groesse" && f.GetProperty("value").GetString() == "m");
         Assert.Empty(t.GetProperty("unknown").EnumerateArray());   // „Grösse“ ist kein Suchwort
     }

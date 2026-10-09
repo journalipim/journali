@@ -2688,9 +2688,10 @@ Text als „Text von einer KI erstellt“. Fehlt der Schlüssel oder ist die Tag
 
 **Bauform — entschieden, wie in 31.** Zwei Teile:
 
-- **Im Server** (`AdvisorApi.cs`): die Definition als Plugin-Daten `def:<schlüssel>` von `advisor` (Journal), der Bestand je
-  Berater und Sprache einmal je Journalstand gerechnet, die Fragen unter `/api/advisor/{key}/…` (`info`, `ask`, `product/{id}`,
-  `compare`, `image/{media}`) und die Token (`tokens`).
+- **Im Server** (`AdvisorApi.cs`, `AdvisorAuswahl.cs`): die Definition als Plugin-Daten `def:<schlüssel>` von `advisor` (Journal), der
+  Bestand je Berater und Sprache einmal je Journalstand gerechnet, die Fragen unter `/api/advisor/{key}/…` (`info`, `vocabulary`, `select`,
+  `docs`, `ki`, `product/{id}`, `variant/{id}`, `compare`, `image/{media}`, `doc/{media}`), die Vorschau (`preview`, Abschnitt 44) und die
+  Token (`tokens`). Der Weg `ask` der ersten Version ist seit 09.10.2026 weg — das Verstehen steht im Kern (Abschnitt 44).
 - **Der Dienst** (`plugins/advisor/serve.mjs`, `dienst.mjs`, `mcp.mjs`): ein eigener Container aus dem Image `node:22-alpine` mit dem
   Verzeichnis des Plugins, ohne npm-Pakete. Er ist das einzige Stück, das von aussen erreichbar ist, spricht ausgehend mit journali
   und hält nichts ausser dem Token und einer Zählung je Besucher im Arbeitsspeicher. Er liefert das Chat-Fenster (`widget.js`), die
@@ -2784,7 +2785,13 @@ fragen darüber den Katalog. Das ist die andere Richtung und bleibt davon unber�
 - Schritt 2 hängt am Shop: wie er seine Kunden anmeldet und ob er einen signierten Nachweis ausstellen kann. Erst mit einem
   konkreten Shop und einem konkreten Fremdsystem.
 
-## 44. Berater und journali — der Berater versteht, journali wählt aus (09.10.2026, Entwurf)
+## 44. Berater und journali — der Berater versteht, journali wählt aus (09.10.2026, Schritte 1–3 gebaut)
+
+**Stand (09.10.2026).** Gebaut: die Schnittstelle Version 2 (`AdvisorAuswahl.cs`: `vocabulary`, `select`, `docs`, `ki`); der Kern im
+Plugin (`plugins/advisor/kern/`: `woerter.mjs`, `verstehen.mjs`, `texte.mjs`, `gespraech.mjs`); er läuft im Dienst und in journali als
+Kindprozess für die Vorschau (`AdvisorKern.cs`, `kern/prozess.mjs`, Weg `preview`, ein Token je Berater nur im Arbeitsspeicher); das
+Fenster zeigt nur noch an; das Gedächtnis der Gespräche mit Vorlieben, Gesehenem und Abgelehntem im Dienst; `search_products` (MCP) fragt
+den Kern ohne Gespräch. `/ask` ist weg. Die Abschnitte unten sind die Entscheidung; was davon wo steht, sagt der Code.
 
 **Die Lage.** Die Abwägung des Produktberaters steckt heute im Server (`AdvisorApi.cs`, Abschnitt 42): Wörter, Angaben,
 Eigenschaftswörter, Tippfehler, Produkt im Blick, Rückfrage. Das Fenster hält das Gespräch (gesammelte Wörter und Angaben,

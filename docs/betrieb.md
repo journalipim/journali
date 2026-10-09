@@ -484,14 +484,25 @@ denselben Dienst unter `https://advisor.example.com/mcp` (MCP, Streamable HTTP; 
 | Weg am Dienst | was |
 |---|---|
 | `GET /widget.js` | das Chat-Fenster — mit Fingerabdruck (ETag), der Browser fragt jedes Mal nach |
-| `GET /api/info`, `POST /api/ask`, `GET /api/product/{id}`, `GET /api/variant/{id}`, `POST /api/compare`, `GET /api/image/{id}`, `GET /api/doc/{id}` | die Fragen des Fensters; `doc` ein Dokument aus den Unterlagen |
+| `POST /api/ask` | eine Eingabe oder ein Klick im Gespräch (mit der Kennung des Gesprächs) — der Kern im Dienst versteht und fragt journali |
+| `GET /api/info`, `GET /api/product/{id}`, `GET /api/variant/{id}`, `POST /api/compare`, `GET /api/image/{id}`, `GET /api/doc/{id}`, `POST /api/event` | was das Fenster sonst braucht; `doc` ein Dokument aus den Unterlagen, `event` ein gemerktes Produkt |
+| `GET /api/vocabulary`, `POST /api/select`, `POST /api/docs` | die Schnittstelle Version 2 von journali, durchgereicht (ohne `ki`) |
 | `POST /mcp` | MCP: `search_products`, `get_product`, `compare_products` |
 | `GET /health` | 200, wenn journali mit dem Token antwortet |
 
 **Was der Dienst speichert:** nichts auf Platte. Im Arbeitsspeicher die Zahl der Fragen je Besucheradresse für Minute und Tag
-(danach verworfen) und die Angaben des Beraters für eine Minute. Den Inhalt einer Frage protokolliert er nicht; ins Protokoll des
+(danach verworfen), die Angaben des Beraters für eine Minute, das Vokabular für 30 Sekunden und **das Gedächtnis der Gespräche**: je
+zufälliger Kennung, die das Fenster beim Laden der Seite erzeugt, die gesammelten Angaben, Vorlieben, gesehene und abgelehnte Produkte,
+das Produkt im Blick und die letzten sechs Eingaben — 30 Minuten nach der letzten Eingabe weg, höchstens 20 000 Gespräche. Die Kennung
+trägt keine Person; ein Neustart des Containers vergisst alles. Den Inhalt einer Frage protokolliert er nicht; ins Protokoll des
 Containers schreibt er nur, wenn journali nicht erreichbar ist. Ist die KI an, gehen Frage und Treffer an den Anbieter des Teams —
 das gehört in die Datenschutzerklärung der Website, ebenso die Adresse des Besuchers beim Dienst.
+
+**Der Kern** (`plugins/advisor/kern/`, `docs/pflegestruktur.md` 44) versteht die Eingabe und führt das Gespräch; journali wählt aus
+(`/api/advisor/{key}/vocabulary`, `select`, `docs`, `ki`). Derselbe Kern läuft in journali als Kindprozess für die Vorschau unter
+⇪ Produktberatung (`node plugins/advisor/kern/prozess.mjs`, gestartet beim ersten Bedarf, wie der Einbetter); er erreicht journali
+über die Adresse der Jobs mit einem Token, das journali nur im Arbeitsspeicher hält. Ohne `node` gibt es keine Vorschau, der Dienst
+an der Website ist davon nicht betroffen.
 
 **Token widerrufen** (Ansicht → ✕ am Token): der Dienst bekommt danach 401 und antwortet Besuchern mit „journali ist nicht
 erreichbar.“. Ein neues Token: ＋ Token, in `.env` eintragen, Container neu starten.

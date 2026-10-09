@@ -1,6 +1,7 @@
 // Der Dienst des Produktberaters (plugins/advisor/dienst.mjs, mcp.mjs): das Stück, das eine Website und fremde KI-Agenten erreichen. journali ist
-// hier vorgetäuscht (fetch); geprüft wird über echtes HTTP: Weiterleitung mit dem Token, Herkunft (CORS), Grenzen je Besucher und MCP in
-// beiden Formen der Spezifikation — 2026-07-28 ohne Handshake und die ältere mit initialize.
+// hier vorgetäuscht (fetch); geprüft wird über echtes HTTP: der Kern im Dienst fragt journali mit dem Token (Vokabular, Auswahl, Unterlagen), das
+// Gespräch hängt an seiner Kennung, Herkunft (CORS), Grenzen je Besucher und MCP in beiden Formen der Spezifikation — 2026-07-28 ohne Handshake und
+// die ältere mit initialize.
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import http from 'node:http'
@@ -9,6 +10,8 @@ import { verarbeite, kopfwert, WERKZEUGE } from '../../plugins/advisor/mcp.mjs'
 
 const TOKEN = 'ja_geheim'
 const INFO = { key: 'shop', label: 'Werkzeugberater', locale: 'de', locales: ['de', 'en'], greeting: { de: 'Hallo' }, ki: false, mcp: true, origins: ['https://shop.example'], limits: { jeBesucherMinute: 50 }, channel: 'web', products: 3 }
+const VOKABULAR = { locale: 'de', locales: ['de', 'en'], etag: '"v1"', ki: false, products: 3, words: [{ word: 'bohrhammer', n: 1 }, { word: 'akkuschrauber', n: 1 }],
+  attributes: [{ key: 'color', label: 'Farbe', labels: { de: 'Farbe', en: 'Colour' }, type: 'enum', facet: true, values: [{ value: 'red', label: 'Rot', labels: { de: 'Rot', en: 'Red' } }] }] }
 const FRAGE = { locale: 'de', total: 1, hits: [{ id: 'p1', name: 'Bohrhammer Pro', keys: { sku: 'S1' }, image: 'm1', variants: 1, values: [{ key: 'leistung', label: 'Leistung', value: '800 W' }] }],
   facets: [{ key: 'color', label: 'Farbe', type: 'list', n: 1, values: [{ value: 'red', label: 'Rot', n: 1 }] }], filter: [], answer: null, warning: null }
 
@@ -20,7 +23,13 @@ async function welt({ info = INFO, unten = false } = {}) {
     const pfad = url.replace('http://journali:8080/api/advisor/shop/', '')
     const antwort = (status, json) => ({ status, text: async () => JSON.stringify(json), headers: new Headers({ 'content-type': 'application/json' }) })
     if (pfad === 'info') return antwort(200, info)
-    if (pfad === 'ask') return antwort(200, FRAGE)
+    if (pfad.startsWith('vocabulary')) return antwort(200, VOKABULAR)
+    if (pfad === 'select') {
+      const b = JSON.parse(o.body)
+      return antwort(200, { ...FRAGE, words: [...(b.art ?? []), ...(b.ordnen ?? [])].map(w => ({ word: w, n: w === 'auto' ? 0 : 1, name: 1 })), relax: [], present: ['color'],
+        filter: (b.angaben ?? []).map(a => ({ ...a, label: 'Farbe', valueLabel: 'Rot' })), focus: b.fokus ? { id: b.fokus, name: 'Bohrhammer Pro', values: [{ key: 'wasserdicht', label: 'Wasserdicht', value: 'nein' }] } : null })
+    }
+    if (pfad === 'docs') return antwort(200, { docs: [], warning: null })
     if (pfad.startsWith('product/p1')) return antwort(200, { id: 'p1', name: 'Bohrhammer Pro', values: [], variants: [] })
     if (pfad.startsWith('product/')) return antwort(404, { error: 'Produkt x gibt es hier nicht.' })
     if (pfad === 'compare') return antwort(200, { products: [{ id: 'p1', name: 'A' }, { id: 'p2', name: 'B' }], rows: [{ key: 'leistung', label: 'Leistung', values: ['800 W', '300 W'], same: false }] })
@@ -58,35 +67,48 @@ test('das Chat-Fenster kommt als Skript, für jede Website', async () => {
   } finally { await w.ende() }
 })
 
-test('eine Frage geht mit dem Token an journali, das Token kommt nie zurück', async () => {
+test('eine Frage versteht der Kern im Dienst; er fragt journali mit dem Token, das Token kommt nie zurück', async () => {
   const w = await welt()
   try {
-    const r = await post(w.url + '/api/ask', { q: 'x'.repeat(500), filter: [{ attribute: 'color', value: 'red' }], locale: 'de' }, { origin: 'https://shop.example' })
+    const r = await post(w.url + '/api/ask', { q: 'Bohrhammer in Rot', locale: 'de' }, { origin: 'https://shop.example' })
     assert.equal(r.status, 200)
     assert.equal(r.headers.get('access-control-allow-origin'), 'https://shop.example')
     const text = await r.text()
     assert.ok(!text.includes(TOKEN))
-    assert.equal(JSON.parse(text).hits[0].name, 'Bohrhammer Pro')
-    const ruf = w.rufe.find(x => x.url.endsWith('/ask'))
+    const j = JSON.parse(text)
+    assert.equal(j.hits[0].name, 'Bohrhammer Pro')
+    assert.equal(j.texte.satz, '1 Produkt passt zu „bohrhammer“.')
+    const ruf = w.rufe.find(x => x.url.endsWith('/select'))
     assert.equal(ruf.auth, 'Bearer ' + TOKEN)
-    assert.equal(ruf.body.q.length, 300, 'die Frage wird gekürzt')
-    assert.deepEqual(ruf.body.filter, [{ attribute: 'color', value: 'red' }])
+    // der Kern hat verstanden: die Art grenzt ein, „Rot“ ist ein Wert der Liste Farbe
+    assert.deepEqual(ruf.body.art, ['bohrhammer'])
+    assert.deepEqual(ruf.body.angaben, [{ attribute: 'color', op: 'eq', value: 'red' }])
+    assert.ok(w.rufe.some(x => x.url.includes('/vocabulary')))
+    // eine lange Eingabe wird gekürzt
+    await post(w.url + '/api/ask', { q: 'x'.repeat(500) })
+    assert.ok(w.rufe.filter(x => x.url.endsWith('/select')).at(-1).body.satz.length <= 300)
     // Info ohne Grenzen und Websites
     const i = await (await fetch(w.url + '/api/info')).json()
     assert.equal(i.label, 'Werkzeugberater'); assert.equal(i.origins, undefined); assert.equal(i.limits, undefined)
   } finally { await w.ende() }
 })
 
-test('ein Gespräch: die gesammelten Wörter und der Verlauf gehen mit, gekürzt', async () => {
+test('ein Gespräch hängt an seiner Kennung: der Dienst merkt sich die Angaben, ohne Kennung steht jede Frage für sich', async () => {
   const w = await welt()
   try {
-    const woerter = Array.from({ length: 20 }, (_, i) => 'w' + i + 'x'.repeat(60))
-    const verlauf = Array.from({ length: 9 }, (_, i) => 'eingabe ' + i)
-    assert.equal((await post(w.url + '/api/ask', { q: 'rot', woerter, verlauf }, { origin: 'https://shop.example' })).status, 200)
-    const ruf = w.rufe.find(x => x.url.endsWith('/ask'))
-    assert.equal(ruf.body.woerter.length, 12, 'höchstens zwölf Wörter')
-    assert.ok(ruf.body.woerter.every(x => x.length <= 40), 'je Wort höchstens 40 Zeichen')
-    assert.deepEqual(ruf.body.verlauf, verlauf.slice(-6), 'die letzten sechs Eingaben')
+    const g = 'a1b2c3d4e5f6a7b8'
+    await post(w.url + '/api/ask', { gespraech: g, q: 'Bohrhammer' })
+    const zwei = await (await post(w.url + '/api/ask', { gespraech: g, q: 'rot' })).json()
+    assert.deepEqual(w.rufe.filter(x => x.url.endsWith('/select')).at(-1).body.art, ['bohrhammer'], 'das Wort der ersten Eingabe gilt weiter')
+    assert.deepEqual(zwei.words, ['bohrhammer'])
+    assert.deepEqual(zwei.filter.map(f => f.value), ['red'])
+    // ein Klick: die Angabe weg
+    const drei = await (await post(w.url + '/api/ask', { gespraech: g, schritt: { art: 'weg', kind: 'filter', attribute: 'color', op: 'eq', value: 'red' } })).json()
+    assert.deepEqual(drei.filter, [])
+    // ohne (gültige) Kennung: kein Gedächtnis
+    await post(w.url + '/api/ask', { q: 'Bohrhammer' })
+    await post(w.url + '/api/ask', { gespraech: 'kurz', q: 'rot' })
+    assert.deepEqual(w.rufe.filter(x => x.url.endsWith('/select')).at(-1).body.art, [])
   } finally { await w.ende() }
 })
 
@@ -129,15 +151,19 @@ test('Produkt, Vergleich und Bild gehen durch, ein unbekannter Weg nicht', async
     // ein Dokument der Unterlagen: durchgereicht, zum Ansehen, ohne Skripte
     const d = await fetch(w.url + '/api/doc/d1')
     assert.equal(d.headers.get('content-type'), 'application/pdf')
-    // das Produkt im Blick geht mit der Frage an journali
-    await post(w.url + '/api/ask', { q: 'ist es wasserdicht?', fokus: 'p1' })
-    assert.equal(w.rufe.filter(x => x.url.endsWith('/ask')).at(-1).body.fokus, 'p1')
+    // geöffnet ist das Produkt im Blick des Gesprächs: eine Frage danach beantworten seine Werte
+    const g = 'f0f1f2f3f4f5f6f7'
+    await fetch(w.url + '/api/product/p1?gespraech=' + g)
+    const ueber = await (await post(w.url + '/api/ask', { gespraech: g, q: 'ist es wasserdicht?' })).json()
+    assert.equal(w.rufe.filter(x => x.url.endsWith('/select')).at(-1).body.fokus, 'p1')
+    assert.equal(ueber.about.values[0].value, 'nein')
     assert.equal(d.headers.get('content-disposition'), "inline; filename*=UTF-8''Pflege.pdf")
     assert.equal(d.headers.get('content-security-policy'), 'sandbox')
     assert.equal(await d.text(), '%PDF')
     assert.equal((await fetch(w.url + '/api/doc/x')).status, 404)
     assert.equal((await fetch(w.url + '/api/tree')).status, 404)
     assert.equal((await fetch(w.url + '/api/ask')).status, 404, 'eine Frage ist ein POST')
+    assert.equal((await post(w.url + '/api/ki', {})).status, 404, 'die KI fragt nur der Kern')
   } finally { await w.ende() }
 })
 
@@ -178,9 +204,10 @@ test('MCP: ein Werkzeug fragt journali und liefert Text und Struktur', async () 
     assert.equal(j.result.structuredContent.hits[0].id, 'p1')
     assert.match(j.result.content[0].text, /1\. Bohrhammer Pro \(S1\) \[id p1\] — Leistung: 800 W/)
     assert.match(j.result.content[0].text, /Farbe \[color\]: Rot = red \(1\)/)
-    const ruf = w.rufe.find(x => x.url.endsWith('/ask'))
-    assert.equal(ruf.body.ki, false, 'ein Agent bekommt keinen Text der KI')
-    assert.deepEqual(ruf.body.filter, [{ attribute: 'color', value: 'red' }])
+    const ruf = w.rufe.find(x => x.url.endsWith('/select'))
+    assert.ok(!w.rufe.some(x => x.url.endsWith('/ki')), 'ein Agent bekommt keinen Text der KI')
+    assert.deepEqual(ruf.body.angaben, [{ attribute: 'color', op: 'eq', value: 'red' }])
+    assert.deepEqual(ruf.body.art, ['bohrhammer'])
     // Name im Kopf als Base64
     const b = await post(w.url + '/mcp', { jsonrpc: '2.0', id: 4, method: 'tools/call', params: { name: 'get_product', arguments: { id: 'p1' }, _meta: meta() } },
       modern('tools/call', { 'mcp-name': '=?base64?' + Buffer.from('get_product').toString('base64') + '?=' }))
@@ -256,5 +283,16 @@ test('eine Variante geht durch wie ein Produkt', async () => {
     await fetch(w.url + '/api/variant/v1?locale=de')
     assert.ok(w.rufe.some(x => x.url.endsWith('/variant/v1?locale=de')), 'an journali als variant/<id>')
     assert.equal((await fetch(w.url + '/api/variant/v1/mehr')).status, 404, 'nur genau eine Kennung')
+  } finally { await w.ende() }
+})
+
+test('die Schnittstelle Version 2 geht durch, ein gemerktes Produkt notiert das Gedächtnis', async () => {
+  const w = await welt()
+  try {
+    assert.equal((await (await fetch(w.url + '/api/vocabulary?locale=en')).json()).etag, '"v1"')
+    assert.ok(w.rufe.some(x => x.url.endsWith('vocabulary?locale=en')))
+    assert.equal((await post(w.url + '/api/select', { art: ['bohrhammer'] })).status, 200)
+    assert.equal((await post(w.url + '/api/docs', { satz: 'pflege' })).status, 200)
+    assert.equal((await post(w.url + '/api/event', { gespraech: 'a1b2c3d4e5f6a7b8', art: 'gemerkt', id: 'p1' })).status, 204)
   } finally { await w.ende() }
 })

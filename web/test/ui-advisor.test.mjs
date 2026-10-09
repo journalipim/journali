@@ -28,8 +28,9 @@ async function welt({ daten = {}, fehler = [], antwort = null } = {}) {
     gesendet.push([m, p, body])
     if (m === 'PUT' && p.startsWith('/api/plugins/advisor/data/')) { gespeichert[decodeURIComponent(p.split('/').pop())] = body; return {} }
     if (p === '/api/advisor/shop/tokens') { tokens = [...tokens, { id: '999999aaaaaa', label: body.label, at: '2026-10-08T11:00:00Z' }]; return { token: 'ja_neu', label: body.label } }
-    if (p === '/api/advisor/shop/ask' && antwort) return antwort
-    if (p === '/api/advisor/shop/ask') return { total: 2, hits: [{ id: 'p1', name: 'Bohrhammer Pro', values: [{ label: 'Leistung', value: '800 W' }] }, { id: 'p2', name: 'Akkuschrauber', values: [] }], facets: [{ key: 'color', label: 'Farbe' }], warning: 'Plugin embed ist aus.' }
+    if (p === '/api/advisor/shop/preview' && antwort) return antwort
+    if (p === '/api/advisor/shop/preview') return { total: 2, hits: [{ id: 'p1', name: 'Bohrhammer Pro', values: [{ label: 'Leistung', value: '800 W' }] }, { id: 'p2', name: 'Akkuschrauber', values: [] }], facets: [{ key: 'color', label: 'Farbe' }], warning: 'Plugin embed ist aus.',
+      words: ['bohrhammer'], filter: [{ attribute: 'color', op: 'eq', value: 'red', label: 'Farbe', valueLabel: 'Rot' }], texte: { satz: '2 Produkte passen zu „bohrhammer“.', hinweise: [] } }
     return {}
   }
   api.del = async p => { gesendet.push(['DELETE', p]); if (p.startsWith('/api/plugins/advisor/data/')) delete gespeichert[decodeURIComponent(p.split('/').pop())]; return {} }
@@ -117,12 +118,25 @@ test('die Vorschau stellt die Frage eines Besuchers ohne KI und zeigt Treffer un
     await w.find('tr.berater').trigger('click'); await warte(w)
     await w.find('input.vorschau-frage').setValue('Bohrhammer')
     await w.find('form.row').trigger('submit'); await warte(w)
-    const [, p, body] = gesendet.find(g => g[1] === '/api/advisor/shop/ask')
-    assert.equal(p, '/api/advisor/shop/ask')
-    assert.deepEqual(body, { q: 'Bohrhammer', locale: 'de', ki: false })
+    // die Vorschau fragt den Kern (Kindprozess) mit einer Kennung des Gesprächs — er merkt sich, was schon gefragt wurde
+    const [, p, body] = gesendet.find(g => g[1] === '/api/advisor/shop/preview')
+    assert.equal(p, '/api/advisor/shop/preview')
+    assert.match(body.gespraech, /^[0-9a-f]{32}$/)
+    assert.deepEqual({ ...body, gespraech: 'x' }, { gespraech: 'x', q: 'Bohrhammer', locale: 'de', ki: false })
     assert.deepEqual(w.findAll('ol.treffer li').map(l => l.text().split(' ')[0]), ['Bohrhammer', 'Akkuschrauber'])
     assert.match(w.find('.vorschau').text(), /2 Treffer · nur Wortsuche/)
     assert.match(w.find('.facetten').text(), /Farbe/)
+    assert.equal(w.find('.vorschau .satz').text(), '2 Produkte passen zu „bohrhammer“.')
+    assert.equal(w.find('.vorschau .gesammelt').text(), 'bohrhammer · Farbe: Rot')
+    // eine zweite Frage gehört zum selben Gespräch, ↺ fängt ein neues an
+    await w.find('form.row').trigger('submit'); await warte(w)
+    const zwei = gesendet.filter(g => g[1] === '/api/advisor/shop/preview')
+    assert.equal(zwei[1][2].gespraech, body.gespraech)
+    await w.find('button.vorschau-neu').trigger('click'); await warte(w)
+    assert.ok(!w.find('.vorschau').exists())
+    await w.find('input.vorschau-frage').setValue('Zelt')
+    await w.find('form.row').trigger('submit'); await warte(w)
+    assert.notEqual(gesendet.filter(g => g[1] === '/api/advisor/shop/preview').at(-1)[2].gespraech, body.gespraech)
   } finally { ende() }
 })
 
@@ -135,7 +149,7 @@ test('nutzt der Berater KI, fragt die Vorschau mit KI und zeigt Text, Unterlagen
     await w.find('tr.berater').trigger('click'); await warte(w)
     await w.find('input.vorschau-frage').setValue('reissverschluss kaputt')
     await w.find('form.row').trigger('submit'); await warte(w)
-    assert.equal(gesendet.find(g => g[1] === '/api/advisor/shop/ask')[2].ki, true)
+    assert.equal(gesendet.find(g => g[1] === '/api/advisor/shop/preview')[2].ki, true)
     assert.equal(w.find('.ki-text').text(), '✧ Den Schieber vorsichtig zusammendrücken [U1].')
     assert.equal(w.find('.unterlage').text(), '⎘ U1 Reparatur: Reißverschluss · Pflege – Hosen.pdf')
     assert.ok(!w.find('.ki-fehler').exists())

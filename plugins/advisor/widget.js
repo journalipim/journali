@@ -3,8 +3,10 @@
 // Wahlweise: data-locale="en" (sonst die des Browsers), data-target="#advisor" (in dieses Element statt schwebend), data-color="#0a6" (Akzent).
 // Kein Paket, kein Framework; alles im Shadow DOM, damit die Seite und das Fenster sich nicht gegenseitig gestalten. Werte aus den Produktdaten
 // kommen nur als Text in die Seite (textContent), nie als HTML. Gespeichert wird nichts — kein Cookie, kein Speicher im Browser.
-// Ein Gespräch (08.10.2026): jede Eingabe ergänzt die bisherigen Angaben (Wörter und Filter, als Chips über den Treffern, einzeln zu entfernen);
-// die Anfrage trägt sie mit, der Server merkt sich nichts. Das Merkmal, das die Treffer am besten teilt, steht als Rückfrage da.
+// Ein Gespräch (08.10.2026): jede Eingabe ergänzt die bisherigen Angaben (Wörter und Filter, als Chips über den Treffern, einzeln zu entfernen).
+// Seit 09.10.2026 (pflegestruktur 44) zeigt das Fenster nur noch an: es schickt die Eingabe oder den Klick mit einer zufälligen Kennung des
+// Gesprächs, der Kern im Dienst (kern/gespraech.mjs) versteht, merkt sich das Gespräch und setzt die Sätze zusammen. Die Kennung trägt keine Person
+// und lebt nur, solange die Seite offen ist. Das Merkmal, das die Treffer am besten teilt, steht als Rückfrage da.
 // Wechselt das Thema (zusammen nichts, die neue Eingabe allein schon), fragt das Fenster, ob es stattdessen danach sucht.
 // Passen Abschnitte aus den Unterlagen (Pflege, Reparatur, häufige Fragen) zur Frage, stehen sie zuerst — mit Quelle und „Dokument öffnen“.
 // Die gesammelten Angaben und was sich lockern lässt, stehen in der Blase der Antwort; die Knöpfe älterer Antworten sind aus. Die letzte Frage
@@ -16,45 +18,39 @@
 (function () {
   'use strict'
 
-  const liste = (l, und) => l.length < 2 ? l.join('') : `${l.slice(0, -1).join(', ')} ${und} ${l.at(-1)}`
+  /// Die Kennung eines Gesprächs: zufällig, ohne Person, nur solange die Seite offen ist
+  function kennung() {
+    const a = new Uint8Array(16)
+    const c = (typeof window !== 'undefined' && window.crypto) || (typeof crypto !== 'undefined' ? crypto : null)
+    if (c && c.getRandomValues) c.getRandomValues(a); else for (let i = 0; i < a.length; i++) a[i] = Math.floor(Math.random() * 256)
+    return Array.from(a, x => x.toString(16).padStart(2, '0')).join('')
+  }
   const TEXTE = {
     de: {
-      oeffnen: 'Produktberatung', schliessen: 'Schliessen', frage: 'Wonach suchen Sie?', senden: 'Fragen', treffer: n => n === 1 ? '1 Produkt passt.' : `${n} Produkte passen.`,
-      keine: 'Kein Produkt passt dazu.', bis: 'bis', ab: 'ab', details: 'Details', vergleichen: 'Vergleichen', vergleich: n => `${n} vergleichen`,
+      oeffnen: 'Produktberatung', schliessen: 'Schliessen', frage: 'Wonach suchen Sie?', senden: 'Fragen',
+      bis: 'bis', ab: 'ab', details: 'Details', vergleichen: 'Vergleichen', vergleich: n => `${n} vergleichen`,
       unterlagen: 'Aus den Unterlagen:', dokOeffnen: 'Dokument öffnen', seite: n => `S. ${n}`, ganz: 'ganzer Abschnitt',
       zurueck: 'Zurück', fehler: 'Der Berater antwortet gerade nicht.', zuviel: 'Zu viele Fragen in kurzer Zeit.', varianten: n => `${n} Ausführungen`, ki: 'Text von einer KI erstellt',
       filterWeg: 'Filter entfernen', merkmal: 'Merkmal', gleich: 'gleich',
-      aehnlich: n => n === 1 ? '1 ähnliches Produkt.' : `${n} ähnliche Produkte.`, unbekannt: w => `„${w.join('“, „')}“ steht in keinem Produkt.`,
       neu: 'Neue Suche', angabeWeg: 'Angabe entfernen', lockern: 'Mit weniger Angaben:', ohne: (l, n) => `${l} (${n})`, alle: 'alle Produkte',
-      abschluss: l => l.length ? `Passt eines davon? Oder soll ich nach ${liste(l, 'oder')} eingrenzen?` : 'Passt eines davon?',
-      gelesen: (von, zu) => `„${von}“ habe ich als „${zu}“ gelesen.`,
-      ueber: n => `Zu „${n}“:`, ueberNichts: 'Dazu steht in den Angaben nichts.', alleAngaben: 'Alle Angaben zu diesem Produkt?',
-      trefferVorn: (n, hart, weich) => hart ? `${n === 1 ? '1 Produkt passt' : `${n} Produkte passen`} zu „${hart}“; zuerst, was zu „${weich}“ passt.`
-        : `${n === 1 ? '1 Produkt passt' : `${n} Produkte passen`} zu „${weich}“, die passendsten zuerst.`,
-      trefferZu: (n, w) => n === 1 ? `1 Produkt passt zu „${w}“.` : `${n} Produkte passen zu „${w}“.`, weitere: n => `${n} weitere zeigen`,
+      weitere: n => `${n} weitere zeigen`, nichtDas: 'Nicht das', nichtDasTitel: 'Dieses Produkt nicht mehr vorn zeigen', angesehen: 'angesehen',
       oeffnenVariante: 'Öffnen', merken: '☆ Merken', gemerkt: '★ Gemerkt', merkzettel: n => `☆ ${n}`, merkzettelTitel: 'Merkzettel', merkzettelLeer: 'Der Merkzettel ist leer.',
       ausMerkzettel: 'Vom Merkzettel nehmen', zumProdukt: 'Zum Produkt', variante: 'Variante',
       produkt: 'Produkt', vergleichTitel: 'Vergleich', werte: 'Werte', gesucht: 'Gesucht:', ansichtZu: 'Ansicht schliessen',
-      statt: w => `Stattdessen nach „${w}“ suchen?`, stattJa: n => n === 1 ? 'Ja, 1 Produkt' : `Ja, ${n} Produkte`,
+      stattJa: n => n === 1 ? 'Ja, 1 Produkt' : `Ja, ${n} Produkte`,
     },
     en: {
-      oeffnen: 'Product advice', schliessen: 'Close', frage: 'What are you looking for?', senden: 'Ask', treffer: n => n === 1 ? '1 product matches.' : `${n} products match.`,
-      keine: 'No product matches.', bis: 'up to', ab: 'from', details: 'Details', vergleichen: 'Compare', vergleich: n => `Compare ${n}`,
+      oeffnen: 'Product advice', schliessen: 'Close', frage: 'What are you looking for?', senden: 'Ask',
+      bis: 'up to', ab: 'from', details: 'Details', vergleichen: 'Compare', vergleich: n => `Compare ${n}`,
       unterlagen: 'From the documentation:', dokOeffnen: 'Open document', seite: n => `p. ${n}`, ganz: 'whole section',
       zurueck: 'Back', fehler: 'The advisor is not answering right now.', zuviel: 'Too many questions in a short time.', varianten: n => `${n} versions`, ki: 'Text written by an AI',
       filterWeg: 'Remove filter', merkmal: 'Attribute', gleich: 'same',
-      aehnlich: n => n === 1 ? '1 similar product.' : `${n} similar products.`, unbekannt: w => `"${w.join('", "')}" does not appear in any product.`,
       neu: 'New search', angabeWeg: 'Remove', lockern: 'With fewer criteria:', ohne: (l, n) => `${l} (${n})`, alle: 'all products',
-      abschluss: l => l.length ? `Does one of these fit? Or shall I narrow it down by ${liste(l, 'or')}?` : 'Does one of these fit?',
-      gelesen: (von, zu) => `I read "${von}" as "${zu}".`,
-      ueber: n => `About "${n}":`, ueberNichts: 'The product details say nothing about this.', alleAngaben: 'See all details of this product?',
-      trefferVorn: (n, hart, weich) => hart ? `${n === 1 ? '1 product matches' : `${n} products match`} "${hart}"; those matching "${weich}" first.`
-        : `${n === 1 ? '1 product matches' : `${n} products match`} "${weich}", best matches first.`,
-      trefferZu: (n, w) => n === 1 ? `1 product matches "${w}".` : `${n} products match "${w}".`, weitere: n => `Show ${n} more`,
+      weitere: n => `Show ${n} more`, nichtDas: 'Not this', nichtDasTitel: 'Stop showing this product first', angesehen: 'viewed',
       oeffnenVariante: 'Open', merken: '☆ Save', gemerkt: '★ Saved', merkzettel: n => `☆ ${n}`, merkzettelTitel: 'Saved items', merkzettelLeer: 'Nothing saved yet.',
       ausMerkzettel: 'Remove', zumProdukt: 'To the product', variante: 'Variant',
       produkt: 'Product', vergleichTitel: 'Comparison', werte: 'Details', gesucht: 'Searching for:', ansichtZu: 'Close view',
-      statt: w => `Search for "${w}" instead?`, stattJa: n => n === 1 ? 'Yes, 1 product' : `Yes, ${n} products`,
+      stattJa: n => n === 1 ? 'Yes, 1 product' : `Yes, ${n} products`,
     },
   }
 
@@ -158,9 +154,9 @@ tr.gleich td { color: var(--leise); }
     const holen = o.fetch || window.fetch.bind(window)
     const sprache = (String(o.locale || navigator.language || 'de').slice(0, 2).toLowerCase() === 'de') ? 'de' : 'en'
     const T = TEXTE[sprache]
-    // das Gespräch: gesammelte Wörter und Filter, die früheren Eingaben — nur im Arbeitsspeicher der Seite
-    // merkzettel: id → { id, name, art: 'produkt' | 'variante' } — in der Reihenfolge des Merkens
-    const zustand = { woerter: [], filter: [], verlauf: [], auswahl: new Set(), merkzettel: new Map(), info: null, laeuft: false, fokus: null }
+    // das Gespräch führt der Kern im Dienst; hier stehen nur seine Kennung und — zum Anzeigen — die gesammelten Wörter und Filter der letzten Antwort
+    // merkzettel: id → { id, name, art: 'produkt' | 'variante' } — in der Reihenfolge des Merkens; alles nur im Arbeitsspeicher der Seite
+    const zustand = { gespraech: kennung(), woerter: [], filter: [], auswahl: new Set(), merkzettel: new Map(), info: null, laeuft: false }
 
     const wirt = document.createElement('div')
     wirt.setAttribute('data-journali-advisor', '')
@@ -229,7 +225,11 @@ tr.gleich td { color: var(--leise); }
       const k = el('button', 'merken'); k.type = 'button'
       const zeige = () => { const an = zustand.merkzettel.has(id); k.textContent = an ? T.gemerkt : T.merken; k.classList.toggle('an', an) }
       k.addEventListener('click', () => {
-        zustand.merkzettel.has(id) ? zustand.merkzettel.delete(id) : zustand.merkzettel.set(id, { id, name, art })
+        if (zustand.merkzettel.has(id)) zustand.merkzettel.delete(id)
+        else {
+          zustand.merkzettel.set(id, { id, name, art })
+          rufe('/api/event', { gespraech: zustand.gespraech, art: 'gemerkt', id, name }).catch(() => {})
+        }
         zeige(); aktualisiereMerkzettel()
       })
       zeige()
@@ -298,6 +298,7 @@ tr.gleich td { color: var(--leise); }
       inhalt.append(el('div', 'name', h.name))
       for (const v of h.values || []) inhalt.append(el('div', 'wert', `${v.label}: ${v.value}`))
       if (h.variants > 1) inhalt.append(el('div', 'wert', T.varianten(h.variants)))
+      if (h.seen) inhalt.append(el('div', 'wert gesehen', T.angesehen))
       const aktion = el('div', 'aktion')
       const details = el('button', 'details', T.details); details.type = 'button'
       details.addEventListener('click', () => zeigeProdukt(h.id))
@@ -309,7 +310,9 @@ tr.gleich td { color: var(--leise); }
         aktualisiereLeiste()
       })
       wahl.append(box, document.createTextNode(' ' + T.vergleichen))
-      aktion.append(details, merkenKnopf(h.id, h.name, 'produkt'), wahl)
+      const nicht = el('button', 'nicht', T.nichtDas); nicht.type = 'button'; nicht.title = T.nichtDasTitel
+      nicht.addEventListener('click', () => schritt({ art: 'ablehnen', id: h.id, name: h.name }))
+      aktion.append(details, merkenKnopf(h.id, h.name, 'produkt'), wahl, nicht)
       inhalt.append(aktion)
       k.append(bild(h.image), inhalt)
       return k
@@ -321,7 +324,7 @@ tr.gleich td { color: var(--leise); }
     /// „Neue Suche“ steht in der letzten Blase einer Antwort (09.10.2026): bei Treffern neben „Passt eines davon?“, ohne Treffer bei den Angaben
     function neueSuche() {
       const neu = el('button', 'chip neu', T.neu); neu.type = 'button'
-      neu.addEventListener('click', () => { zustand.woerter = []; zustand.filter = []; zustand.verlauf = []; zustand.fokus = null; blase(T.neu); eingabe.focus() })
+      neu.addEventListener('click', () => schritt({ art: 'neu' }))
       return neu
     }
 
@@ -331,13 +334,13 @@ tr.gleich td { color: var(--leise); }
       c.append(el('span', 'leise', T.gesucht))
       for (const w of zustand.woerter) {
         const chip = el('button', 'chip an wort', `${w} ×`); chip.type = 'button'; chip.title = T.angabeWeg
-        chip.addEventListener('click', () => { zustand.woerter = zustand.woerter.filter(x => x !== w); frage('', false) })
+        chip.addEventListener('click', () => schritt({ art: 'weg', kind: 'word', word: w }))
         c.append(chip)
       }
       for (const f of zustand.filter) {
         const chip = el('button', 'chip an', `${filterText(f)} ×`)
         chip.type = 'button'; chip.title = T.filterWeg
-        chip.addEventListener('click', () => { zustand.filter = zustand.filter.filter(x => x !== f); frage('', false) })
+        chip.addEventListener('click', () => schritt({ art: 'weg', kind: 'filter', attribute: f.attribute, op: f.op, value: f.value }))
         c.append(chip)
       }
       if (mitNeu) c.append(neueSuche())
@@ -357,11 +360,7 @@ tr.gleich td { color: var(--leise); }
         ]
         const chip = el('button', 'chip', T.ohne(bleibt.length ? bleibt.join(' + ') : T.alle, l.n)); chip.type = 'button'
         chip.title = `${T.angabeWeg}: ${l.kind === 'word' ? l.word : filterText(l)}`
-        chip.addEventListener('click', () => {
-          if (l.kind === 'word') zustand.woerter = zustand.woerter.filter(x => x !== l.word)
-          else zustand.filter = zustand.filter.filter(x => !(x.attribute === l.attribute && x.op === l.op && x.value === l.value))
-          frage('', false)
-        })
+        chip.addEventListener('click', () => schritt(l.kind === 'word' ? { art: 'weg', kind: 'word', word: l.word } : { art: 'weg', kind: 'filter', attribute: l.attribute, op: l.op, value: l.value }))
         c.append(chip)
       }
       return c
@@ -374,10 +373,7 @@ tr.gleich td { color: var(--leise); }
 
     function facettenChip(f, opt) {
       const chip = el('button', 'chip', opt.text); chip.type = 'button'
-      chip.addEventListener('click', () => {
-        zustand.filter.push({ attribute: f.key, op: opt.op, value: opt.value, label: f.label, valueLabel: opt.valueLabel || `${opt.value}${f.unit ? ' ' + f.unit : ''}` })
-        frage('', false)
-      })
+      chip.addEventListener('click', () => schritt({ art: 'filter', attribute: f.key, op: opt.op, value: opt.value }))
       return chip
     }
 
@@ -408,17 +404,12 @@ tr.gleich td { color: var(--leise); }
     }
 
     /// Das Thema hat gewechselt: zusammen mit dem Bisherigen passt nichts, die neue Eingabe allein schon — ja sucht nur noch danach
-    function stattChips(s) {
+    function stattChips(s, frageText) {
       if (!s || !s.n) return null
       const r = el('div', 'rueckfrage statt')
-      r.append(el('div', 'blase', T.statt([...(s.words || []), ...(s.filter || []).map(filterText)].join(', '))))
+      r.append(el('div', 'blase', frageText))
       const ja = el('button', 'chip ja', T.stattJa(s.n)); ja.type = 'button'
-      ja.addEventListener('click', () => {
-        zustand.woerter = [...(s.words || [])]
-        zustand.filter = (s.filter || []).map(f => ({ attribute: f.attribute, op: f.op, value: f.value, label: f.label, valueLabel: f.valueLabel }))
-        zustand.verlauf = zustand.verlauf.slice(-1)   // nur die Eingabe, die das neue Thema gebracht hat
-        frage('', false)
-      })
+      ja.addEventListener('click', () => schritt({ art: 'statt' }))
       const c = el('div', 'chips'); c.append(ja); r.append(c)
       return r
     }
@@ -428,12 +419,12 @@ tr.gleich td { color: var(--leise); }
     /// Merkmal eingrenzen, das die Treffer am besten teilt; darunter seine Werte, die weiteren Merkmale und „weitere zeigen“
     /// Die Frage nennt die Merkmale, nach denen sich die Treffer unterscheiden (höchstens drei), und bietet sie in derselben Blase an —
     /// was sie nicht nennt, steht nicht da (09.10.2026)
-    function rueckfrage(facetten) {
+    function rueckfrage(facetten, frageText) {
       const genannt = (facetten || []).slice(0, 3)
       const r = el('div', 'rueckfrage abschluss')
       const b = el('div', 'blase')
       const kopf = el('div', 'kopfzeile')
-      kopf.append(el('span', 'frage', T.abschluss(genannt.map(f => f.label))))
+      kopf.append(el('span', 'frage', frageText || ''))
       if (zustand.woerter.length || zustand.filter.length) kopf.append(neueSuche())
       b.append(kopf)
       const wahl = facettenWahl(genannt); if (wahl) b.append(wahl)
@@ -466,60 +457,56 @@ tr.gleich td { color: var(--leise); }
     function antwortZumProdukt(r) {
       const antwort = el('div', 'karten antwort')
       const b = el('div', 'blase ueber ergebnis')
-      for (const k of r.corrected || []) b.append(el('div', 'gelesen leise', T.gelesen(k.from, k.to)))
-      b.append(el('div', 'leise', T.ueber(r.about.name)))
+      for (const h of r.texte?.hinweise || []) b.append(el('div', 'gelesen leise', h))
+      b.append(el('div', 'leise', r.texte?.ueber || r.about.name))
       if (r.answer) { b.append(el('span', 'satz', r.answer)); b.append(el('span', 'hinweis', T.ki)) }
       if (r.about.values.length) {
         const t = el('table', 'werte'), tb = el('tbody')
         for (const v of r.about.values) { const tr = el('tr'); tr.append(el('th', '', v.label), el('td', '', v.value)); tb.append(tr) }
         t.append(tb); b.append(t)
-      } else if (!r.answer) b.append(el('span', 'satz', T.ueberNichts))
+      } else if (!r.answer && r.texte?.satz) b.append(el('span', 'satz', r.texte.satz))
       antwort.append(b)
       const ub = unterlagenBlase(r.docs); if (ub) antwort.append(ub)
       const ab = el('div', 'rueckfrage abschluss'), bl = el('div', 'blase'), kopf = el('div', 'kopfzeile')
       const det = el('button', 'chip', T.details); det.type = 'button'
       det.addEventListener('click', () => zeigeProdukt(r.about.id))
       const knoepfe = el('span', 'chips'); knoepfe.append(det, neueSuche())
-      kopf.append(el('span', 'frage', T.alleAngaben), knoepfe)
+      kopf.append(el('span', 'frage', r.texte?.frage || ''), knoepfe)
       bl.append(kopf); ab.append(bl); antwort.append(ab)
       verlauf.append(antwort)
       verlauf.scrollTop = Math.max(0, antwort.offsetTop - 8)
     }
 
-    async function frage(q, alsBlase) {
+    /// Eine Eingabe oder ein Klick an den Kern — mit der Kennung des Gesprächs; was gilt, sagt die Antwort
+    const frage = (q, alsBlase) => anfrage({ q }, alsBlase ? q : null)
+    const schritt = s => anfrage({ schritt: s }, null)
+
+    async function anfrage(inhalt, ichText) {
       if (zustand.laeuft) return
       zustand.laeuft = true; senden.disabled = true
-      if (alsBlase && q) blase(q, true)
+      if (ichText) blase(ichText, true)
       try {
-        const r = await rufe('/api/ask', {
-          q, woerter: zustand.woerter, verlauf: zustand.verlauf.slice(-6), locale: sprache, ...(zustand.fokus ? { fokus: zustand.fokus } : {}),
-          filter: zustand.filter.map(f => ({ attribute: f.attribute, op: f.op, value: f.value })),
-        })
-        // was jetzt gilt, sagt der Server: die gesammelten Wörter und alle Filter, auch die aus dem Text erkannten — mit Bezeichnungen
+        const r = await rufe('/api/ask', { gespraech: zustand.gespraech, locale: sprache, ...inhalt })
+        // die Knöpfe älterer Antworten gelten nicht mehr
+        for (const alt of verlauf.querySelectorAll('.ergebnis button, .abschluss .neu, .karte .nicht')) alt.disabled = true
+        if (r.reset) { zustand.woerter = []; zustand.filter = []; blase(r.texte?.satz || T.neu); eingabe.focus(); return }
+        if (r.about) { antwortZumProdukt(r); return }   // eine Frage zum Produkt im Blick: seine Werte, seine Unterlagen
+        // was jetzt gilt, sagt der Kern: die gesammelten Wörter und alle Filter, auch die aus dem Text erkannten — mit Bezeichnungen
         if (Array.isArray(r.words)) zustand.woerter = r.words
         if (Array.isArray(r.filter)) zustand.filter = r.filter.map(f => ({ attribute: f.attribute, op: f.op, value: f.value, label: f.label, valueLabel: f.valueLabel }))
-        if (q) zustand.verlauf.push(q)
-        if (r.about) { antwortZumProdukt(r); return }   // eine Frage zum Produkt im Blick: seine Werte, seine Unterlagen
-        zustand.fokus = (r.hits || []).length === 1 ? r.hits[0].id : null
         const antwort = el('div', 'karten antwort')
         const ub = unterlagenBlase(r.docs); if (ub) antwort.append(ub)   // beantworten die Unterlagen die Frage, steht das zuerst
-        if (r.unknown && r.unknown.length) antwort.append(el('div', 'blase', T.unbekannt(r.unknown)))
-        // die Antwort nennt die Suche, dann die ersten drei Karten; zuletzt, direkt über der Eingabe, die Frage des Beraters (09.10.2026)
-        const wort = zustand.woerter.join(' ')
-        // weiche Wörter (09.10.2026) grenzen nicht ein, sie ordnen — der Satz sagt beides
-        const weich = (r.ranked || []).filter(w => zustand.woerter.includes(w)), hart = zustand.woerter.filter(w => !weich.includes(w))
-        const gefunden = weich.length ? T.trefferVorn(r.total, hart.join(' '), weich.join(' ')) : wort ? T.trefferZu(r.total, wort) : T.treffer(r.total)
-        const text = r.answer ? r.answer : (r.total ? (r.similar ? T.aehnlich(r.total) : gefunden) : T.keine)
-        // eine Blase: der Satz, was gesucht wird, ohne Treffer was sich lockern lässt — die Knöpfe älterer Antworten gelten nicht mehr
-        for (const alt of verlauf.querySelectorAll('.ergebnis button, .abschluss .neu')) alt.disabled = true
+        const texte = r.texte || {}
+        const text = r.answer ? r.answer : texte.satz
+        // eine Blase: was der Berater gelesen, nicht gefunden oder übernommen hat, der Satz, was gesucht wird, ohne Treffer was sich lockern lässt
         const sb = el('div', 'blase ergebnis')
-        for (const k of r.corrected || []) sb.append(el('div', 'gelesen leise', T.gelesen(k.from, k.to)))   // ein Tippfehler: was der Berater gelesen hat
+        for (const h of texte.hinweise || []) sb.append(el('div', 'gelesen leise', h))
         sb.append(el('span', 'satz', text))
         if (r.answer) sb.append(el('span', 'hinweis', T.ki))
         const ac = angabenChips(!(r.hits || []).length); if (ac) sb.append(ac)   // mit Treffern steht „Neue Suche“ im Abschluss
         const lo = r.total ? null : lockernChips(r.relax); if (lo) sb.append(lo)
         antwort.append(sb)
-        const st = r.total ? null : stattChips(r.instead); if (st) antwort.append(st)   // die Frage zuletzt, direkt über der Eingabe
+        const st = r.total ? null : stattChips(r.instead, texte.statt); if (st) antwort.append(st)   // die Frage zuletzt, direkt über der Eingabe
         const hits = r.hits || []
         for (const h of hits.slice(0, ZUERST)) antwort.append(karte(h))
         // „weitere zeigen“ gehört zur Liste: nach den Karten, vor der Frage; die weiteren Karten kommen an seine Stelle
@@ -528,7 +515,7 @@ tr.gleich td { color: var(--leise); }
           mehr.addEventListener('click', () => { for (const h of hits.slice(ZUERST)) antwort.insertBefore(karte(h), mehr); mehr.remove() })
           antwort.append(mehr)
         }
-        if (hits.length) antwort.append(rueckfrage(r.facets))
+        if (hits.length) antwort.append(rueckfrage(r.facets, texte.frage))
         verlauf.append(antwort)
         verlauf.scrollTop = Math.max(0, antwort.offsetTop - 8)   // an den Anfang der Antwort, nicht ans Ende der Karten
       } catch (e) { blase(e.message) }
@@ -536,9 +523,9 @@ tr.gleich td { color: var(--leise); }
     }
 
     async function zeigeProdukt(id) {
-      zustand.fokus = id   // das geöffnete Produkt ist im Blick
       try {
-        const p = await rufe(`/api/product/${encodeURIComponent(id)}?locale=${sprache}`)
+        // das geöffnete Produkt ist im Blick — der Kern im Dienst merkt es sich zum Gespräch
+        const p = await rufe(`/api/product/${encodeURIComponent(id)}?locale=${sprache}&gespraech=${zustand.gespraech}`)
         const { t: b, kopf, inhalt } = tafel('produkt', T.produkt, p.name)
         absaetze(inhalt, p.texts)
         kopf.append(merkenKnopf(p.id, p.name, 'produkt'))

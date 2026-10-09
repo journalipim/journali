@@ -3118,5 +3118,7 @@
  "Berater {0} gibt es nicht.": "Advisor {0} does not exist.",
  "Das Token des Beraters gilt nur für seine Fragen.": "The advisor's token is valid only for its questions.",
  "Berater {0} nutzt keine KI.": "Advisor {0} does not use AI.",
- "Ein Auftrag an die KI braucht einen Satz.": "A request to the AI needs a sentence."
+ "Ein Auftrag an die KI braucht einen Satz.": "A request to the AI needs a sentence.",
+ "Die Vorschau gibt es nur in journali.": "The preview exists only in journali.",
+ "Eine Frage an die Vorschau ist ein JSON-Objekt.": "A question to the preview is a JSON object."
 }

@@ -275,6 +275,7 @@ jobRunner.Anderswo = verbund.LaufendAnderswo;
 jobRunner.LogFertig = verbund.ProtokollFertig;
 verbund.LogsHier = () => jobRunner.LaufendeLogs();
 builder.Services.AddSingleton(verbund);
+builder.Services.AddSingleton(new AdvisorKern(pluginDir, LoggerFactory.Create(b => b.AddConsole()).CreateLogger("advisor")));   // die Vorschau des Beraters: Kindprozess plugins/advisor/kern/prozess.mjs
 builder.Services.AddSingleton(new Embedder(pluginDir, LoggerFactory.Create(b => b.AddConsole()).CreateLogger("embed"))
 { Eingeschaltet = () => catalog.Lesen((_, _) => catalog.Plugins.All.TryGetValue(Embedder.PluginKey, out var e) && e.Enabled) });   // eine Suchfrage einbetten: Kindprozess plugins/embed/serve.mjs
 builder.Services.AddHostedService(sp => sp.GetRequiredService<JobRunner>());
@@ -587,7 +588,7 @@ MailApi.Map(api, mailer);   // Mailserver einstellen und eine Probe senden (Eins
 LicenceKeys.Map(api, licences, new KeyRequests(db, instanz), instanz, abos);   // Schlüssel: signiert anfordern, einlösen — Reset oder Limit, an die Instanz gebunden, einmal
 JobApi.Map(api, jobRunner, verbund.ProtokollLesen);   // Jobs: Definition, Läufe, Logs (Plugin tasker)
 ScriptumApi.Map(api, jobRunner);   // Skripte (37): im Journal geschrieben, als Job gelaufen — der Quelltext nur für das Schreibrecht
-AdvisorApi.Map(api, dataDir, jobDir);   // Produktberater (42): Fragen aus dem Dienst des Plugins advisor — Treffer, Facetten, Vergleich
+AdvisorApi.Map(api, dataDir, jobDir, () => jobRunner.Origin);   // Produktberater (42): Fragen aus dem Dienst des Plugins advisor — Treffer, Facetten, Vergleich
 ConfiguratorApi.Map(api);   // Konfigurator (39): eine Auswahl gegen die Regeln im Journal prüfen — für den Shop
 TeamApi.Map(api, jobDir);   // Teams: Kostenstelle der KI — Schlüssel, Verbuchung, Führung
 AiApi.Map(api, jobDir);     // KI über den Server: Schlüssel des zahlenden Teams; begrenzt wird hier nichts

@@ -61,6 +61,11 @@ public static class Auth
         With(dir, s => { s.Advisors[Sha(token)] = new AdvisorRec(advisor, label, DateTimeOffset.UtcNow); return 0; }, save: true);
         return token;
     }
+    // Token für den Kern als Kindprozess (Vorschau, AdvisorKern): je Berater eines, nur im Arbeitsspeicher, bis der Server endet
+    private static readonly ConcurrentDictionary<string, string> ProzessToken = new();        // Berater → Token
+    private static readonly ConcurrentDictionary<string, string> ProzessBerater = new();      // Token → Berater
+    public static string AdvisorProzessToken(string advisor) => ProzessToken.GetOrAdd(advisor, a => { var t = "ja_p_" + NewSecret(); ProzessBerater[t] = a; return t; });
+
     public static List<(string Id, string Label, DateTimeOffset At)> AdvisorTokens(string dir, string advisor) =>
         With(dir, s => s.Advisors.Where(t => t.Value.Advisor == advisor).OrderByDescending(t => t.Value.At).Select(t => (t.Key[..12], t.Value.Label, t.Value.At)).ToList());
     public static int AdvisorTokenWiderrufen(string dir, string advisor, string id) =>
@@ -192,10 +197,13 @@ public static class Auth
             if (token.StartsWith("ja_"))
             {
                 // Berater: kein Anwender, die Rolle aus seiner Definition; in der Demo gibt es keinen
-                var br = Demo.An ? null : Finde(dir, s => s.Advisors.GetValueOrDefault(Sha(token)));
-                if (br is null || AdvisorApi.RolleVon(c, br.Advisor) is not { } rolle) return null;
-                ctx.Items["advisor"] = br.Advisor;
-                return ("advisor:" + br.Advisor, rolle);
+                string? pb = null;
+                var vorschau = !Demo.An && ProzessBerater.TryGetValue(token, out pb);
+                var berater = Demo.An ? null : vorschau ? pb : Finde(dir, s => s.Advisors.GetValueOrDefault(Sha(token)))?.Advisor;
+                if (vorschau) ctx.Items["advisorVorschau"] = true;   // der Kern als Kindprozess fragt für die Vorschau eines Anwenders
+                if (berater is null || AdvisorApi.RolleVon(c, berater) is not { } rolle) return null;
+                ctx.Items["advisor"] = berater;
+                return ("advisor:" + berater, rolle);
             }
             var rec = Finde(dir, s => s.Tokens.GetValueOrDefault(Sha(token)));
             if (rec is not null && NurDemo(rec.User) && c.Lesen((_, _) => c.Users.All.GetValueOrDefault(rec.User)) is { Enabled: true } tu) return (tu.Key, tu.Role);

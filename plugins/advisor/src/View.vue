@@ -1,7 +1,8 @@
 <script setup>
 // ⇪ Export → Produktberatung (docs/pflegestruktur.md 42, 08.10.2026): die Berater dieser Instanz. Ein Berater ist ein Publikationsbaum, eine Rolle,
 // eine Sicht und ein paar Grenzen — als Plugin-Daten def:<schlüssel> im Journal. Hier wird er angelegt, sein Dienst bekommt ein Token, und die
-// Vorschau stellt dieselbe Frage wie ein Besucher (POST /api/advisor/<schlüssel>/ask, mit dem Recht Plugins statt des Tokens).
+// Vorschau stellt dieselbe Frage wie ein Besucher: an den Kern als Kindprozess von journali (POST /api/advisor/<schlüssel>/preview, mit dem Recht
+// Plugins statt des Tokens) — dieselbe Abwägung wie im Dienst, mit Gedächtnis je Gespräch (09.10.2026, pflegestruktur 44).
 import { ref, computed, onMounted } from 'vue'
 import { api, store, dialog, L, t } from 'journali'
 
@@ -14,7 +15,9 @@ const meldung = ref('')
 const neuKey = ref('')
 const pubs = ref([]), rollen = ref([]), teams = ref([])
 const tokens = ref([]), neuesToken = ref('')
-const vorschauFrage = ref(''), vorschau = ref(null)
+const vorschauFrage = ref(''), vorschau = ref(null), vorschauGespraech = ref('')
+/// eine zufällige Kennung je Vorschau-Gespräch — der Kern merkt sich damit, was schon gefragt wurde
+const neueKennung = () => Array.from(crypto.getRandomValues(new Uint8Array(16)), x => x.toString(16).padStart(2, '0')).join('')
 
 const sichten = computed(() => (store.model?.views ?? []).map(v => ({ key: v.key, label: L(v.label) || v.key })))
 const sprachen = computed(() => (store.model?.locales ?? []).map(l => l.code))
@@ -54,7 +57,7 @@ async function oeffne(key) {
     def.value = { label: '', pub: '', role: '', view: '', locales: [], greeting: {}, ki: false, team: '', mcp: true, origins: [], limits: {}, ...JSON.parse(JSON.stringify(d)) }
     def.value.limits ??= {}; def.value.greeting ??= {}; def.value.locales ??= []
     basis.value = JSON.stringify(sauber(def.value))
-    cur.value = key; neuesToken.value = ''; vorschau.value = null
+    cur.value = key; neuesToken.value = ''; vorschau.value = null; vorschauGespraech.value = neueKennung()
     await ladeTokens()
   } catch (e) { store.toast(e.message) }
 }
@@ -109,8 +112,12 @@ async function tokenWiderrufen(id) {
 
 async function fragen() {
   // mit KI, wenn der Berater sie nutzt — die Vorschau zeigt, was ein Besucher bekommt, und warum die KI nicht antwortet (09.10.2026)
-  try { vorschau.value = await api.post(`/api/advisor/${encodeURIComponent(cur.value)}/ask`, { q: vorschauFrage.value, locale: grussSprachen.value[0], ki: !!def.value.ki }) }
+  try { vorschau.value = await api.post(`/api/advisor/${encodeURIComponent(cur.value)}/preview`, { gespraech: vorschauGespraech.value, q: vorschauFrage.value, locale: grussSprachen.value[0], ki: !!def.value.ki }) }
   catch (e) { vorschau.value = { error: e.message } }
+}
+/// Ein neues Gespräch in der Vorschau: der Kern vergisst die gesammelten Angaben
+function neuesGespraech() {
+  vorschauGespraech.value = neueKennung(); vorschau.value = null; vorschauFrage.value = ''
 }
 
 const einbinden = computed(() => `<script src="https://advisor.example.com/widget.js" async><` + `/script>`)
@@ -196,10 +203,15 @@ const compose = computed(() => [
         <form class="row" style="padding:4px 8px" @submit.prevent="fragen">
           <input v-model="vorschauFrage" class="vorschau-frage" style="flex:1" :placeholder="$t('Frage eines Besuchers')" />
           <button type="submit" class="vorschau-los" :disabled="geaendert" :title="geaendert ? $t('ungespeicherte Änderungen') : ''">{{ $t('Fragen') }}</button>
+          <button type="button" class="vorschau-neu" :title="$t('ein neues Gespräch: die gesammelten Angaben fallen weg')" @click="neuesGespraech">↺</button>
         </form>
         <div v-if="vorschau" class="vorschau" style="padding:0 8px 8px">
           <div v-if="vorschau.error" class="neg">✗ {{ vorschau.error }}</div>
           <template v-else>
+            <div v-if="vorschau.texte?.satz || vorschau.texte?.ueber" class="satz">{{ vorschau.texte.ueber ? vorschau.texte.ueber + ' ' : '' }}{{ vorschau.texte.satz }}</div>
+            <div v-for="(h, i) in vorschau.texte?.hinweise ?? []" :key="'h' + i" class="muted hinweis">{{ h }}</div>
+            <div v-if="vorschau.filter?.length || vorschau.words?.length" class="muted gesammelt" :title="$t('was der Kern aus dem Gespräch gesammelt hat')">{{ [...(vorschau.words ?? []), ...(vorschau.filter ?? []).map(f => f.label + ': ' + (f.valueLabel ?? f.value))].join(' · ') }}</div>
+            <table v-if="vorschau.about?.values?.length" class="grid about"><tbody><tr v-for="v in vorschau.about.values" :key="v.key"><td class="attr">{{ v.label }}</td><td>{{ v.value }}</td></tr></tbody></table>
             <div class="muted" :title="vorschau.warning || ''">{{ $t('{0} Treffer', [vorschau.total]) }}{{ vorschau.warning && !vorschau.warning.startsWith('KI') ? ' · ' + $t('nur Wortsuche') : '' }}</div>
             <div v-if="vorschau.warning?.startsWith('KI')" class="neg ki-fehler">✗ {{ vorschau.warning }}</div>
             <div v-if="vorschau.answer" class="ki-text" :title="$t('Text von einer KI erstellt')">✧ {{ vorschau.answer }}</div>
