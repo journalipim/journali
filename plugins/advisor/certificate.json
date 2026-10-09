@@ -1,8 +1,8 @@
 {
  "key": "advisor",
- "version": "2.3.0",
- "hash": "2943f874dda00962cf3a1d1e7c2e93a67801539eb6c3b90903874d620233f9ad",
+ "version": "2.3.1",
+ "hash": "8302cb6f13adb9e9f065c28129988ca065c0a345f27ca1f185f8ae8a32659f73",
  "issued": "2026-10-09",
  "issuer": "journali",
- "sig": "4z3OIXWKRbih2BAPh8CYsbBWpc2R1NpdCmNhriUeGghcrBIUWP4D+Kh+aNeDRb2LOIFd0VGR89l+Iw6i+vz7FQ=="
+ "sig": "6HyaKzFPoKZGQJ061AFtY3oITZzm7Ui0m7m7BUI5yk8uDaNDGhywx0an8skHp8tZAuyn1w4sI8/SICTNvPa4vw=="
 }

@@ -8,7 +8,7 @@
 import { woerter, gleichesWort, korrektur, ganz, weg } from './woerter.mjs'
 import { erkenne, fragt, namenWoerter, istArt, imNamen } from './verstehen.mjs'
 import { texte, angabeText } from './texte.mjs'
-import { stellen } from './stellen.mjs'
+import { stellen, genau } from './stellen.mjs'
 
 export const DAUER = 30 * 60_000
 export const MAX_WOERTER = 12
@@ -140,7 +140,8 @@ export function erstelleKern(o) {
     const wort = w.frage.join(' ')
     return {
       gespraech: id, locale: loc, total: 0, hits: [], facets: [], antworten, docs: [], answer, warning, corrected: [],
-      texte: { satz: gefunden.length ? T.zuDen(wort, liste.length) : T.zuDenNichts(wort), nichts: T.ueberNichts, hinweise: [] },
+      // nennt keine Stelle das Gefragte selbst, sagt der Satz, dass es Hinweise sind (09.10.2026)
+      texte: { satz: !gefunden.length ? T.zuDenNichts(wort) : genau(gefunden.flatMap(a => a.values)) ? T.zuDen(wort, liste.length) : T.zuDenHinweise(wort), nichts: T.ueberNichts, hinweise: [] },
     }
   }
 
@@ -155,9 +156,15 @@ export function erstelleKern(o) {
     const sel = await waehle(z, loc, { fokus: z.fokus, satz: eingabe, take: 1 })
     const d = await unterlagen(loc, { satz: eingabe, fokus: z.fokus })
     // nennen die Bezeichnungen der Werte nichts dazu, stehen die Stellen vielleicht in einem Wert oder in der Beschreibung
+    let hinweisWort = null
     if (!(sel.focus?.values ?? []).length) {
       const p = await produkt(z.fokus, loc)
-      if (p) { const w = wonach(vok, namen, eingabe); sel.focus = { id: z.fokus, name: p.name ?? z.fokusName, values: stellen(p, { woerter: w.suchwoerter, attribute: w.attribute }) } }
+      if (p) {
+        const w = wonach(vok, namen, eingabe)
+        const values = stellen(p, { woerter: w.suchwoerter, attribute: w.attribute })
+        sel.focus = { id: z.fokus, name: p.name ?? z.fokusName, values }
+        if (values.length && !genau(values) && w.frage.length) hinweisWort = w.frage.join(' ')
+      }
     }
     let answer = null, warning = sel.warning ?? d.warning ?? null
     if (vok.ki && ki) {
@@ -168,7 +175,7 @@ export function erstelleKern(o) {
     const about = sel.focus ?? { id: z.fokus, name: z.fokusName, values: [] }
     return {
       gespraech: id, locale: loc, total: 0, hits: [], facets: [], about, docs: d.docs ?? [], answer, warning, corrected: [],
-      texte: { ueber: T.ueber(about.name), satz: about.values.length || answer ? null : T.ueberNichts, frage: T.alleAngaben, hinweise: [] },
+      texte: { ueber: hinweisWort ? T.ueberHinweise(hinweisWort, about.name) : T.ueber(about.name), satz: about.values.length || answer ? null : T.ueberNichts, frage: T.alleAngaben, hinweise: [] },
     }
   }
 

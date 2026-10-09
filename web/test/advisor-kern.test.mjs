@@ -7,7 +7,7 @@ import assert from 'node:assert/strict'
 import { woerter, formen, korrektur, abstand } from '../../plugins/advisor/kern/woerter.mjs'
 import { erkenne, fragt, istArt, namenWoerter } from '../../plugins/advisor/kern/verstehen.mjs'
 import { erstelleKern } from '../../plugins/advisor/kern/gespraech.mjs'
-import { stellen, trifft, saetze } from '../../plugins/advisor/kern/stellen.mjs'
+import { stellen, trifft, treffer, saetze } from '../../plugins/advisor/kern/stellen.mjs'
 import { erstelleLernen, vorschlaege } from '../../plugins/advisor/kern/lernen.mjs'
 import { alsText } from '../../plugins/advisor/vorschlaege.mjs'
 import fs from 'node:fs'
@@ -281,10 +281,13 @@ test('Stellen eines Produkts: Werte und Sätze, in denen ein Wort der Frage steh
   assert.ok(!trifft('wasserdicht', 'Kondenswasser'))
   assert.ok(trifft('dicht', 'wasserdicht'), 'das ganze Wort in einem längeren')
   assert.ok(!trifft('ist', 'ist'), 'unter vier Zeichen zählt nicht')
+  assert.equal(treffer('wasserdicht', 'Das Zelt ist wasserdichtes Gewebe'), 'genau', 'das Wort selbst, gebeugt')
+  assert.equal(treffer('wasserdicht', '3000 mm Wassersäule'), 'hinweis', 'nur verwandt')
   assert.deepEqual(saetze('Eins. <b>Zwei</b> drei!\n\nVier'), ['Eins.', 'Zwei drei!', 'Vier'])
   const p = { values: [{ key: 'name', label: 'Name', value: 'Odda Zelt' }, ...PRODUKTE.z1.values], texts: PRODUKTE.z1.texts }
   assert.deepEqual(stellen(p, { woerter: ['wasserdicht'] }).map(v => v.value), ['Polyester, 3000 mm Wassersäule', 'Außenzelt mit 3 000 mm Wassersäule, Boden mit 5 000 mm.'])
-  assert.deepEqual(stellen(p, { attribute: ['gewicht'] }).map(v => [v.label, v.value]), [['Gewicht', '2.4 kg']])
+  assert.deepEqual(stellen(p, { attribute: ['gewicht'] }).map(v => [v.label, v.value, v.genau]), [['Gewicht', '2.4 kg', true]])
+  assert.ok(stellen(p, { woerter: ['wasserdicht'] }).every(v => !v.genau), '„Wassersäule“ ist ein Hinweis auf „wasserdicht“')
   assert.deepEqual(stellen(p, { woerter: ['vorraum'] }), [])
 })
 
@@ -295,7 +298,8 @@ test('„sind die wasserdicht?“ beantworten die Angaben der gezeigten Produkte
   const vorher = j.auswahlen().length
   const a = await kern.antworte({ gespraech: G, q: 'sind die wasserdicht?' })
   assert.equal(j.auswahlen().length, vorher, 'keine neue Auswahl')
-  assert.equal(a.texte.satz, 'Zu „wasserdicht“ steht bei den 2 Produkten:')
+  // Wortlaut (09.10.2026): „Wassersäule“ nennt „wasserdicht“ nicht selbst — der Satz sagt, dass es Hinweise sind
+  assert.equal(a.texte.satz, 'Zu „wasserdicht“ konkret habe ich nichts gefunden, aber diese Merkmale geben Hinweise:')
   assert.deepEqual(a.antworten.map(x => [x.name, x.values.map(v => v.label)]), [['Odda Zelt', ['Material', 'Beschreibung']], ['Ravik Zelt', []]])
   assert.equal(a.texte.nichts, 'Dazu steht in den Angaben nichts.')
   const weiter = await kern.antworte({ gespraech: G, q: '' })
@@ -303,7 +307,7 @@ test('„sind die wasserdicht?“ beantworten die Angaben der gezeigten Produkte
   // ein Name grenzt auf das Produkt ein, „schwer“ fragt nach dem Gewicht, „wiegen“ auch
   const ravik = await kern.antworte({ gespraech: G, q: 'wie schwer ist das Ravik?' })
   assert.deepEqual(ravik.antworten.map(x => [x.name, x.values.map(v => v.value)]), [['Ravik Zelt', ['1.4 kg']]])
-  assert.equal(ravik.texte.satz, 'Zu „schwer“ steht beim Produkt:')
+  assert.equal(ravik.texte.satz, 'Zu „schwer“ steht beim Produkt:', 'das Gewicht nennt das Gefragte')
   assert.deepEqual((await kern.antworte({ gespraech: G, q: 'wie viel wiegen die?' })).antworten.map(x => x.values.map(v => v.value)), [['2.4 kg'], ['1.4 kg']])
   const nichts = await kern.antworte({ gespraech: G, q: 'haben die einen Vorraum?' })
   assert.equal(nichts.texte.satz, 'Zu „vorraum“ steht bei diesen Produkten nichts in den Angaben.')
@@ -330,6 +334,11 @@ test('ein Produkt im Blick: nennen die Bezeichnungen nichts, antworten seine Wer
   const f = await kern.antworte({ gespraech: G, q: 'wie ist der boden?' })
   assert.equal(f.about.name, 'Ravik Zelt')
   assert.deepEqual(f.about.values.map(v => [v.label, v.value]), [['Beschreibung', 'Der Boden ist aus Nylon.']])
+  assert.equal(f.texte.ueber, 'Zu „Ravik Zelt“:', 'der Boden ist genau das Gefragte')
+  kern.merke(G, { id: 'z1', name: 'Odda Zelt' })
+  const h = await kern.antworte({ gespraech: G, q: 'ist es wasserfest?' })
+  assert.equal(h.texte.ueber, 'Zu „wasserfest“ konkret habe ich bei „Odda Zelt“ nichts gefunden, aber diese Merkmale geben Hinweise:')
+  assert.deepEqual(h.about.values.map(v => v.label), ['Material', 'Beschreibung'])
 })
 
 test('Gruss, Dank und Abschied bekommen eine kurze Antwort, keine Suche', async () => {
