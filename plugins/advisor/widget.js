@@ -122,6 +122,7 @@ td.aktion button { border: 1px solid var(--linie); background: transparent; colo
 .mehr { align-self: flex-start; border: 1px solid var(--linie); background: transparent; color: var(--text); border-radius: 8px; padding: 4px 10px; font-size: 12px; }
 .chip.neu { margin-left: auto; }
 .rueckfrage { display: flex; flex-direction: column; gap: 6px; }
+.abschluss > .blase { display: flex; align-items: center; justify-content: space-between; gap: 10px; white-space: normal; }
 .statt .ja { background: var(--akzent); border-color: var(--akzent); color: #fff; }
 form { display: flex; gap: 6px; padding: 10px; border-top: 1px solid var(--linie); }
 input[type=text] { flex: 1; font: inherit; color: var(--text); background: var(--flaeche); border: 1px solid var(--linie); border-radius: 8px; padding: 8px 10px; min-width: 0; }
@@ -313,7 +314,14 @@ tr.gleich td { color: var(--leise); }
     const filterText = f => `${f.label}: ${f.op === 'le' ? T.bis + ' ' : f.op === 'ge' ? T.ab + ' ' : ''}${f.valueLabel || f.value}`
 
     /// Die gesammelten Angaben als Chips: Wörter und Filter, jede einzeln zu entfernen — dazu „Neue Suche“
-    function angabenChips() {
+    /// „Neue Suche“ steht in der letzten Blase einer Antwort (09.10.2026): bei Treffern neben „Passt eines davon?“, ohne Treffer bei den Angaben
+    function neueSuche() {
+      const neu = el('button', 'chip neu', T.neu); neu.type = 'button'
+      neu.addEventListener('click', () => { zustand.woerter = []; zustand.filter = []; zustand.verlauf = []; blase(T.neu); eingabe.focus() })
+      return neu
+    }
+
+    function angabenChips(mitNeu) {
       if (!zustand.filter.length && !zustand.woerter.length) return null
       const c = el('div', 'chips angaben')
       c.append(el('span', 'leise', T.gesucht))
@@ -328,9 +336,7 @@ tr.gleich td { color: var(--leise); }
         chip.addEventListener('click', () => { zustand.filter = zustand.filter.filter(x => x !== f); frage('', false) })
         c.append(chip)
       }
-      const neu = el('button', 'chip neu', T.neu); neu.type = 'button'
-      neu.addEventListener('click', () => { zustand.woerter = []; zustand.filter = []; zustand.verlauf = []; blase(T.neu); eingabe.focus() })
-      c.append(neu)
+      if (mitNeu) c.append(neueSuche())
       return c
     }
 
@@ -418,7 +424,10 @@ tr.gleich td { color: var(--leise); }
     /// Merkmal eingrenzen, das die Treffer am besten teilt; darunter seine Werte, die weiteren Merkmale und „weitere zeigen“
     function rueckfrage(f, weitere, mehr) {
       const r = el('div', 'rueckfrage abschluss')
-      r.append(el('div', 'blase', T.abschluss(f ? f.label : null)))
+      const b = el('div', 'blase')
+      b.append(el('span', 'frage', T.abschluss(f ? f.label : null)))
+      if (zustand.woerter.length || zustand.filter.length) b.append(neueSuche())
+      r.append(b)
       if (f) {
         const c = el('div', 'chips')
         for (const opt of optionen(f, false)) c.append(facettenChip(f, opt))
@@ -475,12 +484,12 @@ tr.gleich td { color: var(--leise); }
         const gefunden = weich.length ? T.trefferVorn(r.total, hart.join(' '), weich.join(' ')) : wort ? T.trefferZu(r.total, wort) : T.treffer(r.total)
         const text = r.answer ? r.answer : (r.total ? (r.similar ? T.aehnlich(r.total) : gefunden) : T.keine)
         // eine Blase: der Satz, was gesucht wird, ohne Treffer was sich lockern lässt — die Knöpfe älterer Antworten gelten nicht mehr
-        for (const alt of verlauf.querySelectorAll('.ergebnis button')) alt.disabled = true
+        for (const alt of verlauf.querySelectorAll('.ergebnis button, .abschluss .neu')) alt.disabled = true
         const sb = el('div', 'blase ergebnis')
         for (const k of r.corrected || []) sb.append(el('div', 'gelesen leise', T.gelesen(k.from, k.to)))   // ein Tippfehler: was der Berater gelesen hat
         sb.append(el('span', 'satz', text))
         if (r.answer) sb.append(el('span', 'hinweis', T.ki))
-        const ac = angabenChips(); if (ac) sb.append(ac)
+        const ac = angabenChips(!(r.hits || []).length); if (ac) sb.append(ac)   // mit Treffern steht „Neue Suche“ im Abschluss
         const lo = r.total ? null : lockernChips(r.relax); if (lo) sb.append(lo)
         antwort.append(sb)
         const st = r.total ? null : stattChips(r.instead); if (st) antwort.append(st)   // die Frage zuletzt, direkt über der Eingabe

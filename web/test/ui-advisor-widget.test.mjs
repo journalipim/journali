@@ -91,7 +91,7 @@ test('eine Frage zeigt Treffer, fragt nach dem Merkmal, das sie am besten teilt,
   assert.deepEqual(w.$$('.karte .name').map(e => e.textContent), ['Bohrhammer Pro', 'Akkuschrauber'])
   assert.ok(w.$$('.blase').some(b => satz(b) === '2 Produkte passen zu „bohrhammer“.'))
   // die erste Facette als Rückfrage, die übrigen zum Eingrenzen
-  assert.equal(w.$('.rueckfrage .blase').textContent, 'Passt eines davon? Oder soll ich nach Farbe eingrenzen?')
+  assert.equal(w.$('.rueckfrage .blase .frage').textContent, 'Passt eines davon? Oder soll ich nach Farbe eingrenzen?')
   assert.deepEqual(w.$$('.rueckfrage > .chips .chip').map(c => c.textContent), ['Rot (1)', 'Blau (1)'])
   // die weiteren Merkmale: je eines ein Knopf, die Werte auf Klick
   assert.ok(w.$$('.eingrenzen .facette').some(c => c.textContent === 'Leistung ▾'))
@@ -252,6 +252,7 @@ test('wechselt das Thema, fragt das Fenster, ob es stattdessen danach sucht — 
   assert.equal(satz(sb), 'Kein Produkt passt dazu.')
   assert.deepEqual([...sb.querySelectorAll('.angaben .chip.an')].map(c => c.textContent), ['hose ×', 'pullover ×', 'Farbe: Grün ×'])
   assert.ok(sb.querySelector('.lockern .chip'))
+  assert.ok(sb.querySelector('.angaben .chip.neu'), 'ohne Treffer gibt es keinen Abschluss — „Neue Suche“ bleibt bei den Angaben')
   const ja = w.$('.statt .ja')
   assert.equal(ja.textContent, 'Ja, 17 Produkte')
   await w.klick(ja)
@@ -332,7 +333,10 @@ test('nach den Karten fragt der Berater, ob eines passt oder wonach er eingrenze
   const kinder = [...antwort.children]
   assert.ok(kinder.indexOf(antwort.querySelector('.rueckfrage')) > kinder.indexOf(antwort.querySelector('.karte')), 'die Frage nach den Karten')
   assert.ok(antwort.lastElementChild === antwort.querySelector('.rueckfrage.abschluss'), 'die Frage zuletzt, direkt über der Eingabe')
-  assert.equal(antwort.querySelector('.abschluss .blase').textContent, 'Passt eines davon? Oder soll ich nach Grösse eingrenzen?')
+  assert.equal(antwort.querySelector('.abschluss .blase .frage').textContent, 'Passt eines davon? Oder soll ich nach Grösse eingrenzen?')
+  // „Neue Suche“ steht in der letzten Blase, neben der Frage — nicht bei den Angaben oben
+  assert.ok(antwort.querySelector('.abschluss .blase .chip.neu'))
+  assert.ok(!antwort.querySelector('.ergebnis .chip.neu'))
   // die gesammelten Angaben stehen in der Blase der Antwort
   assert.deepEqual([...antwort.querySelectorAll('.ergebnis .angaben .chip.wort')].map(c => c.textContent), ['hose ×'])
   assert.equal(antwort.querySelectorAll('.karte').length, 3)
