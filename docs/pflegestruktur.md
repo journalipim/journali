@@ -2596,7 +2596,9 @@ Tafeln mit Kopfzeile (Art und Name) und öffnen in einer Ansicht neben dem Gespr
 vom Gespräch, gleich hoch, bis 480 px breit; das Gespräch ändert weder Lage noch Breite, sonst stünde die Eingabe nach jedem Öffnen an
 anderer Stelle. Ist der Bildschirm schmaler als 760 px, liegt die Ansicht über dem Gespräch. Eingebettet steht sie im selben Rahmen
 rechts. × in der Kopfzeile schliesst sie, eine neue Tafel ersetzt die alte, das Schliessen des Gesprächs schliesst sie mit.
-Die weiteren Merkmale zum Eingrenzen stehen als je ein Knopf („Farbe ▾“) da, ihre Werte erst auf Klick.
+Die weiteren Merkmale zum Eingrenzen stehen als je ein Knopf („Farbe ▾“) da, ihre Werte erst auf Klick. Schwebend lässt sich das Fenster
+vergrössern (⤢ im Kopf, 09.10.2026): fast die ganze Höhe, bis 720 px breit; die Ansicht rückt mit und liegt, wenn die Breite nicht reicht,
+über dem Gespräch. ⤡ stellt es zurück. Eingebettet bestimmt die Seite die Grösse.
 
 **Themenwechsel (08.10.2026).** Findet eine Eingabe zusammen mit den gesammelten Angaben nichts, für sich allein aber schon, und bringt
 sie ein neues Wort, fragt der Berater: „Stattdessen nach „pullover“ suchen?“ (`instead`: Wörter, Filter aus ihrem Text, Zahl). Ja sucht nur
