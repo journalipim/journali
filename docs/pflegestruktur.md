@@ -2748,6 +2748,10 @@ wurde. Gründe:
 - Rechte, Grenzen und Protokoll gibt es einmal, in journali — nicht je Website noch einmal.
 - Fremde Antworten gehen durch dieselbe Stelle wie die eigenen Daten: sie sind Daten, keine Anweisungen an die KI.
 
+**Ergänzt durch Abschnitt 44 (09.10.2026):** wer die Anfrage versteht (der Berater) und wer auswählt (journali), wie der
+Nachweis eines angemeldeten Kunden vom Shop über das Fenster und den Dienst zu journali kommt, und dass Preise aus einem fremden
+System in der Auswahl selbst stehen — nicht erst in der Antwort der KI.
+
 **Das Stück, das es schon gibt.** Der Dienst bietet selbst einen MCP-**Server** an (`/mcp`, Abschnitt 42): fremde KI-Agenten
 fragen darüber den Katalog. Das ist die andere Richtung und bleibt davon unberührt — siehe „Offen“.
 
@@ -2760,7 +2764,8 @@ fragen darüber den Katalog. Das ist die andere Richtung und bleibt davon unber�
    Werkzeuge angeboten; ruft sie eines, führt journali den Aufruf aus (`tools/call`) und gibt ihr das Ergebnis. Ein Eintrag je
    Aufruf (Berater, Zugang, Werkzeug, Dauer, Ergebnis ja/nein — ohne Inhalt) macht nachvollziehbar, was geschah. Damit gehen
    Preise und Verfügbarkeit für alle Besucher gleich: ein Dienstkonto, keine Kundendaten.
-2. **Kundenspezifisch.** Dafür muss feststehen, wer fragt — der Besucher ist im Shop angemeldet, nicht in journali. Vorschlag:
+2. **Kundenspezifisch.** Dafür muss feststehen, wer fragt — der Besucher ist im Shop angemeldet, nicht in journali. Vorschlag
+   (ausgeführt in Abschnitt 44, „Der Nachweis des Kunden“):
    die Website gibt dem Chat-Fenster einen kurzlebigen, vom Shop signierten Nachweis mit (Kundennummer, Ablauf; `data-customer`
    oder ein Aufruf `journaliAdvisor.kunde(token)`); der Dienst reicht ihn durch, journali prüft die Signatur mit dem
    öffentlichen Schlüssel des Shops (am Berater hinterlegt) und gibt ihn an das fremde Werkzeug weiter oder tauscht ihn dort
@@ -2778,3 +2783,123 @@ fragen darüber den Katalog. Das ist die andere Richtung und bleibt davon unber�
   antwortet der Berater wie heute.
 - Schritt 2 hängt am Shop: wie er seine Kunden anmeldet und ob er einen signierten Nachweis ausstellen kann. Erst mit einem
   konkreten Shop und einem konkreten Fremdsystem.
+
+## 44. Berater und journali — der Berater versteht, journali wählt aus (09.10.2026, Entwurf)
+
+**Die Lage.** Die Abwägung des Produktberaters steckt heute im Server (`AdvisorApi.cs`, Abschnitt 42): Wörter, Angaben,
+Eigenschaftswörter, Tippfehler, Produkt im Blick, Rückfrage. Das Fenster hält das Gespräch (gesammelte Wörter und Angaben,
+Verlauf, Produkt im Blick) und schickt es mit jeder Frage mit. Dazu kommen Wünsche, die dort nicht tragen:
+
+- **Ein Gedächtnis:** was der Besucher gesagt, gewählt, gesehen und abgelehnt hat — über einen Themenwechsel hinweg, nicht nur
+  die letzte Antwort und die angeklickten Merkmale.
+- **Lernen:** welche Wörter nichts finden, welche gelesenen Tippfehler angenommen werden, wonach Besucher Produkte öffnen und
+  merken. Das kostet Speicher und Rechenzeit und wächst mit dem Verkehr der Website, nicht mit der Pflege.
+- **Grosse Kataloge:** „ein Laptop zwischen 1000 und 2000 €“ in 100 000 Produkten — journali soll vorauswählen, nicht alles
+  schicken.
+- **Kundenpreise und Anmeldung:** Preise eines angemeldeten Kunden aus dem System des Shops (Abschnitt 43).
+
+**Entschieden (09.10.2026): der Berater versteht, journali wählt aus.** Der Berater macht aus der Eingabe eine genaue Anfrage und
+führt das Gespräch; journali wählt aus, was gezeigt werden darf und passt, und hält alles, was ein Geheimnis oder ein Recht braucht.
+
+| journali | Berater |
+|---|---|
+| was gezeigt werden darf: Baum, Rolle, Sicht, Freigaben, gültige Medien | Verstehen: Art, Angaben, Zahlen mit Einheit, Eigenschaftswörter, Tippfehler, Produkt im Blick |
+| Suche nach Angaben, Wörtern und Sinn; Merkmale zum Eingrenzen; was eine Angabe zu eng macht | Gedächtnis eines Gesprächs: Angaben, Vorlieben, Gesehenes, Abgelehntes, Verlauf |
+| Unterlagen und Vektoren | Rückfragen und Antwort zusammensetzen, in der Sprache des Besuchers |
+| KI über den Schlüssel des Teams, mit Grenzen | wann KI, wann ein Werkzeug gefragt wird |
+| fremde MCP-Werkzeuge: Zugang, Geheimnis, Freigabeliste, Kundennachweis | reicht den Kundennachweis nur durch |
+| Protokoll: wer was gefragt hat, ohne Inhalt | Lernen aus dem Verkehr der Website |
+
+Gründe:
+
+- **Rechte und Geheimnisse an einer Stelle.** Was eine Rolle sieht, gilt in journali; baute der Berater es nach, gäbe es zwei
+  Wahrheiten. Ein Geheimnis geht nur an einen Prozess des Servers (Abschnitt 38), nie an den Dienst an der Website.
+- **Besucherdaten gehören nicht ins Journal.** Ein Gespräch, Vorlieben und das Gelernte sind keine Produktdaten; im Journal lässt
+  sich nichts löschen. Der Berater hält sie, journali sieht sie nicht.
+- **Last getrennt.** Eine Spitze im Verkehr der Website trifft den Berater, nicht die Pflege; fällt der Berater aus, arbeitet
+  journali weiter.
+- **Plugins laufen nie im Serverprozess** (CLAUDE.md). Die Abwägung ist Sache des Plugins `advisor`, nicht des Servers.
+- **Vorauswahl in journali.** Der Berater bekommt nur, was zur Anfrage passt — bei jedem Umfang des Katalogs.
+
+**Ein Kern, zwei Orte.** Die Abwägung wird ein Modul des Plugins (`plugins/advisor/kern/`). Es läuft im Dienst an der Website und
+in journali als Kindprozess (wie der Einbetter, Abschnitt 35) — für die Vorschau in ⇪ Produktberatung, für den Prüfstand und
+für jede spätere Stelle, die beraten will. Beide sprechen mit journali nur über `/api`.
+
+**Die Schnittstelle (Version 2, neben `/ask`).**
+
+1. **Vokabular** — `GET /api/advisor/{key}/vocabulary?locale=…`: die Attribute der Sicht mit Bezeichnung je Sprache, Typ,
+   Einheit und deren Grösse (Masse, Volumen …), Listenwerte mit Bezeichnung, ob sie Merkmal zum Eingrenzen sein können; die
+   Wörter der Produktnamen (die Arten, mit Anzahl); die Sprachen. Klein, mit ETag aus Journalstand und Definition — der Berater
+   holt es, wenn es sich geändert hat, und versteht damit Angaben, Arten und Tippfehler ohne Rundreise.
+2. **Auswahl** — `POST /api/advisor/{key}/select`: `{ art: [Wörter], angaben: [{ attribute, op: eq|le|ge|low|high, value }],
+   ordnen: [Wörter], satz, fokus, take, skip, locale, lockern: true|false }`. journali wählt aus (Rechte, Sicht, die Art im
+   Namen, Angaben, „leicht“ als Hälfte der Treffer), ordnet nach Wörtern und Sinn, rechnet die Merkmale zum Eingrenzen und auf
+   Wunsch, welche Angabe zu eng ist. Zurück: Anzahl, die Treffer der Seite als Karten, Merkmale, Lockern.
+   „Laptop zwischen 1000 und 2000 €“ wird `{ art: ["laptop"], angaben: [{ price ge 1000 }, { price le 2000 }] }` — journali
+   schickt nur, was passt.
+3. **Unterlagen** — `POST /api/advisor/{key}/docs`: `{ satz, art, fokus }` → Abschnitte (Abschnitt 42, „Unterlagen“).
+4. **Ein Produkt, eine Variante, ein Vergleich, ein Bild, ein Dokument** — wie heute.
+5. **KI** — `POST /api/advisor/{key}/ki`: der Auftrag des Beraters (Frage, Treffer, Auszüge, Verlauf) und die freigegebenen
+   Werkzeuge. journali ruft die KI mit dem Schlüssel des Teams und führt jeden Werkzeugaufruf selbst aus (Abschnitt 43) — die
+   Schleife KI ↔ Werkzeug läuft in journali, weil dort die Geheimnisse liegen. Zurück: der Text und welche Werkzeuge gerufen wurden.
+
+`/ask` bleibt, bis das Fenster und der MCP-Server des Dienstes den Kern nutzen; dann fällt es weg.
+
+**Das Gedächtnis eines Gesprächs.** Das Fenster erzeugt beim Laden der Seite eine zufällige Kennung des Gesprächs und schickt sie
+mit; der Dienst hält dazu im Arbeitsspeicher (kein Datenträger, 30 Minuten nach der letzten Frage weg):
+
+- die Angaben (Wörter, Angaben je Attribut, woher: gesagt oder geklickt),
+- **Vorlieben**: Angaben, die über einen Themenwechsel gelten — Farbe, Grösse, Budget, Personen, Einsatz. Wechselt die Art (Zelt
+  → Schlafsack), übernimmt der Berater die Vorlieben, deren Attribut es bei der neuen Art gibt, und sagt es („Grösse M habe ich
+  übernommen.“); die übrigen ruhen, bis eine Art sie wieder hat,
+- gesehene und abgelehnte Produkte („nicht das“, ✕ an einer Karte) — ein abgelehntes kommt nicht wieder nach vorn,
+- das Produkt im Blick und den Verlauf der Eingaben.
+
+Die Kennung ist zufällig und trägt keine Person; ohne sie (ein Agent über MCP) gibt es kein Gedächtnis, jede Frage steht für sich.
+
+**Lernen.** Der Berater zählt, ohne Gespräch und ohne Kennung: Wörter ohne Treffer, angenommene gelesene Tippfehler, Wörter vor
+dem Öffnen oder Merken eines Produkts. Daraus macht er Vorschläge, die ein Mensch in journali übernimmt — ein Synonym in einem
+Wörterbuch, ein fehlendes Attribut in der Sicht. Gespeichert im Container des Dienstes (eigenes Volume), nie im Journal.
+
+**Der Nachweis des Kunden.** Der Shop hat seine Anmeldung; journali kennt seine Kunden nicht und braucht sie nicht zu kennen.
+
+1. Ist ein Kunde angemeldet, stellt der Shop auf seiner Seite einen **signierten, kurzlebigen Nachweis** aus — ein JWT, signiert
+   mit dem privaten Schlüssel des Shops (ES256 oder RS256): `iss` der Shop, `aud` der Berater, `sub` die Kundennummer, auf Wunsch
+   `grp` (Kundengruppe, Preisliste), `exp` höchstens 15 Minuten.
+2. Das Fenster bekommt ihn beim Einbinden (`data-customer`) oder später (`journaliAdvisor.kunde(nachweis)`, auch zum Erneuern)
+   und schickt ihn bei jeder Frage mit. Ein Passwort oder Schlüssel des Kunden geht nie durch den Chat.
+3. Der Dienst reicht ihn unverändert weiter — in einem eigenen Kopf neben seinem Token (`X-Advisor-Customer`), nie anstelle davon.
+   Er prüft ihn nicht und hält ihn nicht im Gedächtnis.
+4. journali prüft bei jeder Anfrage Signatur (öffentlicher Schlüssel oder JWKS-Adresse des Shops am Berater), Aussteller,
+   Empfänger und Ablauf. Gültig: die Anfrage gilt für diesen Kunden — kundenspezifische Werkzeuge werden angeboten, Preise des
+   Kunden fragt journali beim Shop. Ungültig oder fehlend: der Besucher ist anonym. Gespeichert wird davon nichts im Journal; das
+   Protokoll nennt höchstens, dass ein Nachweis galt.
+5. Gegenüber dem MCP-Server des Shops reicht journali den Nachweis weiter oder tauscht ihn dort gegen ein Token des Shops (OAuth
+   Token Exchange) — je nachdem, was der Shop anbietet.
+
+**Preise in der Auswahl.** Kommen Preise aus dem System des Shops, fragt journali sie für die Kandidaten der Auswahl in einem
+Aufruf an (`tools/call` eines freigegebenen Werkzeugs, mit Nachweis), filtert und ordnet danach und schickt sie mit den Karten.
+Ein Preisfilter wirkt so auch auf Preise, die nicht im PIM stehen; ohne Nachweis gelten die Preise für Anonyme (Listenpreise).
+
+**Der Prüfstand.** Dialoge in `tools/berater-dialoge/` — je Gespräch die Eingaben (und Klicks) und die Antwort, die ein Berater
+geben sollte. Ein Skript lässt den Kern sie gegen eine Instanz spielen (lesend, mit dem Token eines Beraters), legt Antwort und
+Erwartung nebeneinander und zählt, wo sie auseinandergehen. Damit wird der Berater nachgestellt, und jede Änderung zeigt, ob
+ein Gespräch schlechter wurde.
+
+**Reihenfolge.**
+
+1. Vokabular und Auswahl in journali (Schnittstelle Version 2), aus dem heutigen Code — mit den Tests, die es gibt.
+2. Der Kern im Plugin: Verstehen und Antwort aus dem Fenster und aus `AdvisorApi` dorthin; das Fenster zeigt nur noch an.
+3. Gedächtnis im Dienst; der Prüfstand mit den ersten Dialogen.
+4. Lernen.
+5. Zugang `mcp`, Freigabeliste, KI mit Werkzeugen, Kundennachweis, Preise in der Auswahl — mit einem konkreten Shop.
+
+**Offen.**
+
+- Ob die Kennung des Gesprächs über ein Neuladen der Seite hinaus gilt (`sessionStorage` im Fenster). Das wäre ein Speicher im
+  Browser; heute speichert das Fenster bewusst nichts (Abschnitt 42).
+- Wo das Gedächtnis liegt, wenn der Dienst auf mehreren Rechnern läuft (heute einer je Berater).
+- Ob Vorschläge aus dem Lernen in journali als Liste erscheinen (unter ⇪ Produktberatung) oder als Datei des Dienstes bleiben.
+- Ob `/mcp` des Dienstes den Kern nutzt und damit auch Vorlieben kennt (ein Agent bringt sein Gedächtnis meist selbst mit).
+- Das Format des Nachweises, wenn ein Shop kein JWT ausstellen kann (etwa ein signierter Kopf mit HMAC und einem gemeinsamen
+  Geheimnis am Berater).
