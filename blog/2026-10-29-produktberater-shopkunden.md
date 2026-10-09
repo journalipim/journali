@@ -1,6 +1,6 @@
 ---
 title: Journali KI Produktberater – wie Besucher, Shop-Kunden und journali zusammenhängen
-excerpt: Wer fragt, was der Berater sich merkt und was nie ins Journal kommt: heute anonym und ohne Speicher, als Nächstes mit einem Gedächtnis im Dienst und einem signierten Nachweis vom Shop für angemeldete Kunden.
+excerpt: Wer fragt, was der Berater sich merkt und was nie ins Journal kommt: anonym, mit einem Gedächtnis im Dienst – und als Nächstes ein signierter Nachweis vom Shop für angemeldete Kunden.
 slug: produktberater-besucher-und-kunden
 tags: [KI, MCP, Integration, Architektur, Betrieb]
 categories: [Entwicklung]
@@ -24,13 +24,13 @@ Wie Dienst, Fenster und MCP-Server gebaut sind, steht in [journali-advisor – w
 
 Der Berater zeigt jedem Besucher dasselbe: die Produkte des Publikationsbaums mit den Attributen der Sicht, so weit die Rolle des Beraters sie sieht. **Eine Anmeldung gibt es nicht, weder im Fenster noch am MCP-Endpunkt.** Was der Berater zeigt, ist öffentlich – das bestätigt ihr vor dem Einschalten.
 
-Das Gespräch hält heute das **Fenster selbst**, im Arbeitsspeicher der Seite: die gesammelten Wörter und Filter, die letzten sechs Eingaben und das Produkt im Blick. Es schickt sie mit jeder Frage mit. Server und Dienst merken sich nichts davon. **Kein Cookie, kein Speicher im Browser** – nach dem Neuladen beginnt das Gespräch von vorn, auch der Merkzettel ist dann leer.
+Das Fenster speichert nichts: **kein Cookie, kein Speicher im Browser** – nach dem Neuladen beginnt das Gespräch von vorn, auch der Merkzettel ist dann leer. Das Gespräch selbst merkt sich der Dienst (nächster Abschnitt).
 
 Der Dienst zählt je Besucheradresse die Fragen für Minute und Tag, im Arbeitsspeicher, und verwirft die Zahlen danach. Den Inhalt einer Frage protokolliert er nicht.
 
-## Als Nächstes: ein Gedächtnis im Dienst – Konzept
+## Ein Gedächtnis im Dienst – gebaut
 
-Entschieden und **noch nicht gebaut** ist ein Gedächtnis für ein Gespräch, das über einen Themenwechsel hinaus gilt:
+Der Berater merkt sich ein Gespräch, auch über einen Themenwechsel hinaus:
 
 1. Das Fenster erzeugt beim Laden der Seite eine **zufällige Kennung des Gesprächs** und schickt sie mit jeder Frage mit. Sie trägt keine Person.
 2. Der Dienst hält dazu **nur im Arbeitsspeicher** fest: die Angaben (gesagt oder geklickt), Vorlieben wie Farbe, Größe oder Budget, gesehene und abgelehnte Produkte, das Produkt im Blick und den Verlauf.
@@ -69,7 +69,7 @@ Im Journal lässt sich nichts löschen. Darum gehört dorthin nur, was Produktda
 - das Gespräch eines Besuchers, seine Vorlieben und was er gesehen oder abgelehnt hat,
 - der Nachweis des Kunden und die Kundennummer – das Protokoll nennt höchstens, dass ein Nachweis galt,
 - die Zählung je Besucheradresse,
-- was der Berater später aus dem Verkehr der Website lernt: Wörter ohne Treffer, angenommene Tippfehler. Das zählt er ohne Gespräch und ohne Kennung, im Container des Dienstes, und macht daraus Vorschläge, die ein Mensch in journali übernimmt.
+- was der Berater aus dem Verkehr der Website lernt: Wörter ohne Treffer, gelesene Tippfehler, Wörter vor dem Öffnen oder Merken eines Produkts. Das zählt er ohne Gespräch und ohne Kennung, wahlweise in einer Datei im Container des Dienstes, und macht daraus Vorschläge, die ein Mensch in journali übernimmt.
 
 ## Wer was hält
 
@@ -80,7 +80,7 @@ Im Journal lässt sich nichts löschen. Darum gehört dorthin nur, was Produktda
 | KI über den Schlüssel des Teams, mit Grenzen | wann KI, wann ein Werkzeug gefragt wird |
 | fremde MCP-Werkzeuge: Zugang, Geheimnis, Freigabeliste, Prüfung des Nachweises | reicht den Nachweis nur durch |
 
-Heute liegt das Verstehen noch im journali-Server und das Gespräch im Fenster. Die Aufteilung in der Tabelle ist entschieden; gebaut wird sie Schritt für Schritt – zuerst die Auswahl in journali, dann das Verstehen im Plugin, dann das Gedächtnis. **Nachweis, Kundenpreise und fremde MCP-Quellen kommen zuletzt, mit einem konkreten Shop**, denn sie hängen daran, wie der Shop seine Kunden anmeldet.
+Die Aufteilung in der Tabelle ist gebaut: die Auswahl in journali, das Verstehen im Plugin, das Gedächtnis im Dienst. **Nachweis, Kundenpreise und fremde MCP-Quellen kommen zuletzt, mit einem konkreten Shop**, denn sie hängen daran, wie der Shop seine Kunden anmeldet.
 
 ## Und jetzt?
 

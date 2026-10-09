@@ -1,6 +1,6 @@
 ---
 title: journali-advisor – wie der Journali KI Produktberater gebaut ist
-excerpt: Ein eigener Dienst im Container, ein Chat-Fenster als ein Script-Tag, ein MCP-Server für KI-Agenten – und journali entscheidet, was ein Berater zeigt. Dazu, was als Nächstes kommt: eine Schnittstelle, über die der Berater versteht und journali auswählt, und weitere Quellen über MCP.
+excerpt: Ein eigener Dienst im Container, ein Chat-Fenster als ein Script-Tag, ein MCP-Server für KI-Agenten – der Berater versteht, journali entscheidet, was er zeigt. Dazu, was als Nächstes kommt: weitere Quellen über MCP.
 slug: produktberater-technik
 tags: [KI, MCP, RAG, Architektur, Integration, Betrieb]
 categories: [Entwicklung]
@@ -13,8 +13,8 @@ Der [Journali KI Produktberater](/?p=233) beantwortet Fragen von Besuchern eurer
 
 **Eure Besucher erreichen nie den journali-Server.** Zwischen Website und PIM steht ein eigener Dienst:
 
-- **Im Server** stehen die Definition des Beraters (im Journal, als Daten des Plugins), der Bestand je Berater und Sprache und die Fragen unter `/api/advisor/{key}/…`: Info, Frage, Produkt, Variante, Vergleich, Bild und Dokument.
-- **Der Dienst** (`serve.mjs`) läuft in einem **eigenen Container** aus `node:22-alpine` mit dem Verzeichnis des Plugins, nur lesend eingebunden – kein eigenes Image, keine npm-Pakete. Er braucht nur HTTP zu journali, keine Datenbank, keinen Medienspeicher, und die Verbindung zu journali baut immer er auf.
+- **Im Server** stehen die Definition des Beraters (im Journal, als Daten des Plugins), der Bestand je Berater und Sprache und die Fragen unter `/api/advisor/{key}/…`: Vokabular, Auswahl, Unterlagen, KI, dazu Info, Produkt, Variante, Vergleich, Bild und Dokument.
+- **Der Dienst** (`serve.mjs`) läuft in einem **eigenen Container** aus `node:22-alpine` mit dem Verzeichnis des Plugins, nur lesend eingebunden – kein eigenes Image, keine npm-Pakete. Er braucht nur HTTP zu journali, keine Datenbank, keinen Medienspeicher, und die Verbindung zu journali baut immer er auf. In ihm läuft der **Kern** des Beraters: Er versteht die Eingaben und führt das Gespräch.
 
 Der Reverse Proxy gibt nur den Port des Dienstes nach außen, etwa als `https://advisor.example.com`. Der journali-Server bleibt im internen Netz.
 
@@ -44,7 +44,7 @@ Mehr braucht eure Website nicht. Das Fenster läuft im **Shadow DOM**, damit Sei
 
 Derselbe Dienst bedient unter `/mcp` einen **MCP-Server** (Streamable HTTP, Antwort als JSON) mit drei Werkzeugen, alle nur lesend:
 
-- `search_products` – Frage, Filter aus den Merkmalen, Sprache, Anzahl; liefert die passenden Abschnitte aus den Unterlagen mit,
+- `search_products` – Frage, Filter aus den Merkmalen, Sprache, Anzahl; der Kern versteht die Frage wie im Fenster, nur ohne Gespräch, und liefert die passenden Abschnitte aus den Unterlagen mit,
 - `get_product` – ein Produkt mit seinen Attributen, Bildern und Varianten,
 - `compare_products` – Produkte nebeneinander.
 
@@ -69,21 +69,21 @@ Die Adresse eines Besuchers kennt nur der Dienst, darum zählt er. journali zäh
 
 **CORS:** Die Definition nennt die Websites, die das Fenster einbinden dürfen. Eine Anfrage mit einem anderen `Origin` bekommt 403, auch am MCP-Endpunkt, wie es die Spezifikation gegen DNS-Rebinding verlangt. Ohne `Origin` – ein Server, ein MCP-Client – gilt die Anfrage.
 
-## Was als Nächstes kommt: der Berater versteht, journali wählt aus
+## Der Berater versteht, journali wählt aus
 
-Heute steckt die Abwägung – Wörter, Angaben, Eigenschaftswörter, Tippfehler, Rückfrage – im journali-Server. Entschieden ist eine neue Aufteilung, **geplant und noch nicht ausgeliefert**:
+Die Arbeit ist geteilt:
 
-- **Der Berater versteht:** Er macht aus der Eingabe eine genaue Anfrage, führt das Gespräch und setzt die Antwort zusammen. Diese Abwägung wird ein Modul des Plugins, das im Dienst läuft und in journali als Kindprozess für die Vorschau.
+- **Der Berater versteht:** Der Kern im Plugin macht aus der Eingabe eine genaue Anfrage – Angaben, Zahlen mit Einheit, Eigenschaftswörter wie „leicht“, Tippfehler, die Art des Produkts –, führt das Gespräch mit seinem Gedächtnis und setzt die Antwort in der Sprache des Besuchers zusammen. Er läuft im Dienst und in journali als Kindprozess für die Vorschau.
 - **journali wählt aus:** Rechte, Sicht, Freigaben, Suche nach Angaben, Wörtern und Sinn, Merkmale, Unterlagen, KI mit dem Schlüssel des Teams – alles, was ein Recht oder ein Geheimnis braucht.
 
-Dafür kommt eine **Schnittstelle in Version 2** neben die heutige Frage:
+Dazwischen liegt die **Schnittstelle in Version 2**:
 
 1. **Vokabular** – die Attribute der Sicht mit Bezeichnung, Typ, Einheit und Listenwerten, dazu die Wörter der Produktnamen. Klein und mit ETag: Der Berater holt es nur, wenn es sich geändert hat.
 2. **Auswahl** – Art, Angaben, Wörter zum Ordnen, Seite. journali schickt nur, was passt: „ein Laptop zwischen 1000 und 2000 €“ wird eine Anfrage mit der Art „laptop“ und zwei Angaben zum Preis, auch in einem sehr großen Katalog.
 3. **Unterlagen** – die passenden Abschnitte zu einer Frage.
 4. **KI** – der Auftrag des Beraters; journali ruft die KI mit dem Schlüssel des Teams.
 
-Die heutige Frage bleibt, bis Fenster und MCP-Server die neue Schnittstelle nutzen.
+Das Chat-Fenster zeigt nur noch an: Es schickt die Eingabe oder den Klick, der Kern antwortet. Wie gut der Berater antwortet, prüft ein **Prüfstand**: Gespräche mit Eingaben, Klicks und der Antwort, die ein guter Berater geben würde, gespielt gegen eine Instanz.
 
 ## Weitere Quellen über MCP – angebunden von journali
 
