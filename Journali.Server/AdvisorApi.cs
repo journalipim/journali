@@ -368,15 +368,15 @@ public static partial class AdvisorApi
     }
 
     /// <summary>
-    /// Die Produkte, zu denen alle Wörter passen. Passt ein Wort bei einem Teil im Namen oder als ganzes Wort, fallen die weg, bei denen
-    /// es nur ein Wortanfang ist — „zelte“ findet die Zelte, nicht die Isomatten „für Trekking und Zelten“; „akku“ findet weiter
-    /// „Akkuschrauber“, weil es dort nichts Besseres gibt.
+    /// Die Produkte, zu denen alle Wörter passen — je Wort nur in der besten Stufe, die vorkommt: steht es in einem Namen, nur die Produkte mit
+    /// ihm im Namen; sonst die mit ihm als ganzem Wort; sonst die, bei denen es ein Wortanfang ist. „zelt“ findet die Zelte, nicht die Stirnlampe,
+    /// die „niemanden im Zelt“ blendet (09.10.2026), und nicht die Isomatte „für Trekking und Zelten“; „akku“ findet weiter „Akkuschrauber“.
     /// </summary>
     public static List<Eintrag> MitWoertern(IEnumerable<Eintrag> kandidaten, IReadOnlyList<string> woerter)
     {
         var aus = kandidaten.Where(e => woerter.All(w => Staerke(e, w) > 0)).ToList();
         foreach (var w in woerter)
-            if (aus.Count > 0 && aus.Max(e => Staerke(e, w)) >= 1) aus = aus.Where(e => Staerke(e, w) >= 1).ToList();
+            if (aus.Count > 0 && aus.Max(e => Staerke(e, w)) is var beste) aus = aus.Where(e => Staerke(e, w) >= beste).ToList();
         return aus;
     }
 

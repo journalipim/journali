@@ -584,11 +584,14 @@ public class AdvisorTests
         var dicht = E("Odda Zelt", "Wassersäule 5000 mm, wasserdicht.");
         var luftig = E("Ravik Zelt", "Leicht und luftig.");
         var matte = E("Heia Isomatte", "Wasserdicht verschweisst.");
-        IReadOnlyList<AdvisorApi.Eintrag> alle = [luftig, matte, dicht];
+        var lampe = E("Bjørk Stirnlampe", "Rotlicht blendet niemanden im Zelt.");   // „Zelt“ als ganzes Wort, aber nicht im Namen
+        IReadOnlyList<AdvisorApi.Eintrag> alle = [luftig, matte, dicht, lampe];
         // „zelt“ steht in Namen: hart; „wasserdicht“ in keinem Namen: weich — beide Zelte, das wasserdichte zuerst, die Matte nicht
         Assert.Equal(["Odda Zelt", "Ravik Zelt"], AdvisorApi.Finde(alle, alle, ["zelt", "wasserdicht"]).Select(e => e.Name).ToList());
         // nur weiche Wörter: was mindestens eines trägt
         Assert.Equal(["Heia Isomatte", "Odda Zelt"], AdvisorApi.Finde(alle, alle, ["wasserdicht"]).Select(e => e.Name).Order().ToList());
+        // steht das Wort in einem Namen, gelten nur die Namen — die Stirnlampe „im Zelt“ ist kein Zelt
+        Assert.Equal(["Odda Zelt", "Ravik Zelt"], AdvisorApi.Finde(alle, alle, ["zelt"]).Select(e => e.Name).Order().ToList());
         // zwei harte Wörter grenzen zusammen ein
         Assert.Empty(AdvisorApi.Finde(alle, alle, ["zelt", "isomatte"]));
         var (hart, weich) = AdvisorApi.HartWeich(alle, ["zelt", "wasserdicht"]);
