@@ -1,0 +1,12 @@
+{
+  "name": "Ein leichtes Zelt",
+  "locale": "de",
+  "schritte": [
+    { "eingabe": "Ich suche ein leichtes Zelt",
+      "erwartet": { "alle_treffer_enthalten": "Zelt", "angaben": [["weight", "low"]], "frage_enthaelt": "Passt eines davon?" },
+      "vorbild": "Die leichtesten Zelte zuerst — das Ravik wiegt 1,4 kg. Für wie viele Personen soll es sein?" },
+    { "eingabe": "in rot",
+      "erwartet": { "alle_treffer_enthalten": "Zelt", "angaben": [["weight", "low"], ["color", "red"]] },
+      "vorbild": "Rot und leicht: diese Zelte. Passt eines davon?" }
+  ]
+}

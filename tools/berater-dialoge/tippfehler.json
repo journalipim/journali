@@ -1,0 +1,9 @@
+{
+  "name": "Ein Tippfehler",
+  "locale": "de",
+  "schritte": [
+    { "eingabe": "isomate",
+      "erwartet": { "korrigiert": [["isomate", "isomatte"]], "alle_treffer_enthalten": "Isomatte", "hinweis_enthaelt": "gelesen" },
+      "vorbild": "Sie meinen Isomatten? Diese habe ich." }
+  ]
+}

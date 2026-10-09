@@ -1,0 +1,9 @@
+{
+  "name": "Etwas, das es nicht gibt",
+  "locale": "de",
+  "schritte": [
+    { "eingabe": "auto",
+      "erwartet": { "unbekannt": ["auto"], "treffer_max": 0, "woerter": [] },
+      "vorbild": "Autos führen wir nicht. Ich helfe bei Bekleidung und Ausrüstung für draussen." }
+  ]
+}

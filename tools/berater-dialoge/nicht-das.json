@@ -1,0 +1,10 @@
+{
+  "name": "Nicht das",
+  "locale": "de",
+  "schritte": [
+    { "eingabe": "Stirnlampe", "erwartet": { "alle_treffer_enthalten": "Stirnlampe", "treffer_min": 2 } },
+    { "ablehnen": 1,
+      "erwartet": { "erster_treffer_anders": true, "hinweis_enthaelt": "nicht mehr vorn" },
+      "vorbild": "Gut, dann diese hier." }
+  ]
+}

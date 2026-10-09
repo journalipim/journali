@@ -504,6 +504,19 @@ das gehört in die Datenschutzerklärung der Website, ebenso die Adresse des Bes
 über die Adresse der Jobs mit einem Token, das journali nur im Arbeitsspeicher hält. Ohne `node` gibt es keine Vorschau, der Dienst
 an der Website ist davon nicht betroffen.
 
+**Der Prüfstand** (`tools/berater-dialoge/`): Dialoge als JSON — je Schritt eine Eingabe, ein Klick, „Öffnen“ oder „Nicht das“, dazu
+was erwartet wird (Treffer, Angaben, Hinweise, Frage, Unterlagen …) und ein Vorbild, wie ein Berater antworten würde. Gespielt werden sie
+über den Kern gegen eine Instanz, nur lesend und ohne KI:
+
+```bash
+node tools/berater-dialoge/spiele.mjs --journali http://localhost:5000 --berater shop --token ja_…
+```
+
+Der Bericht legt je Schritt die Antwort des Beraters, das Vorbild und die Abweichungen nebeneinander; Exit-Code 1, wenn ein Dialog abweicht.
+`--dialog <name>` spielt einen, `--mit-ki` fragt die KI des Teams (das kostet). Die ersten Dialoge passen zu den Testdaten aus
+`tools/demo-daten.cmd --anreichern`; „leicht“ braucht dort am Gewicht die Einheit kg (seit 09.10.2026 in `demo_master_tree.py`, bei
+älteren Daten im Modell nachtragen).
+
 **Token widerrufen** (Ansicht → ✕ am Token): der Dienst bekommt danach 401 und antwortet Besuchern mit „journali ist nicht
 erreichbar.“. Ein neues Token: ＋ Token, in `.env` eintragen, Container neu starten.
 

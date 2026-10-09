@@ -1,0 +1,13 @@
+{
+  "name": "Themenwechsel mit Vorliebe",
+  "locale": "de",
+  "schritte": [
+    { "eingabe": "Hose in Grösse M", "erwartet": { "alle_treffer_enthalten": "Hose", "angaben": [["size", "m"]] } },
+    { "eingabe": "Schlafsack",
+      "erwartet": { "statt": true, "treffer_max": 0 },
+      "vorbild": "Hosen und Schlafsäcke zusammen gibt es nicht — soll ich stattdessen nach Schlafsäcken suchen?" },
+    { "klick": { "art": "statt" },
+      "erwartet": { "alle_treffer_enthalten": "Schlafsack", "angaben": [["size", "m"]], "hinweis_enthaelt": "übernommen" },
+      "vorbild": "Schlafsäcke in Grösse M — die Grösse habe ich übernommen." }
+  ]
+}

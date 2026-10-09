@@ -1,0 +1,12 @@
+{
+  "name": "Eine Frage zum geöffneten Produkt",
+  "locale": "de",
+  "schritte": [
+    { "eingabe": "Zelt", "erwartet": { "alle_treffer_enthalten": "Zelt", "treffer_min": 2 } },
+    { "oeffne": 1 },
+    { "eingabe": "Wie schwer ist es?",
+      "erwartet": { "ueber": true, "werte_enthalten": ["Gewicht"] },
+      "vorbild": "Dieses Zelt wiegt 2,4 kg." },
+    { "eingabe": "", "erwartet": { "woerter": ["zelt"], "ueber": false }, "vorbild": "Die Suche nach Zelten gilt weiter." }
+  ]
+}

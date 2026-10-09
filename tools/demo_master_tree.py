@@ -282,7 +282,7 @@ def ensure_model(api: Api) -> None:
     attr("name", "Name", "Name", "text", axes=["locale"])
     attr("description", "Beschreibung", "Description", "html", axes=["locale", "channel"])
     attr("material", "Material", "Material", "text", axes=["locale"])
-    attr("weight", "Gewicht (kg)", "Weight (kg)", "decimal")
+    attr("weight", "Gewicht", "Weight", "decimal", unit="kg")   # mit Einheit: der Produktberater versteht „leicht“ an der Grösse Masse (pflegestruktur 42)
     attr("brand", "Marke", "Brand", "text", inheritable=True)
     attr("sku", "SKU", "SKU", "text")
     attr("ean", "EAN", "EAN", "text")
