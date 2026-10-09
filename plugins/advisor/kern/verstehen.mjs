@@ -12,8 +12,11 @@ export const EIGENSCHAFTEN = {
   'luminous flux': [['dunkel'], ['hell', 'helle', 'heller', 'hellste', 'bright', 'brighter']],
 }
 
-const UNTER = ['bis zu', 'höchstens', 'hoechstens', 'maximal', 'max.', 'max', 'weniger als', 'kleiner als', 'unter', 'bis', 'up to', 'at most', 'less than', 'under', 'below', '<=', '<', '≤']
-const UEBER = ['mindestens', 'mind.', 'mehr als', 'größer als', 'groesser als', 'über', 'ueber', 'ab', 'at least', 'more than', 'over', 'above', 'from', '>=', '>', '≥']
+// „leichter als 1.8 kg“ (09.10.2026): ein Vergleich mit Eigenschaftswort ist eine Grenze, kein Suchwort
+const UNTER = ['bis zu', 'höchstens', 'hoechstens', 'maximal', 'max.', 'max', 'weniger als', 'kleiner als', 'leichter als', 'kürzer als', 'kuerzer als',
+  'schmaler als', 'niedriger als', 'billiger als', 'günstiger als', 'guenstiger als', 'lighter than', 'shorter than', 'cheaper than', 'smaller than', 'unter', 'bis', 'up to', 'at most', 'less than', 'under', 'below', '<=', '<', '≤']
+const UEBER = ['mindestens', 'mind.', 'mehr als', 'größer als', 'groesser als', 'schwerer als', 'länger als', 'laenger als', 'breiter als', 'höher als',
+  'hoeher als', 'heavier than', 'longer than', 'wider than', 'larger than', 'über', 'ueber', 'ab', 'at least', 'more than', 'over', 'above', 'from', '>=', '>', '≥']
 const NEIN = new Set(['nicht', 'ohne', 'kein', 'keine', 'not', 'no', 'without', 'non'])
 const ZAHL_TYPEN = new Set(['integer', 'decimal'])
 

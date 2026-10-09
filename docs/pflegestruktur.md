@@ -2865,7 +2865,17 @@ mit; der Dienst hält dazu im Arbeitsspeicher (kein Datenträger, 30 Minuten nac
   → Schlafsack), übernimmt der Berater die Vorlieben, deren Attribut es bei der neuen Art gibt, und sagt es („Grösse M habe ich
   übernommen.“); die übrigen ruhen, bis eine Art sie wieder hat,
 - gesehene und abgelehnte Produkte („nicht das“, ✕ an einer Karte) — ein abgelehntes kommt nicht wieder nach vorn,
-- das Produkt im Blick und den Verlauf der Eingaben.
+- das Produkt im Blick und den Verlauf der Eingaben,
+- die Produkte der letzten Antwort.
+
+**Fragen zu den gezeigten Produkten (gebaut 09.10.2026).** Eine Frage („sind die wasserdicht?“, „wie schwer ist das Skare?“), die
+keine andere Art nennt und nicht mit „gibt es …“ sucht, gilt den Produkten der letzten Antwort — ein Name darin grenzt auf diese
+ein. Der Kern holt jedes Produkt (`product/{id}`) und nennt je Produkt die Stellen, in denen ein Wort der Frage steht: Werte nach
+Bezeichnung **und Inhalt**, Sätze aus den Texten (`kern/stellen.mjs`); ein Eigenschaftswort nennt das Attribut („schwer“ → Gewicht).
+Die gesammelten Angaben ändern sich dabei nicht. Dieselben Stellen beantworten die Frage zum Produkt im Blick, wenn die
+Bezeichnungen seiner Werte nichts nennen — in vielen Daten steht die Antwort im Wert („Material: … 3000 mm Wassersäule“) oder in
+der Beschreibung. Mit KI am Berater schreibt sie aus den Stellen einen Text. Gruss, Dank und Abschied bekommen einen kurzen Satz
+statt einer Suche.
 
 Die Kennung ist zufällig und trägt keine Person; ohne sie (ein Agent über MCP) gibt es kein Gedächtnis, jede Frage steht für sich.
 

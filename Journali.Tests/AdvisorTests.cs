@@ -578,6 +578,24 @@ public class AdvisorTests
     }
 
     [Fact]
+    public async Task Eine_Frage_zu_den_gezeigten_Produkten_beantworten_ihre_Angaben()
+    {
+        // Fall aus der Bedienung (09.10.2026): „sind die wasserdicht?“ nach mehreren Treffern wurde ein Suchwort statt einer Antwort
+        await using var w = await Welt.Neu();
+        Assert.Equal(3, (await w.Sag("")).GetProperty("total").GetInt32());
+        var j = await w.Sag("sind die wasserdicht?");
+        var antworten = j.GetProperty("antworten").EnumerateArray().ToList();
+        Assert.Equal(3, antworten.Count);
+        var bohr = antworten.Single(a => a.GetProperty("name").GetString() == "Bohrhammer Pro");
+        Assert.Contains(("Wasserdicht", "nein"), bohr.GetProperty("values").EnumerateArray().Select(v => (v.GetProperty("label").GetString(), v.GetProperty("value").GetString())));
+        // die gesammelten Angaben bleiben leer: die Frage war keine Suche
+        var weiter = await w.Sag("");
+        Assert.Empty(weiter.GetProperty("words").EnumerateArray());
+        Assert.Empty(weiter.GetProperty("filter").EnumerateArray());
+        Assert.Equal("Gern geschehen.", (await w.Sag("danke")).GetProperty("texte").GetProperty("satz").GetString());
+    }
+
+    [Fact]
     public void Welche_Werte_eine_Frage_beantworten_nach_Wort_Einheit_und_Sinn()
     {
         var katalog = new Catalog(new MemoryJournal()); katalog.Rebuild(); katalog.SeedMissing();

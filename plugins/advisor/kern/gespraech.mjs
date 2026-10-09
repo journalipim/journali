@@ -8,6 +8,7 @@
 import { woerter, gleichesWort, korrektur, ganz, weg } from './woerter.mjs'
 import { erkenne, fragt, namenWoerter, istArt, imNamen } from './verstehen.mjs'
 import { texte, angabeText } from './texte.mjs'
+import { stellen } from './stellen.mjs'
 
 export const DAUER = 30 * 60_000
 export const MAX_WOERTER = 12
@@ -20,6 +21,19 @@ const fehler = r => Object.assign(new Error(r.json?.error ?? `journali: HTTP ${r
 const gleich = (a, b) => a.attribute === b.attribute && a.op === b.op && String(a.value) === String(b.value)
 const nurAngabe = ({ attribute, op, value }) => ({ attribute, op, value })
 const gleicheMenge = (a, b) => a.length === b.length && a.every(x => b.includes(x))
+
+// Eine Frage zu den gezeigten Produkten (09.10.2026): Wörter, die auf sie zeigen, suchen nichts; wer „gibt es …“ fragt, sucht
+const BEZUG = new Set(['diese', 'dieser', 'dieses', 'diesen', 'beide', 'beiden', 'alle', 'allen', 'denn', 'davon', 'eigentlich', 'jeweils', 'genau',
+  'wirklich', 'these', 'those', 'they', 'them', 'both', 'all', 'each', 'really', 'actually'])
+const SUCHT = /^(gibt es|gibts|habt ihr|haben sie|hast du|führt ihr|fuehrt ihr|is there|are there|do you have|have you got)(?![\p{L}])/iu
+// Verben, die nach einem Wert fragen, dessen Bezeichnung nicht in der Frage steht: „wie viel wiegen die?“ → Gewicht
+const NACH_WERT = { wiegt: 'gewicht', wiegen: 'gewicht', weigh: 'weight', weighs: 'weight', kostet: 'preis', kosten: 'preis', teuer: 'preis', cost: 'price', costs: 'price' }
+// Gruss, Dank, Abschied: eine kurze Antwort, keine Suche — nur, wenn sonst nichts in der Eingabe steht
+const KURZ = [
+  ['gruss', /^(hallo|hi|hey|moin|servus|guten (morgen|tag|abend)|grüß gott|gruess gott|hello|good (morning|afternoon|evening))(?![\p{L}])/iu],
+  ['dank', /^(danke( schön| sehr)?|dankeschön|vielen dank|thanks|thank you|thx)(?![\p{L}])/iu],
+  ['tschuess', /^(tschüss|tschuess|tschau|ciao|auf wiedersehen|bye|goodbye)(?![\p{L}])/iu],
+]
 
 /**
  * @param {{ journali: (pfad: string, body?: any, kopf?: Record<string, string>) => Promise<{status: number, json: any}>, jetzt?: () => number,
@@ -48,7 +62,7 @@ export function erstelleKern(o) {
   }
 
   function neuerZustand() {
-    return { woerter: [], angaben: [], verlauf: [], fokus: null, fokusName: null, statt: null, vorlieben: {}, abgelehnt: [], gesehen: [], art: [], am: jetzt() }
+    return { woerter: [], angaben: [], verlauf: [], fokus: null, fokusName: null, statt: null, vorlieben: {}, abgelehnt: [], gesehen: [], art: [], zuletzt: [], am: jetzt() }
   }
 
   /// Das Gespräch zu einer Kennung — ohne gültige Kennung eines, das nicht gemerkt wird
@@ -96,6 +110,40 @@ export function erstelleKern(o) {
 
   const quellen = docs => (docs ?? []).map(u => ({ quelle: [u.name, u.heading, u.node?.label].filter(Boolean).join(' · '), text: u.text }))
 
+  /// Ein Produkt, wie es der Besucher öffnet — mit allen Werten und Texten; null, wenn journali es nicht liefert
+  async function produkt(pid, loc) {
+    const r = await journali('product/' + encodeURIComponent(pid) + '?locale=' + encodeURIComponent(loc))
+    return r.status === 200 ? r.json : null
+  }
+
+  /// Was eine Frage sucht: ihre Wörter ohne die, die auf Produkte zeigen, und die Attribute, die sie nennt („schwer“ → Gewicht)
+  function wonach(vok, namen, eingabe) {
+    const ws = woerter(eingabe).filter(w => !BEZUG.has(w))
+    const art = ws.filter(w => istArt(w, namen))
+    const frage = ws.filter(w => !art.includes(w))
+    return { art, frage, suchwoerter: frage.map(w => NACH_WERT[w] ?? w), attribute: erkenne(vok, eingabe).angaben.map(a => a.attribute) }
+  }
+
+  /// Eine Frage zu den Produkten der letzten Antwort: „sind die wasserdicht?“, „wie schwer ist das Skare?“ — je Produkt, was in seinen Werten
+  /// und Texten dazu steht; mit KI ein Text daraus. Die gesammelten Angaben bleiben, wie sie sind.
+  async function zuDenTreffern(z, id, loc, T, eingabe, ki, vok, liste, w) {
+    const produkte = await Promise.all(liste.map(p => produkt(p.id, loc)))
+    const antworten = liste.map((p, i) => ({ id: p.id, name: produkte[i]?.name ?? p.name, values: produkte[i] ? stellen(produkte[i], { woerter: w.suchwoerter, attribute: w.attribute }) : [] }))
+    const gefunden = antworten.filter(a => a.values.length)
+    let answer = null, warning = null
+    if (vok.ki && ki && gefunden.length) {
+      const k = await kiText(loc, { satz: eingabe, treffer: liste.map(p => p.id), verlauf: z.verlauf.slice(-MAX_VERLAUF),
+        unterlagen: gefunden.map(a => ({ quelle: a.name, text: a.values.map(v => `${v.label}: ${v.value}`).join('\n') })) })
+      answer = k.text ?? null; warning = k.warning ?? null
+    }
+    z.verlauf = [...z.verlauf, eingabe].slice(-MAX_VERLAUF)
+    const wort = w.frage.join(' ')
+    return {
+      gespraech: id, locale: loc, total: 0, hits: [], facets: [], antworten, docs: [], answer, warning, corrected: [],
+      texte: { satz: gefunden.length ? T.zuDen(wort, liste.length) : T.zuDenNichts(wort), nichts: T.ueberNichts, hinweise: [] },
+    }
+  }
+
   /// Bezeichnungen aus dem, was journali geprüft hat: was es nicht gibt, fällt weg; woher die Angabe kam, bleibt
   function uebernimmBezeichnungen(z, echo) {
     z.angaben = (echo ?? []).map(f => ({ ...f, quelle: z.angaben.find(a => gleich(a, f))?.quelle ?? 'gesagt' }))
@@ -103,9 +151,14 @@ export function erstelleKern(o) {
   }
 
   /// Eine Frage zum Produkt im Blick: seine Werte, seine Unterlagen und — mit KI — ein Text dazu. Die gesammelten Angaben bleiben, wie sie sind.
-  async function zumFokus(z, id, loc, T, eingabe, ki, vok) {
+  async function zumFokus(z, id, loc, T, eingabe, ki, vok, namen) {
     const sel = await waehle(z, loc, { fokus: z.fokus, satz: eingabe, take: 1 })
     const d = await unterlagen(loc, { satz: eingabe, fokus: z.fokus })
+    // nennen die Bezeichnungen der Werte nichts dazu, stehen die Stellen vielleicht in einem Wert oder in der Beschreibung
+    if (!(sel.focus?.values ?? []).length) {
+      const p = await produkt(z.fokus, loc)
+      if (p) { const w = wonach(vok, namen, eingabe); sel.focus = { id: z.fokus, name: p.name ?? z.fokusName, values: stellen(p, { woerter: w.suchwoerter, attribute: w.attribute }) } }
+    }
     let answer = null, warning = sel.warning ?? d.warning ?? null
     if (vok.ki && ki) {
       const k = await kiText(loc, { satz: eingabe, fokus: z.fokus, verlauf: z.verlauf.slice(-MAX_VERLAUF), unterlagen: quellen(d.docs) })
@@ -134,7 +187,7 @@ export function erstelleKern(o) {
 
     // ---- Klicks: ändern die gesammelten Angaben, eine Suche folgt
     if (schritt?.art === 'neu') {
-      Object.assign(z, { woerter: [], angaben: [], verlauf: [], fokus: null, fokusName: null, statt: null, art: [] })   // Vorlieben, Gesehenes und Abgelehntes bleiben
+      Object.assign(z, { woerter: [], angaben: [], verlauf: [], fokus: null, fokusName: null, statt: null, art: [], zuletzt: [] })   // Vorlieben, Gesehenes und Abgelehntes bleiben
       if (!eingabe) return { gespraech: id, locale: loc, reset: true, texte: { satz: T.neu, hinweise: [] } }
     } else if (schritt?.art === 'filter' && schritt.attribute) {
       setze(z, { attribute: String(schritt.attribute), op: ['le', 'ge', 'low', 'high'].includes(schritt.op) ? schritt.op : 'eq', value: String(schritt.value ?? ''), quelle: 'geklickt' })
@@ -154,7 +207,20 @@ export function erstelleKern(o) {
 
     // ---- eine Frage zum Produkt im Blick: „ist das zelt wasserdicht?“ — nur, wenn die Eingabe eine Frage ist und keine andere Art nennt
     if (eingabe && z.fokus && fragt(eingabe) && woerter(eingabe).filter(w => istArt(w, namen)).every(w => imNamen(w, z.fokusName ?? '')))
-      return await zumFokus(z, id, loc, T, eingabe, ki, vok)
+      return await zumFokus(z, id, loc, T, eingabe, ki, vok, namen)
+
+    // ---- Gruss, Dank, Abschied: eine kurze Antwort
+    if (eingabe && !schritt) for (const [art, re] of KURZ) {
+      const m = re.exec(eingabe)
+      if (m && !woerter(eingabe.slice(m[0].length)).length) return { gespraech: id, locale: loc, kurz: true, texte: { satz: T[art], hinweise: [] } }
+    }
+
+    // ---- eine Frage zu den Produkten der letzten Antwort: „sind die wasserdicht?“ — keine andere Art, und sie fragt nach etwas
+    if (eingabe && !schritt && z.zuletzt.length && fragt(eingabe) && !SUCHT.test(eingabe)) {
+      const w = wonach(vok, namen, eingabe)
+      const liste = z.zuletzt.filter(p => w.art.every(a => imNamen(a, p.name)))
+      if (liste.length && (w.frage.length || w.attribute.length)) return await zuDenTreffern(z, id, loc, T, eingabe, ki, vok, liste, w)
+    }
 
     // ---- die Eingabe ergänzt die gesammelten Angaben: erkannte Angaben werden Filter, der Rest Wörter
     const hatteVorher = z.woerter.length > 0 || z.angaben.length > 0
@@ -254,6 +320,7 @@ export function erstelleKern(o) {
     // ---- das Produkt im Blick: das einzige der Antwort
     const hits = (sel.hits ?? []).map(h => ({ ...h, seen: z.gesehen.includes(h.id) }))
     if (sel.total === 1 && hits.length === 1) { z.fokus = hits[0].id; z.fokusName = hits[0].name } else if (sel.total !== 1) { z.fokus = null; z.fokusName = null }
+    z.zuletzt = hits.map(h => ({ id: h.id, name: h.name }))   // worauf sich „sind die …?“ bezieht
 
     // ---- Lernen: Wörter ohne Treffer, gelesene Tippfehler
     if (lernen) {

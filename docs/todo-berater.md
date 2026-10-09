@@ -17,6 +17,8 @@ Commit je Thema, sofort nach `origin`, dann `github`; Plugin nach Änderung hoch
   an der Karte, „angesehen“, Merken an den Dienst; ⤢ vergrössert das schwebende Fenster.
 - **Gedächtnis** im Dienst je Kennung, 30 Minuten: Angaben mit Herkunft, Vorlieben über einen Themenwechsel („… habe ich übernommen.“),
   gesehene und abgelehnte Produkte, Produkt im Blick, Verlauf.
+- **Fragen zu den gezeigten Produkten** („sind die wasserdicht?“) beantworten ihre Werte und Sätze (`kern/stellen.mjs`); Gruss, Dank
+  und Abschied bekommen einen Satz; „leichter als 1.8 kg“ ist eine Grenze. Stand des Plugins danach: 2.3.0.
 - **Prüfstand** `tools/berater-dialoge/` (`spiele.mjs`, `pruefe.mjs`, sieben Dialoge mit Erwartung und Vorbild).
 - **Lernen** im Dienst (`lernen.json` mit `JOURNALI_ADVISOR_DATA`), Vorschläge mit `plugins/advisor/vorschlaege.mjs`.
 - Blog: drei Beiträge als Entwürfe 233–235 (14.10., 21.10., 29.10.), Startseite mit Karte „Journali KI Produktberater“ (lokal in

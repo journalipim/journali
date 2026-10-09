@@ -146,6 +146,9 @@ th, td { text-align: left; vertical-align: top; padding: 4px 6px; border-bottom:
 tr.gleich td { color: var(--leise); }
 .galerie { display: flex; gap: 6px; overflow-x: auto; }
 .absatz { white-space: pre-wrap; line-height: 1.5; }
+/* eine Frage zu den gezeigten Produkten: je Produkt sein Name (öffnet es) und was in seinen Angaben dazu steht */
+.stelle { display: flex; flex-direction: column; gap: 2px; margin-top: 8px; white-space: normal; }
+.stelle .name { align-self: flex-start; border: 0; background: transparent; padding: 0; color: var(--akzent); font-weight: 600; text-align: left; }
 .galerie img { height: 120px; border-radius: 6px; background: var(--blase); }
 `
 
@@ -496,6 +499,30 @@ tr.gleich td { color: var(--leise); }
       verlauf.scrollTop = Math.max(0, antwort.offsetTop - 8)
     }
 
+    /// Die Antwort auf eine Frage zu den Produkten der letzten Antwort (09.10.2026): je Produkt, was in seinen Angaben dazu steht
+    function antwortZuDenTreffern(r) {
+      const antwort = el('div', 'karten antwort')
+      const b = el('div', 'blase zu-den')
+      for (const h of r.texte?.hinweise || []) b.append(el('div', 'gelesen leise', h))
+      b.append(el('span', 'satz', r.texte?.satz || ''))
+      if (r.answer) { b.append(el('div', 'satz', r.answer)); b.append(el('span', 'hinweis', T.ki)) }
+      for (const a of r.antworten) {
+        const s = el('div', 'stelle')
+        const n = el('button', 'name', a.name); n.type = 'button'; n.title = T.details
+        n.addEventListener('click', () => zeigeProdukt(a.id))
+        s.append(n)
+        if (a.values.length) {
+          const t = el('table', 'werte'), tb = el('tbody')
+          for (const v of a.values) { const tr = el('tr'); tr.append(el('th', '', v.label), el('td', '', v.value)); tb.append(tr) }
+          t.append(tb); s.append(t)
+        } else s.append(el('div', 'leise', r.texte?.nichts || ''))
+        b.append(s)
+      }
+      antwort.append(b)
+      verlauf.append(antwort)
+      verlauf.scrollTop = Math.max(0, antwort.offsetTop - 8)
+    }
+
     /// Eine Eingabe oder ein Klick an den Kern — mit der Kennung des Gesprächs; was gilt, sagt die Antwort
     const frage = (q, alsBlase) => anfrage({ q }, alsBlase ? q : null)
     const schritt = s => anfrage({ schritt: s }, null)
@@ -509,7 +536,9 @@ tr.gleich td { color: var(--leise); }
         // die Knöpfe älterer Antworten gelten nicht mehr
         for (const alt of verlauf.querySelectorAll('.ergebnis button, .abschluss .neu, .karte .nicht')) alt.disabled = true
         if (r.reset) { zustand.woerter = []; zustand.filter = []; blase(r.texte?.satz || T.neu); eingabe.focus(); return }
+        if (r.kurz) { blase(r.texte?.satz || ''); return }   // Gruss, Dank, Abschied
         if (r.about) { antwortZumProdukt(r); return }   // eine Frage zum Produkt im Blick: seine Werte, seine Unterlagen
+        if (r.antworten) { antwortZuDenTreffern(r); return }   // eine Frage zu den gezeigten Produkten
         // was jetzt gilt, sagt der Kern: die gesammelten Wörter und alle Filter, auch die aus dem Text erkannten — mit Bezeichnungen
         if (Array.isArray(r.words)) zustand.woerter = r.words
         if (Array.isArray(r.filter)) zustand.filter = r.filter.map(f => ({ attribute: f.attribute, op: f.op, value: f.value, label: f.label, valueLabel: f.valueLabel }))

@@ -402,6 +402,36 @@ test('ohne Auswahl ist der Knopf zum Vergleichen nicht da — hidden gilt auch g
   assert.match(w.$('style').textContent, /\[hidden\] \{ display: none !important; \}/)
 })
 
+// Fall aus der Bedienung (09.10.2026): „sind die wasserdicht?“ — der Kern antwortet je gezeigtem Produkt mit seinen Angaben
+test('eine Frage zu den gezeigten Produkten: je Produkt sein Name, der es öffnet, und was dazu in seinen Angaben steht', async () => {
+  const w = starte({
+    ...standard(),
+    '/api/ask': antwort({ antworten: [
+      { id: 'p1', name: 'Bohrhammer Pro', values: [{ key: 'material', label: 'Material', value: 'Stahl, <b>gehärtet</b>' }] },
+      { id: 'p2', name: 'Akkuschrauber', values: [] },
+    ] }, { satz: 'Zu „gehärtet“ steht bei den 2 Produkten:', nichts: 'Dazu steht in den Angaben nichts.' }),
+  })
+  await warte()
+  await w.frage('sind die gehärtet?')
+  const b = w.$('.zu-den')
+  assert.equal(satz(b), 'Zu „gehärtet“ steht bei den 2 Produkten:')
+  const stellen = [...b.querySelectorAll('.stelle')]
+  assert.deepEqual(stellen.map(x => x.querySelector('.name').textContent), ['Bohrhammer Pro', 'Akkuschrauber'])
+  assert.equal(stellen[0].querySelector('td').textContent, 'Stahl, <b>gehärtet</b>', 'als Text, nicht als HTML')
+  assert.equal(stellen[1].querySelector('.leise').textContent, 'Dazu steht in den Angaben nichts.')
+  assert.equal(w.$$('.karte').length, 0, 'keine neuen Karten')
+  await w.klick(stellen[0].querySelector('.name'))
+  assert.ok(w.rufe.some(r => r.url.includes('/api/product/p1')), 'der Name öffnet das Produkt')
+})
+
+test('Gruss, Dank und Abschied: eine Blase mit dem Satz des Kerns', async () => {
+  const w = starte({ ...standard(), '/api/ask': [200, { kurz: true, texte: { satz: 'Gern geschehen.', hinweise: [] } }] })
+  await warte()
+  await w.frage('danke')
+  assert.equal(w.$$('.blase').at(-1).textContent, 'Gern geschehen.')
+  assert.equal(w.$$('.karte').length, 0)
+})
+
 // Fall aus der Bedienung (09.10.2026): an der Karte sah „Details“ anders aus als „☆ Merken“ und „Nicht das“ (die brachen um),
 // „Vergleichen“ war ein blosses Kästchen mit Text — alle vier tragen jetzt dieselbe Regel
 test('die Bedienelemente einer Karte sehen gleich aus und brechen nicht um', async () => {

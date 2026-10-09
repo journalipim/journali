@@ -21,6 +21,11 @@ export const TEXTE = {
     uebernommen: l => `${liste(l, 'und')} habe ich übernommen.`,
     abgelehnt: n => `${n} zeige ich nicht mehr vorn.`,
     neu: 'Neue Suche',
+    zuDen: (w, n) => n === 1 ? `Zu „${w}“ steht beim Produkt:` : `Zu „${w}“ steht bei den ${n} Produkten:`,
+    zuDenNichts: w => `Zu „${w}“ steht bei diesen Produkten nichts in den Angaben.`,
+    gruss: 'Hallo. Wonach suchen Sie?',
+    dank: 'Gern geschehen.',
+    tschuess: 'Auf Wiedersehen.',
   },
   en: {
     treffer: n => n === 1 ? '1 product matches.' : `${n} products match.`,
@@ -39,6 +44,11 @@ export const TEXTE = {
     uebernommen: l => `I kept ${liste(l, 'and')}.`,
     abgelehnt: n => `I no longer show ${n} first.`,
     neu: 'New search',
+    zuDen: (w, n) => n === 1 ? `On "${w}", the product details say:` : `On "${w}", the details of the ${n} products say:`,
+    zuDenNichts: w => `The details of these products say nothing about "${w}".`,
+    gruss: 'Hello. What are you looking for?',
+    dank: 'You are welcome.',
+    tschuess: 'Goodbye.',
   },
 }
 

@@ -7,6 +7,7 @@ import assert from 'node:assert/strict'
 import { woerter, formen, korrektur, abstand } from '../../plugins/advisor/kern/woerter.mjs'
 import { erkenne, fragt, istArt, namenWoerter } from '../../plugins/advisor/kern/verstehen.mjs'
 import { erstelleKern } from '../../plugins/advisor/kern/gespraech.mjs'
+import { stellen, trifft, saetze } from '../../plugins/advisor/kern/stellen.mjs'
 import { erstelleLernen, vorschlaege } from '../../plugins/advisor/kern/lernen.mjs'
 import { alsText } from '../../plugins/advisor/vorschlaege.mjs'
 import fs from 'node:fs'
@@ -34,6 +35,13 @@ const KATALOG = [
   { id: 'h1', name: 'Kilden Hose', text: 'wandern', werte: { color: 'blue', groesse: 'm' } },
   { id: 'h2', name: 'Brede Hose', text: 'wandern regen', werte: { color: 'red', groesse: 's' } },
 ]
+// was GET product/{id} liefert: alle Werte und Texte — die Antwort steht oft im Wert oder in der Beschreibung, nicht in einer Bezeichnung
+const PRODUKTE = {
+  z1: { values: [{ key: 'color', label: 'Farbe', value: 'Rot' }, { key: 'gewicht', label: 'Gewicht', value: '2.4 kg' }, { key: 'material', label: 'Material', value: 'Polyester, 3000 mm Wassersäule' }],
+    texts: [{ key: 'description', label: 'Beschreibung', value: 'Kuppelzelt für zwei.\n\nAußenzelt mit 3 000 mm Wassersäule, Boden mit 5 000 mm. Lüftungen mindern Kondenswasser.' }] },
+  z2: { values: [{ key: 'color', label: 'Farbe', value: 'Blau' }, { key: 'gewicht', label: 'Gewicht', value: '1.4 kg' }],
+    texts: [{ key: 'description', label: 'Beschreibung', value: 'Leichtes Tunnelzelt für den Sommer. Der Boden ist aus Nylon.' }] },
+}
 const imNamen = (p, w) => p.name.toLowerCase().split(/\s+/).some(t => formen(w).some(f => t.startsWith(f)))
 const imText = (p, w) => imNamen(p, w) || (p.name + ' ' + p.text).toLowerCase().split(/\s+/).some(t => formen(w).some(f => t.startsWith(f)))
 const passt = (p, a) => a.op === 'le' ? Number(p.werte[a.attribute]) <= Number(a.value) : a.op === 'ge' ? Number(p.werte[a.attribute]) >= Number(a.value)
@@ -56,6 +64,10 @@ function journali({ ki = null } = {}) {
     if (pfad.startsWith('vocabulary')) return { status: 200, json: { ...VOK, ki: !!ki } }
     if (pfad === 'docs') return { status: 200, json: { docs: [], warning: null } }
     if (pfad === 'ki') return { status: 200, json: ki(body) }
+    if (pfad.startsWith('product/')) {
+      const pid = decodeURIComponent(pfad.slice(8).split('?')[0]), p = KATALOG.find(x => x.id === pid)
+      return p ? { status: 200, json: { id: p.id, name: p.name, values: [{ key: 'name', label: 'Name', value: p.name }, ...(PRODUKTE[p.id]?.values ?? [])], texts: PRODUKTE[p.id]?.texts ?? [] } } : { status: 404, json: { error: 'x' } }
+    }
     if (pfad !== 'select') return { status: 404, json: { error: 'x' } }
     let r = waehle(body)
     const hinten = new Set(body.hinten ?? [])
@@ -113,6 +125,10 @@ test('Angaben im Text werden Filter, der Rest bleibt Suchwort', () => {
   assert.deepEqual(woerter(rest), ['bohrhammer'])
   assert.deepEqual(erkenne(v, 'nicht wasserdicht').angaben, [{ attribute: 'wasserdicht', op: 'eq', value: 'false' }])
   assert.deepEqual(erkenne(v, 'ab 1,5 W').angaben, [{ attribute: 'leistung', op: 'ge', value: '1.5' }])
+  // Fall aus der Bedienung (09.10.2026): „leichter als 1.8 kg“ wurde ein Suchwort
+  const kg = { attributes: [{ key: 'gewicht', label: 'Gewicht', labels: { de: 'Gewicht' }, type: 'decimal', unit: 'kg', quantity: 'mass', facet: true }] }
+  assert.deepEqual(erkenne(kg, 'leichter als 1.8 kg'), { angaben: [{ attribute: 'gewicht', op: 'le', value: '1.8' }], rest: '' })
+  assert.deepEqual(erkenne(kg, 'schwerer als 2 kg').angaben, [{ attribute: 'gewicht', op: 'ge', value: '2' }])
   assert.deepEqual(erkenne(v, '900 W').angaben, [], 'ohne „unter“ oder „ab“ ist eine Zahl kein Filter')
   // zwei Zahlenattribute mit derselben Einheit: nur mit Bezeichnung im Text
   const zwei = { attributes: [
@@ -255,6 +271,75 @@ test('ein geöffnetes Produkt ist im Blick und gesehen: eine Frage danach beantw
   assert.ok(weiter.hits.find(h => h.id === 'z1').seen, 'gesehen')
   // eine Frage nach einer anderen Art ist eine Suche
   assert.ok(!(await kern.antworte({ gespraech: G, q: 'ist die hose wasserdicht?' })).about)
+})
+
+// ---- eine Frage zu den gezeigten Produkten (09.10.2026) — Fall aus der Bedienung: „sind die wasserdicht?“ nach zwei Zelten wurde ein
+// weiteres Suchwort („zuerst, was zu „wasserdicht“ passt“), statt die Frage zu beantworten
+
+test('Stellen eines Produkts: Werte und Sätze, in denen ein Wort der Frage steht', () => {
+  assert.ok(trifft('wasserdicht', 'Wassersäule'), 'gemeinsamer Anfang „wasser“')
+  assert.ok(!trifft('wasserdicht', 'Kondenswasser'))
+  assert.ok(trifft('dicht', 'wasserdicht'), 'das ganze Wort in einem längeren')
+  assert.ok(!trifft('ist', 'ist'), 'unter vier Zeichen zählt nicht')
+  assert.deepEqual(saetze('Eins. <b>Zwei</b> drei!\n\nVier'), ['Eins.', 'Zwei drei!', 'Vier'])
+  const p = { values: [{ key: 'name', label: 'Name', value: 'Odda Zelt' }, ...PRODUKTE.z1.values], texts: PRODUKTE.z1.texts }
+  assert.deepEqual(stellen(p, { woerter: ['wasserdicht'] }).map(v => v.value), ['Polyester, 3000 mm Wassersäule', 'Außenzelt mit 3 000 mm Wassersäule, Boden mit 5 000 mm.'])
+  assert.deepEqual(stellen(p, { attribute: ['gewicht'] }).map(v => [v.label, v.value]), [['Gewicht', '2.4 kg']])
+  assert.deepEqual(stellen(p, { woerter: ['vorraum'] }), [])
+})
+
+test('„sind die wasserdicht?“ beantworten die Angaben der gezeigten Produkte — die gesammelten Angaben bleiben', async () => {
+  const j = journali()
+  const kern = erstelleKern({ journali: j.fn })
+  await kern.antworte({ gespraech: G, q: 'Zelt' })
+  const vorher = j.auswahlen().length
+  const a = await kern.antworte({ gespraech: G, q: 'sind die wasserdicht?' })
+  assert.equal(j.auswahlen().length, vorher, 'keine neue Auswahl')
+  assert.equal(a.texte.satz, 'Zu „wasserdicht“ steht bei den 2 Produkten:')
+  assert.deepEqual(a.antworten.map(x => [x.name, x.values.map(v => v.label)]), [['Odda Zelt', ['Material', 'Beschreibung']], ['Ravik Zelt', []]])
+  assert.equal(a.texte.nichts, 'Dazu steht in den Angaben nichts.')
+  const weiter = await kern.antworte({ gespraech: G, q: '' })
+  assert.deepEqual([weiter.words, weiter.filter, weiter.total], [['zelt'], [], 2], '„wasserdicht“ ist kein Suchwort und kein Filter geworden')
+  // ein Name grenzt auf das Produkt ein, „schwer“ fragt nach dem Gewicht, „wiegen“ auch
+  const ravik = await kern.antworte({ gespraech: G, q: 'wie schwer ist das Ravik?' })
+  assert.deepEqual(ravik.antworten.map(x => [x.name, x.values.map(v => v.value)]), [['Ravik Zelt', ['1.4 kg']]])
+  assert.equal(ravik.texte.satz, 'Zu „schwer“ steht beim Produkt:')
+  assert.deepEqual((await kern.antworte({ gespraech: G, q: 'wie viel wiegen die?' })).antworten.map(x => x.values.map(v => v.value)), [['2.4 kg'], ['1.4 kg']])
+  const nichts = await kern.antworte({ gespraech: G, q: 'haben die einen Vorraum?' })
+  assert.equal(nichts.texte.satz, 'Zu „vorraum“ steht bei diesen Produkten nichts in den Angaben.')
+})
+
+test('keine Frage zu den gezeigten: eine andere Art, „gibt es …“, oder noch nichts gezeigt — dann eine Suche', async () => {
+  const j = journali()
+  const kern = erstelleKern({ journali: j.fn })
+  assert.ok(!(await kern.antworte({ gespraech: G, q: 'sind die wasserdicht?' })).antworten, 'nichts gezeigt')
+  await kern.antworte({ gespraech: G, schritt: { art: 'neu' } })
+  await kern.antworte({ gespraech: G, q: 'Zelt' })
+  assert.ok(!(await kern.antworte({ gespraech: G, q: 'ist die hose wasserdicht?' })).antworten, 'eine andere Art')
+  await kern.antworte({ gespraech: G, schritt: { art: 'neu' } })
+  await kern.antworte({ gespraech: G, q: 'Zelt' })
+  const blau = await kern.antworte({ gespraech: G, q: 'gibt es die auch in blau?' })
+  assert.ok(!blau.antworten)
+  assert.deepEqual(blau.filter.map(f => f.value), ['blue'])
+})
+
+test('ein Produkt im Blick: nennen die Bezeichnungen nichts, antworten seine Werte und Sätze', async () => {
+  const kern = erstelleKern({ journali: journali().fn })
+  await kern.antworte({ gespraech: G, q: 'Zelt' })
+  kern.merke(G, { id: 'z2', name: 'Ravik Zelt' })
+  const f = await kern.antworte({ gespraech: G, q: 'wie ist der boden?' })
+  assert.equal(f.about.name, 'Ravik Zelt')
+  assert.deepEqual(f.about.values.map(v => [v.label, v.value]), [['Beschreibung', 'Der Boden ist aus Nylon.']])
+})
+
+test('Gruss, Dank und Abschied bekommen eine kurze Antwort, keine Suche', async () => {
+  const j = journali()
+  const kern = erstelleKern({ journali: j.fn })
+  assert.deepEqual((await kern.antworte({ gespraech: G, q: 'Hallo' })).texte.satz, 'Hallo. Wonach suchen Sie?')
+  assert.ok((await kern.antworte({ gespraech: G, q: 'danke!' })).kurz)
+  assert.equal((await kern.antworte({ gespraech: G, q: 'Tschüss', locale: 'en' })).texte.satz, 'Auf Wiedersehen.', 'die Sprache des Beraters (hier nur de)')
+  assert.equal(j.auswahlen().length, 0)
+  assert.equal((await kern.antworte({ gespraech: G, q: 'Hallo, ich suche ein Zelt' })).total, 2, 'mit einem Anliegen eine Suche')
 })
 
 test('mit KI: was die Regeln nicht erkannt haben, übersetzt die KI in Angaben — aus dem Rest fallen ihre Namen', async () => {
