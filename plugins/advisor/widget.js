@@ -33,6 +33,7 @@
       zurueck: 'Zurück', fehler: 'Der Berater antwortet gerade nicht.', zuviel: 'Zu viele Fragen in kurzer Zeit.', varianten: n => `${n} Ausführungen`, ki: 'Text von einer KI erstellt',
       filterWeg: 'Filter entfernen', merkmal: 'Merkmal', gleich: 'gleich',
       neu: 'Neue Suche', angabeWeg: 'Angabe entfernen', lockern: 'Mit weniger Angaben:', ohne: (l, n) => `${l} (${n})`, alle: 'alle Produkte',
+      gross: 'Fenster vergrössern', klein: 'Fenster verkleinern',
       weitere: n => `${n} weitere zeigen`, nichtDas: 'Nicht das', nichtDasTitel: 'Dieses Produkt nicht mehr vorn zeigen', angesehen: 'angesehen',
       oeffnenVariante: 'Öffnen', merken: '☆ Merken', gemerkt: '★ Gemerkt', merkzettel: n => `☆ ${n}`, merkzettelTitel: 'Merkzettel', merkzettelLeer: 'Der Merkzettel ist leer.',
       ausMerkzettel: 'Vom Merkzettel nehmen', zumProdukt: 'Zum Produkt', variante: 'Variante',
@@ -46,6 +47,7 @@
       zurueck: 'Back', fehler: 'The advisor is not answering right now.', zuviel: 'Too many questions in a short time.', varianten: n => `${n} versions`, ki: 'Text written by an AI',
       filterWeg: 'Remove filter', merkmal: 'Attribute', gleich: 'same',
       neu: 'New search', angabeWeg: 'Remove', lockern: 'With fewer criteria:', ohne: (l, n) => `${l} (${n})`, alle: 'all products',
+      gross: 'Enlarge window', klein: 'Shrink window',
       weitere: n => `Show ${n} more`, nichtDas: 'Not this', nichtDasTitel: 'Stop showing this product first', angesehen: 'viewed',
       oeffnenVariante: 'Open', merken: '☆ Save', gemerkt: '★ Saved', merkzettel: n => `☆ ${n}`, merkzettelTitel: 'Saved items', merkzettelLeer: 'Nothing saved yet.',
       ausMerkzettel: 'Remove', zumProdukt: 'To the product', variante: 'Variant',
@@ -55,14 +57,16 @@
   }
 
   const STIL = `
-:host { all: initial; --akzent: #0b6e4f; --text: #1d1d1f; --leise: #6b6b70; --linie: #d9d9de; --flaeche: #ffffff; --blase: #f2f3f5; font: 14px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; color: var(--text); }
+:host { all: initial; --breite: min(400px, calc(100vw - 32px)); --hoehe: min(620px, calc(100vh - 32px)); --akzent: #0b6e4f; --text: #1d1d1f; --leise: #6b6b70; --linie: #d9d9de; --flaeche: #ffffff; --blase: #f2f3f5; font: 14px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; color: var(--text); }
 @media (prefers-color-scheme: dark) { :host { --text: #ececf0; --leise: #a0a0a8; --linie: #3a3a40; --flaeche: #1c1c1f; --blase: #2a2a2e; } }
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
 button { font: inherit; cursor: pointer; }
 .knopf { position: fixed; right: 16px; bottom: 16px; z-index: 2147483000; border: 0; border-radius: 22px; padding: 10px 16px; background: var(--akzent); color: #fff; box-shadow: 0 4px 16px rgba(0,0,0,.2); }
 .fenster { display: flex; flex-direction: column; background: var(--flaeche); color: var(--text); border: 1px solid var(--linie); border-radius: 12px; overflow: hidden; }
-.schwebend { position: fixed; right: 16px; bottom: 16px; z-index: 2147483000; width: min(400px, calc(100vw - 32px)); height: min(620px, calc(100vh - 32px)); box-shadow: 0 8px 32px rgba(0,0,0,.25); }
+.schwebend { position: fixed; right: 16px; bottom: 16px; z-index: 2147483000; width: var(--breite); height: var(--hoehe); box-shadow: 0 8px 32px rgba(0,0,0,.25); }
+/* vergrössert (09.10.2026): fast die ganze Höhe und eine grössere Breite — die Ansicht daneben rückt mit */
+:host(.gross) { --breite: min(720px, calc(100vw - 32px)); --hoehe: calc(100vh - 32px); }
 .eingebettet { width: 100%; height: 100%; min-height: 420px; }
 .kopf { display: flex; align-items: center; gap: 8px; padding: 10px 12px; background: var(--akzent); color: #fff; }
 .kopf .titel { flex: 1; font-weight: 600; }
@@ -86,10 +90,11 @@ button { font: inherit; cursor: pointer; }
 .gespraech { flex: 1; display: flex; flex-direction: column; min-width: 0; }
 .ansicht { flex: 1.25; min-width: 0; overflow-y: auto; border-left: 1px solid var(--linie); padding: 12px; display: flex; flex-direction: column; gap: 10px; }
 /* schwebend: die Ansicht ist ein eigenes Fenster links vom Gespräch, gleich hoch; das Gespräch bewegt sich nicht (08.10.2026) */
-.ansicht.daneben { position: fixed; bottom: 16px; z-index: 2147483001; right: calc(16px + min(400px, calc(100vw - 32px)) + 12px);
-  width: min(480px, calc(100vw - min(400px, calc(100vw - 32px)) - 44px)); height: min(620px, calc(100vh - 32px));
+.ansicht.daneben { position: fixed; bottom: 16px; z-index: 2147483001; right: calc(16px + var(--breite) + 12px);
+  width: min(480px, calc(100vw - var(--breite) - 44px)); height: var(--hoehe);
   background: var(--flaeche); color: var(--text); border: 1px solid var(--linie); border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,.25); }
-@media (max-width: 760px) { .ansicht.daneben { right: 16px; width: min(400px, calc(100vw - 32px)); } }
+@media (max-width: 760px) { .ansicht.daneben { right: 16px; width: var(--breite); } }
+@media (max-width: 1240px) { :host(.gross) .ansicht.daneben { right: 16px; width: var(--breite); } }
 .tafelkopf .zu { background: transparent; border: 0; color: var(--leise); font-size: 18px; line-height: 1; padding: 0 2px; }
 .facette { border-style: dashed; }
 .facette.offen { border-style: solid; border-color: var(--akzent); }
@@ -174,8 +179,15 @@ tr.gleich td { color: var(--leise); }
     const titel = el('span', 'titel', T.oeffnen)
     const zu = el('button', 'zu', '×'); zu.type = 'button'; zu.setAttribute('aria-label', T.schliessen)
     const merkKnopf = el('button', 'merk', T.merkzettel(0)); merkKnopf.type = 'button'; merkKnopf.title = T.merkzettelTitel; merkKnopf.hidden = true
+    // schwebend: vergrössern und wieder verkleinern — die Grösse hängt am Host, damit Gespräch und Ansicht daneben zusammenpassen
+    const grossKnopf = el('button', 'groesse', '⤢'); grossKnopf.type = 'button'; grossKnopf.title = T.gross; grossKnopf.setAttribute('aria-label', T.gross)
+    grossKnopf.addEventListener('click', () => {
+      const gross = wirt.classList.toggle('gross')
+      grossKnopf.textContent = gross ? '⤡' : '⤢'
+      grossKnopf.title = gross ? T.klein : T.gross; grossKnopf.setAttribute('aria-label', grossKnopf.title)
+    })
     kopf.append(titel, merkKnopf)
-    if (!ziel) kopf.append(zu)
+    if (!ziel) kopf.append(grossKnopf, zu)
     const verlauf = el('div', 'verlauf'); verlauf.setAttribute('role', 'log'); verlauf.setAttribute('aria-live', 'polite')
     const leiste = el('div', 'leiste')
     const vergleichKnopf = el('button', 'vergleich'); vergleichKnopf.type = 'button'; leiste.append(vergleichKnopf); leiste.hidden = true

@@ -492,3 +492,30 @@ test('Details öffnen in einem eigenen Fenster neben dem Gespräch, das Gespräc
   await w.klick(w.$('.kopf .zu'))
   assert.equal(w.$('.ansicht').hidden, true)
 })
+
+// Vergrössern (09.10.2026): schwebend stellt ⤢ das Fenster auf fast die ganze Höhe und eine grössere Breite, ⤡ zurück — die Ansicht daneben rückt mit
+test('das schwebende Fenster lässt sich vergrössern und wieder verkleinern; eingebettet gibt es den Knopf nicht', async () => {
+  const w = starte()
+  await warte()
+  await w.klick(w.$('.knopf'))
+  const k = w.$('.kopf .groesse')
+  assert.equal(k.textContent, '⤢')
+  assert.equal(k.title, 'Fenster vergrössern')
+  await w.klick(k)
+  assert.ok(w.b.wirt.classList.contains('gross'))
+  assert.equal(k.textContent, '⤡')
+  assert.equal(k.getAttribute('aria-label'), 'Fenster verkleinern')
+  await w.klick(k)
+  assert.ok(!w.b.wirt.classList.contains('gross'))
+  const stil = w.$('style').textContent
+  assert.match(stil, /:host\(\.gross\) \{ --breite: min\(720px, calc\(100vw - 32px\)\); --hoehe: calc\(100vh - 32px\); \}/)
+  assert.match(stil, /\.schwebend \{[^}]*width: var\(--breite\); height: var\(--hoehe\);/)
+  assert.match(stil, /\.ansicht\.daneben \{[^}]*right: calc\(16px \+ var\(--breite\) \+ 12px\);/, 'die Ansicht rückt mit')
+  // eingebettet bestimmt die Seite die Grösse
+  win.document.body.innerHTML = ''
+  const d = dienst(standard()); laden()
+  const ziel = win.document.createElement('div'); ziel.id = 'advisor'; win.document.body.append(ziel)
+  const e = win.journaliAdvisor.start({ base: 'https://advisor.test', fetch: d.fetch, locale: 'de', target: '#advisor' })
+  await warte()
+  assert.ok(!e.schatten.querySelector('.kopf .groesse'))
+})
