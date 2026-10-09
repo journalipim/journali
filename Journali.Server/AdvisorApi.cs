@@ -109,6 +109,9 @@ public static partial class AdvisorApi
             ("GET", "info") => true,
             ("POST", "ask") => true,
             ("POST", "compare") => true,
+            // Schnittstelle Version 2 (09.10.2026, pflegestruktur 44): Vokabular, Auswahl, Unterlagen, KI — für den Kern im Dienst
+            ("GET", "vocabulary") => true,
+            ("POST", "select" or "docs" or "ki") => true,
             ("GET", _) when rest.StartsWith("product/") || rest.StartsWith("variant/") || rest.StartsWith("image/") || rest.StartsWith("doc/") => rest.Count(ch => ch == '/') == 1,
             _ => false,
         };
@@ -927,6 +930,7 @@ public static partial class AdvisorApi
 
     public static void Map(RouteGroupBuilder api, string dataDir, string jobsDir)
     {
+        MapV2(api, jobsDir);
         // Die Berater dieser Instanz — mit dem, was an ihnen nicht stimmt
         api.MapGet("/advisor", (Catalog c) =>
         {

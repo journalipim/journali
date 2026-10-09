@@ -846,6 +846,176 @@ public class AdvisorTests
         var (_, user) = AdvisorApi.Prompt("rot", [("Bohrhammer Pro", [("Leistung", "800 W")])], [], ["Bohrhammer", "unter 1000 W"]);
         Assert.StartsWith("Früher gesagt: Bohrhammer | unter 1000 W", user);
     }
+    // ---- Schnittstelle Version 2 (09.10.2026, pflegestruktur 44): Vokabular, Auswahl, Unterlagen, KI
+
+    Task<(HttpStatusCode Status, JsonElement Json)> Auswahl(Welt w, object body, string? token = null) => w.Post("/api/advisor/werkzeug/select", JsonSerializer.Serialize(body), token);
+
+    [Fact]
+    public async Task Das_Vokabular_nennt_die_Attribute_der_Sicht_mit_Werten_und_die_Woerter_der_Namen()
+    {
+        await using var w = await Welt.Neu();
+        w.C.With((_, _, write) => write("t", Model.AttributeStream + "gewicht", Types.AttributeDefined, new AttributeDefinition("gewicht", Labels.Of("Gewicht", "Weight"), AttributeTypes.Decimal, Unit: "kg", Group: "technik"), null));
+        var (status, j) = await w.Get("/api/advisor/werkzeug/vocabulary");
+        Assert.Equal(HttpStatusCode.OK, status);
+        var attr = j.GetProperty("attributes").EnumerateArray().ToDictionary(a => a.GetProperty("key").GetString()!);
+        Assert.False(attr.ContainsKey("einkauf"));                                   // nicht in der Sicht
+        Assert.Equal(("kg", "mass"), (attr["gewicht"].GetProperty("unit").GetString(), attr["gewicht"].GetProperty("quantity").GetString()));
+        Assert.Contains("Kilogramm", attr["gewicht"].GetProperty("unitLabels").EnumerateArray().Select(x => x.GetString()));
+        Assert.True(attr["gewicht"].GetProperty("facet").GetBoolean());
+        var rot = attr["color"].GetProperty("values").EnumerateArray().Single(v => v.GetProperty("value").GetString() == "red");
+        Assert.Equal(("Rot", "Red"), (rot.GetProperty("label").GetString(), rot.GetProperty("labels").GetProperty("en").GetString()));
+        Assert.Equal("Wasserdicht", attr["wasserdicht"].GetProperty("label").GetString());
+        var woerter = j.GetProperty("words").EnumerateArray().ToDictionary(x => x.GetProperty("word").GetString()!, x => x.GetProperty("n").GetInt32());
+        Assert.Equal(1, woerter["bohrhammer"]);                                       // der Prototyp (Rolle) und der neue (Freigabe) zählen nicht
+        Assert.True(woerter.ContainsKey("akkuschrauber"));
+        Assert.False(woerter.ContainsKey("prototyp"));
+        // derselbe Stand: 304 mit dem ETag
+        var etag = j.GetProperty("etag").GetString()!;
+        using var req = new HttpRequestMessage(HttpMethod.Get, w.Url + "/api/advisor/werkzeug/vocabulary");
+        req.Headers.TryAddWithoutValidation("If-None-Match", etag);
+        Assert.Equal(HttpStatusCode.NotModified, (await w.Http.SendAsync(req)).StatusCode);
+        // ein neuer Eintrag: ein neuer ETag
+        w.C.With((_, _, write) => write("t", w.Ids["bohr"], Types.AttributeSet, new AttributeSet("leistung", null, null, "810"), null));
+        Assert.NotEqual(etag, (await w.Get("/api/advisor/werkzeug/vocabulary")).Json.GetProperty("etag").GetString());
+    }
+
+    [Fact]
+    public async Task Die_Auswahl_grenzt_mit_der_Art_ein_und_filtert_mit_Angaben()
+    {
+        await using var w = await Welt.Neu();
+        var (_, alle) = await Auswahl(w, new { });
+        Assert.Equal(3, alle.GetProperty("total").GetInt32());
+        var (_, art) = await Auswahl(w, new { art = new[] { "bohrhammer" } });
+        Assert.Equal(["Bohrhammer Pro"], Namen(art));
+        var (_, rot) = await Auswahl(w, new { angaben = new[] { new { attribute = "color", op = "eq", value = "red" } } });
+        Assert.Equal(["Bohrhammer Pro", "Winkelschleifer"], Namen(rot).Order().ToList());
+        Assert.Equal("Rot", rot.GetProperty("filter")[0].GetProperty("valueLabel").GetString());
+        Assert.DoesNotContain(rot.GetProperty("facets").EnumerateArray(), f => f.GetProperty("key").GetString() == "color");   // schon gefiltert
+        // eine Angabe ausserhalb der Sicht zählt nicht
+        var (_, intern) = await Auswahl(w, new { angaben = new[] { new { attribute = "einkauf", op = "le", value = "1" } } });
+        Assert.Equal(3, intern.GetProperty("total").GetInt32());
+        Assert.Empty(intern.GetProperty("filter").EnumerateArray());
+        // blättern
+        var (_, seite) = await Auswahl(w, new { take = 1, skip = 1 });
+        Assert.Equal((3, 1), (seite.GetProperty("total").GetInt32(), seite.GetProperty("hits").GetArrayLength()));
+    }
+
+    [Fact]
+    public async Task Die_Auswahl_nennt_je_Wort_wie_viele_Produkte_es_tragen()
+    {
+        await using var w = await Welt.Neu();
+        var (_, j) = await Auswahl(w, new { ordnen = new[] { "auto", "kompakt" } });
+        var woerter = j.GetProperty("words").EnumerateArray().ToDictionary(x => x.GetProperty("word").GetString()!, x => (x.GetProperty("n").GetInt32(), x.GetProperty("name").GetInt32()));
+        Assert.Equal((0, 0), woerter["auto"]);
+        Assert.Equal((1, 1), woerter["kompakt"]);                                     // im Namen „Akkuschrauber kompakt“
+        Assert.Equal(["Akkuschrauber kompakt"], Namen(j));                           // ohne Art: was mindestens ein Wort trägt
+    }
+
+    [Fact]
+    public async Task Die_Auswahl_sagt_auf_Wunsch_welche_Angabe_zu_eng_ist()
+    {
+        await using var w = await Welt.Neu();
+        var rot = new[] { new { attribute = "color", op = "eq", value = "red" } };
+        var (_, j) = await Auswahl(w, new { art = new[] { "akkuschrauber" }, angaben = rot, lockern = true });
+        Assert.Equal(0, j.GetProperty("total").GetInt32());
+        var l = j.GetProperty("relax").EnumerateArray().ToList();
+        Assert.Equal(("word", "akkuschrauber", 2), (l[0].GetProperty("kind").GetString(), l[0].GetProperty("word").GetString(), l[0].GetProperty("n").GetInt32()));
+        Assert.Equal(("filter", "color", 1), (l[1].GetProperty("kind").GetString(), l[1].GetProperty("attribute").GetString(), l[1].GetProperty("n").GetInt32()));
+        // ohne Wunsch nicht
+        var (_, k) = await Auswahl(w, new { art = new[] { "akkuschrauber" }, angaben = rot });
+        Assert.Empty(k.GetProperty("relax").EnumerateArray());
+    }
+
+    [Fact]
+    public async Task Abgelehnte_Produkte_stehen_hinten()
+    {
+        await using var w = await Welt.Neu();
+        var (_, j) = await Auswahl(w, new { hinten = new[] { w.Ids["bohr"] } });
+        Assert.Equal("Bohrhammer Pro", Namen(j).Last());
+        Assert.Equal(3, j.GetProperty("total").GetInt32());
+    }
+
+    [Fact]
+    public async Task Zum_Produkt_im_Blick_nennt_die_Auswahl_die_Werte_die_eine_Frage_beantworten()
+    {
+        await using var w = await Welt.Neu();
+        var (_, j) = await Auswahl(w, new { fokus = w.Ids["bohr"], satz = "ist er wasserdicht?" });
+        var f = j.GetProperty("focus");
+        Assert.Equal("Bohrhammer Pro", f.GetProperty("name").GetString());
+        Assert.Equal([("Wasserdicht", "nein")], f.GetProperty("values").EnumerateArray().Select(v => (v.GetProperty("label").GetString(), v.GetProperty("value").GetString())).ToList());
+        var (_, ohne) = await Auswahl(w, new { satz = "wasserdicht" });
+        Assert.Equal(JsonValueKind.Null, ohne.GetProperty("focus").ValueKind);
+    }
+
+    [Fact]
+    public async Task Leicht_ordnet_die_Auswahl_nach_dem_Wert()
+    {
+        await using var w = await Welt.Neu();
+        w.C.With((_, _, write) =>
+        {
+            write("t", Model.AttributeStream + "gewicht", Types.AttributeDefined, new AttributeDefinition("gewicht", Labels.Of("Gewicht", "Weight"), AttributeTypes.Decimal, Unit: "kg", Group: "technik"), null);
+            foreach (var (k, kg) in new[] { ("bohr", "3.2"), ("schrauber", "1.1"), ("schleifer", "2.0") })
+                write("t", w.Ids[k], Types.AttributeSet, new AttributeSet("gewicht", null, null, kg), null);
+            return 0;
+        });
+        var (_, j) = await Auswahl(w, new { angaben = new[] { new { attribute = "gewicht", op = "low", value = "leicht" } } });
+        Assert.Equal(["Akkuschrauber kompakt", "Winkelschleifer"], Namen(j));
+        Assert.Equal("leicht", j.GetProperty("filter")[0].GetProperty("valueLabel").GetString());
+    }
+
+    [Fact]
+    public async Task Eine_Nachfrage_des_Kerns_zaehlt_nicht_als_Frage()
+    {
+        await using var w = await Welt.Neu();
+        w.Setze(w.Standard() with { Limits = new AdvisorApi.Grenzen(JeTag: 1) });
+        Assert.Equal(HttpStatusCode.OK, (await Auswahl(w, new { probe = true })).Status);
+        Assert.Equal(HttpStatusCode.OK, (await Auswahl(w, new { probe = true })).Status);
+        Assert.Equal(HttpStatusCode.OK, (await Auswahl(w, new { })).Status);
+        Assert.Equal((HttpStatusCode)429, (await Auswahl(w, new { })).Status);
+    }
+
+    [Fact]
+    public async Task Unterlagen_und_KI_ueber_die_Schnittstelle()
+    {
+        await using var w = await Welt.Neu();
+        // ohne Dokumentindex: keine Abschnitte, und die Antwort fehlt nicht
+        var (ok, d) = await w.Post("/api/advisor/werkzeug/docs", """{"satz":"Bohrer wechseln","art":["bohrhammer"]}""");
+        Assert.Equal(HttpStatusCode.OK, ok);
+        Assert.Empty(d.GetProperty("docs").EnumerateArray());
+        // ohne KI am Berater gibt es keinen Auftrag
+        Assert.Equal(HttpStatusCode.BadRequest, (await w.Post("/api/advisor/werkzeug/ki", """{"auftrag":"antwort","satz":"x"}""")).Status);
+        // mit KI, aber ohne Schlüssel am Team: der Grund steht in der Vorschau dabei
+        w.Setze(w.Standard() with { Ki = true, Team = "de" });
+        var (_, k) = await w.Post("/api/advisor/werkzeug/ki", JsonSerializer.Serialize(new { auftrag = "antwort", satz = "welcher bohrt beton?", treffer = new[] { w.Ids["bohr"] } }));
+        Assert.StartsWith("KI nicht verfügbar: ", k.GetProperty("warning").GetString());
+        var (_, a) = await w.Post("/api/advisor/werkzeug/ki", """{"auftrag":"angaben","satz":"leise und rot"}""");
+        Assert.Empty(a.GetProperty("angaben").EnumerateArray());
+        Assert.StartsWith("KI nicht verfügbar", a.GetProperty("warning").GetString());
+    }
+
+    [Fact]
+    public async Task Das_Token_erreicht_die_Schnittstelle_Version_2()
+    {
+        await using var w = await Welt.Neu(anmeldung: true);
+        var token = AuthToken(w);
+        Assert.Equal(HttpStatusCode.OK, (await w.Get("/api/advisor/werkzeug/vocabulary", token)).Status);
+        Assert.Equal(HttpStatusCode.OK, (await Auswahl(w, new { art = new[] { "bohrhammer" } }, token)).Status);
+        Assert.Equal(HttpStatusCode.OK, (await w.Post("/api/advisor/werkzeug/docs", "{}", token)).Status);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await Auswahl(w, new { })).Status);
+    }
+
+    static string AuthToken(Welt w) => Auth.AdvisorTokenAusgeben(w.Dir, "werkzeug", "Dienst");
+
+    [Theory]
+    [InlineData("GET", "/api/advisor/werkzeug/vocabulary", true)]
+    [InlineData("POST", "/api/advisor/werkzeug/select", true)]
+    [InlineData("POST", "/api/advisor/werkzeug/docs", true)]
+    [InlineData("POST", "/api/advisor/werkzeug/ki", true)]
+    [InlineData("GET", "/api/advisor/werkzeug/select", false)]
+    [InlineData("POST", "/api/advisor/werkzeug/vocabulary", false)]
+    public void Die_Wege_der_Version_2_fuer_das_Token(string methode, string pfad, bool erlaubt) =>
+        Assert.Equal(erlaubt, AdvisorApi.FuerToken(pfad, methode, "werkzeug"));
+
     // ---- Varianten (08.10.2026): die Achsen zählen zur Sicht, eine Variante lässt sich ganz öffnen
 
     /// <summary>Eine Jacke mit der Achse Grösse (S, M) — die Grösse steht in keiner Gruppe der Sicht.</summary>

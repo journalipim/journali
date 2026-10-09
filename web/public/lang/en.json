@@ -3116,5 +3116,7 @@
  "Berater {0}: {1}": "Advisor {0}: {1}",
  "Plugin {0}: der Hinweis ist nicht bestätigt.": "Plugin {0}: the notice is not confirmed.",
  "Berater {0} gibt es nicht.": "Advisor {0} does not exist.",
- "Das Token des Beraters gilt nur für seine Fragen.": "The advisor's token is valid only for its questions."
+ "Das Token des Beraters gilt nur für seine Fragen.": "The advisor's token is valid only for its questions.",
+ "Berater {0} nutzt keine KI.": "Advisor {0} does not use AI.",
+ "Ein Auftrag an die KI braucht einen Satz.": "A request to the AI needs a sentence."
 }
