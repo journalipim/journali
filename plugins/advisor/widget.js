@@ -28,6 +28,7 @@
       neu: 'Neue Suche', angabeWeg: 'Angabe entfernen', lockern: 'Mit weniger Angaben:', ohne: (l, n) => `${l} (${n})`, alle: 'alle Produkte',
       abschluss: l => l.length ? `Passt eines davon? Oder soll ich nach ${liste(l, 'oder')} eingrenzen?` : 'Passt eines davon?',
       gelesen: (von, zu) => `„${von}“ habe ich als „${zu}“ gelesen.`,
+      ueber: n => `Zu „${n}“:`, ueberNichts: 'Dazu steht in den Angaben nichts.', alleAngaben: 'Alle Angaben zu diesem Produkt?',
       trefferVorn: (n, hart, weich) => hart ? `${n === 1 ? '1 Produkt passt' : `${n} Produkte passen`} zu „${hart}“; zuerst, was zu „${weich}“ passt.`
         : `${n === 1 ? '1 Produkt passt' : `${n} Produkte passen`} zu „${weich}“, die passendsten zuerst.`,
       trefferZu: (n, w) => n === 1 ? `1 Produkt passt zu „${w}“.` : `${n} Produkte passen zu „${w}“.`, weitere: n => `${n} weitere zeigen`,
@@ -46,6 +47,7 @@
       neu: 'New search', angabeWeg: 'Remove', lockern: 'With fewer criteria:', ohne: (l, n) => `${l} (${n})`, alle: 'all products',
       abschluss: l => l.length ? `Does one of these fit? Or shall I narrow it down by ${liste(l, 'or')}?` : 'Does one of these fit?',
       gelesen: (von, zu) => `I read "${von}" as "${zu}".`,
+      ueber: n => `About "${n}":`, ueberNichts: 'The product details say nothing about this.', alleAngaben: 'See all details of this product?',
       trefferVorn: (n, hart, weich) => hart ? `${n === 1 ? '1 product matches' : `${n} products match`} "${hart}"; those matching "${weich}" first.`
         : `${n === 1 ? '1 product matches' : `${n} products match`} "${weich}", best matches first.`,
       trefferZu: (n, w) => n === 1 ? `1 product matches "${w}".` : `${n} products match "${w}".`, weitere: n => `Show ${n} more`,
@@ -158,7 +160,7 @@ tr.gleich td { color: var(--leise); }
     const T = TEXTE[sprache]
     // das Gespräch: gesammelte Wörter und Filter, die früheren Eingaben — nur im Arbeitsspeicher der Seite
     // merkzettel: id → { id, name, art: 'produkt' | 'variante' } — in der Reihenfolge des Merkens
-    const zustand = { woerter: [], filter: [], verlauf: [], auswahl: new Set(), merkzettel: new Map(), info: null, laeuft: false }
+    const zustand = { woerter: [], filter: [], verlauf: [], auswahl: new Set(), merkzettel: new Map(), info: null, laeuft: false, fokus: null }
 
     const wirt = document.createElement('div')
     wirt.setAttribute('data-journali-advisor', '')
@@ -319,7 +321,7 @@ tr.gleich td { color: var(--leise); }
     /// „Neue Suche“ steht in der letzten Blase einer Antwort (09.10.2026): bei Treffern neben „Passt eines davon?“, ohne Treffer bei den Angaben
     function neueSuche() {
       const neu = el('button', 'chip neu', T.neu); neu.type = 'button'
-      neu.addEventListener('click', () => { zustand.woerter = []; zustand.filter = []; zustand.verlauf = []; blase(T.neu); eingabe.focus() })
+      neu.addEventListener('click', () => { zustand.woerter = []; zustand.filter = []; zustand.verlauf = []; zustand.fokus = null; blase(T.neu); eingabe.focus() })
       return neu
     }
 
@@ -460,19 +462,45 @@ tr.gleich td { color: var(--leise); }
       return block
     }
 
+    /// Die Antwort auf eine Frage zum Produkt im Blick (09.10.2026): die passenden Werte, darunter seine Unterlagen, zuletzt „alle Angaben?“
+    function antwortZumProdukt(r) {
+      const antwort = el('div', 'karten antwort')
+      const b = el('div', 'blase ueber ergebnis')
+      for (const k of r.corrected || []) b.append(el('div', 'gelesen leise', T.gelesen(k.from, k.to)))
+      b.append(el('div', 'leise', T.ueber(r.about.name)))
+      if (r.answer) { b.append(el('span', 'satz', r.answer)); b.append(el('span', 'hinweis', T.ki)) }
+      if (r.about.values.length) {
+        const t = el('table', 'werte'), tb = el('tbody')
+        for (const v of r.about.values) { const tr = el('tr'); tr.append(el('th', '', v.label), el('td', '', v.value)); tb.append(tr) }
+        t.append(tb); b.append(t)
+      } else if (!r.answer) b.append(el('span', 'satz', T.ueberNichts))
+      antwort.append(b)
+      const ub = unterlagenBlase(r.docs); if (ub) antwort.append(ub)
+      const ab = el('div', 'rueckfrage abschluss'), bl = el('div', 'blase'), kopf = el('div', 'kopfzeile')
+      const det = el('button', 'chip', T.details); det.type = 'button'
+      det.addEventListener('click', () => zeigeProdukt(r.about.id))
+      const knoepfe = el('span', 'chips'); knoepfe.append(det, neueSuche())
+      kopf.append(el('span', 'frage', T.alleAngaben), knoepfe)
+      bl.append(kopf); ab.append(bl); antwort.append(ab)
+      verlauf.append(antwort)
+      verlauf.scrollTop = Math.max(0, antwort.offsetTop - 8)
+    }
+
     async function frage(q, alsBlase) {
       if (zustand.laeuft) return
       zustand.laeuft = true; senden.disabled = true
       if (alsBlase && q) blase(q, true)
       try {
         const r = await rufe('/api/ask', {
-          q, woerter: zustand.woerter, verlauf: zustand.verlauf.slice(-6), locale: sprache,
+          q, woerter: zustand.woerter, verlauf: zustand.verlauf.slice(-6), locale: sprache, ...(zustand.fokus ? { fokus: zustand.fokus } : {}),
           filter: zustand.filter.map(f => ({ attribute: f.attribute, op: f.op, value: f.value })),
         })
         // was jetzt gilt, sagt der Server: die gesammelten Wörter und alle Filter, auch die aus dem Text erkannten — mit Bezeichnungen
         if (Array.isArray(r.words)) zustand.woerter = r.words
         if (Array.isArray(r.filter)) zustand.filter = r.filter.map(f => ({ attribute: f.attribute, op: f.op, value: f.value, label: f.label, valueLabel: f.valueLabel }))
         if (q) zustand.verlauf.push(q)
+        if (r.about) { antwortZumProdukt(r); return }   // eine Frage zum Produkt im Blick: seine Werte, seine Unterlagen
+        zustand.fokus = (r.hits || []).length === 1 ? r.hits[0].id : null
         const antwort = el('div', 'karten antwort')
         const ub = unterlagenBlase(r.docs); if (ub) antwort.append(ub)   // beantworten die Unterlagen die Frage, steht das zuerst
         if (r.unknown && r.unknown.length) antwort.append(el('div', 'blase', T.unbekannt(r.unknown)))
@@ -508,6 +536,7 @@ tr.gleich td { color: var(--leise); }
     }
 
     async function zeigeProdukt(id) {
+      zustand.fokus = id   // das geöffnete Produkt ist im Blick
       try {
         const p = await rufe(`/api/product/${encodeURIComponent(id)}?locale=${sprache}`)
         const { t: b, kopf, inhalt } = tafel('produkt', T.produkt, p.name)

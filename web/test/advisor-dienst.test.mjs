@@ -129,6 +129,9 @@ test('Produkt, Vergleich und Bild gehen durch, ein unbekannter Weg nicht', async
     // ein Dokument der Unterlagen: durchgereicht, zum Ansehen, ohne Skripte
     const d = await fetch(w.url + '/api/doc/d1')
     assert.equal(d.headers.get('content-type'), 'application/pdf')
+    // das Produkt im Blick geht mit der Frage an journali
+    await post(w.url + '/api/ask', { q: 'ist es wasserdicht?', fokus: 'p1' })
+    assert.equal(w.rufe.filter(x => x.url.endsWith('/ask')).at(-1).body.fokus, 'p1')
     assert.equal(d.headers.get('content-disposition'), "inline; filename*=UTF-8''Pflege.pdf")
     assert.equal(d.headers.get('content-security-policy'), 'sandbox')
     assert.equal(await d.text(), '%PDF')

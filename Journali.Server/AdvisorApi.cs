@@ -60,7 +60,10 @@ public static partial class AdvisorApi
     /// <summary>Ein Filter der Facetten: <c>eq</c> (ein Wert), <c>le</c>/<c>ge</c> (Zahl bis/ab).</summary>
     public sealed record Filter(string? Attribute, string? Op, string? Value);
     /// <param name="Woerter">die gesammelten Suchwörter früherer Eingaben (ein Gespräch); <paramref name="Verlauf"/>: frühere Eingaben im Wortlaut, für die KI</param>
-    public sealed record Frage(string? Q, List<Filter>? Filter, string? Locale, int? Take, bool? Ki, List<string>? Woerter = null, List<string>? Verlauf = null);
+    /// <param name="Fokus">das Produkt im Blick (09.10.2026): das einzige der letzten Antwort oder das zuletzt geöffnete — eine Frage dazu
+    /// („ist das zelt wasserdicht?“) beantwortet der Berater aus seinen Werten</param>
+    public sealed record Frage(string? Q, List<Filter>? Filter, string? Locale, int? Take, bool? Ki, List<string>? Woerter = null, List<string>? Verlauf = null,
+        string? Fokus = null);
     public sealed record Vergleich(List<string>? Ids, string? Locale);
     public sealed record TokenBody(string? Label);
     /// <summary>Ein Wert einer Facette mit der Zahl der Treffer, die ihn haben.</summary>
@@ -796,6 +799,57 @@ public static partial class AdvisorApi
         return (system, sb.ToString().TrimEnd());
     }
 
+    /// <summary>Ist die Eingabe eine Frage? Ein Fragezeichen oder ein Fragewort am Anfang („ist“, „hat“, „wie“, „welche“ …).</summary>
+    public static bool Fragt(string q)
+    {
+        var t = q.Trim().ToLowerInvariant();
+        return t.EndsWith('?') || Regex.IsMatch(t, @"^(ist|sind|hat|haben|hält|haelt|wie|was|welche|welcher|welches|wieviel|kann|passt|gibt|taugt|eignet|is|are|does|do|has|how|what|which|can)\b");
+    }
+
+    /// <summary>Ein Wert eines Produkts als Zeile: Attribut, Bezeichnung, Wert wie ihn ein Besucher liest.</summary>
+    public sealed record WertZeile(AttributeDefinition Def, string Label, string Value);
+
+    /// <summary>
+    /// Welche Werte eine Frage zum Produkt beantworten (09.10.2026): erst nach dem Wort — gleiche Form oder ein gemeinsamer Anfang ab fünf
+    /// Zeichen („wasserdicht“ ↔ „Wassersäule“), ein Eigenschaftswort zur Grösse der Einheit („schwer“ ↔ Gewicht in kg) —, dann nach dem
+    /// Sinn: Abstand höchstens <see cref="WertSinnGrenze"/> und höchstens 0,01 hinter dem besten. Höchstens drei. Gemessen an 16 Werten eines
+    /// Zelts: passende lagen bei 0,13–0,16 („schwer“ → Gewicht, „kostet“ → Preis), ohne passenden Wert („Vorraum“, „Winter“) ab 0,17.
+    /// </summary>
+    public static List<WertZeile> PassendeWerte(ModelCatalog model, IReadOnlyList<WertZeile> zeilen, IReadOnlyList<string> frageWoerter, IReadOnlyList<double>? abstaende = null)
+    {
+        static int Anfang(string a, string b) { var i = 0; while (i < a.Length && i < b.Length && a[i] == b[i]) i++; return i; }
+        bool NachWort(WertZeile z)
+        {
+            var labelWoerter = Woerter(z.Label);
+            if (frageWoerter.Any(w => w.Length >= 4 && labelWoerter.Any(l => Formen(w).Intersect(Formen(l)).Any() || Anfang(w, l) >= 5))) return true;
+            return z.Def.Unit is { } u && model.Units.TryGetValue(u, out var ud) && Eigenschaften.TryGetValue(ud.Quantity, out var e)
+                && frageWoerter.Any(w => e.Wenig.Contains(w) || e.Viel.Contains(w));
+        }
+        var aus = zeilen.Where(NachWort).ToList();
+        if (abstaende is { Count: > 0 } && abstaende.Count == zeilen.Count)
+        {
+            var best = abstaende.Min();
+            aus.AddRange(zeilen.Select((z, i) => (z, d: abstaende[i])).Where(x => x.d <= WertSinnGrenze && x.d <= best + 0.01).OrderBy(x => x.d).Select(x => x.z));
+        }
+        return aus.Distinct().Take(3).ToList();
+    }
+
+    public const double WertSinnGrenze = 0.165;
+    private static readonly ConcurrentDictionary<string, float[]> _zeilenVektoren = new();
+
+    /// <summary>Die Knoten eines Bestands-Eintrags: Produkt, Varianten und die Gruppen darüber — wessen Unterlagen zu ihm gehören.</summary>
+    public static HashSet<string> KnotenVon(Tree tree, IEnumerable<Eintrag> eintraege)
+    {
+        var aus = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var e in eintraege)
+        {
+            aus.Add(e.Product.Id);
+            foreach (var v in e.Varianten) aus.Add(v.Id);
+            foreach (var a in tree.Ancestors(e.Product)) aus.Add(a.Id);
+        }
+        return aus;
+    }
+
     /// <summary>
     /// „KI nicht verfügbar“ — und warum, aber nur für die Vorschau (09.10.2026): ein Besucher fragt mit dem Token des Dienstes (Akteur
     /// advisor:&lt;key&gt;) und bekommt keinen internen Grund; wer in journali angemeldet ist, sieht ihn („Kein Team …“, „Connection refused“).
@@ -950,7 +1004,11 @@ public static partial class AdvisorApi
             }
 
             // Die Wörter: gesammelte und neue; was in keinem Produkt vorkommt, zählt nicht und wird genannt
-            var alle = (body.Woerter ?? []).Select(x => x.Trim().ToLowerInvariant()).Where(x => x.Length is > 0 and <= 40).Concat(Woerter(rest)).Distinct().TakeLast(MaxWoerter).ToList();
+            // gebeugte Formen zählen einmal (09.10.2026): „zelte“ nach „zelt“ ist kein zweites Wort
+            var alle = new List<string>();
+            foreach (var w in (body.Woerter ?? []).Select(x => x.Trim().ToLowerInvariant()).Where(x => x.Length is > 0 and <= 40).Concat(Woerter(rest)))
+                if (!alle.Any(x => x == w || Formen(x).Intersect(Formen(w)).Any())) alle.Add(w);
+            alle = alle.TakeLast(MaxWoerter).ToList();
             var bekannt = alle.Where(w => b.Produkte.Any(e => Punkte(e, [w]) > 0)).ToList();
             var unbekannt = Woerter(rest).Where(w => !bekannt.Contains(w)).ToList();
             // Tippfehler (09.10.2026): ein Wort, das in keinem Produkt steht, oder eines, mit dem zusammen nichts passt, liest der Berater als das
@@ -1003,6 +1061,72 @@ public static partial class AdvisorApi
 
             // Unterlagen (09.10.2026): Abschnitte aus den Dokumenten am Bestand, die zur Eingabe passen — Pflege, Reparatur, häufige Fragen
             var doks = c.Lesen((_, _) => Unterlagen(c, b, d.Role!, c.Users.RightsOf(d.Role!).Contains(Rights.Users)));
+
+            // Eine Frage zum Produkt im Blick (09.10.2026): „ist das zelt wasserdicht?“ nach einem Zelt — die Antwort steht in seinen Werten, nicht
+            // in einer neuen Suche. Nur, wenn die Eingabe eine Frage ist und keine andere Art nennt.
+            var frageWoerter = Woerter(q).Select(w => ersetzt.GetValueOrDefault(w, w)).ToList();   // die ganze Eingabe: „wasserdicht“ hat die Erkennung schon als Angabe genommen
+            if (body.Fokus is { Length: > 0 } fid && b.NachId.TryGetValue(fid, out var imBlick) && Fragt(q)
+                && HartWeich(b.Produkte, frageWoerter.Where(bekannt.Contains).ToList()).Hart.All(w => Staerke(imBlick, w) >= 2))
+            {
+                var (zeilen, knoten, nameBlick) = c.Lesen((model, tree) =>
+                {
+                    var z = AttributeMitAchsen(model, d.View!, b).Where(a => a.Type != AttributeTypes.Html)
+                        .Select(a => (a, w: Werte(tree, model, imBlick, a, loc, b.Channel))).Where(x => x.w.Count > 0)
+                        .Select(x => new WertZeile(x.a, Bez(x.a.Label, loc, model) ?? x.a.Key, AlsText(model, x.a, x.w, loc))).ToList();
+                    return (z, KnotenVon(tree, [imBlick]), imBlick.Name);
+                });
+                var kurz = zeilen.Where(z => z.Value.Length <= 80).ToList();   // lange Texte (Pflege, Merkmale) beantworten die Unterlagen
+                List<double>? abstaende = null;
+                if (vectors.Ready && embedder.Available && kurz.Count > 0)
+                    try
+                    {
+                        var (m, qv) = await embedder.EmbedAsync(q, "query", ct);
+                        abstaende = [];
+                        foreach (var z in kurz)
+                        {
+                            var zeile = $"{z.Label}: {z.Value}";
+                            if (!_zeilenVektoren.TryGetValue(m + "|" + zeile, out var zv))
+                            {
+                                zv = (await embedder.EmbedAsync(zeile, "passage", ct)).Vector;
+                                if (_zeilenVektoren.Count > 5000) _zeilenVektoren.Clear();
+                                _zeilenVektoren[m + "|" + zeile] = zv;
+                            }
+                            abstaende.Add(1 - qv.Zip(zv, (x, y) => (double)x * y).Sum());
+                        }
+                    }
+                    catch (Exception e) { warnung ??= e.Message; abstaende = null; }
+                var passend = c.Lesen((model, _) => PassendeWerte(model, kurz, frageWoerter, abstaende));
+                var (ausBlick, warnBlick) = await AbschnitteAsync(q, doks.Where(m => b.Dokumente.TryGetValue(m, out var n) && knoten.Contains(n)).ToList(), docs, vectors, embedder, ct);
+                warnung ??= warnBlick;
+                var unterBlick = c.Lesen((model, tree) => ausBlick.Select((a, i) =>
+                {
+                    var kn = b.Dokumente.GetValueOrDefault(a.Media) is { } nid && tree.Nodes.TryGetValue(nid, out var nn) ? nn : null;
+                    return new Unterlage(i + 1, a.Media, c.Media.All.GetValueOrDefault(a.Media)?.Name ?? a.Media, a.Page, a.Heading,
+                        a.Body.Length > 1200 ? a.Body[..1200] + " …" : a.Body, kn is null ? null : new UnterlageKnoten(kn.Id, NodeRow.LabelOf(tree, model, kn)));
+                }).ToList());
+                string? textBlick = null;
+                if (d.Ki && kiGewuenscht && Zaehle(key, 1, d.Limits?.KiJeTag))
+                {
+                    var (system, user) = Prompt(q, [(nameBlick, (IReadOnlyList<(string, string)>)zeilen.Take(20).Select(z => (z.Label, z.Value)).ToList())], [], verlauf,
+                        unterBlick.Select(u => ($"{u.Name}{(u.Heading is { } h ? " · " + h : "")}", u.Text)).ToList());
+                    var r = await AiApi.AskAsync(req, c, jobsDir, null, null, system, user, 600, false, 1, "advisor", ct, fuerTeam: d.Team);
+                    if (r.Fehler is null) textBlick = r.Text; else warnung ??= KiNichtVerfuegbar(req, r.Fehler);
+                }
+                return Results.Ok(new
+                {
+                    locale = loc, total = 0, hits = Array.Empty<object>(), facets = Array.Empty<object>(),
+                    about = new { id = imBlick.Product.Id, name = nameBlick, values = passend.Select(z => new { key = z.Def.Key, label = z.Label, value = z.Value }).ToList() },
+                    corrected = korrigiert.Select(k => new { from = k.Von, to = k.Zu }).ToList(), docs = unterBlick, answer = textBlick, warning = warnung,
+                });
+            }
+
+            // nennt die Eingabe eine Art („zelt“), gelten die Unterlagen dieser Produkte und ihrer Gruppen — nicht der Ratgeber Bekleidung
+            var artWoerter = HartWeich(b.Produkte, bekannt).Hart;
+            if (artWoerter.Count > 0)
+            {
+                var knotenArt = c.Lesen((_, tree) => KnotenVon(tree, b.Produkte.Where(e => artWoerter.All(w => Staerke(e, w) >= 2))));
+                doks = doks.Where(m => b.Dokumente.TryGetValue(m, out var n) && knotenArt.Contains(n)).ToList();
+            }
             var (auszuege, dokWarnung) = await AbschnitteAsync(q, doks, docs, vectors, embedder, ct);
             warnung ??= dokWarnung;
 

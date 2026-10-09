@@ -2621,6 +2621,14 @@ Frage. So fragt er auch ohne KI nach.
 ganzes Wort, fallen die weg, bei denen es nur ein Wortanfang ist (`MitWoertern`): „zelte“ fand vorher zuerst Isomatten „für Trekking und
 Zelten“; „akku“ findet weiter „Akkuschrauber“.
 
+**Eine Frage zum Produkt im Blick (09.10.2026).** Das Fenster schickt das Produkt im Blick mit (`fokus`): das einzige der letzten Antwort
+oder das zuletzt geöffnete. Ist die Eingabe eine Frage (Fragezeichen oder Fragewort am Anfang) und nennt keine andere Art, antworten seine
+Werte (`about`): nach dem Wort — gleiche Form oder gemeinsamer Anfang ab fünf Zeichen („wasserdicht“ ↔ „Wassersäule“), ein Eigenschaftswort
+zur Grösse der Einheit („schwer“ ↔ kg) — und nach dem Sinn (Abstand höchstens 0,165, gemessen: passende Werte 0,13–0,16, ohne passenden
+Wert ab 0,17), höchstens drei, nur kurze Werte; lange Texte beantworten die Unterlagen. Darunter die Unterlagen dieses Produkts und seiner
+Gruppen, zuletzt „Alle Angaben zu diesem Produkt?“. Die gesammelten Angaben bleiben, wie sie sind. Nennt eine Eingabe eine Art („zelt“),
+gelten auch sonst nur die Unterlagen dieser Produkte und ihrer Gruppen; gebeugte Formen werden einmal gesammelt („zelte“ nach „zelt“).
+
 **Die Art grenzt ein, jedes andere Wort ordnet (09.10.2026).** Hart ist ein Wort, das im Namen eines Produkts steht — die Art („zelt“,
 „hose“); es grenzt ein. Weich ist jedes andere („wasserdicht“, „winter“, „warm“): es grenzt nicht ein, es ordnet — wer es trägt, steht vorn,
 die Sinnsuche ordnet mit; ohne hartes Wort sind es die Produkte, zu denen mindestens ein weiches passt (`Finde`, `ranked` in der Antwort).

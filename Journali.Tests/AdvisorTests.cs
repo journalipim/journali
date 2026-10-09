@@ -578,6 +578,49 @@ public class AdvisorTests
     }
 
     [Fact]
+    public async Task Eine_Frage_zum_Produkt_im_Blick_beantworten_seine_Werte()
+    {
+        await using var w = await Welt.Neu();
+        var bohr = w.Ids["bohr"];
+        var (_, j) = await w.Frage(JsonSerializer.Serialize(new { q = "ist er wasserdicht?", fokus = bohr }));
+        var about = j.GetProperty("about");
+        Assert.Equal("Bohrhammer Pro", about.GetProperty("name").GetString());
+        Assert.Equal([("Wasserdicht", "nein")], about.GetProperty("values").EnumerateArray().Select(v => (v.GetProperty("label").GetString(), v.GetProperty("value").GetString())).ToList());
+        Assert.Equal(JsonValueKind.Undefined, j.TryGetProperty("words", out var ww) ? ww.ValueKind : JsonValueKind.Undefined);   // die gesammelten Angaben bleiben
+        var (_, k) = await w.Frage(JsonSerializer.Serialize(new { q = "wie viel Leistung hat er?", fokus = bohr }));
+        Assert.Equal("800 W", k.GetProperty("about").GetProperty("values")[0].GetProperty("value").GetString());
+        // keine Frage, oder eine andere Art: eine Suche wie sonst
+        var (_, s1) = await w.Frage(JsonSerializer.Serialize(new { q = "Akkuschrauber", fokus = bohr }));
+        Assert.False(s1.TryGetProperty("about", out _));
+        var (_, s2) = await w.Frage(JsonSerializer.Serialize(new { q = "ist der Akkuschrauber wasserdicht?", fokus = bohr }));
+        Assert.False(s2.TryGetProperty("about", out _));
+    }
+
+    [Fact]
+    public void Welche_Werte_eine_Frage_beantworten_nach_Wort_Einheit_und_Sinn()
+    {
+        var katalog = new Catalog(new MemoryJournal()); katalog.Rebuild(); katalog.SeedMissing();
+        var model = katalog.Lesen((m, _) => m);
+        AttributeDefinition A(string key, string label, string? unit = null) => new(key, Labels.Of(label, label), AttributeTypes.Text, Unit: unit);
+        List<AdvisorApi.WertZeile> zeilen = [new(A("ws", "Wassersäule Außenzelt"), "Wassersäule Außenzelt", "3 000 mm"), new(A("weight", "Gewicht", "kg"), "Gewicht", "2,3 kg"),
+            new(A("bauart", "Bauart"), "Bauart", "Kuppelzelt"), new(A("price", "Preis"), "Preis", "349,95")];
+        Assert.Equal(["ws"], AdvisorApi.PassendeWerte(model, zeilen, ["zelt", "wasserdicht"]).Select(z => z.Def.Key).ToList());   // gemeinsamer Anfang „wasser“
+        Assert.Equal(["weight"], AdvisorApi.PassendeWerte(model, zeilen, ["schwer"]).Select(z => z.Def.Key).ToList());            // „schwer“ ↔ kg
+        // nach dem Sinn: der beste und, was höchstens 0,01 dahinter liegt — über der Grenze nichts
+        Assert.Equal(["price"], AdvisorApi.PassendeWerte(model, zeilen, ["kostet"], [0.20, 0.19, 0.18, 0.159]).Select(z => z.Def.Key).ToList());
+        Assert.Empty(AdvisorApi.PassendeWerte(model, zeilen, ["vorraum"], [0.17, 0.18, 0.19, 0.2]));
+        Assert.True(AdvisorApi.Fragt("ist das zelt wasserdicht")); Assert.True(AdvisorApi.Fragt("Zelt wasserdicht?")); Assert.False(AdvisorApi.Fragt("zelt wasserdicht"));
+    }
+
+    [Fact]
+    public async Task Gebeugte_Formen_werden_einmal_gesammelt()
+    {
+        await using var w = await Welt.Neu();
+        var (_, j) = await w.Frage("""{"q":"bohrhammer","woerter":["bohrhammern"]}""");
+        Assert.Single(j.GetProperty("words").EnumerateArray());
+    }
+
+    [Fact]
     public void Die_Art_grenzt_ein_jedes_andere_Wort_ordnet()
     {
         AdvisorApi.Eintrag E(string name, string text) => new(new Node { Id = "p-" + name, Role = Roles.Product }, [], name, (name + "\n" + text).ToLowerInvariant());

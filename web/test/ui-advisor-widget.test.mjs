@@ -306,6 +306,28 @@ test('weiche Wörter grenzen nicht ein, sie ordnen — der Satz sagt beides', as
   assert.equal(satz(v.$$('.ergebnis').at(-1)), '4 Produkte passen zu „wasserdicht“, die passendsten zuerst.')
 })
 
+test('eine Frage zum Produkt im Blick: das einzige der letzten Antwort geht mit, seine Werte antworten, darunter die Unterlagen', async () => {
+  const w = starte({ ...STANDARD, '/api/ask': body => body.fokus
+    ? [200, { total: 0, hits: [], facets: [], about: { id: 'z1', name: 'Fjell 5 Zelt', values: [{ key: 'ws', label: 'Wassersäule Außenzelt', value: '3 000 mm' }] },
+        docs: [{ n: 1, media: 'm1', name: 'Häufige Fragen – Zelte.pdf', heading: 'Wie wasserdicht muss ein Zelt sein?', text: '…' }] }]
+    : [200, { total: 1, hits: [HIT('z1', 'Fjell 5 Zelt')], facets: [], filter: [], words: ['zelt'] }] })
+  await warte()
+  await w.frage('zelt')
+  await w.frage('ist das zelt wasserdicht?')
+  const letzte = w.rufe.filter(r => r.url.endsWith('/api/ask')).at(-1)
+  assert.equal(letzte.body.fokus, 'z1', 'das einzige Produkt der letzten Antwort ist im Blick')
+  const antwort = w.$$('.antwort').at(-1)
+  assert.equal(antwort.firstElementChild.querySelector('.leise').textContent, 'Zu „Fjell 5 Zelt“:')
+  assert.deepEqual([...antwort.querySelectorAll('.ueber table tr')].map(tr => [...tr.children].map(c => c.textContent)), [['Wassersäule Außenzelt', '3 000 mm']])
+  assert.ok(antwort.children[1].classList.contains('unterlagen'), 'darunter die Unterlagen')
+  assert.equal(antwort.lastElementChild.querySelector('.frage').textContent, 'Alle Angaben zu diesem Produkt?')
+  assert.deepEqual(w.zustandWoerter?.() ?? null, null)
+  // „Neue Suche“ nimmt das Produkt aus dem Blick
+  await w.klick(antwort.querySelector('.chip.neu'))
+  await w.frage('wie schwer?')
+  assert.equal(w.rufe.filter(r => r.url.endsWith('/api/ask')).at(-1).body.fokus, undefined)
+})
+
 test('einen Tippfehler liest der Berater als Produktnamen und sagt es in der Antwort', async () => {
   const w = starte({ ...STANDARD, '/api/ask': [200, { total: 10, hits: [HIT('z1', 'Brenna 5 Zelt')], facets: [], filter: [], words: ['zelt'], corrected: [{ from: 'zeit', to: 'zelt' }] }] })
   await warte()
