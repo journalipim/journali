@@ -2,7 +2,7 @@
 rem Produktberater auf dem PC: tools\berater token ^<key^> ^<ja_...^> ^| start [key] ^| stop ^| status ^| pruefen [key] [dialog]
 rem token   - das Token des Beraters (journali: Export - Produktberatung - + Token) einmal ablegen, ausserhalb des Repos:
 rem           %USERPROFILE%\.journali\advisor-<key>.token
-rem start   - startet den Dienst (plugins\advisor\serve.mjs, localhost:8090) und eine Testseite (tools\berater-testseite.mjs, localhost:8091)
+rem start   - startet den Dienst (plugins\advisor\serve.mjs, localhost:8090) und den Testaufbau (tools\berater-test, Testseite localhost:8091)
 rem           in eigenen Fenstern und oeffnet die Testseite im Browser. journali muss laufen (tools\server start). Am Berater muss unter
 rem           "Websites" http://localhost:8091 stehen, sonst antwortet der Dienst dem Browser mit 403.
 rem           Das Lernen liegt in %USERPROFILE%\.journali\advisor-<key>\lernen.json
@@ -36,7 +36,7 @@ if not exist "%TOKENFILE%" ( echo no token for advisor %KEY% - first: tools\bera
 curl -sf -m 2 -o nul localhost:5000/api/health || ( echo journali is not running - first: tools\server start & exit /b 1 )
 call "%~f0" stop >nul
 start "journali berater" /D "%ROOT%" cmd /k "set JOURNALI=http://localhost:5000&& set JOURNALI_ADVISOR=%KEY%&& set JOURNALI_ADVISOR_TOKEN_FILE=%TOKENFILE%&& set JOURNALI_ADVISOR_DATA=%USERPROFILE%\.journali\advisor-%KEY%&& set PORT=8090&& node plugins\advisor\serve.mjs"
-start "journali berater testseite" /D "%ROOT%" cmd /k "node tools\berater-testseite.mjs --port 8091 --dienst http://localhost:8090"
+start "journali berater testseite" /D "%ROOT%" cmd /k "node tools\berater-test\testseite.mjs --port 8091 --dienst http://localhost:8090"
 echo advisor %KEY% starting ...
 for /l %%i in (1,1,20) do (
   curl -sf -m 2 -o nul localhost:8090/health && (echo running - service http://localhost:8090, test page http://localhost:8091 & start "" http://localhost:8091 & exit /b 0)

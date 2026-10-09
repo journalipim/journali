@@ -510,7 +510,7 @@ tools\berater start shop
 ```
 
 Das Token liegt danach in `%USERPROFILE%\.journali\advisor-shop.token`, nie im Repo. `start` braucht einen laufenden journali
-(`tools\server start`), startet den Dienst (`localhost:8090`) und die Testseite (`localhost:8091`, `tools/berater-testseite.mjs`:
+(`tools\server start`), startet den Dienst (`localhost:8090`) und die Testseite (`localhost:8091`, Testaufbau `tools/berater-test`:
 schwebend, `?eingebettet`, `?en`) in eigenen Fenstern und öffnet sie im Browser. Am Berater gehört `http://localhost:8091` unter
 „Websites“. `tools\berater stop` beendet beides, `status` fragt den Dienst, `pruefen shop` spielt den Prüfstand.
 

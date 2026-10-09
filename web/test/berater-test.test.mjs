@@ -1,9 +1,9 @@
-// Der Produktberater auf dem PC (tools\berater.cmd, tools/berater-testseite.mjs): die Testseite bindet das Chat-Fenster des lokalen Dienstes ein
+// Der Produktberater auf dem PC (tools\berater.cmd, Testaufbau tools/berater-test): die Testseite bindet das Chat-Fenster des lokalen Dienstes ein
 // wie eine Website, schwebend, eingebettet oder englisch; und das Startskript besteht nur aus ASCII — sonst bricht cmd die Datei ab.
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
-import { seite } from '../../tools/berater-testseite.mjs'
+import { seite } from '../../tools/berater-test/testseite.mjs'
 
 test('die Testseite bindet das Fenster des Dienstes ein — schwebend, eingebettet, englisch', () => {
   assert.match(seite('http://localhost:8090/'), /<script src="http:\/\/localhost:8090\/widget\.js" async><\/script>/)
