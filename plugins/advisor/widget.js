@@ -16,16 +16,17 @@
 (function () {
   'use strict'
 
+  const liste = (l, und) => l.length < 2 ? l.join('') : `${l.slice(0, -1).join(', ')} ${und} ${l.at(-1)}`
   const TEXTE = {
     de: {
       oeffnen: 'Produktberatung', schliessen: 'Schliessen', frage: 'Wonach suchen Sie?', senden: 'Fragen', treffer: n => n === 1 ? '1 Produkt passt.' : `${n} Produkte passen.`,
-      keine: 'Kein Produkt passt dazu.', eingrenzen: 'Eingrenzen:', bis: 'bis', ab: 'ab', details: 'Details', vergleichen: 'Vergleichen', vergleich: n => `${n} vergleichen`,
+      keine: 'Kein Produkt passt dazu.', bis: 'bis', ab: 'ab', details: 'Details', vergleichen: 'Vergleichen', vergleich: n => `${n} vergleichen`,
       unterlagen: 'Aus den Unterlagen:', dokOeffnen: 'Dokument öffnen', seite: n => `S. ${n}`, ganz: 'ganzer Abschnitt',
       zurueck: 'Zurück', fehler: 'Der Berater antwortet gerade nicht.', zuviel: 'Zu viele Fragen in kurzer Zeit.', varianten: n => `${n} Ausführungen`, ki: 'Text von einer KI erstellt',
       filterWeg: 'Filter entfernen', merkmal: 'Merkmal', gleich: 'gleich',
       aehnlich: n => n === 1 ? '1 ähnliches Produkt.' : `${n} ähnliche Produkte.`, unbekannt: w => `„${w.join('“, „')}“ steht in keinem Produkt.`,
       neu: 'Neue Suche', angabeWeg: 'Angabe entfernen', lockern: 'Mit weniger Angaben:', ohne: (l, n) => `${l} (${n})`, alle: 'alle Produkte',
-      abschluss: l => l ? `Passt eines davon? Oder soll ich nach ${l} eingrenzen?` : 'Passt eines davon?',
+      abschluss: l => l.length ? `Passt eines davon? Oder soll ich nach ${liste(l, 'oder')} eingrenzen?` : 'Passt eines davon?',
       gelesen: (von, zu) => `„${von}“ habe ich als „${zu}“ gelesen.`,
       trefferVorn: (n, hart, weich) => hart ? `${n === 1 ? '1 Produkt passt' : `${n} Produkte passen`} zu „${hart}“; zuerst, was zu „${weich}“ passt.`
         : `${n === 1 ? '1 Produkt passt' : `${n} Produkte passen`} zu „${weich}“, die passendsten zuerst.`,
@@ -37,13 +38,13 @@
     },
     en: {
       oeffnen: 'Product advice', schliessen: 'Close', frage: 'What are you looking for?', senden: 'Ask', treffer: n => n === 1 ? '1 product matches.' : `${n} products match.`,
-      keine: 'No product matches.', eingrenzen: 'Narrow down:', bis: 'up to', ab: 'from', details: 'Details', vergleichen: 'Compare', vergleich: n => `Compare ${n}`,
+      keine: 'No product matches.', bis: 'up to', ab: 'from', details: 'Details', vergleichen: 'Compare', vergleich: n => `Compare ${n}`,
       unterlagen: 'From the documentation:', dokOeffnen: 'Open document', seite: n => `p. ${n}`, ganz: 'whole section',
       zurueck: 'Back', fehler: 'The advisor is not answering right now.', zuviel: 'Too many questions in a short time.', varianten: n => `${n} versions`, ki: 'Text written by an AI',
       filterWeg: 'Remove filter', merkmal: 'Attribute', gleich: 'same',
       aehnlich: n => n === 1 ? '1 similar product.' : `${n} similar products.`, unbekannt: w => `"${w.join('", "')}" does not appear in any product.`,
       neu: 'New search', angabeWeg: 'Remove', lockern: 'With fewer criteria:', ohne: (l, n) => `${l} (${n})`, alle: 'all products',
-      abschluss: l => l ? `Does one of these fit? Or shall I narrow it down by ${l}?` : 'Does one of these fit?',
+      abschluss: l => l.length ? `Does one of these fit? Or shall I narrow it down by ${liste(l, 'or')}?` : 'Does one of these fit?',
       gelesen: (von, zu) => `I read "${von}" as "${zu}".`,
       trefferVorn: (n, hart, weich) => hart ? `${n === 1 ? '1 product matches' : `${n} products match`} "${hart}"; those matching "${weich}" first.`
         : `${n === 1 ? '1 product matches' : `${n} products match`} "${weich}", best matches first.`,
@@ -122,7 +123,8 @@ td.aktion button { border: 1px solid var(--linie); background: transparent; colo
 .mehr { align-self: flex-start; border: 1px solid var(--linie); background: transparent; color: var(--text); border-radius: 8px; padding: 4px 10px; font-size: 12px; }
 .chip.neu { margin-left: auto; }
 .rueckfrage { display: flex; flex-direction: column; gap: 6px; }
-.abschluss > .blase { display: flex; align-items: center; justify-content: space-between; gap: 10px; white-space: normal; }
+.abschluss > .blase { display: flex; flex-direction: column; gap: 8px; white-space: normal; }
+.abschluss .kopfzeile { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .statt .ja { background: var(--akzent); border-color: var(--akzent); color: #fff; }
 form { display: flex; gap: 6px; padding: 10px; border-top: 1px solid var(--linie); }
 input[type=text] { flex: 1; font: inherit; color: var(--text); background: var(--flaeche); border: 1px solid var(--linie); border-radius: 8px; padding: 8px 10px; min-width: 0; }
@@ -422,42 +424,39 @@ tr.gleich td { color: var(--leise); }
     /// Die Rückfrage: das Merkmal, das die Treffer am besten teilt, als Frage mit Knöpfen
     /// Der Abschluss einer Antwort (09.10.2026): nach den Karten die Frage des Beraters, direkt über der Eingabe — passt eines, oder nach dem
     /// Merkmal eingrenzen, das die Treffer am besten teilt; darunter seine Werte, die weiteren Merkmale und „weitere zeigen“
-    function rueckfrage(f, weitere, mehr) {
+    /// Die Frage nennt die Merkmale, nach denen sich die Treffer unterscheiden (höchstens drei), und bietet sie in derselben Blase an —
+    /// was sie nicht nennt, steht nicht da (09.10.2026)
+    function rueckfrage(facetten) {
+      const genannt = (facetten || []).slice(0, 3)
       const r = el('div', 'rueckfrage abschluss')
       const b = el('div', 'blase')
-      b.append(el('span', 'frage', T.abschluss(f ? f.label : null)))
-      if (zustand.woerter.length || zustand.filter.length) b.append(neueSuche())
+      const kopf = el('div', 'kopfzeile')
+      kopf.append(el('span', 'frage', T.abschluss(genannt.map(f => f.label))))
+      if (zustand.woerter.length || zustand.filter.length) kopf.append(neueSuche())
+      b.append(kopf)
+      const wahl = facettenWahl(genannt); if (wahl) b.append(wahl)
       r.append(b)
-      if (f) {
-        const c = el('div', 'chips')
-        for (const opt of optionen(f, false)) c.append(facettenChip(f, opt))
-        r.append(c)
-      }
-      const fa = facettenChips(weitere); if (fa) r.append(fa)
-      if (mehr) r.append(mehr)
       return r
     }
 
-    /// Die weiteren Merkmale zum Eingrenzen: je Merkmal ein Knopf („Farbe ▾“), seine Werte erst auf Klick — sonst stünden alle Werte aller Merkmale da
-    function facettenChips(facetten) {
-      if (!facetten || !facetten.length) return null
+    /// Die Merkmale der Frage: je eines ein Knopf („Farbe ▾“), das erste offen, seine Werte darunter; bei einem Merkmal nur seine Werte
+    function facettenWahl(facetten) {
+      if (!facetten.length) return null
       const block = el('div', 'eingrenzen')
-      const c = el('div', 'chips')
-      c.append(el('span', 'leise', T.eingrenzen))
-      const werte = el('div', 'chips werte'); werte.hidden = true
-      for (const f of facetten) {
-        const k = el('button', 'chip facette', `${f.label} ▾`); k.type = 'button'
-        k.addEventListener('click', () => {
-          const offen = k.classList.contains('offen')
-          for (const x of c.querySelectorAll('.facette')) x.classList.remove('offen')
-          werte.replaceChildren(); werte.hidden = offen
-          if (offen) return
-          k.classList.add('offen')
-          for (const opt of optionen(f, false)) werte.append(facettenChip(f, opt))
-        })
-        c.append(k)
+      const werte = el('div', 'chips werte')
+      const zeige = f => werte.replaceChildren(...optionen(f, false).map(opt => facettenChip(f, opt)))
+      if (facetten.length > 1) {
+        const c = el('div', 'chips merkmale')
+        for (const f of facetten) {
+          const k = el('button', 'chip facette', `${f.label} ▾`); k.type = 'button'
+          k.addEventListener('click', () => { for (const x of c.querySelectorAll('.facette')) x.classList.toggle('offen', x === k); zeige(f) })
+          c.append(k)
+        }
+        c.firstElementChild.classList.add('offen')
+        block.append(c)
       }
-      block.append(c, werte)
+      zeige(facetten[0])
+      block.append(werte)
       return block
     }
 
@@ -493,20 +492,15 @@ tr.gleich td { color: var(--leise); }
         const lo = r.total ? null : lockernChips(r.relax); if (lo) sb.append(lo)
         antwort.append(sb)
         const st = r.total ? null : stattChips(r.instead); if (st) antwort.append(st)   // die Frage zuletzt, direkt über der Eingabe
-        const [erste, ...weitere] = r.facets || []
         const hits = r.hits || []
         for (const h of hits.slice(0, ZUERST)) antwort.append(karte(h))
-        let mehr = null
+        // „weitere zeigen“ gehört zur Liste: nach den Karten, vor der Frage; die weiteren Karten kommen an seine Stelle
         if (hits.length > ZUERST) {
-          const rest = hits.slice(ZUERST)
-          mehr = el('button', 'mehr', T.weitere(rest.length)); mehr.type = 'button'
+          const mehr = el('button', 'mehr', T.weitere(hits.length - ZUERST)); mehr.type = 'button'
+          mehr.addEventListener('click', () => { for (const h of hits.slice(ZUERST)) antwort.insertBefore(karte(h), mehr); mehr.remove() })
+          antwort.append(mehr)
         }
-        if (hits.length) {
-          const ab = rueckfrage(erste, weitere, mehr)
-          // „weitere zeigen“: die Karten kommen vor die Frage, die Frage bleibt zuletzt
-          if (mehr) mehr.addEventListener('click', () => { for (const h of hits.slice(ZUERST)) antwort.insertBefore(karte(h), ab); mehr.remove() })
-          antwort.append(ab)
-        }
+        if (hits.length) antwort.append(rueckfrage(r.facets))
         verlauf.append(antwort)
         verlauf.scrollTop = Math.max(0, antwort.offsetTop - 8)   // an den Anfang der Antwort, nicht ans Ende der Karten
       } catch (e) { blase(e.message) }

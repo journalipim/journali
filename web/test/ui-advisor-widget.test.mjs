@@ -90,14 +90,15 @@ test('eine Frage zeigt Treffer, fragt nach dem Merkmal, das sie am besten teilt,
   assert.equal(w.$('.blase.ich').textContent, 'Bohrhammer')
   assert.deepEqual(w.$$('.karte .name').map(e => e.textContent), ['Bohrhammer Pro', 'Akkuschrauber'])
   assert.ok(w.$$('.blase').some(b => satz(b) === '2 Produkte passen zu „bohrhammer“.'))
-  // die erste Facette als Rückfrage, die übrigen zum Eingrenzen
-  assert.equal(w.$('.rueckfrage .blase .frage').textContent, 'Passt eines davon? Oder soll ich nach Farbe eingrenzen?')
-  assert.deepEqual(w.$$('.rueckfrage > .chips .chip').map(c => c.textContent), ['Rot (1)', 'Blau (1)'])
-  // die weiteren Merkmale: je eines ein Knopf, die Werte auf Klick
-  assert.ok(w.$$('.eingrenzen .facette').some(c => c.textContent === 'Leistung ▾'))
-  assert.equal(w.$('.eingrenzen .werte').hidden, true)
-  await w.klick(w.$$('.eingrenzen .facette').find(c => c.textContent === 'Leistung ▾'))
-  assert.deepEqual(w.$$('.eingrenzen .werte .chip').map(c => c.textContent), ['bis 550 W', 'ab 550 W'], 'eine Zahl teilt sich in bis und ab')
+  // die Frage nennt die Merkmale und bietet sie in derselben Blase an: das erste offen, seine Werte darunter
+  assert.equal(w.$('.rueckfrage .blase .frage').textContent, 'Passt eines davon? Oder soll ich nach Farbe oder Leistung eingrenzen?')
+  assert.deepEqual(w.$$('.abschluss .blase .facette').map(c => c.textContent), ['Farbe ▾', 'Leistung ▾'])
+  assert.ok(w.$('.abschluss .blase .facette').classList.contains('offen'))
+  assert.deepEqual(w.$$('.abschluss .blase .werte .chip').map(c => c.textContent), ['Rot (1)', 'Blau (1)'])
+  assert.ok(!w.$('.abschluss > .eingrenzen'), 'nichts unter der Blase, was die Frage nicht nennt')
+  await w.klick(w.$$('.abschluss .facette').find(c => c.textContent === 'Leistung ▾'))
+  assert.deepEqual(w.$$('.abschluss .werte .chip').map(c => c.textContent), ['bis 550 W', 'ab 550 W'], 'eine Zahl teilt sich in bis und ab')
+  await w.klick(w.$$('.abschluss .facette').find(c => c.textContent === 'Farbe ▾'))
   await w.klick(w.$$('.rueckfrage .chip').find(c => c.textContent === 'Rot (1)'))
   const letzte = w.rufe.filter(r => r.url.endsWith('/api/ask')).at(-1)
   assert.equal(letzte.body.q, '', 'keine neue Eingabe')
@@ -334,6 +335,11 @@ test('nach den Karten fragt der Berater, ob eines passt oder wonach er eingrenze
   assert.ok(kinder.indexOf(antwort.querySelector('.rueckfrage')) > kinder.indexOf(antwort.querySelector('.karte')), 'die Frage nach den Karten')
   assert.ok(antwort.lastElementChild === antwort.querySelector('.rueckfrage.abschluss'), 'die Frage zuletzt, direkt über der Eingabe')
   assert.equal(antwort.querySelector('.abschluss .blase .frage').textContent, 'Passt eines davon? Oder soll ich nach Grösse eingrenzen?')
+  // ein Merkmal: nur seine Werte, kein Knopf dafür
+  assert.ok(!antwort.querySelector('.abschluss .facette'))
+  assert.deepEqual([...antwort.querySelectorAll('.abschluss .werte .chip')].map(c => c.textContent), ['M (3)', 'L (2)'])
+  // „weitere zeigen“ gehört zur Liste — nach den Karten, vor der Frage
+  assert.ok(antwort.querySelector('.mehr').nextElementSibling === antwort.querySelector('.abschluss'))
   // „Neue Suche“ steht in der letzten Blase, neben der Frage — nicht bei den Angaben oben
   assert.ok(antwort.querySelector('.abschluss .blase .chip.neu'))
   assert.ok(!antwort.querySelector('.ergebnis .chip.neu'))

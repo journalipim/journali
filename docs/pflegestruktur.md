@@ -2611,8 +2611,10 @@ dem Namen (`texts`), nicht als Zeile der Tabelle. Absatz, Zeilenumbruch und List
 Auszeichnung fällt weg (`Absaetze`); das Fenster setzt den Text als Text, nie als HTML.
 
 **Die Antwort endet mit einer Frage (09.10.2026).** Oben steht, was gefunden wurde, dann die ersten drei Karten; zuletzt, direkt über
-der Eingabe, fragt der Berater: „Passt eines davon? Oder soll ich nach Gewicht eingrenzen?“ — darunter die Werte des Merkmals, das die
-Treffer am besten teilt, die weiteren Merkmale und „weitere zeigen“ (die weiteren Karten kommen vor die Frage). So fragt er auch ohne KI nach.
+der Eingabe, fragt der Berater: „Passt eines davon? Oder soll ich nach Farbe oder Gewicht eingrenzen?“ — die Frage nennt die Merkmale,
+nach denen sich die Treffer unterscheiden (höchstens drei), und bietet sie in derselben Blase an: je Merkmal ein Knopf, das erste offen, seine
+Werte darunter; was die Frage nicht nennt, steht nicht da. „Neue Suche“ steht in dieser Blase, „weitere zeigen“ nach den Karten, vor der
+Frage. So fragt er auch ohne KI nach.
 
 **Name vor ganzem Wort vor Wortanfang (09.10.2026).** Ein Wort passt im Namen mit 2, als ganzes Wort im Text mit 1, nur als Wortanfang mit
 0,5 (`Staerke`); gebeugte Formen zählen mit („zelte“ findet „Zelt“, `Formen`). Passt ein Wort bei einem Teil der Produkte im Namen oder als
