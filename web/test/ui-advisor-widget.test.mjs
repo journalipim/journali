@@ -444,6 +444,17 @@ test('das Sortiment: je Gruppe ein Chip mit Anzahl, ein Klick schickt die Gruppe
   assert.deepEqual(w.fragen().at(-1).body.schritt, { art: 'weg', kind: 'gruppe' })
 })
 
+test('die Rückführung: Hinweis, Satz, die Gruppen als Chips und der Nachsatz in einer Blase', async () => {
+  const w = starte({ ...standard(), '/api/ask': antwort({ sortiment: [{ key: 'k-1', label: 'Zelte', n: 3 }] },
+    { hinweise: ['Zu Versand, Lieferung, Bezahlung und Rückgabe kann ich keine Auskunft geben.'], satz: 'Ich kann Ihnen mit den Produkten weiterhelfen, die wir im Angebot haben:',
+      nachsatz: 'Zu anderen Fragen kann ich leider keine Auskunft geben.' }) })
+  await warte()
+  await w.frage('wie lange dauert der versand?')
+  const b = w.$('.blase.sortiment')
+  assert.deepEqual([...b.children].map(x => x.textContent), ['Zu Versand, Lieferung, Bezahlung und Rückgabe kann ich keine Auskunft geben.',
+    'Ich kann Ihnen mit den Produkten weiterhelfen, die wir im Angebot haben:', 'Zelte (3)', 'Zu anderen Fragen kann ich leider keine Auskunft geben.'])
+})
+
 test('Gruss, Dank und Abschied: eine Blase mit dem Satz des Kerns', async () => {
   const w = starte({ ...standard(), '/api/ask': [200, { kurz: true, texte: { satz: 'Gern geschehen.', hinweise: [] } }] })
   await warte()

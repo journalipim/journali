@@ -2883,6 +2883,20 @@ Ebene unter der Wurzel mit mindestens zwei Gruppen (`groups` im Vokabular, `Advi
 Pflegegruppen, Gliederungen einer Regel. Ein Klick wählt eine Gruppe; `select` nimmt sie als `gruppe` und grenzt ein, bevor etwas
 anderes zählt. Sie gilt im Gespräch weiter und steht als Angabe zum Wegnehmen da; ein Themenwechsel wird ohne sie geprüft.
 
+**Das Grundwissen (gebaut 09.10.2026, `kern/wissen.mjs`).** Zur Grundausstattung jedes Beraters gehört, was ein Chat ohne KI und
+ohne Daten des Shops beantwortet: Gruss, Dank, Abschied, wer der Berater ist (ein Programm, kein Mensch), was er kann (dazu das
+Sortiment), wie es ihm geht, eine Bestätigung („ok“). Ein Eintrag gilt nur, wenn die Eingabe sonst nichts enthält („ok, zelt“ ist
+eine Suche). Fragt eine Eingabe nach dem Shop (Versand, Lieferung, Bezahlung, Rückgabe, Kontakt) und nennt keine Art, sagt der
+Berater, dass er dazu keine Auskunft gibt. **Für alles andere gilt die Rückführung**: erkennt der Berater nichts (kein Wort steht in
+einem Produkt, nichts ist eine Angabe) und findet journali nichts — oder es ist eine Frage und journali nennt nur nach dem Sinn
+ähnliche Produkte —, oder steht das Gefragte einer Frage zu den gezeigten Produkten in keinem Produkt des Sortiments, antwortet er:
+„Ich kann Ihnen mit den Produkten weiterhelfen, die wir im Angebot haben:“, die Gruppen des Sortiments, „Zu anderen Fragen kann ich
+leider keine Auskunft geben.“
+
+*Offen:* Allgemeinwissen über das Sortiment hinaus (Fragen, deren Wörter auch in Produkttexten stehen — „wie wird das Wetter?“ trifft
+„wetterfest“) unterscheidet nur der Sinn oder eine KI; ob die KI des Teams solche Fragen beantworten darf, ist eine Entscheidung je
+Berater.
+
 Die Kennung ist zufällig und trägt keine Person; ohne sie (ein Agent über MCP) gibt es kein Gedächtnis, jede Frage steht für sich.
 
 **Lernen.** Der Berater zählt, ohne Gespräch und ohne Kennung: Wörter ohne Treffer, angenommene gelesene Tippfehler, Wörter vor

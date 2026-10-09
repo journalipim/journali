@@ -31,6 +31,15 @@ export const TEXTE = {
     gruss: 'Hallo. Wonach suchen Sie?',
     dank: 'Gern geschehen.',
     tschuess: 'Auf Wiedersehen.',
+    // das Grundwissen (kern/wissen.mjs)
+    wer: 'Ich bin der Produktberater dieses Shops, ein Programm und kein Mensch. Ich kenne die Produkte, die wir im Angebot haben.',
+    koennen: 'Ich suche passende Produkte zu dem, was Sie beschreiben — etwa „leichtes Zelt für zwei“ —, grenze mit Ihnen ein und beantworte Fragen zu den gezeigten Produkten, etwa „sind die wasserdicht?“.',
+    nachsatzGruppen: 'Im Angebot sind diese Bereiche.',
+    befinden: 'Danke, gut. Wobei kann ich helfen?',
+    ok: 'Gut. Wobei kann ich noch helfen?',
+    service: 'Zu Versand, Lieferung, Bezahlung und Rückgabe kann ich keine Auskunft geben.',
+    helfen: mitGruppen => mitGruppen ? 'Ich kann Ihnen mit den Produkten weiterhelfen, die wir im Angebot haben:' : 'Ich kann Ihnen mit den Produkten weiterhelfen, die wir im Angebot haben.',
+    andereFragen: 'Zu anderen Fragen kann ich leider keine Auskunft geben.',
   },
   en: {
     treffer: n => n === 1 ? '1 product matches.' : `${n} products match.`,
@@ -59,6 +68,14 @@ export const TEXTE = {
     gruss: 'Hello. What are you looking for?',
     dank: 'You are welcome.',
     tschuess: 'Goodbye.',
+    wer: 'I am the product advisor of this shop, a program and not a person. I know the products we offer.',
+    koennen: 'I look for products that match what you describe — for example "light tent for two" —, narrow them down with you and answer questions about the products shown, for example "are they waterproof?".',
+    nachsatzGruppen: 'These are the categories we offer.',
+    befinden: 'Fine, thank you. How can I help?',
+    ok: 'Good. What else can I help with?',
+    service: 'I cannot give information on shipping, delivery, payment or returns.',
+    helfen: mitGruppen => mitGruppen ? 'I can help you with the products we offer:' : 'I can help you with the products we offer.',
+    andereFragen: 'Unfortunately I cannot answer other questions.',
   },
 }
 

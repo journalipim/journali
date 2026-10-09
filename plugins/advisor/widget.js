@@ -148,6 +148,7 @@ tr.gleich td { color: var(--leise); }
 .absatz { white-space: pre-wrap; line-height: 1.5; }
 /* eine Frage zu den gezeigten Produkten: je Produkt sein Name (öffnet es) und was in seinen Angaben dazu steht */
 .sortiment .chips { margin-top: 8px; white-space: normal; }
+.sortiment .nachsatz { margin-top: 8px; }
 .stelle { display: flex; flex-direction: column; gap: 2px; margin-top: 8px; white-space: normal; }
 .stelle .name { align-self: flex-start; border: 0; background: transparent; padding: 0; color: var(--akzent); font-weight: 600; text-align: left; }
 .galerie img { height: 120px; border-radius: 6px; background: var(--blase); }
@@ -509,6 +510,7 @@ tr.gleich td { color: var(--leise); }
     function antwortSortiment(r) {
       const antwort = el('div', 'karten antwort')
       const b = el('div', 'blase sortiment')
+      for (const h of r.texte?.hinweise || []) b.append(el('div', 'gelesen', h))
       b.append(el('span', 'satz', r.texte?.satz || ''))
       if (r.sortiment.length) {
         const c = el('div', 'chips')
@@ -519,6 +521,7 @@ tr.gleich td { color: var(--leise); }
         }
         b.append(c)
       }
+      if (r.texte?.nachsatz) b.append(el('div', 'nachsatz', r.texte.nachsatz))
       antwort.append(b)
       verlauf.append(antwort)
       verlauf.scrollTop = Math.max(0, antwort.offsetTop - 8)

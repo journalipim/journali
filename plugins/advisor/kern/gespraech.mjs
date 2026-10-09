@@ -9,6 +9,7 @@ import { woerter, gleichesWort, korrektur, ganz, weg } from './woerter.mjs'
 import { erkenne, fragt, namenWoerter, istArt, imNamen } from './verstehen.mjs'
 import { texte, angabeText } from './texte.mjs'
 import { stellen, genau } from './stellen.mjs'
+import { grundwissen, fragtShop } from './wissen.mjs'
 
 export const DAUER = 30 * 60_000
 export const MAX_WOERTER = 12
@@ -34,12 +35,6 @@ const ALLGEMEIN = new Set(['verkauft', 'verkaufen', 'verkaufst', 'führt', 'fueh
   'sortiment', 'artikel', 'produkte', 'produkt', 'waren', 'sachen', 'alles', 'alle', 'katalog', 'euch', 'eigentlich', 'denn', 'überhaupt', 'ueberhaupt',
   'gibts', 'shop', 'laden', 'sell', 'selling', 'offer', 'products', 'product', 'items', 'range', 'catalog', 'catalogue', 'stuff', 'everything', 'all',
   'carry', 'store'])
-// Gruss, Dank, Abschied: eine kurze Antwort, keine Suche — nur, wenn sonst nichts in der Eingabe steht
-const KURZ = [
-  ['gruss', /^(hallo|hi|hey|moin|servus|guten (morgen|tag|abend)|grüß gott|gruess gott|hello|good (morning|afternoon|evening))(?![\p{L}])/iu],
-  ['dank', /^(danke( schön| sehr)?|dankeschön|vielen dank|thanks|thank you|thx)(?![\p{L}])/iu],
-  ['tschuess', /^(tschüss|tschuess|tschau|ciao|auf wiedersehen|bye|goodbye)(?![\p{L}])/iu],
-]
 
 /**
  * @param {{ journali: (pfad: string, body?: any, kopf?: Record<string, string>) => Promise<{status: number, json: any}>, jetzt?: () => number,
@@ -138,6 +133,11 @@ export function erstelleKern(o) {
     const produkte = await Promise.all(liste.map(p => produkt(p.id, loc)))
     const antworten = liste.map((p, i) => ({ id: p.id, name: produkte[i]?.name ?? p.name, values: produkte[i] ? stellen(produkte[i], { woerter: w.suchwoerter, attribute: w.attribute }) : [] }))
     const gefunden = antworten.filter(a => a.values.length)
+    // nichts bei den gezeigten, und das Gefragte steht in keinem Produkt des Sortiments („wer ist bundeskanzler?“): keine Frage zu ihnen
+    if (!gefunden.length && !w.attribute.length) {
+      const probe = await waehle(z, loc, { art: [], ordnen: w.suchwoerter, angaben: [], probe: true, take: 1, gruppe: null })
+      if ((probe.words ?? []).every(x => x.n === 0)) return null
+    }
     let answer = null, warning = null
     if (vok.ki && ki && gefunden.length) {
       const k = await kiText(loc, { satz: eingabe, treffer: liste.map(p => p.id), verlauf: z.verlauf.slice(-MAX_VERLAUF),
@@ -231,27 +231,32 @@ export function erstelleKern(o) {
     if (eingabe && z.fokus && fragt(eingabe) && woerter(eingabe).filter(w => istArt(w, namen)).every(w => imNamen(w, z.fokusName ?? '')))
       return await zumFokus(z, id, loc, T, eingabe, ki, vok, namen)
 
-    // ---- Gruss, Dank, Abschied: eine kurze Antwort
-    if (eingabe && !schritt) for (const [art, re] of KURZ) {
-      const m = re.exec(eingabe)
-      if (m && !woerter(eingabe.slice(m[0].length)).length) return { gespraech: id, locale: loc, kurz: true, texte: { satz: T[art], hinweise: [] } }
+    // ---- das Grundwissen (kern/wissen.mjs): Gruss, Dank, wer der Berater ist, was er kann — und Fragen zum Shop statt zu Produkten
+    const sortiment = (satz, hinweise = [], nachsatz = null) => ({ gespraech: id, locale: loc, total: vok.products ?? 0, hits: [], facets: [], sortiment: vok.groups ?? [],
+      texte: { satz, hinweise, nachsatz } })
+    if (eingabe && !schritt) {
+      const g = grundwissen(eingabe)
+      if (g?.sortiment) return sortiment(T[g.key], [], (vok.groups ?? []).length ? T.nachsatzGruppen : null)
+      if (g) return { gespraech: id, locale: loc, kurz: true, texte: { satz: T[g.key], hinweise: [] } }
+      if (fragtShop(woerter(eingabe), w => istArt(w, namen))) return sortiment(T.helfen((vok.groups ?? []).length > 0), [T.service])
     }
 
     // ---- eine Frage nach dem Sortiment: die Gruppen des Publikationsbaums, ein Klick grenzt auf eine ein
     if (eingabe && !schritt) {
       const ws = woerter(eingabe)
-      if (ws.length && ws.every(w => ALLGEMEIN.has(w))) {
-        const gruppen = vok.groups ?? []
-        return { gespraech: id, locale: loc, total: vok.products ?? 0, hits: [], facets: [], sortiment: gruppen,
-          texte: { satz: gruppen.length ? T.sortiment(vok.products ?? 0, gruppen.length) : T.sortimentOhne(vok.products ?? 0), hinweise: [] } }
-      }
+      if (ws.length && ws.every(w => ALLGEMEIN.has(w)))
+        return sortiment((vok.groups ?? []).length ? T.sortiment(vok.products ?? 0, vok.groups.length) : T.sortimentOhne(vok.products ?? 0))
     }
 
     // ---- eine Frage zu den Produkten der letzten Antwort: „sind die wasserdicht?“ — keine andere Art, und sie fragt nach etwas
     if (eingabe && !schritt && z.zuletzt.length && fragt(eingabe) && !SUCHT.test(eingabe)) {
       const w = wonach(vok, namen, eingabe)
       const liste = z.zuletzt.filter(p => w.art.every(a => imNamen(a, p.name)))
-      if (liste.length && (w.frage.length || w.attribute.length)) return await zuDenTreffern(z, id, loc, T, eingabe, ki, vok, liste, w)
+      if (liste.length && (w.frage.length || w.attribute.length)) {
+        const r = await zuDenTreffern(z, id, loc, T, eingabe, ki, vok, liste, w)
+        if (r) return r
+        return { ...sortiment(T.helfen((vok.groups ?? []).length > 0), [], T.andereFragen), total: 0 }
+      }
     }
 
     // ---- die Eingabe ergänzt die gesammelten Angaben: erkannte Angaben werden Filter, der Rest Wörter
@@ -361,6 +366,12 @@ export function erstelleKern(o) {
       for (const k of corrected) lernen.notiere('korrektur', k)
       if (sel.total === 0 && z.woerter.length) lernen.notiere('nichts', { woerter: z.woerter })
     }
+
+    // ---- nichts erkannt (09.10.2026): kein Wort steht in einem Produkt, nichts ist eine Angabe — und journali findet nichts, oder es ist eine
+    // Frage und journali nennt nur nach dem Sinn ähnliche Produkte („wie wird das wetter?“). Dann nennt der Berater, wobei er hilft.
+    if (eingabe && !schritt && !neueAngaben.length && !neueWoerter.length && !corrected.length && unknown.length && (sel.total === 0 || (sel.similar && fragt(eingabe))))
+      return { ...sortiment(T.helfen((vok.groups ?? []).length > 0), fragt(eingabe) ? [] : [T.unbekannt(unknown)], T.andereFragen),
+        total: 0, similar: false, unknown, words: z.woerter, filter: z.angaben }
 
     // ---- die Sätze
     const ranked = weich.filter(w => z.woerter.includes(w))

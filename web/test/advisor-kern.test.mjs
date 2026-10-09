@@ -203,6 +203,9 @@ test('ein Wort in keinem Produkt wird genannt und nicht gesammelt; ein Tippfehle
   const a = await kern.antworte({ gespraech: G, q: 'auto' })
   assert.deepEqual([a.unknown, a.words, a.total], [['auto'], [], 0])
   assert.deepEqual(a.texte.hinweise, ['„auto“ steht in keinem Produkt.'])
+  // nichts erkannt (09.10.2026): der Berater nennt, wobei er hilft — die Gruppen des Sortiments
+  assert.deepEqual([a.texte.satz, a.sortiment.map(g => g.label), a.texte.nachsatz],
+    ['Ich kann Ihnen mit den Produkten weiterhelfen, die wir im Angebot haben:', ['Schlafen', 'Kleidung'], 'Zu anderen Fragen kann ich leider keine Auskunft geben.'])
   const b = await kern.antworte({ gespraech: 'tipp-00000001', q: 'zeit' })
   assert.deepEqual(b.corrected, [{ from: 'zeit', to: 'zelt' }])
   assert.equal(b.total, 2)
@@ -311,8 +314,12 @@ test('„sind die wasserdicht?“ beantworten die Angaben der gezeigten Produkte
   assert.deepEqual(ravik.antworten.map(x => [x.name, x.values.map(v => v.value)]), [['Ravik Zelt', ['1.4 kg']]])
   assert.equal(ravik.texte.satz, 'Zu „schwer“ steht beim Produkt:', 'das Gewicht nennt das Gefragte')
   assert.deepEqual((await kern.antworte({ gespraech: G, q: 'wie viel wiegen die?' })).antworten.map(x => x.values.map(v => v.value)), [['2.4 kg'], ['1.4 kg']])
-  const nichts = await kern.antworte({ gespraech: G, q: 'haben die einen Vorraum?' })
-  assert.equal(nichts.texte.satz, 'Zu „vorraum“ steht bei diesen Produkten nichts in den Angaben.')
+  const nichts = await kern.antworte({ gespraech: G, q: 'sind die für den Winter?' })
+  assert.equal(nichts.texte.satz, 'Zu „winter“ steht bei diesen Produkten nichts in den Angaben.', '„winter“ steht beim Schlafsack, nicht bei den Zelten')
+  // steht das Gefragte in keinem Produkt, ist es keine Frage zu den gezeigten — der Berater nennt, wobei er hilft
+  const fremd = await kern.antworte({ gespraech: G, q: 'wer ist bundeskanzler?' })
+  assert.deepEqual([fremd.antworten, fremd.texte.satz, fremd.texte.nachsatz],
+    [undefined, 'Ich kann Ihnen mit den Produkten weiterhelfen, die wir im Angebot haben:', 'Zu anderen Fragen kann ich leider keine Auskunft geben.'])
 })
 
 test('keine Frage zu den gezeigten: eine andere Art, „gibt es …“, oder noch nichts gezeigt — dann eine Suche', async () => {
@@ -368,6 +375,32 @@ test('eine Frage nach dem Sortiment nennt die Gruppen; ein Klick grenzt ein, ein
   assert.equal((await kern.antworte({ gespraech: G, schritt: { art: 'gruppe', key: 'k-gibtsnicht', label: 'X' } })).group, null, 'was journali nicht kennt, fällt weg')
   // ein Wort ausser den allgemeinen ist eine Suche
   assert.ok(!(await kern.antworte({ gespraech: 'anders-0001', q: 'welche zelte habt ihr?' })).sortiment)
+})
+
+// ---- das Grundwissen (kern/wissen.mjs, 09.10.2026)
+
+test('Grundwissen: wer der Berater ist, was er kann, wie es ihm geht — ohne Suche; was er kann, nennt das Sortiment dazu', async () => {
+  const j = journali()
+  const kern = erstelleKern({ journali: j.fn })
+  assert.match((await kern.antworte({ gespraech: G, q: 'Bist du ein Mensch?' })).texte.satz, /^Ich bin der Produktberater dieses Shops, ein Programm und kein Mensch\./)
+  assert.match((await kern.antworte({ gespraech: G, q: 'wer bist du' })).texte.satz, /^Ich bin der Produktberater/)
+  assert.equal((await kern.antworte({ gespraech: G, q: 'Wie geht es dir?' })).texte.satz, 'Danke, gut. Wobei kann ich helfen?')
+  assert.equal((await kern.antworte({ gespraech: G, q: 'ok' })).texte.satz, 'Gut. Wobei kann ich noch helfen?')
+  const hilfe = await kern.antworte({ gespraech: G, q: 'Was kannst du?' })
+  assert.match(hilfe.texte.satz, /^Ich suche passende Produkte/)
+  assert.deepEqual([hilfe.sortiment.length, hilfe.texte.nachsatz], [2, 'Im Angebot sind diese Bereiche.'])
+  assert.equal(j.auswahlen().length, 0)
+  assert.equal((await kern.antworte({ gespraech: G, q: 'ok, zelt' })).total, 2, 'mit einem Anliegen eine Suche')
+})
+
+test('eine Frage zum Shop (Versand, Rückgabe) und eine Frage ausserhalb führen auf das Sortiment zurück', async () => {
+  const kern = erstelleKern({ journali: journali().fn })
+  const v = await kern.antworte({ gespraech: G, q: 'Wie lange dauert der Versand?' })
+  assert.deepEqual([v.texte.hinweise, v.texte.satz, v.sortiment.length],
+    [['Zu Versand, Lieferung, Bezahlung und Rückgabe kann ich keine Auskunft geben.'], 'Ich kann Ihnen mit den Produkten weiterhelfen, die wir im Angebot haben:', 2])
+  assert.ok(!(await kern.antworte({ gespraech: 'anders-0002', q: 'Zelt mit schneller Lieferung' })).sortiment, 'mit einer Art eine Suche')
+  const w = await kern.antworte({ gespraech: 'anders-0003', q: 'Wie wird das Wetter morgen?' })
+  assert.deepEqual([w.texte.hinweise, w.texte.nachsatz], [[], 'Zu anderen Fragen kann ich leider keine Auskunft geben.'], 'eine Frage: ohne „steht in keinem Produkt“')
 })
 
 test('Gruss, Dank und Abschied bekommen eine kurze Antwort, keine Suche', async () => {

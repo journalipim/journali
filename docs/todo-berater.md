@@ -19,7 +19,8 @@ Commit je Thema, sofort nach `origin`, dann `github`; Plugin nach Änderung hoch
   gesehene und abgelehnte Produkte, Produkt im Blick, Verlauf.
 - **Fragen zu den gezeigten Produkten** („sind die wasserdicht?“) beantworten ihre Werte und Sätze (`kern/stellen.mjs`); Gruss, Dank
   und Abschied bekommen einen Satz; „leichter als 1.8 kg“ ist eine Grenze. **Sortiment**: „was verkauft ihr?“ nennt die Gruppen des
-  Publikationsbaums (`groups` im Vokabular, `gruppe` in `select`). Stand des Plugins: 2.4.0.
+  Publikationsbaums (`groups` im Vokabular, `gruppe` in `select`). **Grundwissen** (`kern/wissen.mjs`): wer, was kann er, Shopfragen,
+  und die Rückführung auf das Sortiment für alles andere. Stand des Plugins: 2.5.0.
 - **Prüfstand** `tools/berater-dialoge/` (`spiele.mjs`, `pruefe.mjs`, sieben Dialoge mit Erwartung und Vorbild).
 - **Lernen** im Dienst (`lernen.json` mit `JOURNALI_ADVISOR_DATA`), Vorschläge mit `plugins/advisor/vorschlaege.mjs`.
 - Blog: drei Beiträge als Entwürfe 233–235 (14.10., 21.10., 29.10.), Startseite mit Karte „Journali KI Produktberater“ (lokal in
@@ -35,6 +36,9 @@ Commit je Thema, sofort nach `origin`, dann `github`; Plugin nach Änderung hoch
    `X-Advisor-Customer` → journali prüft), Preise aus dem Shop in der Auswahl.
 
 ## Offene Entscheidungen (Abschnitt 44, „Offen“)
+
+- ob die KI des Teams Fragen ausserhalb des Sortiments beantworten darf (je Berater ein Schalter) — ohne KI gilt die Rückführung, und eine
+  Frage, deren Wörter in Produkttexten stehen („wie wird das Wetter?“ trifft „wetterfest“), bleibt eine Suche,
 
 - ob die Kennung des Gesprächs ein Neuladen der Seite übersteht (`sessionStorage`),
 - wo das Gedächtnis liegt, wenn der Dienst auf mehreren Rechnern läuft,
