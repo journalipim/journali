@@ -210,7 +210,7 @@ Liegt `origin` mehr als ein Stück Arbeit hinter dem Rechner, ist das ein Fehler
   Beschreibung sagt sachlich, was das Plugin tut und was es braucht — keine
   Begründung, kein Beispiel aus dem Alltag, keine Rechtfertigung („ein 200-MB-TIFF
   rechnet man nicht um, während jemand wartet“ gehört in den Quelltext, nicht ins
-  Manifest). Im Quelltext bleibt beides (Prüfstand `kein-name.test.mjs`)
+  Manifest). Im Quelltext bleibt beides (Prüfstand `sichtbare-texte.test.mjs`)
 - `web` — Vue 3 + Vite, Fat-Client-Gefühl: keine Seitenwechsel, Inline-
   Bearbeitung in der Zelle, Tastatur durch Listen, Journal lebendig daneben.
   Symbole und Zahlen statt Wörter in Kacheln, Knöpfen, Zeilen; Sätze nur im
