@@ -2610,6 +2610,10 @@ und ihre Zahl; was wegfällt, steht im Tooltip. „ohne pullover (17)“ las sic
 dem Namen (`texts`), nicht als Zeile der Tabelle. Absatz, Zeilenumbruch und Listenpunkt werden zu Leerzeilen, alles andere an
 Auszeichnung fällt weg (`Absaetze`); das Fenster setzt den Text als Text, nie als HTML.
 
+**Gesucht wird, was die Sicht zeigt (09.10.2026).** Die Wörter einer Frage werden im Namen, in den Attributen der Sicht und in den
+Achsen eines Produkts gesucht — nicht in allen Texten am Knoten. Sonst passte ein Zelt zu „undicht“, weil seine häufigen Fragen
+(GEO-Texte) „Warum ist mein Zelt undicht?“ enthalten; Fragen nach einem Problem beantworten die Unterlagen.
+
 **Unterlagen — der Berater schlägt in den Dokumenten nach (09.10.2026).** Was in keinem Attribut steht — wie man einen klemmenden
 Reißverschluss gängig macht, warum ein Zelt innen nass wird, wie man eine Jacke neu imprägniert —, steht in den Dokumenten an den Knoten.
 Der Berater nutzt dafür, was es schon gibt: den Dokumentindex (Job `docs`, Abschnitte mit Seite und Überschrift, Abschnitt 32) und die
@@ -2619,7 +2623,8 @@ Vektoren der Abschnitte (Job `embed`, Abschnitt 35). Kein eigener Index, keine K
   (`Bestand.Dokumente`, jede Relation ausser `image`, kein Bild) — eine Pflegeanleitung an der Gruppe „Hosen“ gilt für jede Hose. Gezeigt
   wird nur, was heute gilt, freigegeben ist und die Rolle des Beraters sieht (`Unterlagen`), wie bei den Bildern.
 - **Welche Abschnitte.** Nach dem Sinn: Kosinusabstand höchstens 0,145 und höchstens 0,03 hinter dem besten, drei Abschnitte, gleicher
-  Text aus zwei Dokumenten einmal. Die Grenze ist gemessen, nicht geschätzt: an 499 Abschnitten der Demo-Unterlagen lagen die besten
+  Text aus zwei Dokumenten einmal; Teile desselben Abschnitts (gleiches Dokument, gleiche Überschrift) werden ein Auszug in der
+  Reihenfolge des Dokuments (`Zusammenfassen`). Die Grenze ist gemessen, nicht geschätzt: an 499 Abschnitten der Demo-Unterlagen lagen die besten
   Treffer von acht Fragen zu Pflege und Reparatur bei 0,095–0,137, die von vier Fragen ohne Bezug bei 0,158–0,192. Die Wortsuche ist nur
   der Rückfall ohne Vektoren — sie findet „reissverschluss“ nicht in „Reißverschluss“.
 - **Die Antwort.** `docs` nennt je Abschnitt Nummer, Dokument, Seite, Überschrift, Text (höchstens 1 200 Zeichen) und den Knoten, an dem

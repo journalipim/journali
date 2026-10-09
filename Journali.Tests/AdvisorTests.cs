@@ -520,6 +520,25 @@ public class AdvisorTests
     }
 
     [Fact]
+    public async Task Gesucht_wird_nur_in_dem_was_die_Sicht_zeigt()
+    {
+        await using var w = await Welt.Neu();
+        // ein Text an einem Attribut ausserhalb der Sicht (die Gruppe intern nennt die Sicht nicht)
+        w.C.With((_, _, write) =>
+        {
+            write("t", Model.AttributeStream + "notiz", Types.AttributeDefined, new AttributeDefinition("notiz", Labels.Of("Notiz", "Note"), AttributeTypes.Text, Group: "intern"), null);
+            write("t", w.Ids["bohr"], Types.AttributeSet, new AttributeSet("notiz", null, null, "Warum ist mein Bohrhammer undicht?"), null);
+            return 0;
+        });
+        var (_, j) = await w.Frage("""{"q":"undicht"}""");
+        Assert.Equal(0, j.GetProperty("total").GetInt32());
+        Assert.Equal(["undicht"], j.GetProperty("unknown").EnumerateArray().Select(x => x.GetString()).ToList());
+        // was die Sicht zeigt, zählt: die Leistung steht in der Gruppe technik
+        var (_, k) = await w.Frage("""{"q":"Bohrhammer"}""");
+        Assert.Contains("Bohrhammer Pro", Namen(k));
+    }
+
+    [Fact]
     public void Wem_etwas_gehoert_und_wie_gefragt_wird_sucht_kein_Produkt()
     {
         Assert.Equal(["zelt", "wasserdicht"], AdvisorApi.Woerter("Mein Zelt ist nicht mehr wasserdicht"));
@@ -625,6 +644,22 @@ public class AdvisorTests
         // ohne Dokumentindex (keine Datenbank) bleibt die Antwort ohne Abschnitte — und sie fehlt nicht
         var (_, j) = await w.Frage("""{"q":"Bohrhammer"}""");
         Assert.Empty(j.GetProperty("docs").EnumerateArray());
+    }
+
+    [Fact]
+    public void Teile_eines_Abschnitts_werden_ein_Auszug_gleicher_Text_zaehlt_einmal()
+    {
+        AdvisorApi.Auszug A(string m, int seq, string? h, string body, int page = 1) => new(m, seq, page, h, body);
+        var aus = AdvisorApi.Zusammenfassen([
+            A("m1", 5, "Der Schnürsenkel ist gerissen", "• runde Senkel halten länger"),   // der bessere Teil zuerst gefunden
+            A("m2", 1, "Waschen", "Bei 30 °C waschen."),
+            A("m1", 4, "Der Schnürsenkel ist gerissen", "Unterwegs hilft ein Knoten."),
+            A("m3", 1, "Waschen", "Bei 30 °C waschen."),                                     // dasselbe aus einem zweiten Dokument
+            A("m1", 9, null, "ohne Überschrift"), A("m1", 10, null, "auch ohne"),          // ohne Überschrift bleibt jeder Teil für sich
+        ]);
+        Assert.Equal(["m1:Der Schnürsenkel ist gerissen", "m2:Waschen", "m1:", "m1:"], aus.Select(a => a.Media + ":" + a.Heading).ToList());
+        Assert.Equal("Unterwegs hilft ein Knoten.\n• runde Senkel halten länger", aus[0].Body);
+        Assert.Equal(4, aus[0].Seq);
     }
 
     [Fact]

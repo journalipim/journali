@@ -137,14 +137,26 @@ public static partial class AdvisorApi
             var role = d.Role!;
             var admin = c.Users.RightsOf(role).Contains(Rights.Users);
             var produkte = new List<Eintrag>(); var gesehen = new HashSet<string>(StringComparer.Ordinal);
+            var sicht = Attribute(model, d.View!);
+            string SichtText(Node n)
+            {
+                var sb = new StringBuilder();
+                foreach (var a in sicht)
+                    if (Roh(tree, model, n, a, locale, root.Channel) is { Length: > 0 } w) sb.Append(Anzeige(model, a, w, locale)).Append('\n');
+                foreach (var (k, w) in n.AxisValues)
+                    if (model.Attributes.TryGetValue(k, out var ad)) sb.Append(Anzeige(model, ad, w, locale)).Append('\n');
+                return sb.ToString();
+            }
             foreach (var r in Publication.Export(tree, model, root, locale, c.AsOf))
             {
                 if (!r.In || !gesehen.Add(r.Product.Id) || !tree.Visible(r.Product, role, admin)) continue;
                 var varianten = r.Variants.Where(v => v.Verdict.In && tree.Visible(v.Variant, role, admin)).Select(v => v.Variant).ToList();
                 if (varianten.Count == 0) continue;
                 var name = Name(tree, model, r.Product, locale, root.Channel);
-                var text = new StringBuilder(name).Append('\n').Append(NodeText.Of(model, tree, r.Product, locale));
-                foreach (var v in varianten) text.Append('\n').Append(NodeText.Of(model, tree, v, locale));
+                // gesucht wird in dem, was die Sicht zeigt (09.10.2026): Name, Attribute der Sicht, Achsen — nicht in allen Texten am Knoten.
+                // Sonst passte ein Zelt zu „undicht“, weil seine häufigen Fragen (GEO-Texte) „Warum ist mein Zelt undicht?“ enthalten.
+                var text = new StringBuilder(name).Append('\n').Append(SichtText(r.Product));
+                foreach (var v in varianten) text.Append('\n').Append(SichtText(v));
                 produkte.Add(new Eintrag(r.Product, varianten, name, text.ToString().ToLowerInvariant()));
             }
             var nachId = new Dictionary<string, Eintrag>(StringComparer.Ordinal);
@@ -696,7 +708,23 @@ public static partial class AdvisorApi
                 aus.Add(new Auszug(h.Media, h.Seq, h.Page, h.Heading, ganz?.Body ?? h.Snippet.Replace("«", "").Replace("»", "")));
             }
         }
-        return (aus.DistinctBy(a => Leer().Replace(a.Body, " ").Trim()).Take(MaxUnterlagen).ToList(), null);
+        return (Zusammenfassen(aus).Take(MaxUnterlagen).ToList(), null);
+    }
+
+    /// <summary>
+    /// Ein Abschnitt, ein Auszug (09.10.2026): der Dokumentindex schneidet einen langen Abschnitt in Teile mit derselben Überschrift —
+    /// gefundene Teile desselben Dokuments und derselben Überschrift werden einer, in der Reihenfolge des Dokuments, an der Stelle des
+    /// besten Teils. Danach zählt gleicher Text aus zwei Dokumenten einmal.
+    /// </summary>
+    public static List<Auszug> Zusammenfassen(IReadOnlyList<Auszug> nachRang)
+    {
+        var aus = new List<Auszug>();
+        foreach (var g in nachRang.Select((a, i) => (a, i)).GroupBy(x => x.a.Heading is { Length: > 0 } h ? (x.a.Media, h) : (x.a.Media, "#" + x.a.Seq)).OrderBy(g => g.Min(x => x.i)))
+        {
+            var teile = g.Select(x => x.a).OrderBy(a => a.Seq).ToList();
+            aus.Add(teile[0] with { Page = teile.Min(a => a.Page), Body = string.Join("\n", teile.Select(a => a.Body.Trim())) });
+        }
+        return aus.DistinctBy(a => Leer().Replace(a.Body, " ").Trim()).ToList();
     }
 
     // ---- Wege ----
