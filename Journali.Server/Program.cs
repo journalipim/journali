@@ -248,7 +248,7 @@ if (builder.Configuration["JOURNALI_ORIGIN"] is { Length: > 0 } festeAdresse) jo
 var demoBilder = 0;
 if (Demo.An)
 {
-    var (demoEintraege, neueBilder) = Demo.Einrichten(catalog, mediaStore, pluginDir, dataDir);
+    var (demoEintraege, neueBilder) = Demo.Einrichten(catalog, mediaStore, pluginDir, dataDir, Demo.TannwaldDatei);
     demoBilder = neueBilder;
     Console.WriteLine($"journali: demo mode — {demoEintraege} entries, {neueBilder} images written");
     // erst nach dem Einrichten: der Beispielkatalog geht am Filter vorbei, was Besucher schreiben, nicht
@@ -702,12 +702,17 @@ app.Lifetime.ApplicationStarted.Register(() =>
 {
     if (app.Urls.FirstOrDefault() is { } eigene && jobRunner.Origin == "http://localhost:5000")
         jobRunner.Origin = System.Text.RegularExpressions.Regex.Replace(eigene, @"//(\+|\*|0\.0\.0\.0|\[::\])(?=[:/]|$)", "//localhost");
-    // Demo: die neuen Bilder brauchen Abmessungen und Vorschauen — wie nach einem Hochladen
-    if (demoBilder > 0 && verbund.IstHaupt)
+    // Demo: die neuen Bilder brauchen Abmessungen und Vorschauen — wie nach einem Hochladen; die Unterlagen (Tannwald) lesen docs und embed.
+    // Deren Jobs legt in der Demo sonst niemand an (das Recht jobs hat die Rolle demo nicht), und ohne Job zieht der Takt nichts nach (10.10.2026)
+    if (Demo.An && verbund.IstHaupt)
         _ = Task.Run(async () =>
         {
             await Task.Delay(TimeSpan.FromSeconds(5));
-            foreach (var (was, kick) in new (string, Func<(string? Job, string? Error)>)[] { ("probe", () => ProbeApi.Kick(catalog, jobRunner, Demo.Anwender)), ("derive", () => DeriveApi.Kick(catalog, jobRunner, Demo.Anwender)) })
+            var anstossen = new List<(string, Func<(string? Job, string? Error)>)>();
+            if (demoBilder > 0) anstossen.AddRange([("probe", () => ProbeApi.Kick(catalog, jobRunner, Demo.Anwender)), ("derive", () => DeriveApi.Kick(catalog, jobRunner, Demo.Anwender))]);
+            foreach (var plugin in new[] { "docs", "embed" })
+                anstossen.Add((plugin, () => JobApi.Systemjob(catalog, jobRunner, plugin, Demo.Anwender) is var (job, _, _, abgewiesen) ? (job, abgewiesen?.Error) : default));
+            foreach (var (was, kick) in anstossen)
                 try { if (kick().Error is { } fehler) Console.WriteLine($"journali: demo {was} — {fehler}"); }
                 catch (Exception e) { Console.WriteLine($"journali: demo {was} — {e.Message}"); }
         });

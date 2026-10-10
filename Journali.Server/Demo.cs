@@ -37,6 +37,10 @@ public static class Demo
     /// einen Zugang; ixp ist eine interne Schnittstelle). ETIM bleibt an, mit einer fest zugewiesenen Klasse (<see cref="Etim"/>).</summary>
     public static readonly string[] OhnePlugins = ["driver", "ixp", "solr"];
 
+    /// <summary>An, obwohl sie beim ersten Lauf etwas aus dem Netz holen (10.10.2026): embed — Vektoren für ⌕ Dokumente und die Unterlagen von
+    /// <see cref="Tannwald"/>. Das Modell liegt beim Betrieb der Demo in einem Verzeichnis, das den täglichen Neustart übersteht (docs/betrieb.md, Demo).</summary>
+    public static readonly string[] MitDownload = ["embed"];
+
     /// <summary>
     /// In der Demo gesperrt, mit jedem Recht: das eigene Konto (Passwort, Token anlegen und löschen), Einrichten, die Beschreibung der Schnittstelle; Hochladen und
     /// Holen von Medien; Workflows und Vorschau-Presets ändern, Vorschauen und Abmessungen von Hand anstossen; Zugänge und das Dateisystem;
@@ -158,9 +162,10 @@ public static class Demo
 
     /// <summary>
     /// Beim Start, nach den Plugins: der Beispielkatalog (nur in ein leeres Journal) mit Bildern, wenn ein Medienspeicher da ist; die Plugins
-    /// aus <see cref="OhnePlugins"/> aus; dann Rolle und Anwender. Liefert die Zahl der geschriebenen Einträge und der neuen Bilder.
+    /// aus <see cref="OhnePlugins"/> aus; dann Rolle und Anwender. Mit <paramref name="tannwald"/> dazu die Marke Tannwald (<see cref="Tannwald"/>).
+    /// Liefert die Zahl der geschriebenen Einträge und der neuen Medien.
     /// </summary>
-    public static (int Eintraege, int Bilder) Einrichten(Catalog c, IMediaStore? store = null, string? pluginDir = null, string? dataDir = null)
+    public static (int Eintraege, int Bilder) Einrichten(Catalog c, IMediaStore? store = null, string? pluginDir = null, string? dataDir = null, string? tannwald = null)
     {
         var n = 0; var bilder = 0;
         if (pluginDir is not null) n += PluginsEinschalten(c, pluginDir);
@@ -174,10 +179,13 @@ public static class Demo
         }
         n += Etim(c);
         if (pluginDir is not null) n += Systemobjekte(c, pluginDir);
+        if (tannwald is not null && Tannwald(c, store, tannwald) is var tw) { n += tw.Eintraege; bilder += tw.Medien; }
         n += GeoTexte(c, geo);
         if (pluginDir is not null) n += Gpc(c, pluginDir);
+        c.MaxPubTrees = 2;   // Online-Shop und Product Advisor, gleich was der Tarif sagt
         n += Publikationsbaum(c);
-        c.MaxPubTrees = 1;   // ein Publikationsbaum, wie eine Grenze des Tarifs: anlegen geht nicht, löschen sperrt Gesperrt (Knoten zurückziehen)
+        // die Publikationsbäume der Demo und keiner mehr, wie eine Grenze des Tarifs: anlegen geht nicht, löschen sperrt Gesperrt (Knoten zurückziehen)
+        c.MaxPubTrees = Math.Max(1, c.Lesen((_, t) => t.PubTrees.Count()));
         foreach (var key in OhnePlugins)
             if (c.Lesen((_, _) => c.Plugins.All.GetValueOrDefault(key)) is { Enabled: true })
                 n += c.With((_, _, write) => { write(Anwender, Plugins.Stream + key, Types.PluginDisabled, new PluginDisabled(), null); return 1; });
@@ -197,7 +205,7 @@ public static class Demo
 
     /// <summary>
     /// Alle Plugins mit dem Siegel von journali installiert und an — wer die Demo ansieht, darf keine einschalten. Ausgenommen sind
-    /// <see cref="OhnePlugins"/> und, was beim ersten Lauf etwas aus dem Netz holt (<c>download</c>: Modelle, Sprachdaten). Ein Hinweis im
+    /// <see cref="OhnePlugins"/> und, was beim ersten Lauf etwas aus dem Netz holt (<c>download</c>: Modelle, Sprachdaten), ausser <see cref="MitDownload"/>. Ein Hinweis im
     /// Manifest (<c>acknowledge</c>) gilt in der Demo als vom Betreiber bestätigt.
     /// </summary>
     public static int PluginsEinschalten(Catalog c, string dir, bool auchFremde = false)
@@ -205,7 +213,7 @@ public static class Demo
         var n = 0;
         foreach (var m in PluginApi.NachAbhaengigkeit(PluginApi.Scan(dir).Values))
         {
-            if (OhnePlugins.Contains(m.Key) || m.Raw.TryGetProperty("download", out _) || (!auchFremde && !m.Seal.Original)) continue;
+            if (OhnePlugins.Contains(m.Key) || (m.Raw.TryGetProperty("download", out _) && !MitDownload.Contains(m.Key)) || (!auchFremde && !m.Seal.Original)) continue;
             var stand = c.Lesen((_, _) => c.Plugins.All.GetValueOrDefault(m.Key));
             var hinweis = PluginApi.Hinweis(m.Raw);
             n += c.With((_, _, write) =>
@@ -466,24 +474,186 @@ public static class Demo
         return n + zaehler;
     }
 
-    /// <summary>Der Publikationsbaum der Demo (07.10.2026): „Online-Shop“ für den Kanal web, abgeleitet aus den Bereichen des Beispielkatalogs —
-    /// je Produktgruppe eine Rubrik, jedes Produkt ein Verweis. Nur, solange es keinen Publikationsbaum gibt.</summary>
+    /// <summary>Die Publikationsbäume der Demo, für den Kanal web: „Online-Shop“ (07.10.2026) aus den Bereichen des Beispielkatalogs, „Product
+    /// Advisor“ (10.10.2026) aus der Marke Tannwald — je Produktgruppe eine Rubrik, jedes Produkt ein Verweis. Jeder nur, solange es ihn nicht gibt.</summary>
     public static int Publikationsbaum(Catalog c)
     {
-        if (c.Lesen((_, t) => t.PubTrees.Any())) return 0;
         var kanal = c.Lesen((m, _) => m.Channels.ContainsKey("web") ? "web" : m.Channels.Keys.Order(StringComparer.Ordinal).FirstOrDefault());
-        var bereiche = c.Lesen((_, t) => t.Nodes.Values.Where(x => x.Parent == Model.RootNode && x.Role == Roles.Group).Select(x => x.Id).ToList());
-        if (kanal is null || bereiche.Count == 0) return 0;
-        return c.WithBatch(Anwender, "demo-publikation", (model, tree, write) =>
+        if (kanal is null) return 0;
+        var bereiche = c.Lesen((_, t) => t.Nodes.Values.Where(x => x.Parent == Model.RootNode && x.Role == Roles.Group).ToList());
+        var marke = bereiche.Where(x => x.Label.GetValueOrDefault("de") == TannwaldGruppe).Select(x => x.Id).ToList();
+        return Baum("Online-Shop", Labels.Of("Online-Shop", "Online shop"), bereiche.Select(x => x.Id).Except(marke).ToList())
+             + Baum("Product Advisor", Labels.Of("Product Advisor", "Product Advisor"), marke);
+
+        int Baum(string name, Labels label, List<string> aus)
+        {
+            if (aus.Count == 0 || c.Lesen((_, t) => t.PubTrees.Any(p => p.Name == name))) return 0;
+            return c.WithBatch(Anwender, "demo-publikation", (model, tree, write) =>
+            {
+                var z = 0;
+                var ctx = Kontext(c, model, tree, write, () => z++);
+                var baum = Commands.CreateRubric(ctx, null, label, name, kanal);
+                if (baum.Error is { } e) throw new InvalidOperationException("Demo: Publikationsbaum — " + e);
+                foreach (var bereich in aus)
+                    if (Commands.Derive(ctx, baum.Entry!.Stream, bereich, true, out _).Error is { } f) throw new InvalidOperationException("Demo: Publikationsbaum — " + f);
+                return z;
+            });
+        }
+    }
+
+    // ---- Tannwald (10.10.2026): die erfundene Outdoor-Marke der Demo-Daten (tools/demo_master_tree.py) — Produkte mit Beschreibung, Technik,
+    // Bildern und Unterlagen (Datenblätter, Pflege und Reparatur, häufige Fragen, Ratgeber), die Grundlage für ⌕ Dokumente und den Produktberater.
+
+    /// <summary>Die Bezeichnung der Gruppe unter der Wurzel, an der alles von Tannwald hängt.</summary>
+    public const string TannwaldGruppe = "Tannwald Outdoor";
+
+    /// <summary>Die Aufzeichnung des Generators — neben dem Server (im Image unter /app), geschrieben von <c>tools/tannwald_export.py</c>.</summary>
+    public static string TannwaldDatei => Path.Combine(AppContext.BaseDirectory, "demo-tannwald.json");
+
+    /// <summary>
+    /// Die Marke Tannwald aus der Aufzeichnung des Generators (<see cref="TannwaldDatei"/>): jeder Schritt ist eine Anfrage, die der Generator
+    /// an eine Instanz stellt — ein Teil des Modells (<c>model.*</c>: anlegen, was fehlt; Mitgliedschaften dazu), ein Medium (<c>media.create</c>:
+    /// das Bild gezeichnet von <see cref="DemoBilder.Tannwald"/>, die Unterlage gesetzt von <see cref="PdfEinfach"/>) oder ein Befehl des
+    /// Stapels (<see cref="BatchApi.Ausfuehren"/>, mit <c>@ref</c> auf Knoten, Medien und Relationen dieses Laufs). Bilder und Unterlagen kommen
+    /// vorher in den Medienspeicher; ohne Speicher entfällt beides. Nur, solange es die Gruppe <see cref="TannwaldGruppe"/> nicht gibt.
+    /// Ein Befehl, der nicht passt, wird übersprungen und gezählt (wie im Generator) — nur ein Knoten, der nicht entsteht, bricht ab.
+    /// </summary>
+    public static (int Eintraege, int Medien, Dictionary<string, int> Uebersprungen) Tannwald(Catalog c, IMediaStore? store, string datei)
+    {
+        var uebersprungen = new Dictionary<string, int>();
+        if (!File.Exists(datei)) return (0, 0, uebersprungen);
+        if (c.Lesen((_, t) => t.Nodes.Values.Any(x => x.Parent == Model.RootNode && x.Role == Roles.Group && x.Label.GetValueOrDefault("de") == TannwaldGruppe)))
+            return (0, 0, uebersprungen);
+        using var doc = JsonDocument.Parse(File.ReadAllBytes(datei));
+        var schritte = doc.RootElement.GetProperty("schritte").EnumerateArray().ToList();
+        static string Op(JsonElement s) => s.GetProperty("op").GetString()!;
+        static string? Ref(JsonElement s) => s.TryGetProperty("ref", out var r) ? r.GetString() : null;
+
+        // Medien: zeichnen und setzen nebeneinander, ablegen der Reihe nach — ausserhalb der Sperre
+        var abgelegt = new Dictionary<string, (string Sha, long Bytes)>();
+        if (store is not null)
+        {
+            var medien = schritte.Where(s => Op(s) == "media.create").ToList();
+            var daten = new byte[medien.Count][];
+            Parallel.For(0, medien.Count, i =>
+            {
+                var a = medien[i].GetProperty("args");
+                daten[i] = a.TryGetProperty("bild", out var b) ? DemoBilder.Tannwald(b.GetProperty("form").GetString()!, b.GetProperty("farbe").GetString()!)
+                    : Unterlage(a.GetProperty("pdf"));
+            });
+            for (var i = 0; i < medien.Count; i++)
+            {
+                using var strom = new MemoryStream(daten[i]);
+                abgelegt[Ref(medien[i])!] = store.PutAsync(strom, CancellationToken.None).GetAwaiter().GetResult();
+            }
+        }
+
+        var neueMedien = 0;
+        var n = c.WithBatch(Anwender, "demo-tannwald", (model, tree, write) =>
         {
             var z = 0;
-            var ctx = Kontext(c, model, tree, write, () => z++);
-            var baum = Commands.CreateRubric(ctx, null, Labels.Of("Online-Shop", "Online shop"), "Online-Shop", kanal);
-            if (baum.Error is { } e) throw new InvalidOperationException("Demo: Publikationsbaum — " + e);
-            foreach (var bereich in bereiche)
-                if (Commands.Derive(ctx, baum.Entry!.Stream, bereich, true, out _).Error is { } f) throw new InvalidOperationException("Demo: Publikationsbaum — " + f);
+            Entry W(string stream, string type, object payload) { z++; return write(Anwender, stream, type, payload, "demo-tannwald"); }
+            var ctx = new Ctx { Model = model, Tree = tree, Relations = c.Relations, Media = c.Media, Write = W };
+            var refs = new Dictionary<string, string>();
+            void Zaehle(string grund) => uebersprungen[grund] = uebersprungen.GetValueOrDefault(grund) + 1;
+            foreach (var s in schritte)
+            {
+                var op = Op(s); var a = s.GetProperty("args"); var r = Ref(s);
+                if (op.StartsWith("model.", StringComparison.Ordinal)) { if (TannwaldModell(model, W, op, a) is { } grund) Zaehle(grund); continue; }
+                if (op == "media.create")
+                {
+                    if (r is null || !abgelegt.TryGetValue(r, out var f)) continue;
+                    var medium = c.Media.BySha(f.Sha)?.Id;
+                    if (medium is null) { medium = W(Ids.Media(), Types.MediaCreated, new MediaCreated(f.Sha, f.Bytes, a.GetProperty("mime").GetString()!, a.GetProperty("name").GetString()!)).Stream; neueMedien++; }
+                    refs[r] = medium;
+                    continue;
+                }
+                var o = BatchApi.Ausfuehren(ctx, op, a, refs);
+                if (o.Entry is { } e) { if (r is not null) refs[r] = BatchApi.Verweis(e); continue; }
+                if (op is "group.create" or "product.create" or "variant.create")
+                    throw new InvalidOperationException($"Demo: Tannwald {op} — " + string.Format(o.Template ?? o.Error ?? "", o.Args ?? []));
+                Zaehle(op + ": " + (o.Template ?? o.Error ?? "Knoten gibt es nicht."));
+            }
             return z;
         });
+        foreach (var (grund, anzahl) in uebersprungen) Console.WriteLine($"journali: demo Tannwald skipped {anzahl} × {grund}");
+        return (n, neueMedien, uebersprungen);
+    }
+
+    /// <summary>Ein Schritt am Modell, wie der Generator ihn über <c>/api/model</c> stellt: anlegen, was fehlt; an einem vorhandenen Attribut nur
+    /// die Mitgliedschaften dazu, an einer vorhandenen Sicht nur die fehlenden Gruppen. Liefert den Grund, wenn der Schritt nicht passt.</summary>
+    private static string? TannwaldModell(ModelCatalog model, Func<string, string, object, Entry> w, string op, JsonElement a)
+    {
+        var key = a.GetProperty("key").GetString()!;
+        JsonElement Body() => a.GetProperty("body");
+        switch (op)
+        {
+            case "model.unit":
+                if (!model.Units.ContainsKey(key)) w(Model.UnitStream + key, Types.UnitDefined, Body().Deserialize<UnitDefinition>(Web)! with { Key = key });
+                return null;
+            case "model.group":
+                if (!model.Groups.ContainsKey(key)) w(Model.GroupStream + key, Types.AttributeGroupDefined, Body().Deserialize<AttributeGroupDefinition>(Web)! with { Key = key });
+                return null;
+            case "model.list":
+                if (!model.Lists.ContainsKey(key)) w(Model.ListStream + key, Types.ListDefined, Body().Deserialize<ListDefinition>(Web)! with { Key = key });
+                return null;
+            case "model.listValues":
+                if (!model.Lists.TryGetValue(key, out var liste)) return "model.listValues: Werteliste fehlt";
+                foreach (var v in a.GetProperty("values").Deserialize<ListValueDefinition[]>(Web) ?? [])
+                    if (!liste.Values.ContainsKey(v.Value)) w(Model.ListStream + key, Types.ListValueDefined, v with { Label = v.Label ?? new() });
+                return null;
+            case "model.attribute":
+            {
+                var body = Body();
+                var gruppen = body.TryGetProperty("groups", out var gs) && gs.ValueKind == JsonValueKind.Array ? gs.EnumerateArray().Select(x => x.GetString()!).ToArray() : null;
+                if (model.Attributes.TryGetValue(key, out var da))
+                {
+                    if (gruppen is null) return null;
+                    var alt = model.AttributeGroups.GetValueOrDefault(key) ?? [];
+                    var neu = alt.Union(gruppen).Where(g => g != da.Group).Distinct().Order(StringComparer.Ordinal).ToArray();
+                    if (!neu.ToHashSet().SetEquals(alt)) w(Model.AttributeStream + key, Types.AttributeGroupsSet, new AttributeGroupsSet(key, neu));
+                    return null;
+                }
+                var def = body.Deserialize<AttributeDefinition>(Web)! with { Key = key };
+                var zahl = def.Type is AttributeTypes.Integer or AttributeTypes.Decimal;
+                def = def with { Label = def.Label ?? new(), Unit = zahl ? def.Unit : null, List = def.Type == AttributeTypes.Enum ? def.List : null, Axes = def.Axes is { Length: > 0 } ax ? ax : null };
+                if (def.Unit is not null && !model.Units.ContainsKey(def.Unit)) return "model.attribute: Einheit fehlt";
+                if (def.List is not null && !model.Lists.ContainsKey(def.List)) return "model.attribute: Werteliste fehlt";
+                w(Model.AttributeStream + key, Types.AttributeDefined, def);
+                if (gruppen is { Length: > 0 }) w(Model.AttributeStream + key, Types.AttributeGroupsSet, new AttributeGroupsSet(key, gruppen.Where(g => g != def.Group).Distinct().Order(StringComparer.Ordinal).ToArray()));
+                return null;
+            }
+            case "model.view":
+            {
+                var sicht = Body().Deserialize<ViewDefinition>(Web)! with { Key = key };
+                var items = (model.Views.GetValueOrDefault(key)?.Items ?? []).ToList();
+                var dazu = sicht.Items.Where(i => model.Groups.ContainsKey(i.Group) && items.All(x => x.Group != i.Group)).ToList();
+                if (dazu.Count == 0) return null;
+                w(Model.ViewStream + key, Types.ViewDefined, (model.Views.GetValueOrDefault(key) ?? sicht) with { Items = [.. items, .. dazu] });
+                return null;
+            }
+            default:
+                return op + ": unbekannt";
+        }
+    }
+
+    /// <summary>Eine Unterlage aus ihren Bausteinen (<c>pdf</c> der Aufzeichnung): Titel, Kopfzeile und der Reihe nach h1, h2, p, punkte, tabelle.</summary>
+    public static byte[] Unterlage(JsonElement pdf)
+    {
+        var d = new PdfEinfach(pdf.GetProperty("titel").GetString()!, pdf.GetProperty("kopf").GetString()!);
+        foreach (var t in pdf.GetProperty("teile").EnumerateArray())
+        {
+            var inhalt = t[1];
+            switch (t[0].GetString())
+            {
+                case "h1": d.H1(inhalt.GetString()!); break;
+                case "h2": d.H2(inhalt.GetString()!); break;
+                case "p": d.P(inhalt.GetString()!); break;
+                case "punkte": d.Punkte(inhalt.EnumerateArray().Select(x => x.GetString()!)); break;
+                case "tabelle": d.Tabelle(inhalt.EnumerateArray().Select(z => (z[0].GetString()!, z[1].GetString()!))); break;
+            }
+        }
+        return d.Pdf();
     }
 
     /// <summary>Das Skript, das die Systemobjekte der Plugins nennt — neben dem Server (im Image unter /app).</summary>

@@ -157,7 +157,7 @@ public sealed class Catalog
     /// <summary>Darf dieser Eintrag (Typ) noch geschrieben werden — ein Kontingent neben dem des Teams, in der Demo je Absender (Demo.Zaehle); sonst null.</summary>
     public Func<string, bool>? ZusatzKontingent { get; set; }
 
-    /// <summary>Höchstens so viele Publikationsbäume, gleich was der Tarif sagt — gesetzt in der Demo (Demo.Einrichten: einer), sonst null.</summary>
+    /// <summary>Höchstens so viele Publikationsbäume, gleich was der Tarif sagt — gesetzt in der Demo (Demo.Einrichten: die der Demo), sonst null.</summary>
     public int? MaxPubTrees { get; set; }
 
     /// <summary>Was der Tarif verbietet, wirft: ein Publikationsbaum mehr, als er erlaubt (oder als <see cref="MaxPubTrees"/> zulässt).</summary>

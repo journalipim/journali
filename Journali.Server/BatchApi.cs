@@ -43,48 +43,7 @@ public static class BatchApi
                 for (var i = 0; i < r.Commands.Count; i++)
                 {
                     var cmd = r.Commands[i];
-                    var a = new Args(cmd.Args, refs);
-                    Outcome outcome;
-                    try
-                    {
-                        outcome = cmd.Op switch
-                        {
-                            "group.create" => Commands.CreateGroup(ctx, a.Id("parent"), a.Labels("label"), a.Str("name")),
-                            "group.rename" => Commands.RenameGroup(ctx, a.Node(), a.Labels("label")),   // Altlast
-                            "node.rename" => Commands.Rename(ctx, a.Node(), a.Str("name")),
-                            "label.set" => Commands.SetLabelAttribute(ctx, a.Node(), a.Str("attribute")),
-                            "product.create" => Commands.CreateProduct(ctx, a.Id("group"), a.Strings("axes")),
-                            "axes.set" => Commands.SetAxes(ctx, a.Node(), a.Strings("axes")),
-                            "groups.attach" => Commands.AttachGroups(ctx, a.Node(), a.Strings("groups")),
-                            "variant.create" => Commands.CreateVariant(ctx, a.Id("product"), a.Map("axisValues")),
-                            "node.move" => Commands.Move(ctx, a.Node(), a.Id("parent")),
-                            "node.retire" => Commands.Retire(ctx, a.Node()),
-                            "node.order" => Commands.Order(ctx, a.Node(), a.Id("parent"), a.Id("before")),   // Tabellenbearbeitung: Zeilen verschieben
-                            "status.set" => Commands.SetStatus(ctx, a.Node(), a.Str("status"), a.Str("from")),
-                            "attribute.set" => Commands.SetAttribute(ctx, a.Node(), a.Str("attribute"), a.Str("locale"), a.Str("channel"), a.Str("value"), a.Strings("values"), a.Id("row"), a.Str("unit")),
-                            "value.source" => Commands.SourceValue(ctx, a.Node(), a.Str("attribute"), a.Str("locale"), a.Str("channel"), a.Id("row"), a.Str("source"), a.Str("title"), a.Str("note"), a.Str("method"), a.Str("checkedAt")),
-                            "row.add" => Commands.AddRow(ctx, a.Node(), a.Str("attribute")),
-                            "row.remove" => Commands.RemoveRow(ctx, a.Node(), a.Str("attribute"), a.Str("row")),
-                            "row.order" => Commands.OrderRows(ctx, a.Node(), a.Str("attribute"), a.Strings("rows")),
-                            "category.assign" => Commands.AssignCategory(ctx, a.Node(), a.Str("category")),
-                            "category.remove" => Commands.RemoveCategory(ctx, a.Node(), a.Str("category") ?? ""),
-                            "release.grant" => Commands.GrantRelease(ctx, a.Node(), a.Str("channel"), a.Str("locale")),
-                            "release.revoke" => Commands.RevokeRelease(ctx, a.Node(), a.Str("channel") ?? "", a.Str("locale")),
-                            "external.link" => Commands.LinkExternal(ctx, a.Node(), a.Str("system"), a.Str("id")),
-                            "external.unlink" => Commands.UnlinkExternal(ctx, a.Node(), a.Str("system") ?? ""),
-                            "relation.create" => Commands.CreateRelation(ctx, a.Str("type"), a.Id("from"), a.Id("to")),
-                            "relation.retire" => Commands.RetireRelation(ctx, a.Id("relation") ?? ""),
-                            "relation.attribute.set" => Commands.SetRelationAttribute(ctx, a.Id("relation") ?? "", a.Str("attribute"), a.Str("locale"), a.Str("channel"), a.Str("value"), a.Strings("values"), a.Str("unit")),
-                            "media.attribute.set" => Commands.SetMediumAttribute(ctx, a.Id("media") ?? "", a.Str("attribute"), a.Str("locale"), a.Str("channel"), a.Str("value"), a.Strings("values")),
-                            "media.external.link" => Commands.LinkMediumExternal(ctx, a.Id("media") ?? "", a.Str("system"), a.Str("id")),
-                            "media.retire" => Commands.RetireMedium(ctx, a.Id("media") ?? ""),
-                            "media.file" => Commands.FileMedium(ctx, a.Id("media") ?? "", a.Str("folder")),   // in einen Ordner (leer = ohne Ordner), 04.10.2026
-                            "rubric.place" => Commands.Place(ctx, a.Id("rubric") ?? "", a.Node()),           // in eine Rubrik hängen, 04.10.2026
-                            "relation.external.link" => Commands.LinkRelationExternal(ctx, a.Id("relation") ?? "", a.Str("system"), a.Str("id")),
-                            _ => Outcome.Bad("Unbekannter Befehl: {0}", cmd.Op),
-                        };
-                    }
-                    catch (ArgumentException ex) { outcome = Outcome.Bad(ex.Message); }
+                    var outcome = Ausfuehren(ctx, cmd.Op, cmd.Args, refs);
 
                     if (outcome.Entry is not { } e)
                     {
@@ -94,7 +53,7 @@ public static class BatchApi
                     }
 
                     // Ein neuer Knoten oder eine neue Zeile bekommt den ref; bei Zeilen zeigt er auf die Zeilenkennung.
-                    if (Blank(cmd.Ref) is { } key) refs[key] = e.Type == Types.RowAdded ? Types.Deserialize<RowAdded>(e.Payload).Row : e.Stream;
+                    if (Blank(cmd.Ref) is { } key) refs[key] = Verweis(e);
                     results.Add(new Result(i, cmd.Ref, e.Stream, e.Number, e.Type));
                 }
                 return new Response(batch, results, null, skipped.Count > 0 ? skipped : null);
@@ -102,6 +61,56 @@ public static class BatchApi
 
             return Results.Ok(response);
         });
+    }
+
+    /// <summary>Worauf ein <c>ref</c> zeigt: auf den Knoten, die Relation oder das Medium des Eintrags — bei einer neuen Zeile auf die Zeilenkennung.</summary>
+    public static string Verweis(Entry e) => e.Type == Types.RowAdded ? Types.Deserialize<RowAdded>(e.Payload).Row : e.Stream;
+
+    /// <summary>Ein Befehl des Stapels — auch für den Start der Demo (Demo.Tannwald), der dieselben Befehle ohne Anfrage schreibt.
+    /// <paramref name="refs"/>: die Verweise dieses Stapels (<c>@ref</c>).</summary>
+    public static Outcome Ausfuehren(Ctx ctx, string op, JsonElement args, Dictionary<string, string> refs)
+    {
+        var a = new Args(args, refs);
+        try
+        {
+            return op switch
+            {
+                "group.create" => Commands.CreateGroup(ctx, a.Id("parent"), a.Labels("label"), a.Str("name")),
+                "group.rename" => Commands.RenameGroup(ctx, a.Node(), a.Labels("label")),   // Altlast
+                "node.rename" => Commands.Rename(ctx, a.Node(), a.Str("name")),
+                "label.set" => Commands.SetLabelAttribute(ctx, a.Node(), a.Str("attribute")),
+                "product.create" => Commands.CreateProduct(ctx, a.Id("group"), a.Strings("axes")),
+                "axes.set" => Commands.SetAxes(ctx, a.Node(), a.Strings("axes")),
+                "groups.attach" => Commands.AttachGroups(ctx, a.Node(), a.Strings("groups")),
+                "variant.create" => Commands.CreateVariant(ctx, a.Id("product"), a.Map("axisValues")),
+                "node.move" => Commands.Move(ctx, a.Node(), a.Id("parent")),
+                "node.retire" => Commands.Retire(ctx, a.Node()),
+                "node.order" => Commands.Order(ctx, a.Node(), a.Id("parent"), a.Id("before")),   // Tabellenbearbeitung: Zeilen verschieben
+                "status.set" => Commands.SetStatus(ctx, a.Node(), a.Str("status"), a.Str("from")),
+                "attribute.set" => Commands.SetAttribute(ctx, a.Node(), a.Str("attribute"), a.Str("locale"), a.Str("channel"), a.Str("value"), a.Strings("values"), a.Id("row"), a.Str("unit")),
+                "value.source" => Commands.SourceValue(ctx, a.Node(), a.Str("attribute"), a.Str("locale"), a.Str("channel"), a.Id("row"), a.Str("source"), a.Str("title"), a.Str("note"), a.Str("method"), a.Str("checkedAt")),
+                "row.add" => Commands.AddRow(ctx, a.Node(), a.Str("attribute")),
+                "row.remove" => Commands.RemoveRow(ctx, a.Node(), a.Str("attribute"), a.Str("row")),
+                "row.order" => Commands.OrderRows(ctx, a.Node(), a.Str("attribute"), a.Strings("rows")),
+                "category.assign" => Commands.AssignCategory(ctx, a.Node(), a.Str("category")),
+                "category.remove" => Commands.RemoveCategory(ctx, a.Node(), a.Str("category") ?? ""),
+                "release.grant" => Commands.GrantRelease(ctx, a.Node(), a.Str("channel"), a.Str("locale")),
+                "release.revoke" => Commands.RevokeRelease(ctx, a.Node(), a.Str("channel") ?? "", a.Str("locale")),
+                "external.link" => Commands.LinkExternal(ctx, a.Node(), a.Str("system"), a.Str("id")),
+                "external.unlink" => Commands.UnlinkExternal(ctx, a.Node(), a.Str("system") ?? ""),
+                "relation.create" => Commands.CreateRelation(ctx, a.Str("type"), a.Id("from"), a.Id("to")),
+                "relation.retire" => Commands.RetireRelation(ctx, a.Id("relation") ?? ""),
+                "relation.attribute.set" => Commands.SetRelationAttribute(ctx, a.Id("relation") ?? "", a.Str("attribute"), a.Str("locale"), a.Str("channel"), a.Str("value"), a.Strings("values"), a.Str("unit")),
+                "media.attribute.set" => Commands.SetMediumAttribute(ctx, a.Id("media") ?? "", a.Str("attribute"), a.Str("locale"), a.Str("channel"), a.Str("value"), a.Strings("values")),
+                "media.external.link" => Commands.LinkMediumExternal(ctx, a.Id("media") ?? "", a.Str("system"), a.Str("id")),
+                "media.retire" => Commands.RetireMedium(ctx, a.Id("media") ?? ""),
+                "media.file" => Commands.FileMedium(ctx, a.Id("media") ?? "", a.Str("folder")),   // in einen Ordner (leer = ohne Ordner), 04.10.2026
+                "rubric.place" => Commands.Place(ctx, a.Id("rubric") ?? "", a.Node()),           // in eine Rubrik hängen, 04.10.2026
+                "relation.external.link" => Commands.LinkRelationExternal(ctx, a.Id("relation") ?? "", a.Str("system"), a.Str("id")),
+                _ => Outcome.Bad("Unbekannter Befehl: {0}", op),
+            };
+        }
+        catch (ArgumentException ex) { return Outcome.Bad(ex.Message); }
     }
 
     /// <summary>Argumente eines Befehls: Felder aus dem JSON, <c>@ref</c> aufgelöst.</summary>

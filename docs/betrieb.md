@@ -645,7 +645,10 @@ ausser bei den Werten der Produkte, die pflegt man wie sonst.
 - **Plugins**: alle mit dem Siegel von journali sind installiert und an, ein Hinweis im Manifest gilt als vom Betreiber bestätigt. Ihre
   Systemobjekte (Attributgruppen und Attribute von DPP, PPWR, GEO, GPC, die Gruppe an den Wurzeln) legt der Start an (`Demo.Systemobjekte`,
   Angaben aus den Plugins über `demo-system.mjs`); die Oberfläche richtet in der Demo keine Plugins ein, kein Besucher sieht eine Rückfrage. Aus
-  bleiben `driver`, `ixp`, `solr` und, was beim ersten Lauf etwas aus dem Netz holt (`embed`, `ocr`).
+  bleiben `driver`, `ixp`, `solr` und, was beim ersten Lauf etwas aus dem Netz holt (`ocr`). **`embed` ist an** (10.10.2026, `Demo.MitDownload`):
+  sein Modell (etwa 130 MB) liegt in einem Volume auf `/app/plugins/embed/.cache`, das den täglichen Neustart übersteht — geholt wird es einmal,
+  beim ersten Lauf. Die Jobs `docs` und `embed` stösst der Start an (`JobApi.Systemjob`; die Rolle demo hat das Recht jobs nicht, und ohne Job
+  zieht der Takt nichts nach): danach sind die Unterlagen gelesen und alle Knoten und Abschnitte eingebettet — ⌕ Dokumente sucht nach Sinn.
 - **ETIM**: fest zugewiesen ist EC001959 „LED-lamp/Multi-LED“ (ETIM 10.0) an den LED-Lampen, mit den acht Merkmalen des Katalogs, zugeordnet
   auf seine Attribute — Namen nur englisch (ETIM-Modell unter ODC-BY 1.0, die deutschen Bezeichnungen gehören ETIM Deutschland). Eine
   Freigabe holen, Klassen zuweisen oder entfernen gibt es in der Demo nicht.
@@ -660,9 +663,10 @@ ausser bei den Werten der Produkte, die pflegt man wie sonst.
 - **Keine Plugin-Ansicht** (07.10.2026): ⬡ Plugins steht nicht in der Leiste, Alt+7 und `/plugins` führen zum Baum.
 - **Hinter dem Proxy** (`JOURNALI_PROXY=1`, gilt auch ausserhalb der Demo): Absender aus `X-Forwarded-For`, damit Bremse und Begrenzung je
   Besucher gelten und nicht für alle zusammen. Nur setzen, wenn der Server allein über den Proxy erreichbar ist.
-- **Ein Publikationsbaum** (07.10.2026): der Start leitet „Online-Shop“ (Kanal web) aus den Bereichen des Beispielkatalogs ab
-  (`Demo.Publikationsbaum`). Einen zweiten weist der Server ab wie eine Grenze des Tarifs (`Catalog.MaxPubTrees` = 1); löschen, leeren und
-  Rubriken entfernen gehen nicht (Knoten zurückziehen ist gesperrt) und stehen in der Oberfläche nicht da.
+- **Zwei Publikationsbäume** (07.10.2026, der zweite seit 10.10.2026): der Start leitet „Online-Shop“ (Kanal web) aus den Bereichen des
+  Beispielkatalogs ab und „Product Advisor“ aus Tannwald Outdoor (`Demo.Publikationsbaum`). Einen weiteren weist der Server ab wie eine Grenze
+  des Tarifs (`Catalog.MaxPubTrees` = die Bäume der Demo); löschen, leeren und Rubriken entfernen gehen nicht (Knoten zurückziehen ist gesperrt)
+  und stehen in der Oberfläche nicht da.
 - **Eingabefilter** (07.10.2026, `Eingabefilter.cs`): was Besucher als Text schreiben (Datenpflege, Struktur, Ausleitung), darf keinen Link,
   keine E-Mail-Adresse, keine Telefonnummer und keinen Begriff der Sperrliste enthalten und höchstens 2000 Zeichen lang sein; sonst 400 „Diese
   Eingabe ist nicht zulässig.“ Die Sperrliste liegt beim Betrieb der Demo, nicht im Repo: `JOURNALI_DEMO_SPERRLISTE` nennt die Datei (eine Zeile
@@ -679,6 +683,15 @@ ausser bei den Werten der Produkte, die pflegt man wie sonst.
   42 Produkte, etwa 100 Varianten, Lichttechnik mit Einheiten und Listen, zwei Sprachen) — über `Catalog.WithBatch` und `Commands`, wie
   jede Pflege. Dazu je Variante ein Bild, im Code gezeichnet (PNG, gleicher Inhalt ein Medium), als Relation `image` an Variante und
   Produkt; danach stösst der Hauptserver `probe` und `derive` an. Danach Rolle und Anwender; ein weiterer Start schreibt nichts.
+- **Tannwald** (10.10.2026, `Demo.Tannwald`): dazu die erfundene Outdoor-Marke der Demo-Daten — 203 Produkte in 17 Untergruppen, etwa 650
+  Varianten, Beschreibung, Merkmale, Pflege, Technik je Untergruppe, GEO-Texte, ein Bild je Produkt und 243 Unterlagen (Datenblatt je Produkt,
+  „Pflege, Reparatur und häufige Fragen“ und „Häufige Fragen“ je Untergruppe, Ratgeber je Obergruppe, „Garantie und Service“), die Sicht
+  „Onlineshop“. Die Quelle ist der Generator (`tools/demo_master_tree.py`, `tannwald_inhalt.py`, `tannwald_faq.md`): `tools/tannwald_export.py`
+  lässt ihn gegen eine Instanz laufen, die nur mitschreibt, und legt `Journali.Server/demo-tannwald.json` ab — Modell, Stapelbefehle wie
+  `/api/batch` (`BatchApi.Ausfuehren`), Bilder und Unterlagen als Beschreibung. Der Start spielt die Datei nach den Systemobjekten ab: Bilder
+  zeichnet `DemoBilder.Tannwald`, PDFs setzt `PdfEinfach` (Byte für Byte wie `pdf_einfach.py`), beide über den Medienspeicher und
+  `MediaCreated` wie die Bilder der Leuchten. Nach einer Änderung am Generator schreibt `python tools/tannwald_export.py` die Datei neu;
+  `tannwald-export.test.mjs` prüft, dass sie passt. Nur, solange es die Gruppe „Tannwald Outdoor“ nicht gibt.
 - **Zurücksetzen** geschieht von aussen: die Demo läuft mit einer Datenbank ohne Volume, der Betrieb startet den Stack täglich neu,
   und der Start legt alles wieder an. Einen Weg, das Journal zu leeren, gibt es nicht.
 - **Hinweis**: hinter „Testversion“ steht zusätzlich, dass die Demo täglich zurückgesetzt wird und alle Besucher sehen, was eingegeben wird.

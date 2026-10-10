@@ -21,5 +21,7 @@
     <!-- Demo: nennt die Systemobjekte der Plugins (Demo.Systemobjekte) -->
     <None Update="demo-system.mjs" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <None Update="demo-gpc.mjs" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <!-- Demo: die Marke Tannwald, aufgezeichnet von tools/tannwald_export.py (Demo.Tannwald) -->
+    <None Update="demo-tannwald.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

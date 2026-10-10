@@ -146,7 +146,8 @@ public class DemoTests
         Demo.Einrichten(c, null, dir);
         var an = c.Lesen((_, _) => c.Plugins.All.Values.Where(p => p.Enabled).Select(p => p.Key).ToHashSet());
         foreach (var k in new[] { "table", "csv", "datasheet", "xliff", "geo", "docs", "dpp", "ppwr", "empco" }) Assert.Contains(k, an);
-        foreach (var k in Demo.OhnePlugins.Concat(["embed", "ocr"])) Assert.DoesNotContain(k, an);
+        foreach (var k in Demo.OhnePlugins.Concat(["ocr"])) Assert.DoesNotContain(k, an);
+        Assert.Contains("embed", an);   // 10.10.2026: trotz download — das Modell liegt beim Betrieb der Demo (Demo.MitDownload)
         Assert.NotNull(c.Lesen((_, _) => c.Plugins.All["dpp"].Acknowledged));   // der Hinweis gilt als bestätigt
         // ETIM: an, mit EC001959 an den LED-Lampen; die zugeordneten Attribute stehen in der Gruppe der Klasse, ohne Kopie
         Assert.Contains("etim", an);
@@ -254,6 +255,112 @@ public class DemoTests
             variante, "weight", null, null, (1 + i % 2).ToString(), null));
         for (var i = 0; i < Demo.Kontingent; i++) Assert.Null(Gewicht(i).Error);
         Assert.Throws<KeinKontingentException>(() => Gewicht(Demo.Kontingent));
+    }
+
+    /// <summary>Das Verzeichnis plugins/ des Repos (über dem Ausgabeverzeichnis der Tests).</summary>
+    private static string Plugins()
+    {
+        for (var d = new DirectoryInfo(AppContext.BaseDirectory); d is not null; d = d.Parent)
+            if (File.Exists(Path.Combine(d.FullName, "plugins", "table", "plugin.json"))) return Path.Combine(d.FullName, "plugins");
+        throw new InvalidOperationException("plugins/ nicht gefunden");
+    }
+
+    [Fact]
+    public void Tannwald_kommt_vollstaendig_mit_Bildern_und_Unterlagen_und_einem_eigenen_Publikationsbaum()
+    {
+        // 10.10.2026: die Aufzeichnung des Generators (tools/tannwald_export.py) — jeder Schritt passt, nichts wird übersprungen
+        Assert.True(File.Exists(Demo.TannwaldDatei), Demo.TannwaldDatei);
+        var dir = Directory.CreateTempSubdirectory("demo-tannwald").FullName;
+        try
+        {
+            var c = Neu();
+            var plugins = Plugins();
+            PluginApi.AutoInstall(c, plugins);
+            // die Reihenfolge des Starts (Demo.Einrichten): Plugins, Katalog der Leuchten, Systemobjekte (GEO), dann Tannwald — vor dem Kontingent
+            Demo.PluginsEinschalten(c, plugins);
+            Demo.Beispielkatalog(c);
+            Demo.Systemobjekte(c, plugins);
+            var tw = Demo.Tannwald(c, new FileMediaStore(dir), Demo.TannwaldDatei);
+            Assert.Empty(tw.Uebersprungen);
+            c.Lesen((m, t) =>
+            {
+                var marke = t.Nodes.Values.Single(x => x.Parent == Model.RootNode && x.Label.GetValueOrDefault("de") == Demo.TannwaldGruppe);
+                bool Unter(Journali.Core.Projections.Node n) { for (var p = n; p is not null; p = p.Parent is { } v ? t.Nodes.GetValueOrDefault(v) : null) if (p.Id == marke.Id) return true; return false; }
+                var produkte = t.Nodes.Values.Where(x => x.Role == Roles.Product && Unter(x)).ToList();
+                Assert.Equal(203, produkte.Count);
+                Assert.InRange(t.Nodes.Values.Count(x => x.Role == Roles.Variant && Unter(x)), 500, 800);
+                // jedes Produkt: Bild, Datenblatt, Beschreibung, Technik, GEO-Texte
+                foreach (var p in produkte)
+                {
+                    var rel = c.Relations.From(p.Id).ToList();
+                    Assert.Contains(rel, r => r.Type == "image");
+                    Assert.Contains(rel, r => r.Type == "document" && c.Media.All[r.To].Mime == "application/pdf" && c.Media.All[r.To].Name.StartsWith("Datenblatt "));
+                    Assert.False(string.IsNullOrEmpty(t.Resolve(m, p, "description", "de", "web").Value));
+                    Assert.False(string.IsNullOrEmpty(t.Resolve(m, p, "geo_faq", "de", null).Value));
+                }
+                var zelt = produkte.First(x => t.Nodes[x.Parent!].Label.GetValueOrDefault("de") == "Zelte");
+                Assert.False(string.IsNullOrEmpty(t.Resolve(m, zelt, "persons", null, null).Value));   // die Technik der Untergruppe
+                Assert.True(m.Views.ContainsKey("onlineshop"));
+                // Unterlagen der Gruppen: Pflege und Reparatur, häufige Fragen, Ratgeber, Garantie
+                var namen = c.Media.All.Values.Where(x => x.Mime == "application/pdf").Select(x => x.Name).ToList();
+                Assert.Contains("Garantie und Service.pdf", namen);
+                Assert.Contains("Pflege, Reparatur und häufige Fragen – Zelte.pdf", namen);
+                Assert.Contains("Häufige Fragen – Zelte.pdf", namen);
+                return 0;
+            });
+            // die Dateien liegen im Speicher: ein PDF mit Textebene, ein PNG
+            var pdf = c.Lesen((_, _) => c.Media.All.Values.First(x => x.Name == "Garantie und Service.pdf"));
+            var bytes = File.ReadAllBytes(Path.Combine(dir, pdf.Sha256[..2], pdf.Sha256));
+            Assert.StartsWith("%PDF-1.4", System.Text.Encoding.ASCII.GetString(bytes, 0, 8));
+            Assert.Contains("/BaseFont /Helvetica", System.Text.Encoding.Latin1.GetString(bytes));
+            // ein zweiter Lauf schreibt nichts; die Publikationsbäume: Online-Shop (Leuchten) und Product Advisor (Tannwald), kein dritter
+            var vorher = c.Head;
+            Assert.Equal(0, Demo.Tannwald(c, new FileMediaStore(dir), Demo.TannwaldDatei).Eintraege);
+            Assert.Equal(vorher, c.Head);
+            Demo.Einrichten(c, null, plugins, null, Demo.TannwaldDatei);
+            var baeume = c.Lesen((_, t) => t.PubTrees.Select(b => b.Name).Order().ToList());
+            Assert.Equal(["Online-Shop", "Product Advisor"], baeume);
+            Assert.Equal(2, c.MaxPubTrees);
+            c.Lesen((_, t) =>
+            {
+                var advisor = t.PubTrees.Single(b => b.Name == "Product Advisor");
+                var shop = t.PubTrees.Single(b => b.Name == "Online-Shop");
+                Assert.Contains(t.Nodes.Values, x => x.Role == Roles.Rubric && x.Label.GetValueOrDefault("de") == "Zelte" && Wurzel(t, x) == advisor.Id);
+                Assert.DoesNotContain(t.Nodes.Values, x => x.Role == Roles.Rubric && x.Label.GetValueOrDefault("de") == "Zelte" && Wurzel(t, x) == shop.Id);
+                return 0;
+            });
+        }
+        finally { Directory.Delete(dir, true); }
+
+        static string Wurzel(Tree t, Journali.Core.Projections.Node n) { while (n.Parent is { } p && t.Nodes.TryGetValue(p, out var v)) n = v; return n.Id; }
+    }
+
+    [Theory]
+    // die Hashes setzt tools/pdf_einfach.py aus denselben Bausteinen (10.10.2026): PdfEinfach.cs setzt Byte für Byte gleich
+    [InlineData("Garantie und Service.pdf", "f3653bb11262cf637d3c4e3d4b8a0f3ae6dfa12d9f0d4adefac0208f4de969b6")]
+    [InlineData("Datenblatt Fjell Jacke.pdf", "b5ba23d62c7e9cc4e1c71589a65e02a852097b217017e86b2d36d7ffca56c1d9")]
+    [InlineData("Datenblatt Fjell 5 Zelt.pdf", "8394f10232f4e86cdc86cb8c790e0be60e63e985f7654b7aa7bc651fe1e48eb3")]
+    public void Eine_Unterlage_ist_dasselbe_PDF_wie_aus_dem_Generator(string name, string sha)
+    {
+        using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllBytes(Demo.TannwaldDatei));
+        var schritt = doc.RootElement.GetProperty("schritte").EnumerateArray()
+            .First(s => s.GetProperty("op").GetString() == "media.create" && s.GetProperty("args").GetProperty("name").GetString() == name);
+        var pdf = Demo.Unterlage(schritt.GetProperty("args").GetProperty("pdf"));
+        Assert.Equal(sha, Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(pdf)).ToLowerInvariant());
+    }
+
+    [Fact]
+    public void Tannwald_Bilder_sind_gueltige_PNGs_je_Form_verschieden()
+    {
+        var formen = new[] { "jacket", "trousers", "shirt", "hat", "boot", "sandal", "pack", "bag", "tent", "sleepingbag", "pad", "stove", "bottle", "lamp", "poles" };
+        var bilder = formen.Select(f => DemoBilder.Tannwald(f, "#3b7a3b")).ToList();
+        foreach (var png in bilder)
+        {
+            Assert.Equal(new byte[] { 0x89, 0x50, 0x4E, 0x47 }, png[..4]);
+            Assert.Equal((uint)DemoBilder.TannwaldGroesse, (uint)(png[16] << 24 | png[17] << 16 | png[18] << 8 | png[19]));
+        }
+        Assert.Equal(formen.Length, bilder.Select(Convert.ToBase64String).Distinct().Count());
+        Assert.NotEqual(bilder[0], DemoBilder.Tannwald("jacket", "#c0392b"));   // die Farbe zählt
     }
 
     [Fact]

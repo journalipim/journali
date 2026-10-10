@@ -23,6 +23,9 @@ Schreibt ausschliesslich über /api (Catalog ist der einzige Schreibpfad, Regel 
   7. GEO-Texte je Produkt, wenn das Plugin geo seine Attribute angelegt hat: Definition, Beschreibung, Suchbegriffe und häufige Fragen —
      zwei mit den Werten des Produkts, drei allgemeine mit hoher Priorität aus der Wissensbasis.
 
+Die Demo (JOURNALI_DEMO=1) bringt den Tannwald-Teil mit: tools/tannwald_export.py zeichnet ihn auf (Journali.Server/demo-tannwald.json),
+der Server spielt die Aufzeichnung beim Start ab. Nach einer Änderung hier oder in tannwald_inhalt.py: python tools/tannwald_export.py.
+
 Aufruf: tools\\demo-daten.cmd (Windows, aus jedem Verzeichnis, ohne Parameter) oder python tools/demo_master_tree.py.
   Ohne Angaben fragt das Skript: Adresse (Vorgabe http://localhost:5000), Anwender und Passwort, wenn die Instanz eine Anmeldung
   verlangt. Alles lässt sich auch mitgeben: --url, --user, --password oder JOURNALI_DEMO_PASSWORD, --token jt_…
