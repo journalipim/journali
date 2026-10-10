@@ -175,6 +175,9 @@ public static class Auth
     /// <summary>Token für einen Joblauf. <paramref name="role"/> kommt vom Job (null = editor wie bisher).</summary>
     public static string IssueServiceToken(string actor, string? role = null) { var t = "svc_" + NewSecret(); Service[t] = (actor, role); return t; }
     public static void RevokeServiceToken(string token) => Service.TryRemove(token, out _);
+    /// <summary>Trägt die Anfrage das gültige Dienst-Token eines Laufs? (Vor der Anmeldung lesbar — für die Sperre der Demo.)</summary>
+    public static bool DienstToken(HttpRequest req) =>
+        req.Headers.Authorization.ToString() is var a && a.StartsWith("Bearer svc_", StringComparison.OrdinalIgnoreCase) && Service.ContainsKey(a[7..].Trim());
 
     /// <summary>Gibt es Benutzer? Dann ist der Server gesperrt und X-Actor kommt aus der Sitzung.</summary>
     public static bool Enabled(Catalog c) => c.Lesen((_, _) => c.Users.All.Values.Any(u => u.Enabled));
@@ -346,7 +349,8 @@ public static class Auth
         bool Beginnt(string vorn) => path.StartsWith(vorn, StringComparison.OrdinalIgnoreCase);
         var plugin = Beginnt("/plugins/");
         // Demo: das eigene Konto, Anmelden und Einrichten gibt es nicht — vor allem anderen, auch vor den Wegen ohne Sitzung
-        if (Demo.An && Demo.Gesperrt(path, ctx.Request.Method)) { ctx.Response.StatusCode = 403; await ctx.Response.WriteAsJsonAsync(Err("In der Demo nicht verfügbar.")); return; }
+        if (Demo.An && Demo.Gesperrt(path, ctx.Request.Method) && !(Demo.NurFuerLaeufe(path, ctx.Request.Method) && DienstToken(ctx.Request)))
+        { ctx.Response.StatusCode = 403; await ctx.Response.WriteAsJsonAsync(Err("In der Demo nicht verfügbar.")); return; }
         if ((!Beginnt("/api") && !plugin) || (plugin && OeffentlichesPlugin(path)) || ApiOhneSitzung(path))
         {
             // Wer nicht angemeldet ist, bekommt keinen grossen Körper: Kestrel erlaubt sonst 30 MB, die ein JSON-Aufruf (Anmeldung) in den Speicher läse

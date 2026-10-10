@@ -135,6 +135,34 @@ public class DemoTests
         Assert.Equal(gesperrt, Demo.Gesperrt(pfad, methode));
 
     [Fact]
+    public void Der_Job_probe_misst_von_Hand_anstossen_bleibt_gesperrt()
+    {
+        // 10.10.2026: probe schreibt über POST /api/media/probe — gesperrt für Besucher, offen für einen Lauf mit Dienst-Token
+        Assert.True(Demo.Gesperrt("/api/media/probe", "POST"));
+        Assert.True(Demo.NurFuerLaeufe("/api/media/probe", "POST"));
+        Assert.False(Demo.NurFuerLaeufe("/api/media/probe/run", "POST"));
+        Assert.False(Demo.NurFuerLaeufe("/api/media", "POST"));
+        // derive: Ableitungen und Belege — für Besucher gesperrt (auch web, nicht nur thumb), für den Lauf offen; lesen bleibt
+        foreach (var (pfad, methode) in new[] { ("/api/media/m-1/derived/thumb", "PUT"), ("/api/media/m-1/derived/web", "PUT"), ("/api/media/derived", "POST") })
+        {
+            Assert.True(Demo.Gesperrt(pfad, methode), pfad);
+            Assert.True(Demo.NurFuerLaeufe(pfad, methode), pfad);
+        }
+        Assert.False(Demo.Gesperrt("/api/media/m-1/derived/web", "GET"));
+        Assert.False(Demo.NurFuerLaeufe("/api/media/m-1/thumb", "PUT"));   // ein Vorschaubild von Hand: auch kein Lauf
+        var token = Auth.IssueServiceToken("system:probe");
+        try
+        {
+            var mit = new Microsoft.AspNetCore.Http.DefaultHttpContext(); mit.Request.Headers.Authorization = "Bearer " + token;
+            var falsch = new Microsoft.AspNetCore.Http.DefaultHttpContext(); falsch.Request.Headers.Authorization = "Bearer svc_erfunden";
+            Assert.True(Auth.DienstToken(mit.Request));
+            Assert.False(Auth.DienstToken(falsch.Request));
+            Assert.False(Auth.DienstToken(new Microsoft.AspNetCore.Http.DefaultHttpContext().Request));
+        }
+        finally { Auth.RevokeServiceToken(token); }
+    }
+
+    [Fact]
     public void Die_erlaubten_Plugins_sind_an_ohne_Netz_und_ohne_Zugaenge()
     {
         string? dir = null;

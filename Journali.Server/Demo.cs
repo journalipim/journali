@@ -66,9 +66,24 @@ public static class Demo
         if (p.StartsWith("/api/plugins/") && p.Contains("/data")) return !lesen;
         if (p.StartsWith("/api/plugins/") && p.EndsWith("/run")) return true;   // keinen Prozess eines Plugins starten
         if (p.StartsWith("/api/media/") && p.EndsWith("/thumb")) return !lesen;   // keine Vorschaubilder überschreiben — am Eingabefilter vorbei
+        if (Ableitung(p)) return !lesen;   // Ableitungen und ihre Belege schreibt nur der Lauf von derive (NurFuerLaeufe, 10.10.2026)
         if (p == "/api/auth/me/prefs") return !lesen;   // Ansicht und Sprache von demo teilen sich alle Besucher
         return p == "/api/drivers" && !lesen;
     }
+
+    /// <summary>Gesperrt, aber nicht für einen Lauf (Dienst-Token, 10.10.2026): der Job probe schreibt seine Messungen über
+    /// <c>POST /api/media/probe</c> — die Sperre traf ihn mit, und kein Bild der Demo bekam seine Abmessungen. Von Hand anstossen bleibt gesperrt.</summary>
+    /// Ebenso derive: es legt jede Ableitung per <c>PUT /api/media/{id}/derived/{preset}</c> ab und die Belege per <c>POST /api/media/derived</c> —
+    /// die Sperre „keine Vorschaubilder überschreiben“ traf <c>…/derived/thumb</c>, und keine Kachel wurde gerechnet; …/derived/web stand Besuchern offen.
+    public static bool NurFuerLaeufe(string path, string method)
+    {
+        var p = path.ToLowerInvariant().TrimEnd('/');
+        return method is not ("GET" or "HEAD" or "OPTIONS") && ((method == "POST" && p == "/api/media/probe") || Ableitung(p));
+    }
+
+    /// <summary>Eine Ableitung oder ihre Belege: <c>/api/media/derived</c>, <c>/api/media/{id}/derived/…</c>.</summary>
+    private static bool Ableitung(string p) =>
+        p == "/api/media/derived" || System.Text.RegularExpressions.Regex.IsMatch(p, "^/api/media/[^/]+/derived(/|$)");
 
     /// <summary>
     /// Einstieg der Demo (10.10.2026): <c>JOURNALI_DEMO_EINSTIEG</c> nennt eine Seite mit Anleitung und Bedingungen. Wer eine Seite der Demo

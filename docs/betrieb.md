@@ -642,6 +642,9 @@ ausser bei den Werten der Produkte, die pflegt man wie sonst.
   Layouts — die eigene Einstellung `settings` eines Plugins bleibt) und ihre Geheimnisse (Schlüssel am Profil). Was abgewiesen wird,
   blendet die Oberfläche aus: ein Element mit `data-demo="aus"` steht in der Demo nicht da (Klasse `demo` am Dokument) — im Kern wie in
   den Ansichten der Plugins.
+  **Ausgenommen sind die Läufe** (10.10.2026, `Demo.NurFuerLaeufe`): mit dem Dienst-Token eines Jobs schreibt probe seine Messungen
+  (`POST /api/media/probe`) und derive seine Ableitungen und Belege (`PUT /api/media/{id}/derived/…`, `POST /api/media/derived`) — vorher traf
+  die Sperre auch sie, und kein Bild der Demo bekam Abmessungen oder eine Kachel. Besuchern bleiben beide Wege gesperrt.
 - **Plugins**: alle mit dem Siegel von journali sind installiert und an, ein Hinweis im Manifest gilt als vom Betreiber bestätigt. Ihre
   Systemobjekte (Attributgruppen und Attribute von DPP, PPWR, GEO, GPC, die Gruppe an den Wurzeln) legt der Start an (`Demo.Systemobjekte`,
   Angaben aus den Plugins über `demo-system.mjs`); die Oberfläche richtet in der Demo keine Plugins ein, kein Besucher sieht eine Rückfrage. Aus
