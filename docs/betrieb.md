@@ -486,7 +486,7 @@ denselben Dienst unter `https://advisor.example.com/mcp` (MCP, Streamable HTTP; 
 |---|---|
 | `GET /widget.js` | das Chat-Fenster — mit Fingerabdruck (ETag), der Browser fragt jedes Mal nach |
 | `POST /api/ask` | eine Eingabe oder ein Klick im Gespräch (mit der Kennung des Gesprächs) — der Kern im Dienst versteht und fragt journali |
-| `GET /api/info`, `GET /api/product/{id}`, `GET /api/variant/{id}`, `POST /api/compare`, `GET /api/image/{id}`, `GET /api/doc/{id}`, `POST /api/event` | was das Fenster sonst braucht; `doc` ein Dokument aus den Unterlagen, `event` ein gemerktes Produkt |
+| `GET /api/info`, `GET /api/product/{id}`, `GET /api/variant/{id}`, `POST /api/compare`, `GET /api/image/{id}`, `GET /api/doc/{id}`, `POST /api/event` | was das Fenster sonst braucht; `doc` ein Dokument aus den Unterlagen als Text (Abschnitte, keine Datei), `event` ein gemerktes Produkt |
 | `GET /api/vocabulary`, `POST /api/select`, `POST /api/docs` | die Schnittstelle Version 2 von journali, durchgereicht (ohne `ki`) |
 | `POST /mcp` | MCP: `search_products`, `get_product`, `compare_products` |
 | `GET /health` | 200, wenn journali mit dem Token antwortet |

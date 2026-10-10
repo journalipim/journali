@@ -834,13 +834,14 @@ public class AdvisorTests
         var gelten = w.C.Lesen((_, _) => AdvisorApi.Unterlagen(w.C, b, "reader", false));
         Assert.Equal(new[] { amProdukt, anGruppe }.Order(), gelten.Order());
 
-        // das Dokument selbst: nur eines aus den Unterlagen, PDF zum Ansehen, ohne Skripte
+        // das Dokument als Text, keine Datei: nur eines aus den Unterlagen — ohne Dokumentindex (keine Datenbank) ohne Abschnitte
+        var (st, dj) = await w.Get($"/api/advisor/werkzeug/doc/{amProdukt}");
+        Assert.Equal(HttpStatusCode.OK, st);
+        Assert.Equal("Datenblatt.pdf", dj.GetProperty("name").GetString());
+        Assert.Empty(dj.GetProperty("sections").EnumerateArray());
         using var r = await w.Http.GetAsync(w.Url + $"/api/advisor/werkzeug/doc/{amProdukt}");
-        Assert.Equal(HttpStatusCode.OK, r.StatusCode);
-        Assert.Equal("application/pdf", r.Content.Headers.ContentType?.MediaType);
-        Assert.StartsWith("inline", r.Content.Headers.ContentDisposition?.ToString() ?? r.Headers.GetValues("Content-Disposition").First());
-        Assert.Equal("sandbox", r.Headers.GetValues("Content-Security-Policy").Single());
-        Assert.Equal("%PDF-1.4 Test", await r.Content.ReadAsStringAsync());
+        Assert.Equal("application/json", r.Content.Headers.ContentType?.MediaType);
+        Assert.Null(r.Content.Headers.ContentDisposition);
         foreach (var m in new[] { abgelaufen, ausserhalb, "m-gibtsnicht" })
             Assert.Equal(HttpStatusCode.NotFound, (await w.Http.GetAsync(w.Url + $"/api/advisor/werkzeug/doc/{m}")).StatusCode);
 

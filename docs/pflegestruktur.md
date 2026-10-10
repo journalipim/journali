@@ -2668,9 +2668,11 @@ Vektoren der Abschnitte (Job `embed`, Abschnitt 35). Kein eigener Index, keine K
   das Dokument hängt. Mit KI gehen die Abschnitte als `[U1]` … in den Auftrag: bei Fragen nach Pflege, Gebrauch, Grösse oder einem
   Problem antwortet sie zuerst daraus und nennt den Abschnitt; steht die Antwort nicht darin, sagt sie das. Ohne KI steht der beste
   Abschnitt ganz da, die weiteren gekürzt. Im Fenster stehen die Unterlagen zuerst — beantworten sie die Frage, ist das die Antwort.
-- **Das Dokument selbst.** `GET /api/advisor/{key}/doc/{media}` (am Dienst `/api/doc/{id}`) gibt nur ein Dokument aus den Unterlagen
-  heraus; ein PDF zum Ansehen, alles andere als Download, immer mit `Content-Security-Policy: sandbox` — ein HTML-Dokument führt auf
-  dieser Adresse kein Skript aus.
+- **Das Dokument selbst — als Text, nicht als Datei (10.10.2026).** `GET /api/advisor/{key}/doc/{media}` (am Dienst `/api/doc/{id}`)
+  liefert nur ein Dokument aus den Unterlagen, und zwar seine gelesenen Abschnitte aus dem Dokumentindex (Überschrift, Seite, Text) — keine
+  Datei. Der Berater bietet keinen Download an: „Weiterlesen“ an einem Auszug zeigt das ganze Dokument als Text in der Ansicht neben dem
+  Gespräch, der gefundene Abschnitt hervorgehoben (die Abschnitte der Unterlagen tragen dafür ihre Nummer `seq`). Vorher gab der Weg die
+  Datei heraus (PDF zum Ansehen, sonst als Download).
 - **MCP.** `search_products` liefert die Abschnitte mit; ein fremder KI-Agent bekommt dieselben Auszüge.
 
 Testdaten dafür bringt `tools/demo_master_tree.py` mit (`--anreichern` für einen vorhandenen Katalog): je Produkt Beschreibung, Merkmale,

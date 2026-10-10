@@ -335,6 +335,6 @@ public static partial class AdvisorApi
         {
             var knoten = b.Dokumente.GetValueOrDefault(a.Media) is { } nid && tree.Nodes.TryGetValue(nid, out var nn) ? nn : null;
             return new Unterlage(i + 1, a.Media, c.Media.All.GetValueOrDefault(a.Media)?.Name ?? a.Media, a.Page, a.Heading,
-                a.Body.Length > 1200 ? a.Body[..1200] + " …" : a.Body, knoten is null ? null : new UnterlageKnoten(knoten.Id, NodeRow.LabelOf(tree, model, knoten)));
+                a.Body.Length > 1200 ? a.Body[..1200] + " …" : a.Body, knoten is null ? null : new UnterlageKnoten(knoten.Id, NodeRow.LabelOf(tree, model, knoten)), a.Seq);
         }).ToList());
 }

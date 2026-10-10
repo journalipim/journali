@@ -733,7 +733,7 @@ public static partial class AdvisorApi
     /// <summary>Ein Abschnitt aus den Unterlagen: Medium, Nummer, Seite, Überschrift, Text.</summary>
     public sealed record Auszug(string Media, int Seq, int? Page, string? Heading, string Body);
     /// <summary>Ein Abschnitt in der Antwort: Nummer (für [U1] im Text der KI), Dokument, Seite, Überschrift, Text, der Knoten, an dem es hängt.</summary>
-    public sealed record Unterlage(int N, string Media, string Name, int? Page, string? Heading, string Text, UnterlageKnoten? Node);
+    public sealed record Unterlage(int N, string Media, string Name, int? Page, string? Heading, string Text, UnterlageKnoten? Node, int Seq = 0);
     public sealed record UnterlageKnoten(string Id, string Label);
 
     /// <summary>
@@ -927,20 +927,17 @@ public static partial class AdvisorApi
             return Results.Json(ModelApi.Err("Bild {0} hat keine Vorschau.", media), statusCode: 404);
         });
 
-        // Ein Dokument dieses Beraters (09.10.2026): nur eines aus seinen Unterlagen, das heute gilt und seine Rolle sieht. PDF zum Ansehen,
-        // alles andere als Download; sandbox, damit ein HTML-Dokument auf dieser Adresse kein Skript ausführt
-        api.MapGet("/advisor/{key}/doc/{media}", async (string key, string media, HttpRequest req, HttpResponse res, Catalog c, IMediaStore store, CancellationToken ct) =>
+        // Ein Dokument dieses Beraters als Text (10.10.2026): nur eines aus seinen Unterlagen, das heute gilt und seine Rolle sieht — die gelesenen
+        // Abschnitte mit Überschrift und Seite aus dem Dokumentindex, keine Datei. Der Berater bietet keinen Download an; „Weiterlesen“ zeigt den
+        // Text im Fenster. Vorher gab dieser Weg die Datei heraus (PDF zum Ansehen, sonst als Download).
+        api.MapGet("/advisor/{key}/doc/{media}", async (string key, string media, HttpRequest req, Catalog c, DocText docs, CancellationToken ct) =>
         {
             if (Zugang(req, c, key, out var d, out var nein)) return nein!;
             var b = BestandVon(c, key, d!, Sprache(c, d!, null));
             var m = c.Lesen((_, _) => Unterlagen(c, b, d!.Role!, c.Users.RightsOf(d!.Role!).Contains(Rights.Users)).Contains(media) ? c.Media.All[media] : null);
-            if (m is null || await store.OpenAsync(m.Sha256, ct) is not { } s) return Results.Json(ModelApi.Err("Dokument {0} gibt es hier nicht.", media), statusCode: 404);
-            var pdf = m.Mime == "application/pdf";
-            res.Headers.XContentTypeOptions = "nosniff";
-            res.Headers.ContentSecurityPolicy = "sandbox";
-            res.Headers.ContentDisposition = $"{(pdf ? "inline" : "attachment")}; filename*=UTF-8''{Uri.EscapeDataString(m.Name ?? media)}";
-            res.Headers.CacheControl = "public, max-age=3600";
-            return Results.File(s, pdf ? m.Mime : "application/octet-stream");
+            if (m is null) return Results.Json(ModelApi.Err("Dokument {0} gibt es hier nicht.", media), statusCode: 404);
+            var (_, _, teile) = await docs.ChunksAsync(media, ct);
+            return Results.Ok(new { id = media, name = m.Name ?? media, sections = teile.Select(t => new { seq = t.Seq, page = t.Page, heading = t.Heading, text = t.Body }).ToList() });
         });
 
         // Token des Dienstes: je Berater beliebig viele, nur beim Anlegen sichtbar, jederzeit zu widerrufen

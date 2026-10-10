@@ -295,12 +295,14 @@ test('wechselt das Thema, fragt das Fenster mit dem Satz des Kerns, ob es stattd
   assert.ok([...w.$$('.ergebnis').at(-1).querySelectorAll('button')].every(b => !b.disabled))
 })
 
-test('passen Abschnitte aus den Unterlagen, stehen sie zuerst — der erste ganz, die weiteren gekürzt, je mit „Dokument öffnen“', async () => {
+test('passen Abschnitte aus den Unterlagen, stehen sie zuerst — der erste ganz, die weiteren gekürzt, je mit „Weiterlesen“ statt Download', async () => {
   const lang = 'Klemmt der Reißverschluss, reiben Sie die Zähne mit Kerzenwachs ein. '.repeat(8)
   const w = starte({
     ...standard(),
+    '/api/doc/m-1': [200, { id: 'm-1', name: 'Pflege – Hosen.pdf', sections: [{ seq: 1, page: 1, heading: 'Waschen', text: 'Bei 30 °C.' },
+      { seq: 3, page: 2, heading: 'Reparatur: Reißverschluss', text: 'Schieber mit einer Zange <b>zusammendrücken</b>.' }] }],
     '/api/ask': antwort({ total: 17, hits: [HIT('h1', 'Kilden Hose')], words: ['hose'],
-      docs: [{ n: 1, media: 'm-1', name: 'Pflege – Hosen.pdf', page: 1, heading: 'Reparatur: Reißverschluss', text: 'Schieber mit einer Zange <b>zusammendrücken</b>.', node: { id: 'g-1', label: 'Hosen' } },
+      docs: [{ n: 1, media: 'm-1', seq: 3, name: 'Pflege – Hosen.pdf', page: 1, heading: 'Reparatur: Reißverschluss', text: 'Schieber mit einer Zange <b>zusammendrücken</b>.', node: { id: 'g-1', label: 'Hosen' } },
              { n: 2, media: 'm/2', name: 'Häufige Fragen – Hosen.pdf', page: 2, heading: null, text: lang, node: null }] }, { satz: '17 Produkte passen zu „hose“.' }),
   })
   await warte()
@@ -312,15 +314,18 @@ test('passen Abschnitte aus den Unterlagen, stehen sie zuerst — der erste ganz
   assert.equal(x.querySelector('.quelle').textContent, 'Pflege – Hosen.pdf · S. 1 · Hosen')
   assert.equal(x.querySelector('.text').textContent, 'Schieber mit einer Zange <b>zusammendrücken</b>.', 'Text, nie HTML')
   assert.ok(!x.querySelector('.text b'))
-  assert.ok(!x.querySelector('.ganz'), 'der erste steht ganz da')
-  assert.equal(x.querySelector('a').getAttribute('href'), 'https://advisor.test/api/doc/m-1')
-  assert.equal(x.querySelector('a').getAttribute('rel'), 'noopener')
   assert.equal(y.querySelector('.titel').textContent, 'Häufige Fragen – Hosen.pdf')
   assert.ok(y.querySelector('.text').textContent.endsWith(' …'))
-  assert.equal(y.querySelector('a').getAttribute('href'), 'https://advisor.test/api/doc/m%2F2')
-  await w.klick(y.querySelector('.ganz'))
-  assert.equal(y.querySelector('.text').textContent, lang)
-  assert.ok(!y.querySelector('.ganz'))
+  // kein Download: kein Link auf eine Datei, „Weiterlesen“ zeigt das Dokument als Text in der Ansicht, am gefundenen Abschnitt
+  assert.ok(!a.querySelector('.auszug a'))
+  assert.equal(x.querySelector('.weiter').textContent, 'Weiterlesen')
+  await w.klick(x.querySelector('.weiter'))
+  assert.ok(w.rufe.some(r => r.url.endsWith('/api/doc/m-1')))
+  const dok = w.$('.ansicht .dokument')
+  assert.equal(dok.querySelector('.tafelkopf .name').textContent, 'Pflege – Hosen.pdf')
+  assert.deepEqual([...dok.querySelectorAll('.abschnitt .titel')].map(t => t.textContent), ['Waschen', 'Reparatur: Reißverschluss'])
+  assert.equal(dok.querySelector('.abschnitt.gefunden .titel').textContent, 'Reparatur: Reißverschluss')
+  assert.ok(!dok.querySelector('.abschnitt.gefunden .text b'), 'Text, nie HTML')
 })
 
 test('eine Frage zum Produkt im Blick: seine Werte antworten, darunter die Unterlagen — die Sätze kommen vom Kern', async () => {

@@ -34,7 +34,7 @@ async function welt({ info = INFO, unten = false } = {}) {
     if (pfad.startsWith('product/')) return antwort(404, { error: 'Produkt x gibt es hier nicht.' })
     if (pfad === 'compare') return antwort(200, { products: [{ id: 'p1', name: 'A' }, { id: 'p2', name: 'B' }], rows: [{ key: 'leistung', label: 'Leistung', values: ['800 W', '300 W'], same: false }] })
     if (pfad.startsWith('image/m1')) return { status: 200, headers: new Headers({ 'content-type': 'image/webp' }), arrayBuffer: async () => new Uint8Array([7, 8, 9]).buffer, text: async () => '' }
-    if (pfad === 'doc/d1') return { status: 200, headers: new Headers({ 'content-type': 'application/pdf', 'content-disposition': "inline; filename*=UTF-8''Pflege.pdf" }), arrayBuffer: async () => new TextEncoder().encode('%PDF').buffer, text: async () => '' }
+    if (pfad === 'doc/d1') return antwort(200, { id: 'd1', name: 'Pflege.pdf', sections: [{ seq: 1, page: 1, heading: 'Waschen', text: 'Bei 30 °C.' }] })
     return antwort(404, { error: 'nicht da' })
   }
   let t = Date.UTC(2026, 9, 8, 10, 0, 0)
@@ -148,18 +148,17 @@ test('Produkt, Vergleich und Bild gehen durch, ein unbekannter Weg nicht', async
     const b = await fetch(w.url + '/api/image/m1')
     assert.equal(b.headers.get('content-type'), 'image/webp')
     assert.deepEqual([...new Uint8Array(await b.arrayBuffer())], [7, 8, 9])
-    // ein Dokument der Unterlagen: durchgereicht, zum Ansehen, ohne Skripte
+    // ein Dokument der Unterlagen: als Text durchgereicht, keine Datei
     const d = await fetch(w.url + '/api/doc/d1')
-    assert.equal(d.headers.get('content-type'), 'application/pdf')
+    assert.match(d.headers.get('content-type'), /application\/json/)
     // geöffnet ist das Produkt im Blick des Gesprächs: eine Frage danach beantworten seine Werte
     const g = 'f0f1f2f3f4f5f6f7'
     await fetch(w.url + '/api/product/p1?gespraech=' + g)
     const ueber = await (await post(w.url + '/api/ask', { gespraech: g, q: 'ist es wasserdicht?' })).json()
     assert.equal(w.rufe.filter(x => x.url.endsWith('/select')).at(-1).body.fokus, 'p1')
     assert.equal(ueber.about.values[0].value, 'nein')
-    assert.equal(d.headers.get('content-disposition'), "inline; filename*=UTF-8''Pflege.pdf")
-    assert.equal(d.headers.get('content-security-policy'), 'sandbox')
-    assert.equal(await d.text(), '%PDF')
+    assert.equal(d.headers.get('content-disposition'), null)
+    assert.equal((await d.json()).sections[0].heading, 'Waschen')
     assert.equal((await fetch(w.url + '/api/doc/x')).status, 404)
     assert.equal((await fetch(w.url + '/api/tree')).status, 404)
     assert.equal((await fetch(w.url + '/api/ask')).status, 404, 'eine Frage ist ein POST')

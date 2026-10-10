@@ -29,7 +29,7 @@
     de: {
       oeffnen: 'Produktberatung', schliessen: 'Schliessen', frage: 'Wonach suchen Sie?', senden: 'Fragen',
       bis: 'bis', ab: 'ab', details: 'Details', vergleichen: 'Vergleichen', vergleich: n => `${n} vergleichen`,
-      unterlagen: 'Aus den Unterlagen:', dokOeffnen: 'Dokument öffnen', seite: n => `S. ${n}`, ganz: 'ganzer Abschnitt',
+      unterlagen: 'Aus den Unterlagen:', weiterlesen: 'Weiterlesen', dokument: 'Dokument', dokumentLeer: 'Zu diesem Dokument gibt es keinen Text.', seite: n => `S. ${n}`,
       zurueck: 'Zurück', fehler: 'Der Berater antwortet gerade nicht.', zuviel: 'Zu viele Fragen in kurzer Zeit.', varianten: n => `${n} Ausführungen`, ki: 'Text von einer KI erstellt',
       filterWeg: 'Filter entfernen', merkmal: 'Merkmal', gleich: 'gleich',
       neu: 'Neue Suche', angabeWeg: 'Angabe entfernen', lockern: 'Mit weniger Angaben:', ohne: (l, n) => `${l} (${n})`, alle: 'alle Produkte',
@@ -43,7 +43,7 @@
     en: {
       oeffnen: 'Product advice', schliessen: 'Close', frage: 'What are you looking for?', senden: 'Ask',
       bis: 'up to', ab: 'from', details: 'Details', vergleichen: 'Compare', vergleich: n => `Compare ${n}`,
-      unterlagen: 'From the documentation:', dokOeffnen: 'Open document', seite: n => `p. ${n}`, ganz: 'whole section',
+      unterlagen: 'From the documentation:', weiterlesen: 'Read more', dokument: 'Document', dokumentLeer: 'There is no text for this document.', seite: n => `p. ${n}`,
       zurueck: 'Back', fehler: 'The advisor is not answering right now.', zuviel: 'Too many questions in a short time.', varianten: n => `${n} versions`, ki: 'Text written by an AI',
       filterWeg: 'Remove filter', merkmal: 'Attribute', gleich: 'same',
       neu: 'New search', angabeWeg: 'Remove', lockern: 'With fewer criteria:', ohne: (l, n) => `${l} (${n})`, alle: 'all products',
@@ -80,7 +80,12 @@ button { font: inherit; cursor: pointer; }
 .auszug .text { white-space: pre-wrap; }
 .auszug .zeile { display: flex; gap: 10px; align-items: center; font-size: 12px; }
 .auszug a { color: var(--akzent); }
-.auszug .ganz { border: 0; background: transparent; color: var(--akzent); padding: 0; font-size: 12px; }
+.auszug .weiter { border: 0; background: transparent; color: var(--akzent); padding: 0; font-size: 12px; text-decoration: underline; }
+.dokument .abschnitt { display: flex; flex-direction: column; gap: 2px; padding: 6px 0; border-bottom: 1px solid var(--linie); }
+.dokument .abschnitt .titel { font-weight: 600; }
+.dokument .abschnitt .quelle { font-size: 11px; color: var(--leise); }
+.dokument .abschnitt .text { white-space: pre-wrap; }
+.dokument .abschnitt.gefunden { border-left: 3px solid var(--akzent); padding-left: 8px; }
 .blase.ich { align-self: flex-end; background: var(--akzent); color: #fff; }
 .blase .hinweis { display: block; margin-top: 4px; font-size: 11px; color: var(--leise); }
 .karten { display: flex; flex-direction: column; gap: 8px; }
@@ -303,6 +308,27 @@ tr.gleich td { color: var(--leise); }
       t.append(kopf, inhalt)
       return { t, kopf, inhalt }
     }
+    /// Ein Dokument der Unterlagen als Text in der Ansicht (10.10.2026): alle Abschnitte mit Überschrift und Seite, der gefundene hervorgehoben und
+    /// sichtbar — kein Download, keine Datei
+    async function zeigeDokument(id, seq) {
+      try {
+        const d = await rufe(`/api/doc/${encodeURIComponent(id)}`)
+        const { t: b, inhalt } = tafel('dokument', T.dokument, d.name)
+        let ziel = null
+        for (const s of d.sections || []) {
+          const a = el('div', 'abschnitt')
+          if (s.heading) a.append(el('div', 'titel', s.heading))
+          if (s.page) a.append(el('div', 'quelle', T.seite(s.page)))
+          a.append(el('div', 'text', s.text))
+          if (seq && s.seq === seq) { a.classList.add('gefunden'); ziel = a }
+          inhalt.append(a)
+        }
+        if (!(d.sections || []).length) inhalt.append(el('div', 'leise', T.dokumentLeer))
+        zeige(b)
+        if (ziel) ansicht.scrollTop = Math.max(0, ziel.offsetTop - 8)
+      } catch (e) { blase(e.message) }
+    }
+
     /// Eine Tafel in der Ansicht neben dem Gespräch; eine neue ersetzt die vorige
     function zeige(block) {
       const zu = el('button', 'zu', '×'); zu.type = 'button'; zu.title = T.ansichtZu; zu.setAttribute('aria-label', T.ansichtZu)
@@ -418,16 +444,12 @@ tr.gleich td { color: var(--leise); }
         a.append(el('div', 'titel', d.heading || d.name))
         a.append(el('div', 'quelle', [d.name, d.page ? T.seite(d.page) : null, d.node ? d.node.label : null].filter(Boolean).join(' · ')))
         const kurz = i > 0 && d.text.length > 240
-        const t = el('div', 'text', kurz ? d.text.slice(0, 240).replace(/\s+\S*$/, '') + ' …' : d.text)
-        a.append(t)
+        a.append(el('div', 'text', kurz ? d.text.slice(0, 240).replace(/\s+\S*$/, '') + ' …' : d.text))
+        // kein Download (10.10.2026): „Weiterlesen“ zeigt das ganze Dokument als Text in der Ansicht, am gefundenen Abschnitt
         const zeile = el('div', 'zeile')
-        if (kurz) {
-          const g = el('button', 'ganz', T.ganz); g.type = 'button'
-          g.addEventListener('click', () => { t.textContent = d.text; g.remove() })
-          zeile.append(g)
-        }
-        const link = el('a', '', T.dokOeffnen); link.href = `${basis}/api/doc/${encodeURIComponent(d.media)}`; link.target = '_blank'; link.rel = 'noopener'
-        zeile.append(link)
+        const weiter = el('button', 'weiter', T.weiterlesen); weiter.type = 'button'
+        weiter.addEventListener('click', () => zeigeDokument(d.media, d.seq))
+        zeile.append(weiter)
         a.append(zeile)
         b.append(a)
       })
