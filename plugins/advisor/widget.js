@@ -111,6 +111,7 @@ button { font: inherit; cursor: pointer; }
 .karte .inhalt { flex: 1; min-width: 0; }
 .karte .name { font-weight: 600; }
 .karte .wert { font-size: 12px; color: var(--leise); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.karte .text { font-size: 13px; margin: 2px 0 4px; }
 .karte .aktion { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 4px; font-size: 12px; }
 /* die vier Bedienelemente einer Karte sehen gleich aus (09.10.2026): „Vergleichen“ ist ein Kästchen in einem Rahmen wie die Knöpfe,
    kein Text bricht um, und „★ Gemerkt“ bekommt seine Farbe auch hier — vorher galt die Regel für Knöpfe der Karte vor .merken.an */
@@ -319,6 +320,7 @@ tr.gleich td { color: var(--leise); }
       const k = el('div', 'karte')
       const inhalt = el('div', 'inhalt')
       inhalt.append(el('div', 'name', h.name))
+      if (h.text) inhalt.append(el('div', 'text', h.text))   // der Anfang der Beschreibung (10.10.2026)
       for (const v of h.values || []) inhalt.append(el('div', 'wert', `${v.label}: ${v.value}`))
       if (h.variants > 1) inhalt.append(el('div', 'wert', T.varianten(h.variants)))
       if (h.seen) inhalt.append(el('div', 'wert gesehen', T.angesehen))

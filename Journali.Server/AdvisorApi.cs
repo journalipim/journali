@@ -963,7 +963,20 @@ public static partial class AdvisorApi
         id = e.Product.Id, name = e.Name, keys = tree.KeysOf(model, e.Product), image = ErstesBild(c, tree, model, e, role, admin), variants = e.Varianten.Count,
         values = attr.Where(a => a.Type != AttributeTypes.Html && a.Key != "name").Select(a => (a, Werte(tree, model, e, a, loc, channel))).Where(x => x.Item2.Count > 0).Take(werte)
             .Select(x => new { key = x.a.Key, label = Bez(x.a.Label, loc, model) ?? x.a.Key, value = AlsText(model, x.a, x.Item2, loc) }).ToList(),
+        text = KartenText(tree, model, e, attr, loc, channel),
     };
+
+    /// <summary>
+    /// Der Anfang der Beschreibung auf der Karte (10.10.2026): der erste Absatz des ersten HTML-Attributs der Sicht, höchstens 240 Zeichen, an
+    /// einer Wortgrenze gekürzt. Vorher standen Beschreibungen nur als Unterlagen über den Karten — oft von anderen Produkten als den gezeigten.
+    /// </summary>
+    public static string? KartenText(Tree tree, ModelCatalog model, Eintrag e, IEnumerable<AttributeDefinition> attr, string loc, string channel)
+    {
+        foreach (var a in attr.Where(a => a.Type == AttributeTypes.Html))
+            if (Werte(tree, model, e, a, loc, channel).FirstOrDefault() is { Length: > 0 } roh && Absaetze(roh).Split("\n\n")[0] is { Length: > 0 } t)
+                return t.Length <= 240 ? t : t[..(t.LastIndexOf(' ', 240) is var i and > 120 ? i : 240)].TrimEnd(',', ';', ' ') + " …";
+        return null;
+    }
 
     /// <summary>Die Sprache einer Anfrage: die gewünschte, wenn der Berater sie führt; sonst seine erste, sonst die Leitsprache.</summary>
     private static string Sprache(Catalog c, Definition d, string? gewuenscht)

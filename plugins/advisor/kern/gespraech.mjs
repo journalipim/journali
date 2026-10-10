@@ -362,6 +362,9 @@ export function erstelleKern(o) {
     // ---- Unterlagen und der Text der KI
     let docs = []
     if (eingabe) { const d = await unterlagen(loc, { satz: eingabe, art }); docs = d.docs ?? []; warning = warning ?? d.warning ?? null }
+    // Gibt es Treffer, steht ihre Beschreibung auf den Karten (10.10.2026): ein Dokument an einem einzelnen Produkt oder einer Variante (ein
+    // Datenblatt) erscheint dann nicht als eigene Unterlage — es zeigte sonst andere Produkte als die Karten. Unterlagen von Gruppen bleiben.
+    if ((sel.hits ?? []).length) docs = docs.filter(u => !/^[pv]-/.test(u.node?.id ?? '')).map((u, i) => ({ ...u, n: i + 1 }))
     warning = warning ?? sel.warning ?? null
     let answer = null
     if (vok.ki && ki && (eingabe || z.verlauf.length) && ((sel.hits ?? []).length || docs.length)) {

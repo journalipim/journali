@@ -342,6 +342,18 @@ test('eine Frage zum Produkt im Blick: seine Werte antworten, darunter die Unter
   assert.deepEqual(w.fragen().at(-1).body.schritt, { art: 'neu' })
 })
 
+test('eine Karte zeigt den Anfang der Beschreibung unter dem Namen — als Text', async () => {
+  const w = starte({ ...standard(), '/api/ask': antwort({ total: 2, hits: [HIT('z1', 'Frost Jacke', { text: 'Die Frost Jacke ist eine <b>Wetterschutzjacke</b>.' }), HIT('z2', 'Aske Jacke')] },
+    { satz: '2 Produkte passen zu „jacke“.' }) })
+  await warte()
+  await w.frage('jacke')
+  const [a, b] = w.$$('.karte')
+  assert.equal(a.querySelector('.text').textContent, 'Die Frost Jacke ist eine <b>Wetterschutzjacke</b>.')
+  assert.ok(!a.querySelector('.text b'))
+  assert.ok(a.querySelector('.name').nextElementSibling === a.querySelector('.text'), 'gleich unter dem Namen')
+  assert.ok(!b.querySelector('.text'), 'ohne Beschreibung kein Text')
+})
+
 test('einen Tippfehler liest der Kern als Produktnamen — der Hinweis steht über dem Satz', async () => {
   const w = starte({ ...standard(), '/api/ask': antwort({ total: 10, hits: [HIT('z1', 'Brenna 5 Zelt')], words: ['zelt'], corrected: [{ from: 'zeit', to: 'zelt' }] },
     { satz: '10 Produkte passen zu „zelt“.', hinweise: ['„zeit“ habe ich als „zelt“ gelesen.'] }) })

@@ -197,6 +197,25 @@ public class AdvisorTests
     // ---- was der Berater zeigt
 
     [Fact]
+    public async Task Eine_Karte_bringt_den_Anfang_ihrer_Beschreibung_mit()
+    {
+        await using var w = await Welt.Neu();
+        var lang = string.Join(" ", Enumerable.Repeat("Schlägt kräftig in Beton und Stein.", 12));
+        w.C.With((_, _, write) =>
+        {
+            write("t", w.Ids["bohr"], Types.AttributeSet, new AttributeSet("description", "de", null, "<p>Schlägt <b>kräftig</b>.</p><p>Mit Koffer.</p>"), null);
+            write("t", w.Ids["schleifer"], Types.AttributeSet, new AttributeSet("description", "de", null, $"<p>{lang}</p>"), null);
+            return 0;
+        });
+        var (_, j) = await w.Auswahl(new { });
+        var text = j.GetProperty("hits").EnumerateArray().ToDictionary(h => h.GetProperty("name").GetString()!, h => h.TryGetProperty("text", out var t) ? t.GetString() : null);
+        Assert.Equal("Schlägt kräftig.", text["Bohrhammer Pro"]);                  // der erste Absatz, ohne Auszeichnung
+        Assert.EndsWith(" …", text["Winkelschleifer"]);                             // gekürzt, an einer Wortgrenze
+        Assert.True(text["Winkelschleifer"]!.Length <= 242);
+        Assert.Null(text["Akkuschrauber kompakt"]);                                  // ohne Beschreibung kein Text
+    }
+
+    [Fact]
     public async Task Ohne_Frage_zeigt_er_was_der_Baum_ausleitet_und_die_Rolle_sieht()
     {
         await using var w = await Welt.Neu();

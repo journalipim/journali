@@ -53,7 +53,7 @@ const label = a => {
   return { ...a, label: def?.label ?? a.attribute, valueLabel: def?.values?.find(v => v.value === a.value)?.label ?? a.value }
 }
 
-function journali({ ki = null } = {}) {
+function journali({ ki = null, docs = [] } = {}) {
   const rufe = []
   const waehle = b => {
     let r = KATALOG.filter(p => (!b.gruppe || p.gruppe === b.gruppe) && (b.angaben ?? []).every(a => passt(p, a)))
@@ -64,7 +64,7 @@ function journali({ ki = null } = {}) {
   const fn = async (pfad, body) => {
     rufe.push({ pfad, body })
     if (pfad.startsWith('vocabulary')) return { status: 200, json: { ...VOK, ki: !!ki } }
-    if (pfad === 'docs') return { status: 200, json: { docs: [], warning: null } }
+    if (pfad === 'docs') return { status: 200, json: { docs, warning: null } }
     if (pfad === 'ki') return { status: 200, json: ki(body) }
     if (pfad.startsWith('product/')) {
       const pid = decodeURIComponent(pfad.slice(8).split('?')[0]), p = KATALOG.find(x => x.id === pid)
@@ -186,6 +186,22 @@ test('ein Gespräch sammelt die Angaben: die Art grenzt ein, eine Angabe filtert
   const neu = await kern.antworte({ gespraech: G, schritt: { art: 'neu' } })
   assert.ok(neu.reset)
   assert.equal(neu.texte.satz, 'Neue Suche')
+})
+
+test('mit Treffern keine Datenblätter einzelner Produkte als Unterlagen — die Beschreibung steht auf der Karte; Unterlagen von Gruppen bleiben', async () => {
+  const docs = [
+    { n: 1, media: 'm1', name: 'Datenblatt Rime Zelt.pdf', heading: 'Beschreibung', text: 'Das Rime Zelt …', node: { id: 'p-rime', label: 'Rime Zelt' } },
+    { n: 2, media: 'm2', name: 'Datenblatt Rime Zelt.pdf', heading: 'Ausführungen', text: '…', node: { id: 'v-rime-1', label: 'Rime Zelt rot' } },
+    { n: 3, media: 'm3', name: 'Häufige Fragen – Zelte.pdf', heading: 'Wie wasserdicht muss ein Zelt sein?', text: '…', node: { id: 'g-zelte', label: 'Zelte' } },
+  ]
+  const kern = erstelleKern({ journali: journali({ docs }).fn })
+  const r = await kern.antworte({ gespraech: 'karten-0001', q: 'zelt für den winter' })
+  assert.ok(r.total > 0)
+  assert.deepEqual(r.docs.map(d => [d.n, d.name]), [[1, 'Häufige Fragen – Zelte.pdf']])
+  // ohne Treffer zählen auch die Datenblätter
+  const k2 = erstelleKern({ journali: journali({ docs }).fn })
+  const leer = await k2.antworte({ gespraech: 'karten-0002', q: 'reissverschluss kaputt' })
+  if (!leer.total) assert.equal(leer.docs.length, 3)
 })
 
 test('nach 30 Minuten ohne Eingabe ist ein Gespräch vergessen', async () => {

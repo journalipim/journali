@@ -2893,6 +2893,12 @@ einem Produkt, nichts ist eine Angabe) und findet journali nichts — oder es is
 „Ich kann Ihnen mit den Produkten weiterhelfen, die wir im Angebot haben:“, die Gruppen des Sortiments, „Zu anderen Fragen kann ich
 leider keine Auskunft geben.“
 
+**Die Beschreibung steht auf der Karte (10.10.2026).** Jede Karte der Auswahl bringt den Anfang ihrer Beschreibung mit (`text`: der
+erste Absatz des ersten HTML-Attributs der Sicht, höchstens 240 Zeichen, an einer Wortgrenze gekürzt — `KartenText`); das Fenster zeigt ihn
+unter dem Namen. Gibt es Treffer, erscheinen Dokumente an einem einzelnen Produkt oder einer Variante (Datenblätter) nicht mehr als eigene
+Unterlagen: sie zeigten sonst andere Produkte als die Karten („jacke für den winter“ — Datenblätter von Storm und Rime über den Karten von
+Aske, Bjørk und Frost). Unterlagen von Gruppen (Pflege, Reparatur, häufige Fragen, Ratgeber) bleiben; ohne Treffer zählen alle.
+
 **Assoziationen (gebaut 09.10.2026, `kern/assoziationen.mjs`).** Ein Wort, das in keinem Produkt steht, sucht über die Wörter, die man
 damit verbindet: „winter“ → kalt, frost, gefüttert; „tennis“ → sport, training, rückschlagspiel; „festival“ → zelt, camping. Nur die
 assoziierten Wörter, die im Sortiment stehen, ordnen (höchstens sechs, in der Reihenfolge der Liste — nach Häufigkeit gewönnen allgemeine
