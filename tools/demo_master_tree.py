@@ -185,7 +185,7 @@ class Api:
         if self.log:
             self.log.write(f"{method} {path} {str(kw.get('json'))[:200]}\n"); self.log.flush()
         for attempt in range(3):
-            r = self.s.request(method, self.url + path, timeout=120, **kw)
+            r = self.anfrage(method, path, **kw)
             if self.log:
                 self.log.write(f"  -> {r.status_code} {r.text[:300]}\n"); self.log.flush()
             if r.status_code < 500:
@@ -206,10 +206,29 @@ class Api:
             sys.exit(f"{method} {path} → {r.status_code}: {r.text[:300]}")
         return r.json() if r.content else None
 
+    def anfrage(self, method: str, path: str, **kw):
+        """Eine Anfrage; reisst die Verbindung ab (Server neu gestartet), wartet sie bis zu 5 Minuten auf /api/health und wiederholt.
+        Eine Anfrage, die vor dem Abbruch schon geschrieben hat, schreibt beim zweiten Mal denselben Wert — der Generator setzt nur Werte."""
+        bis = time.time() + 300
+        while True:
+            try:
+                return self.s.request(method, self.url + path, timeout=120, **kw)
+            except requests.ConnectionError as e:
+                if time.time() > bis:
+                    sys.exit(f"Server nicht erreichbar ({method} {path}): {e}. Bis hier ist alles geschrieben; ein neuer Lauf knüpft an.")
+                print(f"  Server nicht erreichbar, warte … ({type(e).__name__})", flush=True)
+                while time.time() < bis:
+                    time.sleep(5)
+                    try:
+                        if requests.get(self.url + "/api/health", timeout=5).ok:
+                            break
+                    except requests.RequestException:
+                        pass
+
     def probe(self, method: str, path: str, **kw):
         """Wie call, aber ohne Abbruch: (Statuscode, Antwort). Für Fragen, deren Nein eine Antwort ist."""
         self.calls += 1
-        r = self.s.request(method, self.url + path, timeout=120, **kw)
+        r = self.anfrage(method, path, **kw)
         if self.log:
             self.log.write(f"{method} {path} {str(kw.get('json'))[:200]}\n  -> {r.status_code} {r.text[:300]}\n"); self.log.flush()
         try:
