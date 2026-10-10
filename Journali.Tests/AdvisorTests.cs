@@ -713,12 +713,12 @@ public class AdvisorTests
         w.C.With((_, _, write) =>
         {
             write("t", Model.AttributeStream + "notiz", Types.AttributeDefined, new AttributeDefinition("notiz", Labels.Of("Notiz", "Note"), AttributeTypes.Text, Group: "intern"), null);
-            write("t", w.Ids["bohr"], Types.AttributeSet, new AttributeSet("notiz", null, null, "Warum ist mein Bohrhammer undicht?"), null);
+            write("t", w.Ids["bohr"], Types.AttributeSet, new AttributeSet("notiz", null, null, "Der Bohrhammer ist geräuscharm."), null);
             return 0;
         });
-        var j = await w.Sag("undicht");
+        var j = await w.Sag("geräuscharm");   // („undicht“ wäre seit 10.10.2026 eine Frage nach einem Problem, keine Suche)
         Assert.Equal(0, j.GetProperty("total").GetInt32());
-        Assert.Equal(["undicht"], j.GetProperty("unknown").EnumerateArray().Select(x => x.GetString()).ToList());
+        Assert.Equal(["geräuscharm"], j.GetProperty("unknown").EnumerateArray().Select(x => x.GetString()).ToList());
         // was die Sicht zeigt, zählt: die Leistung steht in der Gruppe technik
         var (_, k) = await w.Auswahl(new { art = new[] { "bohrhammer" } });
         Assert.Contains("Bohrhammer Pro", Namen(k));

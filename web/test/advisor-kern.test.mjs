@@ -5,7 +5,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { woerter, formen, korrektur, abstand } from '../../plugins/advisor/kern/woerter.mjs'
-import { erkenne, fragt, istArt, namenWoerter } from '../../plugins/advisor/kern/verstehen.mjs'
+import { erkenne, fragt, istArt, namenWoerter, istProblem } from '../../plugins/advisor/kern/verstehen.mjs'
 import { erstelleKern } from '../../plugins/advisor/kern/gespraech.mjs'
 import { stellen, trifft, treffer, saetze } from '../../plugins/advisor/kern/stellen.mjs'
 import { erstelleAssoziationen } from '../../plugins/advisor/kern/assoziationen.mjs'
@@ -202,6 +202,33 @@ test('mit Treffern keine Datenblätter einzelner Produkte als Unterlagen — die
   const k2 = erstelleKern({ journali: journali({ docs }).fn })
   const leer = await k2.antworte({ gespraech: 'karten-0002', q: 'reissverschluss kaputt' })
   if (!leer.total) assert.equal(leer.docs.length, 3)
+})
+
+test('eine Frage nach einem Problem ist keine Produktsuche: die Unterlagen der Art antworten, die Angaben bleiben', async () => {
+  for (const q of ['meine hose hat ein loch', 'der reißverschluss klemmt', 'zelt wird innen nass', 'wie wasche ich die jacke', 'mein zelt ist nicht mehr wasserdicht', 'sohle löst sich'])
+    assert.ok(istProblem(q), q)
+  for (const q of ['jacke für nasses wetter', 'leichte hose', 'zelt für 2 personen', 'wasserdichte jacke'])
+    assert.ok(!istProblem(q), q)
+  const docs = [{ n: 1, media: 'm1', seq: 4, name: 'Pflege – Zelte.pdf', heading: 'Reparatur: Riss oder Loch', text: 'Reparaturband …', node: { id: 'g-zelte', label: 'Zelte' } }]
+  const j = journali({ docs })
+  const kern = erstelleKern({ journali: j.fn })
+  await kern.antworte({ gespraech: 'problem-0001', q: 'zelt' })
+  const vorher = j.auswahlen().length
+  const r = await kern.antworte({ gespraech: 'problem-0001', q: 'mein zelt hat ein loch' })
+  assert.ok(r.problem)
+  assert.equal(j.auswahlen().length, vorher, 'keine Auswahl — keine Produktsuche')
+  const anfrage = j.rufe.filter(x => x.pfad === 'docs').at(-1).body
+  assert.deepEqual([anfrage.art, anfrage.problem], [['zelt'], true])
+  assert.equal(r.docs[0].heading, 'Reparatur: Riss oder Loch')
+  assert.deepEqual([r.texte.satz, r.texte.frage], [null, 'Hilft Ihnen das weiter?'])
+  // die gesammelten Angaben bleiben: „loch“ ist kein Suchwort geworden
+  const weiter = await kern.antworte({ gespraech: 'problem-0001', q: 'rot' })
+  assert.deepEqual(weiter.words, ['zelt'])
+  // „wie wasche ich die zelte“: „die“ vor einer Art ist ein Artikel — eine Pflegefrage
+  assert.ok((await kern.antworte({ gespraech: 'problem-0001', q: 'wie wasche ich die zelte' })).problem)
+  // ohne Unterlagen sagt der Berater es
+  const k2 = erstelleKern({ journali: journali().fn })
+  assert.equal((await k2.antworte({ gespraech: 'problem-0002', q: 'zelt hat ein loch' })).texte.satz, 'Dazu habe ich keine Anleitung in den Unterlagen.')
 })
 
 test('nach 30 Minuten ohne Eingabe ist ein Gespräch vergessen', async () => {

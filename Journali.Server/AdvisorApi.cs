@@ -475,6 +475,12 @@ public static partial class AdvisorApi
     /// vier Fragen ohne Bezug (Wetter, Versand, „rote hose in größe m“, ein Geschenk) bei 0,158–0,192.
     /// </summary>
     public const double DokSinnGrenze = 0.145, DokSinnAbstand = 0.03;
+    /// <summary>
+    /// Eine Frage nach einem Problem oder zur Pflege in einem engen Rahmen (eine Art oder das Produkt im Blick, 10.10.2026): die Absicht ist klar und
+    /// die Unterlagen sind wenige — dann gilt ein Abschnitt bis 0,17. Gemessen an den Demo-Unterlagen: die richtigen Abschnitte lagen bei 0,088–0,162
+    /// („zelt hat ein loch“ → „Reparatur: Riss oder Loch“ 0,162, „sohle löst sich“ → „Reparatur: Sohle“ 0,158).
+    /// </summary>
+    public const double DokProblemGrenze = 0.17;
     public const int MaxUnterlagen = 3;
 
     /// <summary>Eine erkannte Angabe: ein Filter auf ein Attribut der Sicht.</summary>
@@ -740,7 +746,8 @@ public static partial class AdvisorApi
     /// Die Abschnitte der Unterlagen, die zur Eingabe passen: nach dem Sinn mit <see cref="DokSinnGrenze"/>; ohne Vektoren die Wortsuche
     /// (sie findet nur, was wörtlich dasteht — „reissverschluss“ nicht in „Reißverschluss“). Gleiche Abschnitte aus zwei Dokumenten zählen einmal.
     /// </summary>
-    public static async Task<(List<Auszug> Auszuege, string? Warnung)> AbschnitteAsync(string q, List<string> doks, DocText docs, Vectors vectors, Embedder embedder, CancellationToken ct)
+    public static async Task<(List<Auszug> Auszuege, string? Warnung)> AbschnitteAsync(string q, List<string> doks, DocText docs, Vectors vectors, Embedder embedder, CancellationToken ct,
+        double grenze = DokSinnGrenze)
     {
         var aus = new List<Auszug>();
         if (q.Length == 0 || doks.Count == 0 || !docs.Ready) return (aus, null);
@@ -752,7 +759,7 @@ public static partial class AdvisorApi
                 var hits = await vectors.SearchChunksAsync(m, v, MaxUnterlagen * 3, doks, ct);
                 if (hits.Count == 0) return (aus, null);
                 var best = hits.Min(h => h.Distance);
-                aus.AddRange(hits.Where(h => h.Distance <= DokSinnGrenze && h.Distance <= best + DokSinnAbstand).OrderBy(h => h.Distance)
+                aus.AddRange(hits.Where(h => h.Distance <= grenze && h.Distance <= best + DokSinnAbstand).OrderBy(h => h.Distance)
                     .Select(h => new Auszug(h.Media, h.Seq, h.Page, h.Heading, h.Body)));
             }
             catch (Exception e) { return (aus, e.Message); }

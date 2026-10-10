@@ -359,6 +359,37 @@ test('eine Karte zeigt den Anfang der Beschreibung unter dem Namen — als Text'
   assert.ok(!b.querySelector('.text'), 'ohne Beschreibung kein Text')
 })
 
+test('eine Frage nach einem Problem: die Unterlagen, zuletzt „Hilft Ihnen das weiter?“ — keine Karten', async () => {
+  const w = starte({ ...standard(), '/api/ask': antwort({ problem: true, total: 0, hits: [],
+    docs: [{ n: 1, media: 'm1', seq: 4, name: 'Pflege – Zelte.pdf', heading: 'Reparatur: Riss oder Loch', text: 'Reparaturband …', node: { id: 'g-1', label: 'Zelte' } }] },
+    { satz: null, frage: 'Hilft Ihnen das weiter?' }) })
+  await warte()
+  await w.frage('mein zelt hat ein loch')
+  const a = w.$$('.antwort').at(-1)
+  assert.ok(a.firstElementChild.classList.contains('unterlagen'))
+  assert.ok(!a.querySelector('.karte'))
+  assert.equal(a.lastElementChild.querySelector('.frage').textContent, 'Hilft Ihnen das weiter?')
+  assert.ok(a.lastElementChild.querySelector('.chip.neu'))
+})
+
+test('frühere Eingaben: ein Klick auf die eigene Blase setzt sie in die Eingabezeile, ↑ und ↓ blättern', async () => {
+  const w = starte()
+  await warte()
+  await w.frage('zelt')
+  await w.frage('in rot')
+  const feld = w.$('input[type=text]')
+  assert.equal(feld.value, '')
+  const taste = key => feld.dispatchEvent(new win.KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }))
+  taste('ArrowUp'); assert.equal(feld.value, 'in rot')
+  taste('ArrowUp'); assert.equal(feld.value, 'zelt')
+  taste('ArrowUp'); assert.equal(feld.value, 'zelt', 'am Anfang bleibt es')
+  taste('ArrowDown'); assert.equal(feld.value, 'in rot')
+  taste('ArrowDown'); assert.equal(feld.value, '', 'nach der letzten wieder leer')
+  await w.klick(w.$$('.blase.ich')[0])
+  assert.equal(feld.value, 'zelt')
+  assert.equal(w.$$('.blase.ich')[0].title, 'Noch einmal fragen')
+})
+
 test('einen Tippfehler liest der Kern als Produktnamen — der Hinweis steht über dem Satz', async () => {
   const w = starte({ ...standard(), '/api/ask': antwort({ total: 10, hits: [HIT('z1', 'Brenna 5 Zelt')], words: ['zelt'], corrected: [{ from: 'zeit', to: 'zelt' }] },
     { satz: '10 Produkte passen zu „zelt“.', hinweise: ['„zeit“ habe ich als „zelt“ gelesen.'] }) })

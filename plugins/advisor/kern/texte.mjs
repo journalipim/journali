@@ -14,6 +14,8 @@ export const TEXTE = {
     ueber: n => `Zu „${n}“:`,
     ueberNichts: 'Dazu steht in den Angaben nichts.',
     alleAngaben: 'Alle Angaben zu diesem Produkt?',
+    hilftDas: 'Hilft Ihnen das weiter?',
+    problemNichts: 'Dazu habe ich keine Anleitung in den Unterlagen.',
     trefferVorn: (n, hart, weich) => hart ? `${n === 1 ? '1 Produkt passt' : `${n} Produkte passen`} zu „${hart}“; zuerst, was zu „${weich}“ passt.`
       : `${n === 1 ? '1 Produkt passt' : `${n} Produkte passen`} zu „${weich}“, die passendsten zuerst.`,
     trefferZu: (n, w) => n === 1 ? `1 Produkt passt zu „${w}“.` : `${n} Produkte passen zu „${w}“.`,
@@ -52,6 +54,8 @@ export const TEXTE = {
     ueber: n => `About "${n}":`,
     ueberNichts: 'The product details say nothing about this.',
     alleAngaben: 'See all details of this product?',
+    hilftDas: 'Does this help?',
+    problemNichts: 'There are no instructions for this in the documentation.',
     trefferVorn: (n, hart, weich) => hart ? `${n === 1 ? '1 product matches' : `${n} products match`} "${hart}"; those matching "${weich}" first.`
       : `${n === 1 ? '1 product matches' : `${n} products match`} "${weich}", best matches first.`,
     trefferZu: (n, w) => n === 1 ? `1 product matches "${w}".` : `${n} products match "${w}".`,

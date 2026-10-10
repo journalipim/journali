@@ -29,7 +29,7 @@
     de: {
       oeffnen: 'Produktberatung', schliessen: 'Schliessen', frage: 'Wonach suchen Sie?', senden: 'Fragen',
       bis: 'bis', ab: 'ab', details: 'Details', vergleichen: 'Vergleichen', vergleich: n => `${n} vergleichen`,
-      unterlagen: 'Aus den Unterlagen:', weiterlesen: 'Weiterlesen', dokument: 'Dokument', dokumentLeer: 'Zu diesem Dokument gibt es keinen Text.', seite: n => `S. ${n}`,
+      nochmal: 'Noch einmal fragen', unterlagen: 'Aus den Unterlagen:', weiterlesen: 'Weiterlesen', dokument: 'Dokument', dokumentLeer: 'Zu diesem Dokument gibt es keinen Text.', seite: n => `S. ${n}`,
       zurueck: 'Zurück', fehler: 'Der Berater antwortet gerade nicht.', zuviel: 'Zu viele Fragen in kurzer Zeit.', varianten: n => `${n} Ausführungen`, ki: 'Text von einer KI erstellt',
       filterWeg: 'Filter entfernen', merkmal: 'Merkmal', gleich: 'gleich',
       neu: 'Neue Suche', angabeWeg: 'Angabe entfernen', lockern: 'Mit weniger Angaben:', ohne: (l, n) => `${l} (${n})`, alle: 'alle Produkte',
@@ -43,7 +43,7 @@
     en: {
       oeffnen: 'Product advice', schliessen: 'Close', frage: 'What are you looking for?', senden: 'Ask',
       bis: 'up to', ab: 'from', details: 'Details', vergleichen: 'Compare', vergleich: n => `Compare ${n}`,
-      unterlagen: 'From the documentation:', weiterlesen: 'Read more', dokument: 'Document', dokumentLeer: 'There is no text for this document.', seite: n => `p. ${n}`,
+      nochmal: 'Ask again', unterlagen: 'From the documentation:', weiterlesen: 'Read more', dokument: 'Document', dokumentLeer: 'There is no text for this document.', seite: n => `p. ${n}`,
       zurueck: 'Back', fehler: 'The advisor is not answering right now.', zuviel: 'Too many questions in a short time.', varianten: n => `${n} versions`, ki: 'Text written by an AI',
       filterWeg: 'Remove filter', merkmal: 'Attribute', gleich: 'same',
       neu: 'New search', angabeWeg: 'Remove', lockern: 'With fewer criteria:', ohne: (l, n) => `${l} (${n})`, alle: 'all products',
@@ -231,8 +231,18 @@ tr.gleich td { color: var(--leise); }
       return j
     }
 
+    // Frühere Eingaben (10.10.2026): ein Klick auf die eigene Blase setzt ihren Text in die Eingabezeile; ↑ und ↓ in der Eingabezeile blättern
+    // durch die Eingaben — nur im Arbeitsspeicher der Seite
+    const eingaben = []
+    let blaettern = -1
     function blase(text, ich, hinweis) {
       const b = el('div', 'blase' + (ich ? ' ich' : ''), text)
+      if (ich) {
+        if (eingaben.at(-1) !== text) eingaben.push(text)
+        blaettern = -1
+        b.title = T.nochmal
+        b.addEventListener('click', () => { eingabe.value = text; eingabe.focus() })
+      }
       if (hinweis) b.append(el('span', 'hinweis', hinweis))
       verlauf.append(b); verlauf.scrollTop = verlauf.scrollHeight
       return b
@@ -507,6 +517,19 @@ tr.gleich td { color: var(--leise); }
     }
 
     /// Die Antwort auf eine Frage zum Produkt im Blick (09.10.2026): die passenden Werte, darunter seine Unterlagen, zuletzt „alle Angaben?“
+    /// Die Antwort auf eine Frage nach einem Problem oder zur Pflege (10.10.2026): die Unterlagen, zuletzt „Hilft Ihnen das weiter?“
+    function antwortProblem(r) {
+      const antwort = el('div', 'karten antwort')
+      if (r.answer) { const k = el('div', 'blase ergebnis'); k.append(el('span', 'satz', r.answer), el('span', 'hinweis', T.ki)); antwort.append(k) }
+      const ub = unterlagenBlase(r.docs); if (ub) antwort.append(ub)
+      if (r.texte?.satz) antwort.append(el('div', 'blase ergebnis', r.texte.satz))
+      const ab = el('div', 'rueckfrage abschluss'), bl = el('div', 'blase'), kopf = el('div', 'kopfzeile')
+      kopf.append(el('span', 'frage', r.texte?.frage || ''), neueSuche())
+      bl.append(kopf); ab.append(bl); antwort.append(ab)
+      verlauf.append(antwort)
+      verlauf.scrollTop = Math.max(0, antwort.offsetTop - 8)
+    }
+
     function antwortZumProdukt(r) {
       const antwort = el('div', 'karten antwort')
       const b = el('div', 'blase ueber ergebnis')
@@ -591,6 +614,7 @@ tr.gleich td { color: var(--leise); }
         if (r.kurz) { blase(r.texte?.satz || ''); return }   // Gruss, Dank, Abschied
         if (r.about) { antwortZumProdukt(r); return }   // eine Frage zum Produkt im Blick: seine Werte, seine Unterlagen
         if (r.antworten) { antwortZuDenTreffern(r); return }   // eine Frage zu den gezeigten Produkten
+        if (r.problem) { antwortProblem(r); return }   // eine Frage nach einem Problem oder zur Pflege: die Unterlagen
         if (r.sortiment) { antwortSortiment(r); return }   // eine Frage nach dem Sortiment
         // was jetzt gilt, sagt der Kern: die gesammelten Wörter und alle Filter, auch die aus dem Text erkannten — mit Bezeichnungen
         if (Array.isArray(r.words)) { zustand.woerter = r.words; zustand.gruppe = r.group ?? null }
@@ -687,6 +711,14 @@ tr.gleich td { color: var(--leise); }
         t.append(tb); inhalt.append(t)
         zeige(rahmen)
       } catch (e) { blase(e.message) }
+    })
+
+    eingabe.addEventListener('keydown', ev => {
+      if ((ev.key !== 'ArrowUp' && ev.key !== 'ArrowDown') || !eingaben.length) return
+      ev.preventDefault()
+      blaettern = ev.key === 'ArrowUp' ? (blaettern < 0 ? eingaben.length - 1 : Math.max(0, blaettern - 1)) : (blaettern < 0 ? -1 : blaettern + 1)
+      if (blaettern >= eingaben.length) blaettern = -1
+      eingabe.value = blaettern < 0 ? '' : eingaben[blaettern]
     })
 
     formular.addEventListener('submit', ev => {

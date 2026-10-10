@@ -25,7 +25,8 @@ public static partial class AdvisorApi
     /// <paramref name="Gruppe"/>: nur Produkte dieser Gruppe des Publikationsbaums (<see cref="Gruppe.Key"/>, 09.10.2026).</param>
     public sealed record Auswahl(List<string>? Art = null, List<Filter>? Angaben = null, List<string>? Ordnen = null, string? Satz = null, string? Fokus = null,
         int? Take = null, int? Skip = null, string? Locale = null, bool? Lockern = null, List<string>? Hinten = null, bool? Probe = null, string? Gruppe = null);
-    public sealed record DocsAnfrage(string? Satz = null, List<string>? Art = null, string? Fokus = null, string? Locale = null);
+    /// <param name="Problem">eine Frage nach einem Problem oder zur Pflege — in einem engen Rahmen gilt <see cref="AdvisorApi.DokProblemGrenze"/></param>
+    public sealed record DocsAnfrage(string? Satz = null, List<string>? Art = null, string? Fokus = null, string? Locale = null, bool? Problem = null);
     public sealed record KiUnterlage(string? Quelle, string? Text);
     /// <param name="Auftrag"><c>angaben</c> (übersetze den Satz in Angaben) oder <c>antwort</c> (ein Text zu den Treffern oder zum Produkt im Blick)</param>
     public sealed record KiAuftrag(string? Auftrag = null, string? Satz = null, List<string>? Verlauf = null, List<string>? Treffer = null, List<string>? Merkmale = null,
@@ -245,14 +246,15 @@ public static partial class AdvisorApi
             if (satz.Length > MaxFrage) return Bad("Eine Frage hat höchstens {0} Zeichen.", MaxFrage);
             var b = BestandVon(c, key, d!, Sprache(c, d!, body.Locale));
             var art = SaubereWoerter(body.Art);
-            var doks = c.Lesen((_, tree) =>
+            var (doks, eng) = c.Lesen((_, tree) =>
             {
                 var alle = Unterlagen(c, b, d!.Role!, c.Users.RightsOf(d.Role!).Contains(Rights.Users));
                 HashSet<string>? knoten = body.Fokus is { Length: > 0 } fid && b.NachId.TryGetValue(fid, out var bl) ? KnotenVon(tree, [bl])
                     : art.Count > 0 ? KnotenVon(tree, b.Produkte.Where(e => art.All(w => Staerke(e, w) >= 2))) : null;
-                return knoten is null ? alle : alle.Where(m => b.Dokumente.TryGetValue(m, out var n) && knoten.Contains(n)).ToList();
+                return (knoten is null ? alle : alle.Where(m => b.Dokumente.TryGetValue(m, out var n) && knoten.Contains(n)).ToList(), knoten is not null);
             });
-            var (auszuege, warnung) = await AbschnitteAsync(satz, doks, docs, vectors, embedder, ct);
+            // eine Frage nach einem Problem in einem engen Rahmen: die weitere Grenze (10.10.2026); ohne Rahmen bleibt die allgemeine
+            var (auszuege, warnung) = await AbschnitteAsync(satz, doks, docs, vectors, embedder, ct, body.Problem == true && eng ? DokProblemGrenze : DokSinnGrenze);
             return Results.Ok(new { docs = AlsUnterlagen(c, b, auszuege), warning = warnung });
         });
 

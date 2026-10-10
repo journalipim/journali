@@ -2895,6 +2895,16 @@ einem Produkt, nichts ist eine Angabe) und findet journali nichts — oder es is
 „Ich kann Ihnen mit den Produkten weiterhelfen, die wir im Angebot haben:“, die Gruppen des Sortiments, „Zu anderen Fragen kann ich
 leider keine Auskunft geben.“
 
+**Fragen nach einem Problem (10.10.2026).** „meine hose hat ein loch“, „der reißverschluss klemmt“, „zelt wird innen nass“, „wie wasche
+ich …“ sind keine Produktsuche (`istProblem`, `kern/verstehen.mjs`; „nass“ zählt nur nach „ist/wird“, „für nasses Wetter“ bleibt eine Suche).
+Die Antwort stehen die Unterlagen der genannten Art, sonst des Produkts im Blick, sonst der zuletzt gesuchten Art; in diesem engen Rahmen gilt
+ein Abschnitt bis 0,17 statt 0,145 (`DokProblemGrenze`, gemessen: die richtigen lagen bei 0,088–0,162). Die Problemwörter werden keine
+Angaben, es gibt keine Assoziationen („loch“ suchte vorher nach „wasser“), die gesammelten Angaben bleiben. Zuletzt fragt der Berater „Hilft
+Ihnen das weiter?“; ohne passende Unterlage sagt er, dass es keine Anleitung gibt.
+
+**Frühere Eingaben (10.10.2026).** Ein Klick auf die eigene Blase setzt ihren Text in die Eingabezeile; ↑ und ↓ in der Eingabezeile blättern
+durch die Eingaben — nur im Arbeitsspeicher der Seite.
+
 **Die Beschreibung steht auf der Karte (10.10.2026).** Jede Karte der Auswahl bringt den Anfang ihrer Beschreibung mit (`text`: der
 erste Absatz des ersten HTML-Attributs der Sicht, höchstens 240 Zeichen, an einer Wortgrenze gekürzt — `KartenText`); das Fenster zeigt ihn
 unter dem Namen. Gibt es Treffer, erscheinen Dokumente an einem einzelnen Produkt oder einer Variante (Datenblätter) nicht mehr als eigene

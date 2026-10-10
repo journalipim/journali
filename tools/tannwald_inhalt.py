@@ -209,9 +209,10 @@ K["Hosen"] = dict(
                       "Die Zähne greifen nicht mehr ineinander oder fehlen: das Band muss getauscht werden — das übernimmt unsere Werkstatt.",
                       "Der Reißverschluss klemmt: Zähne mit Kerzenwachs, Seife oder einem Grafitstift einreiben und den Schieber mehrmals bewegen.",
                       "Nur die Zuglasche ist abgebrochen: ein kleiner Schlüsselring oder eine Schlaufe aus Reepschnur ersetzt sie."]]),
-        ("Reparatur: Knopf, Saum und kleine Risse", ["Einen losen Knopf nähen Sie mit doppeltem Polyestergarn an. Ein gelöster Saum lässt "
-                     "sich mit einem Saumband aufbügeln. Kleine Risse im Material flicken Sie mit einem aufbügelbaren Flicken von innen; bei "
-                     "größeren Schäden reparieren wir die Hose in unserer Werkstatt."]),
+        ("Reparatur: Loch, Riss, Knopf und Saum", ["Ein kleines Loch oder einen Riss im Material flicken Sie mit einem aufbügelbaren "
+                     "Flicken von innen: Stelle säubern, Flicken etwas größer als das Loch zuschneiden, mit dem Bügeleisen ohne Dampf andrücken. "
+                     "Bei Löchern an Knie oder Gesäß hält ein aufgenähter Flicken länger. Einen losen Knopf nähen Sie mit doppeltem Polyestergarn "
+                     "an. Ein gelöster Saum lässt sich mit einem Saumband aufbügeln. Größere Schäden reparieren wir in unserer Werkstatt."]),
         ("Häufige Fragen", ["Läuft die Hose beim Waschen ein? Nein, das Material ist vorgewaschen; bei 30 °C bleibt die Größe erhalten.",
                      "Welche Schrittlänge hat die Hose? Die Schrittlänge steht in den technischen Daten; Kurz- und Langgrößen fertigen wir auf Anfrage.",
                      "Ist die Hose wasserdicht? Nein, sie ist wasserabweisend. Bei Dauerregen gehört eine Regenhose darüber."]),

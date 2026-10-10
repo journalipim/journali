@@ -6,7 +6,7 @@
 // geklickt, KI, übernommen), Vorlieben über einen Themenwechsel, gesehene und abgelehnte Produkte, das Produkt im Blick, der Verlauf. Die Kennung
 // eines Gesprächs ist zufällig und trägt keine Person; ohne Kennung (ein Agent über MCP) steht jede Frage für sich. Nichts davon geht ins Journal.
 import { woerter, gleichesWort, korrektur, ganz, weg } from './woerter.mjs'
-import { erkenne, fragt, namenWoerter, istArt, imNamen } from './verstehen.mjs'
+import { erkenne, fragt, namenWoerter, istArt, imNamen, istProblem } from './verstehen.mjs'
 import { texte, angabeText } from './texte.mjs'
 import { stellen, genau } from './stellen.mjs'
 import { grundwissen, fragtShop } from './wissen.mjs'
@@ -107,7 +107,7 @@ export function erstelleKern(o) {
   }
 
   async function unterlagen(loc, a) {
-    const r = await journali('docs', { satz: a.satz ?? '', art: a.art ?? [], locale: loc, ...(a.fokus ? { fokus: a.fokus } : {}) })
+    const r = await journali('docs', { satz: a.satz ?? '', art: a.art ?? [], locale: loc, ...(a.fokus ? { fokus: a.fokus } : {}), ...(a.problem ? { problem: true } : {}) })
     return r.status === 200 ? r.json : { docs: [], warning: r.json?.error ?? null }
   }
 
@@ -232,6 +232,26 @@ export function erstelleKern(o) {
       if (!z.abgelehnt.includes(schritt.id)) z.abgelehnt = [...z.abgelehnt, schritt.id].slice(-MAX_ABGELEHNT)
       if (schritt.name) hinweise.push(T.abgelehnt(String(schritt.name).slice(0, 120)))
       lernen?.notiere('abgelehnt', { woerter: z.woerter, id: schritt.id })
+    }
+
+    // ---- eine Frage nach einem Problem oder zur Pflege (10.10.2026): „meine hose hat ein loch“ ist keine Produktsuche — die Antwort steht in den
+    // Unterlagen der genannten Art, sonst des Produkts im Blick, sonst der zuletzt gesuchten Art. Die Problemwörter werden keine Angaben, es gibt
+    // keine Assoziationen; die gesammelten Angaben bleiben, wie sie sind.
+    // „werden die nass?“ zeigt auf die gezeigten Produkte — eine Frage nach ihrer Eigenschaft, kein Problem; „die“ vor einer Art ist ein Artikel
+    const aufGezeigte = [...eingabe.toLowerCase().matchAll(/(?:^|[^\p{L}])(die|diese|sie|they|these|those)(?:\s+(\p{L}+))?/gu)].some(m => !m[2] || !istArt(m[2], namen))
+    if (eingabe && !schritt && istProblem(eingabe) && !(aufGezeigte && z.zuletzt.length)) {
+      const artP = woerter(eingabe).filter(w => istArt(w, namen))
+      const fokus = z.fokus && (!artP.length || artP.every(w => imNamen(w, z.fokusName ?? ''))) ? z.fokus : null
+      const d = await unterlagen(loc, { satz: eingabe, art: artP.length ? artP : fokus ? [] : z.art, ...(fokus ? { fokus } : {}), problem: true })
+      const docs = d.docs ?? []
+      let answer = null, warning = d.warning ?? null
+      if (vok.ki && ki && docs.length) {
+        const k = await kiText(loc, { satz: eingabe, ...(fokus ? { fokus } : {}), verlauf: z.verlauf.slice(-MAX_VERLAUF), unterlagen: quellen(docs) })
+        answer = k.text ?? null; warning = warning ?? k.warning ?? null
+      }
+      z.verlauf = [...z.verlauf, eingabe].slice(-MAX_VERLAUF)
+      return { gespraech: id, locale: loc, problem: true, total: 0, hits: [], facets: [], docs, answer, warning, corrected: [],
+        texte: { satz: docs.length || answer ? null : T.problemNichts, hinweise: [], frage: T.hilftDas } }
     }
 
     // ---- eine Frage zum Produkt im Blick: „ist das zelt wasserdicht?“ — nur, wenn die Eingabe eine Frage ist und keine andere Art nennt

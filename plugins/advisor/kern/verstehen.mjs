@@ -114,6 +114,19 @@ export function erkenne(vok, q) {
   return { angaben: aus, rest: rest.replace(/\s+/g, ' ').trim() }
 }
 
+/// Fragt die Eingabe nach einem Problem oder nach Pflege und Reparatur (10.10.2026)? „meine hose hat ein loch“, „reißverschluss klemmt“, „zelt
+/// wird innen nass“, „wie wasche ich …“ — das ist keine Produktsuche, die Antwort steht in den Unterlagen. „für nasses Wetter“ ist kein Problem:
+/// „nass“ zählt nur nach „ist“, „wird“, „sind“, „werden“.
+const PROBLEM = new RegExp('(^|[^\\p{L}])(' + [
+  'kaputt', 'defekt', 'loch', 'löcher', 'riss', 'risse', 'gerissen', 'reißt', 'reisst', 'zerrissen', 'undicht', 'leck', 'tropft', 'klemmt', 'hakt',
+  'schimmel\\p{L}*', 'stockflecken', 'stinkt', 'riecht', 'abgebrochen', 'gebrochen', 'löst sich', 'loest sich', 'quietscht', 'scheuert', 'verfärbt',
+  'eingelaufen', 'ausgeleiert', 'repar\\p{L}*', 'flick\\p{L}*', 'wasch\\p{L}*', 'wäsch\\p{L}*', 'imprägnier\\p{L}*', 'impraegnier\\p{L}*',
+  'reinig\\p{L}*', 'nicht mehr', 'geht nicht', 'geht auf', 'geht ab', 'ist ab', 'funktioniert nicht', 'zündet nicht', 'verliert luft',
+  '(ist|sind|wird|werden)( \\p{L}+){0,3} (nass|feucht)',
+  'broken', 'hole', 'torn', 'ripped', 'leak\\p{L}*', 'stuck', 'repair\\p{L}*', 'fix', 'wash\\p{L}*', 'clean\\p{L}*', 'not working', 'gets wet', 'is wet',
+].join('|') + ')(?=$|[^\\p{L}])', 'iu')
+export function istProblem(q) { return PROBLEM.test(String(q ?? '').toLowerCase()) }
+
 /// Ist die Eingabe eine Frage? Ein Fragezeichen oder ein Fragewort am Anfang („ist“, „hat“, „wie“, „welche“ …)
 export function fragt(q) {
   const t = String(q ?? '').trim().toLowerCase()
