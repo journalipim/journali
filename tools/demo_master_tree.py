@@ -347,21 +347,30 @@ class Baum:
         self.rows.append({"id": id_, "parent": parent, "role": role, "label": label})
 
 
-def gruppen_anhaengen(api: Api, node: str, attributes: list[str]) -> None:
-    """Hängt an node die Attributgruppen, ohne die ein Demo-Attribut auf diesem Pfad nicht gälte (je Attribut seine erste Gruppe)."""
+def gruppen_anhaengen(api: Api, node: str, attributes: list[str], gruppe: tuple[str, str, str]) -> None:
+    """Sorgt dafür, dass die Demo-Attribute an node gelten — über die eigene Gruppe des Generators (gruppe: Schlüssel, de, en), nie über fremde.
+    Gilt ein Attribut am Pfad nicht, wird es zusätzlich Mitglied der eigenen Gruppe (n:m, Abschnitt 36), und die eigene Gruppe hängt an node.
+    Vorher hing das Skript die erste Gruppe des Attributs an (10.10.2026: „price“ mit Heimatgruppe „solr“ aus einem Import brachte den ganzen
+    Reiter „solr“ an alle Tannwald-Produkte)."""
+    key, de, en = gruppe
     model = api.get("/api/model")
     attrs = model["attributes"] if isinstance(model["attributes"], list) else list(model["attributes"].values())
-    gruppen_von = {a["key"]: (a.get("groups") or [a.get("group")]) for a in attrs}
+    nach_key = {a["key"]: a for a in attrs}
+    if not any(isinstance(g, dict) and g.get("key") == key and g.get("defined") for g in (model.get("groups") or [])):
+        api.put(f"/api/model/groups/{key}", {"key": key, "label": labels(de, en)})
     gilt = {g["key"] for g in (api.get(f"/api/nodes/{node}").get("groups") or []) if isinstance(g, dict) and g.get("key")}
+    mitglied = []
+    for k in attributes:
+        a = nach_key.get(k)
+        gs = [g for g in ((a or {}).get("groups") or [(a or {}).get("group")]) if g]
+        if a and not any(g in gilt for g in gs) and key not in gs:
+            api.call("PUT", f"/api/model/attributes/{k}", soft=True, json={**a, "groups": sorted((set(gs) | {key}) - {a.get("group")})})
+            mitglied.append(k)
     eigen = [x for x in (next((n.get("groups") for n in api.get("/api/tree") if n["id"] == node), None) or "").split(",") if x]
-    dazu = []
-    for key in attributes:
-        gs = [g for g in gruppen_von.get(key, []) if g]
-        if gs and not any(g in gilt for g in gs) and gs[0] not in dazu:
-            dazu.append(gs[0])
-    if dazu:
-        api.put(f"/api/nodes/{node}/groups", {"groups": eigen + dazu})
-        print(f"  Attributgruppen angehängt: {', '.join(dazu)}")
+    if key not in eigen and (mitglied or key not in gilt):
+        api.put(f"/api/nodes/{node}/groups", {"groups": eigen + [key]})
+    if mitglied:
+        print(f"  Attribute in der Gruppe {key}: {', '.join(mitglied)}")
 
 
 TANNWALD_ATTRS = ["name", "description", "material", "weight", "brand", "sku", "ean", "price", "size", "shoe_size", "capacity", "color"]
@@ -652,7 +661,7 @@ def build(api: Api, out_dir: str | None, want: int, anreichern: bool = False, pd
     da = baum.kind(ROOT, "group", f"{BRAND} Outdoor")
     brand_group = baum.gruppe(ROOT, f"{BRAND} Outdoor", f"{BRAND} Outdoor")
     print(f"Gruppe {BRAND} Outdoor: {brand_group}" + (" (vorhanden, der Lauf knüpft an)" if da else ""))
-    gruppen_anhaengen(api, brand_group, TANNWALD_ATTRS)
+    gruppen_anhaengen(api, brand_group, TANNWALD_ATTRS, INHALT.SHOP_GRUPPE)
     gruppen_dazu(api, brand_group, [INHALT.SHOP_GRUPPE[0]])
     api.set_value(brand_group, "brand", BRAND)
     api.set_value(brand_group, "warranty_years", "5")
@@ -859,7 +868,7 @@ def build_konfigurator(api: Api) -> None:
     da = baum.kind(ROOT, "group", SERVER_GROUP)
     top = baum.gruppe(ROOT, SERVER_GROUP, "Server configurator (demo)")
     print(f"Gruppe {SERVER_GROUP}: {top}" + (" (vorhanden, der Lauf knüpft an)" if da else ""))
-    gruppen_anhaengen(api, top, SERVER_ATTRS)
+    gruppen_anhaengen(api, top, SERVER_ATTRS, ("demo_konfigurator", "Server-Konfigurator (Demo)", "Server configurator (demo)"))
     subs = {}
     for key, de, en in SERVER_SUBGROUPS:
         subs[key] = baum.gruppe(top, de, en)
