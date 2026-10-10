@@ -129,6 +129,7 @@ catalog.ZaehltAb = licences.Lic.CountFrom;   // ab wann gezählt wird
 var seeded = catalog.SeedMissing();
 // Demo (07.10.2026): eingerichtet wird nach den Plugins (Demo.Einrichten unten), gilt aber von hier an
 Demo.An = Environment.GetEnvironmentVariable("JOURNALI_DEMO") == "1";
+Demo.Einstieg = Environment.GetEnvironmentVariable("JOURNALI_DEMO_EINSTIEG");   // Seite mit Anleitung und Bedingungen vor der Demo (10.10.2026)
 // Server auf derselben Datenbank (pflegestruktur 41): Kennung, Puls, Rolle. Der erste Takt gleich hier, damit der Start weiss, ob er Hauptserver ist
 var verbund = new Verbund(db, catalog, dataDir, typeof(Program).Assembly.GetName().Version?.ToString(3), System.IO.File.GetLastWriteTimeUtc(typeof(Program).Assembly.Location));
 try { verbund.Takt(); } catch (Exception e) { Console.WriteLine($"journali: server not registered — {e.Message}"); }
@@ -357,6 +358,8 @@ app.Use(async (ctx, next) =>
 app.UseRateLimiter();
 // Demo: wer fragt — für das Kontingent je Besucher (Demo.Zaehle); hinter dem Proxy aus X-Forwarded-For (JOURNALI_PROXY)
 if (Demo.An) app.Use(async (ctx, next) => { Demo.Absender.Value = ctx.Connection.RemoteIpAddress?.ToString(); await next(); });
+// Demo: wer nicht über die Seite mit Anleitung und Bedingungen kommt, wird dorthin umgeleitet (JOURNALI_DEMO_EINSTIEG, 10.10.2026)
+if (Demo.An && !string.IsNullOrWhiteSpace(Demo.Einstieg)) app.Use(Demo.Einstiegsweg);
 // Ein gesperrter Server (pflegestruktur 41) beantwortet unter /api nur noch /api/health — entsperrt wird er von einem anderen Server aus
 app.Use(async (ctx, next) =>
 {

@@ -27,7 +27,7 @@ public static class Auth
     /// <summary>Darf ein Benutzer mit dieser Rolle Benutzer verwalten? („Administrator“ heißt: das Recht users)</summary>
     public static bool IsAdmin(Catalog c, string role) => RightsOf(c, role).Contains(Rights.Users);
     private static int AdminsLeft(Catalog c) => c.Lesen((_, _) => c.Users.All.Values.Count(u => u.Enabled && c.Users.RightsOf(u.Role).Contains(Rights.Users)));
-    private const string Cookie = "journali.session";
+    internal const string Cookie = "journali.session";
     /// <summary>Die Zähler der Fehlversuche bei der Anmeldung (ein Prozess, ein Zähler).</summary>
     public static readonly LoginBremse Bremse = new();
     /// <summary>Wie gross der Körper eines Aufrufs ohne Sitzung höchstens sein darf: eine Anmeldung ist ein paar hundert Bytes.</summary>

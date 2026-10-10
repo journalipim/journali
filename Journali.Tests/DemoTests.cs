@@ -332,6 +332,55 @@ public class DemoAnmeldungTests
     }
 
     [Fact]
+    public async Task Ohne_Einstieg_leitet_die_Demo_auf_die_Seite_mit_den_Bedingungen()
+    {
+        // 10.10.2026: eine Seite der Demo ohne ?einstieg, Cookie, Sitzung oder Referrer der Seite geht auf JOURNALI_DEMO_EINSTIEG; die API nie
+        var b = WebApplication.CreateBuilder(); b.WebHost.UseUrls("http://127.0.0.1:0");
+        await using var app = b.Build();
+        app.Use(Demo.Einstiegsweg);
+        app.MapGet("/", () => "oberflaeche"); app.MapGet("/tree", () => "oberflaeche"); app.MapGet("/api/health", () => "ok"); app.MapGet("/logo.png", () => "bild");
+        await app.StartAsync();
+        var url = app.Urls.First();
+        Demo.An = true; Demo.Einstieg = "https://example.org/testen/";
+        try
+        {
+            using var http = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false, UseCookies = false });
+            async Task<HttpResponseMessage> Hole(string pfad, string? cookie = null, string? von = null)
+            {
+                var req = new HttpRequestMessage(HttpMethod.Get, url + pfad);
+                if (cookie is not null) req.Headers.Add("Cookie", cookie);
+                if (von is not null) req.Headers.Referrer = new Uri(von);
+                return await http.SendAsync(req);
+            }
+            var direkt = await Hole("/");
+            Assert.Equal(System.Net.HttpStatusCode.Redirect, direkt.StatusCode);
+            Assert.Equal("https://example.org/testen/", direkt.Headers.Location!.ToString());
+            Assert.Equal(System.Net.HttpStatusCode.Redirect, (await Hole("/tree")).StatusCode);
+            Assert.Equal(System.Net.HttpStatusCode.OK, (await Hole("/api/health")).StatusCode);   // die API nie
+            Assert.Equal(System.Net.HttpStatusCode.OK, (await Hole("/logo.png")).StatusCode);   // Dateien nicht
+            // der Link der Seite: Cookie für einen Tag, weiter ohne den Parameter
+            var link = await Hole("/?einstieg&lang=de");
+            Assert.Equal(System.Net.HttpStatusCode.Redirect, link.StatusCode);
+            Assert.Equal("/?lang=de", link.Headers.Location!.ToString());
+            var gesetzt = link.Headers.GetValues("Set-Cookie").Single();
+            Assert.StartsWith(Demo.EinstiegCookie + "=1", gesetzt);
+            Assert.Equal(System.Net.HttpStatusCode.OK, (await Hole("/tree", gesetzt.Split(';')[0])).StatusCode);
+            Assert.Equal(System.Net.HttpStatusCode.OK, (await Hole("/tree", "journali.session=x")).StatusCode);   // angemeldet: kein Umweg
+            // der Referrer der Seite genügt auch, und er setzt das Cookie
+            var verwiesen = await Hole("/", von: "https://example.org/");
+            Assert.Equal(System.Net.HttpStatusCode.OK, verwiesen.StatusCode);
+            Assert.StartsWith(Demo.EinstiegCookie + "=1", verwiesen.Headers.GetValues("Set-Cookie").Single());
+            Assert.Equal(System.Net.HttpStatusCode.Redirect, (await Hole("/", von: "https://anderswo.example/")).StatusCode);
+            // ohne Variable oder ohne Demo: keine Umleitung
+            Demo.Einstieg = null;
+            Assert.Equal(System.Net.HttpStatusCode.OK, (await Hole("/")).StatusCode);
+            Demo.Einstieg = "https://example.org/testen/"; Demo.An = false;
+            Assert.Equal(System.Net.HttpStatusCode.OK, (await Hole("/")).StatusCode);
+        }
+        finally { Demo.An = false; Demo.Einstieg = null; }
+    }
+
+    [Fact]
     public async Task In_der_Demo_meldet_sich_kein_Administrator_an()
     {
         // 07.10.2026: auch wenn es einen Administrator mit Passwort gäbe — Anmeldung und Sitzung gelten in der Demo nur für demo

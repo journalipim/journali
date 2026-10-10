@@ -4,7 +4,7 @@ import { RECHTLICHES } from '../help.js'   // Impressum und Datenschutz — in d
 // danach ist der Server gesperrt und der Urheber jedes Eintrags kommt aus der Sitzung.
 // Stehen im Journal Administratoren, von denen keiner ein Passwort hat (Datenbank von einem anderen Server), legt man hier
 // für einen von ihnen eines fest. Beides verlangt den Einrichtungscode aus der Konsole des Servers.
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, watch, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '../api.js'
 import { store } from '../store.js'
@@ -19,6 +19,8 @@ function sperreStart(sek) {
   uhr = setInterval(() => { sperre.value = Math.max(0, sperre.value - 1); if (sperre.value === 0) { clearInterval(uhr); error.value = '' } }, 1000)
 }
 onUnmounted(() => clearInterval(uhr))
+// Demo (10.10.2026): Anmeldename und Passwort stehen schon da — Enter meldet an. Kommt store.demo erst mit /api/health, füllt es dann
+watch(() => store.demo && !store.auth.setup && !store.auth.claim, d => { if (d && !user.value && !password.value) { user.value = 'demo'; password.value = 'demo' } }, { immediate: true })
 onMounted(async () => {
   await store.loadAuth()
   if (store.auth.enabled && store.auth.user) router.replace('/tree')

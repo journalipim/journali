@@ -67,6 +67,53 @@ public static class Demo
     }
 
     /// <summary>
+    /// Einstieg der Demo (10.10.2026): <c>JOURNALI_DEMO_EINSTIEG</c> nennt eine Seite mit Anleitung und Bedingungen. Wer eine Seite der Demo
+    /// aufruft, ohne von dort zu kommen, wird dorthin umgeleitet; ihr Link auf die Demo trägt den Parameter <see cref="EinstiegParameter"/>
+    /// (<c>?einstieg</c>). Der Parameter oder ein Referrer mit dem Host der Seite setzt das Cookie <see cref="EinstiegCookie"/> für einen Tag, danach
+    /// gilt die Demo ohne Umweg; eine Sitzung genügt ebenso. Kein Schutz: wer den Parameter kennt, kommt direkt herein — die Umleitung führt den
+    /// gewöhnlichen Besucher über die Seite. Der Referrer allein reicht nicht, ein Browser darf ihn weglassen. Die API wird nie umgeleitet.
+    /// Ohne die Variable gibt es keine Umleitung.
+    /// </summary>
+    public static string? Einstieg { get; set; }
+    public const string EinstiegParameter = "einstieg";
+    public const string EinstiegCookie = "journali.demo";
+
+    /// <summary>Was mit einer Anfrage geschieht: null — weiter; sonst die Adresse, auf die umgeleitet wird. <paramref name="merken"/>: das Cookie setzen.</summary>
+    public static string? EinstiegFuer(HttpRequest r, out bool merken)
+    {
+        merken = false;
+        if (!An || string.IsNullOrWhiteSpace(Einstieg) || !HttpMethods.IsGet(r.Method) && !HttpMethods.IsHead(r.Method)) return null;
+        var pfad = r.Path.Value ?? "/";
+        // nur Seiten der Oberfläche: keine API, keine Dateien (Skripte, Bilder, Manifest — sie lädt die Seite selbst)
+        if (r.Path.StartsWithSegments("/api") || Path.HasExtension(pfad)) return null;
+        if (r.Query.ContainsKey(EinstiegParameter))
+        {
+            merken = true;
+            var rest = string.Join("&", r.Query.Where(q => q.Key != EinstiegParameter).SelectMany(q => q.Value.Select(v => Uri.EscapeDataString(q.Key) + "=" + Uri.EscapeDataString(v ?? ""))));
+            return pfad + (rest.Length > 0 ? "?" + rest : "");   // ohne den Parameter: die Adresse in der Leiste bleibt sauber
+        }
+        if (r.Cookies.ContainsKey(EinstiegCookie) || r.Cookies.ContainsKey(Auth.Cookie)) return null;
+        if (Uri.TryCreate(r.Headers.Referer.ToString(), UriKind.Absolute, out var von) && Uri.TryCreate(Einstieg, UriKind.Absolute, out var seite)
+            && string.Equals(von.Host, seite.Host, StringComparison.OrdinalIgnoreCase))
+        {
+            merken = true;
+            return null;
+        }
+        return Einstieg;
+    }
+
+    /// <summary>Die Umleitung als Schritt der Pipeline (<see cref="EinstiegFuer"/>).</summary>
+    public static async Task Einstiegsweg(HttpContext ctx, Func<Task> next)
+    {
+        var ziel = EinstiegFuer(ctx.Request, out var merken);
+        if (merken)
+            ctx.Response.Cookies.Append(EinstiegCookie, "1", new CookieOptions { HttpOnly = true, SameSite = SameSiteMode.Lax, Secure = ctx.Request.IsHttps, Path = "/", Expires = DateTimeOffset.UtcNow.AddDays(1) });
+        if (ziel is null) { await next(); return; }
+        ctx.Response.Headers.CacheControl = "no-store";
+        ctx.Response.Redirect(ziel);
+    }
+
+    /// <summary>
     /// Kontingent der Demo (07.10.2026): so viele zählende Einträge (Datenpflege) je Woche und Monat für das Init Team, also für alle Besucher
     /// zusammen. Die Demo startet jeden Tag mit leerem Journal, damit ist es ein Tageskontingent. Gesetzt wird es zuletzt beim Einrichten — eine
     /// Änderung der Grenzen lässt die Zählung neu beginnen, der Beispielkatalog zählt nicht mit. Die Startphase hebt es in der Demo nicht auf.

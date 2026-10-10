@@ -625,7 +625,13 @@ dass eine Wiederherstellung gelingt. Die Oberfläche sagt das in ⇅ B&R und im 
 `JOURNALI_DEMO=1` macht eine Instanz zur öffentlichen Demo (`Demo.cs`, `DemoBilder.cs`). **Ansehen ja, speichern und neu anlegen nein** —
 ausser bei den Werten der Produkte, die pflegt man wie sonst.
 
-- **Anmeldung mit demo / demo** (07.10.2026): die Anmeldeseite nennt den Zugang; das Passwort setzt der Start (`Demo.Passwort`, im Tresor), ändern
+- **Einstieg** (10.10.2026): `JOURNALI_DEMO_EINSTIEG` nennt eine Seite mit Anleitung und Bedingungen (die Adresse der Seite „journali
+  testen“). Wer eine Seite der Demo aufruft, ohne von dort zu kommen, wird dorthin umgeleitet. Der Link der Seite auf die Demo trägt
+  `?einstieg` (`https://<demo>/?einstieg`); der Parameter setzt das Cookie `journali.demo` für einen Tag und leitet auf die Adresse ohne ihn weiter.
+  Ein Referrer mit dem Host der Seite setzt das Cookie ebenso, reicht aber nicht allein — ein Browser darf ihn weglassen. Mit Sitzung gibt es
+  keinen Umweg, die API und Dateien werden nie umgeleitet. Ein Schutz ist es nicht: wer `?einstieg` kennt, kommt direkt herein. Ohne die
+  Variable keine Umleitung (`Demo.Einstiegsweg`).
+- **Anmeldung mit demo / demo** (07.10.2026): die Anmeldeseite nennt den Zugang und hat ihn vorbelegt (10.10.2026: Enter meldet an); das Passwort setzt der Start (`Demo.Passwort`, im Tresor), ändern
   lässt es sich nicht. Ein anderer Anwender meldet sich in der Demo nicht an, auch kein Administrator: Anmeldung, Sitzung und API-Token
   gelten nur für `demo`, `JOURNALI_ADMIN_PASSWORD` wird übergangen, Einrichten und Passwort festlegen sind gesperrt. Die Bremse gegen Fehlversuche gilt für `demo` nur je Absender, nicht je Name — sonst sperrte ein Fehlversuch alle Besucher.
   Angemeldet ist man der Anwender `demo` mit der Rolle `demo` — lesen, Werte pflegen,

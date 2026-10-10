@@ -72,6 +72,33 @@ test('Demo: die Anmeldeseite nennt Anmeldename und Passwort', async () => {
   w.unmount()
 })
 
+// Demo (10.10.2026): Anmeldename und Passwort stehen schon da — Enter meldet als demo an
+test('Demo: demo / demo ist vorbelegt, Enter meldet an', async () => {
+  const rufe = []
+  globalThis.fetch = async (url, opt = {}) => {
+    rufe.push({ pfad: String(url).replace(/^https?:\/\/[^/]+/, ''), body: opt.body ? JSON.parse(opt.body) : null })
+    return { ok: true, status: 200, statusText: '', headers: new Headers(), text: async () => '{}', json: async () => ({}) }
+  }
+  store.demo = true
+  try {
+    store.auth = { known: true, enabled: true, setup: false, user: null }
+    const w = mount(LoginView, { global: { provide: { [routerKey]: router } } })
+    await flushPromises()
+    assert.equal(w.find('input[type=text]').element.value, 'demo')
+    assert.equal(w.find('input[type=password]').element.value, 'demo')
+    await w.find('form').trigger('submit'); await flushPromises()   // Enter im Feld schickt das Formular ab
+    assert.deepEqual(rufe.find(r => r.pfad === '/api/auth/login')?.body, { user: 'demo', password: 'demo' })
+    w.unmount()
+  } finally { store.demo = false }
+  // ohne Demo bleiben die Felder leer
+  store.auth = { known: true, enabled: true, setup: false, user: null }
+  const w = mount(LoginView, { global: { provide: { [routerKey]: router } } })
+  await flushPromises()
+  assert.equal(w.find('input[type=text]').element.value, '')
+  assert.equal(w.find('input[type=password]').element.value, '')
+  w.unmount()
+})
+
 // Demo (07.10.2026): unter dem Zugang stehen Impressum und Datenschutz — auf journali.de
 test('Demo: die Anmeldeseite verlinkt Impressum und Datenschutz', async () => {
   server({ body: {} })
