@@ -77,7 +77,7 @@ async function save() {
             <td>
               <button v-for="t in [['system', $t('System')], ['light', $t('Hell')], ['dark', $t('Dunkel')]]" :key="t[0]" :class="{ primary: theme === t[0] }" @click="setTheme(t[0])" style="margin-right:4px">{{ t[1] }}</button>
             </td>
-            <td class="muted">{{ $t("System folgt der Windows-Einstellung.") }}</td>
+            <td class="muted">{{ $t("System folgt der Einstellung des Betriebssystems.") }}</td>
           </tr>
           <!-- Oberflächensprache: hängt an der Person, nicht am Rechner; die Sprachen sind die Dateien unter lang/, nicht die des Modells -->
           <tr>

@@ -818,7 +818,7 @@
  "Bis es eine Anmeldung gibt, steht dieser Name als Urheber in jedem Eintrag.": "Until there is a login, this name appears as author in every entry.",
  "Urheber jedes Eintrags": "Author of every entry",
  "◐ Darstellung": "◐ Appearance",
- "System folgt der Windows-Einstellung.": "System follows the Windows setting.",
+ "System folgt der Einstellung des Betriebssystems.": "System follows the operating system setting.",
  "🗣 Sprache": "🗣 Language",
  "Sprache der Oberfläche — Menüs, Knöpfe, Meldungen. Die Sprachen der Produktdaten stehen im Modell.": "Language of the interface — menus, buttons, messages. The languages of the product data are in the model.",
  "Oberfläche": "Interface",

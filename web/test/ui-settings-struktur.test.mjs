@@ -28,6 +28,8 @@ async function sicht(rights, enabled = true) {
 test('ein Leser sieht sich und sein Team — sonst nichts', async () => {
   const w = await sicht(['read'])
   assert.deepEqual(reiter(w), ['◐ Mein Account', '◍ Team'])
+  // die Darstellung „System“ folgt dem Betriebssystem, gleich welchem (14.10.2026: vorher hiess es „der Windows-Einstellung“)
+  assert.match(w.text(), /System folgt der Einstellung des Betriebssystems/)
   await ruhe(); w.unmount()
 })
 
