@@ -716,8 +716,10 @@ app.Lifetime.ApplicationStarted.Register(() =>
 {
     StartAbschnitt("routes, listening");
     var vorher = DateTime.Now - System.Diagnostics.Process.GetCurrentProcess().StartTime - startUhr.Elapsed;   // .NET bis zur ersten Zeile
-    Console.WriteLine($"journali: ready in {startUhr.Elapsed.TotalSeconds:0.0} s — {string.Join(", ", startAbschnitte.Where(a => a.Ms >= 50).Select(a => $"{a.Name} {a.Ms / 1000.0:0.0} s"))}"
-        + $" (before that: runtime {Math.Max(0, vorher.TotalSeconds):0.0} s)");
+    // die Konsole spricht Englisch (04.10.2026) — auch die Zahlen: Punkt statt Komma, gleich wie der Rechner eingestellt ist
+    string S(double sek) => sek.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + " s";
+    Console.WriteLine($"journali: ready in {S(startUhr.Elapsed.TotalSeconds)} — {string.Join(", ", startAbschnitte.Where(a => a.Ms >= 50).Select(a => $"{a.Name} {S(a.Ms / 1000.0)}"))}"
+        + $" (before that: runtime {S(Math.Max(0, vorher.TotalSeconds))})");
     if (app.Urls.FirstOrDefault() is { } eigene && jobRunner.Origin == "http://localhost:5000")
         jobRunner.Origin = System.Text.RegularExpressions.Regex.Replace(eigene, @"//(\+|\*|0\.0\.0\.0|\[::\])(?=[:/]|$)", "//localhost");
     // Demo: die neuen Bilder brauchen Abmessungen und Vorschauen — wie nach einem Hochladen; die Unterlagen (Tannwald) lesen docs und embed.
