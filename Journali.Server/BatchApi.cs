@@ -31,7 +31,10 @@ public static class BatchApi
             if (Actor(req) is not { } actor) return ActorMissing();
             if (r.Commands is null || r.Commands.Count == 0) return Bad("commands fehlt.");
             if (r.Commands.Count > 10_000) return Bad("Höchstens 10 000 Befehle je Stapel.");
-            if (Demo.An && actor == Demo.Anwender && Demo.StapelGesperrt(r.Commands.Select(x => x.Op ?? "").ToList())) return Bad("In der Demo nicht verfügbar.");   // Demo: keine Massenbearbeitung
+            // Demo: keine Massenbearbeitung. Die Grenze steht in der Meldung (14.10.2026): „nicht verfügbar“ las sich, als ginge Übernehmen in der Demo
+            // überhaupt nicht — dabei gehen bis zu MaxStapel Befehle (in der Prüfansicht zwei je Wert: Wert und Beleg)
+            if (Demo.An && actor == Demo.Anwender && r.Commands.Count > Demo.MaxStapel) return Bad("In der Demo höchstens {0} Befehle je Stapel.", Demo.MaxStapel);
+            if (Demo.An && actor == Demo.Anwender && Demo.StapelGesperrt(r.Commands.Select(x => x.Op ?? "").ToList())) return Bad("In der Demo nicht verfügbar.");
             var batch = Blank(r.Batch) ?? "b-" + Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(4)).ToLowerInvariant();
 
             var response = c.WithBatch(actor, batch, (model, tree, write) =>

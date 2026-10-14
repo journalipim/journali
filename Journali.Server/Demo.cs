@@ -683,7 +683,16 @@ public static class Demo
     /// </summary>
     public static int Systemobjekte(Catalog c, string pluginDir)
     {
-        using var doc = System.Text.Json.JsonDocument.Parse(SystemJson(pluginDir));
+        // die Attribute, die es schon gibt — ein Datenpunkt mit gleichem Namen nimmt sie, statt ein eigenes anzulegen
+        var datei = Path.GetTempFileName();
+        string json;
+        try
+        {
+            File.WriteAllText(datei, System.Text.Json.JsonSerializer.Serialize(c.Lesen((m, _) => m.Attributes.Values.Select(a => new { key = a.Key, label = a.Label, type = a.Type }).ToList())));
+            json = NodeJson(SystemSkript, pluginDir, datei);
+        }
+        finally { File.Delete(datei); }
+        using var doc = System.Text.Json.JsonDocument.Parse(json);
         var n = 0;
         foreach (var p in doc.RootElement.EnumerateArray())
         {
@@ -776,14 +785,12 @@ public static class Demo
         Write = (stream, type, payload) => { gezaehlt(); return write(Anwender, stream, type, payload, null); },
     };
 
-    /// <summary>Die Ausgabe von <see cref="SystemSkript"/>: node mit dem Verzeichnis der Plugins.</summary>
-    private static string SystemJson(string pluginDir) => NodeJson(SystemSkript, pluginDir);
-
-    /// <summary>Ein Skript der Demo mit node ausführen (Argument: das Verzeichnis der Plugins) — seine Ausgabe ist eine Zeile JSON.</summary>
-    private static string NodeJson(string skript, string pluginDir)
+    /// <summary>Ein Skript der Demo mit node ausführen (Argumente: das Verzeichnis der Plugins, dazu weitere) — seine Ausgabe ist eine Zeile JSON.</summary>
+    private static string NodeJson(string skript, string pluginDir, params string[] weitere)
     {
         var psi = new System.Diagnostics.ProcessStartInfo("node") { RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false };
         psi.ArgumentList.Add(skript); psi.ArgumentList.Add(pluginDir);
+        foreach (var a in weitere) psi.ArgumentList.Add(a);
         using var proc = System.Diagnostics.Process.Start(psi) ?? throw new InvalidOperationException("Demo: node startet nicht.");
         var aus = proc.StandardOutput.ReadToEndAsync(); var err = proc.StandardError.ReadToEndAsync();
         if (!proc.WaitForExit(30_000)) { proc.Kill(true); throw new InvalidOperationException($"Demo: {Path.GetFileName(skript)} antwortet nicht."); }

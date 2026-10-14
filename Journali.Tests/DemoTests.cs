@@ -188,6 +188,16 @@ public class DemoTests
             Assert.Contains(ClassificationApi.Registered(c.Plugins), r => r.Plugin == plugin && r.Groups.Contains(gruppe) && r.Attributes.Length > 0);
         }
         Assert.True(c.Lesen((_, _) => c.Plugins.All["dpp"].Data.ContainsKey("mapping")));
+        // 14.10.2026: ein Datenpunkt mit gleichem Namen nimmt das vorhandene Attribut (wie beim Einschalten in der Oberfläche) — Gewicht (kg) zeigte
+        // vorher auf eine Formel dpp_weight ohne Ausdruck, obwohl weight in kg gepflegt war
+        using (var zuordnung = System.Text.Json.JsonDocument.Parse(c.Lesen((_, _) => c.Plugins.All["dpp"].Data["mapping"])))
+        {
+            Assert.Equal("weight", zuordnung.RootElement.GetProperty("weight").GetProperty("to").GetString());
+            Assert.Equal("ean", zuordnung.RootElement.GetProperty("gtin").GetProperty("to").GetString());
+            Assert.Equal("dpp_recycled_content", zuordnung.RootElement.GetProperty("recycled_content").GetProperty("to").GetString());   // ohne Gegenstück: eigenes Attribut
+        }
+        Assert.False(c.Lesen((m, _) => m.Attributes.ContainsKey("dpp_weight")));
+        Assert.True(c.Lesen((m, _) => m.Attributes.ContainsKey("dpp_recycled_content")));
         Assert.True(c.Lesen((_, _) => c.Plugins.All["geo"].Data.ContainsKey("targets")));
         Assert.Contains("enrich_geo", c.Lesen((_, t) => t.Nodes[Model.RootNode].Groups));
         foreach (var attr in new[] { "power", "luminous_flux", "socket", "energy_class" })
@@ -439,6 +449,38 @@ public class DemoTests
 [Collection("Startphase")]
 public class DemoAnmeldungTests
 {
+    [Fact]
+    public async Task Ein_zu_grosser_Stapel_nennt_die_Grenze_der_Demo()
+    {
+        // 14.10.2026: „angehakte übernehmen“ mit 1 023 Vorschlägen hiess nur „In der Demo nicht verfügbar.“ — als ginge Übernehmen dort gar nicht
+        var journal = new MemoryJournal();
+        var c = new Catalog(journal); c.Rebuild(); c.SeedMissing();
+        var p = c.With((_, _, write) =>
+        {
+            var g = write("t", Ids.New(Roles.Group), Types.GroupCreated, new GroupCreated(null, Labels.Of("G", "G")), null).Stream;
+            return write("t", Ids.New(Roles.Product), Types.ProductCreated, new ProductCreated(g), null).Stream;
+        });
+        var b = WebApplication.CreateBuilder(); b.WebHost.UseUrls("http://127.0.0.1:0"); b.Services.AddSingleton(c); b.Services.AddSingleton<IJournal>(journal);
+        await using var app = b.Build();
+        app.Use(async (ctx, next) => { ctx.Request.Headers["X-Actor"] = Demo.Anwender; await next(); });
+        BatchApi.Map(app.MapGroup("/api"));
+        await app.StartAsync();
+        using var http = new HttpClient();
+        object Befehle(int n) => new { commands = Enumerable.Range(0, n).Select(i => new { op = "attribute.set", args = new { node = p, attribute = "sku", locale = (string?)null, value = $"S-{i}" } }).ToArray() };
+        Demo.An = true;
+        try
+        {
+            var zuViel = await http.PostAsJsonAsync(app.Urls.First() + "/api/batch", Befehle(Demo.MaxStapel + 1));
+            Assert.Equal(System.Net.HttpStatusCode.BadRequest, zuViel.StatusCode);
+            using var j = System.Text.Json.JsonDocument.Parse(await zuViel.Content.ReadAsStringAsync());
+            Assert.Equal("In der Demo höchstens {0} Befehle je Stapel.", j.RootElement.GetProperty("template").GetString());
+            Assert.Equal(Demo.MaxStapel.ToString(), j.RootElement.GetProperty("args")[0].ToString());
+            var passt = await http.PostAsJsonAsync(app.Urls.First() + "/api/batch", Befehle(Demo.MaxStapel));
+            Assert.True(passt.IsSuccessStatusCode, await passt.Content.ReadAsStringAsync());
+        }
+        finally { Demo.An = false; }
+    }
+
     [Fact]
     public void In_der_Demo_ist_die_Lage_Anmelden()
     {

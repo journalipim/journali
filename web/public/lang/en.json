@@ -2022,6 +2022,7 @@
  "Journal nicht lesbar: {0}": "Journal not readable: {0}",
  "commands fehlt.": "commands is missing.",
  "Höchstens 10 000 Befehle je Stapel.": "At most 10 000 commands per batch.",
+ "In der Demo höchstens {0} Befehle je Stapel.": "At most {0} commands per batch in the demo.",
  "Unbekannter Befehl: {0}": "Unknown command: {0}",
  "node fehlt.": "node is missing.",
  "spiegel oder schnappschuss.": "spiegel or schnappschuss.",
