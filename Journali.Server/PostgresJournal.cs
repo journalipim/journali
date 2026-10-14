@@ -107,7 +107,8 @@ public sealed class PostgresJournal : IJournal
         return entry;
     }
 
-    /// <summary>Viele Einträge in einer Transaktion: eine Sperre, MAX(number) einmal, dann ein vorbereitetes INSERT je Eintrag — 5 000 Klassen in Sekunden statt Minuten.</summary>
+    /// <summary>Viele Einträge in einer Transaktion: eine Sperre, MAX(number) einmal, dann ein INSERT je 5 000 Einträge über unnest der Spalten.
+    /// Vorher ein vorbereitetes INSERT je Eintrag — eine Rundreise zur Datenbank je Eintrag, 2 000 Einträge 6 bis 30 s (14.10.2026).</summary>
     public IReadOnlyList<Entry> AppendMany(string actor, IReadOnlyList<(string Stream, string Type, string Payload)> items, string? batch = null)
     {
         var list = new List<Entry>(items.Count);
@@ -117,16 +118,28 @@ public sealed class PostgresJournal : IJournal
         using (var gate = new NpgsqlCommand("LOCK TABLE journal IN SHARE ROW EXCLUSIVE MODE", conn, tx)) gate.ExecuteNonQuery();
         long next;
         using (var max = new NpgsqlCommand("SELECT COALESCE(MAX(number), 0) FROM journal", conn, tx)) next = (long)max.ExecuteScalar()!;
-        using var cmd = new NpgsqlCommand($"INSERT INTO journal (number, at, actor, stream, type, payload, batch, kind) VALUES (@n, now(), @actor, @stream, @type, @payload, @batch, @kind) RETURNING {Columns}", conn, tx);
-        var pn = cmd.Parameters.Add("n", NpgsqlDbType.Bigint); cmd.Parameters.AddWithValue("actor", actor);
-        var ps = cmd.Parameters.Add("stream", NpgsqlDbType.Text); var pt = cmd.Parameters.Add("type", NpgsqlDbType.Text); var pp = cmd.Parameters.Add("payload", NpgsqlDbType.Jsonb);
-        var pk = cmd.Parameters.Add("kind", NpgsqlDbType.Text);
+        // JSONB normalisiert; zurück kommt die gespeicherte Form (wie bei Append). RETURNING sagt keine Reihenfolge zu — darum nach Nummer sortiert.
+        using var cmd = new NpgsqlCommand($"""
+            INSERT INTO journal (number, at, actor, stream, type, payload, batch, kind)
+            SELECT u.n, now(), @actor, u.s, u.t, u.p::jsonb, @batch, u.k
+            FROM unnest(@n, @s, @t, @p, @k) AS u(n, s, t, p, k)
+            RETURNING {Columns}
+            """, conn, tx);
+        cmd.Parameters.AddWithValue("actor", actor);
         cmd.Parameters.Add("batch", NpgsqlDbType.Text).Value = (object?)batch ?? DBNull.Value;
-        cmd.Prepare();
-        foreach (var (s, t, p) in items)
+        var pn = cmd.Parameters.Add("n", NpgsqlDbType.Array | NpgsqlDbType.Bigint);
+        var ps = cmd.Parameters.Add("s", NpgsqlDbType.Array | NpgsqlDbType.Text); var pt = cmd.Parameters.Add("t", NpgsqlDbType.Array | NpgsqlDbType.Text);
+        var pp = cmd.Parameters.Add("p", NpgsqlDbType.Array | NpgsqlDbType.Text); var pk = cmd.Parameters.Add("k", NpgsqlDbType.Array | NpgsqlDbType.Text);
+        const int Je = 5000;
+        for (var i = 0; i < items.Count; i += Je)
         {
-            pn.Value = ++next; ps.Value = s; pt.Value = t; pp.Value = p; pk.Value = Kinds.Of(t);
-            using var reader = cmd.ExecuteReader(); reader.Read(); list.Add(Read(reader));
+            var teil = items.Skip(i).Take(Je).ToList();
+            pn.Value = teil.Select((_, j) => next + i + j + 1).ToArray();
+            ps.Value = teil.Select(x => x.Stream).ToArray(); pt.Value = teil.Select(x => x.Type).ToArray();
+            pp.Value = teil.Select(x => x.Payload).ToArray(); pk.Value = teil.Select(x => Kinds.Of(x.Type)).ToArray();
+            var gelesen = new List<Entry>(teil.Count);
+            using (var reader = cmd.ExecuteReader()) while (reader.Read()) gelesen.Add(Read(reader));
+            list.AddRange(gelesen.OrderBy(e => e.Number));
         }
         tx.Commit();
         return list;

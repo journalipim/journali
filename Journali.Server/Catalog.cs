@@ -591,10 +591,16 @@ public sealed class Catalog
     /// <summary>Viele Einträge als eine Transaktion unter der Sperre, danach die Abbilder — für Stapel, die nicht prüfen müssen (Plugin-Daten).</summary>
     public IReadOnlyList<Entry> WriteMany(string actor, IReadOnlyList<(string Stream, string Type, object Payload)> items, string? batch = null)
     {
+        // Teilzeiten in der Zeile „slow: …“: Warten auf andere Schreiber, Datenbank, Abbilder
+        var uhr = System.Diagnostics.Stopwatch.StartNew();
         lock (_write)
         {
+            Teilzeit.Notiere("write lock", uhr.ElapsedMilliseconds); uhr.Restart();
             var entries = _journal.AppendMany(actor, items.Select(i => (i.Stream, i.Type, Types.Serialize(i.Payload))).ToList(), batch);
-            return Aendernd(() => { foreach (var e in entries) Apply(e); return entries; });
+            Teilzeit.Notiere($"journal {entries.Count} entries", uhr.ElapsedMilliseconds); uhr.Restart();
+            var ergebnis = Aendernd(() => { foreach (var e in entries) Apply(e); return entries; });
+            Teilzeit.Notiere("apply", uhr.ElapsedMilliseconds);
+            return ergebnis;
         }
     }
 }
