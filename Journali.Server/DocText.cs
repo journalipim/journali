@@ -139,6 +139,7 @@ public sealed class DocText
             await doc.ExecuteNonQueryAsync(ct);
         }
         await tx.CommitAsync(ct);
+        SemanticApi.StandVerwerfen();   // andere Abschnitte: der Stand der Einbettungen zählt neu
     }
 
     /// <summary>
@@ -185,7 +186,7 @@ public sealed class DocText
         await using var conn = await _db.OpenConnectionAsync(ct);
         await using var cmd = new NpgsqlCommand("DELETE FROM media_text WHERE media = @m; DELETE FROM media_table WHERE media = @m; DELETE FROM media_text_doc WHERE media = @m;", conn);
         cmd.Parameters.AddWithValue("m", media);
-        return await cmd.ExecuteNonQueryAsync(ct);
+        try { return await cmd.ExecuteNonQueryAsync(ct); } finally { SemanticApi.StandVerwerfen(); }
     }
 
     /// <summary>Die Tabellen eines Dokuments mit dem Stand des Index: Zustand und Hash, den der Leser kannte. Ohne Zustand

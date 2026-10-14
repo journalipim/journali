@@ -100,16 +100,17 @@ public class VektorenTests
     }
 
     [Fact]
-    public void Der_Stand_der_Einbettungen_gilt_je_Modell_eine_Weile_und_wird_beim_Ablegen_verworfen()
+    public void Der_Stand_der_Einbettungen_gilt_je_Modell_bis_ein_Eintrag_kommt_und_wird_beim_Ablegen_verworfen()
     {
         SemanticApi.StandVerwerfen();
-        Assert.Null(SemanticApi.StandAlt("m1"));
+        Assert.Null(SemanticApi.StandAlt("m1", 10));
         var stand = new { offen = 3 };
-        SemanticApi.StandMerken("m1", stand);
-        Assert.Same(stand, SemanticApi.StandAlt("m1"));
-        Assert.Null(SemanticApi.StandAlt("m2"));          // ein anderes Modell hat seinen eigenen Stand
-        SemanticApi.StandVerwerfen();                      // der PUT der Vektoren verwirft ihn
-        Assert.Null(SemanticApi.StandAlt("m1"));
+        SemanticApi.StandMerken("m1", 10, stand);
+        Assert.Same(stand, SemanticApi.StandAlt("m1", 10));   // nichts geändert: gilt, auch nach mehr als 20 Sekunden (der Takt fragt je Minute)
+        Assert.Null(SemanticApi.StandAlt("m1", 11));          // ein neuer Eintrag im Journal: andere Knotentexte, neu zählen
+        Assert.Null(SemanticApi.StandAlt("m2", 10));          // ein anderes Modell hat seinen eigenen Stand
+        SemanticApi.StandVerwerfen();                          // der PUT der Vektoren und neue Dokumenttexte verwerfen ihn
+        Assert.Null(SemanticApi.StandAlt("m1", 10));
     }
 
     [Fact]

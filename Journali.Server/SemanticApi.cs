@@ -202,11 +202,14 @@ public static class SemanticApi
             return new { id = n.Id, role = n.Role, label = NodeRow.LabelOf(tree, model, n), path = tree.Ancestors(n).Reverse().Select(a => NodeRow.LabelOf(tree, model, a)).ToList(), score = Math.Round(1 - h.Distance, 4) };
         }).ToList());
 
-    // Der Stand der Einbettungen für die Anzeige, je Modell 20 Sekunden gemerkt
-    private static readonly Dictionary<string, (DateTime Wann, object Stand)> _stand = new();
-    private static readonly TimeSpan StandDauer = TimeSpan.FromSeconds(20);
-    public static object? StandAlt(string modell) { lock (_stand) return _stand.TryGetValue(modell, out var e) && DateTime.UtcNow - e.Wann < StandDauer ? e.Stand : null; }
-    public static void StandMerken(string modell, object stand) { lock (_stand) _stand[modell] = (DateTime.UtcNow, stand); }
+    // Der Stand der Einbettungen für die Anzeige, je Modell gemerkt: er gilt, solange das Journal auf demselben Eintrag steht und weder Vektoren
+    // (PUT /docs/embed) noch Dokumenttexte (DocText) geschrieben wurden — beide verwerfen ihn. Bis 14.10.2026 galt er 20 Sekunden; der Takt des
+    // JobRunners fragt aber höchstens einmal je Minute, traf ihn nie und rechnete jedes Mal gut eine Sekunde (Zählen und Hashes in der Datenbank).
+    // Die Höchstdauer fängt ab, was ein anderer Server in dieselbe Datenbank schreibt.
+    private static readonly Dictionary<string, (DateTime Wann, long Kopf, object Stand)> _stand = new();
+    private static readonly TimeSpan StandDauer = TimeSpan.FromMinutes(10);
+    public static object? StandAlt(string modell, long kopf) { lock (_stand) return _stand.TryGetValue(modell, out var e) && e.Kopf == kopf && DateTime.UtcNow - e.Wann < StandDauer ? e.Stand : null; }
+    public static void StandMerken(string modell, long kopf, object stand) { lock (_stand) _stand[modell] = (DateTime.UtcNow, kopf, stand); }
     public static void StandVerwerfen() { lock (_stand) _stand.Clear(); }
 
     public static void Map(RouteGroupBuilder api, string jobsDir)
@@ -218,15 +221,16 @@ public static class SemanticApi
             if (!vectors.Ready) return Results.Ok(new { ready = false, reason = vectors.Reason, model = m, plugin = embedder.Available, pluginReason = embedder.Reason, chunks = 0L, embedded = 0L, nodes = 0L, nodesTotal = 0, offen = 0L, gelesen = 0L, total = 0L });
             // Der Stand dient der Anzeige (Kachel des Systemjobs, Nachziehen, Bereitschaft) und wird alle paar Sekunden gefragt: die Abfragen an die Datenbank kosten
             // gut 0,3 s, und nach jedem Schreiben ins Journal rechnete der Aufruf die Texte aller Knoten neu — unter der Lesesperre, hinter der alles andere wartet.
-            // Darum gilt der Stand 20 Sekunden; das Ablegen von Vektoren (PUT) verwirft ihn. Die Postenliste des Jobs (pending) rechnet immer frisch.
-            if (StandAlt(m) is { } alt) return Results.Ok(alt);
+            // Darum gilt der Stand, bis sich etwas ändert (StandAlt). Die Postenliste des Jobs (pending) rechnet immer frisch.
+            var kopf = c.Head;
+            if (StandAlt(m, kopf) is { } alt) return Results.Ok(alt);
             var (chunks, embedded, nodesDone) = await Teilzeit.MessenAsync("stats", () => vectors.StatsAsync(m, ct));
             var known = await Teilzeit.MessenAsync("hashes", () => vectors.NodeHashesAsync(m, ct));
             var texte = Teilzeit.Messen("node texts", () => KnotenTexte(c));
             var offeneKnoten = Teilzeit.Messen("pending", () => PendingNodes(texte, known).Count);
             var stand = new { ready = true, reason = (string?)null, model = m, plugin = embedder.Available, pluginReason = embedder.Reason, indexError = vectors.IndexError,
                 chunks, embedded, nodes = nodesDone, nodesTotal = texte.Count, offen = (chunks - embedded) + offeneKnoten, gelesen = embedded + nodesDone, total = chunks + texte.Count };
-            StandMerken(m, stand);
+            StandMerken(m, kopf, stand);
             return Results.Ok(stand);
         });
 

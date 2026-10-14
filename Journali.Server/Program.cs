@@ -413,6 +413,8 @@ app.Use(async (ctx, next) =>
 // Was hier wirklich läuft: beides einmal beim Start lesen. Der Zeitstempel der Datei ändert sich
 // beim nächsten Bau — wer ihn bei jedem Aufruf liest, meldet einen Stand, den er gar nicht geladen hat.
 long dbGeprueft = -10_000;   // wann die Datenbank zuletzt geantwortet hat (TickCount64)
+int dbPruefung = 0;          // 1, solange eine Prüfung im Hintergrund läuft
+Exception? dbFehler = null;  // die letzte Prüfung schlug fehl
 var gebautAm = System.IO.File.GetLastWriteTimeUtc(typeof(Program).Assembly.Location);
 var laufendeVersion = typeof(Program).Assembly.GetName().Version?.ToString(3);
 
@@ -468,13 +470,19 @@ api.MapGet("/health", (HttpRequest req, Catalog c) =>
 });
 
 /// <summary>Fragt die Datenbank, höchstens alle 5 Sekunden: der Punkt unten links in der Oberfläche soll sagen, ob die eingestellte Datenbank da ist.
-/// Der Journalstand im Speicher sagt das nicht. Fällt die Anfrage aus, wirft sie, und der nächste Aufruf versucht es sofort wieder.</summary>
+/// Der Journalstand im Speicher sagt das nicht. Die Frage läuft im Hintergrund (14.10.2026): mit der Datenbank auf einem anderen Rechner kostete sie
+/// gut 0,2 s, und jeder fünfte Aufruf von /api/health (alle 3 s je Oberfläche) stand als „slow:“ in der Konsole. Schlug die letzte Prüfung fehl, fragt
+/// der Aufruf selbst und wirft — die Wache macht daraus 503, und die Oberfläche sieht sofort, wann die Datenbank wieder da ist.</summary>
 void DatenbankPruefen()
 {
-    var jetzt = Environment.TickCount64;
-    if (jetzt - Interlocked.Read(ref dbGeprueft) < 5000) return;
-    _ = journal.Head;
-    Interlocked.Exchange(ref dbGeprueft, jetzt);
+    if (Volatile.Read(ref dbFehler) is not null) { DatenbankFragen(); return; }
+    if (Environment.TickCount64 - Interlocked.Read(ref dbGeprueft) < 5000 || Interlocked.Exchange(ref dbPruefung, 1) == 1) return;
+    _ = Task.Run(() => { try { DatenbankFragen(); } catch { } finally { Volatile.Write(ref dbPruefung, 0); } });
+}
+void DatenbankFragen()
+{
+    try { _ = journal.Head; Interlocked.Exchange(ref dbGeprueft, Environment.TickCount64); Volatile.Write(ref dbFehler, null); }
+    catch (Exception e) { Volatile.Write(ref dbFehler, e); throw; }
 }
 
 /// <summary>Der Puls der Präsenz: „ich bin hier“ und wer sonst noch — mit Namen, wie die Oberfläche sie zeigt.</summary>
