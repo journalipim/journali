@@ -78,6 +78,15 @@ public class SnapshotTests
             var n = full.SaveSnapshot(path);
             Assert.Equal(j.Head, n);
             Assert.True(File.Exists(path));
+            // nichts doppelt (14.10.2026): das private Feld steht in der Datei, die Eigenschaft davor nicht
+            using (var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllBytes(path)))
+            {
+                var teile = doc.RootElement.GetProperty("Parts");
+                Assert.True(teile.GetProperty("Tree").TryGetProperty("_nodes", out _));
+                Assert.False(teile.GetProperty("Tree").TryGetProperty("Nodes", out _));
+                Assert.False(teile.GetProperty("Plugins").TryGetProperty("All", out _));
+                Assert.False(teile.GetProperty("Relations").TryGetProperty("All", out _));
+            }
 
             // zweiter Start: laden, nichts Neues — gleicher Stand
             var again = new Catalog(j);

@@ -79,7 +79,8 @@ public static class Snapshot
     /// oder 0, wenn es keine Datei gibt, der Stempel nicht passt oder der Eintrag #n im Journal anders ist (Datei wird gelöscht).
     /// <para>In einem Durchgang (14.10.2026): erst der Kopf (Stempel und Eintrag #n stehen am Anfang der Datei) — passt er nicht, ist die Datei
     /// verworfen, bevor die Abbilder gelesen sind —, dann die Abbilder direkt aus der Datei in ihre Typen. Vorher las der Start die ganze Datei in
-    /// ein JsonDocument und jedes Abbild daraus ein zweites Mal: bei 849 MB 7 s und 1,6 GB, jetzt 5 s und 1,3 GB.</para>
+    /// ein JsonDocument und jedes Abbild daraus ein zweites Mal: bei 849 MB 7 s und 1,6 GB, jetzt 5 s und 1,3 GB — und ohne die doppelten
+    /// Felder (<see cref="PrivateMembers"/>) ist dieselbe Datei 429 MB gross und in 3 s gelesen.</para>
     /// </summary>
     public static long Load(string path, IJournal journal, IReadOnlyList<(string Name, Type Type)> parts, out Dictionary<string, IProjection> loaded)
     {
@@ -168,6 +169,7 @@ public static class Snapshot
             if (setter is not null && !setter.IsPublic) prop.Set = (obj, value) => pi.SetValue(obj, value);
         }
         // private Instanzfelder (ohne Compiler-Rückfelder): lesbar; schreibbar, wenn nicht readonly, sonst an Ort und Stelle füllen
+        var felder = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         for (var t = ti.Type; t is not null && t != typeof(object); t = t.BaseType)
         {
             foreach (var f in t.GetFields(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.DeclaredOnly))
@@ -180,8 +182,13 @@ public static class Snapshot
                 else if (!f.FieldType.IsValueType && f.FieldType != typeof(string)) jp.ObjectCreationHandling = JsonObjectCreationHandling.Populate;
                 else continue;   // readonly Wert oder Text: nicht wiederherstellbar — es gibt keins in den Abbildern
                 ti.Properties.Add(jp);
+                felder.Add(f.Name.TrimStart('_'));
             }
         }
+        // Eine öffentliche Eigenschaft vor einem gleichnamigen privaten Feld (Nodes vor _nodes, All vor _all) zeigt dieselben Daten: nur das
+        // Feld zählt — es ist der Speicher (14.10.2026). Vorher stand beides in der Datei: der Schnappschuss war doppelt so gross (849 MB statt
+        // gut 430), und der Start las Baum, Plugins, Relationen und Medien zweimal.
+        foreach (var p in ti.Properties.Where(p => p.AttributeProvider is PropertyInfo && felder.Contains(p.Name)).ToList()) ti.Properties.Remove(p);
     }
 
     /// <summary>Axis als Text „attribut|sprache|kanal|zeile“ — auch als Schlüssel eines Dictionary.</summary>

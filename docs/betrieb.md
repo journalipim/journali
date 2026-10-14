@@ -741,8 +741,10 @@ jeder Commit liess ihn fallen. Der Eintrag #n wird gegen das Journal geprüft; b
 An und aus ebenfalls in ⚙ Einstellungen → ▨ Storage → ▨ Start; ohne `betrieb.json` zählt `JOURNALI_SNAPSHOT=off`.
 Startzeile: „Schnappschuss bis #n“.
 Geladen wird in einem Durchgang (14.10.2026): erst der Kopf (Stempel, Eintrag #n — sie stehen am Anfang der Datei), dann die Abbilder direkt
-aus der Datei in ihre Typen. Vorher las der Start die ganze Datei in ein Dokument und jedes Abbild daraus ein zweites Mal; gemessen an 849 MB
-(Baum 445 MB, Daten der Plugins 393 MB): 7 s und 1,6 GB vorher, 5 s und 1,3 GB jetzt.
+aus der Datei in ihre Typen. Vorher las der Start die ganze Datei in ein Dokument und jedes Abbild daraus ein zweites Mal. Und jedes Abbild stand
+doppelt darin: die öffentliche Eigenschaft und das private Feld dahinter (`Nodes` und `_nodes`, `All` und `_all`) — jetzt nur das Feld.
+Gemessen an denselben Daten (19 523 Knoten, 22 481 Einträge ETIM): vorher 849 MB und 7 s zum Laden, jetzt 429 MB und 3 s; schreiben 2 s.
+Nach dem Update fällt der alte Schnappschuss einmal am Stempel — der erste Start liest das Journal ganz und schreibt danach einen neuen.
 
 **Wohin die Zeit beim Start geht** (14.10.2026): sobald der Server Anfragen annimmt, steht eine Zeile da —
 `journali: ready in 12.3 s — database 0.9 s, snapshot 5.0 s, journal 2.2 s, …` —, je Abschnitt seine Dauer (ab 0,05 s), dahinter die Zeit
