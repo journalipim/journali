@@ -1,4 +1,4 @@
-(function(){const s=document.createElement('style');s.textContent="\n.seiten[data-v-0be73fe9] { display: flex; gap: 0; flex: 1; min-height: 0;\n}\n.liste[data-v-0be73fe9] { width: 260px; border-right: 1px solid var(--line); overflow-y: auto;\n}\n.rechts[data-v-0be73fe9] { flex: 1; overflow-y: auto; min-width: 0;\n}\n.kopf[data-v-0be73fe9] { display: flex; gap: 6px; align-items: center; padding: 6px 8px;\n}\n.kopf .bez[data-v-0be73fe9] { flex: 1;\n}\n.neu[data-v-0be73fe9] { display: flex; gap: 4px; padding: 6px 8px;\n}\n.neu input[data-v-0be73fe9] { flex: 1; min-width: 0;\n}\n.form[data-v-0be73fe9] { width: 100%;\n}\n.form td[data-v-0be73fe9] { height: 30px; vertical-align: middle; white-space: normal; padding: 2px 4px;\n}\n.form td.attr[data-v-0be73fe9] { color: var(--muted); white-space: nowrap; padding-left: 8px;\n}\n.row[data-v-0be73fe9] { display: flex; gap: 8px; align-items: center; flex-wrap: wrap;\n}\n.zahl[data-v-0be73fe9] { width: 70px;\n}\n.code[data-v-0be73fe9] { margin: 2px 0 8px; padding: 6px 8px; background: var(--bg2, rgba(127,127,127,.08)); border-radius: 4px; white-space: pre-wrap; word-break: break-all; font-size: 12px;\n}\n.neues-token[data-v-0be73fe9] { user-select: all; word-break: break-all;\n}\n.fehler[data-v-0be73fe9] { margin: 4px 8px; padding-left: 16px;\n}\n.treffer[data-v-0be73fe9] { margin: 4px 0; padding-left: 20px;\n}\n";document.head.append(s)})();
+(function(){const s=document.createElement('style');s.textContent="\n.seiten[data-v-0449e972] { display: flex; gap: 0; flex: 1; min-height: 0;\n}\n.liste[data-v-0449e972] { width: 260px; border-right: 1px solid var(--line); overflow-y: auto;\n}\n.rechts[data-v-0449e972] { flex: 1; overflow-y: auto; min-width: 0;\n}\n.kopf[data-v-0449e972] { display: flex; gap: 6px; align-items: center; padding: 6px 8px;\n}\n.kopf .bez[data-v-0449e972] { flex: 1;\n}\n.neu[data-v-0449e972] { display: flex; gap: 4px; padding: 6px 8px;\n}\n.neu input[data-v-0449e972] { flex: 1; min-width: 0;\n}\n.form[data-v-0449e972] { width: 100%;\n}\n.felder[data-v-0449e972] { border: 0; padding: 0; margin: 0; min-width: 0;\n}\n.form td[data-v-0449e972] { height: 30px; vertical-align: middle; white-space: normal; padding: 2px 4px;\n}\n.form td.attr[data-v-0449e972] { color: var(--muted); white-space: nowrap; padding-left: 8px;\n}\n.row[data-v-0449e972] { display: flex; gap: 8px; align-items: center; flex-wrap: wrap;\n}\n.zahl[data-v-0449e972] { width: 70px;\n}\n.code[data-v-0449e972] { margin: 2px 0 8px; padding: 6px 8px; background: var(--bg2, rgba(127,127,127,.08)); border-radius: 4px; white-space: pre-wrap; word-break: break-all; font-size: 12px;\n}\n.neues-token[data-v-0449e972] { user-select: all; word-break: break-all;\n}\n.fehler[data-v-0449e972] { margin: 4px 8px; padding-left: 16px;\n}\n.treffer[data-v-0449e972] { margin: 4px 0; padding-left: 20px;\n}\n";document.head.append(s)})();
 const m = window.journali.vue;
 const Fragment = m.Fragment;
 const computed = m.computed;
@@ -12,6 +12,7 @@ const openBlock = m.openBlock;
 const ref = m.ref;
 const renderList = m.renderList;
 const toDisplayString = m.toDisplayString;
+const unref = m.unref;
 const vModelCheckbox = m.vModelCheckbox;
 const vModelSelect = m.vModelSelect;
 const vModelText = m.vModelText;
@@ -56,90 +57,93 @@ const _hoisted_17 = {
   key: 0,
   class: "fehler neg"
 };
-const _hoisted_18 = { class: "grid form" };
-const _hoisted_19 = ["title"];
-const _hoisted_20 = ["value"];
-const _hoisted_21 = ["title"];
-const _hoisted_22 = ["value"];
-const _hoisted_23 = ["title"];
-const _hoisted_24 = ["value"];
-const _hoisted_25 = { class: "attr" };
-const _hoisted_26 = { class: "chips" };
-const _hoisted_27 = ["onClick"];
-const _hoisted_28 = ["title"];
-const _hoisted_29 = { class: "attr" };
-const _hoisted_30 = ["onUpdate:modelValue", "title"];
-const _hoisted_31 = { class: "attr" };
-const _hoisted_32 = { class: "row" };
-const _hoisted_33 = ["title"];
+const _hoisted_18 = ["disabled"];
+const _hoisted_19 = { class: "grid form" };
+const _hoisted_20 = ["title"];
+const _hoisted_21 = ["value"];
+const _hoisted_22 = ["title"];
+const _hoisted_23 = ["value"];
+const _hoisted_24 = ["title"];
+const _hoisted_25 = ["value"];
+const _hoisted_26 = { class: "attr" };
+const _hoisted_27 = { class: "chips" };
+const _hoisted_28 = ["onClick"];
+const _hoisted_29 = ["title"];
+const _hoisted_30 = { class: "attr" };
+const _hoisted_31 = ["onUpdate:modelValue", "title"];
+const _hoisted_32 = { class: "attr" };
+const _hoisted_33 = { class: "row" };
 const _hoisted_34 = ["title"];
-const _hoisted_35 = ["value"];
-const _hoisted_36 = { class: "attr" };
-const _hoisted_37 = ["title"];
+const _hoisted_35 = ["title"];
+const _hoisted_36 = ["value"];
+const _hoisted_37 = { class: "attr" };
 const _hoisted_38 = ["title"];
 const _hoisted_39 = ["title"];
-const _hoisted_40 = { class: "row grenzen" };
-const _hoisted_41 = ["title"];
+const _hoisted_40 = ["title"];
+const _hoisted_41 = { class: "row grenzen" };
 const _hoisted_42 = ["title"];
 const _hoisted_43 = ["title"];
 const _hoisted_44 = ["title"];
 const _hoisted_45 = ["title"];
-const _hoisted_46 = { class: "grid" };
-const _hoisted_47 = { class: "muted" };
-const _hoisted_48 = { class: "muted" };
-const _hoisted_49 = { style: { "width": "24px" } };
-const _hoisted_50 = ["title", "onClick"];
-const _hoisted_51 = {
+const _hoisted_46 = { "data-demo": "aus" };
+const _hoisted_47 = ["title"];
+const _hoisted_48 = { class: "grid" };
+const _hoisted_49 = { class: "muted" };
+const _hoisted_50 = { class: "muted" };
+const _hoisted_51 = { style: { "width": "24px" } };
+const _hoisted_52 = ["title", "onClick"];
+const _hoisted_53 = {
   class: "row",
   style: { "padding": "4px 8px" }
 };
-const _hoisted_52 = ["disabled", "title"];
-const _hoisted_53 = ["title"];
-const _hoisted_54 = ["title"];
-const _hoisted_55 = ["placeholder"];
-const _hoisted_56 = ["disabled", "title"];
-const _hoisted_57 = ["title"];
-const _hoisted_58 = {
+const _hoisted_54 = ["disabled", "title"];
+const _hoisted_55 = ["title"];
+const _hoisted_56 = ["title"];
+const _hoisted_57 = ["placeholder"];
+const _hoisted_58 = ["disabled", "title"];
+const _hoisted_59 = ["title"];
+const _hoisted_60 = {
   key: 1,
   class: "vorschau",
   style: { "padding": "0 8px 8px" }
 };
-const _hoisted_59 = {
+const _hoisted_61 = {
   key: 0,
   class: "neg"
 };
-const _hoisted_60 = {
+const _hoisted_62 = {
   key: 0,
   class: "satz"
 };
-const _hoisted_61 = ["title"];
-const _hoisted_62 = {
+const _hoisted_63 = ["title"];
+const _hoisted_64 = {
   key: 2,
   class: "grid about"
 };
-const _hoisted_63 = { class: "attr" };
-const _hoisted_64 = ["title"];
-const _hoisted_65 = {
+const _hoisted_65 = { class: "attr" };
+const _hoisted_66 = ["title"];
+const _hoisted_67 = {
   key: 3,
   class: "neg ki-fehler"
 };
-const _hoisted_66 = ["title"];
-const _hoisted_67 = ["title"];
-const _hoisted_68 = { class: "treffer" };
-const _hoisted_69 = { class: "muted" };
-const _hoisted_70 = {
+const _hoisted_68 = ["title"];
+const _hoisted_69 = ["title"];
+const _hoisted_70 = { class: "treffer" };
+const _hoisted_71 = { class: "muted" };
+const _hoisted_72 = {
   key: 5,
   class: "muted facetten"
 };
-const _hoisted_71 = ["title"];
-const _hoisted_72 = {
+const _hoisted_73 = ["title"];
+const _hoisted_74 = {
   style: { "padding": "4px 8px" },
-  class: "einbinden"
+  class: "einbinden",
+  "data-demo": "aus"
 };
-const _hoisted_73 = { class: "muted" };
-const _hoisted_74 = { class: "code" };
 const _hoisted_75 = { class: "muted" };
 const _hoisted_76 = { class: "code" };
+const _hoisted_77 = { class: "muted" };
+const _hoisted_78 = { class: "code" };
 const _sfc_main = {
   __name: "View",
   setup(__props) {
@@ -195,6 +199,7 @@ const _sfc_main = {
         liste.value = [];
         meldung.value = "✗ " + e.message;
       }
+      if (!cur.value && liste.value.length === 1) await oeffne(liste.value[0].key);
     }
     async function ladeAuswahl() {
       const sicher = async (p) => {
@@ -403,6 +408,7 @@ const _sfc_main = {
               "form",
               {
                 class: "neu",
+                "data-demo": "aus",
                 onSubmit: withModifiers(anlegen, ["prevent"])
               },
               [
@@ -437,12 +443,14 @@ const _sfc_main = {
               createElementVNode("button", {
                 type: "button",
                 class: "primary speichern",
+                "data-demo": "aus",
                 disabled: !geaendert.value,
                 onClick: speichern
               }, toDisplayString(_ctx.$t("Speichern")), 9, _hoisted_15),
               createElementVNode("button", {
                 type: "button",
                 class: "entfernen",
+                "data-demo": "aus",
                 title: _ctx.$t("Berater entfernen"),
                 onClick: entfernen
               }, "✕", 8, _hoisted_16)
@@ -464,494 +472,502 @@ const _sfc_main = {
                 /* KEYED_FRAGMENT */
               ))
             ])) : createCommentVNode("v-if", true),
-            createElementVNode("table", _hoisted_18, [
-              _cache[19] || (_cache[19] = createElementVNode(
-                "colgroup",
-                null,
-                [
-                  createElementVNode("col", { style: { "width": "120px" } }),
-                  createElementVNode("col")
-                ],
-                -1
-                /* CACHED */
-              )),
-              createElementVNode("tbody", null, [
-                createElementVNode("tr", null, [
-                  createElementVNode("td", {
-                    class: "attr",
-                    title: _ctx.$t("welche Produkte der Berater kennt: was dieser Baum für seinen Kanal ausleitet")
-                  }, toDisplayString(_ctx.$t("Publikationsbaum")), 9, _hoisted_19),
-                  createElementVNode("td", null, [
-                    withDirectives(createElementVNode(
-                      "select",
-                      {
-                        "onUpdate:modelValue": _cache[2] || (_cache[2] = ($event) => def.value.pub = $event),
-                        class: "pub"
-                      },
-                      [
-                        _cache[15] || (_cache[15] = createElementVNode(
-                          "option",
-                          { value: "" },
-                          "—",
-                          -1
-                          /* CACHED */
-                        )),
-                        (openBlock(true), createElementBlock(
-                          Fragment,
-                          null,
-                          renderList(pubs.value, (p) => {
-                            return openBlock(), createElementBlock("option", {
-                              key: p.id,
-                              value: p.id
-                            }, toDisplayString(p.label) + " · " + toDisplayString(p.channel) + toDisplayString(p.market ? " · " + p.market : ""), 9, _hoisted_20);
-                          }),
-                          128
-                          /* KEYED_FRAGMENT */
-                        ))
-                      ],
-                      512
-                      /* NEED_PATCH */
-                    ), [
-                      [vModelSelect, def.value.pub]
-                    ])
-                  ])
-                ]),
-                createElementVNode("tr", null, [
-                  createElementVNode("td", {
-                    class: "attr",
-                    title: _ctx.$t("der Berater sieht, was diese Rolle sieht — eingeschränkte Knoten und Ordner bleiben aussen vor")
-                  }, toDisplayString(_ctx.$t("Rolle")), 9, _hoisted_21),
-                  createElementVNode("td", null, [
-                    withDirectives(createElementVNode(
-                      "select",
-                      {
-                        "onUpdate:modelValue": _cache[3] || (_cache[3] = ($event) => def.value.role = $event),
-                        class: "rolle"
-                      },
-                      [
-                        _cache[16] || (_cache[16] = createElementVNode(
-                          "option",
-                          { value: "" },
-                          "—",
-                          -1
-                          /* CACHED */
-                        )),
-                        (openBlock(true), createElementBlock(
-                          Fragment,
-                          null,
-                          renderList(rollen.value, (r) => {
-                            return openBlock(), createElementBlock("option", {
-                              key: r.key,
-                              value: r.key
-                            }, toDisplayString(r.label || r.key), 9, _hoisted_22);
-                          }),
-                          128
-                          /* KEYED_FRAGMENT */
-                        ))
-                      ],
-                      512
-                      /* NEED_PATCH */
-                    ), [
-                      [vModelSelect, def.value.role]
-                    ])
-                  ])
-                ]),
-                createElementVNode("tr", null, [
-                  createElementVNode("td", {
-                    class: "attr",
-                    title: _ctx.$t("nur die Attribute dieser Sicht erscheinen am Produkt, in den Facetten und im Vergleich")
-                  }, toDisplayString(_ctx.$t("Sicht")), 9, _hoisted_23),
-                  createElementVNode("td", null, [
-                    withDirectives(createElementVNode(
-                      "select",
-                      {
-                        "onUpdate:modelValue": _cache[4] || (_cache[4] = ($event) => def.value.view = $event),
-                        class: "sicht"
-                      },
-                      [
-                        _cache[17] || (_cache[17] = createElementVNode(
-                          "option",
-                          { value: "" },
-                          "—",
-                          -1
-                          /* CACHED */
-                        )),
-                        (openBlock(true), createElementBlock(
-                          Fragment,
-                          null,
-                          renderList(sichten.value, (v) => {
-                            return openBlock(), createElementBlock("option", {
-                              key: v.key,
-                              value: v.key
-                            }, toDisplayString(v.label), 9, _hoisted_24);
-                          }),
-                          128
-                          /* KEYED_FRAGMENT */
-                        ))
-                      ],
-                      512
-                      /* NEED_PATCH */
-                    ), [
-                      [vModelSelect, def.value.view]
-                    ])
-                  ])
-                ]),
-                createElementVNode("tr", null, [
-                  createElementVNode(
-                    "td",
-                    _hoisted_25,
-                    toDisplayString(_ctx.$t("Sprachen")),
-                    1
-                    /* TEXT */
-                  ),
-                  createElementVNode("td", null, [
-                    createElementVNode("div", _hoisted_26, [
-                      (openBlock(true), createElementBlock(
-                        Fragment,
-                        null,
-                        renderList(sprachen.value, (c) => {
-                          return openBlock(), createElementBlock("span", {
-                            key: c,
-                            class: normalizeClass(["view-chip sprache", { on: def.value.locales.includes(c) }]),
-                            onClick: ($event) => sprache(c)
-                          }, toDisplayString(c), 11, _hoisted_27);
-                        }),
-                        128
-                        /* KEYED_FRAGMENT */
-                      )),
-                      !def.value.locales.length ? (openBlock(), createElementBlock("span", {
-                        key: 0,
-                        class: "muted",
-                        title: _ctx.$t("ohne Auswahl gilt die Leitsprache")
-                      }, toDisplayString(" " + _ctx.$t("· Leitsprache {0}", [leitsprache.value])), 9, _hoisted_28)) : createCommentVNode("v-if", true)
-                    ])
-                  ])
-                ]),
-                (openBlock(true), createElementBlock(
-                  Fragment,
+            createCommentVNode(" in der Demo nur ansehen: speichern geht dort nicht, und ungespeichert sperrte die Vorschau "),
+            createElementVNode("fieldset", {
+              class: "felder",
+              disabled: !!unref(store).demo
+            }, [
+              createElementVNode("table", _hoisted_19, [
+                _cache[19] || (_cache[19] = createElementVNode(
+                  "colgroup",
                   null,
-                  renderList(grussSprachen.value, (l) => {
-                    return openBlock(), createElementBlock("tr", {
-                      key: "g" + l
-                    }, [
-                      createElementVNode(
-                        "td",
-                        _hoisted_29,
-                        toDisplayString(_ctx.$t("Begrüssung {0}", [l])),
-                        1
-                        /* TEXT */
-                      ),
-                      createElementVNode("td", null, [
-                        withDirectives(createElementVNode("input", {
-                          "onUpdate:modelValue": ($event) => def.value.greeting[l] = $event,
-                          class: "gruss",
-                          style: { "width": "100%" },
-                          title: _ctx.$t("der erste Satz im Chat-Fenster")
-                        }, null, 8, _hoisted_30), [
-                          [vModelText, def.value.greeting[l]]
-                        ])
-                      ])
-                    ]);
-                  }),
-                  128
-                  /* KEYED_FRAGMENT */
+                  [
+                    createElementVNode("col", { style: { "width": "120px" } }),
+                    createElementVNode("col")
+                  ],
+                  -1
+                  /* CACHED */
                 )),
-                createElementVNode("tr", null, [
-                  createElementVNode(
-                    "td",
-                    _hoisted_31,
-                    toDisplayString(_ctx.$t("KI")),
-                    1
-                    /* TEXT */
-                  ),
-                  createElementVNode("td", null, [
-                    createElementVNode("div", _hoisted_32, [
+                createElementVNode("tbody", null, [
+                  createElementVNode("tr", null, [
+                    createElementVNode("td", {
+                      class: "attr",
+                      title: _ctx.$t("welche Produkte der Berater kennt: was dieser Baum für seinen Kanal ausleitet")
+                    }, toDisplayString(_ctx.$t("Publikationsbaum")), 9, _hoisted_20),
+                    createElementVNode("td", null, [
+                      withDirectives(createElementVNode(
+                        "select",
+                        {
+                          "onUpdate:modelValue": _cache[2] || (_cache[2] = ($event) => def.value.pub = $event),
+                          class: "pub"
+                        },
+                        [
+                          _cache[15] || (_cache[15] = createElementVNode(
+                            "option",
+                            { value: "" },
+                            "—",
+                            -1
+                            /* CACHED */
+                          )),
+                          (openBlock(true), createElementBlock(
+                            Fragment,
+                            null,
+                            renderList(pubs.value, (p) => {
+                              return openBlock(), createElementBlock("option", {
+                                key: p.id,
+                                value: p.id
+                              }, toDisplayString(p.label) + " · " + toDisplayString(p.channel) + toDisplayString(p.market ? " · " + p.market : ""), 9, _hoisted_21);
+                            }),
+                            128
+                            /* KEYED_FRAGMENT */
+                          ))
+                        ],
+                        512
+                        /* NEED_PATCH */
+                      ), [
+                        [vModelSelect, def.value.pub]
+                      ])
+                    ])
+                  ]),
+                  createElementVNode("tr", null, [
+                    createElementVNode("td", {
+                      class: "attr",
+                      title: _ctx.$t("der Berater sieht, was diese Rolle sieht — eingeschränkte Knoten und Ordner bleiben aussen vor")
+                    }, toDisplayString(_ctx.$t("Rolle")), 9, _hoisted_22),
+                    createElementVNode("td", null, [
+                      withDirectives(createElementVNode(
+                        "select",
+                        {
+                          "onUpdate:modelValue": _cache[3] || (_cache[3] = ($event) => def.value.role = $event),
+                          class: "rolle"
+                        },
+                        [
+                          _cache[16] || (_cache[16] = createElementVNode(
+                            "option",
+                            { value: "" },
+                            "—",
+                            -1
+                            /* CACHED */
+                          )),
+                          (openBlock(true), createElementBlock(
+                            Fragment,
+                            null,
+                            renderList(rollen.value, (r) => {
+                              return openBlock(), createElementBlock("option", {
+                                key: r.key,
+                                value: r.key
+                              }, toDisplayString(r.label || r.key), 9, _hoisted_23);
+                            }),
+                            128
+                            /* KEYED_FRAGMENT */
+                          ))
+                        ],
+                        512
+                        /* NEED_PATCH */
+                      ), [
+                        [vModelSelect, def.value.role]
+                      ])
+                    ])
+                  ]),
+                  createElementVNode("tr", null, [
+                    createElementVNode("td", {
+                      class: "attr",
+                      title: _ctx.$t("nur die Attribute dieser Sicht erscheinen am Produkt, in den Facetten und im Vergleich")
+                    }, toDisplayString(_ctx.$t("Sicht")), 9, _hoisted_24),
+                    createElementVNode("td", null, [
+                      withDirectives(createElementVNode(
+                        "select",
+                        {
+                          "onUpdate:modelValue": _cache[4] || (_cache[4] = ($event) => def.value.view = $event),
+                          class: "sicht"
+                        },
+                        [
+                          _cache[17] || (_cache[17] = createElementVNode(
+                            "option",
+                            { value: "" },
+                            "—",
+                            -1
+                            /* CACHED */
+                          )),
+                          (openBlock(true), createElementBlock(
+                            Fragment,
+                            null,
+                            renderList(sichten.value, (v) => {
+                              return openBlock(), createElementBlock("option", {
+                                key: v.key,
+                                value: v.key
+                              }, toDisplayString(v.label), 9, _hoisted_25);
+                            }),
+                            128
+                            /* KEYED_FRAGMENT */
+                          ))
+                        ],
+                        512
+                        /* NEED_PATCH */
+                      ), [
+                        [vModelSelect, def.value.view]
+                      ])
+                    ])
+                  ]),
+                  createElementVNode("tr", null, [
+                    createElementVNode(
+                      "td",
+                      _hoisted_26,
+                      toDisplayString(_ctx.$t("Sprachen")),
+                      1
+                      /* TEXT */
+                    ),
+                    createElementVNode("td", null, [
+                      createElementVNode("div", _hoisted_27, [
+                        (openBlock(true), createElementBlock(
+                          Fragment,
+                          null,
+                          renderList(sprachen.value, (c) => {
+                            return openBlock(), createElementBlock("span", {
+                              key: c,
+                              class: normalizeClass(["view-chip sprache", { on: def.value.locales.includes(c) }]),
+                              onClick: ($event) => sprache(c)
+                            }, toDisplayString(c), 11, _hoisted_28);
+                          }),
+                          128
+                          /* KEYED_FRAGMENT */
+                        )),
+                        !def.value.locales.length ? (openBlock(), createElementBlock("span", {
+                          key: 0,
+                          class: "muted",
+                          title: _ctx.$t("ohne Auswahl gilt die Leitsprache")
+                        }, toDisplayString(" " + _ctx.$t("· Leitsprache {0}", [leitsprache.value])), 9, _hoisted_29)) : createCommentVNode("v-if", true)
+                      ])
+                    ])
+                  ]),
+                  (openBlock(true), createElementBlock(
+                    Fragment,
+                    null,
+                    renderList(grussSprachen.value, (l) => {
+                      return openBlock(), createElementBlock("tr", {
+                        key: "g" + l
+                      }, [
+                        createElementVNode(
+                          "td",
+                          _hoisted_30,
+                          toDisplayString(_ctx.$t("Begrüssung {0}", [l])),
+                          1
+                          /* TEXT */
+                        ),
+                        createElementVNode("td", null, [
+                          withDirectives(createElementVNode("input", {
+                            "onUpdate:modelValue": ($event) => def.value.greeting[l] = $event,
+                            class: "gruss",
+                            style: { "width": "100%" },
+                            title: _ctx.$t("der erste Satz im Chat-Fenster")
+                          }, null, 8, _hoisted_31), [
+                            [vModelText, def.value.greeting[l]]
+                          ])
+                        ])
+                      ]);
+                    }),
+                    128
+                    /* KEYED_FRAGMENT */
+                  )),
+                  createElementVNode("tr", null, [
+                    createElementVNode(
+                      "td",
+                      _hoisted_32,
+                      toDisplayString(_ctx.$t("KI")),
+                      1
+                      /* TEXT */
+                    ),
+                    createElementVNode("td", null, [
+                      createElementVNode("div", _hoisted_33, [
+                        createElementVNode("label", {
+                          title: _ctx.$t("die KI des gewählten Teams schreibt zu den Treffern einen kurzen Text — sonst antwortet der Berater ohne KI")
+                        }, [
+                          withDirectives(createElementVNode(
+                            "input",
+                            {
+                              type: "checkbox",
+                              "onUpdate:modelValue": _cache[5] || (_cache[5] = ($event) => def.value.ki = $event),
+                              class: "ki"
+                            },
+                            null,
+                            512
+                            /* NEED_PATCH */
+                          ), [
+                            [vModelCheckbox, def.value.ki]
+                          ]),
+                          createTextVNode(
+                            toDisplayString(" " + _ctx.$t("Text zu den Treffern")),
+                            1
+                            /* TEXT */
+                          )
+                        ], 8, _hoisted_34),
+                        def.value.ki ? withDirectives((openBlock(), createElementBlock("select", {
+                          key: 0,
+                          "onUpdate:modelValue": _cache[6] || (_cache[6] = ($event) => def.value.team = $event),
+                          class: "team",
+                          title: _ctx.$t("mit dessen KI-Schlüssel, gezählt bei diesem Team")
+                        }, [
+                          _cache[18] || (_cache[18] = createElementVNode(
+                            "option",
+                            { value: "" },
+                            "—",
+                            -1
+                            /* CACHED */
+                          )),
+                          (openBlock(true), createElementBlock(
+                            Fragment,
+                            null,
+                            renderList(teams.value, (tm) => {
+                              return openBlock(), createElementBlock("option", {
+                                key: tm.key,
+                                value: tm.key
+                              }, toDisplayString(tm.label || tm.key), 9, _hoisted_36);
+                            }),
+                            128
+                            /* KEYED_FRAGMENT */
+                          ))
+                        ], 8, _hoisted_35)), [
+                          [vModelSelect, def.value.team]
+                        ]) : createCommentVNode("v-if", true)
+                      ])
+                    ])
+                  ]),
+                  createElementVNode("tr", null, [
+                    createElementVNode(
+                      "td",
+                      _hoisted_37,
+                      toDisplayString(_ctx.$t("MCP")),
+                      1
+                      /* TEXT */
+                    ),
+                    createElementVNode("td", null, [
                       createElementVNode("label", {
-                        title: _ctx.$t("die KI des gewählten Teams schreibt zu den Treffern einen kurzen Text — sonst antwortet der Berater ohne KI")
+                        title: _ctx.$t("fremde KI-Agenten fragen den Dienst unter /mcp mit denselben Grenzen")
                       }, [
                         withDirectives(createElementVNode(
                           "input",
                           {
                             type: "checkbox",
-                            "onUpdate:modelValue": _cache[5] || (_cache[5] = ($event) => def.value.ki = $event),
-                            class: "ki"
+                            "onUpdate:modelValue": _cache[7] || (_cache[7] = ($event) => def.value.mcp = $event),
+                            class: "mcp"
                           },
                           null,
                           512
                           /* NEED_PATCH */
                         ), [
-                          [vModelCheckbox, def.value.ki]
+                          [vModelCheckbox, def.value.mcp]
                         ]),
                         createTextVNode(
-                          toDisplayString(" " + _ctx.$t("Text zu den Treffern")),
+                          toDisplayString(" " + _ctx.$t("Werkzeuge für KI-Agenten")),
                           1
                           /* TEXT */
                         )
-                      ], 8, _hoisted_33),
-                      def.value.ki ? withDirectives((openBlock(), createElementBlock("select", {
-                        key: 0,
-                        "onUpdate:modelValue": _cache[6] || (_cache[6] = ($event) => def.value.team = $event),
-                        class: "team",
-                        title: _ctx.$t("mit dessen KI-Schlüssel, gezählt bei diesem Team")
-                      }, [
-                        _cache[18] || (_cache[18] = createElementVNode(
-                          "option",
-                          { value: "" },
-                          "—",
-                          -1
-                          /* CACHED */
-                        )),
-                        (openBlock(true), createElementBlock(
-                          Fragment,
-                          null,
-                          renderList(teams.value, (tm) => {
-                            return openBlock(), createElementBlock("option", {
-                              key: tm.key,
-                              value: tm.key
-                            }, toDisplayString(tm.label || tm.key), 9, _hoisted_35);
-                          }),
-                          128
-                          /* KEYED_FRAGMENT */
-                        ))
-                      ], 8, _hoisted_34)), [
-                        [vModelSelect, def.value.team]
-                      ]) : createCommentVNode("v-if", true)
+                      ], 8, _hoisted_38)
                     ])
-                  ])
-                ]),
-                createElementVNode("tr", null, [
-                  createElementVNode(
-                    "td",
-                    _hoisted_36,
-                    toDisplayString(_ctx.$t("MCP")),
-                    1
-                    /* TEXT */
-                  ),
-                  createElementVNode("td", null, [
-                    createElementVNode("label", {
-                      title: _ctx.$t("fremde KI-Agenten fragen den Dienst unter /mcp mit denselben Grenzen")
-                    }, [
+                  ]),
+                  createElementVNode("tr", null, [
+                    createElementVNode("td", {
+                      class: "attr",
+                      title: _ctx.$t("je Zeile eine Adresse, etwa https://www.example.com — nur diese Websites dürfen das Chat-Fenster einbinden")
+                    }, toDisplayString(_ctx.$t("Websites")), 9, _hoisted_39),
+                    createElementVNode("td", null, [
                       withDirectives(createElementVNode(
-                        "input",
+                        "textarea",
                         {
-                          type: "checkbox",
-                          "onUpdate:modelValue": _cache[7] || (_cache[7] = ($event) => def.value.mcp = $event),
-                          class: "mcp"
+                          "onUpdate:modelValue": _cache[8] || (_cache[8] = ($event) => websites.value = $event),
+                          class: "websites",
+                          rows: "2",
+                          style: { "width": "100%" },
+                          placeholder: "https://www.example.com"
                         },
                         null,
                         512
                         /* NEED_PATCH */
                       ), [
-                        [vModelCheckbox, def.value.mcp]
-                      ]),
-                      createTextVNode(
-                        toDisplayString(" " + _ctx.$t("Werkzeuge für KI-Agenten")),
-                        1
-                        /* TEXT */
-                      )
-                    ], 8, _hoisted_37)
-                  ])
-                ]),
-                createElementVNode("tr", null, [
-                  createElementVNode("td", {
-                    class: "attr",
-                    title: _ctx.$t("je Zeile eine Adresse, etwa https://www.example.com — nur diese Websites dürfen das Chat-Fenster einbinden")
-                  }, toDisplayString(_ctx.$t("Websites")), 9, _hoisted_38),
-                  createElementVNode("td", null, [
-                    withDirectives(createElementVNode(
-                      "textarea",
-                      {
-                        "onUpdate:modelValue": _cache[8] || (_cache[8] = ($event) => websites.value = $event),
-                        class: "websites",
-                        rows: "2",
-                        style: { "width": "100%" },
-                        placeholder: "https://www.example.com"
-                      },
-                      null,
-                      512
-                      /* NEED_PATCH */
-                    ), [
-                      [
-                        vModelText,
-                        websites.value,
-                        void 0,
-                        { lazy: true }
-                      ]
+                        [
+                          vModelText,
+                          websites.value,
+                          void 0,
+                          { lazy: true }
+                        ]
+                      ])
                     ])
-                  ])
-                ]),
-                createElementVNode("tr", null, [
-                  createElementVNode("td", {
-                    class: "attr",
-                    title: _ctx.$t("je Besucher zählt der Dienst, je Tag zählt journali; leer heisst Vorgabe")
-                  }, toDisplayString(_ctx.$t("Grenzen")), 9, _hoisted_39),
-                  createElementVNode("td", null, [
-                    createElementVNode("div", _hoisted_40, [
-                      createElementVNode("label", {
-                        title: _ctx.$t("Fragen je Besucher und Minute (Vorgabe 20)")
-                      }, [
-                        createTextVNode(
-                          toDisplayString(_ctx.$t("Besucher/min")) + " ",
-                          1
-                          /* TEXT */
-                        ),
-                        withDirectives(createElementVNode(
-                          "input",
-                          {
-                            type: "number",
-                            min: "0",
-                            "onUpdate:modelValue": _cache[9] || (_cache[9] = ($event) => def.value.limits.jeBesucherMinute = $event),
-                            class: "zahl"
-                          },
-                          null,
-                          512
-                          /* NEED_PATCH */
-                        ), [
-                          [vModelText, def.value.limits.jeBesucherMinute]
-                        ])
-                      ], 8, _hoisted_41),
-                      createElementVNode("label", {
-                        title: _ctx.$t("Fragen je Besucher und Tag (Vorgabe 300)")
-                      }, [
-                        createTextVNode(
-                          toDisplayString(_ctx.$t("Besucher/Tag")) + " ",
-                          1
-                          /* TEXT */
-                        ),
-                        withDirectives(createElementVNode(
-                          "input",
-                          {
-                            type: "number",
-                            min: "0",
-                            "onUpdate:modelValue": _cache[10] || (_cache[10] = ($event) => def.value.limits.jeBesucherTag = $event),
-                            class: "zahl"
-                          },
-                          null,
-                          512
-                          /* NEED_PATCH */
-                        ), [
-                          [vModelText, def.value.limits.jeBesucherTag]
-                        ])
-                      ], 8, _hoisted_42),
-                      createElementVNode("label", {
-                        title: _ctx.$t("Fragen aller Besucher je Tag (leer: ohne Grenze)")
-                      }, [
-                        createTextVNode(
-                          toDisplayString(_ctx.$t("gesamt/Tag")) + " ",
-                          1
-                          /* TEXT */
-                        ),
-                        withDirectives(createElementVNode(
-                          "input",
-                          {
-                            type: "number",
-                            min: "0",
-                            "onUpdate:modelValue": _cache[11] || (_cache[11] = ($event) => def.value.limits.jeTag = $event),
-                            class: "zahl je-tag"
-                          },
-                          null,
-                          512
-                          /* NEED_PATCH */
-                        ), [
-                          [vModelText, def.value.limits.jeTag]
-                        ])
-                      ], 8, _hoisted_43),
-                      createElementVNode("label", {
-                        title: _ctx.$t("Texte der KI je Tag (leer: ohne Grenze)")
-                      }, [
-                        createTextVNode(
-                          toDisplayString(_ctx.$t("KI/Tag")) + " ",
-                          1
-                          /* TEXT */
-                        ),
-                        withDirectives(createElementVNode(
-                          "input",
-                          {
-                            type: "number",
-                            min: "0",
-                            "onUpdate:modelValue": _cache[12] || (_cache[12] = ($event) => def.value.limits.kiJeTag = $event),
-                            class: "zahl"
-                          },
-                          null,
-                          512
-                          /* NEED_PATCH */
-                        ), [
-                          [vModelText, def.value.limits.kiJeTag]
-                        ])
-                      ], 8, _hoisted_44)
+                  ]),
+                  createElementVNode("tr", null, [
+                    createElementVNode("td", {
+                      class: "attr",
+                      title: _ctx.$t("je Besucher zählt der Dienst, je Tag zählt journali; leer heisst Vorgabe")
+                    }, toDisplayString(_ctx.$t("Grenzen")), 9, _hoisted_40),
+                    createElementVNode("td", null, [
+                      createElementVNode("div", _hoisted_41, [
+                        createElementVNode("label", {
+                          title: _ctx.$t("Fragen je Besucher und Minute (Vorgabe 20)")
+                        }, [
+                          createTextVNode(
+                            toDisplayString(_ctx.$t("Besucher/min")) + " ",
+                            1
+                            /* TEXT */
+                          ),
+                          withDirectives(createElementVNode(
+                            "input",
+                            {
+                              type: "number",
+                              min: "0",
+                              "onUpdate:modelValue": _cache[9] || (_cache[9] = ($event) => def.value.limits.jeBesucherMinute = $event),
+                              class: "zahl"
+                            },
+                            null,
+                            512
+                            /* NEED_PATCH */
+                          ), [
+                            [vModelText, def.value.limits.jeBesucherMinute]
+                          ])
+                        ], 8, _hoisted_42),
+                        createElementVNode("label", {
+                          title: _ctx.$t("Fragen je Besucher und Tag (Vorgabe 300)")
+                        }, [
+                          createTextVNode(
+                            toDisplayString(_ctx.$t("Besucher/Tag")) + " ",
+                            1
+                            /* TEXT */
+                          ),
+                          withDirectives(createElementVNode(
+                            "input",
+                            {
+                              type: "number",
+                              min: "0",
+                              "onUpdate:modelValue": _cache[10] || (_cache[10] = ($event) => def.value.limits.jeBesucherTag = $event),
+                              class: "zahl"
+                            },
+                            null,
+                            512
+                            /* NEED_PATCH */
+                          ), [
+                            [vModelText, def.value.limits.jeBesucherTag]
+                          ])
+                        ], 8, _hoisted_43),
+                        createElementVNode("label", {
+                          title: _ctx.$t("Fragen aller Besucher je Tag (leer: ohne Grenze)")
+                        }, [
+                          createTextVNode(
+                            toDisplayString(_ctx.$t("gesamt/Tag")) + " ",
+                            1
+                            /* TEXT */
+                          ),
+                          withDirectives(createElementVNode(
+                            "input",
+                            {
+                              type: "number",
+                              min: "0",
+                              "onUpdate:modelValue": _cache[11] || (_cache[11] = ($event) => def.value.limits.jeTag = $event),
+                              class: "zahl je-tag"
+                            },
+                            null,
+                            512
+                            /* NEED_PATCH */
+                          ), [
+                            [vModelText, def.value.limits.jeTag]
+                          ])
+                        ], 8, _hoisted_44),
+                        createElementVNode("label", {
+                          title: _ctx.$t("Texte der KI je Tag (leer: ohne Grenze)")
+                        }, [
+                          createTextVNode(
+                            toDisplayString(_ctx.$t("KI/Tag")) + " ",
+                            1
+                            /* TEXT */
+                          ),
+                          withDirectives(createElementVNode(
+                            "input",
+                            {
+                              type: "number",
+                              min: "0",
+                              "onUpdate:modelValue": _cache[12] || (_cache[12] = ($event) => def.value.limits.kiJeTag = $event),
+                              class: "zahl"
+                            },
+                            null,
+                            512
+                            /* NEED_PATCH */
+                          ), [
+                            [vModelText, def.value.limits.kiJeTag]
+                          ])
+                        ], 8, _hoisted_45)
+                      ])
                     ])
                   ])
                 ])
               ])
-            ]),
-            createElementVNode("div", {
-              class: "step-band",
-              title: _ctx.$t("der Dienst meldet sich mit einem Token an; es gilt nur für die Fragen an diesen Berater")
-            }, toDisplayString(_ctx.$t("Token")) + " · " + toDisplayString(tokens.value.length), 9, _hoisted_45),
-            createElementVNode("table", _hoisted_46, [
-              createElementVNode("tbody", null, [
-                (openBlock(true), createElementBlock(
-                  Fragment,
-                  null,
-                  renderList(tokens.value, (tk) => {
-                    return openBlock(), createElementBlock("tr", {
-                      key: tk.id,
-                      class: "token"
-                    }, [
-                      createElementVNode("td", null, [
-                        createTextVNode(
-                          toDisplayString(tk.label) + " ",
+            ], 8, _hoisted_18),
+            createElementVNode("div", _hoisted_46, [
+              createElementVNode("div", {
+                class: "step-band",
+                title: _ctx.$t("der Dienst meldet sich mit einem Token an; es gilt nur für die Fragen an diesen Berater")
+              }, toDisplayString(_ctx.$t("Token")) + " · " + toDisplayString(tokens.value.length), 9, _hoisted_47),
+              createElementVNode("table", _hoisted_48, [
+                createElementVNode("tbody", null, [
+                  (openBlock(true), createElementBlock(
+                    Fragment,
+                    null,
+                    renderList(tokens.value, (tk) => {
+                      return openBlock(), createElementBlock("tr", {
+                        key: tk.id,
+                        class: "token"
+                      }, [
+                        createElementVNode("td", null, [
+                          createTextVNode(
+                            toDisplayString(tk.label) + " ",
+                            1
+                            /* TEXT */
+                          ),
+                          createElementVNode(
+                            "span",
+                            _hoisted_49,
+                            toDisplayString(tk.id) + "…",
+                            1
+                            /* TEXT */
+                          )
+                        ]),
+                        createElementVNode(
+                          "td",
+                          _hoisted_50,
+                          toDisplayString(new Date(tk.at).toLocaleString()),
                           1
                           /* TEXT */
                         ),
-                        createElementVNode(
-                          "span",
-                          _hoisted_47,
-                          toDisplayString(tk.id) + "…",
-                          1
-                          /* TEXT */
-                        )
-                      ]),
-                      createElementVNode(
-                        "td",
-                        _hoisted_48,
-                        toDisplayString(new Date(tk.at).toLocaleString()),
-                        1
-                        /* TEXT */
-                      ),
-                      createElementVNode("td", _hoisted_49, [
-                        createElementVNode("button", {
-                          type: "button",
-                          class: "x widerrufen",
-                          title: _ctx.$t("Token widerrufen"),
-                          onClick: ($event) => tokenWiderrufen(tk.id)
-                        }, "✕", 8, _hoisted_50)
-                      ])
-                    ]);
-                  }),
-                  128
-                  /* KEYED_FRAGMENT */
-                ))
+                        createElementVNode("td", _hoisted_51, [
+                          createElementVNode("button", {
+                            type: "button",
+                            class: "x widerrufen",
+                            title: _ctx.$t("Token widerrufen"),
+                            onClick: ($event) => tokenWiderrufen(tk.id)
+                          }, "✕", 8, _hoisted_52)
+                        ])
+                      ]);
+                    }),
+                    128
+                    /* KEYED_FRAGMENT */
+                  ))
+                ])
+              ]),
+              createElementVNode("div", _hoisted_53, [
+                createElementVNode("button", {
+                  type: "button",
+                  class: "token-neu",
+                  disabled: geaendert.value,
+                  title: geaendert.value ? _ctx.$t("ungespeicherte Änderungen") : _ctx.$t("ein neues Token für den Dienst"),
+                  onClick: tokenAusgeben
+                }, toDisplayString(_ctx.$t("＋ Token")), 9, _hoisted_54),
+                neuesToken.value ? (openBlock(), createElementBlock("code", {
+                  key: 0,
+                  class: "neues-token",
+                  title: _ctx.$t("nur jetzt sichtbar — als JOURNALI_ADVISOR_TOKEN des Dienstes")
+                }, toDisplayString(neuesToken.value), 9, _hoisted_55)) : createCommentVNode("v-if", true)
               ])
-            ]),
-            createElementVNode("div", _hoisted_51, [
-              createElementVNode("button", {
-                type: "button",
-                class: "token-neu",
-                disabled: geaendert.value,
-                title: geaendert.value ? _ctx.$t("ungespeicherte Änderungen") : _ctx.$t("ein neues Token für den Dienst"),
-                onClick: tokenAusgeben
-              }, toDisplayString(_ctx.$t("＋ Token")), 9, _hoisted_52),
-              neuesToken.value ? (openBlock(), createElementBlock("code", {
-                key: 0,
-                class: "neues-token",
-                title: _ctx.$t("nur jetzt sichtbar — als JOURNALI_ADVISOR_TOKEN des Dienstes")
-              }, toDisplayString(neuesToken.value), 9, _hoisted_53)) : createCommentVNode("v-if", true)
             ]),
             createElementVNode("div", {
               class: "step-band",
               title: _ctx.$t("dieselbe Frage, die ein Besucher stellt — mit Text der KI, wenn der Berater sie nutzt")
-            }, toDisplayString(_ctx.$t("Vorschau")), 9, _hoisted_54),
+            }, toDisplayString(_ctx.$t("Vorschau")), 9, _hoisted_56),
             createElementVNode(
               "form",
               {
@@ -965,7 +981,7 @@ const _sfc_main = {
                   class: "vorschau-frage",
                   style: { "flex": "1" },
                   placeholder: _ctx.$t("Frage eines Besuchers")
-                }, null, 8, _hoisted_55), [
+                }, null, 8, _hoisted_57), [
                   [vModelText, vorschauFrage.value]
                 ]),
                 createElementVNode("button", {
@@ -973,21 +989,21 @@ const _sfc_main = {
                   class: "vorschau-los",
                   disabled: geaendert.value,
                   title: geaendert.value ? _ctx.$t("ungespeicherte Änderungen") : ""
-                }, toDisplayString(_ctx.$t("Fragen")), 9, _hoisted_56),
+                }, toDisplayString(_ctx.$t("Fragen")), 9, _hoisted_58),
                 createElementVNode("button", {
                   type: "button",
                   class: "vorschau-neu",
                   title: _ctx.$t("ein neues Gespräch: die gesammelten Angaben fallen weg"),
                   onClick: neuesGespraech
-                }, "↺", 8, _hoisted_57)
+                }, "↺", 8, _hoisted_59)
               ],
               32
               /* NEED_HYDRATION */
             ),
-            vorschau.value ? (openBlock(), createElementBlock("div", _hoisted_58, [
+            vorschau.value ? (openBlock(), createElementBlock("div", _hoisted_60, [
               vorschau.value.error ? (openBlock(), createElementBlock(
                 "div",
-                _hoisted_59,
+                _hoisted_61,
                 "✗ " + toDisplayString(vorschau.value.error),
                 1
                 /* TEXT */
@@ -997,7 +1013,7 @@ const _sfc_main = {
                 [
                   vorschau.value.texte?.satz || vorschau.value.texte?.ueber ? (openBlock(), createElementBlock(
                     "div",
-                    _hoisted_60,
+                    _hoisted_62,
                     toDisplayString(vorschau.value.texte.ueber ? vorschau.value.texte.ueber + " " : "") + toDisplayString(vorschau.value.texte.satz),
                     1
                     /* TEXT */
@@ -1024,8 +1040,8 @@ const _sfc_main = {
                     key: 1,
                     class: "muted gesammelt",
                     title: _ctx.$t("was der Kern aus dem Gespräch gesammelt hat")
-                  }, toDisplayString([...vorschau.value.words ?? [], ...(vorschau.value.filter ?? []).map((f) => f.label + ": " + (f.valueLabel ?? f.value))].join(" · ")), 9, _hoisted_61)) : createCommentVNode("v-if", true),
-                  vorschau.value.about?.values?.length ? (openBlock(), createElementBlock("table", _hoisted_62, [
+                  }, toDisplayString([...vorschau.value.words ?? [], ...(vorschau.value.filter ?? []).map((f) => f.label + ": " + (f.valueLabel ?? f.value))].join(" · ")), 9, _hoisted_63)) : createCommentVNode("v-if", true),
+                  vorschau.value.about?.values?.length ? (openBlock(), createElementBlock("table", _hoisted_64, [
                     createElementVNode("tbody", null, [
                       (openBlock(true), createElementBlock(
                         Fragment,
@@ -1036,7 +1052,7 @@ const _sfc_main = {
                           }, [
                             createElementVNode(
                               "td",
-                              _hoisted_63,
+                              _hoisted_65,
                               toDisplayString(v.label),
                               1
                               /* TEXT */
@@ -1058,10 +1074,10 @@ const _sfc_main = {
                   createElementVNode("div", {
                     class: "muted",
                     title: vorschau.value.warning || ""
-                  }, toDisplayString(_ctx.$t("{0} Treffer", [vorschau.value.total])) + toDisplayString(vorschau.value.warning && !vorschau.value.warning.startsWith("KI") ? " · " + _ctx.$t("nur Wortsuche") : ""), 9, _hoisted_64),
+                  }, toDisplayString(_ctx.$t("{0} Treffer", [vorschau.value.total])) + toDisplayString(vorschau.value.warning && !vorschau.value.warning.startsWith("KI") ? " · " + _ctx.$t("nur Wortsuche") : ""), 9, _hoisted_66),
                   vorschau.value.warning?.startsWith("KI") ? (openBlock(), createElementBlock(
                     "div",
-                    _hoisted_65,
+                    _hoisted_67,
                     "✗ " + toDisplayString(vorschau.value.warning),
                     1
                     /* TEXT */
@@ -1070,7 +1086,7 @@ const _sfc_main = {
                     key: 4,
                     class: "ki-text",
                     title: _ctx.$t("Text von einer KI erstellt")
-                  }, "✧ " + toDisplayString(vorschau.value.answer), 9, _hoisted_66)) : createCommentVNode("v-if", true),
+                  }, "✧ " + toDisplayString(vorschau.value.answer), 9, _hoisted_68)) : createCommentVNode("v-if", true),
                   (openBlock(true), createElementBlock(
                     Fragment,
                     null,
@@ -1079,12 +1095,12 @@ const _sfc_main = {
                         key: u.n,
                         class: "unterlage muted",
                         title: u.text
-                      }, "⎘ U" + toDisplayString(u.n) + " " + toDisplayString(u.heading || u.name) + " · " + toDisplayString(u.name), 9, _hoisted_67);
+                      }, "⎘ U" + toDisplayString(u.n) + " " + toDisplayString(u.heading || u.name) + " · " + toDisplayString(u.name), 9, _hoisted_69);
                     }),
                     128
                     /* KEYED_FRAGMENT */
                   )),
-                  createElementVNode("ol", _hoisted_68, [
+                  createElementVNode("ol", _hoisted_70, [
                     (openBlock(true), createElementBlock(
                       Fragment,
                       null,
@@ -1099,7 +1115,7 @@ const _sfc_main = {
                           ),
                           createElementVNode(
                             "span",
-                            _hoisted_69,
+                            _hoisted_71,
                             toDisplayString((h2.values ?? []).map((v) => v.label + ": " + v.value).join(" · ")),
                             1
                             /* TEXT */
@@ -1112,7 +1128,7 @@ const _sfc_main = {
                   ]),
                   vorschau.value.facets?.length ? (openBlock(), createElementBlock(
                     "div",
-                    _hoisted_70,
+                    _hoisted_72,
                     toDisplayString(_ctx.$t("Facetten")) + ": " + toDisplayString(vorschau.value.facets.map((f) => f.label).join(", ")),
                     1
                     /* TEXT */
@@ -1124,26 +1140,27 @@ const _sfc_main = {
             ])) : createCommentVNode("v-if", true),
             createElementVNode("div", {
               class: "step-band",
+              "data-demo": "aus",
               title: _ctx.$t("der Dienst läuft im eigenen Container und spricht nur über /api mit journali — docs/betrieb.md")
-            }, toDisplayString(_ctx.$t("Einbinden")), 9, _hoisted_71),
-            createElementVNode("div", _hoisted_72, [
+            }, toDisplayString(_ctx.$t("Einbinden")), 9, _hoisted_73),
+            createElementVNode("div", _hoisted_74, [
               createElementVNode(
                 "div",
-                _hoisted_73,
+                _hoisted_75,
                 toDisplayString(_ctx.$t("Website")),
                 1
                 /* TEXT */
               ),
               createElementVNode(
                 "pre",
-                _hoisted_74,
+                _hoisted_76,
                 toDisplayString(einbinden.value),
                 1
                 /* TEXT */
               ),
               createElementVNode(
                 "div",
-                _hoisted_75,
+                _hoisted_77,
                 toDisplayString(_ctx.$t("MCP")),
                 1
                 /* TEXT */
@@ -1164,7 +1181,7 @@ const _sfc_main = {
               )),
               createElementVNode(
                 "pre",
-                _hoisted_76,
+                _hoisted_78,
                 toDisplayString(compose.value),
                 1
                 /* TEXT */
@@ -1176,7 +1193,7 @@ const _sfc_main = {
     };
   }
 };
-const View = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-0be73fe9"]]);
+const View = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-0449e972"]]);
 const entry = {
   views: [{ path: "advisor", topic: "export", order: 50, label: t("Produktberatung"), icon: "✆", hint: t("Fragen von Besuchern einer Website an die Produkte eines Publikationsbaums — als Chat-Fenster und für KI-Agenten"), component: View }]
 };

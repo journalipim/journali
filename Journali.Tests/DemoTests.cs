@@ -367,6 +367,13 @@ public class DemoTests
                 Assert.DoesNotContain(t.Nodes.Values, x => x.Role == Roles.Rubric && x.Label.GetValueOrDefault("de") == "Zelte" && Wurzel(t, x) == shop.Id);
                 return 0;
             });
+            // 14.10.2026: der Produktberater der Demo auf dem Baum Product Advisor, ohne MCP (der Dienst läuft in der Demo nicht)
+            var beraterDaten = c.Lesen((_, _) => c.Plugins.All[AdvisorApi.Plugin].Data.GetValueOrDefault(AdvisorApi.Prefix + Demo.BeraterKey));
+            Assert.NotNull(beraterDaten);
+            var berater = AdvisorApi.Definition.Read(beraterDaten!).Def!;
+            Assert.Equal(c.Lesen((_, t) => t.PubTrees.Single(b => b.Name == "Product Advisor").Id), berater.Pub);
+            Assert.Equal("onlineshop", berater.View);
+            Assert.False(berater.Mcp);
             // 14.10.2026: freigegeben für web — vorher leiteten beide Bäume nichts aus, und der Produktberater hatte kein Produkt
             c.Lesen((m, t) =>
             {

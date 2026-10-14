@@ -44,6 +44,8 @@ function sauber(d) {
 async function ladeListe() {
   try { liste.value = await api.get('/api/advisor') ?? []; meldung.value = '' }
   catch (e) { liste.value = []; meldung.value = '✗ ' + e.message }
+  // genau ein Berater: gleich offen — die Liste hätte nur eine Zeile (14.10.2026, in der Demo der von Tannwald)
+  if (!cur.value && liste.value.length === 1) await oeffne(liste.value[0].key)
 }
 async function ladeAuswahl() {
   const sicher = async p => { try { return await api.get(p) ?? [] } catch { return [] } }
@@ -149,7 +151,7 @@ const compose = computed(() => [
             <td style="width:24px" :class="b.errors.length ? 'neg' : 'pos'" :title="b.errors.join(' · ')">{{ b.errors.length ? '✗' : '✓' }}</td>
           </tr>
         </tbody></table>
-        <form class="neu" @submit.prevent="anlegen">
+        <form class="neu" data-demo="aus" @submit.prevent="anlegen">
           <input v-model="neuKey" class="neu-key" :placeholder="$t('Schlüssel, z. B. shop')" :title="$t('a–z, 0–9, _ und -, beginnt mit einem Buchstaben')" />
           <button type="submit" :disabled="!keyOk" :title="$t('Berater anlegen')">＋</button>
         </form>
@@ -158,11 +160,13 @@ const compose = computed(() => [
       <div v-if="def" class="rechts">
         <div class="kopf">
           <input v-model="def.label" class="bez" :placeholder="$t('Bezeichnung')" :title="$t('steht im Kopf des Chat-Fensters')" />
-          <button type="button" class="primary speichern" :disabled="!geaendert" @click="speichern">{{ $t('Speichern') }}</button>
-          <button type="button" class="entfernen" :title="$t('Berater entfernen')" @click="entfernen">✕</button>
+          <button type="button" class="primary speichern" data-demo="aus" :disabled="!geaendert" @click="speichern">{{ $t('Speichern') }}</button>
+          <button type="button" class="entfernen" data-demo="aus" :title="$t('Berater entfernen')" @click="entfernen">✕</button>
         </div>
         <ul v-if="fehler.length" class="fehler neg"><li v-for="(e, i) in fehler" :key="i">✗ {{ e }}</li></ul>
 
+        <!-- in der Demo nur ansehen: speichern geht dort nicht, und ungespeichert sperrte die Vorschau -->
+        <fieldset class="felder" :disabled="!!store.demo">
         <table class="grid form"><colgroup><col style="width:120px" /><col /></colgroup><tbody>
           <tr><td class="attr" :title="$t('welche Produkte der Berater kennt: was dieser Baum für seinen Kanal ausleitet')">{{ $t('Publikationsbaum') }}</td>
             <td><select v-model="def.pub" class="pub"><option value="">—</option><option v-for="p in pubs" :key="p.id" :value="p.id">{{ p.label }} · {{ p.channel }}{{ p.market ? ' · ' + p.market : '' }}</option></select></td></tr>
@@ -189,7 +193,9 @@ const compose = computed(() => [
             <label :title="$t('Texte der KI je Tag (leer: ohne Grenze)')">{{ $t('KI/Tag') }} <input type="number" min="0" v-model="def.limits.kiJeTag" class="zahl" /></label>
           </div></td></tr>
         </tbody></table>
+        </fieldset>
 
+        <div data-demo="aus">
         <div class="step-band" :title="$t('der Dienst meldet sich mit einem Token an; es gilt nur für die Fragen an diesen Berater')">{{ $t('Token') }} · {{ tokens.length }}</div>
         <table class="grid"><tbody>
           <tr v-for="tk in tokens" :key="tk.id" class="token"><td>{{ tk.label }} <span class="muted">{{ tk.id }}…</span></td><td class="muted">{{ new Date(tk.at).toLocaleString() }}</td>
@@ -198,6 +204,7 @@ const compose = computed(() => [
         <div class="row" style="padding:4px 8px">
           <button type="button" class="token-neu" :disabled="geaendert" :title="geaendert ? $t('ungespeicherte Änderungen') : $t('ein neues Token für den Dienst')" @click="tokenAusgeben">{{ $t('＋ Token') }}</button>
           <code v-if="neuesToken" class="neues-token" :title="$t('nur jetzt sichtbar — als JOURNALI_ADVISOR_TOKEN des Dienstes')">{{ neuesToken }}</code>
+        </div>
         </div>
 
         <div class="step-band" :title="$t('dieselbe Frage, die ein Besucher stellt — mit Text der KI, wenn der Berater sie nutzt')">{{ $t('Vorschau') }}</div>
@@ -222,8 +229,8 @@ const compose = computed(() => [
           </template>
         </div>
 
-        <div class="step-band" :title="$t('der Dienst läuft im eigenen Container und spricht nur über /api mit journali — docs/betrieb.md')">{{ $t('Einbinden') }}</div>
-        <div style="padding:4px 8px" class="einbinden">
+        <div class="step-band" data-demo="aus" :title="$t('der Dienst läuft im eigenen Container und spricht nur über /api mit journali — docs/betrieb.md')">{{ $t('Einbinden') }}</div>
+        <div style="padding:4px 8px" class="einbinden" data-demo="aus">
           <div class="muted">{{ $t('Website') }}</div><pre class="code">{{ einbinden }}</pre>
           <div class="muted">{{ $t('MCP') }}</div><pre class="code">https://advisor.example.com/mcp</pre>
           <div class="muted">compose.yaml</div><pre class="code">{{ compose }}</pre>
@@ -242,6 +249,7 @@ const compose = computed(() => [
 .neu { display: flex; gap: 4px; padding: 6px 8px; }
 .neu input { flex: 1; min-width: 0; }
 .form { width: 100%; }
+.felder { border: 0; padding: 0; margin: 0; min-width: 0; }
 .form td { height: 30px; vertical-align: middle; white-space: normal; padding: 2px 4px; }
 .form td.attr { color: var(--muted); white-space: nowrap; padding-left: 8px; }
 .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }

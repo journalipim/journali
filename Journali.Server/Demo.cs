@@ -200,6 +200,7 @@ public static class Demo
         c.MaxPubTrees = 2;   // Online-Shop und Product Advisor, gleich was der Tarif sagt
         n += Publikationsbaum(c);
         n += Freigaben(c);
+        n += Berater(c);
         // die Publikationsbäume der Demo und keiner mehr, wie eine Grenze des Tarifs: anlegen geht nicht, löschen sperrt Gesperrt (Knoten zurückziehen)
         c.MaxPubTrees = Math.Max(1, c.Lesen((_, t) => t.PubTrees.Count()));
         foreach (var key in OhnePlugins)
@@ -785,6 +786,30 @@ public static class Demo
             return 0;
         });
         return n;
+    }
+
+    /// <summary>Schlüssel des Produktberaters der Demo.</summary>
+    public const string BeraterKey = "tannwald";
+
+    /// <summary>
+    /// Der Produktberater (14.10.2026): ein Berater auf dem Baum „Product Advisor“, damit ✆ Produktberatung in der Demo etwas zeigt — anlegen dürfen
+    /// Besucher keinen (Plugin-Daten sind gesperrt). Gefragt wird in der Vorschau der Ansicht; der Dienst mit Chat-Fenster und MCP läuft in der Demo
+    /// nicht, darum ohne MCP und ohne Token. Ohne KI: die Demo hat keinen Schlüssel. Was schon da ist, bleibt.
+    /// </summary>
+    public static int Berater(Catalog c)
+    {
+        if (c.Lesen((_, _) => c.Plugins.All.GetValueOrDefault(AdvisorApi.Plugin)) is not { Enabled: true } plugin) return 0;
+        if (plugin.Data.Keys.Any(k => k.StartsWith(AdvisorApi.Prefix, StringComparison.Ordinal))) return 0;
+        var pub = c.Lesen((_, t) => t.PubTrees.FirstOrDefault(b => b.Name == "Product Advisor")?.Id);
+        if (pub is null) return 0;
+        var def = new AdvisorApi.Definition(
+            Label: TannwaldGruppe, Pub: pub,
+            Role: c.Lesen((_, _) => c.Users.Roles.ContainsKey("reader")) ? "reader" : Rolle,
+            View: c.Lesen((m, _) => m.Views.ContainsKey("onlineshop")) ? "onlineshop" : null,
+            Locales: ["de", "en"],
+            Greeting: new() { ["de"] = "Wonach suchen Sie?", ["en"] = "What are you looking for?" },
+            Ki: false, Mcp: false, Limits: new(JeTag: 5000));
+        return c.With((_, _, write) => { write(Anwender, Plugins.Stream + AdvisorApi.Plugin, Types.PluginDataSet, new PluginDataSet(AdvisorApi.Prefix + BeraterKey, def.Write()), null); return 1; });
     }
 
     /// <summary>Die Gruppe an jede Wurzel des Baums (ohne Rubriken), die sie noch nicht hat.</summary>

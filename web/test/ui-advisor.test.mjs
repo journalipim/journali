@@ -42,6 +42,19 @@ async function welt({ daten = {}, fehler = [], antwort = null } = {}) {
   return { w, gesendet, gespeichert, ende: () => { w.unmount(); api.get = get; api.post = post; api.del = del; dialog.confirm = confirm } }
 }
 
+test('genau ein Berater ist gleich offen; in der Demo nur ansehen und fragen (14.10.2026)', async () => {
+  const { w, ende } = await welt()
+  try {
+    assert.equal(w.find('select.pub').element.value, 'r1', 'ohne Klick offen')
+    assert.equal(w.find('fieldset.felder').element.disabled, false)
+    store.demo = true; await warte(w)
+    assert.equal(w.find('fieldset.felder').element.disabled, true, 'in der Demo sind die Felder gesperrt')
+    for (const sel of ['form.neu', 'button.speichern', 'button.entfernen', 'button.token-neu', 'div.einbinden'])
+      assert.ok(w.find(sel).element.closest('[data-demo="aus"]'), sel + ' steht in der Demo nicht da')
+    assert.equal(w.find('button.vorschau-los').element.closest('[data-demo="aus"]'), null, 'fragen geht auch in der Demo')
+  } finally { store.demo = null; ende() }
+})
+
 test('die Liste zeigt die Berater mit ihrem Zustand; ein Klick öffnet einen mit seinen Feldern', async () => {
   const { w, ende } = await welt({ fehler: ['keine Sicht'] })
   try {
