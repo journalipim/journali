@@ -390,7 +390,7 @@ onMounted(() => { if (!tree.loaded) tree.load() })
         <span v-if="row.kind === 'placed' && row.r.role === 'group'" class="muted count" :title="$t('Produktgruppe mit {0} darunter', [tree.below(row.r.id).total])">{{ tree.below(row.r.id).total }}</span>
       </div>
       <div v-if="!trees.length" class="empty">{{ $t("Kein Publikationsbaum.") }}<div class="chips" style="justify-content:center;margin-top:8px"><button class="primary" @click="newTree">{{ $t("+ Publikationsbaum") }}</button></div><div class="muted" style="margin-top:6px;font-size:12px"><span :title="$t('Danach Äste aus dem Pflegebaum links herüberziehen.')">{{ $t("Name, Kanal, optional Markt") }}</span></div></div>
-      <div v-else-if="rows.length === 1" class="empty">{{ $t("Noch leer — einen Ast aus dem Pflegebaum links auf „{0}“ ziehen.", [current.label]) }}<div class="chips" style="justify-content:center;margin-top:8px"><button class="x" @click="newRubric(current)" :title="$t('eine leere Rubrik anlegen, z. B. für eigene Gliederung')">{{ $t("+ Rubrik") }}</button></div></div>
+      <div v-else-if="rows.length === 1 && !rows[0].has" class="empty">{{ $t("Noch leer — einen Ast aus dem Pflegebaum links auf „{0}“ ziehen.", [current.label]) }}<div class="chips" style="justify-content:center;margin-top:8px"><button class="x" @click="newRubric(current)" :title="$t('eine leere Rubrik anlegen, z. B. für eigene Gliederung')">{{ $t("+ Rubrik") }}</button></div></div>
     </div>
     <div class="toolbar hint muted" style="border-top:1px solid var(--line);border-bottom:0;font-size:12px"><span :title="$t('Ziehen von links übernimmt, hier ziehen hängt um; Strg-Klick wählt mehrere.')">{{ $t("▥ Rubrik · ↗ Verweis · ziehen, Strg-Klick, Rechtsklick") }}</span></div>
   </div>
