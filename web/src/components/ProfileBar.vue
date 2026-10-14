@@ -22,8 +22,13 @@ const saved = ref('')          // JSON des gespeicherten Standes
 const dirty = ref(false)
 const dismissed = ref('')      // Stand, bei dem die Leiste weggeklickt wurde — bei einer weiteren Änderung kommt sie wieder
 let timer = null
+// Ohne Profil ist der Ausgangsstand der, mit dem die Ansicht aufgeht (letzter Besuch, erste Wurzel) — bis der Anwender etwas eingibt oder anklickt.
+// Vorher war er leer, und „Einstellungen geändert — noch kein Profil“ stand schon beim Öffnen da (14.10.2026).
+let beruehrt = false
+const merke = () => { beruehrt = true }
+const EREIGNISSE = ['input', 'change', 'pointerdown', 'keydown']
 const snapshot = () => { try { return JSON.stringify(props.get() ?? {}) } catch { return '' } }
-function tick() { const now = snapshot(); const d = now !== saved.value && now !== '{}'; if (d !== dirty.value) dirty.value = d; if (!d) dismissed.value = '' }
+function tick() { const now = snapshot(); if (!current.value && !beruehrt) saved.value = now; const d = now !== saved.value && now !== '{}'; if (d !== dirty.value) dirty.value = d; if (!d) dismissed.value = '' }
 const showBar = () => dirty.value && snapshot() !== dismissed.value
 async function saveAs() {
   const n = await dialog.prompt({ title: t('Als neues Profil speichern'), value: current.value ? current.value + '-2' : '', placeholder: t('Name'), ok: t('💾 Speichern') })
@@ -31,7 +36,7 @@ async function saveAs() {
   name.value = n.trim(); await save()
 }
 async function discard() { if (current.value) await apply(current.value); else { props.set(null); saved.value = ''; dirty.value = false } }
-onUnmounted(() => { clearInterval(timer); window.removeEventListener('journali:profile-applied', rebase) })
+onUnmounted(() => { clearInterval(timer); window.removeEventListener('journali:profile-applied', rebase); for (const e of EREIGNISSE) document.removeEventListener(e, merke, true) })
 
 async function load() {
   try { names.value = (await api.get(`/api/plugins/${props.plugin}/data`)).filter(n => n.startsWith(PREFIX)).map(n => n.slice(PREFIX.length)) }
@@ -70,7 +75,7 @@ async function remove() {
 }
 // die Ansicht sagt, wenn sie das Profil auf eine neu geladene Datei gelegt hat — das ist dann der Ausgangsstand
 const rebase = () => { saved.value = snapshot(); dirty.value = false; dismissed.value = '' }
-onMounted(() => { load(); timer = setInterval(tick, 1000); window.addEventListener('journali:profile-applied', rebase) })
+onMounted(() => { load(); timer = setInterval(tick, 1000); window.addEventListener('journali:profile-applied', rebase); for (const e of EREIGNISSE) document.addEventListener(e, merke, true) })
 defineExpose({ load })
 </script>
 
