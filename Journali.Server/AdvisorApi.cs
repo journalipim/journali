@@ -237,7 +237,9 @@ public static partial class AdvisorApi
             return string.Join(", ", Teile(raw).Select(x => list.Values.TryGetValue(x, out var lv) && Bez(lv.Label, locale, model) is { Length: > 0 } l ? l : x));
         if (def.Type == AttributeTypes.Boolean) return raw == "true" ? (de ? "ja" : "yes") : (de ? "nein" : "no");
         if (def.Type == AttributeTypes.Html) return Leer().Replace(Tags().Replace(raw, " "), " ").Trim().Replace("&nbsp;", " ").Replace("&amp;", "&");
-        return string.IsNullOrEmpty(def.Unit) ? raw : raw + " " + def.Unit;
+        // eine Dezimalzahl auf Deutsch mit Komma (14.10.2026: in der Demo stand „Preis (EUR): 44.95“) — gespeichert und gefiltert wird mit Punkt
+        var zahl = def.Type == AttributeTypes.Decimal && de ? raw.Replace('.', ',') : raw;
+        return string.IsNullOrEmpty(def.Unit) ? zahl : zahl + " " + def.Unit;
     }
 
     /// <summary>Ein HTML-Wert als Absätze: Absatz, Zeilenumbruch und Listenpunkt werden zu Leerzeilen, das Ende einer Zelle zu einem

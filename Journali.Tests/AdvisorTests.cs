@@ -440,6 +440,18 @@ public class AdvisorTests
 
     // ---- das Token des Dienstes
 
+    [Theory]
+    [InlineData("de", "44.95", "44,95")]
+    [InlineData("en", "44.95", "44.95")]
+    [InlineData("de", "12", "12")]
+    public void Eine_Dezimalzahl_liest_ein_Besucher_in_seiner_Sprache(string locale, string roh, string gezeigt)
+    {
+        // 14.10.2026: in der Demo stand „Preis (EUR): 44.95“ in der deutschen Vorschau
+        var preis = new AttributeDefinition("price", Labels.Of("Preis", "Price"), AttributeTypes.Decimal);
+        Assert.Equal(gezeigt, AdvisorApi.Anzeige(new ModelCatalog(), preis, roh, locale));
+        Assert.Equal(gezeigt + " W", AdvisorApi.Anzeige(new ModelCatalog(), preis with { Unit = "W" }, roh, locale));
+    }
+
     [Fact]
     public async Task In_der_Demo_fragt_der_Anwender_demo_den_Berater_ohne_das_Recht_Plugins()
     {
