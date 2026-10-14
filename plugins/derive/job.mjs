@@ -10,6 +10,7 @@ import os from 'node:os'
 import path from 'node:path'
 import { pipeline } from 'node:stream/promises'
 import { Readable } from 'node:stream'
+import { pdfFirstPage } from './pdf.mjs'
 
 // Keine Preset-Auswahl: der Job rechnet alle Presets mit „automatisch". Welche das sind, steht in den
 // Einstellungen — ein Job, der davon eines aussparte, liess den Rest fuer immer liegen. Auch JOURNALI_PRESET wird
@@ -25,24 +26,6 @@ const headers = { 'X-Actor': actor, ...(E.JOURNALI_TOKEN ? { Authorization: 'Bea
 
 let sharp
 try { sharp = (await import('sharp')).default } catch (e) { console.error('✗ sharp fehlt — im Plugin-Verzeichnis einmal „npm install“ ausführen (' + e.message + ')'); process.exitCode = 1 }
-
-/// Erste Seite eines PDF als PNG. Einmal je Datei in der grössten gebrauchten Kante gerendert —
-/// die Presets rechnen dann aus diesem Bild weiter, statt das PDF mehrfach zu öffnen. Weisser Grund: ein Datenblatt
-/// ist auf Papier gedacht, durchsichtig sähe in der Kachel aus wie ein Fehler.
-async function pdfFirstPage(file, edge) {
-  const [{ createCanvas }, pdfjs] = await Promise.all([import('@napi-rs/canvas'), import('pdfjs-dist/legacy/build/pdf.mjs')])
-  const doc = await pdfjs.getDocument({ data: new Uint8Array(fs.readFileSync(file)), useSystemFonts: true, isEvalSupported: false, verbosity: 0 }).promise
-  try {
-    const page = await doc.getPage(1)
-    const base = page.getViewport({ scale: 1 })
-    const viewport = page.getViewport({ scale: Math.min(4, Math.max(0.2, edge / Math.max(base.width, base.height))) })
-    const canvas = createCanvas(Math.ceil(viewport.width), Math.ceil(viewport.height))
-    const ctx = canvas.getContext('2d')
-    ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height)
-    await page.render({ canvasContext: ctx, viewport }).promise
-    return canvas.toBuffer('image/png')
-  } finally { await doc.destroy() }
-}
 
 /// Hält der Tasker den Lauf an (ein Import hat Vorfahrt)? Dann endet der Prozess; der nächste Lauf findet dieselben Ableitungen.
 async function angehalten() {
