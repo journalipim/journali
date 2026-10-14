@@ -248,5 +248,6 @@
  "Relationen, Zeile {0}: {1} {2}": "Relations, row {0}: {1} {2}",
  "Relationen aus dem Blatt Relationen": "Relations from the sheet Relationen",
  "{0} Relationen neu · {1} geändert · {2} unverändert": "{0} relations new · {1} changed · {2} unchanged",
- "{0}: {1} MB, im Browser höchstens {2} MB.": "{0}: {1} MB, at most {2} MB in the browser."
+ "{0}: {1} MB, im Browser höchstens {2} MB.": "{0}: {1} MB, at most {2} MB in the browser.",
+ "Ziel wählen — {0} Zeilen gibt es noch nicht": "Choose a target — {0} rows do not exist yet"
 }

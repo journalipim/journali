@@ -217,7 +217,10 @@ function typeHint(inv) { const a = attrs.value.find(x => x.key === inv.key) ?? s
 // ---- Plan
 async function analyse() {
   if (!source.value) return
-  if (!target.value && !mapping.value.some(m => m.target === 'parent') && !(idLocked.value && unknownIds.value === 0)) { store.toast(idLocked.value ? t_('Ziel wählen — {0} Zeilen haben Ids, die der Baum nicht kennt (neu)', [unknownIds.value]) : t_('Ziel wählen (Gruppe oder Produkt) — oder eine Spalte „Elternteil“')); return }
+  // Ohne Ziel und ohne Spalte „Elternteil“ geht es, wenn jede Zeile einen vorhandenen Knoten trifft — über Id, Kennung oder ein eindeutiges Attribut
+  // wie die SKU (14.10.2026: Preise über die SKU zu ändern verlangte ein Ziel, obwohl keine Zeile neu war). Geprüft wird unten, nach dem Abgleich.
+  const ohneZiel = !target.value && !mapping.value.some(m => m.target === 'parent')
+  if (ohneZiel && idLocked.value && unknownIds.value > 0) { store.toast(t_('Ziel wählen — {0} Zeilen haben Ids, die der Baum nicht kennt (neu)', [unknownIds.value])); return }
   busy.value = t_('vergleiche mit dem Bestand …')
   try {
     await tree.load(true)
@@ -231,12 +234,15 @@ async function analyse() {
     const byKey = new Map(); for (const r of tree.rows) for (const [k, v] of Object.entries(r.keys ?? {})) byKey.set(k + '\u0001' + String(v).trim(), r)
     const byExt = new Map(external.value ? tree.rows.filter(r => r.external?.[external.value]).map(r => [String(r.external[external.value]), r]) : [])
     const gefunden = new Set()   // Ids der Knoten, die die Datei trifft
+    let treffer = 0               // Zeilen, die einen vorhandenen Knoten treffen
     for (const row of source.value.rows) {
       const id = String(row[iId] ?? '').trim(), ext = String(row[iExt] ?? '').trim()
       const viaKey = keyCols.map(i => byKey.get(mapping.value[i].attribute + '\u0001' + String(row[i] ?? '').trim())).find(Boolean)   // über jedes eindeutige Attribut
       const n = (iId >= 0 && id && tree.byId.get(id)) || (iExt >= 0 && ext && byExt.get(ext)) || viaKey || null
-      if (n) gefunden.add(n.id)
+      if (n) { gefunden.add(n.id); treffer++ }
     }
+    const neu = source.value.rows.length - treffer
+    if (ohneZiel && !idLocked.value && neu > 0) { store.toast(treffer ? t_('Ziel wählen — {0} Zeilen gibt es noch nicht', [neu]) : t_('Ziel wählen (Gruppe oder Produkt) — oder eine Spalte „Elternteil“')); return }
     // genau die gefundenen Knoten, je 2 000 und Sprache eine Anfrage (04.10.2026 — vorher je Elternteil die Tabelle aller Kinder, je Sprache)
     const ids = [...gefunden], SEITE = 2000
     let done = 0; const runden = Math.ceil(ids.length / SEITE) * locs.length
