@@ -102,7 +102,6 @@
  "Ziel wählen (Gruppe oder Produkt) — oder eine Spalte „Elternteil“": "Choose a target (group or product) — or a column “Parent”",
  "Ziel wählen — {0} Zeilen haben Ids, die der Baum nicht kennt (neu)": "Choose a target — {0} rows have ids the tree does not know (new)",
  "Zuordnung neu vorschlagen — verwirft die Zuordnung des Profils (mit gewähltem Profil wird der neue Vorschlag gespeichert)": "Suggest the mapping anew — discards the profile's mapping (with a selected profile, the new suggestion is saved)",
- "Zuordnung prüfen, Ziel wählen, dann analysieren. Nichts wird geschrieben, bevor Du „schreiben“ drückst.": "Check the mapping, choose a target, then analyse. Nothing is written before you press “write”.",
  "Zwischenablage": "Clipboard",
  "alle Knoten darunter": "all nodes below",
  "als regulärer Ausdruck (Flags gi)": "as a regular expression (flags gi)",
@@ -249,5 +248,7 @@
  "Relationen aus dem Blatt Relationen": "Relations from the sheet Relationen",
  "{0} Relationen neu · {1} geändert · {2} unverändert": "{0} relations new · {1} changed · {2} unchanged",
  "{0}: {1} MB, im Browser höchstens {2} MB.": "{0}: {1} MB, at most {2} MB in the browser.",
- "Ziel wählen — {0} Zeilen gibt es noch nicht": "Choose a target — {0} rows do not exist yet"
+ "Ziel wählen — {0} Zeilen gibt es noch nicht": "Choose a target — {0} rows do not exist yet",
+ "Zuordnung prüfen, Ziel wählen, dann analysieren.": "Check the mapping, choose a target, then analyse.",
+ "Nichts wird geschrieben, bevor Du „schreiben“ drückst.": "Nothing is written before you press “write”."
 }

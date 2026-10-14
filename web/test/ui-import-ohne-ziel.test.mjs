@@ -46,6 +46,15 @@ test('ohne Ziel: jede Zeile trifft eine vorhandene Variante über die SKU — di
   assert.ok(w.vm.planned.commands.some(c => c.op === 'attribute.set' && c.args.attribute === 'price' && c.args.value === '77.5'))
 })
 
+test('vor der Analyse: der Satz über „schreiben“ fällt in der Demo weg, wie der Knopf', async () => {
+  const w = await welt()
+  w.vm.setSource({ name: 'Zwischenablage', columns: ['SKU', 'Preis (EUR)'], rows: [['TW-1-RED', '77,50']] })
+  await w.vm.$nextTick()
+  const satz = w.findAll('.hinweis span').find(s => s.text().includes('schreiben'))
+  assert.ok(satz, 'der Satz steht da')
+  assert.equal(satz.attributes('data-demo'), 'aus')
+})
+
 test('ohne Ziel mit einer neuen Zeile: die Meldung sagt, wie viele es noch nicht gibt', async () => {
   const w = await welt()
   w.vm.setSource({ name: 'Zwischenablage', columns: ['SKU', 'Preis (EUR)'], rows: [['TW-1-RED', '77,50'], ['TW-9-NEU', '12']] })

@@ -509,7 +509,7 @@ onMounted(async () => {
         <details style="margin-top:8px"><summary class="muted">{{ $t("Befehle (erste 200)") }}</summary>
           <pre class="out">{{ planned.commands.slice(0, 200).map(c => `${c.op} ${JSON.stringify(c.args)}`).join('\n') }}</pre></details>
       </div>
-      <div v-else-if="source" class="muted">{{ $t("Zuordnung prüfen, Ziel wählen, dann analysieren. Nichts wird geschrieben, bevor Du „schreiben“ drückst.") }}</div>
+      <div v-else-if="source" class="muted hinweis">{{ $t("Zuordnung prüfen, Ziel wählen, dann analysieren.") }}<span data-demo="aus">{{ ' ' + $t("Nichts wird geschrieben, bevor Du „schreiben“ drückst.") }}</span></div>
       <div v-else class="empty">{{ $t("Datei ablegen oder aus Excel einfügen.") }}<br /><span class="muted" style="font-size:12px">{{ $t("Der Mapper erkennt Spalten an Schlüssel, Label, Synonymen (Artikelnummer → sku …), Sprache im Namen (name_en) und rät den Typ neuer Attribute aus den Werten.") }}</span></div>
       <div v-if="result" class="pos" style="margin-top:8px">{{ $t("✓ {0} Einträge geschrieben · Stapel {1} —", [result.written, result.batch]) + ' ' }}<router-link :to="{ path: '/journal', query: { q: result.batch } }">{{ $t("im Journal") }}</router-link></div>
       <div class="section" v-if="log.length"><h2>{{ $t("Protokoll") }}</h2><div class="mono" style="font-size:12px;white-space:pre-wrap"><div v-for="(l, i) in log" :key="i" :class="/^\S+ ✗/.test(l) ? 'fehler' : ''">{{ l }}</div></div></div>
