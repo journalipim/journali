@@ -5,7 +5,7 @@
 // Das Gedächtnis eines Gesprächs liegt hier, im Arbeitsspeicher, 30 Minuten nach der letzten Eingabe weg: Wörter und Angaben (woher: gesagt,
 // geklickt, KI, übernommen), Vorlieben über einen Themenwechsel, gesehene und abgelehnte Produkte, das Produkt im Blick, der Verlauf. Die Kennung
 // eines Gesprächs ist zufällig und trägt keine Person; ohne Kennung (ein Agent über MCP) steht jede Frage für sich. Nichts davon geht ins Journal.
-import { woerter, gleichesWort, korrektur, ganz, weg } from './woerter.mjs'
+import { woerter, gleichesWort, korrektur, ganz, weg, formen } from './woerter.mjs'
 import { erkenne, fragt, namenWoerter, istArt, imNamen, istProblem } from './verstehen.mjs'
 import { texte, angabeText } from './texte.mjs'
 import { stellen, genau } from './stellen.mjs'
@@ -29,7 +29,11 @@ const BEZUG = new Set(['diese', 'dieser', 'dieses', 'diesen', 'beide', 'beiden',
   'wirklich', 'these', 'those', 'they', 'them', 'both', 'all', 'each', 'really', 'actually'])
 const SUCHT = /^(gibt es|gibts|habt ihr|haben sie|hast du|führt ihr|fuehrt ihr|is there|are there|do you have|have you got)(?![\p{L}])/iu
 // Verben, die nach einem Wert fragen, dessen Bezeichnung nicht in der Frage steht: „wie viel wiegen die?“ → Gewicht
-const NACH_WERT = { wiegt: 'gewicht', wiegen: 'gewicht', weigh: 'weight', weighs: 'weight', kostet: 'preis', kosten: 'preis', teuer: 'preis', cost: 'price', costs: 'price' }
+// Mehrere je Wort (14.10.2026): ein Attribut aus einem Import heisst „price“ — „kostet“ sucht beide
+const NACH_WERT = { wiegt: ['gewicht', 'weight'], wiegen: ['gewicht', 'weight'], schwer: ['gewicht', 'weight'], leicht: ['gewicht', 'weight'],
+  weigh: ['weight', 'gewicht'], weighs: ['weight', 'gewicht'], heavy: ['weight'], kostet: ['preis', 'price'], kosten: ['preis', 'price'],
+  teuer: ['preis', 'price'], billig: ['preis', 'price'], günstig: ['preis', 'price'], guenstig: ['preis', 'price'], preis: ['preis', 'price'],
+  cost: ['price', 'preis'], costs: ['price', 'preis'], price: ['price', 'preis'] }
 // Eine Frage nach dem Sortiment (09.10.2026): „was verkauft ihr?“, „welche Artikel habt ihr im Angebot?“ — besteht die Eingabe nur aus solchen
 // Wörtern (nach den Füllwörtern), nennt der Berater die Gruppen des Publikationsbaums
 const ALLGEMEIN = new Set(['verkauft', 'verkaufen', 'verkaufst', 'führt', 'fuehrt', 'führen', 'fuehren', 'bietet', 'bieten', 'anbieten', 'angebot', 'angeboten',
@@ -129,7 +133,7 @@ export function erstelleKern(o) {
     const ws = woerter(eingabe).filter(w => !BEZUG.has(w))
     const art = ws.filter(w => istArt(w, namen))
     const frage = ws.filter(w => !art.includes(w))
-    const suchwoerter = frage.map(w => NACH_WERT[w] ?? w)
+    const suchwoerter = [...new Set(frage.flatMap(w => NACH_WERT[w] ?? [w]))]
     const verwandt = [...new Set(suchwoerter.flatMap(w => assoz.zu(w, vok.locale)))].filter(x => !suchwoerter.includes(x))
     return { art, frage, suchwoerter, verwandt, attribute: erkenne(vok, eingabe).angaben.map(a => a.attribute) }
   }
@@ -169,6 +173,8 @@ export function erstelleKern(o) {
   /// Eine Frage zum Produkt im Blick: seine Werte, seine Unterlagen und — mit KI — ein Text dazu. Die gesammelten Angaben bleiben, wie sie sind.
   async function zumFokus(z, id, loc, T, eingabe, ki, vok, namen) {
     const sel = await waehle(z, loc, { fokus: z.fokus, satz: eingabe, take: 1 })
+    // der Name ist keine Antwort (14.10.2026): „Was kostet die Fjell Jacke?“ nennt ihn — gesucht ist der Preis
+    if (sel.focus) sel.focus = { ...sel.focus, values: (sel.focus.values ?? []).filter(v => v.key !== 'name') }
     const d = await unterlagen(loc, { satz: eingabe, fokus: z.fokus })
     // nennen die Bezeichnungen der Werte nichts dazu, stehen die Stellen vielleicht in einem Wert oder in der Beschreibung
     let hinweisWort = null
@@ -291,8 +297,15 @@ export function erstelleKern(o) {
     const neueAngaben = []
     let neueWoerter = [], offen = []
     if (eingabe) {
-      // welche Attribute die gezeigten Produkte haben und welche schon gelten, entscheidet, was eine Zahl meint (14.10.2026)
-      const e = erkenne(vok, eingabe, { vorhanden: z.vorhanden, gesetzt: z.angaben.map(a => a.attribute) })
+      // welche Attribute die gezeigten Produkte haben und welche schon gelten, entscheidet, was eine Zahl meint (14.10.2026) — nennt die Eingabe
+      // eine neue Art, die Attribute ihrer Produkte („leichtes Zelt“: Zelte haben ein Gewicht, keine Zuladung)
+      let vorhanden = z.vorhanden
+      const artNeu = woerter(eingabe).filter(w => istArt(w, namen))
+      if (artNeu.length && !gleicheMenge(artNeu, z.art)) {
+        const p = await waehle(z, loc, { art: artNeu, ordnen: [], angaben: [], probe: true, take: 1, gruppe: null })
+        if (Array.isArray(p.present) && p.total > 0) vorhanden = p.present
+      }
+      const e = erkenne(vok, eingabe, { vorhanden, gesetzt: z.angaben.map(a => a.attribute) })
       offen = e.offen ?? []
       let rest = e.rest
       for (const a of e.angaben) { setze(z, { ...a, quelle: 'gesagt' }); neueAngaben.push(a) }
@@ -303,6 +316,16 @@ export function erstelleKern(o) {
           for (const a of r.json.angaben ?? []) if (!z.angaben.some(y => y.attribute === a.attribute)) { setze(z, { ...a, quelle: 'ki' }); neueAngaben.push(a) }
           for (const n of r.json.names ?? []) for (let i = ganz(rest, n); i >= 0; i = ganz(rest, n)) rest = weg(rest, i, n.length)
           warning = r.json.warning ?? null
+        }
+      }
+      // ein Tippfehler, der nur über den Wortanfang trifft (14.10.2026): „isomate“ findet die Isomatten — der Berater sagt, dass er „isomatte“ gelesen hat
+      for (const w of woerter(rest)) {
+        if (namen4.has(w) || !istArt(w, namen) || formen(w).some(f => namen.has(f))) continue
+        const k = korrektur(w, namen4)
+        if (k && formen(w).some(f => k.startsWith(f))) {
+          rest = rest.replace(new RegExp(`(?<![\\p{L}\\p{N}])${w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\p{L}\\p{N}])`, 'giu'), k)
+          eingabe = eingabe.replace(new RegExp(`(?<![\\p{L}\\p{N}])${w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\p{L}\\p{N}])`, 'giu'), k)
+          corrected.push({ from: w, to: k })
         }
       }
       neueWoerter = woerter(rest).filter(w => !z.woerter.some(x => gleichesWort(x, w)))   // gebeugte Formen zählen einmal

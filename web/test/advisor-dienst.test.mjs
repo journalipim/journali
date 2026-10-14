@@ -78,7 +78,7 @@ test('eine Frage versteht der Kern im Dienst; er fragt journali mit dem Token, d
     const j = JSON.parse(text)
     assert.equal(j.hits[0].name, 'Bohrhammer Pro')
     assert.equal(j.texte.satz, '1 Produkt passt zu „bohrhammer“.')
-    const ruf = w.rufe.find(x => x.url.endsWith('/select'))
+    const ruf = w.rufe.find(x => x.url.endsWith('/select') && !x.body.probe)   // nicht die Probe nach den Attributen der Art
     assert.equal(ruf.auth, 'Bearer ' + TOKEN)
     // der Kern hat verstanden: die Art grenzt ein, „Rot“ ist ein Wert der Liste Farbe
     assert.deepEqual(ruf.body.art, ['bohrhammer'])
@@ -203,7 +203,7 @@ test('MCP: ein Werkzeug fragt journali und liefert Text und Struktur', async () 
     assert.equal(j.result.structuredContent.hits[0].id, 'p1')
     assert.match(j.result.content[0].text, /1\. Bohrhammer Pro \(S1\) \[id p1\] — Leistung: 800 W/)
     assert.match(j.result.content[0].text, /Farbe \[color\]: Rot = red \(1\)/)
-    const ruf = w.rufe.find(x => x.url.endsWith('/select'))
+    const ruf = w.rufe.find(x => x.url.endsWith('/select') && !x.body.probe)   // nicht die Probe nach den Attributen der Art
     assert.ok(!w.rufe.some(x => x.url.endsWith('/ki')), 'ein Agent bekommt keinen Text der KI')
     assert.deepEqual(ruf.body.angaben, [{ attribute: 'color', op: 'eq', value: 'red' }])
     assert.deepEqual(ruf.body.art, ['bohrhammer'])

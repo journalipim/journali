@@ -19,7 +19,7 @@ export const ERWARTUNGEN = {
   woerter: 'genau diese Wörter sind gesammelt',
   statt: 'der Berater fragt nach einem Themenwechsel (true) oder nicht (false)',
   ueber: 'die Antwort gilt dem Produkt im Blick',
-  werte_enthalten: 'die Werte zum Produkt im Blick nennen diese Bezeichnungen',
+  werte_enthalten: 'die Werte zum Produkt im Blick nennen diese Bezeichnungen (oder Schlüssel: „price“ gilt für „Preis (EUR)“ wie für „price“)',
   unterlagen_min: 'mindestens so viele Abschnitte aus den Unterlagen',
   unbekannt: 'diese Wörter stehen in keinem Produkt',
   korrigiert: 'diese Wörter hat der Berater anders gelesen ([von, zu])',
@@ -55,7 +55,7 @@ export function pruefe(antwort, erwartet = {}, vorher = null) {
   if (e.woerter !== undefined && JSON.stringify([...(a.words ?? [])].sort()) !== JSON.stringify([...e.woerter].sort())) fehlt(`Wörter ${JSON.stringify(e.woerter)}`, JSON.stringify(a.words ?? []))
   if (e.statt !== undefined && !!a.instead !== e.statt) fehlt(e.statt ? 'die Frage nach einem Themenwechsel' : 'keine Frage nach einem Themenwechsel', JSON.stringify(a.instead ?? null))
   if (e.ueber !== undefined && !!a.about !== e.ueber) fehlt(e.ueber ? 'eine Antwort zum Produkt im Blick' : 'keine Antwort zum Produkt im Blick', a.about ? a.about.name : 'eine Suche')
-  for (const l of e.werte_enthalten ?? []) if (!(a.about?.values ?? []).some(v => enthaelt(v.label, l))) fehlt(`Wert „${l}“`, JSON.stringify((a.about?.values ?? []).map(v => v.label)))
+  for (const l of e.werte_enthalten ?? []) if (!(a.about?.values ?? []).some(v => enthaelt(v.label, l) || v.key === l)) fehlt(`Wert „${l}“`, JSON.stringify((a.about?.values ?? []).map(v => v.label)))
   if (e.unterlagen_min !== undefined && (a.docs ?? []).length < e.unterlagen_min) fehlt(`mindestens ${e.unterlagen_min} Abschnitte aus den Unterlagen`, (a.docs ?? []).length)
   if (e.unbekannt !== undefined && JSON.stringify([...(a.unknown ?? [])].sort()) !== JSON.stringify([...e.unbekannt].sort())) fehlt(`unbekannt ${JSON.stringify(e.unbekannt)}`, JSON.stringify(a.unknown ?? []))
   for (const [von, zu] of e.korrigiert ?? []) if (!(a.corrected ?? []).some(k => k.from === von && k.to === zu)) fehlt(`„${von}“ als „${zu}“ gelesen`, JSON.stringify(a.corrected ?? []))

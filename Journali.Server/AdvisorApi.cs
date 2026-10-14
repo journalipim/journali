@@ -331,6 +331,7 @@ public static partial class AdvisorApi
         "bin", "bist", "war", "waren", "wird", "werden", "wurde", "habe", "hab", "hast", "geht", "gehen", "kann", "können", "koennen", "soll", "sollte", "muss",
         "warum", "wieso", "weshalb", "wo", "wann", "wer", "so", "sehr", "schon", "immer", "wieder", "jetzt", "mal", "bitte", "danke", "hallo", "man", "einfach",
         "my", "our", "your", "it", "its", "not", "no", "anymore", "why", "how", "can", "does", "did", "was", "were", "has", "had", "me", "please",
+        "ja", "jo", "gern", "gerne", "ok", "okay", "eins", "eines", "yes", "yeah", "sure", "one",   // Antworten auf eine Rückfrage (14.10.2026)
     };
 
     /// <summary>Die Suchwörter einer Frage: klein, ohne Füllwörter, Zahlen bleiben.</summary>

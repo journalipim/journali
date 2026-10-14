@@ -441,10 +441,11 @@ def ensure_shop_model(api: Api) -> bool:
         hat = set(a.get("groups") or [a.get("group")])
         if not alle <= hat:
             api.call("PUT", f"/api/model/attributes/{key}", soft=True, json={**a, "groups": sorted((hat | alle) - {a.get("group")})})
-    # die Sicht „Onlineshop“: MasterGroup, Shopangaben, die Technik aller Untergruppen
+    # die Sicht „Onlineshop“: MasterGroup, Physisch (das Gewicht — ohne es versteht der Produktberater „leicht“ nicht, 14.10.2026), Shopangaben,
+    # die Technik aller Untergruppen
     vkey, vde, ven = INHALT.SICHT
     da_gruppen = {g["key"] for g in as_list(api.get("/api/model").get("groups")) if isinstance(g, dict)}
-    items = [g for g in ["mastergroup"] + [k for k, _, _ in gruppen] if g in da_gruppen]
+    items = [g for g in ["mastergroup", "physical"] + [k for k, _, _ in gruppen] if g in da_gruppen]
     sicht = next((v for v in as_list(model.get("views")) if v.get("key") == vkey), None)
     if sicht is None:
         api.call("PUT", f"/api/model/views/{vkey}", soft=True, json={"key": vkey, "label": labels(vde, ven), "items": [{"group": g} for g in items], "level": "product"})

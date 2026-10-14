@@ -183,7 +183,7 @@ test('Angaben aus Kundensätzen: Zahlwörter, Geld, Einheiten, Zeit, Ja/Nein mit
   assert.deepEqual(a('mit trinksystem'), [{ attribute: 'hydration', op: 'eq', value: 'true' }])
   // Zeit: welches Attribut, sagt seine Bezeichnung — und sie ist danach kein Suchwort
   assert.deepEqual(erkenne(v, 'eins, das schnell aufgebaut ist').angaben, [{ attribute: 'pitch_min', op: 'low', value: 'schnell' }])
-  assert.deepEqual(woerter(erkenne(v, 'eins, das schnell aufgebaut ist').rest), ['eins'])
+  assert.deepEqual(woerter(erkenne(v, 'eins, das schnell aufgebaut ist').rest), [], '„eins“ antwortet auf die Rückfrage, es sucht nichts')
   assert.deepEqual(erkenne(v, 'Flasche, die Tee lange warm hält'), { angaben: [{ attribute: 'keeps_hot_h', op: 'high', value: 'lange' }], rest: 'Flasche, die Tee', offen: [] })
   assert.deepEqual(a('schnell'), [], 'ohne Bezeichnung keines von drei Zeitattributen')
   assert.deepEqual(erkenne(v, 'schnell', { vorhanden: ['pitch_min'] }).angaben, [{ attribute: 'pitch_min', op: 'low', value: 'schnell' }])
@@ -192,6 +192,24 @@ test('Angaben aus Kundensätzen: Zahlwörter, Geld, Einheiten, Zeit, Ja/Nein mit
   assert.deepEqual(woerter(erkenne(v, 'Schlafsack für Minusgrade').rest), ['schlafsack'])
   assert.deepEqual(a('Komforttemperatur bis minus 10 grad'), [{ attribute: 'comfort_c', op: 'le', value: '-10' }])
   assert.deepEqual(erkenne(v, 'bis -5 °C', { gesetzt: ['comfort_c'] }).angaben, [{ attribute: 'comfort_c', op: 'le', value: '-5' }])
+  // ein Preis aus einem Import heisst „price“, ohne Währung — er gilt trotzdem für Geld
+  const importiert = { attributes: [{ key: 'price', label: 'price', labels: { de: 'price' }, type: 'decimal', facet: true }] }
+  assert.deepEqual(erkenne(importiert, 'unter 200 Euro').angaben, [{ attribute: 'price', op: 'le', value: '200' }])
+  // „leicht“: zwei Attribute messen Masse — es gilt das, das die Produkte der genannten Art haben
+  const masse = { attributes: [Z('max_load_kg', 'Empfohlene Zuladung', 'Recommended load', 'integer', 'kg', ['Kilogramm'], 'mass'), Z('weight', 'Gewicht', 'Weight', 'decimal', 'kg', ['Kilogramm'], 'mass')] }
+  assert.deepEqual(erkenne(masse, 'leichtes Zelt').angaben, [{ attribute: 'max_load_kg', op: 'low', value: 'leichtes' }], 'ohne Wissen über die Art: das erste')
+  assert.deepEqual(erkenne(masse, 'leichtes Zelt', { vorhanden: ['weight', 'persons'] }).angaben, [{ attribute: 'weight', op: 'low', value: 'leichtes' }])
+})
+
+test('ein Tippfehler, der nur über den Wortanfang trifft, wird als gelesen gemeldet; die Art einer neuen Eingabe bestimmt die Attribute', async () => {
+  const j = journali()
+  const kern = erstelleKern({ journali: j.fn })
+  const r = await kern.antworte({ gespraech: G, q: 'schlafsac' })   // „schlafsac“ beginnt „schlafsack“
+  assert.deepEqual(r.corrected, [{ from: 'schlafsac', to: 'schlafsack' }])
+  assert.deepEqual(r.words, ['schlafsack'])
+  assert.ok(r.texte.hinweise.some(h => h.includes('gelesen')))
+  // vor dem Erkennen fragt der Kern, welche Attribute die Produkte der genannten Art haben
+  assert.ok(j.auswahlen().some(a => a.body.probe && a.body.art?.join() === 'schlafsac'))
 })
 
 test('„leicht“ ist wenig Masse am Zahlenattribut, dessen Einheit Masse misst; ein Wert aus einem Zeichen nur mit Bezeichnung', () => {
@@ -425,6 +443,7 @@ test('eine Frage, die genau ein Produkt trifft, beantworten seine Werte — eine
   assert.equal(r.about?.name, 'Odda Zelt')
   assert.ok(r.about.values.some(v => v.label === 'Gewicht'))
   assert.deepEqual(r.hits.map(h => h.name), ['Odda Zelt'])
+  assert.ok(!r.about.values.some(v => v.key === 'name'), 'der Name ist keine Antwort')
   const k2 = erstelleKern({ journali: journali().fn })
   await k2.antworte({ gespraech: G, q: 'Zelt' })
   const blau = await k2.antworte({ gespraech: G, q: 'auch in blau?' })

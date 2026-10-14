@@ -151,13 +151,16 @@ export function erkenne(vok, q, { vorhanden = null, gesetzt = null } = {}) {
   }
 
   // Geld (14.10.2026): ein Betrag mit Währung gilt dem Zahlenattribut, dessen Bezeichnung die Währung nennt („Preis (EUR)“)
-  const geld = attr.filter(a => istZahl(a) && frei(a) && namen(a).some(n => /(\beur\b|€|\busd\b|\$|\bgbp\b|£|\bchf\b)/i.test(n)))
+  // nennt keines eine Währung, das Zahlenattribut, das Preis heisst („price“ aus einem Import)
+  const mitWaehrung = attr.filter(a => istZahl(a) && frei(a) && namen(a).some(n => /(\beur\b|€|\busd\b|\$|\bgbp\b|£|\bchf\b)/i.test(n)))
+  const geld = mitWaehrung.length ? mitWaehrung
+    : attr.filter(a => istZahl(a) && frei(a) && [a.key, ...namen(a)].some(n => /^(preis|price|kosten|cost|verkaufspreis|vk)\b/i.test(String(n).trim())))
   if (geld.length) {
     const reG = new RegExp(`(?<![\\p{L}\\p{N}])(?:(${muster([...UNTER, ...UEBER])})\\s*)?(?:(${muster(['€', '$', '£'])})\\s*)?${ZAHL}\\s*(${muster(Object.keys(WAEHRUNG))})?(?![\\p{L}\\p{N}])`, 'giu')
     for (const m of [...rest.matchAll(reG)].sort((x, y) => y.index - x.index)) {
       const waehrung = WAEHRUNG[(m[4] ?? m[2] ?? '').toLowerCase()]
       if (!waehrung) continue
-      const def = eines(geld.filter(a => namen(a).some(n => n.toLowerCase().includes(waehrung) || (waehrung === 'eur' && n.includes('€')))))
+      const def = eines(mitWaehrung.length ? geld.filter(a => namen(a).some(n => n.toLowerCase().includes(waehrung) || (waehrung === 'eur' && n.includes('€')))) : geld)
       if (!def) continue
       aus.push({ attribute: def.key, op: m[1] && UEBER.includes(m[1].toLowerCase()) ? 'ge' : 'le', value: zahlWert(m[3]) })
       rest = weg(rest, m.index, m[0].length)
@@ -191,7 +194,9 @@ export function erkenne(vok, q, { vorhanden = null, gesetzt = null } = {}) {
     const kandidaten = attr.filter(a => istZahl(a) && frei(a) && (a.quantity ?? '').toLowerCase() === groesse)
     // mehrere (Zeit: Aufbauzeit, Hält warm, Leuchtdauer): das mit der Bezeichnung im Text, sonst das der gezeigten Produkte; bei Masse, Volumen,
     // Leistung, Licht wie bisher das erste
-    const def = groesse === 'time' ? eines(kandidaten) : (kandidaten.find(benannt) ?? kandidaten[0])
+    // sonst das, das die Produkte der genannten Art haben („leichtes Zelt“: Gewicht, nicht die Zuladung eines Rucksacks), sonst das erste
+    const def = groesse === 'time' ? eines(kandidaten)
+      : (kandidaten.find(benannt) ?? (vorhanden ? kandidaten.find(d => vorhanden.includes(d.key)) : null) ?? kandidaten[0])
     if (!def) continue
     for (const [liste, op] of [[wenig, 'low'], [viel, 'high']]) {
       const wort = [...liste].sort((a, b) => b.length - a.length).find(x => ganz(rest, x) >= 0)
