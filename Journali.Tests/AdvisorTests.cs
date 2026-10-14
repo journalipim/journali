@@ -441,6 +441,24 @@ public class AdvisorTests
     // ---- das Token des Dienstes
 
     [Fact]
+    public async Task In_der_Demo_fragt_der_Anwender_demo_den_Berater_ohne_das_Recht_Plugins()
+    {
+        // 14.10.2026: die Demo bringt einen Berater mit; ohne das Recht Plugins hiess die Vorschau dort „die Vorschau braucht das Recht Plugins“
+        await using var w = await Welt.Neu(anmeldung: true);
+        w.Setze(w.Standard());
+        var demo = Auth.IssueServiceToken(Demo.Anwender, "reader");
+        var jemand = Auth.IssueServiceToken("jemand", "reader");
+        Assert.Equal(HttpStatusCode.Forbidden, (await w.Get("/api/advisor/werkzeug/info", demo)).Status);   // ausserhalb der Demo: das Recht Plugins
+        Demo.An = true;
+        try
+        {
+            Assert.Equal(HttpStatusCode.OK, (await w.Get("/api/advisor/werkzeug/info", demo)).Status);
+            Assert.Equal(HttpStatusCode.Forbidden, (await w.Get("/api/advisor/werkzeug/info", jemand)).Status);   // nur der Anwender demo
+        }
+        finally { Demo.An = false; }
+    }
+
+    [Fact]
     public async Task Das_Token_erreicht_nur_die_Fragen_seines_Beraters()
     {
         await using var w = await Welt.Neu(anmeldung: true);

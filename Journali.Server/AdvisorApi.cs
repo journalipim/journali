@@ -1009,7 +1009,7 @@ public static partial class AdvisorApi
         if (Bereit(c) is { } b) { nein = b; return true; }
         var token = req.HttpContext.Items["advisor"] as string;
         if (token is not null && token != key) { nein = Results.Json(ModelApi.Err("Der Zugang gilt für einen anderen Berater."), statusCode: 403); return true; }
-        if (token is null && !Auth.Has(req, c, Rights.Plugins)) { nein = Results.Json(ModelApi.Err("Den Berater fragt sein Dienst; die Vorschau braucht das Recht Plugins."), statusCode: 403); return true; }
+        if (token is null && !Auth.Has(req, c, Rights.Plugins) && !DemoBesucher(req)) { nein = Results.Json(ModelApi.Err("Den Berater fragt sein Dienst; die Vorschau braucht das Recht Plugins."), statusCode: 403); return true; }
         d = Von(c, key);
         if (d is null) { nein = Unbekannt(key); return true; }
         var def = d;
@@ -1018,6 +1018,10 @@ public static partial class AdvisorApi
         nein = null;
         return false;
     }
+
+    /// <summary>In der Demo fragt der Anwender demo den Berater ohne das Recht Plugins (14.10.2026): die Vorschau liest nur, und der Dienst mit dem
+    /// Chat-Fenster läuft dort nicht — sonst zeigte ✆ Produktberatung nichts. Token ausgeben bleibt beim Recht Plugins (Auth.Needed).</summary>
+    private static bool DemoBesucher(HttpRequest req) => Demo.An && req.HttpContext.Items["user"] as string == Demo.Anwender;
 
     /// <summary>Das Plugin muss da, an und im Tarif sein, und sein Hinweis (Manifest: acknowledge) bestätigt — ohne Bestätigung wirkt es nicht.</summary>
     private static IResult? Bereit(Catalog c)
