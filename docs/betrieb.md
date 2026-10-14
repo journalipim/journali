@@ -351,8 +351,9 @@ KI (fünf Produkte mit je zwölf Werten, rund 1 000 Token) liest ein Modell dies
 bevor das erste Wort kommt. `gemma3:4b` antwortet in gutem Deutsch nach 30 bis 34 s (drei Produkte mit je sechs Werten: 22 s), braucht im Container
 3,9 GB und bricht mit 4 GB Grenze ab; eine von drei Antworten war nur eine Rückfrage, eine nannte einen falschen Wert. `qwen2.5:3b` ist kaum
 schneller und läuft sich bei den Nummern in eckigen Klammern fest („[2] [3] [1] …“ bis zur Grenze). `qwen2.5:1.5b` antwortet auf die knappe
-Anfrage in 4 s, aber in brüchigem Deutsch und mit einer falschen Zuordnung. Für einen Berater, auf den ein Besucher wartet, reicht keins davon
-ohne Grafikkarte; er antwortet ohne KI (in der Demo in rund 2 s).
+Anfrage in 4 s, aber in brüchigem Deutsch und mit einer falschen Zuordnung. `phi4-mini` braucht 26 bis 38 s (knapp: 10 s), lässt passende
+Produkte weg und fragt den Besucher, was es empfehlen soll; `smollm2:1.7b` schreibt die Liste der Produkte ab statt zu antworten. Für einen
+Berater, auf den ein Besucher wartet, reicht keins davon ohne Grafikkarte; er antwortet ohne KI (in der Demo in rund 2 s).
 
 Der Schlüssel liegt **am Team** (⚙ Einstellungen → ◍ Team), im Datenverzeichnis
 des Servers (Tresor, Stück `secrets` unter `team:<key>`), nie im Journal und nie im Browser. Gefragt wird
