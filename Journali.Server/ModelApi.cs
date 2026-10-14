@@ -440,7 +440,8 @@ public static partial class ModelApi
     private static string? CheckOne(ModelCatalog model, AttributeDefinition def, string v) => def.Type switch
     {
         AttributeTypes.Integer => long.TryParse(v, NumberStyles.Integer, CultureInfo.InvariantCulture, out _) ? null : $"{def.Key}: ganze Zahl erwartet, nicht „{v}“.",
-        AttributeTypes.Decimal => decimal.TryParse(v, NumberStyles.Number, CultureInfo.InvariantCulture, out _) ? null : $"{def.Key}: Zahl mit Punkt erwartet, nicht „{v}“.",
+        // ohne Tausendertrennzeichen (14.10.2026): mit NumberStyles.Number ging „4,5“ durch und wurde als 45 gelesen
+        AttributeTypes.Decimal => decimal.TryParse(v, Zahl, CultureInfo.InvariantCulture, out _) ? null : $"{def.Key}: Zahl mit Punkt erwartet, nicht „{v}“.",
         AttributeTypes.Boolean => v is "true" or "false" ? null : $"{def.Key}: true oder false erwartet.",
         AttributeTypes.Date => DateOnly.TryParseExact(v, "yyyy-MM-dd", out _) ? null : $"{def.Key}: Datum als JJJJ-MM-TT erwartet.",
         AttributeTypes.Enum => model.Lists.TryGetValue(def.List ?? "", out var list) && list.Values.ContainsKey(v) ? null : $"{def.Key}: „{v}“ steht nicht in der Werteliste {def.List}.",
@@ -448,6 +449,9 @@ public static partial class ModelApi
         AttributeTypes.Text when def.Pattern is not null => Matches(def.Pattern, v) ? null : $"{def.Key}: „{v}“ passt nicht zum Muster{(def.PatternHint is not null ? " — " + def.PatternHint : " " + def.Pattern)}.",
         _ => null,
     };
+
+    /// <summary>Eine gespeicherte Zahl: Vorzeichen, Ziffern, Punkt — kein Tausendertrennzeichen. Ein Komma ist dort ein Fehler, keine Gruppierung.</summary>
+    public const NumberStyles Zahl = NumberStyles.Number & ~NumberStyles.AllowThousands;
 
     /// <summary>Ganzer Wert gegen das Muster; ein Muster, das nicht terminiert, gilt als Treffer (nie den Nutzer aussperren).</summary>
     private static bool Matches(string pattern, string v)

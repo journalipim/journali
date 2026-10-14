@@ -7,6 +7,7 @@ import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { api } from '../api.js'
 import { store } from '../store.js'
+import { convert } from '../mapper.js'
 import { dialog } from '../dialog.js'
 import { tree, icon } from '../tree.js'
 import { menu } from '../menu.js'
@@ -203,7 +204,9 @@ function commandsOf() {
     if (gone.has(node)) continue   // gelöschte Zeile: ihre Zellen sind egal
     if (isNew && childRole.value === 'variant' && axesSet.has(attribute)) continue   // steckt schon im variant.create
     if (isNew && !v) continue
-    out.push({ op: 'attribute.set', args: { node: isNew ? '@' + node : node, attribute, locale: d?.perLocale ? locale.value : null, value: v }, _key: k })   // _key: welche Zelle — bleibt bei einem Fehler stehen
+    // Zahlen in der Form des Modells: „4,5“ wird 4.5 (wie in der Knotenansicht)
+    const wert = d && (d.type === 'integer' || d.type === 'decimal') ? (convert(v, d, store.model) ?? v) : v
+    out.push({ op: 'attribute.set', args: { node: isNew ? '@' + node : node, attribute, locale: d?.perLocale ? locale.value : null, value: wert }, _key: k })   // _key: welche Zelle — bleibt bei einem Fehler stehen
   }
   // gelöschte Zeilen, dann die Reihenfolge der verschobenen — beide erst jetzt, im selben Stapel
   for (const r of data.value.rows) if (r.retired && !r.isNew) out.push({ op: 'node.retire', args: { node: r.row.id }, _key: 'retire|' + r.row.id })

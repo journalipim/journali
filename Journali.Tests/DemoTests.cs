@@ -450,6 +450,20 @@ public class DemoTests
 public class DemoAnmeldungTests
 {
     [Fact]
+    public void Eine_Dezimalzahl_mit_Komma_wird_abgewiesen_statt_als_Tausender_gelesen()
+    {
+        // 14.10.2026: „4,5“ ging durch die Prüfung (NumberStyles.Number) und wurde als 45 gelesen
+        var model = new ModelCatalog();
+        var def = new AttributeDefinition("power", Labels.Of("Leistung", "Power"), AttributeTypes.Decimal);
+        string? v = "4,5"; string[]? vs = null;
+        Assert.Contains("Zahl mit Punkt erwartet", ModelApi.CheckValue(model, def, ref v, ref vs));
+        v = "4.5";
+        Assert.Null(ModelApi.CheckValue(model, def, ref v, ref vs));
+        v = "-1234.5";
+        Assert.Null(ModelApi.CheckValue(model, def, ref v, ref vs));
+    }
+
+    [Fact]
     public async Task Ein_zu_grosser_Stapel_nennt_die_Grenze_der_Demo()
     {
         // 14.10.2026: „angehakte übernehmen“ mit 1 023 Vorschlägen hiess nur „In der Demo nicht verfügbar.“ — als ginge Übernehmen dort gar nicht

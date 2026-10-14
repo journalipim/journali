@@ -320,7 +320,8 @@ public sealed class Tree : IProjection
             : inRow ? node.Own(key, d.PerLocale ? locale : null, null, row!.Value.Row, MasterLocale, MasterChannel, LocaleFallback, ChannelFallback)
             : Resolve(model, node, key, d.PerLocale ? locale : null, null).Value;
         if (raw is null) return Entries.Formula.Value.None;
-        if (d.Type is AttributeTypes.Integer or AttributeTypes.Decimal && decimal.TryParse(raw, System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out var n)) return Entries.Formula.Value.Of(n);
+        // ohne Tausendertrennzeichen (14.10.2026): „4,5“ ist keine Zahl, nicht 45
+        if (d.Type is AttributeTypes.Integer or AttributeTypes.Decimal && decimal.TryParse(raw, System.Globalization.NumberStyles.Number & ~System.Globalization.NumberStyles.AllowThousands, System.Globalization.CultureInfo.InvariantCulture, out var n)) return Entries.Formula.Value.Of(n);
         if (d.Type == AttributeTypes.Enum && model.Lists.TryGetValue(d.List ?? "", out var list) && list.Values.TryGetValue(raw, out var lv) && lv.Label.GetValueOrDefault(locale ?? MasterLocale ?? "de") is { Length: > 0 } label) return Entries.Formula.Value.Of(label);
         return Entries.Formula.Value.Of(raw);
     }

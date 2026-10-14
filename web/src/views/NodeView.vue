@@ -659,6 +659,8 @@ const cellUnit = (def, col) => zelleEinheit[zellenKey(def, col)] ?? eigeneEinhei
 const gezeigt = (def, col, gespeichert) => inEinheit(store.model, def, gespeichert, cellUnit(def, col))
 /// Eingabe einer Zelle: in die Einheit des Attributs zurückgerechnet geschrieben, dazu die Einheit, in der sie eingegeben wurde
 function zelleSpeichern(def, col, eingabe) {
+  // Zahlen in der Form des Modells (14.10.2026): „4,5“ wird 4.5 — vorher ging es mit Komma hinaus, und der Server las 45
+  if (def.type === 'integer' || def.type === 'decimal') eingabe = convert(eingabe, def, store.model) ?? eingabe
   const u = cellUnit(def, col)
   const w = inBasis(def, eingabe, u)
   if (w == null) return

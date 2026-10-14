@@ -110,6 +110,15 @@ test('in der Einheit des Attributs bleibt die Eingabe, wie sie ist', async () =>
   w.unmount()
 })
 
+test('eine Zahl mit Komma geht mit Punkt hinaus — der Server las „4,5“ als 45 (14.10.2026)', async () => {
+  const { w, rufe } = await ansicht()
+  await eintragen(zeile(w, 'Gewicht'), '4,5')
+  assert.equal(raus(rufe).at(-1).rumpf.value, '4.5')
+  await eintragen(zeile(w, 'Länge'), '1.234,75')
+  assert.equal(raus(rufe).at(-1).rumpf.value, '1234.75', 'Tausenderpunkt und Dezimalkomma')
+  w.unmount()
+})
+
 test('die Einheit der Eingabe steht im Eintrag: die Zelle zeigt den Wert wieder so, wie er eingegeben wurde', async () => {
   const { w } = await ansicht()
   const zl = zeile(w, 'Nettogewicht')
