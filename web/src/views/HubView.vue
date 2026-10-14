@@ -14,7 +14,10 @@ const list = computed(() => entries.value[props.topic] ?? [])
 const router = useRouter()
 watchEffect(() => { if (plugins.loaded && list.value.length === 1) router.replace(list.value[0].to) })
 const meta = key => plugins.list.find(p => p.key === key)
-const text = e => e.plugin ? (L(meta(e.plugin)?.manifest?.description) || meta(e.plugin)?.manifest?.description?.en || e.hint) : e.hint
+// Bringt ein Plugin mehrere Kacheln ins Thema (table: CSV-Export, Excel-Export, Struktur), sagt jede ihren eigenen Satz (hint der Ansicht) —
+// sonst stand dreimal dieselbe Beschreibung des Plugins da (14.10.2026)
+const mehrere = key => list.value.filter(x => x.plugin === key).length > 1
+const text = e => e.plugin && !mehrere(e.plugin) ? (L(meta(e.plugin)?.manifest?.description) || meta(e.plugin)?.manifest?.description?.en || e.hint) : e.hint
 </script>
 
 <template>
