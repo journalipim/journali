@@ -1,0 +1,9 @@
+{
+  "name": "A light tent for two (English)",
+  "locale": "en",
+  "schritte": [
+    { "eingabe": "lightweight tent for two",
+      "erwartet": { "alle_treffer_enthalten": "Tent", "angaben": [["persons", "2"], ["weight", "low"]] },
+      "vorbild": "The lightest two-person tents first — the lightest weighs 1.4 kg. Tunnel or dome?" }
+  ]
+}

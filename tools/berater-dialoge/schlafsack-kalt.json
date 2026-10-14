@@ -1,0 +1,12 @@
+{
+  "name": "Ein Schlafsack für Minusgrade",
+  "locale": "de",
+  "schritte": [
+    { "eingabe": "Schlafsack für Minusgrade",
+      "erwartet": { "alle_treffer_enthalten": "Schlafsack", "angaben": [["comfort_c", "le"]] },
+      "vorbild": "Für Minusgrade: diese Schlafsäcke sind bis -5 °C oder -10 °C komfortabel. Wie kalt wird es dort, wo Sie schlafen?" },
+    { "eingabe": "bis minus 10 grad",
+      "erwartet": { "alle_treffer_enthalten": "Schlafsack", "angaben": [["comfort_c", "-10"]], "treffer_max": 5 },
+      "vorbild": "Komfortabel bis -10 °C sind fünf Schlafsäcke, alle mit 950 g Daune." }
+  ]
+}

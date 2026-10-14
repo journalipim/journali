@@ -1,0 +1,9 @@
+{
+  "name": "Ein gerissener Schnürsenkel",
+  "locale": "de",
+  "schritte": [
+    { "eingabe": "Bei meinen Wanderschuhen ist der Schnürsenkel gerissen",
+      "erwartet": { "unterlagen_min": 1, "frage_enthaelt": "Hilft Ihnen das weiter?" },
+      "vorbild": "Unterwegs hilft ein Weberknoten oder ein Stück Reepschnur; Ersatzsenkel in der richtigen Länge schicken wir kostenlos." }
+  ]
+}

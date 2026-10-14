@@ -1,0 +1,12 @@
+{
+  "name": "Ein Zelt für zwei, schnell aufgebaut",
+  "locale": "de",
+  "schritte": [
+    { "eingabe": "Ich brauche ein Zelt für zwei Personen",
+      "erwartet": { "alle_treffer_enthalten": "Zelt", "angaben": [["persons", "2"]], "treffer_max": 5 },
+      "vorbild": "Für zwei Personen habe ich fünf Zelte, das leichteste wiegt 1,4 kg. Soll es eher ein Tunnel- oder ein Kuppelzelt sein?" },
+    { "eingabe": "eins, das schnell aufgebaut ist",
+      "erwartet": { "alle_treffer_enthalten": "Zelt", "angaben": [["persons", "2"], ["pitch_min", "low"]] },
+      "vorbild": "Am schnellsten steht dieses: etwa 5 Minuten, Aussen- und Innenzelt in einem." }
+  ]
+}

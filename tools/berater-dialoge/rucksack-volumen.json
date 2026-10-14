@@ -1,0 +1,12 @@
+{
+  "name": "Ein Tagesrucksack mit Volumen und Trinksystem",
+  "locale": "de",
+  "schritte": [
+    { "eingabe": "Tagesrucksack mit 30 Litern",
+      "erwartet": { "alle_treffer_enthalten": "Tagesrucksack", "angaben": [["volume_l", "30"]], "treffer_max": 3 },
+      "vorbild": "Mit 30 Litern habe ich drei Tagesrucksäcke. Soll ein Trinksystem hineinpassen?" },
+    { "eingabe": "ja, mit trinksystem",
+      "erwartet": { "alle_treffer_enthalten": "Tagesrucksack", "angaben": [["volume_l", "30"], ["hydration", "true"]] },
+      "vorbild": "30 Liter mit Fach für die Trinkblase: dieser." }
+  ]
+}

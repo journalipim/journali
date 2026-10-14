@@ -1,0 +1,12 @@
+{
+  "name": "Wanderschuhe in einer Grösse, wasserdicht",
+  "locale": "de",
+  "schritte": [
+    { "eingabe": "Wanderschuhe in 43 mit Membran",
+      "erwartet": { "alle_treffer_enthalten": "Wanderschuh", "angaben": [["shoe_size", "eu43"], ["membrane", "true"]] },
+      "vorbild": "In EU 43 mit wasserdichter Membran: diese Wanderschuhe. Gehen Sie eher auf Wegen oder auch ins Gelände mit Steigeisen?" },
+    { "eingabe": "hoher schaft",
+      "erwartet": { "alle_treffer_enthalten": "Wanderschuh", "angaben": [["shoe_size", "eu43"], ["membrane", "true"], ["shaft", "Hoch"]] },
+      "vorbild": "Mit hohem Schaft, Membran und in 43: diese." }
+  ]
+}

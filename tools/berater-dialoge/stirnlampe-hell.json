@@ -1,0 +1,12 @@
+{
+  "name": "Eine helle Stirnlampe",
+  "locale": "de",
+  "schritte": [
+    { "eingabe": "Stirnlampe mit mindestens 400 Lumen",
+      "erwartet": { "alle_treffer_enthalten": "Stirnlampe", "angaben": [["lumen", "ge"]], "treffer_max": 6 },
+      "vorbild": "Ab 400 Lumen habe ich sechs Stirnlampen, drei davon mit 600 Lumen. Brauchen Sie Rotlicht fürs Zelt?" },
+    { "eingabe": "mit rotlicht",
+      "erwartet": { "alle_treffer_enthalten": "Stirnlampe", "angaben": [["lumen", "ge"], ["red_light", "true"]] },
+      "vorbild": "Mit Rotlicht und mindestens 400 Lumen: diese." }
+  ]
+}

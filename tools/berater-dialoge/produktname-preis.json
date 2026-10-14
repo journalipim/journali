@@ -1,0 +1,9 @@
+{
+  "name": "Ein Produkt mit Namen und sein Preis",
+  "locale": "de",
+  "schritte": [
+    { "eingabe": "Was kostet die Fjell Jacke?",
+      "erwartet": { "alle_treffer_enthalten": "Fjell", "treffer_max": 3 },
+      "vorbild": "Die Fjell Jacke kostet 184,95 €, in Grösse L und XL 189,95 €." }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "name": "Eine Jacke mit Preisgrenze",
+  "locale": "de",
+  "schritte": [
+    { "eingabe": "Regenjacke unter 200 Euro",
+      "erwartet": { "alle_treffer_enthalten": "Jacke", "angaben": [["price", "le"]] },
+      "vorbild": "Bis 200 € habe ich diese Jacken, alle mit verschweissten Nähten. Ist sie für den Alltag oder für Touren?" },
+    { "eingabe": "mit helmkapuze",
+      "erwartet": { "alle_treffer_enthalten": "Jacke", "angaben": [["price", "le"], ["helmet_hood", "true"]] },
+      "vorbild": "Mit helmtauglicher Kapuze bis 200 €: diese." }
+  ]
+}

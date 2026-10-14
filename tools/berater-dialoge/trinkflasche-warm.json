@@ -1,0 +1,12 @@
+{
+  "name": "Eine Flasche, die lange warm hält, und eine Farbe",
+  "locale": "de",
+  "schritte": [
+    { "eingabe": "Trinkflasche, die Tee lange warm hält",
+      "erwartet": { "alle_treffer_enthalten": "Trinkflasche", "angaben": [["keeps_hot_h", "high"]] },
+      "vorbild": "Am längsten warm halten diese: 18 Stunden, kalt sogar 24 Stunden." },
+    { "eingabe": "gibt es die auch in orange?",
+      "erwartet": { "alle_treffer_enthalten": "Trinkflasche", "angaben": [["keeps_hot_h", "high"], ["color", "orange"]] },
+      "vorbild": "In Orange: diese." }
+  ]
+}
