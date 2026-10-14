@@ -199,6 +199,7 @@ public static class Demo
         if (pluginDir is not null) n += Gpc(c, pluginDir);
         c.MaxPubTrees = 2;   // Online-Shop und Product Advisor, gleich was der Tarif sagt
         n += Publikationsbaum(c);
+        n += Freigaben(c);
         // die Publikationsbäume der Demo und keiner mehr, wie eine Grenze des Tarifs: anlegen geht nicht, löschen sperrt Gesperrt (Knoten zurückziehen)
         c.MaxPubTrees = Math.Max(1, c.Lesen((_, t) => t.PubTrees.Count()));
         foreach (var key in OhnePlugins)
@@ -761,6 +762,28 @@ public static class Demo
         }
         // ETIM: die Gruppe des Klassifikationssystems an die Wurzeln, wie install() des Plugins
         if (c.Lesen((m, _) => m.Groups.ContainsKey("class_etim")) && c.Lesen((_, _) => c.Plugins.All.GetValueOrDefault("etim")) is { Enabled: true }) n += AnDieWurzeln(c, "class_etim");
+        return n;
+    }
+
+    /// <summary>Der Kanal, für den die Demo freigibt — der der Publikationsbäume.</summary>
+    public const string Kanal = "web";
+
+    /// <summary>
+    /// Freigaben (14.10.2026): jede Variante für <see cref="Kanal"/>, wie „✓ freigeben“ im Pflegebaum (<see cref="Commands.GrantRelease"/>) — eine
+    /// unvollständige bleibt draussen. Ohne Freigaben leiteten beide Publikationsbäume nichts aus, und der Produktberater, der nur zeigt, was sein Baum
+    /// ausleitet, hatte kein Produkt. Was schon frei ist, bleibt.
+    /// </summary>
+    public static int Freigaben(Catalog c)
+    {
+        if (!c.Lesen((m, _) => m.Channels.ContainsKey(Kanal))) return 0;
+        var n = 0;
+        c.WithBatch(Anwender, "demo-freigaben", (model, tree, write) =>
+        {
+            var ctx = Kontext(c, model, tree, write, () => n++);
+            foreach (var v in tree.Nodes.Values.Where(x => x.Role == Roles.Variant && !x.Releases.Contains(new Release(Kanal, null))).Select(x => x.Id).ToList())
+                Commands.GrantRelease(ctx, v, Kanal, null);
+            return 0;
+        });
         return n;
     }
 

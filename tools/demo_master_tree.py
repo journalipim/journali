@@ -274,6 +274,17 @@ def labels(de: str, en: str) -> dict:
 COLORS = dict(COLOR_HEX)   # die Farben, die es in der Liste des Attributs color gibt (nach ensure_model)
 
 
+def achswert(schluessel: str, loc: str) -> str:
+    """Die Bezeichnung eines Werts der zweiten Achse (Grösse, Schuhgrösse, Füllmenge) für den Namen einer Variante."""
+    for k, label in SIZES + SHOE_SIZES:
+        if k == schluessel:
+            return label
+    for k, de, en in CAPACITIES:
+        if k == schluessel:
+            return de if loc == "de" else en
+    return schluessel
+
+
 def ensure_model(api: Api) -> None:
     """Legt an, was die Demo braucht und fehlt: Listen, fehlende Werte einer Liste, Attribute. Was es schon gibt, bleibt, wie es ist."""
     model = api.get("/api/model")
@@ -786,6 +797,15 @@ def build(api: Api, out_dir: str | None, want: int, anreichern: bool = False, pd
                     api.set_value(variant, "ean", ean13(sku))
                     surcharge = 0 if second in (None, "xs", "s", "m", "c050", "c075") else 5
                     api.set_value(variant, "price", f"{base_price + surcharge:.2f}")
+                    # der Name der Variante: der des Produkts mit den Werten der Achsen, wie bei den Leuchten (14.10.2026) — ohne ihn fehlte die
+                    # Pflicht name, keine Variante liess sich freigeben, und der Baum zeigte die SKU
+                    for loc, produktname in (("de", name_de), ("en", name_en)):
+                        teile = [produktname]
+                        if color:
+                            teile.append(FARBE_DE.get(color, color) if loc == "de" else color.capitalize())
+                        if second:
+                            teile.append(achswert(second, loc))
+                        api.set_value(variant, "name", ", ".join(teile), locale=loc)
                     fuers_blatt.append({"sku": sku, "ean": ean13(sku), "farbe": FARBE_DE.get(color or "", color),
                                         "groesse": (dict(SIZES) | dict(SHOE_SIZES) | {k: d for k, d, _ in CAPACITIES}).get(second or "")})
 

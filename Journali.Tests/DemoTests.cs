@@ -367,6 +367,17 @@ public class DemoTests
                 Assert.DoesNotContain(t.Nodes.Values, x => x.Role == Roles.Rubric && x.Label.GetValueOrDefault("de") == "Zelte" && Wurzel(t, x) == shop.Id);
                 return 0;
             });
+            // 14.10.2026: freigegeben für web — vorher leiteten beide Bäume nichts aus, und der Produktberater hatte kein Produkt
+            c.Lesen((m, t) =>
+            {
+                foreach (var (baum, mindestens) in new[] { ("Product Advisor", 200), ("Online-Shop", 30) })
+                {
+                    var wurzel = t.PubTrees.Single(b => b.Name == baum);
+                    var drin = Publication.Export(t, m, wurzel, "de", null).Count(r => r.In);
+                    Assert.True(drin >= mindestens, $"{baum}: {drin} Produkte ausgeleitet");
+                }
+                return 0;
+            });
         }
         finally { Directory.Delete(dir, true); }
 
