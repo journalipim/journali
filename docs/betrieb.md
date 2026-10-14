@@ -740,6 +740,14 @@ und fällt, wenn die Abbilder anders rechnen könnten; nicht bei einem neuen Com
 jeder Commit liess ihn fallen. Der Eintrag #n wird gegen das Journal geprüft; bei Abweichung wird die Datei gelöscht.
 An und aus ebenfalls in ⚙ Einstellungen → ▨ Storage → ▨ Start; ohne `betrieb.json` zählt `JOURNALI_SNAPSHOT=off`.
 Startzeile: „Schnappschuss bis #n“.
+Geladen wird in einem Durchgang (14.10.2026): erst der Kopf (Stempel, Eintrag #n — sie stehen am Anfang der Datei), dann die Abbilder direkt
+aus der Datei in ihre Typen. Vorher las der Start die ganze Datei in ein Dokument und jedes Abbild daraus ein zweites Mal; gemessen an 849 MB
+(Baum 445 MB, Daten der Plugins 393 MB): 7 s und 1,6 GB vorher, 5 s und 1,3 GB jetzt.
+
+**Wohin die Zeit beim Start geht** (14.10.2026): sobald der Server Anfragen annimmt, steht eine Zeile da —
+`journali: ready in 12.3 s — database 0.9 s, snapshot 5.0 s, journal 2.2 s, …` —, je Abschnitt seine Dauer (ab 0,05 s), dahinter die Zeit
+der Laufzeit vor der ersten Zeile. Nicht darin: der Bau, den `dotnet run` (`tools\server start`) vor jedem Start macht — ohne Änderung
+etwa 2–3 s, nach einer Änderung mehr. Im Paket gibt es ihn nicht.
 
 ## Mehrere Server auf einer Datenbank
 

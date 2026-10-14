@@ -11,6 +11,12 @@ using static Journali.Server.ModelApi;
 // Speicher, Befehle als Endpunkte unter /api, die Oberfläche (web/, gebaut
 // nach wwwroot) daneben. Regel: kein Schreibpfad am Catalog vorbei.
 
+// Wohin die Zeit beim Start geht (14.10.2026): je Abschnitt eine Zahl, eine Zeile, sobald der Server Anfragen annimmt („ready in …“)
+var startUhr = System.Diagnostics.Stopwatch.StartNew();
+var startAbschnitte = new List<(string Name, long Ms)>();
+long startLetzter = 0;
+void StartAbschnitt(string name) { var t = startUhr.ElapsedMilliseconds; startAbschnitte.Add((name, t - startLetzter)); startLetzter = t; }
+
 var builder = WebApplication.CreateBuilder(args);
 // Die erste Zeile: welche Version startet — Build wie in der Kopfleiste (TTMM.hhmm, Ortszeit des Servers).
 // Die Konsole spricht Englisch, gleich welche Sprache die Oberfläche hat (04.10.2026): sonst mischen sich die eigenen Zeilen mit denen von ASP.NET.
@@ -37,6 +43,7 @@ pg.EnsureSchema();
 var tresor = new PostgresTresor(db);
 Tresor.Nutze(tresor);
 foreach (var datei in Tresor.Uebernehmen(dataDir, tresor)) Console.WriteLine($"journali: {datei} moved into the database");
+StartAbschnitt("database");
 // Spiegel und Schnappschuss stellt der Administrator ein — betrieb.json im Datenverzeichnis,
 // ohne Datei zählt die Umgebung (JOURNALI_JOURNAL_CACHE=off, JOURNALI_SNAPSHOT=off). Gelesen wird das hier, vor dem
 // Journal: der Spiegel entscheidet, wie das Journal überhaupt gelesen wird.
@@ -58,6 +65,7 @@ if (Environment.GetEnvironmentVariable("JOURNALI_LICENCE_KEY") is { Length: > 0 
 // JOURNALI_SNAPSHOT=off schaltet ihn ab. Geschrieben nach dem Start (im Hintergrund) und beim Beenden.
 var snapshotPath = betrieb.Snapshot ? Path.Combine(dataDir, $"snapshot-{connection.Host}-{connection.Port}-{connection.Database}.json") : null;
 var snapshotAt = snapshotPath is null ? 0 : catalog.LoadSnapshot(snapshotPath);
+StartAbschnitt("snapshot");
 Console.WriteLine($"journali: reading journal …{(snapshotAt > 0 ? $" (snapshot up to #{snapshotAt})" : "")}{(journal is CachedJournal cj && cj.CachedHead > 0 ? $" (mirror up to #{cj.CachedHead}, rest from the database)" : "")}");   // vor dem Logger — damit der Start nicht stumm ist
 var sw0 = System.Diagnostics.Stopwatch.StartNew();
 // Fortschritt etwa je Sekunde — Ziel ist der Kopf des Journals
@@ -92,6 +100,7 @@ void WriteSnapshot(string why)
     catch (Exception e) { Console.WriteLine($"journali: snapshot not written — {e.Message}"); }
 }
 Console.WriteLine($"journali: {rebuilt} entries in {sw0.ElapsedMilliseconds} ms — {timing}");   // wo die Zeit hingeht
+StartAbschnitt("journal");
 // Die Lizenz liegt signiert und verschlüsselt in der Datenbank
 // („jegliche eingespielte Lizenz kommt signiert und verschlüsselt in einen Container — die DB“); eine Datei von früher
 // wird beim ersten Lesen übernommen. Muss vor dem Saatgut stehen: daraus bekommt das Init Team seine Limits.
@@ -133,6 +142,7 @@ Demo.Einstieg = Environment.GetEnvironmentVariable("JOURNALI_DEMO_EINSTIEG");   
 // Server auf derselben Datenbank (pflegestruktur 41): Kennung, Puls, Rolle. Der erste Takt gleich hier, damit der Start weiss, ob er Hauptserver ist
 var verbund = new Verbund(db, catalog, dataDir, typeof(Program).Assembly.GetName().Version?.ToString(3), System.IO.File.GetLastWriteTimeUtc(typeof(Program).Assembly.Location));
 try { verbund.Takt(); } catch (Exception e) { Console.WriteLine($"journali: server not registered — {e.Message}"); }
+StartAbschnitt("licence, servers");
 Console.WriteLine($"journali: server {verbund.NameVon(verbund.Id, verbund.Host)} ({verbund.Host}, {verbund.Id}) — {(verbund.IstHaupt ? "main server" : "worker server")}{(verbund.Gesperrt ? ", blocked" : "")}{(verbund.OhneLizenz ? $", unlicensed (allowed: {verbund.Erlaubt} {(verbund.Erlaubt == 1 ? "server" : "servers")})" : "")}");
 _ = Task.Run(async () =>
 {
@@ -210,6 +220,7 @@ builder.Services.AddSingleton(mediaStore);
 builder.Services.AddSingleton(new DocText(db));   // Text der Dokumente: abgeleitet, eigene Tabelle neben dem Journal (pflegestruktur 32)
 builder.Services.AddSingleton(new Vectors(db));   // Vektoren je Abschnitt und Knoten (pgvector): abgeleitet, gerechnet vom Plugin embed (35)
 builder.Services.AddSingleton<IMediaStore>(mediaStore);
+StartAbschnitt("media, documents, vectors");
 // Stellt ein anderer Server auf derselben Datenbank den Medienspeicher um, folgt dieser — sonst lägen Bytes mal hier, mal dort (pflegestruktur 41)
 _ = Task.Run(async () =>
 {
@@ -235,6 +246,7 @@ pluginDir = Path.GetFullPath(pluginDir);
 var autoInstalled = PluginApi.AutoInstall(catalog, pluginDir);
 // Attribute von DPP, PPWR, GEO, ETIM und GPC sind vererbbar (07.10.2026) — was eine Instanz von vorher anders angelegt hat, zieht nach
 if (ClassificationApi.PluginAttributeVererbbar(catalog) is > 0 and var vererbbar) Console.WriteLine($"journali: {vererbbar} plugin attributes made inheritable");
+StartAbschnitt("plugins");
 
 // Jobs (Plugin tasker): laufen im Server als Kindprozesse, unabhängig vom Browser; Logs und Geheimnisse
 // unter JOURNALI_JOBS (Vorgabe jobs/ neben dem Programm, im Repo ignoriert)
@@ -257,6 +269,7 @@ if (Demo.An)
     catalog.ZusatzKontingent = Demo.Zaehle;
     Demo.Saatkopf = catalog.Head;   // bis hier der Beispielkatalog — Rückgängig nimmt ihn nicht zurück   // je Besucher höchstens Demo.KontingentJeAbsender zählende Einträge am Tag
     Console.WriteLine($"journali: demo input filter — {filter.Begriffe} blocked terms, links, contact data, at most {Eingabefilter.MaxText} characters");
+    StartAbschnitt("demo");
 }
 jobRunner.IstHaupt = () => verbund.IstHaupt;
 jobRunner.Aktiv = () => !verbund.Gesperrt && !verbund.OhneLizenz;   // ein gesperrter Server und einer ohne Lizenz führen keine Jobs aus
@@ -291,6 +304,7 @@ builder.Services.ConfigureHttpJsonOptions(o =>
 builder.Services.AddCors(o => o.AddDefaultPolicy(p => p.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod()));
 
 var app = builder.Build();
+StartAbschnitt("web host");
 // Hinter einem Proxy (07.10.2026, JOURNALI_PROXY=1): Absender und Schema aus X-Forwarded-For/-Proto. Sonst sehen Bremse und Begrenzung nur den
 // Proxy — alle Besucher teilten sich eine Begrenzung, und Fehlversuche eines einzigen sperrten alle. Nur setzen, wenn der Server allein über
 // den Proxy erreichbar ist (Port an 127.0.0.1): wer ihn direkt erreicht, könnte sich jede Adresse geben.
@@ -700,6 +714,10 @@ _ = Task.Run(() => verbund.HoerenAsync(jobRunner.Ausfuehren, app.Lifetime.Applic
 // die Oberfläche läuft auf den Arbeitsservern. Die eigene Adresse, mit localhost statt „alle Adressen“
 app.Lifetime.ApplicationStarted.Register(() =>
 {
+    StartAbschnitt("routes, listening");
+    var vorher = DateTime.Now - System.Diagnostics.Process.GetCurrentProcess().StartTime - startUhr.Elapsed;   // .NET bis zur ersten Zeile
+    Console.WriteLine($"journali: ready in {startUhr.Elapsed.TotalSeconds:0.0} s — {string.Join(", ", startAbschnitte.Where(a => a.Ms >= 50).Select(a => $"{a.Name} {a.Ms / 1000.0:0.0} s"))}"
+        + $" (before that: runtime {Math.Max(0, vorher.TotalSeconds):0.0} s)");
     if (app.Urls.FirstOrDefault() is { } eigene && jobRunner.Origin == "http://localhost:5000")
         jobRunner.Origin = System.Text.RegularExpressions.Regex.Replace(eigene, @"//(\+|\*|0\.0\.0\.0|\[::\])(?=[:/]|$)", "//localhost");
     // Demo: die neuen Bilder brauchen Abmessungen und Vorschauen — wie nach einem Hochladen; die Unterlagen (Tannwald) lesen docs und embed.

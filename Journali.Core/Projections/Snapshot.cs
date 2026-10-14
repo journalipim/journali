@@ -77,6 +77,9 @@ public static class Snapshot
     /// <summary>
     /// Abbilder aus der Datei laden — neue Instanzen je Name (der Aufrufer tauscht sie ein). Liefert #n und die Instanzen,
     /// oder 0, wenn es keine Datei gibt, der Stempel nicht passt oder der Eintrag #n im Journal anders ist (Datei wird gelöscht).
+    /// <para>In einem Durchgang (14.10.2026): erst der Kopf (Stempel und Eintrag #n stehen am Anfang der Datei) — passt er nicht, ist die Datei
+    /// verworfen, bevor die Abbilder gelesen sind —, dann die Abbilder direkt aus der Datei in ihre Typen. Vorher las der Start die ganze Datei in
+    /// ein JsonDocument und jedes Abbild daraus ein zweites Mal: bei 849 MB 7 s und 1,6 GB, jetzt 5 s und 1,3 GB.</para>
     /// </summary>
     public static long Load(string path, IJournal journal, IReadOnlyList<(string Name, Type Type)> parts, out Dictionary<string, IProjection> loaded)
     {
@@ -84,23 +87,72 @@ public static class Snapshot
         if (!System.IO.File.Exists(path)) return 0;
         try
         {
-            File? file;
+            var (stamp, check) = Kopf(path);
+            if (stamp != Stamp || check is null) { Discard(path); return 0; }
+            var db = journal.ReadAfter(check.Number - 1).FirstOrDefault();
+            if (db is null || db.Number != check.Number || db.Stream != check.Stream || db.Type != check.Type || db.At != check.At) { Discard(path); return 0; }
+            Laden? file;
             using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 1 << 16))
-                file = JsonSerializer.Deserialize<File>(fs, Options);
-            if (file is null || file.Stamp != Stamp) { Discard(path); return 0; }
-            var db = journal.ReadAfter(file.Check.Number - 1).FirstOrDefault();
-            if (db is null || db.Number != file.Check.Number || db.Stream != file.Check.Stream || db.Type != file.Check.Type || db.At != file.Check.At) { Discard(path); return 0; }
-            foreach (var (name, type) in parts)
+                file = JsonSerializer.Deserialize<Laden>(fs, MitTeilen(parts));
+            foreach (var (name, _) in parts)
             {
-                if (!file.Parts.TryGetValue(name, out var el)) { Discard(path); loaded = new(); return 0; }
-                var p = (IProjection?)el.Deserialize(type, Options);
-                if (p is null || p.LastApplied != file.Check.Number) { Discard(path); loaded = new(); return 0; }
+                if (file?.Parts.Werte.GetValueOrDefault(name) is not IProjection p || p.LastApplied != check.Number) { Discard(path); loaded = new(); return 0; }
                 loaded[name] = p;
             }
-            return file.Check.Number;
+            return check.Number;
         }
         catch { Discard(path); loaded = new(); return 0; }
     }
+
+    /// <summary>Stempel und Eintrag #n vom Anfang der Datei — ohne den Rest zu lesen (sie stehen vor den Abbildern, siehe <see cref="Write"/>).</summary>
+    private static (string? Stamp, Head? Check) Kopf(string path)
+    {
+        var puffer = new byte[1 << 16];
+        int n;
+        using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 1 << 12)) n = fs.Read(puffer, 0, puffer.Length);
+        var r = new Utf8JsonReader(puffer.AsSpan(0, n), isFinalBlock: false, default);
+        if (!r.Read() || r.TokenType != JsonTokenType.StartObject) return (null, null);
+        string? stamp = null; Head? check = null;
+        while (r.Read() && r.TokenType == JsonTokenType.PropertyName)
+        {
+            var name = r.GetString();
+            if (name == nameof(File.Parts)) break;
+            if (!r.Read()) break;
+            if (name == nameof(File.Stamp)) stamp = r.GetString();
+            else if (name == nameof(File.Check)) check = JsonSerializer.Deserialize<Head>(ref r, Options);
+            else r.Skip();
+        }
+        return (stamp, check);
+    }
+
+    /// <summary>Die Datei beim Laden: nur die Abbilder (Stempel und Kopf sind schon gelesen).</summary>
+    private sealed class Laden { public Teile Parts { get; set; } = new(); }
+    /// <summary>Die Abbilder als Objekt, dessen Eigenschaften erst beim Laden feststehen: je Name eine Eigenschaft ihres Typs (<see cref="MitTeilen"/>).</summary>
+    private sealed class Teile { [JsonIgnore] public Dictionary<string, object?> Werte { get; } = new(); }
+
+    /// <summary>Optionen wie <see cref="Options"/>, dazu der Vertrag für <see cref="Teile"/>: je Abbild eine Eigenschaft seines Typs. So liest
+    /// der Serializer jedes Abbild direkt aus dem Strom, ohne die ganze Datei als Dokument zu halten.</summary>
+    private static JsonSerializerOptions MitTeilen(IReadOnlyList<(string Name, Type Type)> parts) => new(Options)
+    {
+        TypeInfoResolver = new DefaultJsonTypeInfoResolver
+        {
+            Modifiers =
+            {
+                PrivateMembers,
+                ti =>
+                {
+                    if (ti.Type != typeof(Teile)) return;
+                    ti.Properties.Clear();
+                    foreach (var (name, type) in parts)
+                    {
+                        var p = ti.CreateJsonPropertyInfo(type, name);
+                        p.Set = (obj, value) => ((Teile)obj).Werte[name] = value;
+                        ti.Properties.Add(p);
+                    }
+                },
+            },
+        },
+    };
 
     private static void Discard(string path) { try { System.IO.File.Delete(path); } catch { } }
 

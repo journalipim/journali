@@ -127,4 +127,36 @@ public class SnapshotTests
         }
         finally { if (File.Exists(path)) File.Delete(path); }
     }
+
+    [Fact]
+    public void Ein_fremder_Stempel_ein_fehlendes_Abbild_oder_eine_kaputte_Datei_werden_verworfen()
+    {
+        // 14.10.2026: geladen wird in einem Durchgang — erst der Kopf, dann die Abbilder direkt aus der Datei. Was nicht passt, fällt weg.
+        var path = TempFile();
+        try
+        {
+            var j = World();
+            var c = new Catalog(j); c.Rebuild();
+            void Neu() => Assert.True(c.SaveSnapshot(path) > 0);
+            void Verworfen() { Assert.Equal(0, new Catalog(j).LoadSnapshot(path)); Assert.False(File.Exists(path)); }
+            // fremder Stempel (ein anderer Bau des Kerns): weg, ohne dass die Abbilder gelesen werden
+            Neu();
+            File.WriteAllText(path, File.ReadAllText(path).Replace(Snapshot.Stamp, "anderer-bau"));
+            Verworfen();
+            // ein Abbild fehlt
+            Neu();
+            var text = File.ReadAllText(path);
+            File.WriteAllText(path, text.Replace("\"Teams\":", "\"TeamsFehlt\":"));
+            Verworfen();
+            // abgeschnitten
+            Neu();
+            text = File.ReadAllText(path);
+            File.WriteAllText(path, text[..(text.Length / 2)]);
+            Verworfen();
+            // und ein heiler lädt
+            Neu();
+            Assert.Equal(j.Head, new Catalog(j).LoadSnapshot(path));
+        }
+        finally { if (File.Exists(path)) File.Delete(path); }
+    }
 }
