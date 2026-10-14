@@ -1,4 +1,4 @@
-(function(){const s=document.createElement('style');s.textContent="\n.seiten[data-v-c0438417] { display: flex; gap: 0; flex: 1; min-height: 0;\n}\n.liste[data-v-c0438417] { width: 260px; border-right: 1px solid var(--line); overflow-y: auto;\n}\n.rechts[data-v-c0438417] { flex: 1; overflow-y: auto; min-width: 0;\n}\n.kopf[data-v-c0438417] { display: flex; gap: 6px; align-items: center; padding: 6px 8px;\n}\n.kopf .bez[data-v-c0438417] { flex: 1;\n}\n.neu[data-v-c0438417] { display: flex; gap: 4px; padding: 6px 8px;\n}\n.neu input[data-v-c0438417] { flex: 1; min-width: 0;\n}\n.form[data-v-c0438417] { width: 100%;\n}\n.felder[data-v-c0438417] { border: 0; padding: 0; margin: 0; min-width: 0;\n}\n.form td[data-v-c0438417] { height: 30px; vertical-align: middle; white-space: normal; padding: 2px 4px;\n}\n.form td.attr[data-v-c0438417] { color: var(--muted); white-space: nowrap; padding-left: 8px;\n}\n.row[data-v-c0438417] { display: flex; gap: 8px; align-items: center; flex-wrap: wrap;\n}\n.zahl[data-v-c0438417] { width: 70px;\n}\n.code[data-v-c0438417] { margin: 2px 0 8px; padding: 6px 8px; background: var(--bg2, rgba(127,127,127,.08)); border-radius: 4px; white-space: pre-wrap; word-break: break-all; font-size: 12px;\n}\n.neues-token[data-v-c0438417] { user-select: all; word-break: break-all;\n}\n.fehler[data-v-c0438417] { margin: 4px 8px; padding-left: 16px;\n}\n.treffer[data-v-c0438417] { margin: 4px 0; padding-left: 20px;\n}\n";document.head.append(s)})();
+(function(){const s=document.createElement('style');s.textContent="\n.seiten[data-v-9edaf72b] { display: flex; gap: 0; flex: 1; min-height: 0;\n}\n.liste[data-v-9edaf72b] { width: 260px; border-right: 1px solid var(--line); overflow-y: auto;\n}\n.rechts[data-v-9edaf72b] { flex: 1; overflow-y: auto; min-width: 0;\n}\n.kopf[data-v-9edaf72b] { display: flex; gap: 6px; align-items: center; padding: 6px 8px;\n}\n.kopf .bez[data-v-9edaf72b] { flex: 1;\n}\n.neu[data-v-9edaf72b] { display: flex; gap: 4px; padding: 6px 8px;\n}\n.neu input[data-v-9edaf72b] { flex: 1; min-width: 0;\n}\n.form[data-v-9edaf72b] { width: 100%;\n}\n.felder[data-v-9edaf72b] { border: 0; padding: 0; margin: 0; min-width: 0;\n}\n.form td[data-v-9edaf72b] { height: 30px; vertical-align: middle; white-space: normal; padding: 2px 4px;\n}\n.form td.attr[data-v-9edaf72b] { color: var(--muted); white-space: nowrap; padding-left: 8px;\n}\n.row[data-v-9edaf72b] { display: flex; gap: 8px; align-items: center; flex-wrap: wrap;\n}\n.zahl[data-v-9edaf72b] { width: 70px;\n}\n.code[data-v-9edaf72b] { margin: 2px 0 8px; padding: 6px 8px; background: var(--bg2, rgba(127,127,127,.08)); border-radius: 4px; white-space: pre-wrap; word-break: break-all; font-size: 12px;\n}\n.neues-token[data-v-9edaf72b] { user-select: all; word-break: break-all;\n}\n.fehler[data-v-9edaf72b] { margin: 4px 8px; padding-left: 16px;\n}\n.treffer[data-v-9edaf72b] { margin: 4px 0; padding-left: 20px;\n}\n";document.head.append(s)})();
 const m = window.journali.vue;
 const Fragment = m.Fragment;
 const computed = m.computed;
@@ -316,6 +316,7 @@ const _sfc_main = {
         vorschau.value = { error: e.message };
       }
     }
+    const angabe = (f) => f.label + ": " + (f.op === "le" ? t("bis") + " " : f.op === "ge" ? t("ab") + " " : "") + (f.valueLabel ?? f.value);
     function neuesGespraech() {
       vorschauGespraech.value = neueKennung();
       vorschau.value = null;
@@ -1052,7 +1053,7 @@ const _sfc_main = {
                     key: 2,
                     class: "muted gesammelt",
                     title: _ctx.$t("was der Kern aus dem Gespräch gesammelt hat")
-                  }, toDisplayString([...vorschau.value.words ?? [], ...(vorschau.value.filter ?? []).map((f) => f.label + ": " + (f.valueLabel ?? f.value))].join(" · ")), 9, _hoisted_64)) : createCommentVNode("v-if", true),
+                  }, toDisplayString([...vorschau.value.words ?? [], ...(vorschau.value.filter ?? []).map(angabe)].join(" · ")), 9, _hoisted_64)) : createCommentVNode("v-if", true),
                   vorschau.value.about?.values?.length ? (openBlock(), createElementBlock("table", _hoisted_65, [
                     createElementVNode("tbody", null, [
                       (openBlock(true), createElementBlock(
@@ -1205,7 +1206,7 @@ const _sfc_main = {
     };
   }
 };
-const View = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-c0438417"]]);
+const View = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-9edaf72b"]]);
 const entry = {
   views: [{ path: "advisor", topic: "export", order: 50, label: t("Produktberatung"), icon: "✆", hint: t("Fragen von Besuchern einer Website an die Produkte eines Publikationsbaums — als Chat-Fenster und für KI-Agenten"), component: View }]
 };

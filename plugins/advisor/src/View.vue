@@ -117,6 +117,8 @@ async function fragen() {
   try { vorschau.value = await api.post(`/api/advisor/${encodeURIComponent(cur.value)}/preview`, { gespraech: vorschauGespraech.value, q: vorschauFrage.value, locale: grussSprachen.value[0], ki: !!def.value.ki }) }
   catch (e) { vorschau.value = { error: e.message } }
 }
+/// Eine gesammelte Angabe als Text, wie im Chat-Fenster: „Preis (EUR): bis 200“ — ohne „bis“ las sich eine Grenze wie ein genauer Wert (14.10.2026)
+const angabe = f => f.label + ': ' + (f.op === 'le' ? t('bis') + ' ' : f.op === 'ge' ? t('ab') + ' ' : '') + (f.valueLabel ?? f.value)
 /// Ein neues Gespräch in der Vorschau: der Kern vergisst die gesammelten Angaben
 function neuesGespraech() {
   vorschauGespraech.value = neueKennung(); vorschau.value = null; vorschauFrage.value = ''
@@ -220,7 +222,7 @@ const compose = computed(() => [
             <div v-for="(h, i) in vorschau.texte?.hinweise ?? []" :key="'h' + i" class="muted hinweis">{{ h }}</div>
             <!-- die Frage des Beraters gehört zur Antwort, wie im Chat-Fenster (14.10.2026: die Vorschau liess sie weg) -->
             <div v-if="vorschau.texte?.statt || vorschau.texte?.frage" class="frage">{{ [vorschau.texte.statt, vorschau.texte.frage].filter(Boolean).join(' ') }}</div>
-            <div v-if="vorschau.filter?.length || vorschau.words?.length" class="muted gesammelt" :title="$t('was der Kern aus dem Gespräch gesammelt hat')">{{ [...(vorschau.words ?? []), ...(vorschau.filter ?? []).map(f => f.label + ': ' + (f.valueLabel ?? f.value))].join(' · ') }}</div>
+            <div v-if="vorschau.filter?.length || vorschau.words?.length" class="muted gesammelt" :title="$t('was der Kern aus dem Gespräch gesammelt hat')">{{ [...(vorschau.words ?? []), ...(vorschau.filter ?? []).map(angabe)].join(' · ') }}</div>
             <table v-if="vorschau.about?.values?.length" class="grid about"><tbody><tr v-for="v in vorschau.about.values" :key="v.key"><td class="attr">{{ v.label }}</td><td>{{ v.value }}</td></tr></tbody></table>
             <div class="muted" :title="vorschau.warning || ''">{{ $t('{0} Treffer', [vorschau.total]) }}{{ vorschau.warning && !vorschau.warning.startsWith('KI') ? ' · ' + $t('nur Wortsuche') : '' }}</div>
             <div v-if="vorschau.warning?.startsWith('KI')" class="neg ki-fehler">✗ {{ vorschau.warning }}</div>

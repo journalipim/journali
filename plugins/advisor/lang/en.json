@@ -65,5 +65,7 @@
  "Produktberatung": "Product advisor",
  "Fragen von Besuchern einer Website an die Produkte eines Publikationsbaums — als Chat-Fenster und für KI-Agenten": "Questions from website visitors about the products of a publication tree — as a chat window and for AI agents",
  "ein neues Gespräch: die gesammelten Angaben fallen weg": "a new conversation: the collected criteria are dropped",
- "was der Kern aus dem Gespräch gesammelt hat": "what the core collected from the conversation"
+ "was der Kern aus dem Gespräch gesammelt hat": "what the core collected from the conversation",
+ "bis": "up to",
+ "ab": "from"
 }
