@@ -218,6 +218,8 @@ const compose = computed(() => [
           <template v-else>
             <div v-if="vorschau.texte?.satz || vorschau.texte?.ueber" class="satz">{{ vorschau.texte.ueber ? vorschau.texte.ueber + ' ' : '' }}{{ vorschau.texte.satz }}</div>
             <div v-for="(h, i) in vorschau.texte?.hinweise ?? []" :key="'h' + i" class="muted hinweis">{{ h }}</div>
+            <!-- die Frage des Beraters gehört zur Antwort, wie im Chat-Fenster (14.10.2026: die Vorschau liess sie weg) -->
+            <div v-if="vorschau.texte?.statt || vorschau.texte?.frage" class="frage">{{ [vorschau.texte.statt, vorschau.texte.frage].filter(Boolean).join(' ') }}</div>
             <div v-if="vorschau.filter?.length || vorschau.words?.length" class="muted gesammelt" :title="$t('was der Kern aus dem Gespräch gesammelt hat')">{{ [...(vorschau.words ?? []), ...(vorschau.filter ?? []).map(f => f.label + ': ' + (f.valueLabel ?? f.value))].join(' · ') }}</div>
             <table v-if="vorschau.about?.values?.length" class="grid about"><tbody><tr v-for="v in vorschau.about.values" :key="v.key"><td class="attr">{{ v.label }}</td><td>{{ v.value }}</td></tr></tbody></table>
             <div class="muted" :title="vorschau.warning || ''">{{ $t('{0} Treffer', [vorschau.total]) }}{{ vorschau.warning && !vorschau.warning.startsWith('KI') ? ' · ' + $t('nur Wortsuche') : '' }}</div>

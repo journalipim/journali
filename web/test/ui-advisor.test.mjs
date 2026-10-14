@@ -30,7 +30,7 @@ async function welt({ daten = {}, fehler = [], antwort = null } = {}) {
     if (p === '/api/advisor/shop/tokens') { tokens = [...tokens, { id: '999999aaaaaa', label: body.label, at: '2026-10-08T11:00:00Z' }]; return { token: 'ja_neu', label: body.label } }
     if (p === '/api/advisor/shop/preview' && antwort) return antwort
     if (p === '/api/advisor/shop/preview') return { total: 2, hits: [{ id: 'p1', name: 'Bohrhammer Pro', values: [{ label: 'Leistung', value: '800 W' }] }, { id: 'p2', name: 'Akkuschrauber', values: [] }], facets: [{ key: 'color', label: 'Farbe' }], warning: 'Plugin embed ist aus.',
-      words: ['bohrhammer'], filter: [{ attribute: 'color', op: 'eq', value: 'red', label: 'Farbe', valueLabel: 'Rot' }], texte: { satz: '2 Produkte passen zu „bohrhammer“.', hinweise: [] } }
+      words: ['bohrhammer'], filter: [{ attribute: 'color', op: 'eq', value: 'red', label: 'Farbe', valueLabel: 'Rot' }], texte: { satz: '2 Produkte passen zu „bohrhammer“.', hinweise: [], frage: 'Passt eines davon? Oder soll ich nach Farbe eingrenzen?' } }
     return {}
   }
   api.del = async p => { gesendet.push(['DELETE', p]); if (p.startsWith('/api/plugins/advisor/data/')) delete gespeichert[decodeURIComponent(p.split('/').pop())]; return {} }
@@ -141,6 +141,7 @@ test('die Vorschau stellt die Frage eines Besuchers ohne KI und zeigt Treffer un
     assert.match(w.find('.vorschau').text(), /2 Treffer · nur Wortsuche/)
     assert.match(w.find('.facetten').text(), /Farbe/)
     assert.equal(w.find('.vorschau .satz').text(), '2 Produkte passen zu „bohrhammer“.')
+    assert.equal(w.find('.vorschau .frage').text(), 'Passt eines davon? Oder soll ich nach Farbe eingrenzen?', 'die Frage des Beraters gehört zur Antwort')
     assert.equal(w.find('.vorschau .gesammelt').text(), 'bohrhammer · Farbe: Rot')
     // eine zweite Frage gehört zum selben Gespräch, ↺ fängt ein neues an
     await w.find('form.row').trigger('submit'); await warte(w)
