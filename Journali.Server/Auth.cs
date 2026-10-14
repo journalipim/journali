@@ -199,10 +199,11 @@ public static class Auth
             }
             if (token.StartsWith("ja_"))
             {
-                // Berater: kein Anwender, die Rolle aus seiner Definition; in der Demo gibt es keinen
-                string? pb = null;
-                var vorschau = !Demo.An && ProzessBerater.TryGetValue(token, out pb);
-                var berater = Demo.An ? null : vorschau ? pb : Finde(dir, s => s.Advisors.GetValueOrDefault(Sha(token)))?.Advisor;
+                // Berater: kein Anwender, die Rolle aus seiner Definition. In der Demo gibt es keinen Dienst und kein ausgegebenes Token — nur den Kern der
+                // Vorschau als Kindprozess (14.10.2026): sein Token gibt journali selbst aus und hält es im Arbeitsspeicher; ohne ihn fragte die Vorschau
+                // in der Demo ins Leere („Anmeldung nötig“).
+                var vorschau = ProzessBerater.TryGetValue(token, out var pb);
+                var berater = vorschau ? pb : Demo.An ? null : Finde(dir, s => s.Advisors.GetValueOrDefault(Sha(token)))?.Advisor;
                 if (vorschau) ctx.Items["advisorVorschau"] = true;   // der Kern als Kindprozess fragt für die Vorschau eines Anwenders
                 if (berater is null || AdvisorApi.RolleVon(c, berater) is not { } rolle) return null;
                 ctx.Items["advisor"] = berater;

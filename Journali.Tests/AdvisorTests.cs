@@ -454,6 +454,12 @@ public class AdvisorTests
         {
             Assert.Equal(HttpStatusCode.OK, (await w.Get("/api/advisor/werkzeug/info", demo)).Status);
             Assert.Equal(HttpStatusCode.Forbidden, (await w.Get("/api/advisor/werkzeug/info", jemand)).Status);   // nur der Anwender demo
+            // die Vorschau: der Kern als Kindprozess fragt mit seinem Prozess-Token zurück — das gilt auch in der Demo (vorher „Anmeldung nötig“)
+            var (status, j) = await w.Post("/api/advisor/werkzeug/preview", JsonSerializer.Serialize(new { gespraech = "demo-1", q = "bohrhammer", locale = "de" }), demo);
+            Assert.True(status == HttpStatusCode.OK, $"Vorschau: {status} {j}");
+            Assert.Contains("Bohrhammer Pro", j.GetProperty("hits").EnumerateArray().Select(h => h.GetProperty("name").GetString()));
+            // ein ausgegebenes Token des Dienstes bleibt in der Demo gesperrt
+            Assert.Equal(HttpStatusCode.Unauthorized, (await w.Get("/api/advisor/werkzeug/info", Auth.AdvisorTokenAusgeben(w.Dir, "werkzeug", "Dienst"))).Status);
         }
         finally { Demo.An = false; }
     }
