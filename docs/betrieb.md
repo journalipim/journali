@@ -346,6 +346,14 @@ anderthalb Minuten, davon der grösste Teil für die Eingabe — vier Komma fün
 Grenze knapp, aber ohne Auslagerung. Für kurze Zuordnungs- und Benennungsfragen (Knopf) taugt das; ein ganzes Dokument
 lesen ist für einen Knopf, hinter dem jemand wartet, zu langsam — dafür bliebe ein Nachtjob.
 
+**Für den Produktberater gemessen** (14.10.2026, dieselbe Ausstattung, Ollama im eigenen Container neben der Demo): die Anfrage des Beraters an die
+KI (fünf Produkte mit je zwölf Werten, rund 1 000 Token) liest ein Modell dieser Grösse mit 34 bis 40 Token je Sekunde — eine halbe Minute,
+bevor das erste Wort kommt. `gemma3:4b` antwortet in gutem Deutsch nach 30 bis 34 s (drei Produkte mit je sechs Werten: 22 s), braucht im Container
+3,9 GB und bricht mit 4 GB Grenze ab; eine von drei Antworten war nur eine Rückfrage, eine nannte einen falschen Wert. `qwen2.5:3b` ist kaum
+schneller und läuft sich bei den Nummern in eckigen Klammern fest („[2] [3] [1] …“ bis zur Grenze). `qwen2.5:1.5b` antwortet auf die knappe
+Anfrage in 4 s, aber in brüchigem Deutsch und mit einer falschen Zuordnung. Für einen Berater, auf den ein Besucher wartet, reicht keins davon
+ohne Grafikkarte; er antwortet ohne KI (in der Demo in rund 2 s).
+
 Der Schlüssel liegt **am Team** (⚙ Einstellungen → ◍ Team), im Datenverzeichnis
 des Servers (Tresor, Stück `secrets` unter `team:<key>`), nie im Journal und nie im Browser. Gefragt wird
 über `POST /api/ai/ask`: der Server nimmt den Schlüssel des **zahlenden** Teams (`keysFrom`) und das
