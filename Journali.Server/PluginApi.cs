@@ -272,6 +272,9 @@ public static class PluginApi
         });
     }
 
+    /// <summary>Höchstens so viele Zeichen stdout gibt /run zurück (32 MB).</summary>
+    public const int MaxStdout = 32 * 1024 * 1024;
+
     /// <summary>Prozess eines Plugins laufen lassen und auf das Ende warten: Rückgabewert und Ausgabe (stdout, dann stderr). Für /run und die Belegerzeuger (Versionen).</summary>
     public static async Task<(int Exit, string Output)> RunProcessAsync(string dir, string key, JsonElement proc, Dictionary<string, string> values, TimeSpan limit, CancellationToken ct)
     {
@@ -283,12 +286,16 @@ public static class PluginApi
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
         timeout.CancelAfter(limit);
         try { await p.WaitForExitAsync(timeout.Token); } catch (OperationCanceledException) { try { p.Kill(true); } catch { } throw; }
-        output.Append(await stdout);
+        // stdout ist das Ergebnis (eine JSON-Zeile) und bleibt ganz, bis 32 MB — etim liefert so die Suchliste einer Freigabe (1,7 MB, 14.10.2026);
+        // vorher galt für alles zusammen 200 000 Zeichen vom Ende her, und eine grössere Ergebniszeile kam abgeschnitten an. stderr ist Fortschritt:
+        // davon das Ende, 200 000 Zeichen.
+        var aus = await stdout;
+        if (aus.Length > MaxStdout) aus = "…" + aus[^MaxStdout..];
+        output.Append(aus);
         var err = await stderr;
+        if (err.Length > 200_000) err = "…" + err[^200_000..];
         if (err.Length > 0) output.Append("\n--- stderr ---\n").Append(err);
-        var text = output.ToString();
-        if (text.Length > 200_000) text = "…" + text[^200_000..];
-        return (p.ExitCode, text);
+        return (p.ExitCode, output.ToString());
     }
 
     /// <summary>Gehört das Plugin nicht zum Tarif der Instanz: 403 mit dem Tarif, der es hat.</summary>

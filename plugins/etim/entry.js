@@ -6,7 +6,7 @@
 // Umbau: ETIM ist Klassifikation, kein Export — die Ansicht geht vom Knoten aus
 // (Klasse → Attribute → Daten → Ausleitung), bearbeitet wird in der Subitems-Tabelle, nicht hier; die Zuordnung ETIM-Attribut → Attribut
 // hat ƒ (Umwandlungskette); die Regeln der Ausleitung (unbekannt, Klasse Pflicht, Vollständigkeit) stehen im BMEcat-Profil (xport).
-import { parseIxf, classRecord, nameOf, classText, featureText, featuresOf, checkNode, resolveValue, gate, mapEntry, throughSteps, audit, variantOf, releaseKey, readiness, isZip, ixfInZip, inflateInBrowser } from './core.mjs'
+import { parseIxf, classRecord, nameOf, classText, featureText, featuresOf, checkNode, resolveValue, gate, mapEntry, throughSteps, audit, variantOf, releaseKey, readiness, isZip, ixfInZip, inflateInBrowser, featureCount } from './core.mjs'
 import { OPS, FIELDS, FIELD_LABEL, FIELD_HINT, DATE_FORMATS, YES_DEFAULT, describe as describeSteps, opHint } from '../table/transform.mjs'
 const L = l => globalThis.journali?.L ? globalThis.journali.L(l) : (l?.de ?? Object.values(l ?? {})[0] ?? '')   // Bezeichnung in der Oberflächensprache
 const t_ = (k, p) => globalThis.journali?.t ? globalThis.journali.t(k, p) : String(k).replace(/\{(\w+)\}/g, (m, i) => p?.[i] ?? m)   // Oberflächensprache: spät gebunden, im Test ohne Fenster ladbar
@@ -32,7 +32,10 @@ const ofSystem = a => a.group === groupKey() || String(a.group ?? '').startsWith
 // release = die aktuelle Version (Zuweisen, Prüfen, Export). Alte Datensätze class:<EC> ohne Version zählen zur Version der damaligen Freigabe.
 // Mit der ganzen Freigabe im Journal (5 640 Klassen, 17 000 ETIM-Attribute) heisst „übernommen“ nicht mehr „in Gebrauch“: Attribute, Zuordnung und
 // Datenanalyse richten sich nach den Klassen, die im Baum zugewiesen sind (used); die Freigabe ist der Suchpool.
-const cache = { classes: new Map(), settings: { ...DEFAULTS }, map: {}, mapping: {}, loaded: null, version: null, releaseKey: null, release: null, versions: [], used: new Set(), usedBy: new Map(), ownClass: new Map(), pool: false }   // ownClass: Knoten → Code der eigenen Klasse (klasseVon rechnet die geerbte dazu); pool: die ganze Freigabe ist geladen
+// Seit 14.10.2026 steht keine ganze Freigabe mehr im Journal: classes hält die Klassen in Gebrauch (vollständig, aus dem Journal), liste die
+// Suchliste der aktuellen Freigabe (Code, Namen, Synonyme, Gruppe, Zahl der ETIM-Attribute) — nur im Browser, geholt von der URL der Freigabe,
+// wenn jemand sucht oder zuweist, und weg, wenn die Seite geschlossen wird.
+const cache = { classes: new Map(), liste: new Map(), settings: { ...DEFAULTS }, map: {}, mapping: {}, loaded: null, version: null, releaseKey: null, release: null, versions: [], used: new Set(), usedBy: new Map(), ownClass: new Map(), pool: false, poolError: null }   // ownClass: Knoten → Code der eigenen Klasse (klasseVon rechnet die geerbte dazu); pool: die Suchliste ist geholt
 // Wo eine Klasse zugewiesen ist: GET /api/values/{klassenattribut} — nur die eigenen Werte (Id, Wert, Name, Rolle). Vorher kam der ganze Baum noch
 // einmal und je Wurzel eine Tabelle (rund 15 MB je Abruf, bei jedem Seitenaufruf, 04.10.2026). Die geerbte Klasse rechnet klasseVon über den Baum.
 async function loadUsed() {
@@ -106,29 +109,61 @@ async function loadCache() {
     const cur = current ? cache.versions.find(v => v.key === releaseKey(current)) ?? cache.versions.find(v => v.version === String(current.version ?? current.number ?? '')) : null
     const use = cur ?? cache.versions[0] ?? null
     cache.releaseKey = use?.key ?? null; cache.version = use?.version ?? null; cache.release = use
-    cache.classes = new Map(); cache.pool = false
+    cache.classes = new Map(); cache.liste = new Map(); cache.pool = false; cache.poolError = null
     await loadUsed()
     if (cache.releaseKey != null) {
-      // Nur die Klassen in Gebrauch, einzeln (wenige); die ganze Freigabe (5 640 Klassen, gemessen 74 MB) lädt ensurePool, wenn jemand sucht
-      // oder zuweist. Sind keine zugewiesen und nur wenige übernommen (von Hand), kommen alle — wie bisher.
+      // Nur die Klassen in Gebrauch, einzeln (wenige). Sind keine zugewiesen und nur wenige übernommen (von Hand), kommen diese — die Suchliste
+      // der ganzen Freigabe holt ensurePool, wenn jemand sucht oder zuweist.
       const imBestand = names.filter(n => n.startsWith(`class:${cache.releaseKey}:`)).length
-      if (!cache.used.size && imBestand <= 50) { await ensurePool(); return }
+      if (!cache.used.size && imBestand <= 50) {
+        if (imBestand) { const all = await (await fetch(`/api/plugins/etim/data?values=true&prefix=${encodeURIComponent('class:' + cache.releaseKey + ':')}`)).json(); for (const c of Object.values(all)) cache.classes.set(c.code, c) }
+        return
+      }
       const codes = [...cache.used]
       for (let i = 0; i < codes.length; i += 8)
         await Promise.all(codes.slice(i, i + 8).map(async code => { const k = await get(`class:${cache.releaseKey}:${code}`) ?? (use?.legacy ? await get(`class:${code}`) : null); if (k) cache.classes.set(k.code, k) }))
     }
   } catch { }
 }
-/// Die ganze Freigabe in den Speicher — erst, wenn jemand sucht, zuweist oder Attribute anlegt (Ansicht ⌗ ETIM, Klassendialog)
+/// Ein Lauf des Prozesses fetch.mjs (Server, wegen CORS): sein Ergebnis ist die JSON-Zeile der Ausgabe
+async function etimLauf(params) {
+  const r = await fetch('/api/plugins/etim/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ params: { mode: '', url: '', langs: '', codes: '', ...params } }) })
+  const j = await r.json().catch(() => null)
+  if (!r.ok) throw new Error(j?.error ?? `${r.status}`)
+  const out = jsonOfOut(j?.output)
+  if (!out) throw new Error(String(j?.output ?? '').split('\n').filter(z => z.startsWith('✗')).pop()?.slice(2) || t_('ETIM nicht gelesen'))
+  return out
+}
+const sprachen = () => (globalThis.journali?.store?.model?.locales ?? []).map(l => l.code).join(',') || 'de,en'
+/// Die Suchliste der aktuellen Freigabe — erst, wenn jemand sucht oder zuweist (14.10.2026): der Server holt die Freigabe von ihrer URL, liest sie
+/// und gibt die Liste zurück; der Browser hält sie, solange die Seite offen ist. Ohne URL (aus einer Datei gelesen) wird in den Klassen in Gebrauch
+/// gesucht — für mehr ist die Datei neu zu lesen.
 async function ensurePool() {
   if (cache.pool || cache.releaseKey == null) return
+  for (const c of cache.classes.values()) cache.liste.set(c.code, c)
+  const url = cache.release?.url
+  if (!url) { cache.pool = true; return }
   try {
-    const all = await (await fetch(`/api/plugins/etim/data?values=true&prefix=${encodeURIComponent('class:' + cache.releaseKey + ':')}`)).json()
-    for (const c of Object.values(all)) cache.classes.set(c.code, c)
-    if (cache.release?.legacy) { const old = await (await fetch('/api/plugins/etim/data?values=true&prefix=class%3A')).json(); for (const [n, c] of Object.entries(old)) if (/^class:[^:]+$/.test(n) && !cache.classes.has(c.code)) cache.classes.set(c.code, c) }
-    cache.pool = true
-  } catch { }
+    const j = await etimLauf({ mode: 'index', url, langs: sprachen() })
+    for (const c of j.liste ?? []) if (!cache.classes.has(c.code)) cache.liste.set(c.code, c)
+    cache.pool = true; cache.poolError = null
+  } catch (e) { cache.poolError = e.message }
 }
+/// Klassen vollständig ins Journal und in den Speicher — wenn jemand sie übernimmt oder zuweist: der Server holt die Freigabe und schreibt genau
+/// diese Klassen (fetch.mjs classes). Liefert, was es in der Freigabe nicht gibt.
+async function holeKlassen(codes) {
+  const fehlt = [...new Set(codes.map(c => String(c).toUpperCase()))].filter(c => !cache.classes.has(c))
+  if (!fehlt.length) return []
+  if (!cache.release?.url) return fehlt
+  await etimLauf({ mode: 'classes', url: cache.release.url, langs: sprachen(), codes: fehlt.join(',') })
+  for (const code of fehlt) {
+    const r = await fetch('/api/plugins/etim/data/' + encodeURIComponent(`class:${cache.releaseKey}:${code}`))
+    if (r.ok) { const k = await r.json(); cache.classes.set(k.code, k); cache.liste.set(k.code, k) }
+  }
+  return fehlt.filter(c => !cache.classes.has(c))
+}
+/// Was gesucht wird: die Suchliste, darin die Klassen in Gebrauch vollständig
+const suchliste = () => [...new Map([...cache.liste, ...cache.classes]).values()]
 cache.loaded = loadCache()
 const cfg = locale => ({ ...cache.settings, map: mergedMap(), locale })
 
@@ -323,6 +358,11 @@ async function classDialog(nodeId, ctx, onDone = null) {
 
   // Schritt 2: nur noch zeigen, was passiert, und zuweisen — das Ziel wurde oben gewählt
   async function assign(code) {
+    if (!cache.classes.has(code)) {
+      say(t_('hole {0} aus ETIM {1} …', [code, cache.version]))
+      try { if ((await holeKlassen([code])).length) { say(t_('{0} gibt es in ETIM {1} nicht', [code, cache.version])); return } } catch (e) { say('✗ ' + e.message); return }
+      say('')
+    }
     const c = cache.classes.get(code); if (!c) return
     const at = tree.byId.get(target) ?? row
     const missing = c.features.filter(f => !ops.hasAttr(attrKeyOf(f.code)))
@@ -366,12 +406,12 @@ async function classDialog(nodeId, ctx, onDone = null) {
   // Schritt 3: keine eigene Tabelle mehr — nach dem Zuweisen
   // geht es in die ETIM-Übersicht des Knotens (Klasse → Attribute → Daten → Ausleitung); bearbeitet wird in der Subitems-Tabelle
   function checkStep(code) { close(); onDone ? onDone(code) : ctx.go?.(`/tree/${encodeURIComponent(nodeId)}`) }
-  const line = (code, why) => { const c = cache.classes.get(code); return el('div', { class: 'pick', style: 'display:flex;gap:8px;align-items:center', title: [c && code !== current ? t_('{0} {1} wählen', [code, nameOf(c.name, locale)]) : '', why].filter(Boolean).join('\n'), onclick: () => { if (c && code !== current) assign(code) } }, el('span', { class: 'mono muted' }, code), el('span', { class: 'grow' }, c ? nameOf(c.name, locale) : el('i', { class: 'muted' }, t_('nicht in der Bibliothek')), c ? el('span', { class: 'muted', style: 'font-size:11px' }, ' ' + t_('· {0} ETIM-Attribute', [c.features.length])) : null, why ? el('span', { class: 'muted', style: 'font-size:11px' }, `  (${why})`) : null), c && code !== current ? el('button', { class: 'primary', onclick: () => assign(code) }, '⇢ zuweisen') : null) }
+  const line = (code, why) => { const c = cache.classes.get(code) ?? cache.liste.get(code); return el('div', { class: 'pick', style: 'display:flex;gap:8px;align-items:center', title: [c && code !== current ? t_('{0} {1} wählen', [code, nameOf(c.name, locale)]) : '', why].filter(Boolean).join('\n'), onclick: () => { if (c && code !== current) assign(code) } }, el('span', { class: 'mono muted' }, code), el('span', { class: 'grow' }, c ? nameOf(c.name, locale) : el('i', { class: 'muted' }, t_('nicht in der Bibliothek')), c ? el('span', { class: 'muted', style: 'font-size:11px' }, ' ' + t_('· {0} ETIM-Attribute', [featureCount(c)])) : null, why ? el('span', { class: 'muted', style: 'font-size:11px' }, `  (${why})`) : null), c && code !== current ? el('button', { class: 'primary', onclick: () => assign(code) }, '⇢ zuweisen') : null) }
 
   // Version im Dialog wechseln: die Auswahl gilt
   // ab sofort für Zuweisen, Prüfen und Export (release im Journal) — die Liste der Klassen darunter wird neu gelesen
   function versionBar() {
-    if (cache.versions.length < 2 && cache.version) return el('span', { class: 'muted', style: 'font-size:12px' }, t_('ETIM {0} · {1} Klassen', [cache.version, cache.classes.size]))
+    if (cache.versions.length < 2 && cache.version) return el('span', { class: 'muted', style: 'font-size:12px' }, t_('ETIM {0} · {1} Klassen', [cache.version, cache.release?.classes ?? cache.liste.size]))
     const sel = el('select', { title: t_('ETIM-Version — gilt für Zuweisen, Prüfen und Export'), onchange: async e => {
       const v = cache.versions.find(x => x.version === e.target.value); if (!v) return
       say(t_('wechsle auf ETIM {0} …', [v.version]))
@@ -383,19 +423,20 @@ async function classDialog(nodeId, ctx, onDone = null) {
   }
   function draw() {
     body.innerHTML = ''
-    const P = [...cache.classes.values()]
-    // Fall 1: keine Bibliothek
-    if (!P.length) {
+    const P = suchliste()
+    // Fall 1: keine Freigabe — holen heisst: die Freigabe merken (mit URL) und ihre Suchliste lesen; ins Journal kommt erst die zugewiesene Klasse
+    if (cache.releaseKey == null) {
       body.append(el('div', { class: 'empty' }, t_('Keine ETIM-Version im Journal.')),
         el('div', { class: 'chips' }, el('button', { 'data-demo': 'aus', class: 'primary', onclick: () => run(t_('hole Liste …'), async () => {
-          const r = await api.post('/api/plugins/etim/run', { params: { mode: 'list', url: '', langs: '' } }); const j = jsonOfOut(r.output); const best = j?.releases?.[0]; if (!best) throw new Error(t_('keine Liste von etim-international.com'))
-          const h0 = (await api.get('/api/health')).head; const t0 = Date.now()
-          const tick = setInterval(async () => { try { const h = (await api.get('/api/health')).head; say(`lade ${best.name} … ${h - h0} Klassen · ${Math.round((Date.now() - t0) / 1000)} s`) } catch { } }, 2000)
-          try { const r2 = await api.post('/api/plugins/etim/run', { params: { mode: 'load', url: best.url, langs: model().locales.map(l => l.code).join(',') } }); const j2 = jsonOfOut(r2.output); if (!j2?.classes) throw new Error((r2.output ?? '').slice(-300)) } finally { clearInterval(tick) }
-          await loadCache(); await store.poll(true); await ops.ensureClassAttr(); await store.poll(true); say(''); draw()
+          const j = await etimLauf({ mode: 'list' }); const best = j?.releases?.[0]; if (!best) throw new Error(t_('keine Liste von etim-international.com'))
+          const t0 = Date.now(); const tick = setInterval(() => say(t_('lese {0} … {1} s', [best.name, Math.round((Date.now() - t0) / 1000)])), 1000)
+          let j2; try { j2 = await etimLauf({ mode: 'index', url: best.url, langs: sprachen() }) } finally { clearInterval(tick) }
+          await loadCache(); for (const c of j2.liste ?? []) cache.liste.set(c.code, c); cache.pool = true
+          await store.poll(true); await ops.ensureClassAttr(); await store.poll(true); say(''); draw()
         }) }, t_('⇩ ETIM (neueste, alle Sektoren) holen')), el('span', { class: 'muted' }, t_('von etim-international.com — öffentlich, englische Namen; oder ⇪ Export → ⌗ ETIM: Datei'))))
       return
     }
+    if (!P.length && cache.poolError) body.append(el('div', { class: 'neg', style: 'font-size:12px;margin-bottom:6px' }, t_('✗ ETIM {0} nicht gelesen: {1}', [cache.version, cache.poolError])))
     body.append(el('div', { class: 'chips', style: 'margin-bottom:8px' }, versionBar()))
     // Stand
     // Zustand in einer Zeile, dann die Zielwahl — keine Kästen
@@ -639,8 +680,7 @@ async function bandMount({ head, body: bodyEl }, nodeId, ctx) {
 async function mount(root, ctx) {
   const { api, store, tree } = ctx
   if (!tree.loaded) await tree.load()
-  await cache.loaded
-  await ensurePool()   // die Ansicht sucht in der ganzen Freigabe und legt Attribute an
+  await cache.loaded   // die Suchliste holt erst „⌕ Klassen laden“ (14.10.2026) — die Ansicht zu öffnen lädt keine Freigabe
   const model = () => store.model
   const locale = model().masterLocale ?? 'de'
   const params = new URLSearchParams(location.search); const assignParam = params.get('assign'); const classParam = params.get('class'); const backNode = params.get('node'); const efParam = (params.get('ef') ?? '').toUpperCase(); if (assignParam || classParam) history.replaceState(null, '', location.pathname)
@@ -736,7 +776,11 @@ async function mount(root, ctx) {
   // Wert im Klassenattribut (vererbbar — an der Gruppe gesetzt gilt es für alles darunter); fehlt die Gruppe ETIM am Pfad, kommt sie an den Knoten
   async function assignClass(nodeId, code) {
     const row = tree.byId.get(nodeId); if (!row) return
-    if (!cache.classes.has(code)) { const cls = st.rel?.classes.find(x => x.code === code); if (!cls) { store.toast(t_('Klasse {0} nicht übernommen', [code])); return } await takeClass(cls, true) }
+    if (!cache.classes.has(code)) {
+      const cls = st.rel?.classes.find(x => x.code === code)
+      if (cls) await takeClass(cls, true)
+      else { const rest = await holeKlassen([code]).catch(e => { store.toast(e.message); return [code] }); if (rest.length) { store.toast(t_('Klasse {0} nicht übernommen', [code])); return } }
+    }
     await busy(t_('weise {0} zu …', [code]), async () => {
       cache.used.add(code)
       const r = await ops.assign(nodeId, cache.classes.get(code), { withFeatures: false }); await store.poll(true)
@@ -751,11 +795,15 @@ async function mount(root, ctx) {
     ? el('button', { class: 'primary', title: t_('{0} dem gewählten Knoten zuweisen', [code]), onclick: async () => { await assignClass(st.assign, code); draw() } }, '⇢ zuweisen')
     : el('button', { class: 'x', title: t_('{0} einem Knoten zuweisen — Auswahlbaum', [code]), onclick: e => { assignCode = code; const host = e.currentTarget.parentElement; host.style.position = 'relative'; host.append(assignPick); assignPick.style.display = assignPick.style.display === 'none' ? 'block' : 'none' } }, '⇢')
   async function takeClass(cls, silent) {
+    // aus der Suchliste (von der URL): der Server holt die Freigabe und schreibt die Klasse; aus einer gelesenen Datei: hier
+    if (!st.rel || !st.rel.classes.includes(cls)) {
+      await busy(t_('hole {0} aus ETIM {1} …', [cls.code, cache.version]), async () => { if ((await holeKlassen([cls.code])).length) throw new Error(t_('{0} gibt es in ETIM {1} nicht', [cls.code, cache.version])) })
+      const rec = cache.classes.get(cls.code); if (rec && !silent) say(t_('{0} übernommen · {1} ETIM-Attribute', [classText(rec, locale), rec.features.length]))
+      return
+    }
     const rec = classRecord(st.rel, cls, model().locales.map(l => l.code)); await ensureVersion(); await ctx.data.set(classKeyOf(rec.code), rec); cache.classes.set(rec.code, rec)
     if (!silent) say(t_('{0} übernommen · {1} ETIM-Attribute', [classText(rec, locale), rec.features.length]))
   }
-  // Die ganze Freigabe ins Journal: je Klasse ein Datensatz class:<EC>,
-  // nur in den Sprachen des Modells, in Stapeln zu 400 — danach geht Suche, Zuweisen und Prüfen ohne die Datei
   // Version der gelesenen Datei als Freigabe eintragen und zur aktuellen machen, wenn keine da ist; Namen anderer Sprachen derselben Version bleiben (Datei von etim.de ergänzt die englische)
   async function ensureVersion() {
     const h = st.rel.header; const ver = String(h.number ?? '0'); const variant = variantOf(st.relFile ?? ''); const key = [ver, variant].filter(Boolean).join('-')
@@ -763,34 +811,36 @@ async function mount(root, ctx) {
     if (cache.version == null) { cache.version = ver; await ctx.data.set('release', { ...cache.versions.find(v => v.version === ver) }) }
     if (cache.version !== ver) { cache.version = ver; await ctx.data.set('release', { ...cache.versions.find(v => v.version === ver) }); await loadCache() }
   }
-  const merge = (a, b) => !a ? b : { ...b, name: { ...(a.name ?? {}), ...(b.name ?? {}) }, synonyms: { ...(a.synonyms ?? {}), ...(b.synonyms ?? {}) }, features: b.features.map(f => { const o = a.features?.find(x => x.code === f.code); return o ? { ...f, name: { ...(o.name ?? {}), ...(f.name ?? {}) }, values: f.values.map(v => ({ ...v, name: { ...(o.values?.find(x => x.code === v.code)?.name ?? {}), ...(v.name ?? {}) } })) } : f }) }
-  async function takeAll() {
-    if (!st.rel) return
-    const langs = model().locales.map(l => l.code); const all = st.rel.classes; const CH = 400
-    await busy(t_('übernehme {0} Klassen …', [all.length]), async () => {
-      await ensureVersion()
-      for (let i = 0; i < all.length; i += CH) {
-        const chunk = all.slice(i, i + CH); const items = {}
-        for (const cls of chunk) { const rec = merge(cache.classes.get(cls.code), classRecord(st.rel, cls, langs)); items[classKeyOf(rec.code)] = rec; cache.classes.set(rec.code, rec) }
-        await api.post('/api/plugins/etim/data', items, 'PUT'); say(t_('{0} / {1} Klassen übernommen …', [Math.min(i + CH, all.length), all.length]))
-      }
-      const v = cache.versions.find(x => x.version === cache.version); if (v) { v.all = true; v.classes = all.length; v.languages = [...new Set([...(v.languages ?? []), ...Object.keys(all[0]?.name ?? {})])]; await ctx.data.set('release:' + v.version, v); if (cache.version === v.version) await ctx.data.set('release', v) }
-      await store.poll(true); await ops.ensureClassAttr(); await store.poll(true)
-      say(t_('{0} Klassen im Journal — Suche und Zuweisen gehen jetzt ohne die Datei', [all.length])); draw()
-    })
-  }
-  // Klassen, in denen gesucht wird: die gelesene Freigabe, sonst die übernommenen (als Datensätze gleich aufgebaut)
-  const pool = () => st.rel ? st.rel.classes : [...cache.classes.values()]
+  // Klassen, in denen gesucht wird: die gelesene Freigabe, sonst die Suchliste der aktuellen Version (erst nach „⌕ Klassen laden“)
+  const pool = () => st.rel ? st.rel.classes : suchliste()
   async function classesFromTree() {
-    if (!pool().length) { store.toast(t_('erst eine ETIM-Version holen')); return }
+    if (cache.releaseKey == null && !st.rel) { store.toast(t_('erst eine ETIM-Version holen')); return }
     const key = cache.settings.classAttr; if (!hasAttr(key)) { store.toast(t_('Attribut {0} gibt es nicht', [key])); return }
     await busy(t_('suche Klassen im Baum …'), async () => {
       const codes = new Set()
       for (const r of tree.rows.filter(r => !r.parent)) { const t = await api.get(`/api/nodes/${encodeURIComponent(r.id)}/table?deep=true&attributes=${key}`); for (const row of t.rows) { const c = String(row.values[key]?.value ?? '').trim().toUpperCase(); if (/^EC\d{6}$/.test(c)) codes.add(c) } }
-      let n = 0, miss = 0
-      for (const c of codes) { if (cache.classes.has(c)) continue; const cls = st.rel?.classes.find(x => x.code === c); if (cls) { await takeClass(cls, true); n++ } else miss++ }
+      const fehlt = [...codes].filter(c => !cache.classes.has(c)); let n = 0
+      const ausDatei = fehlt.map(c => st.rel?.classes.find(x => x.code === c)).filter(Boolean)
+      for (const cls of ausDatei) { await takeClass(cls, true); n++ }
+      const rest = fehlt.filter(c => !cache.classes.has(c))
+      const miss = rest.length ? (await holeKlassen(rest)).length : 0
+      n += rest.length - miss
       say(t_('{0} Klassen im Baum · {1} neu übernommen{2}', [codes.size, n, miss ? ' ' + t_('· {0} nicht in Version {1}', [miss, cache.version]) : ''])); draw()
     })
+  }
+  // Klassen im Journal, die keiner verwendet (14.10.2026): vorher kam beim Holen die ganze Freigabe ins Journal — aufräumen nimmt sie heraus
+  // (im Journal steht das Entfernen; die Historie bleibt). Gezählt beim Öffnen der Ansicht.
+  st.unbenutzt = (await ctx.data.list().catch(() => [])).filter(n => n.startsWith('class:') && !cache.used.has(n.split(':').pop().toUpperCase()))
+  async function aufraeumen() {
+    const weg = st.unbenutzt; if (!weg.length) return
+    if (!(await ctx.dialog.confirm({ title: t_('{0} Klassen ohne Zuweisung aus dem Journal nehmen?', [weg.length]), text: t_('Die Klassen in Gebrauch bleiben. Gesucht wird danach in der Freigabe selbst — sie wird von ihrer URL gelesen, wenn jemand sucht oder zuweist.'), ok: t_('✕ {0} Klassen entfernen', [weg.length]), danger: true }))) return
+    await busy(t_('entferne {0} Klassen …', [weg.length]), async () => {
+      for (let i = 0; i < weg.length; i += 2000) { say(t_('{0} / {1} Klassen entfernt …', [Math.min(i + 2000, weg.length), weg.length])); await api.post('/api/plugins/etim/data', Object.fromEntries(weg.slice(i, i + 2000).map(n => [n, null])), 'PUT') }
+      await loadCache(); st.unbenutzt = []; say(t_('{0} Klassen entfernt', [weg.length])); draw()
+    })
+  }
+  async function klassenLaden() {
+    await busy(t_('lese ETIM {0} von {1} …', [cache.version, (cache.release?.url ?? '').split('/').pop()]), async () => { await ensurePool(); if (cache.poolError) throw new Error(cache.poolError); say(t_('ETIM {0}: {1} Klassen zum Suchen', [cache.version, cache.liste.size])); draw() })
   }
 
   // ── Attribute anlegen (modelOps): Klassenattribut, je ETIM-Attribut ein Attribut in der Gruppe ETIM
@@ -919,34 +969,36 @@ async function mount(root, ctx) {
     const urlIn = el('input', { placeholder: 'URL (Zip/XML)', value: st.url ?? '', style: 'width:360px', oninput: e => { st.url = e.target.value } })
     const sel = el('select', { style: 'max-width:420px', onchange: e => { st.url = e.target.value; urlIn.value = st.url } }, el('option', { value: '' }, st.list ? t_('{0} Versionen bei ETIM International …', [st.list.length]) : t_('↻ Liste erst holen')), ...(st.list ?? []).map(r => el('option', { value: r.url, selected: r.url === st.url ? '' : null }, r.name.replace(/\.zip$/, ''))))
     const listBtn = el('button', { 'data-demo': 'aus', class: 'x', title: t_('etim-international.com/downloads lesen — die IXF-Versionen als Auswahl'), onclick: () => busy(t_('hole Liste …'), async () => { const r = await api.post('/api/plugins/etim/run', { params: { mode: 'list', url: '', langs: '' } }); const j = jsonOf(r.output); if (!j?.releases) throw new Error(r.output?.slice(0, 200) || t_('keine Liste')); st.list = j.releases; st.url ||= j.releases[0]?.url ?? ''; say(t_('{0} Versionen', [j.releases.length])); draw() }) }, t_('↻ Liste'))
-    const loadBtn = el('button', { 'data-demo': 'aus', class: 'primary', title: t_('laden und alle Klassen ins Journal (Sprachen des Modells; ETIM International = englisch)'), onclick: async () => { if (!st.url) { store.toast(t_('erst eine Version wählen oder eine URL eintragen')); return }
-      // schon da? — dann fragen
-      const have = cache.versions.find(v => v.url === st.url || (v.file && st.url.endsWith(v.file.replace(/\.xml$/i, '.zip'))))
-      if (have && !(await ctx.dialog.confirm({ title: t_('ETIM {0} ist schon im Journal', [have.version]), warn: t_('{0} Klassen vom {1}', [have.classes, (have.at ?? '').slice(0, 10)]), text: t_('Erneut laden überschreibt die Klassen dieser Version (neue Einträge im Journal).'), ok: t_('Erneut laden') }))) return
-      busy(`lade ${st.url.split('/').pop()} …`, async () => {
-      const h0 = (await api.get('/api/health')).head; const t0 = Date.now()
-      const tick = setInterval(async () => { try { const h = (await api.get('/api/health')).head; say(t_('lade {0} … {1} Klassen geschrieben · {2} s', [st.url.split('/').pop(), h - h0, Math.round((Date.now() - t0) / 1000)])) } catch { } }, 2000)
-      try {
-        const r = await api.post('/api/plugins/etim/run', { params: { mode: 'load', url: st.url, langs: langs.join(',') } }); const j = jsonOf(r.output); if (!j?.classes) throw new Error((r.output ?? '').slice(-300) || t_('Laden fehlgeschlagen')); await loadCache(); await store.poll(true); await ops.ensureClassAttr(); await store.poll(true); say(t_('ETIM {0}: {1} Klassen in {2} s{3}', [j.version, j.classes, Math.round(j.ms / 1000), j.current !== j.version ? ' ' + t_('— aktuell bleibt ETIM {0}', [j.current]) : ''])); draw()
-      } finally { clearInterval(tick) }
-    }) } }, '⇩ laden')
+    const loadBtn = el('button', { 'data-demo': 'aus', class: 'primary', title: t_('die Version merken (mit URL) und ihre Klassen zum Suchen lesen — ins Journal kommen nur die Klassen, die übernommen oder zugewiesen werden'), onclick: async () => { if (!st.url) { store.toast(t_('erst eine Version wählen oder eine URL eintragen')); return }
+      busy(`lese ${st.url.split('/').pop()} …`, async () => {
+        const t0 = Date.now(); const tick = setInterval(() => say(t_('lese {0} … {1} s', [st.url.split('/').pop(), Math.round((Date.now() - t0) / 1000)])), 1000)
+        let j; try { j = await etimLauf({ mode: 'index', url: st.url, langs: langs.join(',') }) } finally { clearInterval(tick) }
+        await loadCache()
+        if (j.key === cache.releaseKey) { for (const c of j.liste ?? []) if (!cache.classes.has(c.code)) cache.liste.set(c.code, c); cache.pool = true }
+        await store.poll(true); await ops.ensureClassAttr(); await store.poll(true)
+        say(t_('ETIM {0}: {1} Klassen in {2} s{3}', [j.version, j.classes, Math.round(j.ms / 1000), j.current !== j.version ? ' ' + t_('— aktuell bleibt ETIM {0}', [j.current]) : ''])); draw()
+      })
+    } }, '⇩ laden')
     const fileBtn = el('button', { 'data-demo': 'aus', class: 'x', title: t_('IXF-3.1-Datei vom Rechner — ergänzt dieselbe Version'), onclick: () => file.click() }, t_('⇩ Datei …'))
-    const fileState = rel ? el('span', { class: 'muted' }, `gelesen: ETIM ${rel.header.number ?? '?'} · ${rel.classes.length} Klassen · ${[...new Set(rel.classes.slice(0, 50).flatMap(c => Object.keys(c.name)))].join('/')} `, el('button', { class: 'primary', onclick: takeAll }, t_('⇩ {0} Klassen übernehmen', [rel.classes.length]))) : null
+    const fileState = rel ? el('span', { class: 'muted', title: t_('bleibt im Browser, solange die Seite offen ist — ins Journal kommen nur übernommene Klassen') }, `gelesen: ETIM ${rel.header.number ?? '?'} · ${rel.classes.length} Klassen · ${[...new Set(rel.classes.slice(0, 50).flatMap(c => Object.keys(c.name)))].join('/')}`) : null
+    const aufraeumBtn = st.unbenutzt?.length ? el('button', { 'data-demo': 'aus', class: 'x', title: t_('Klassen, die beim früheren Holen ins Journal kamen und nirgends zugewiesen sind, herausnehmen'), onclick: aufraeumen }, t_('✕ {0} Klassen ohne Zuweisung', [st.unbenutzt.length])) : null
     body.append(section(t_('1 · Klassifikation'), t_('ETIM-Versionen im Journal · ● die aktuelle gilt für Zuweisen, Prüfen und Export'),
       cache.versions.length ? el('table', { class: 'grid', style: 'width:auto;min-width:640px' }, el('thead', {}, el('tr', {}, el('th', { style: 'width:34px' }, ''), el('th', { style: 'width:90px' }, t_('Version')), el('th', {}, t_('Quelle')), el('th', { style: 'width:80px' }, t_('Klassen')), el('th', { style: 'width:90px' }, t_('Sprachen')), el('th', { style: 'width:100px' }, 'geladen'))), el('tbody', {}, ...verRows))
         : el('div', { class: 'empty' }, t_('noch keine ETIM-Version im Journal')),
-      el('div', { 'data-demo': 'aus', style: 'display:flex;gap:8px;align-items:center;padding:8px 0 2px;flex-wrap:wrap' }, el('span', { class: 'muted' }, 'dazu:'), listBtn, sel, el('span', { class: 'muted' }, 'oder'), urlIn, loadBtn, el('span', { class: 'muted' }, 'oder'), fileBtn, file, fileState)))
+      el('div', { 'data-demo': 'aus', style: 'display:flex;gap:8px;align-items:center;padding:8px 0 2px;flex-wrap:wrap' }, el('span', { class: 'muted' }, 'dazu:'), listBtn, sel, el('span', { class: 'muted' }, 'oder'), urlIn, loadBtn, el('span', { class: 'muted' }, 'oder'), fileBtn, file, fileState),
+      aufraeumBtn ? el('div', { style: 'padding:4px 0' }, aufraeumBtn) : null))
     // Klassen
     // ohne gelesene Freigabe (bleibt im Browser, je Sitzung) gibt es nichts zu suchen — Feld und Knopf sagen das, statt nach dem Klick zu meckern
     const P = pool()
     const wizPick = el('div', { class: 'picker', style: 'position:absolute;left:0;top:28px;z-index:6;width:380px;display:none;padding:6px;background:var(--pane)' })
     ctx.treePicker(wizPick, { roles: ['group', 'product', 'variant'], height: 300, onPick: r => { wizPick.style.display = 'none'; classDialog(r.id, ctx) } })
     const wizBtn = el('button', { 'data-demo': 'aus', class: 'primary', title: t_('Knoten wählen, dann die Klasse — mit Vorschlag, Umfeld, Suche und Gruppen'), onclick: () => { wizPick.style.display = wizPick.style.display === 'none' ? 'block' : 'none' } }, t_('⌗ Klasse zuweisen … (Knoten wählen)'))
-    const q = el('input', { placeholder: P.length ? t_('Klasse suchen — Code, Name, Synonym ({0})', [P.length]) : t_('erst oben „⇩ IXF lesen“ — dann suchen'), value: st.q, style: 'width:360px', disabled: !P.length, oninput: e => { st.q = e.target.value; search() } })
+    const q = el('input', { placeholder: P.length ? t_('Klasse suchen — Code, Name, Synonym ({0})', [P.length]) : t_('erst „⌕ Klassen laden“ — dann suchen'), value: st.q, style: 'width:360px', disabled: !P.length, oninput: e => { st.q = e.target.value; search() } })
+    const ladenBtn = !st.rel && !cache.pool && cache.release?.url ? el('button', { class: 'x', title: t_('ETIM {0} von ihrer URL lesen — die Liste bleibt im Browser, solange die Seite offen ist', [cache.version]), onclick: klassenLaden }, t_('⌕ Klassen laden')) : null
     const hits = el('div')
     // Blättern nach Klassengruppen: ohne Suchbegriff die Gruppen, Klick zeigt die Klassen der Gruppe
     const groupsOf = () => { const m = new Map(); for (const c of P) { const g = c.group ? (nameOf(c.group.name, locale) || c.group.code) : '—'; if (!m.has(g)) m.set(g, []); m.get(g).push(c) } return [...m].sort((a, b) => a[0].localeCompare(b[0], 'de')) }
-    const row = c => el('div', { class: 'pick', style: 'display:flex;gap:8px;align-items:center' }, el('span', { class: 'mono muted' }, c.code), el('span', { class: 'grow' }, nameOf(c.name, locale), el('span', { class: 'muted', style: 'font-size:11px' }, ' ' + t_('· {0} ETIM-Attribute · {1}', [c.features.length, c.status]))), cache.classes.has(c.code) ? assignBtn(c.code) : el('button', { class: 'x', title: t_('Klasse übernehmen'), onclick: async () => { await takeClass(c); draw() } }, '+'))
+    const row = c => el('div', { class: 'pick', style: 'display:flex;gap:8px;align-items:center' }, el('span', { class: 'mono muted' }, c.code), el('span', { class: 'grow' }, nameOf(c.name, locale), el('span', { class: 'muted', style: 'font-size:11px' }, ' ' + t_('· {0} ETIM-Attribute · {1}', [featureCount(c), c.status]))), cache.classes.has(c.code) ? assignBtn(c.code) : el('button', { class: 'x', title: t_('Klasse übernehmen'), onclick: async () => { await takeClass(c); draw() } }, '+'))
     const browse = () => {
       hits.innerHTML = ''
       if (st.grp) { hits.append(el('div', { class: 'pick', style: 'font-weight:600', onclick: () => { st.grp = null; browse() } }, `‹ ${st.grp}`)); for (const c of (groupsOf().find(([g]) => g === st.grp)?.[1] ?? []).sort((a, b) => nameOf(a.name, locale).localeCompare(nameOf(b.name, locale)))) hits.append(row(c)); return }
@@ -958,7 +1010,7 @@ async function mount(root, ctx) {
       hits.innerHTML = ''; if (!P.length || st.q.trim().length < 2) { if (P.length) browse(); return }
       const s = st.q.trim().toLowerCase()
       const found = P.filter(c => c.code.toLowerCase().includes(s) || Object.values(c.name).some(n => n.toLowerCase().includes(s)) || Object.values(c.synonyms).some(l => l.some(n => n.toLowerCase().includes(s)))).slice(0, 40)
-      for (const c of found) hits.append(el('div', { class: 'pick', style: 'display:flex;gap:8px;align-items:center' }, el('span', { class: 'mono muted' }, c.code), el('span', { class: 'grow' }, nameOf(c.name, locale), el('span', { class: 'muted', style: 'font-size:11px' }, ' ' + t_('· {0} ETIM-Attribute · {1}', [c.features.length, c.status]))), cache.classes.has(c.code) ? el('span', { class: 'muted' }, '✓') : el('button', { class: 'x', title: t_('Klasse übernehmen (ins Journal)'), onclick: async () => { await takeClass(c); draw() } }, '+'), st.assign ? el('button', { class: 'primary', title: t_('übernehmen und {0} zuweisen', [tree.byId.get(st.assign)?.label]), onclick: async () => { await assignClass(st.assign, c.code); draw() } }, '⇢ zuweisen') : null))
+      for (const c of found) hits.append(el('div', { class: 'pick', style: 'display:flex;gap:8px;align-items:center' }, el('span', { class: 'mono muted' }, c.code), el('span', { class: 'grow' }, nameOf(c.name, locale), el('span', { class: 'muted', style: 'font-size:11px' }, ' ' + t_('· {0} ETIM-Attribute · {1}', [featureCount(c), c.status]))), cache.classes.has(c.code) ? el('span', { class: 'muted' }, '✓') : el('button', { class: 'x', title: t_('Klasse übernehmen (ins Journal)'), onclick: async () => { await takeClass(c); draw() } }, '+'), st.assign ? el('button', { class: 'primary', title: t_('übernehmen und {0} zuweisen', [tree.byId.get(st.assign)?.label]), onclick: async () => { await assignClass(st.assign, c.code); draw() } }, '⇢ zuweisen') : null))
       if (!found.length) hits.append(el('div', { class: 'muted', style: 'padding:4px' }, t_('nichts gefunden')))
     }
     if (P.length) search()
@@ -968,10 +1020,10 @@ async function mount(root, ctx) {
         el('td', { style: 'position:relative' }, assignBtn(c.code)),
         el('td', {}, rel && rel.classes.some(x => x.code === c.code && x.version !== c.version) ? el('button', { class: 'x', title: t_('aus der gelesenen Freigabe aktualisieren'), onclick: async () => { await takeClass(rel.classes.find(x => x.code === c.code)); draw() } }, '↻') : null, el('button', { class: 'x', title: t_('Zuweisung an {0} Knoten entfernen — die Klasse bleibt in Version {1}', [(cache.usedBy.get(c.code) ?? []).length, cache.version]), onclick: async () => { const nodes = cache.usedBy.get(c.code) ?? []; if (!(await ctx.dialog.confirm({ title: t_('{0} an {1} Knoten entfernen?', [c.code, nodes.length]), list: nodes.map(n => `${ICON[n.role] ?? ''} ${n.label}`), text: t_('Das Klassenattribut wird dort geleert; die Klasse bleibt in der Version.'), ok: t_('✕ Zuweisungen entfernen'), danger: true }))) return; await busy(`entferne ${c.code} …`, async () => { await ctx.batch(nodes.map(n => ({ op: 'attribute.set', args: { node: n.id, attribute: cache.settings.classAttr, locale: null, value: '' } }))); await store.poll(true); await loadUsed(); draw() }) } }, '✕')), el('td', { class: 'muted', style: 'font-size:11px' }, (cache.usedBy.get(c.code) ?? []).slice(0, 3).map(n => n.label).join(', ') + ((cache.usedBy.get(c.code) ?? []).length > 3 ? ` … (${cache.usedBy.get(c.code).length})` : ''))) })))
     const assignRow = st.assign ? tree.byId.get(st.assign) : null
-    body.append(section(t_('2 · Klassen'), t_('{0} in Gebrauch · {1} in Version {2}', [taken.length, cache.classes.size, cache.version ?? '?']),
+    body.append(section(t_('2 · Klassen'), t_('{0} in Gebrauch · {1} in Version {2}', [taken.length, cache.release?.classes ?? '?', cache.version ?? '?']),
       el('div', { style: 'display:flex;gap:8px;align-items:center;padding:4px 0' }, el('span', { style: 'position:relative' }, wizBtn, wizPick), el('span', { class: 'muted', style: 'font-size:12px' }, t_('oder im Baum: Rechtsklick → Datenanalyse → ⌗ ETIM-Klasse …'))),
-      el('div', { style: 'display:flex;gap:8px;align-items:center;padding:6px 0;flex-wrap:wrap' }, q, el('button', { class: 'x', disabled: !P.length, title: P.length ? t_('alle Klassen, die im Attribut {0} im Baum stehen, übernehmen', [cache.settings.classAttr]) : t_('braucht eine ETIM-Version (oben holen)'), onclick: classesFromTree }, t_('⇩ aus dem Baum'))),
-      hits, taken.length ? tbl : el('div', { class: 'empty' }, cache.classes.size ? t_('noch keine Klasse im Baum zugewiesen — oben suchen und ⇢ zuweisen') : t_('erst eine ETIM-Version holen'))))
+      el('div', { style: 'display:flex;gap:8px;align-items:center;padding:6px 0;flex-wrap:wrap' }, ladenBtn, q, el('button', { class: 'x', disabled: cache.releaseKey == null && !st.rel, title: cache.releaseKey != null || st.rel ? t_('alle Klassen, die im Attribut {0} im Baum stehen, übernehmen', [cache.settings.classAttr]) : t_('braucht eine ETIM-Version (oben holen)'), onclick: classesFromTree }, t_('⇩ aus dem Baum'))),
+      hits, taken.length ? tbl : el('div', { class: 'empty' }, cache.releaseKey != null ? t_('noch keine Klasse im Baum zugewiesen — oben suchen und ⇢ zuweisen') : t_('erst eine ETIM-Version holen'))))
     // Attribute
     // Gruppe der ETIM-Daten: „etim“ legen wir an (Attribute direkt zugewiesen); eine vorhandene Gruppe heißt: hier zuordnen (Best Guess über die Namen)
     const groupSel = el('select', { title: t_('Attributgruppe der ETIM-Daten — gibt es sie nicht, wird sie angelegt'), onchange: e => { cache.settings.group = e.target.value; saveSettings(); draw() } },

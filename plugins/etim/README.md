@@ -12,13 +12,17 @@ erlaubten Werten, alles mit Übersetzungen (`de-DE`, `EN`, …).
 
 ## Was das Plugin macht
 
-1. **Freigabe lesen** — die IXF-Datei wird im Browser gelesen (`core.mjs: parseIxf`, ohne DOM,
-   Regex über den Text; auch grosse Dateien). Ins Journal gehen `release` (Name, Nummer, Datum, Zählung) und alle Klassen der
-   Freigabe in den Sprachen des Modells; danach braucht niemand mehr die Datei (Stand 04.10.2026).
-2. **Klassen übernehmen** — Suche nach Code, Name, Synonym; `+` legt `class:<EC>` als
-   Datensatz an: Name, Gruppe, Version, alle ETIM-Attribute mit Typ, Einheit (Code, Abkürzung,
-   Name) und Werten (EV-Code, Namen). Alles aufgelöst — Job, Prüfung und Export brauchen die
-   Freigabe nicht mehr. „aus dem Baum“ übernimmt alle Klassen, die im Klassenattribut stehen.
+1. **Freigabe holen** — von etim-international.com (Liste oder URL) liest sie der Prozess `fetch.mjs` auf dem Server (der Browser darf
+   die Seite wegen CORS nicht lesen), eine IXF-Datei vom Rechner der Browser (`core.mjs: parseIxf`, ohne DOM, Regex über den Text). Ins
+   Journal geht nur `release:<key>` (Name, Nummer, Datum, Zählung, **URL**). Die Klassen werden gelesen, wenn jemand sucht oder zuweist,
+   und danach verworfen (14.10.2026; vorher kam jede Klasse ins Journal):
+   - `fetch.mjs index <url> <langs>` — die Suchliste (Code, Namen, Synonyme, Gruppe, Zahl der ETIM-Attribute), nur im Browser;
+   - `fetch.mjs classes <url> <langs> <codes>` — die genannten Klassen vollständig ins Journal (`class:<key>:<EC>`).
+2. **Klassen übernehmen** — Suche nach Code, Name, Synonym (die Ansicht holt die Suchliste mit „⌕ Klassen laden“, der Klassendialog
+   beim Öffnen); `+` oder „⇢ zuweisen“ legt `class:<key>:<EC>` als Datensatz an: Name, Gruppe, Version, alle ETIM-Attribute mit Typ,
+   Einheit (Code, Abkürzung, Name) und Werten (EV-Code, Namen). Alles aufgelöst — Job, Prüfung und Export brauchen die Freigabe nicht.
+   „aus dem Baum“ übernimmt alle Klassen, die im Klassenattribut stehen. „✕ n Klassen ohne Zuweisung“ nimmt heraus, was das frühere
+   Holen ins Journal gebracht hat und nirgends zugewiesen ist.
 3. **Attribute anlegen** — Klassenattribut `class_etim` (Werteliste der übernommenen Klassen,
    vererbbar, Gruppe ETIM) und je Klasse eine Attributgruppe `etim_<klasse>` („EC002712 Name“) mit ihren Attributen: ein
    Attribut `ef…` entsteht, wo es noch keins gibt, sonst wird das vorhandene nur dieser Gruppe zugeordnet.
@@ -101,8 +105,9 @@ Zuordnung) stehen unter der Übersicht, zugeklappt.
 
 | Name | Inhalt |
 |---|---|
-| `release` | zuletzt gelesene Freigabe |
-| `class:<EC>` | Klasse aufgelöst (s. o.) |
+| `release` | die aktuelle Freigabe (gilt für Zuweisen, Prüfen, Export) |
+| `release:<key>` | eine geholte Freigabe mit URL — ohne ihre Klassen |
+| `class:<key>:<EC>` | eine Klasse in Gebrauch, aufgelöst (s. o.); `class:<EC>` ohne Version ist Altbestand |
 | `settings` | `group` (Attributgruppe der ETIM-Daten, Vorgabe `class_etim` — gibt es sie nicht, wird sie angelegt; eine vorhandene heißt: dort zuordnen, „↻ in … zuordnen“ rät nach Namen), `classAttr` (Vorgabe `class_etim`), `unknownAs` (UN / NA / skip), `requireClass` |
 | `map` | EF-Code → Attributschlüssel, wo nicht das eigene `ef…` gilt |
 

@@ -1,13 +1,13 @@
 {
   "key": "etim",
-  "version": "1.0.3",
+  "version": "1.1.0",
   "label": {
     "de": "ETIM",
     "en": "ETIM"
   },
   "description": {
-    "de": "ETIM-Klassifikation (Klasse → ETIM-Attribute → Werte, vom Knoten aus): Freigaben von etim-international.com holen (Vorschlagsliste oder URL, öffentlich) oder eine IXF-3.1-Datei lesen — alle Klassen kommen ins Journal (Sprachen des Modells), Versionen werden gemerkt. Die Klasse steht als Attribut am Produkt (Werteliste), je ETIM-Attribut Zuordnung auf ein vorhandenes Attribut mit ƒ (Einheit, Ja/Nein, Werteliste) oder ein eigenes Attribut in der Gruppe ETIM. Werte in der Subitems-Tabelle. Prüfregel in ✓ Datenqualität. Liefert die ETIM-Attribute nach ETIM-BMEcat-Guideline 5.0 an ‹› Vorlagen-Export (BMEcat-Profil auf einem Publikationsbaum).",
-    "en": "ETIM classification: fetch releases from etim-international.com (list or URL) or read an IXF 3.1 file — all classes into the journal, versions remembered; one attribute per feature or a mapping, checks in data quality, features for the BMEcat template export."
+    "de": "ETIM-Klassifikation (Klasse → ETIM-Attribute → Werte, vom Knoten aus): Freigaben von etim-international.com (Vorschlagsliste oder URL, öffentlich) oder eine IXF-3.1-Datei werden beim Suchen und Zuweisen gelesen; ins Journal kommen nur die Klassen in Gebrauch (Sprachen des Modells), die Versionen werden mit ihrer URL gemerkt. Die Klasse steht als Attribut am Produkt (Werteliste), je ETIM-Attribut Zuordnung auf ein vorhandenes Attribut mit ƒ (Einheit, Ja/Nein, Werteliste) oder ein eigenes Attribut in der Gruppe ETIM. Werte in der Subitems-Tabelle. Prüfregel in ✓ Datenqualität. Liefert die ETIM-Attribute nach ETIM-BMEcat-Guideline 5.0 an ‹› Vorlagen-Export (BMEcat-Profil auf einem Publikationsbaum).",
+    "en": "ETIM classification: fetch releases from etim-international.com (list or URL) or read an IXF 3.1 file when searching and assigning — only the classes in use go into the journal, versions are remembered with their URL; one attribute per feature or a mapping, checks in data quality, features for the BMEcat template export."
   },
   "kind": "classification",
   "runs": "browser",
@@ -25,9 +25,10 @@
       "{actor}",
       "{mode}",
       "{url}",
-      "{langs}"
+      "{langs}",
+      "{codes}"
     ],
-    "description": "ETIM-Freigaben holen: Liste der Downloads (list) oder eine Freigabe laden und alle Klassen ins Journal (load <url>)",
+    "description": "ETIM-Freigaben holen: Liste der Downloads (list), Suchliste einer Freigabe (index <url>), die genannten Klassen ins Journal (classes <url> <codes>)",
     "params": []
   },
   "health": "/api/plugins/etim/system/health"

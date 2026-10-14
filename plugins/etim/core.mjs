@@ -105,6 +105,15 @@ export function classRecord(rel, cls, langs = null) {
   }
 }
 
+/// Eine Klasse für die Suche (14.10.2026): Code, Namen, Synonyme, Gruppe, Status — statt der ETIM-Attribute nur ihre Zahl. Die Suchliste einer
+/// Freigabe (gut 5 600 Klassen, 1,7 MB) lebt nur im Browser, solange jemand sucht; ins Journal kommen allein die Klassen in Gebrauch (classRecord).
+export function classSummary(rel, cls, langs = null) {
+  const r = classRecord(rel, { ...cls, features: [] }, langs)
+  return { code: r.code, version: r.version, status: r.status, name: r.name, synonyms: r.synonyms, group: r.group, features: cls.features.length }
+}
+/// Zahl der ETIM-Attribute — der Datensatz trägt sie als Liste, der Eintrag der Suchliste als Zahl
+export const featureCount = c => Array.isArray(c?.features) ? c.features.length : (c?.features ?? 0)
+
 /// Zuordnung eines ETIM-Attributs: { key, steps } — Zeiger (Text) oder { to, steps }; ohne Zuordnung das eigene Attribut ef… (Code klein)
 export function mapEntry(map, code) {
   const m = map?.[code] ?? map?.[code.toUpperCase()]

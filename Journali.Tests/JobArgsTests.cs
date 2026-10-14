@@ -23,4 +23,25 @@ public class JobArgsTests
         Assert.Equal(new[] { "job.mjs", "--dry" }, PluginApi.BuildProcess(Path.GetTempPath(), "x", proc, new() { ["dry"] = "true" }).ArgumentList.ToArray());
         Assert.Equal(new[] { "job.mjs" }, PluginApi.BuildProcess(Path.GetTempPath(), "x", proc, new() { ["dry"] = "false" }).ArgumentList.ToArray());
     }
+
+    [Fact]
+    public async Task Das_Ergebnis_auf_stdout_kommt_ganz_der_Fortschritt_auf_stderr_wird_gekuerzt()
+    {
+        // 14.10.2026: etim gibt die Suchliste einer Freigabe als eine JSON-Zeile aus (1,7 MB) — vorher galt für alles zusammen 200 000 Zeichen vom
+        // Ende her, und die Zeile kam abgeschnitten an. Jetzt bleibt stdout bis 32 MB ganz; von stderr (Fortschritt) bleibt das Ende.
+        var dir = Directory.CreateTempSubdirectory("journali-run").FullName;
+        try
+        {
+            Directory.CreateDirectory(Path.Combine(dir, "x"));
+            File.WriteAllText(Path.Combine(dir, "x", "lauf.mjs"), "process.stderr.write('f'.repeat(300000) + 'ENDE'); console.log(JSON.stringify({ liste: 'a'.repeat(1000000) }))");
+            var proc = JsonDocument.Parse("""{"command":"node","args":["lauf.mjs"]}""").RootElement;
+            var (exit, output) = await PluginApi.RunProcessAsync(dir, "x", proc, new(), TimeSpan.FromMinutes(1), CancellationToken.None);
+            Assert.Equal(0, exit);
+            var zeile = output.Split('\n')[0];
+            Assert.Equal(1000000, JsonDocument.Parse(zeile).RootElement.GetProperty("liste").GetString()!.Length);
+            var fortschritt = output[(output.IndexOf("--- stderr ---", StringComparison.Ordinal) + 15)..];
+            Assert.True(fortschritt.Length <= 200_001 && fortschritt.EndsWith("ENDE"), $"{fortschritt.Length}");
+        }
+        finally { Directory.Delete(dir, true); }
+    }
 }

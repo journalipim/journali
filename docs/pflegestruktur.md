@@ -861,6 +861,14 @@ Export-Konfiguration im Klassifikations-Plugin („welche Klassen, ab welcher St
   zuweisen (Gruppe des Systems an den Pfad, Gruppe der Klasse und Klasse an den Knoten), entfernen, umstellen und die Bereitschaft
   (`POST /api/classification/ensure|assign|clear|migrate|readiness`) macht der Server aus einer neutralen Beschreibung; er kennt kein
   System. Ein zugeordnetes Merkmal (`target`) kommt als vorhandenes Attribut in die Gruppe, ein eigenes entsteht dann nicht.
+- *Entschieden (14.10.2026):* **Keine ganze ETIM-Freigabe im Journal.** Eine Klassifikation braucht man selten — dann wird die Freigabe
+  von ihrer URL geholt, gelesen und verworfen: suchen und durchsehen (`fetch.mjs index`: die Suchliste mit Code, Namen, Synonymen, Gruppe,
+  Zahl der ETIM-Attribute, gut 5 600 Klassen in 1,7 MB, nur im Browser, solange die Seite offen ist), übernehmen und zuweisen
+  (`fetch.mjs classes`: genau diese Klassen vollständig ins Journal). Im Journal stehen die Freigabe mit ihrer URL und die Klassen in
+  Gebrauch — Prüfung, Datenanalyse und Export brauchen ihre ETIM-Attribute. Vorher (04.10.2026) kam beim Holen jede Klasse ins Journal: vier
+  Freigaben ergaben 22 481 Datensätze, 188 MB im Speicher des Servers und in jedem Schnappschuss. „✕ n Klassen ohne Zuweisung“ in der Ansicht
+  nimmt sie heraus. Eine aus einer Datei gelesene Freigabe hat keine URL: gesucht wird dann in den Klassen in Gebrauch, für mehr ist die
+  Datei neu zu lesen.
 - **GPC** (Plugin `gpc`, 30.09.2026): die GS1-Produktklassifikation als zweites System — Segment, Family, Class, Brick; der Brick
   ist die Klasse. Die Nutzung ist laut GS1 kostenfrei; die Datei (JSON, oder das Zip der Veröffentlichung) holt der Anwender
   selbst, im Repo liegen keine GPC-Daten (`sample.json` ist erfunden). Attribute und Werte haben in allen Bricks dieselben
