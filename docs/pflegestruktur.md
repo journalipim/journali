@@ -2905,6 +2905,27 @@ Ihnen das weiter?“; ohne passende Unterlage sagt er, dass es keine Anleitung g
 **Frühere Eingaben (10.10.2026).** Ein Klick auf die eigene Blase setzt ihren Text in die Eingabezeile; ↑ und ↓ in der Eingabezeile blättern
 durch die Eingaben — nur im Arbeitsspeicher der Seite.
 
+**Angaben aus Kundensätzen (14.10.2026, Prüfstand mit den Tannwald-Daten).** `erkenne` (`kern/verstehen.mjs`) versteht ohne KI:
+Zahlwörter („für zwei Personen“), eine Zahl vor der Bezeichnung eines Zahlenattributs ohne Einheit („2 Personen“, „4 Taschen“, auch „people“,
+„Leute“), Geld („unter 200 Euro“, „für 150 €“ — das Attribut, dessen Bezeichnung die Währung nennt; ohne Vergleich eine Obergrenze), eine
+ganze Zahl mit Einheit ohne Vergleich als Wert („mit 30 Litern“; Kommazahlen nicht), Minus und Grad („bis minus 10 grad“), Frost
+(„für Minusgrade“: höchstens 0 °C), Zeit als Eigenschaft („schnell aufgebaut“, „lange warm“ — welches Zeitattribut, sagt seine Bezeichnung,
+auch gebeugt), Ja/Nein-Bezeichnungen aus mehreren Wörtern („wasserdicht mit Membran“), zusammengesetzt („helmkapuze“) und als Wortanfang
+(„trinksystem“), die Zahl in einem Listenwert („in 43“ → „EU 43“, ab zwei Ziffern). Eine Bezeichnung, die nur zum Teil genannt ist („mit
+Kapuze“ bei „Helmtaugliche Kapuze“), bleibt ein Suchwort.
+
+**Rückfrage, wenn eine Angabe mehreres meint (14.10.2026).** Haben mehrere Attribute dieselbe Einheit und keines ist genannt („bis minus 10
+grad“ bei Komfort-, Grenz- und Extremtemperatur), wählt der Kern das einzige, das die zuletzt gezeigten Produkte haben; sonst fragt er
+(„Meinen Sie Komforttemperatur, Grenztemperatur oder Extremtemperatur?“, `wahl`) — je Möglichkeit ein Knopf, der die Angabe setzt. Gilt
+eines davon schon, ersetzt eine neue Zahl seinen Wert. Eine Frage, die genau ein Produkt trifft („Was kostet die Fjell Jacke?“, „wie schwer
+ist das Odda Zelt?“), beantworten seine Werte wie beim Produkt im Blick; „gibt es die auch in blau?“ bleibt eine Eingrenzung.
+
+**Die Art bleibt ein Name (14.10.2026).** Ob ein Wort im Namen, als ganzes Wort oder als Wortanfang zählt, entscheidet der ganze Bestand des
+Beraters, nicht die nach den Angaben übrige Auswahl (`MitWoertern`): gibt es Zelte, aber kein rotes, findet „leichtes Zelt … in rot“ nichts —
+vorher rückte die rote Stirnlampe nach, deren Beschreibung „im Zelt“ nennt.
+
+**Offen.** Text-Attribute (Schafthöhe „Hoch“, Bauart „Tunnelzelt“) sind keine Facetten — „hoher schaft“ ordnet, filtert aber nicht.
+
 **Die Beschreibung steht auf der Karte (10.10.2026).** Jede Karte der Auswahl bringt den Anfang ihrer Beschreibung mit (`text`: der
 erste Absatz des ersten HTML-Attributs der Sicht, höchstens 240 Zeichen, an einer Wortgrenze gekürzt — `KartenText`); das Fenster zeigt ihn
 unter dem Namen. Gibt es Treffer, erscheinen Dokumente an einem einzelnen Produkt oder einer Variante (Datenblätter) nicht mehr als eigene

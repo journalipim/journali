@@ -687,6 +687,9 @@ public class AdvisorTests
         Assert.Equal(["Odda Zelt", "Ravik Zelt"], Wahl(["zelt"], []).Order().ToList());
         // zwei Arten grenzen zusammen ein
         Assert.Empty(Wahl(["zelt", "isomatte"], []));
+        // die Stufe kommt aus dem ganzen Bestand (14.10.2026): filtern die Angaben alle Zelte weg (kein rotes), rückt die Stirnlampe nicht nach
+        Assert.Empty(AdvisorApi.MitWoertern([lampe], ["zelt"], alle));
+        Assert.Equal(["Bjørk Stirnlampe"], AdvisorApi.MitWoertern([lampe], ["zelt"]).Select(e => e.Name).ToList());   // ohne Bestand wie bisher
     }
 
     [Fact]

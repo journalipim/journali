@@ -3,8 +3,11 @@
   "locale": "de",
   "schritte": [
     { "eingabe": "Schlafsack für Minusgrade",
+      "erwartet": { "alle_treffer_enthalten": "Schlafsack", "frage_enthaelt": "Komforttemperatur" },
+      "vorbild": "Für Minusgrade — meinen Sie die Komforttemperatur, die Grenztemperatur oder die Extremtemperatur?" },
+    { "klick": { "art": "filter", "attribute": "comfort_c", "op": "le", "value": "0" },
       "erwartet": { "alle_treffer_enthalten": "Schlafsack", "angaben": [["comfort_c", "le"]] },
-      "vorbild": "Für Minusgrade: diese Schlafsäcke sind bis -5 °C oder -10 °C komfortabel. Wie kalt wird es dort, wo Sie schlafen?" },
+      "vorbild": "Komfortabel bis 0 °C sind diese Schlafsäcke. Wie kalt wird es dort, wo Sie schlafen?" },
     { "eingabe": "bis minus 10 grad",
       "erwartet": { "alle_treffer_enthalten": "Schlafsack", "angaben": [["comfort_c", "-10"]], "treffer_max": 5 },
       "vorbild": "Komfortabel bis -10 °C sind fünf Schlafsäcke, alle mit 950 g Daune." }

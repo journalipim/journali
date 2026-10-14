@@ -372,6 +372,25 @@ test('eine Frage nach einem Problem: die Unterlagen, zuletzt „Hilft Ihnen das 
   assert.ok(a.lastElementChild.querySelector('.chip.neu'))
 })
 
+// 14.10.2026: „Schlafsack für Minusgrade“ — drei Temperaturen passen; der Kern fragt, welche gemeint ist, je Möglichkeit ein Knopf
+test('kann eine Angabe mehreres meinen, fragt der Berater danach — je Möglichkeit ein Knopf, der die Angabe als Schritt setzt', async () => {
+  const w = starte({ ...standard(), '/api/ask': body => body.schritt
+    ? antwort({ total: 1, hits: [HIT('s1', 'Eira Schlafsack')], filter: [{ attribute: 'comfort_c', op: 'le', value: '0', label: 'Komforttemperatur', valueLabel: '0 °C' }] }, { satz: '1 Produkt passt.', frage: 'Passt eines davon?' })
+    : antwort({ total: 10, hits: [HIT('s1', 'Eira Schlafsack'), HIT('s2', 'Ravn Schlafsack')], facets: FACETTEN, words: ['schlafsack'],
+      wahl: { optionen: [{ attribute: 'comfort_c', op: 'le', value: '0', label: 'Komforttemperatur', text: 'Komforttemperatur: bis 0 °C' },
+        { attribute: 'limit_c', op: 'le', value: '0', label: 'Grenztemperatur', text: 'Grenztemperatur: bis 0 °C' }] } },
+      { satz: '10 Produkte passen zu „schlafsack“.', frage: 'Meinen Sie Komforttemperatur oder Grenztemperatur?' }) })
+  await warte()
+  await w.frage('Schlafsack für Minusgrade')
+  const ab = w.$$('.antwort').at(-1).lastElementChild
+  assert.equal(ab.querySelector('.frage').textContent, 'Meinen Sie Komforttemperatur oder Grenztemperatur?')
+  const knoepfe = [...ab.querySelectorAll('.wahl .chip')]
+  assert.deepEqual(knoepfe.map(k => k.textContent), ['Komforttemperatur: bis 0 °C', 'Grenztemperatur: bis 0 °C'])
+  assert.ok(!ab.querySelector('.facette'), 'statt der Merkmale die Wahl')
+  await w.klick(knoepfe[0])
+  assert.deepEqual(w.fragen().at(-1).body.schritt, { art: 'filter', attribute: 'comfort_c', op: 'le', value: '0' })
+})
+
 test('frühere Eingaben: ein Klick auf die eigene Blase setzt sie in die Eingabezeile, ↑ und ↓ blättern', async () => {
   const w = starte()
   await warte()

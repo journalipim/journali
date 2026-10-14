@@ -60,7 +60,7 @@ public static partial class AdvisorApi
     public static List<Eintrag> Waehle(Tree tree, ModelCatalog model, Bestand b, IReadOnlyList<(AttributeDefinition Def, string Op, string Value)> f, IReadOnlyList<string> art, IReadOnlyList<string> ordnen)
     {
         var kandidaten = b.Produkte.Where(e => Passt(tree, model, e, f, b.Locale, b.Channel));
-        List<Eintrag> gefunden = art.Count > 0 ? MitWoertern(kandidaten, art)
+        List<Eintrag> gefunden = art.Count > 0 ? MitWoertern(kandidaten, art, b.Produkte)
             : ordnen.Count > 0 ? kandidaten.Where(e => ordnen.Any(w => Staerke(e, w) > 0)).ToList()
             : kandidaten.ToList();
         if (art.Count > 0 || ordnen.Count > 0)

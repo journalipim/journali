@@ -482,7 +482,9 @@ tr.gleich td { color: var(--leise); }
     /// Merkmal eingrenzen, das die Treffer am besten teilt; darunter seine Werte, die weiteren Merkmale und „weitere zeigen“
     /// Die Frage nennt die Merkmale, nach denen sich die Treffer unterscheiden (höchstens drei), und bietet sie in derselben Blase an —
     /// was sie nicht nennt, steht nicht da (09.10.2026)
-    function rueckfrage(facetten, frageText) {
+    /// Kann eine Angabe mehreres meinen („bis minus 10 grad“: Komfort- oder Grenztemperatur), fragt der Kern danach (`wahl`, 14.10.2026): je
+    /// Möglichkeit ein Knopf, der die Angabe setzt — statt der Merkmale
+    function rueckfrage(facetten, frageText, auswahl) {
       const genannt = (facetten || []).slice(0, 3)
       const r = el('div', 'rueckfrage abschluss')
       const b = el('div', 'blase')
@@ -490,6 +492,16 @@ tr.gleich td { color: var(--leise); }
       kopf.append(el('span', 'frage', frageText || ''))
       if (zustand.woerter.length || zustand.filter.length) kopf.append(neueSuche())
       b.append(kopf)
+      if (auswahl?.optionen?.length) {
+        const c = el('div', 'chips werte wahl')
+        for (const o of auswahl.optionen) {
+          const chip = el('button', 'chip', o.text); chip.type = 'button'
+          chip.addEventListener('click', () => schritt({ art: 'filter', attribute: o.attribute, op: o.op, value: o.value }))
+          c.append(chip)
+        }
+        b.append(c); r.append(b)
+        return r
+      }
       const wahl = facettenWahl(genannt); if (wahl) b.append(wahl)
       r.append(b)
       return r
@@ -640,7 +652,7 @@ tr.gleich td { color: var(--leise); }
           mehr.addEventListener('click', () => { for (const h of hits.slice(ZUERST)) antwort.insertBefore(karte(h), mehr); mehr.remove() })
           antwort.append(mehr)
         }
-        if (hits.length) antwort.append(rueckfrage(r.facets, texte.frage))
+        if (hits.length || r.wahl) antwort.append(rueckfrage(r.facets, texte.frage, r.wahl))
         verlauf.append(antwort)
         verlauf.scrollTop = Math.max(0, antwort.offsetTop - 8)   // an den Anfang der Antwort, nicht ans Ende der Karten
       } catch (e) { blase(e.message) }

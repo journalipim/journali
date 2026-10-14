@@ -4,9 +4,12 @@
   "schritte": [
     { "eingabe": "Ich suche ein leichtes Zelt",
       "erwartet": { "alle_treffer_enthalten": "Zelt", "angaben": [["weight", "low"]], "frage_enthaelt": "Passt eines davon?" },
-      "vorbild": "Die leichtesten Zelte zuerst — das Ravik wiegt 1,4 kg. Für wie viele Personen soll es sein?" },
+      "vorbild": "Die leichtesten Zelte zuerst — das leichteste wiegt 1,4 kg. Für wie viele Personen soll es sein?" },
+    { "eingabe": "in orange",
+      "erwartet": { "alle_treffer_enthalten": "Zelt", "angaben": [["weight", "low"], ["color", "orange"]] },
+      "vorbild": "Orange und leicht: diese Zelte. Passt eines davon?" },
     { "eingabe": "in rot",
-      "erwartet": { "alle_treffer_enthalten": "Zelt", "angaben": [["weight", "low"], ["color", "red"]] },
-      "vorbild": "Rot und leicht: diese Zelte. Passt eines davon?" }
+      "erwartet": { "treffer_max": 0, "angaben": [["color", "red"]] },
+      "vorbild": "Zelte in Rot führen wir nicht — in Orange, Grün, Braun, Beige, Marine und Anthrazit." }
   ]
 }

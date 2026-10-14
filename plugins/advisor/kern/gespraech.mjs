@@ -67,7 +67,7 @@ export function erstelleKern(o) {
   }
 
   function neuerZustand() {
-    return { woerter: [], angaben: [], verlauf: [], fokus: null, fokusName: null, statt: null, vorlieben: {}, abgelehnt: [], gesehen: [], art: [], zuletzt: [], gruppe: null, assoz: {}, am: jetzt() }
+    return { woerter: [], angaben: [], verlauf: [], fokus: null, fokusName: null, statt: null, vorlieben: {}, abgelehnt: [], gesehen: [], art: [], zuletzt: [], gruppe: null, assoz: {}, vorhanden: null, am: jetzt() }
   }
 
   /// Das Gespräch zu einer Kennung — ohne gültige Kennung eines, das nicht gemerkt wird
@@ -210,7 +210,7 @@ export function erstelleKern(o) {
 
     // ---- Klicks: ändern die gesammelten Angaben, eine Suche folgt
     if (schritt?.art === 'neu') {
-      Object.assign(z, { woerter: [], angaben: [], verlauf: [], fokus: null, fokusName: null, statt: null, art: [], zuletzt: [], gruppe: null, assoz: {} })   // Vorlieben, Gesehenes und Abgelehntes bleiben
+      Object.assign(z, { woerter: [], angaben: [], verlauf: [], fokus: null, fokusName: null, statt: null, art: [], zuletzt: [], gruppe: null, assoz: {}, vorhanden: null })   // Vorlieben, Gesehenes und Abgelehntes bleiben
       if (!eingabe) return { gespraech: id, locale: loc, reset: true, texte: { satz: T.neu, hinweise: [] } }
     } else if (schritt?.art === 'filter' && schritt.attribute) {
       setze(z, { attribute: String(schritt.attribute), op: ['le', 'ge', 'low', 'high'].includes(schritt.op) ? schritt.op : 'eq', value: String(schritt.value ?? ''), quelle: 'geklickt' })
@@ -289,9 +289,11 @@ export function erstelleKern(o) {
     // ---- die Eingabe ergänzt die gesammelten Angaben: erkannte Angaben werden Filter, der Rest Wörter
     const hatteVorher = z.woerter.length > 0 || z.angaben.length > 0
     const neueAngaben = []
-    let neueWoerter = []
+    let neueWoerter = [], offen = []
     if (eingabe) {
-      const e = erkenne(vok, eingabe)
+      // welche Attribute die gezeigten Produkte haben und welche schon gelten, entscheidet, was eine Zahl meint (14.10.2026)
+      const e = erkenne(vok, eingabe, { vorhanden: z.vorhanden, gesetzt: z.angaben.map(a => a.attribute) })
+      offen = e.offen ?? []
       let rest = e.rest
       for (const a of e.angaben) { setze(z, { ...a, quelle: 'gesagt' }); neueAngaben.push(a) }
       // mit KI: was die Regeln nicht erkannt haben, übersetzt sie in Angaben — nur aus dem Vokabular, von journali geprüft
@@ -360,6 +362,7 @@ export function erstelleKern(o) {
       }
     }
     if (art.length) z.art = art
+    if (Array.isArray(sel.present)) z.vorhanden = sel.present
     uebernimmBezeichnungen(z, sel.filter)
     if (z.gruppe) z.gruppe = sel.group ? { key: sel.group.key, label: sel.group.label } : null   // was journali nicht kennt, fällt weg
 
@@ -399,6 +402,20 @@ export function erstelleKern(o) {
     if (sel.total === 1 && hits.length === 1) { z.fokus = hits[0].id; z.fokusName = hits[0].name } else if (sel.total !== 1) { z.fokus = null; z.fokusName = null }
     z.zuletzt = hits.map(h => ({ id: h.id, name: h.name }))   // worauf sich „sind die …?“ bezieht
 
+    // ---- eine Frage, die genau ein Produkt trifft (14.10.2026): „was kostet die Fjell Jacke?“ — die Antwort steht bei ihm, wie zum Produkt im Blick
+    // „gibt es die auch in blau?“ ist eine Eingrenzung: gefragt ist nur, was nach den erkannten Angaben und dem Namen des Produkts übrig bleibt
+    if (eingabe && !schritt && fragt(eingabe) && !SUCHT.test(eingabe) && sel.total === 1 && hits.length === 1) {
+      // ein Eigenschaftswort ist hier gefragt, nicht gesucht: „wie schwer ist das Odda Zelt?“
+      const e = erkenne(vok, eingabe)
+      const eigenschaft = e.angaben.filter(a => a.op === 'low' || a.op === 'high')
+      const frei = [...woerter(e.rest), ...eigenschaft.map(a => a.value)].filter(x => !BEZUG.has(x) && !imNamen(x, hits[0].name))
+      if (frei.length) {
+        z.angaben = z.angaben.filter(a => !eigenschaft.some(x => x.attribute === a.attribute && x.op === a.op))
+        z.verlauf = z.verlauf.slice(0, -1)   // zumFokus schreibt die Eingabe selbst in den Verlauf
+        return { ...(await zumFokus(z, id, loc, T, eingabe, ki, vok, namen)), total: 1, hits }
+      }
+    }
+
     // ---- Lernen: Wörter ohne Treffer, gelesene Tippfehler
     if (lernen) {
       for (const u of unknown) lernen.notiere('ohneTreffer', { wort: u })
@@ -408,7 +425,7 @@ export function erstelleKern(o) {
 
     // ---- nichts erkannt (09.10.2026): kein Wort steht in einem Produkt, nichts ist eine Angabe — und journali findet nichts, oder es ist eine
     // Frage und journali nennt nur nach dem Sinn ähnliche Produkte („wie wird das wetter?“). Dann nennt der Berater, wobei er hilft.
-    if (eingabe && !schritt && !neueAngaben.length && !neueWoerter.length && !corrected.length && unknown.length && (sel.total === 0 || (sel.similar && fragt(eingabe))))
+    if (eingabe && !schritt && !neueAngaben.length && !offen.length && !neueWoerter.length && !corrected.length && unknown.length && (sel.total === 0 || (sel.similar && fragt(eingabe))))
       return { ...sortiment(T.helfen((vok.groups ?? []).length > 0), fragt(eingabe) ? [] : [T.unbekannt(unknown)], T.andereFragen),
         total: 0, similar: false, unknown, words: z.woerter, filter: z.angaben }
 
@@ -422,12 +439,18 @@ export function erstelleKern(o) {
     for (const k of corrected) hinweise.unshift(T.gelesen(k.from, k.to))
     if (unknown.length) hinweise.push(T.unbekannt(unknown))
     if (uebernommen.length) hinweise.push(T.uebernommen(uebernommen))
+    // eine Zahl, die mehrere Attribute meinen kann (14.10.2026): der Berater fragt, welches — je eines ein Knopf, der die Angabe setzt
+    const wahl = offen.length ? { optionen: offen[0].attribute.map(k => {
+      const def = (vok.attributes ?? []).find(a => a.key === k)
+      const label = def?.label ?? k
+      return { attribute: k, op: offen[0].op, value: offen[0].value, label, text: angabeText({ label, op: offen[0].op, value: offen[0].value, valueLabel: [offen[0].value, def?.unit].filter(Boolean).join(' ') }, loc) }
+    }) } : null
     return {
       gespraech: id, locale: loc, total: sel.total, hits, facets: sel.facets ?? [], filter: z.angaben, words: z.woerter, group: z.gruppe, ranked, unknown, corrected,
-      similar: !!sel.similar, relax, instead: statt, docs, answer, warning, uebernommen,
+      similar: !!sel.similar, relax, instead: statt, docs, answer, warning, uebernommen, wahl,
       texte: {
         satz, hinweise,
-        frage: hits.length ? T.abschluss((sel.facets ?? []).slice(0, 3).map(f => f.label)) : null,
+        frage: wahl ? T.welche(wahl.optionen.map(o => o.label)) : hits.length ? T.abschluss((sel.facets ?? []).slice(0, 3).map(f => f.label)) : null,
         statt: statt ? T.statt([...statt.words, ...statt.filter.map(f => angabeText(f, loc))].join(', ')) : null,
       },
     }

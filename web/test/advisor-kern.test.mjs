@@ -130,7 +130,7 @@ test('Angaben im Text werden Filter, der Rest bleibt Suchwort', () => {
   assert.deepEqual(erkenne(v, 'ab 1,5 W').angaben, [{ attribute: 'leistung', op: 'ge', value: '1.5' }])
   // Fall aus der Bedienung (09.10.2026): „leichter als 1.8 kg“ wurde ein Suchwort
   const kg = { attributes: [{ key: 'gewicht', label: 'Gewicht', labels: { de: 'Gewicht' }, type: 'decimal', unit: 'kg', quantity: 'mass', facet: true }] }
-  assert.deepEqual(erkenne(kg, 'leichter als 1.8 kg'), { angaben: [{ attribute: 'gewicht', op: 'le', value: '1.8' }], rest: '' })
+  assert.deepEqual(erkenne(kg, 'leichter als 1.8 kg'), { angaben: [{ attribute: 'gewicht', op: 'le', value: '1.8' }], rest: '', offen: [] })
   assert.deepEqual(erkenne(kg, 'schwerer als 2 kg').angaben, [{ attribute: 'gewicht', op: 'ge', value: '2' }])
   assert.deepEqual(erkenne(v, '900 W').angaben, [], 'ohne „unter“ oder „ab“ ist eine Zahl kein Filter')
   // zwei Zahlenattribute mit derselben Einheit: nur mit Bezeichnung im Text
@@ -139,7 +139,59 @@ test('Angaben im Text werden Filter, der Rest bleibt Suchwort', () => {
     { key: 'breite', label: 'Breite', labels: { de: 'Breite', en: 'Width' }, type: 'decimal', unit: 'cm', facet: true },
   ] }
   assert.deepEqual(erkenne(zwei, 'bis 50 cm').angaben, [])
+  assert.deepEqual(erkenne(zwei, 'bis 50 cm').offen, [{ op: 'le', value: '50', attribute: ['laenge', 'breite'] }], 'offen: der Berater fragt, welches gemeint ist')
   assert.deepEqual(erkenne(zwei, 'Breite bis 50 cm').angaben, [{ attribute: 'breite', op: 'le', value: '50' }])
+  assert.deepEqual(erkenne(zwei, 'bis 50 cm', { vorhanden: ['breite'] }).angaben, [{ attribute: 'breite', op: 'le', value: '50' }], 'nur eines bei den gezeigten Produkten')
+  assert.deepEqual(erkenne(zwei, 'bis 60 cm', { gesetzt: ['laenge'] }).angaben, [{ attribute: 'laenge', op: 'le', value: '60' }], 'eines gilt schon: die neue Zahl ersetzt es')
+})
+
+// Fälle aus dem Prüfstand (14.10.2026, tools/berater-dialoge): Zahlwörter, Zahl vor der Bezeichnung, Geld, Zahl mit Einheit ohne Vergleich,
+// Minus und Grad, Frost, Zeit über die Bezeichnung, Ja/Nein gebeugt, als Wortanfang und zusammengesetzt, die Zahl in einem Listenwert
+test('Angaben aus Kundensätzen: Zahlwörter, Geld, Einheiten, Zeit, Ja/Nein mit mehreren Wörtern', () => {
+  const Z = (key, de, en, type, unit, unitLabels = [], quantity = null) => ({ key, label: de, labels: { de, en }, type, unit, unitLabels, quantity, facet: true })
+  const B = (key, de, en) => ({ key, label: de, labels: { de, en }, type: 'boolean', facet: true })
+  const v = { attributes: [
+    Z('price', 'Preis (EUR)', 'Price (EUR)', 'decimal'),
+    Z('weight', 'Gewicht', 'Weight', 'decimal', 'kg', ['Kilogramm'], 'mass'),
+    Z('persons', 'Personen', 'Persons', 'integer'),
+    Z('volume_l', 'Volumen', 'Volume', 'integer', 'l', ['Liter', 'litre'], 'volume'),
+    Z('pitch_min', 'Aufbauzeit', 'Pitching time', 'integer', 'min', ['Minute'], 'time'),
+    Z('keeps_hot_h', 'Hält warm', 'Keeps hot', 'integer', 'h', ['Stunde'], 'time'),
+    Z('keeps_cold_h', 'Hält kalt', 'Keeps cold', 'integer', 'h', ['Stunde'], 'time'),
+    Z('comfort_c', 'Komforttemperatur', 'Comfort temperature', 'integer', '°C', ['Grad Celsius'], 'temperature'),
+    Z('limit_c', 'Grenztemperatur', 'Limit temperature', 'integer', '°C', ['Grad Celsius'], 'temperature'),
+    Z('lumen', 'Lichtstrom', 'Luminous flux', 'integer', 'lm', ['Lumen'], 'luminous flux'),
+    { key: 'shoe_size', label: 'Schuhgrösse', labels: { de: 'Schuhgrösse' }, type: 'enum', facet: true, values: [42, 43].map(n => ({ value: 'eu' + n, label: 'EU ' + n, labels: { de: 'EU ' + n } })) },
+    B('membrane', 'Wasserdichte Membran', 'Waterproof membrane'),
+    B('helmet_hood', 'Helmtaugliche Kapuze', 'Helmet-compatible hood'),
+    B('hydration', 'Trinksystemvorbereitet', 'Hydration compatible'),
+  ] }
+  const a = q => erkenne(v, q).angaben
+  assert.deepEqual(a('Zelt für zwei Personen'), [{ attribute: 'persons', op: 'eq', value: '2' }])
+  assert.deepEqual(a('tent for two people'), [{ attribute: 'persons', op: 'eq', value: '2' }])
+  assert.deepEqual(a('Regenjacke unter 200 Euro'), [{ attribute: 'price', op: 'le', value: '200' }])
+  assert.deepEqual(a('Jacke für 150 €'), [{ attribute: 'price', op: 'le', value: '150' }], 'ein Betrag ohne Vergleich ist eine Obergrenze')
+  assert.deepEqual(a('ab 100 Euro'), [{ attribute: 'price', op: 'ge', value: '100' }])
+  assert.deepEqual(a('Tagesrucksack mit 30 Litern'), [{ attribute: 'volume_l', op: 'eq', value: '30' }])
+  assert.deepEqual(a('mit mindestens 400 Lumen'), [{ attribute: 'lumen', op: 'ge', value: '400' }])
+  assert.deepEqual(a('in 43'), [{ attribute: 'shoe_size', op: 'eq', value: 'eu43' }])
+  assert.deepEqual(a('wasserdicht mit Membran'), [{ attribute: 'membrane', op: 'eq', value: 'true' }])
+  assert.deepEqual(a('mit wasserdichter Membran'), [{ attribute: 'membrane', op: 'eq', value: 'true' }])
+  assert.deepEqual(a('mit Membran'), [], 'ein Teil der Bezeichnung genügt nicht')
+  assert.deepEqual(a('mit helmkapuze'), [{ attribute: 'helmet_hood', op: 'eq', value: 'true' }])
+  assert.deepEqual(a('mit Kapuze'), [], 'eine Kapuze ist nicht helmtauglich')
+  assert.deepEqual(a('mit trinksystem'), [{ attribute: 'hydration', op: 'eq', value: 'true' }])
+  // Zeit: welches Attribut, sagt seine Bezeichnung — und sie ist danach kein Suchwort
+  assert.deepEqual(erkenne(v, 'eins, das schnell aufgebaut ist').angaben, [{ attribute: 'pitch_min', op: 'low', value: 'schnell' }])
+  assert.deepEqual(woerter(erkenne(v, 'eins, das schnell aufgebaut ist').rest), ['eins'])
+  assert.deepEqual(erkenne(v, 'Flasche, die Tee lange warm hält'), { angaben: [{ attribute: 'keeps_hot_h', op: 'high', value: 'lange' }], rest: 'Flasche, die Tee', offen: [] })
+  assert.deepEqual(a('schnell'), [], 'ohne Bezeichnung keines von drei Zeitattributen')
+  assert.deepEqual(erkenne(v, 'schnell', { vorhanden: ['pitch_min'] }).angaben, [{ attribute: 'pitch_min', op: 'low', value: 'schnell' }])
+  // Grad und Frost: zwei Temperaturen — der Berater fragt; eine genannte gilt
+  assert.deepEqual(erkenne(v, 'Schlafsack für Minusgrade').offen, [{ op: 'le', value: '0', attribute: ['comfort_c', 'limit_c'] }])
+  assert.deepEqual(woerter(erkenne(v, 'Schlafsack für Minusgrade').rest), ['schlafsack'])
+  assert.deepEqual(a('Komforttemperatur bis minus 10 grad'), [{ attribute: 'comfort_c', op: 'le', value: '-10' }])
+  assert.deepEqual(erkenne(v, 'bis -5 °C', { gesetzt: ['comfort_c'] }).angaben, [{ attribute: 'comfort_c', op: 'le', value: '-5' }])
 })
 
 test('„leicht“ ist wenig Masse am Zahlenattribut, dessen Einheit Masse misst; ein Wert aus einem Zeichen nur mit Bezeichnung', () => {
@@ -364,6 +416,44 @@ test('„sind die wasserdicht?“ beantworten die Angaben der gezeigten Produkte
   const fremd = await kern.antworte({ gespraech: G, q: 'wer ist bundeskanzler?' })
   assert.deepEqual([fremd.antworten, fremd.texte.satz, fremd.texte.nachsatz],
     [undefined, 'Ich kann Ihnen mit den Produkten weiterhelfen, die wir im Angebot haben:', 'Zu anderen Fragen kann ich leider keine Auskunft geben.'])
+})
+
+// 14.10.2026 (Prüfstand): „Was kostet die Fjell Jacke?“ — die Frage trifft genau ein Produkt; seine Werte antworten, die Karte bleibt
+test('eine Frage, die genau ein Produkt trifft, beantworten seine Werte — eine Eingrenzung bleibt eine Suche', async () => {
+  const kern = erstelleKern({ journali: journali().fn })
+  const r = await kern.antworte({ gespraech: G, q: 'wie schwer ist das Odda Zelt?' })
+  assert.equal(r.about?.name, 'Odda Zelt')
+  assert.ok(r.about.values.some(v => v.label === 'Gewicht'))
+  assert.deepEqual(r.hits.map(h => h.name), ['Odda Zelt'])
+  const k2 = erstelleKern({ journali: journali().fn })
+  await k2.antworte({ gespraech: G, q: 'Zelt' })
+  const blau = await k2.antworte({ gespraech: G, q: 'auch in blau?' })
+  assert.ok(!blau.about, 'eine Angabe zu den gezeigten ist keine Frage zum Produkt')
+})
+
+// 14.10.2026: eine Zahl, die zwei Attribute meinen kann — der Kern fragt; ein Klick setzt die Angabe, eine weitere Zahl ersetzt sie
+test('mehrdeutige Angabe: der Kern fragt, welches Attribut gemeint ist; gilt eines, ersetzt die nächste Zahl seinen Wert', async () => {
+  const VOKZ = { ...VOK, attributes: [...VOK.attributes,
+    { key: 'laenge', label: 'Länge', labels: { de: 'Länge' }, type: 'integer', unit: 'cm', unitLabels: ['Zentimeter'], facet: true },
+    { key: 'breite', label: 'Breite', labels: { de: 'Breite' }, type: 'integer', unit: 'cm', unitLabels: ['Zentimeter'], facet: true }] }
+  const j = journali()
+  // die Auswahl gibt die Angaben zurück, wie sie kamen (die Attrappe kennt sonst nur das Grundvokabular)
+  const fn = async (pfad, body) => {
+    if (pfad.startsWith('vocabulary')) return { status: 200, json: VOKZ }
+    const r = await j.fn(pfad, body)
+    if (pfad === 'select') r.json.filter = (body.angaben ?? []).map(a => ({ ...a, label: a.attribute, valueLabel: a.value }))
+    return r
+  }
+  const kern = erstelleKern({ journali: fn })
+  const r = await kern.antworte({ gespraech: G, q: 'Zelt bis 200 cm' })
+  assert.deepEqual(r.wahl.optionen.map(o => [o.attribute, o.op, o.value, o.text]), [['laenge', 'le', '200', 'Länge: bis 200 cm'], ['breite', 'le', '200', 'Breite: bis 200 cm']])
+  assert.equal(r.texte.frage, 'Meinen Sie Länge oder Breite?')
+  assert.deepEqual(r.words, ['zelt'], 'die Zahl ist kein Suchwort')
+  const gesetzt = await kern.antworte({ gespraech: G, schritt: { art: 'filter', attribute: 'laenge', op: 'le', value: '200' } })
+  assert.ok(!gesetzt.wahl)
+  const neu = await kern.antworte({ gespraech: G, q: 'bis 250 cm' })
+  assert.ok(!neu.wahl, 'Länge gilt schon — die neue Zahl ersetzt sie')
+  assert.deepEqual(j.auswahlen().at(-1).body.angaben.filter(a => a.attribute === 'laenge').map(a => a.value), ['250'])
 })
 
 test('keine Frage zu den gezeigten: eine andere Art, „gibt es …“, oder noch nichts gezeigt — dann eine Suche', async () => {

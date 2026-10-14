@@ -3,7 +3,7 @@
   "locale": "de",
   "schritte": [
     { "eingabe": "Der Reißverschluss an meiner Jacke klemmt",
-      "erwartet": { "unterlagen_min": 1, "alle_treffer_enthalten": "Jacke" },
+      "erwartet": { "unterlagen_min": 1, "treffer_max": 0, "frage_enthaelt": "Hilft Ihnen das weiter?" },
       "vorbild": "Reiben Sie die Zähne mit Kerzenwachs ein und bewegen Sie den Schieber mehrmals; klemmt er weiter, den Schieber mit einer Zange leicht zusammendrücken." }
   ]
 }

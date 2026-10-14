@@ -374,13 +374,17 @@ public static partial class AdvisorApi
     /// Die Produkte, zu denen alle Wörter passen — je Wort nur in der besten Stufe, die vorkommt: steht es in einem Namen, nur die Produkte mit
     /// ihm im Namen; sonst die mit ihm als ganzem Wort; sonst die, bei denen es ein Wortanfang ist. „zelt“ findet die Zelte, nicht die Stirnlampe,
     /// die „niemanden im Zelt“ blendet (09.10.2026), und nicht die Isomatte „für Trekking und Zelten“; „akku“ findet weiter „Akkuschrauber“.
+    /// Die Stufe bestimmt der ganze <paramref name="bestand"/>, nicht die gefilterte Auswahl (14.10.2026): gibt es Zelte, aber kein rotes, ist
+    /// „zelt“ trotzdem ein Name — vorher rückte bei „leichtes Zelt … in rot“ die rote Stirnlampe nach, die „im Zelt“ nicht blendet.
     /// </summary>
-    public static List<Eintrag> MitWoertern(IEnumerable<Eintrag> kandidaten, IReadOnlyList<string> woerter)
+    public static List<Eintrag> MitWoertern(IEnumerable<Eintrag> kandidaten, IReadOnlyList<string> woerter, IEnumerable<Eintrag>? bestand = null)
     {
-        var aus = kandidaten.Where(e => woerter.All(w => Staerke(e, w) > 0)).ToList();
+        var liste = kandidaten.ToList();
+        var basis = (bestand ?? liste).Where(e => woerter.All(w => Staerke(e, w) > 0)).ToList();
+        var stufe = new Dictionary<string, double>();
         foreach (var w in woerter)
-            if (aus.Count > 0 && aus.Max(e => Staerke(e, w)) is var beste) aus = aus.Where(e => Staerke(e, w) >= beste).ToList();
-        return aus;
+            if (basis.Count > 0 && basis.Max(e => Staerke(e, w)) is var beste) { stufe[w] = beste; basis = basis.Where(e => Staerke(e, w) >= beste).ToList(); }
+        return liste.Where(e => woerter.All(w => Staerke(e, w) is var s && s > 0 && s >= stufe.GetValueOrDefault(w))).ToList();
     }
 
     private static bool AmWortanfang(string text, string w)
