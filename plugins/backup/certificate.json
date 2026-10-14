@@ -1,8 +1,8 @@
 {
  "key": "backup",
- "version": "2.0.1",
- "hash": "feb580a9527cdb97eb56367d29569bbd5552c3f9e78059d8ae08191af2e5b1c8",
- "issued": "2026-10-05",
+ "version": "1.0.1",
+ "hash": "a9e94f44906949e30a474ff428234c21367dcbc154c64bafb1f00de6fae67d78",
+ "issued": "2026-10-14",
  "issuer": "journali",
- "sig": "cxnr0vkuBE7TRE6CXNi9jSaiWdaZ4Tvqsb3aHgkz3h+GRYLd+DeH+lHWHFRXeELiSFfaOQOsU4Qmt/u35B5MPg=="
+ "sig": "kVh0+IplsKZcK/fyhWXEIx6xpez109KAsVhb2K11tpV+NjSaWAH25qzQ2SXnijENC/PhXZQKt4v8tdK4oVxCMA=="
 }

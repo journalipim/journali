@@ -1,8 +1,8 @@
 {
  "key": "etim",
- "version": "2.0.3",
- "hash": "a35bb4246bca371ced6a77f8dcc2fe3f2b764f6053b3384e1ad7ff2441db5ae8",
- "issued": "2026-10-07",
+ "version": "1.0.3",
+ "hash": "bcf1c2007f3491d2507423857d7789568634c144acf690db2414832a68706252",
+ "issued": "2026-10-14",
  "issuer": "journali",
- "sig": "A/Hxu1SM0jt13XiK9JAtsuWKXSgmMVZhJchfjq7xmsHvMH1/ajn/tFrFy67AeURbbSr7Qj+toiA3vl+xtLaywQ=="
+ "sig": "nExS4iquSx/y9CkDXG1eUqZ107hLLJ3UqseqcIwVH2gDumngQo4O/5x28q9nSTGSRIu6L+YBgiO86gyaQAAdAA=="
 }

@@ -123,6 +123,19 @@ public class PluginSealTests
     }
 
     /// <summary>
+    /// Versionen bleiben unter 2 (14.10.2026): journali ist nicht veröffentlicht, eine Hauptversion gibt es nicht — eine Änderung zählt die
+    /// letzte, eine neue Funktion die mittlere Stelle hoch (CLAUDE.md). Vorher stand advisor bei 2.7.0, datasheet, json, etim und backup ebenfalls über 2.
+    /// </summary>
+    [Fact]
+    public void Core_Plugins_bleiben_unter_Version_2()
+    {
+        var zuHoch = PluginApi.Scan(PluginVerzeichnis()).Values
+            .Where(m => !int.TryParse(m.Version.Split('.')[0], out var haupt) || haupt >= 2)
+            .Select(m => $"{m.Key} {m.Version}").ToList();
+        Assert.Empty(zuHoch);
+    }
+
+    /// <summary>
     /// Jedes ausgelieferte Plugin hat ein Siegel (27.09.2026): ein <b>fehlendes</b> fiel bis dahin niemandem auf — der
     /// Prüfstand oben sah nur die, die schon eines hatten, und ein neues Plugin rutschte ungesiegelt durch.
     /// Signiert wird mit <c>node tools/plugin-cert.mjs sign &lt;key&gt;</c>, nach dem Bau.

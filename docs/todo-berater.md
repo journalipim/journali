@@ -1,7 +1,7 @@
 # Produktberater — was zu tun ist (Stand 09.10.2026, abends)
 
 Übergabe an die nächste Sitzung. Grundlage: `docs/pflegestruktur.md` Abschnitte 42 (gebaut), 43 (Entwurf) und 44 (Schritte 1–4 und das
-Lernen gebaut). Stand des Plugins: `advisor` 2.2.0. Arbeitsregeln wie immer: CLAUDE.md (Python-Patchskripte, Tests vor dem Commit, ein
+Lernen gebaut). Stand des Plugins: `advisor` 1.7.0 (bis 14.10.2026 als 2.7.0 gezählt). Arbeitsregeln wie immer: CLAUDE.md (Python-Patchskripte, Tests vor dem Commit, ein
 Commit je Thema, sofort nach `origin`, dann `github`; Plugin nach Änderung hochzählen, bauen, signieren).
 
 ## Was steht
@@ -21,7 +21,7 @@ Commit je Thema, sofort nach `origin`, dann `github`; Plugin nach Änderung hoch
   und Abschied bekommen einen Satz; „leichter als 1.8 kg“ ist eine Grenze. **Sortiment**: „was verkauft ihr?“ nennt die Gruppen des
   Publikationsbaums (`groups` im Vokabular, `gruppe` in `select`). **Grundwissen** (`kern/wissen.mjs`): wer, was kann er, Shopfragen,
   und die Rückführung auf das Sortiment für alles andere. **Assoziationen** (`kern/assoziationen.mjs`, `wissen/`): eigene Liste und
-  Unterbegriffe von 388 Oberthemen aus Wikidata (`tools/advisor-wissen/`). Stand des Plugins: 2.6.0.
+  Unterbegriffe von 388 Oberthemen aus Wikidata (`tools/advisor-wissen/`).
 - **Prüfstand** `tools/berater-dialoge/` (`spiele.mjs`, `pruefe.mjs`, sieben Dialoge mit Erwartung und Vorbild).
 - **Lernen** im Dienst (`lernen.json` mit `JOURNALI_ADVISOR_DATA`), Vorschläge mit `plugins/advisor/vorschlaege.mjs`.
 - Blog: drei Beiträge als Entwürfe 233–235 (14.10., 21.10., 29.10.), Startseite mit Karte „Journali KI Produktberater“ (lokal in

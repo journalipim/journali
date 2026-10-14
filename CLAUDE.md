@@ -206,6 +206,9 @@ Liegt `origin` mehr als ein Stück Arbeit hinter dem Rechner, ist das ein Fehler
   (`ProfileBar`); im Job-Dialog steht bei gewähltem Profil nur, was am Job hängt
   (Profil, Pfade, Schalter) — ein Parameter mit `perJob: true` bleibt immer sichtbar. Der Job-Dialog legt **keine
   Profile an**: den generischen Profil-Editor gibt es nicht mehr, seit `rag` eine eigene Ansicht hat (28.09.2026).
+  **Versionen bleiben unter 2** (14.10.2026): journali ist nicht veröffentlicht, also gibt es keine Hauptversion. Eine Änderung zählt die
+  letzte Stelle hoch (1.7.0 → 1.7.1), eine neue Funktion die mittlere (1.7.1 → 1.8.0); die erste Stelle bleibt 1 (0 bei Entwürfen).
+  Prüfstand: `Core_Plugins_bleiben_unter_Version_2`.
   **Zertifikat:** `certificate.json` neben dem Manifest (`docs/plugins-zertifizierung.md`); wer ein Plugin
   ändert, signiert es vor dem Commit neu (`node tools/plugin-cert.mjs sign <key>`, nach dem Bau) — der Kern-Test
   `Core_Plugins_mit_Zertifikat_sind_gueltig` prüft alle Siegel im Repo. **Core-Plugins** sind die mit journali
