@@ -38,6 +38,7 @@ function sauber(d) {
   return {
     label: String(d.label ?? '').trim() || null, pub: d.pub || null, role: d.role || null, view: d.view || null, locales: d.locales ?? [],
     greeting: gruss, ki: !!d.ki, team: d.ki ? (d.team || null) : null, mcp: d.mcp !== false, origins: d.origins ?? [], limits: g,
+    url: String(d.url ?? '').trim().replace(/\/+$/, '') || null,
   }
 }
 
@@ -56,7 +57,7 @@ onMounted(() => { ladeListe(); ladeAuswahl() })
 async function oeffne(key) {
   try {
     const d = await api.get('/api/plugins/advisor/data/' + encodeURIComponent('def:' + key)) ?? {}
-    def.value = { label: '', pub: '', role: '', view: '', locales: [], greeting: {}, ki: false, team: '', mcp: true, origins: [], limits: {}, ...JSON.parse(JSON.stringify(d)) }
+    def.value = { label: '', pub: '', role: '', view: '', locales: [], greeting: {}, ki: false, team: '', mcp: true, origins: [], limits: {}, url: '', ...JSON.parse(JSON.stringify(d)) }
     def.value.limits ??= {}; def.value.greeting ??= {}; def.value.locales ??= []
     basis.value = JSON.stringify(sauber(def.value))
     cur.value = key; neuesToken.value = ''; vorschau.value = null; vorschauGespraech.value = neueKennung()
@@ -124,7 +125,20 @@ function neuesGespraech() {
   vorschauGespraech.value = neueKennung(); vorschau.value = null; vorschauFrage.value = ''
 }
 
-const einbinden = computed(() => `<script src="https://advisor.example.com/widget.js" async><` + `/script>`)
+/// wo der Dienst erreichbar ist — gespeichert am Berater, sonst ein Platzhalter für den Code zum Einbinden
+const dienst = computed(() => (def.value?.url || '').replace(/\/+$/, '') || 'https://advisor.example.com')
+const einbinden = computed(() => `<script src="${dienst.value}/widget.js" async><` + `/script>`)
+/// Das echte Chat-Fenster auf dieser Seite (15.10.2026): lädt widget.js vom Dienst des Beraters — so, wie eine Website es einbindet. Einmal je Seite;
+/// danach steht das Fenster unten rechts. Der Dienst lässt es nur zu, wenn diese Adresse unter Websites steht.
+function chatOeffnen() {
+  const src = `${dienst.value}/widget.js`
+  if (!document.querySelector(`script[data-berater="${cur.value}"]`)) {
+    const s = document.createElement('script')
+    s.src = src; s.async = true; s.dataset.berater = cur.value; s.dataset.locale = grussSprachen.value[0]
+    document.body.append(s)
+  }
+  store.toast(t('✆ Das Chat-Fenster steht unten rechts.'), 'ok')
+}
 const compose = computed(() => [
   `  advisor-${cur.value}:`,
   '    image: node:22-alpine',
@@ -186,6 +200,8 @@ const compose = computed(() => [
             <select v-if="def.ki" v-model="def.team" class="team" :title="$t('mit dessen KI-Schlüssel, gezählt bei diesem Team')"><option value="">—</option><option v-for="tm in teams" :key="tm.key" :value="tm.key">{{ tm.label || tm.key }}</option></select>
           </div></td></tr>
           <tr><td class="attr">{{ $t('MCP') }}</td><td><label :title="$t('fremde KI-Agenten fragen den Dienst unter /mcp mit denselben Grenzen')"><input type="checkbox" v-model="def.mcp" class="mcp" />{{ ' ' + $t('Werkzeuge für KI-Agenten') }}</label></td></tr>
+          <tr><td class="attr" :title="$t('wo der Dienst des Beraters erreichbar ist — für den Code zum Einbinden und das Chat-Fenster hier')">{{ $t('Dienst') }}</td>
+            <td><input v-model="def.url" class="dienst-url" style="width:100%" placeholder="https://advisor.example.com" /></td></tr>
           <tr><td class="attr" :title="$t('je Zeile eine Adresse, etwa https://www.example.com — nur diese Websites dürfen das Chat-Fenster einbinden')">{{ $t('Websites') }}</td>
             <td><textarea v-model.lazy="websites" class="websites" rows="2" style="width:100%" placeholder="https://www.example.com" /></td></tr>
           <tr><td class="attr" :title="$t('je Besucher zählt der Dienst, je Tag zählt journali; leer heisst Vorgabe')">{{ $t('Grenzen') }}</td><td><div class="row grenzen">
@@ -214,6 +230,7 @@ const compose = computed(() => [
           <input v-model="vorschauFrage" class="vorschau-frage" style="flex:1" :placeholder="$t('Frage eines Besuchers')" />
           <button type="submit" class="vorschau-los" :disabled="geaendert" :title="geaendert ? $t('ungespeicherte Änderungen') : ''">{{ $t('Fragen') }}</button>
           <button type="button" class="vorschau-neu" :title="$t('ein neues Gespräch: die gesammelten Angaben fallen weg')" @click="neuesGespraech">↺</button>
+          <button v-if="def.url && !geaendert" type="button" class="chat-oeffnen" :title="$t('das Chat-Fenster des Dienstes auf dieser Seite, wie auf einer Website')" @click="chatOeffnen">{{ $t('✆ Chat-Fenster') }}</button>
         </form>
         <div v-if="vorschau" class="vorschau" style="padding:0 8px 8px">
           <div v-if="vorschau.error" class="neg">✗ {{ vorschau.error }}</div>
@@ -236,7 +253,7 @@ const compose = computed(() => [
         <div class="step-band" data-demo="aus" :title="$t('der Dienst läuft im eigenen Container und spricht nur über /api mit journali — docs/betrieb.md')">{{ $t('Einbinden') }}</div>
         <div style="padding:4px 8px" class="einbinden" data-demo="aus">
           <div class="muted">{{ $t('Website') }}</div><pre class="code">{{ einbinden }}</pre>
-          <div class="muted">{{ $t('MCP') }}</div><pre class="code">https://advisor.example.com/mcp</pre>
+          <div class="muted">{{ $t('MCP') }}</div><pre class="code">{{ dienst }}/mcp</pre>
           <div class="muted">compose.yaml</div><pre class="code">{{ compose }}</pre>
         </div>
       </div>

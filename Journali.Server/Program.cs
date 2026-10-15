@@ -139,6 +139,10 @@ var seeded = catalog.SeedMissing();
 // Demo (07.10.2026): eingerichtet wird nach den Plugins (Demo.Einrichten unten), gilt aber von hier an
 Demo.An = Environment.GetEnvironmentVariable("JOURNALI_DEMO") == "1";
 Demo.Einstieg = Environment.GetEnvironmentVariable("JOURNALI_DEMO_EINSTIEG");   // Seite mit Anleitung und Bedingungen vor der Demo (10.10.2026)
+// der Chat-Dienst des Produktberaters neben der Demo (15.10.2026): Adresse, Websites, die ihn einbinden, und die Datei für sein Token
+Demo.BeraterUrl = Environment.GetEnvironmentVariable("JOURNALI_DEMO_BERATER_URL");
+Demo.BeraterOrigins = (Environment.GetEnvironmentVariable("JOURNALI_DEMO_BERATER_ORIGINS") ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+Demo.BeraterTokenDatei = Environment.GetEnvironmentVariable("JOURNALI_DEMO_BERATER_TOKEN");
 // Server auf derselben Datenbank (pflegestruktur 41): Kennung, Puls, Rolle. Der erste Takt gleich hier, damit der Start weiss, ob er Hauptserver ist
 var verbund = new Verbund(db, catalog, dataDir, typeof(Program).Assembly.GetName().Version?.ToString(3), System.IO.File.GetLastWriteTimeUtc(typeof(Program).Assembly.Location));
 try { verbund.Takt(); } catch (Exception e) { Console.WriteLine($"journali: server not registered — {e.Message}"); }

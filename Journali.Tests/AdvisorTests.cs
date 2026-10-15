@@ -470,8 +470,9 @@ public class AdvisorTests
             var (status, j) = await w.Post("/api/advisor/werkzeug/preview", JsonSerializer.Serialize(new { gespraech = "demo-1", q = "bohrhammer", locale = "de" }), demo);
             Assert.True(status == HttpStatusCode.OK, $"Vorschau: {status} {j}");
             Assert.Contains("Bohrhammer Pro", j.GetProperty("hits").EnumerateArray().Select(h => h.GetProperty("name").GetString()));
-            // ein ausgegebenes Token des Dienstes bleibt in der Demo gesperrt
-            Assert.Equal(HttpStatusCode.Unauthorized, (await w.Get("/api/advisor/werkzeug/info", Auth.AdvisorTokenAusgeben(w.Dir, "werkzeug", "Dienst"))).Status);
+            // das Token des Chat-Dienstes gilt auch in der Demo (15.10.2026) — ausgeben kann es dort nur sie selbst (Demo.BeraterToken), Besuchern fehlt das Recht Plugins
+            Assert.Equal(HttpStatusCode.OK, (await w.Get("/api/advisor/werkzeug/info", Auth.AdvisorTokenAusgeben(w.Dir, "werkzeug", "Dienst"))).Status);
+            Assert.Equal(HttpStatusCode.Forbidden, (await w.Post("/api/advisor/werkzeug/tokens", "{}", demo)).Status);
         }
         finally { Demo.An = false; }
     }

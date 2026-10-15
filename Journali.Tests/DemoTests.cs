@@ -367,13 +367,15 @@ public class DemoTests
                 Assert.DoesNotContain(t.Nodes.Values, x => x.Role == Roles.Rubric && x.Label.GetValueOrDefault("de") == "Zelte" && Wurzel(t, x) == shop.Id);
                 return 0;
             });
-            // 14.10.2026: der Produktberater der Demo auf dem Baum Product Advisor, ohne MCP (der Dienst läuft in der Demo nicht)
+            // 14.10.2026: der Produktberater der Demo auf dem Baum Product Advisor, ohne MCP; Adresse und Websites seines Chat-Dienstes (15.10.2026)
+            // nur, wenn einer läuft — hier keiner
             var beraterDaten = c.Lesen((_, _) => c.Plugins.All[AdvisorApi.Plugin].Data.GetValueOrDefault(AdvisorApi.Prefix + Demo.BeraterKey));
             Assert.NotNull(beraterDaten);
             var berater = AdvisorApi.Definition.Read(beraterDaten!).Def!;
             Assert.Equal(c.Lesen((_, t) => t.PubTrees.Single(b => b.Name == "Product Advisor").Id), berater.Pub);
             Assert.Equal("onlineshop", berater.View);
             Assert.False(berater.Mcp);
+            Assert.Null(berater.Url);
             // 14.10.2026: freigegeben für web — vorher leiteten beide Bäume nichts aus, und der Produktberater hatte kein Produkt
             c.Lesen((m, t) =>
             {
@@ -467,6 +469,34 @@ public class DemoTests
 [Collection("Startphase")]
 public class DemoAnmeldungTests
 {
+    [Fact]
+    public void Das_Token_des_Chat_Dienstes_steht_in_einer_Datei_und_uebersteht_den_Neustart()
+    {
+        // 15.10.2026: der Tresor der Demo ist nach dem täglichen Neustart leer, die Datei im Volume bleibt — der Dienst liest sie nur beim Start
+        var wurzel = Directory.CreateTempSubdirectory("demo-berater").FullName;
+        var datei = Path.Combine(wurzel, "token", "token");
+        Demo.BeraterTokenDatei = datei;
+        try
+        {
+            var gestern = Path.Combine(wurzel, "gestern"); Directory.CreateDirectory(gestern);
+            Demo.BeraterToken(gestern);
+            var token = File.ReadAllText(datei);
+            Assert.StartsWith("ja_", token);
+            Assert.Single(Auth.AdvisorTokens(gestern, Demo.BeraterKey));
+            // der Neustart: ein leerer Tresor, dieselbe Datei — dasselbe Token gilt wieder
+            var heute = Path.Combine(wurzel, "heute"); Directory.CreateDirectory(heute);
+            Demo.BeraterToken(heute);
+            Assert.Equal(token, File.ReadAllText(datei));
+            Assert.Equal(Auth.AdvisorTokens(gestern, Demo.BeraterKey).Single().Id, Auth.AdvisorTokens(heute, Demo.BeraterKey).Single().Id);
+            // ein Prozess-Token (nur im Arbeitsspeicher) in der Datei taugt nicht: ein neues
+            File.WriteAllText(datei, "ja_p_abc");
+            Demo.BeraterToken(heute);
+            Assert.StartsWith("ja_", File.ReadAllText(datei));
+            Assert.DoesNotContain("ja_p_", File.ReadAllText(datei));
+        }
+        finally { Demo.BeraterTokenDatei = null; Directory.Delete(wurzel, true); }
+    }
+
     [Fact]
     public void Eine_Dezimalzahl_mit_Komma_wird_abgewiesen_statt_als_Tausender_gelesen()
     {

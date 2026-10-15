@@ -61,6 +61,10 @@ public static class Auth
         With(dir, s => { s.Advisors[Sha(token)] = new AdvisorRec(advisor, label, DateTimeOffset.UtcNow); return 0; }, save: true);
         return token;
     }
+    /// <summary>Ein vorhandenes Token übernehmen (15.10.2026, Demo): die Demo legt das Token ihres Chat-Dienstes in eine Datei, die den täglichen
+    /// Neustart übersteht — ihr Tresor übersteht ihn nicht. Beim Start kommt es wieder hinein, und der Dienst braucht kein neues.</summary>
+    public static void AdvisorTokenUebernehmen(string dir, string advisor, string token, string label) =>
+        With(dir, s => { s.Advisors[Sha(token)] = new AdvisorRec(advisor, label, DateTimeOffset.UtcNow); return 0; }, save: true);
     // Token für den Kern als Kindprozess (Vorschau, AdvisorKern): je Berater eines, nur im Arbeitsspeicher, bis der Server endet
     private static readonly ConcurrentDictionary<string, string> ProzessToken = new();        // Berater → Token
     private static readonly ConcurrentDictionary<string, string> ProzessBerater = new();      // Token → Berater
@@ -199,11 +203,11 @@ public static class Auth
             }
             if (token.StartsWith("ja_"))
             {
-                // Berater: kein Anwender, die Rolle aus seiner Definition. In der Demo gibt es keinen Dienst und kein ausgegebenes Token — nur den Kern der
-                // Vorschau als Kindprozess (14.10.2026): sein Token gibt journali selbst aus und hält es im Arbeitsspeicher; ohne ihn fragte die Vorschau
-                // in der Demo ins Leere („Anmeldung nötig“).
+                // Berater: kein Anwender, die Rolle aus seiner Definition. Der Kern der Vorschau als Kindprozess fragt mit einem Token, das journali selbst
+                // ausgibt und im Arbeitsspeicher hält (14.10.2026); der Dienst mit dem Chat-Fenster mit einem ausgegebenen. In der Demo gibt nur sie selbst
+                // eines aus (15.10.2026, Demo.BeraterToken) — Besucher nicht, dafür fehlt ihnen das Recht Plugins.
                 var vorschau = ProzessBerater.TryGetValue(token, out var pb);
-                var berater = vorschau ? pb : Demo.An ? null : Finde(dir, s => s.Advisors.GetValueOrDefault(Sha(token)))?.Advisor;
+                var berater = vorschau ? pb : Finde(dir, s => s.Advisors.GetValueOrDefault(Sha(token)))?.Advisor;
                 if (vorschau) ctx.Items["advisorVorschau"] = true;   // der Kern als Kindprozess fragt für die Vorschau eines Anwenders
                 if (berater is null || AdvisorApi.RolleVon(c, berater) is not { } rolle) return null;
                 ctx.Items["advisor"] = berater;

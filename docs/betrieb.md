@@ -679,6 +679,12 @@ ausser bei den Werten der Produkte, die pflegt man wie sonst.
   Beispielkatalogs ab und „Product Advisor“ aus Tannwald Outdoor (`Demo.Publikationsbaum`). Einen weiteren weist der Server ab wie eine Grenze
   des Tarifs (`Catalog.MaxPubTrees` = die Bäume der Demo); löschen, leeren und Rubriken entfernen gehen nicht (Knoten zurückziehen ist gesperrt)
   und stehen in der Oberfläche nicht da.
+- **Produktberater** (14.10.2026): der Start legt den Berater `tannwald` auf „Product Advisor“ an (`Demo.Berater`, ohne KI und ohne MCP); Besucher
+  fragen ihn in der Vorschau unter ⇪ Export → ✆ Produktberatung, auch ohne das Recht Plugins. **Chat-Dienst** (15.10.2026): läuft `serve.mjs`
+  als eigener Container neben der Demo, nennt `JOURNALI_DEMO_BERATER_URL` seine Adresse und `JOURNALI_DEMO_BERATER_ORIGINS` die Websites, die
+  das Fenster einbinden (durch Komma getrennt, auch die Adresse der Demo selbst — „✆ Chat-Fenster“ in der Vorschau lädt es dort).
+  `JOURNALI_DEMO_BERATER_TOKEN` nennt eine Datei in einem Volume, das beide sehen: die Demo legt das Token des Dienstes hinein und übernimmt es
+  nach jedem Neustart wieder in den leeren Tresor (`Demo.BeraterToken`); der Dienst liest es mit `JOURNALI_ADVISOR_TOKEN_FILE`.
 - **Eingabefilter** (07.10.2026, `Eingabefilter.cs`): was Besucher als Text schreiben (Datenpflege, Struktur, Ausleitung), darf keinen Link,
   keine E-Mail-Adresse, keine Telefonnummer und keinen Begriff der Sperrliste enthalten und höchstens 2000 Zeichen lang sein; sonst 400 „Diese
   Eingabe ist nicht zulässig.“ Die Sperrliste liegt beim Betrieb der Demo, nicht im Repo: `JOURNALI_DEMO_SPERRLISTE` nennt die Datei (eine Zeile

@@ -201,6 +201,7 @@ public static class Demo
         n += Publikationsbaum(c);
         n += Freigaben(c);
         n += Berater(c);
+        if (dataDir is not null) BeraterToken(dataDir);
         // die Publikationsbäume der Demo und keiner mehr, wie eine Grenze des Tarifs: anlegen geht nicht, löschen sperrt Gesperrt (Knoten zurückziehen)
         c.MaxPubTrees = Math.Max(1, c.Lesen((_, t) => t.PubTrees.Count()));
         foreach (var key in OhnePlugins)
@@ -790,6 +791,31 @@ public static class Demo
 
     /// <summary>Schlüssel des Produktberaters der Demo.</summary>
     public const string BeraterKey = "tannwald";
+    /// <summary>Wo der Chat-Dienst der Demo erreichbar ist (<c>JOURNALI_DEMO_BERATER_URL</c>, 15.10.2026); leer: es läuft keiner.</summary>
+    public static string? BeraterUrl { get; set; }
+    /// <summary>Websites, die sein Chat-Fenster einbinden dürfen (<c>JOURNALI_DEMO_BERATER_ORIGINS</c>, durch Komma getrennt).</summary>
+    public static string[] BeraterOrigins { get; set; } = [];
+    /// <summary>Die Datei, in die die Demo das Token ihres Chat-Dienstes legt (<c>JOURNALI_DEMO_BERATER_TOKEN</c>) — der Dienst liest sie beim Start.</summary>
+    public static string? BeraterTokenDatei { get; set; }
+
+    /// <summary>
+    /// Das Token des Chat-Dienstes (15.10.2026): steht in <see cref="BeraterTokenDatei"/> schon eines, kommt es wieder in den Tresor — er ist nach dem
+    /// täglichen Neustart leer, die Datei liegt in einem Volume und bleibt; sonst gibt die Demo ein neues aus und schreibt es hinein. Der Dienst startet
+    /// erst, wenn es die Datei gibt (er endet ohne Token und wird neu gestartet).
+    /// </summary>
+    public static void BeraterToken(string dataDir)
+    {
+        if (BeraterTokenDatei is not { Length: > 0 } datei) return;
+        var vorhanden = File.Exists(datei) ? File.ReadAllText(datei).Trim() : "";
+        if (vorhanden.StartsWith("ja_", StringComparison.Ordinal) && !vorhanden.StartsWith("ja_p_", StringComparison.Ordinal))
+        {
+            Auth.AdvisorTokenUebernehmen(dataDir, BeraterKey, vorhanden, "Demo");
+            return;
+        }
+        var token = Auth.AdvisorTokenAusgeben(dataDir, BeraterKey, "Demo");
+        if (Path.GetDirectoryName(datei) is { Length: > 0 } ordner) Directory.CreateDirectory(ordner);
+        File.WriteAllText(datei, token);
+    }
 
     /// <summary>
     /// Der Produktberater (14.10.2026): ein Berater auf dem Baum „Product Advisor“, damit ✆ Produktberatung in der Demo etwas zeigt — anlegen dürfen
@@ -808,7 +834,9 @@ public static class Demo
             View: c.Lesen((m, _) => m.Views.ContainsKey("onlineshop")) ? "onlineshop" : null,
             Locales: ["de", "en"],
             Greeting: new() { ["de"] = "Wonach suchen Sie?", ["en"] = "What are you looking for?" },
-            Ki: false, Mcp: false, Limits: new(JeTag: 5000));
+            Ki: false, Mcp: false, Limits: new(JeTag: 5000),
+            // der Chat-Dienst neben der Demo (15.10.2026), wenn einer läuft: seine Adresse und die Websites, die das Fenster einbinden
+            Url: string.IsNullOrWhiteSpace(BeraterUrl) ? null : BeraterUrl.TrimEnd('/'), Origins: BeraterOrigins.Length > 0 ? BeraterOrigins : null);
         return c.With((_, _, write) => { write(Anwender, Plugins.Stream + AdvisorApi.Plugin, Types.PluginDataSet, new PluginDataSet(AdvisorApi.Prefix + BeraterKey, def.Write()), null); return 1; });
     }
 

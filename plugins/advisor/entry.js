@@ -1,4 +1,4 @@
-(function(){const s=document.createElement('style');s.textContent="\n.seiten[data-v-9edaf72b] { display: flex; gap: 0; flex: 1; min-height: 0;\n}\n.liste[data-v-9edaf72b] { width: 260px; border-right: 1px solid var(--line); overflow-y: auto;\n}\n.rechts[data-v-9edaf72b] { flex: 1; overflow-y: auto; min-width: 0;\n}\n.kopf[data-v-9edaf72b] { display: flex; gap: 6px; align-items: center; padding: 6px 8px;\n}\n.kopf .bez[data-v-9edaf72b] { flex: 1;\n}\n.neu[data-v-9edaf72b] { display: flex; gap: 4px; padding: 6px 8px;\n}\n.neu input[data-v-9edaf72b] { flex: 1; min-width: 0;\n}\n.form[data-v-9edaf72b] { width: 100%;\n}\n.felder[data-v-9edaf72b] { border: 0; padding: 0; margin: 0; min-width: 0;\n}\n.form td[data-v-9edaf72b] { height: 30px; vertical-align: middle; white-space: normal; padding: 2px 4px;\n}\n.form td.attr[data-v-9edaf72b] { color: var(--muted); white-space: nowrap; padding-left: 8px;\n}\n.row[data-v-9edaf72b] { display: flex; gap: 8px; align-items: center; flex-wrap: wrap;\n}\n.zahl[data-v-9edaf72b] { width: 70px;\n}\n.code[data-v-9edaf72b] { margin: 2px 0 8px; padding: 6px 8px; background: var(--bg2, rgba(127,127,127,.08)); border-radius: 4px; white-space: pre-wrap; word-break: break-all; font-size: 12px;\n}\n.neues-token[data-v-9edaf72b] { user-select: all; word-break: break-all;\n}\n.fehler[data-v-9edaf72b] { margin: 4px 8px; padding-left: 16px;\n}\n.treffer[data-v-9edaf72b] { margin: 4px 0; padding-left: 20px;\n}\n";document.head.append(s)})();
+(function(){const s=document.createElement('style');s.textContent="\n.seiten[data-v-d065a6d1] { display: flex; gap: 0; flex: 1; min-height: 0;\n}\n.liste[data-v-d065a6d1] { width: 260px; border-right: 1px solid var(--line); overflow-y: auto;\n}\n.rechts[data-v-d065a6d1] { flex: 1; overflow-y: auto; min-width: 0;\n}\n.kopf[data-v-d065a6d1] { display: flex; gap: 6px; align-items: center; padding: 6px 8px;\n}\n.kopf .bez[data-v-d065a6d1] { flex: 1;\n}\n.neu[data-v-d065a6d1] { display: flex; gap: 4px; padding: 6px 8px;\n}\n.neu input[data-v-d065a6d1] { flex: 1; min-width: 0;\n}\n.form[data-v-d065a6d1] { width: 100%;\n}\n.felder[data-v-d065a6d1] { border: 0; padding: 0; margin: 0; min-width: 0;\n}\n.form td[data-v-d065a6d1] { height: 30px; vertical-align: middle; white-space: normal; padding: 2px 4px;\n}\n.form td.attr[data-v-d065a6d1] { color: var(--muted); white-space: nowrap; padding-left: 8px;\n}\n.row[data-v-d065a6d1] { display: flex; gap: 8px; align-items: center; flex-wrap: wrap;\n}\n.zahl[data-v-d065a6d1] { width: 70px;\n}\n.code[data-v-d065a6d1] { margin: 2px 0 8px; padding: 6px 8px; background: var(--bg2, rgba(127,127,127,.08)); border-radius: 4px; white-space: pre-wrap; word-break: break-all; font-size: 12px;\n}\n.neues-token[data-v-d065a6d1] { user-select: all; word-break: break-all;\n}\n.fehler[data-v-d065a6d1] { margin: 4px 8px; padding-left: 16px;\n}\n.treffer[data-v-d065a6d1] { margin: 4px 0; padding-left: 20px;\n}\n";document.head.append(s)})();
 const m = window.journali.vue;
 const Fragment = m.Fragment;
 const computed = m.computed;
@@ -80,74 +80,77 @@ const _hoisted_37 = { class: "attr" };
 const _hoisted_38 = ["title"];
 const _hoisted_39 = ["title"];
 const _hoisted_40 = ["title"];
-const _hoisted_41 = { class: "row grenzen" };
-const _hoisted_42 = ["title"];
+const _hoisted_41 = ["title"];
+const _hoisted_42 = { class: "row grenzen" };
 const _hoisted_43 = ["title"];
 const _hoisted_44 = ["title"];
 const _hoisted_45 = ["title"];
-const _hoisted_46 = { "data-demo": "aus" };
-const _hoisted_47 = ["title"];
-const _hoisted_48 = { class: "grid" };
-const _hoisted_49 = { class: "muted" };
+const _hoisted_46 = ["title"];
+const _hoisted_47 = { "data-demo": "aus" };
+const _hoisted_48 = ["title"];
+const _hoisted_49 = { class: "grid" };
 const _hoisted_50 = { class: "muted" };
-const _hoisted_51 = { style: { "width": "24px" } };
-const _hoisted_52 = ["title", "onClick"];
-const _hoisted_53 = {
+const _hoisted_51 = { class: "muted" };
+const _hoisted_52 = { style: { "width": "24px" } };
+const _hoisted_53 = ["title", "onClick"];
+const _hoisted_54 = {
   class: "row",
   style: { "padding": "4px 8px" }
 };
-const _hoisted_54 = ["disabled", "title"];
-const _hoisted_55 = ["title"];
+const _hoisted_55 = ["disabled", "title"];
 const _hoisted_56 = ["title"];
-const _hoisted_57 = ["placeholder"];
-const _hoisted_58 = ["disabled", "title"];
-const _hoisted_59 = ["title"];
-const _hoisted_60 = {
+const _hoisted_57 = ["title"];
+const _hoisted_58 = ["placeholder"];
+const _hoisted_59 = ["disabled", "title"];
+const _hoisted_60 = ["title"];
+const _hoisted_61 = ["title"];
+const _hoisted_62 = {
   key: 1,
   class: "vorschau",
   style: { "padding": "0 8px 8px" }
 };
-const _hoisted_61 = {
+const _hoisted_63 = {
   key: 0,
   class: "neg"
 };
-const _hoisted_62 = {
+const _hoisted_64 = {
   key: 0,
   class: "satz"
 };
-const _hoisted_63 = {
+const _hoisted_65 = {
   key: 1,
   class: "frage"
 };
-const _hoisted_64 = ["title"];
-const _hoisted_65 = {
+const _hoisted_66 = ["title"];
+const _hoisted_67 = {
   key: 3,
   class: "grid about"
 };
-const _hoisted_66 = { class: "attr" };
-const _hoisted_67 = ["title"];
-const _hoisted_68 = {
+const _hoisted_68 = { class: "attr" };
+const _hoisted_69 = ["title"];
+const _hoisted_70 = {
   key: 4,
   class: "neg ki-fehler"
 };
-const _hoisted_69 = ["title"];
-const _hoisted_70 = ["title"];
-const _hoisted_71 = { class: "treffer" };
-const _hoisted_72 = { class: "muted" };
-const _hoisted_73 = {
+const _hoisted_71 = ["title"];
+const _hoisted_72 = ["title"];
+const _hoisted_73 = { class: "treffer" };
+const _hoisted_74 = { class: "muted" };
+const _hoisted_75 = {
   key: 6,
   class: "muted facetten"
 };
-const _hoisted_74 = ["title"];
-const _hoisted_75 = {
+const _hoisted_76 = ["title"];
+const _hoisted_77 = {
   style: { "padding": "4px 8px" },
   class: "einbinden",
   "data-demo": "aus"
 };
-const _hoisted_76 = { class: "muted" };
-const _hoisted_77 = { class: "code" };
 const _hoisted_78 = { class: "muted" };
 const _hoisted_79 = { class: "code" };
+const _hoisted_80 = { class: "muted" };
+const _hoisted_81 = { class: "code" };
+const _hoisted_82 = { class: "code" };
 const _sfc_main = {
   __name: "View",
   setup(__props) {
@@ -192,7 +195,8 @@ const _sfc_main = {
         team: d.ki ? d.team || null : null,
         mcp: d.mcp !== false,
         origins: d.origins ?? [],
-        limits: g
+        limits: g,
+        url: String(d.url ?? "").trim().replace(/\/+$/, "") || null
       };
     }
     async function ladeListe() {
@@ -222,7 +226,7 @@ const _sfc_main = {
     async function oeffne(key) {
       try {
         const d = await api.get("/api/plugins/advisor/data/" + encodeURIComponent("def:" + key)) ?? {};
-        def.value = { label: "", pub: "", role: "", view: "", locales: [], greeting: {}, ki: false, team: "", mcp: true, origins: [], limits: {}, ...JSON.parse(JSON.stringify(d)) };
+        def.value = { label: "", pub: "", role: "", view: "", locales: [], greeting: {}, ki: false, team: "", mcp: true, origins: [], limits: {}, url: "", ...JSON.parse(JSON.stringify(d)) };
         def.value.limits ??= {};
         def.value.greeting ??= {};
         def.value.locales ??= [];
@@ -322,7 +326,20 @@ const _sfc_main = {
       vorschau.value = null;
       vorschauFrage.value = "";
     }
-    const einbinden = computed(() => `<script src="https://advisor.example.com/widget.js" async><\/script>`);
+    const dienst = computed(() => (def.value?.url || "").replace(/\/+$/, "") || "https://advisor.example.com");
+    const einbinden = computed(() => `<script src="${dienst.value}/widget.js" async><\/script>`);
+    function chatOeffnen() {
+      const src = `${dienst.value}/widget.js`;
+      if (!document.querySelector(`script[data-berater="${cur.value}"]`)) {
+        const s = document.createElement("script");
+        s.src = src;
+        s.async = true;
+        s.dataset.berater = cur.value;
+        s.dataset.locale = grussSprachen.value[0];
+        document.body.append(s);
+      }
+      store.toast(t("✆ Das Chat-Fenster steht unten rechts."), "ok");
+    }
     const compose = computed(() => [
       `  advisor-${cur.value}:`,
       "    image: node:22-alpine",
@@ -345,7 +362,7 @@ const _sfc_main = {
             1
             /* TEXT */
           ),
-          _cache[14] || (_cache[14] = createElementVNode(
+          _cache[15] || (_cache[15] = createElementVNode(
             "span",
             { class: "grow" },
             null,
@@ -483,7 +500,7 @@ const _sfc_main = {
               disabled: !!unref(store).demo
             }, [
               createElementVNode("table", _hoisted_19, [
-                _cache[19] || (_cache[19] = createElementVNode(
+                _cache[20] || (_cache[20] = createElementVNode(
                   "colgroup",
                   null,
                   [
@@ -507,7 +524,7 @@ const _sfc_main = {
                           class: "pub"
                         },
                         [
-                          _cache[15] || (_cache[15] = createElementVNode(
+                          _cache[16] || (_cache[16] = createElementVNode(
                             "option",
                             { value: "" },
                             "—",
@@ -547,7 +564,7 @@ const _sfc_main = {
                           class: "rolle"
                         },
                         [
-                          _cache[16] || (_cache[16] = createElementVNode(
+                          _cache[17] || (_cache[17] = createElementVNode(
                             "option",
                             { value: "" },
                             "—",
@@ -587,7 +604,7 @@ const _sfc_main = {
                           class: "sicht"
                         },
                         [
-                          _cache[17] || (_cache[17] = createElementVNode(
+                          _cache[18] || (_cache[18] = createElementVNode(
                             "option",
                             { value: "" },
                             "—",
@@ -712,7 +729,7 @@ const _sfc_main = {
                           class: "team",
                           title: _ctx.$t("mit dessen KI-Schlüssel, gezählt bei diesem Team")
                         }, [
-                          _cache[18] || (_cache[18] = createElementVNode(
+                          _cache[19] || (_cache[19] = createElementVNode(
                             "option",
                             { value: "" },
                             "—",
@@ -773,13 +790,35 @@ const _sfc_main = {
                   createElementVNode("tr", null, [
                     createElementVNode("td", {
                       class: "attr",
+                      title: _ctx.$t("wo der Dienst des Beraters erreichbar ist — für den Code zum Einbinden und das Chat-Fenster hier")
+                    }, toDisplayString(_ctx.$t("Dienst")), 9, _hoisted_39),
+                    createElementVNode("td", null, [
+                      withDirectives(createElementVNode(
+                        "input",
+                        {
+                          "onUpdate:modelValue": _cache[8] || (_cache[8] = ($event) => def.value.url = $event),
+                          class: "dienst-url",
+                          style: { "width": "100%" },
+                          placeholder: "https://advisor.example.com"
+                        },
+                        null,
+                        512
+                        /* NEED_PATCH */
+                      ), [
+                        [vModelText, def.value.url]
+                      ])
+                    ])
+                  ]),
+                  createElementVNode("tr", null, [
+                    createElementVNode("td", {
+                      class: "attr",
                       title: _ctx.$t("je Zeile eine Adresse, etwa https://www.example.com — nur diese Websites dürfen das Chat-Fenster einbinden")
-                    }, toDisplayString(_ctx.$t("Websites")), 9, _hoisted_39),
+                    }, toDisplayString(_ctx.$t("Websites")), 9, _hoisted_40),
                     createElementVNode("td", null, [
                       withDirectives(createElementVNode(
                         "textarea",
                         {
-                          "onUpdate:modelValue": _cache[8] || (_cache[8] = ($event) => websites.value = $event),
+                          "onUpdate:modelValue": _cache[9] || (_cache[9] = ($event) => websites.value = $event),
                           class: "websites",
                           rows: "2",
                           style: { "width": "100%" },
@@ -802,9 +841,9 @@ const _sfc_main = {
                     createElementVNode("td", {
                       class: "attr",
                       title: _ctx.$t("je Besucher zählt der Dienst, je Tag zählt journali; leer heisst Vorgabe")
-                    }, toDisplayString(_ctx.$t("Grenzen")), 9, _hoisted_40),
+                    }, toDisplayString(_ctx.$t("Grenzen")), 9, _hoisted_41),
                     createElementVNode("td", null, [
-                      createElementVNode("div", _hoisted_41, [
+                      createElementVNode("div", _hoisted_42, [
                         createElementVNode("label", {
                           title: _ctx.$t("Fragen je Besucher und Minute (Vorgabe 20)")
                         }, [
@@ -818,7 +857,7 @@ const _sfc_main = {
                             {
                               type: "number",
                               min: "0",
-                              "onUpdate:modelValue": _cache[9] || (_cache[9] = ($event) => def.value.limits.jeBesucherMinute = $event),
+                              "onUpdate:modelValue": _cache[10] || (_cache[10] = ($event) => def.value.limits.jeBesucherMinute = $event),
                               class: "zahl"
                             },
                             null,
@@ -827,7 +866,7 @@ const _sfc_main = {
                           ), [
                             [vModelText, def.value.limits.jeBesucherMinute]
                           ])
-                        ], 8, _hoisted_42),
+                        ], 8, _hoisted_43),
                         createElementVNode("label", {
                           title: _ctx.$t("Fragen je Besucher und Tag (Vorgabe 300)")
                         }, [
@@ -841,7 +880,7 @@ const _sfc_main = {
                             {
                               type: "number",
                               min: "0",
-                              "onUpdate:modelValue": _cache[10] || (_cache[10] = ($event) => def.value.limits.jeBesucherTag = $event),
+                              "onUpdate:modelValue": _cache[11] || (_cache[11] = ($event) => def.value.limits.jeBesucherTag = $event),
                               class: "zahl"
                             },
                             null,
@@ -850,7 +889,7 @@ const _sfc_main = {
                           ), [
                             [vModelText, def.value.limits.jeBesucherTag]
                           ])
-                        ], 8, _hoisted_43),
+                        ], 8, _hoisted_44),
                         createElementVNode("label", {
                           title: _ctx.$t("Fragen aller Besucher je Tag (leer: ohne Grenze)")
                         }, [
@@ -864,7 +903,7 @@ const _sfc_main = {
                             {
                               type: "number",
                               min: "0",
-                              "onUpdate:modelValue": _cache[11] || (_cache[11] = ($event) => def.value.limits.jeTag = $event),
+                              "onUpdate:modelValue": _cache[12] || (_cache[12] = ($event) => def.value.limits.jeTag = $event),
                               class: "zahl je-tag"
                             },
                             null,
@@ -873,7 +912,7 @@ const _sfc_main = {
                           ), [
                             [vModelText, def.value.limits.jeTag]
                           ])
-                        ], 8, _hoisted_44),
+                        ], 8, _hoisted_45),
                         createElementVNode("label", {
                           title: _ctx.$t("Texte der KI je Tag (leer: ohne Grenze)")
                         }, [
@@ -887,7 +926,7 @@ const _sfc_main = {
                             {
                               type: "number",
                               min: "0",
-                              "onUpdate:modelValue": _cache[12] || (_cache[12] = ($event) => def.value.limits.kiJeTag = $event),
+                              "onUpdate:modelValue": _cache[13] || (_cache[13] = ($event) => def.value.limits.kiJeTag = $event),
                               class: "zahl"
                             },
                             null,
@@ -896,19 +935,19 @@ const _sfc_main = {
                           ), [
                             [vModelText, def.value.limits.kiJeTag]
                           ])
-                        ], 8, _hoisted_45)
+                        ], 8, _hoisted_46)
                       ])
                     ])
                   ])
                 ])
               ])
             ], 8, _hoisted_18),
-            createElementVNode("div", _hoisted_46, [
+            createElementVNode("div", _hoisted_47, [
               createElementVNode("div", {
                 class: "step-band",
                 title: _ctx.$t("der Dienst meldet sich mit einem Token an; es gilt nur für die Fragen an diesen Berater")
-              }, toDisplayString(_ctx.$t("Token")) + " · " + toDisplayString(tokens.value.length), 9, _hoisted_47),
-              createElementVNode("table", _hoisted_48, [
+              }, toDisplayString(_ctx.$t("Token")) + " · " + toDisplayString(tokens.value.length), 9, _hoisted_48),
+              createElementVNode("table", _hoisted_49, [
                 createElementVNode("tbody", null, [
                   (openBlock(true), createElementBlock(
                     Fragment,
@@ -926,7 +965,7 @@ const _sfc_main = {
                           ),
                           createElementVNode(
                             "span",
-                            _hoisted_49,
+                            _hoisted_50,
                             toDisplayString(tk.id) + "…",
                             1
                             /* TEXT */
@@ -934,18 +973,18 @@ const _sfc_main = {
                         ]),
                         createElementVNode(
                           "td",
-                          _hoisted_50,
+                          _hoisted_51,
                           toDisplayString(new Date(tk.at).toLocaleString()),
                           1
                           /* TEXT */
                         ),
-                        createElementVNode("td", _hoisted_51, [
+                        createElementVNode("td", _hoisted_52, [
                           createElementVNode("button", {
                             type: "button",
                             class: "x widerrufen",
                             title: _ctx.$t("Token widerrufen"),
                             onClick: ($event) => tokenWiderrufen(tk.id)
-                          }, "✕", 8, _hoisted_52)
+                          }, "✕", 8, _hoisted_53)
                         ])
                       ]);
                     }),
@@ -954,25 +993,25 @@ const _sfc_main = {
                   ))
                 ])
               ]),
-              createElementVNode("div", _hoisted_53, [
+              createElementVNode("div", _hoisted_54, [
                 createElementVNode("button", {
                   type: "button",
                   class: "token-neu",
                   disabled: geaendert.value,
                   title: geaendert.value ? _ctx.$t("ungespeicherte Änderungen") : _ctx.$t("ein neues Token für den Dienst"),
                   onClick: tokenAusgeben
-                }, toDisplayString(_ctx.$t("＋ Token")), 9, _hoisted_54),
+                }, toDisplayString(_ctx.$t("＋ Token")), 9, _hoisted_55),
                 neuesToken.value ? (openBlock(), createElementBlock("code", {
                   key: 0,
                   class: "neues-token",
                   title: _ctx.$t("nur jetzt sichtbar — als JOURNALI_ADVISOR_TOKEN des Dienstes")
-                }, toDisplayString(neuesToken.value), 9, _hoisted_55)) : createCommentVNode("v-if", true)
+                }, toDisplayString(neuesToken.value), 9, _hoisted_56)) : createCommentVNode("v-if", true)
               ])
             ]),
             createElementVNode("div", {
               class: "step-band",
               title: _ctx.$t("dieselbe Frage, die ein Besucher stellt — mit Text der KI, wenn der Berater sie nutzt")
-            }, toDisplayString(_ctx.$t("Vorschau")), 9, _hoisted_56),
+            }, toDisplayString(_ctx.$t("Vorschau")), 9, _hoisted_57),
             createElementVNode(
               "form",
               {
@@ -982,11 +1021,11 @@ const _sfc_main = {
               },
               [
                 withDirectives(createElementVNode("input", {
-                  "onUpdate:modelValue": _cache[13] || (_cache[13] = ($event) => vorschauFrage.value = $event),
+                  "onUpdate:modelValue": _cache[14] || (_cache[14] = ($event) => vorschauFrage.value = $event),
                   class: "vorschau-frage",
                   style: { "flex": "1" },
                   placeholder: _ctx.$t("Frage eines Besuchers")
-                }, null, 8, _hoisted_57), [
+                }, null, 8, _hoisted_58), [
                   [vModelText, vorschauFrage.value]
                 ]),
                 createElementVNode("button", {
@@ -994,21 +1033,28 @@ const _sfc_main = {
                   class: "vorschau-los",
                   disabled: geaendert.value,
                   title: geaendert.value ? _ctx.$t("ungespeicherte Änderungen") : ""
-                }, toDisplayString(_ctx.$t("Fragen")), 9, _hoisted_58),
+                }, toDisplayString(_ctx.$t("Fragen")), 9, _hoisted_59),
                 createElementVNode("button", {
                   type: "button",
                   class: "vorschau-neu",
                   title: _ctx.$t("ein neues Gespräch: die gesammelten Angaben fallen weg"),
                   onClick: neuesGespraech
-                }, "↺", 8, _hoisted_59)
+                }, "↺", 8, _hoisted_60),
+                def.value.url && !geaendert.value ? (openBlock(), createElementBlock("button", {
+                  key: 0,
+                  type: "button",
+                  class: "chat-oeffnen",
+                  title: _ctx.$t("das Chat-Fenster des Dienstes auf dieser Seite, wie auf einer Website"),
+                  onClick: chatOeffnen
+                }, toDisplayString(_ctx.$t("✆ Chat-Fenster")), 9, _hoisted_61)) : createCommentVNode("v-if", true)
               ],
               32
               /* NEED_HYDRATION */
             ),
-            vorschau.value ? (openBlock(), createElementBlock("div", _hoisted_60, [
+            vorschau.value ? (openBlock(), createElementBlock("div", _hoisted_62, [
               vorschau.value.error ? (openBlock(), createElementBlock(
                 "div",
-                _hoisted_61,
+                _hoisted_63,
                 "✗ " + toDisplayString(vorschau.value.error),
                 1
                 /* TEXT */
@@ -1018,7 +1064,7 @@ const _sfc_main = {
                 [
                   vorschau.value.texte?.satz || vorschau.value.texte?.ueber ? (openBlock(), createElementBlock(
                     "div",
-                    _hoisted_62,
+                    _hoisted_64,
                     toDisplayString(vorschau.value.texte.ueber ? vorschau.value.texte.ueber + " " : "") + toDisplayString(vorschau.value.texte.satz),
                     1
                     /* TEXT */
@@ -1044,7 +1090,7 @@ const _sfc_main = {
                   createCommentVNode(" die Frage des Beraters gehört zur Antwort, wie im Chat-Fenster (14.10.2026: die Vorschau liess sie weg) "),
                   vorschau.value.texte?.statt || vorschau.value.texte?.frage ? (openBlock(), createElementBlock(
                     "div",
-                    _hoisted_63,
+                    _hoisted_65,
                     toDisplayString([vorschau.value.texte.statt, vorschau.value.texte.frage].filter(Boolean).join(" ")),
                     1
                     /* TEXT */
@@ -1053,8 +1099,8 @@ const _sfc_main = {
                     key: 2,
                     class: "muted gesammelt",
                     title: _ctx.$t("was der Kern aus dem Gespräch gesammelt hat")
-                  }, toDisplayString([...vorschau.value.words ?? [], ...(vorschau.value.filter ?? []).map(angabe)].join(" · ")), 9, _hoisted_64)) : createCommentVNode("v-if", true),
-                  vorschau.value.about?.values?.length ? (openBlock(), createElementBlock("table", _hoisted_65, [
+                  }, toDisplayString([...vorschau.value.words ?? [], ...(vorschau.value.filter ?? []).map(angabe)].join(" · ")), 9, _hoisted_66)) : createCommentVNode("v-if", true),
+                  vorschau.value.about?.values?.length ? (openBlock(), createElementBlock("table", _hoisted_67, [
                     createElementVNode("tbody", null, [
                       (openBlock(true), createElementBlock(
                         Fragment,
@@ -1065,7 +1111,7 @@ const _sfc_main = {
                           }, [
                             createElementVNode(
                               "td",
-                              _hoisted_66,
+                              _hoisted_68,
                               toDisplayString(v.label),
                               1
                               /* TEXT */
@@ -1087,10 +1133,10 @@ const _sfc_main = {
                   createElementVNode("div", {
                     class: "muted",
                     title: vorschau.value.warning || ""
-                  }, toDisplayString(_ctx.$t("{0} Treffer", [vorschau.value.total])) + toDisplayString(vorschau.value.warning && !vorschau.value.warning.startsWith("KI") ? " · " + _ctx.$t("nur Wortsuche") : ""), 9, _hoisted_67),
+                  }, toDisplayString(_ctx.$t("{0} Treffer", [vorschau.value.total])) + toDisplayString(vorschau.value.warning && !vorschau.value.warning.startsWith("KI") ? " · " + _ctx.$t("nur Wortsuche") : ""), 9, _hoisted_69),
                   vorschau.value.warning?.startsWith("KI") ? (openBlock(), createElementBlock(
                     "div",
-                    _hoisted_68,
+                    _hoisted_70,
                     "✗ " + toDisplayString(vorschau.value.warning),
                     1
                     /* TEXT */
@@ -1099,7 +1145,7 @@ const _sfc_main = {
                     key: 5,
                     class: "ki-text",
                     title: _ctx.$t("Text von einer KI erstellt")
-                  }, "✧ " + toDisplayString(vorschau.value.answer), 9, _hoisted_69)) : createCommentVNode("v-if", true),
+                  }, "✧ " + toDisplayString(vorschau.value.answer), 9, _hoisted_71)) : createCommentVNode("v-if", true),
                   (openBlock(true), createElementBlock(
                     Fragment,
                     null,
@@ -1108,12 +1154,12 @@ const _sfc_main = {
                         key: u.n,
                         class: "unterlage muted",
                         title: u.text
-                      }, "⎘ U" + toDisplayString(u.n) + " " + toDisplayString(u.heading || u.name) + " · " + toDisplayString(u.name), 9, _hoisted_70);
+                      }, "⎘ U" + toDisplayString(u.n) + " " + toDisplayString(u.heading || u.name) + " · " + toDisplayString(u.name), 9, _hoisted_72);
                     }),
                     128
                     /* KEYED_FRAGMENT */
                   )),
-                  createElementVNode("ol", _hoisted_71, [
+                  createElementVNode("ol", _hoisted_73, [
                     (openBlock(true), createElementBlock(
                       Fragment,
                       null,
@@ -1128,7 +1174,7 @@ const _sfc_main = {
                           ),
                           createElementVNode(
                             "span",
-                            _hoisted_72,
+                            _hoisted_74,
                             toDisplayString((h2.values ?? []).map((v) => v.label + ": " + v.value).join(" · ")),
                             1
                             /* TEXT */
@@ -1141,7 +1187,7 @@ const _sfc_main = {
                   ]),
                   vorschau.value.facets?.length ? (openBlock(), createElementBlock(
                     "div",
-                    _hoisted_73,
+                    _hoisted_75,
                     toDisplayString(_ctx.$t("Facetten")) + ": " + toDisplayString(vorschau.value.facets.map((f) => f.label).join(", ")),
                     1
                     /* TEXT */
@@ -1155,36 +1201,36 @@ const _sfc_main = {
               class: "step-band",
               "data-demo": "aus",
               title: _ctx.$t("der Dienst läuft im eigenen Container und spricht nur über /api mit journali — docs/betrieb.md")
-            }, toDisplayString(_ctx.$t("Einbinden")), 9, _hoisted_74),
-            createElementVNode("div", _hoisted_75, [
+            }, toDisplayString(_ctx.$t("Einbinden")), 9, _hoisted_76),
+            createElementVNode("div", _hoisted_77, [
               createElementVNode(
                 "div",
-                _hoisted_76,
+                _hoisted_78,
                 toDisplayString(_ctx.$t("Website")),
                 1
                 /* TEXT */
               ),
               createElementVNode(
                 "pre",
-                _hoisted_77,
+                _hoisted_79,
                 toDisplayString(einbinden.value),
                 1
                 /* TEXT */
               ),
               createElementVNode(
                 "div",
-                _hoisted_78,
+                _hoisted_80,
                 toDisplayString(_ctx.$t("MCP")),
                 1
                 /* TEXT */
               ),
-              _cache[20] || (_cache[20] = createElementVNode(
+              createElementVNode(
                 "pre",
-                { class: "code" },
-                "https://advisor.example.com/mcp",
-                -1
-                /* CACHED */
-              )),
+                _hoisted_81,
+                toDisplayString(dienst.value) + "/mcp",
+                1
+                /* TEXT */
+              ),
               _cache[21] || (_cache[21] = createElementVNode(
                 "div",
                 { class: "muted" },
@@ -1194,7 +1240,7 @@ const _sfc_main = {
               )),
               createElementVNode(
                 "pre",
-                _hoisted_79,
+                _hoisted_82,
                 toDisplayString(compose.value),
                 1
                 /* TEXT */
@@ -1206,7 +1252,7 @@ const _sfc_main = {
     };
   }
 };
-const View = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-9edaf72b"]]);
+const View = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-d065a6d1"]]);
 const entry = {
   views: [{ path: "advisor", topic: "export", order: 50, label: t("Produktberatung"), icon: "✆", hint: t("Fragen von Besuchern einer Website an die Produkte eines Publikationsbaums — als Chat-Fenster und für KI-Agenten"), component: View }]
 };

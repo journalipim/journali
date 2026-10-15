@@ -45,8 +45,10 @@ public static partial class AdvisorApi
     /// <param name="View">die Sicht: welche Attribute an einem Produkt erscheinen</param>
     /// <param name="Ki">ob die KI des Teams <paramref name="Team"/> einen Text zu den Treffern schreibt</param>
     /// <param name="Origins">Websites, die das Chat-Fenster einbinden dürfen (CORS im Dienst)</param>
+    /// <param name="Url">wo sein Dienst erreichbar ist (15.10.2026) — für den Code zum Einbinden und „✆ Chat-Fenster“ in der Ansicht; leer: unbekannt</param>
     public sealed record Definition(string? Label = null, string? Pub = null, string? Role = null, string? View = null, string[]? Locales = null,
-        Dictionary<string, string>? Greeting = null, bool Ki = false, string? Team = null, bool Mcp = true, string[]? Origins = null, Grenzen? Limits = null)
+        Dictionary<string, string>? Greeting = null, bool Ki = false, string? Team = null, bool Mcp = true, string[]? Origins = null, Grenzen? Limits = null,
+        string? Url = null)
     {
         private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
         public static (Definition? Def, string? Error) Read(string json)

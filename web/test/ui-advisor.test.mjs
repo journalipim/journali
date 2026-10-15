@@ -42,6 +42,33 @@ async function welt({ daten = {}, fehler = [], antwort = null } = {}) {
   return { w, gesendet, gespeichert, ende: () => { w.unmount(); api.get = get; api.post = post; api.del = del; dialog.confirm = confirm } }
 }
 
+test('mit der Adresse des Dienstes: echter Code zum Einbinden, und „✆ Chat-Fenster“ lädt das Fenster auf die Seite (15.10.2026)', async () => {
+  const { w, ende } = await welt({ daten: { 'def:shop': { label: 'Shop', pub: 'r1', role: 'reader', view: 'sellable', locales: ['de'], greeting: { de: 'Hallo' }, ki: false, mcp: true,
+    origins: ['https://demo.example'], limits: {}, url: 'https://chat.example/' } } })
+  try {
+    assert.equal(w.find('input.dienst-url').element.value, 'https://chat.example/')
+    assert.ok(w.find('.einbinden').text().includes('<script src="https://chat.example/widget.js" async>'), 'der Code zum Einbinden nennt den Dienst')
+    assert.ok(w.find('.einbinden').text().includes('https://chat.example/mcp'))
+    const knopf = w.find('button.chat-oeffnen')
+    assert.ok(knopf.exists(), 'mit Adresse: der Knopf')
+    await knopf.trigger('click'); await knopf.trigger('click'); await warte(w)
+    const skripte = [...document.querySelectorAll('script[data-berater="shop"]')]
+    assert.equal(skripte.length, 1, 'einmal je Seite')
+    assert.equal(skripte[0].getAttribute('src'), 'https://chat.example/widget.js')
+    assert.equal(skripte[0].dataset.locale, 'de')
+    assert.equal(knopf.element.closest('[data-demo="aus"]'), null, 'auch in der Demo')
+    skripte.forEach(s => s.remove())
+  } finally { ende() }
+})
+
+test('ohne Adresse kein Knopf, der Code zum Einbinden mit Platzhalter', async () => {
+  const { w, ende } = await welt()
+  try {
+    assert.equal(w.find('button.chat-oeffnen').exists(), false)
+    assert.ok(w.find('.einbinden').text().includes('https://advisor.example.com/widget.js'))
+  } finally { ende() }
+})
+
 test('genau ein Berater ist gleich offen; in der Demo nur ansehen und fragen (14.10.2026)', async () => {
   const { w, ende } = await welt()
   try {
