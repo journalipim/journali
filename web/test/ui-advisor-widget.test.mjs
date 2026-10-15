@@ -81,6 +81,22 @@ function starte(antworten = standard(), o = {}) {
   return { ...d, b, $, $$, klick, frage, fragen }
 }
 
+test('über die Zeile zum Einbinden gestartet: das Fenster merkt sich, data-open öffnet es gleich (15.10.2026)', async () => {
+  const a = laden()
+  win.fetch = async () => ({ ok: true, status: 200, json: async () => ({ label: 'Tannwald Outdoor', greeting: { de: 'Wonach suchen Sie?' }, locales: ['de'], locale: 'de', products: 3 }) })
+  const f = a.autostart('https://chat.example/widget.js', { open: '1', locale: 'de' })
+  await warte()
+  assert.ok(a.fenster === f, 'die Instanz für „Produktberater starten“')
+  const sr = win.document.querySelector('[data-journali-advisor]').shadowRoot
+  assert.equal(sr.querySelector('.knopf').hidden, true, 'offen: der Knopf ist weg')
+  assert.equal(sr.querySelector('.fenster')?.hidden, false, 'das Fenster steht da')
+  // ohne data-open bleibt es zu, bis jemand klickt
+  const b = laden()
+  b.autostart('https://chat.example/widget.js', {})
+  await warte()
+  assert.equal(win.document.querySelector('[data-journali-advisor]').shadowRoot.querySelector('.knopf').hidden, false)
+})
+
 test('der Knopf öffnet das Fenster mit Bezeichnung und Begrüssung des Beraters', async () => {
   const w = starte()
   await warte()

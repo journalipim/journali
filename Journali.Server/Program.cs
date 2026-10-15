@@ -458,6 +458,7 @@ api.MapGet("/health", (HttpRequest req, Catalog c) =>
     usage = Journali.Core.Licensing.Startphase.An && !Demo.An ? null : Nutzung(req, c),   // Demo: die Balken zeigen, was heute noch geht   // Startphase: nichts zu journali-Token
     startphase = Journali.Core.Licensing.Startphase.An ? true : (bool?)null,    // die Oberfläche blendet Lizenz, Limits und Token aus
     testversion = BetriebshinweisApi.Testversion ? true : (bool?)null,    // oben das rote Feld „Testversion“
+    berater = Demo.An && !string.IsNullOrWhiteSpace(Demo.BeraterUrl) ? Demo.BeraterUrl.TrimEnd('/') : null,   // Demo mit Chat-Dienst: „Produktberater starten“ (15.10.2026)
     demo = Demo.An ? true : (bool?)null,    // Demo: kein eigenes Konto (Anmeldung mit demo / demo)
     built = gebautAm,      // Stand der LAUFENDEN Version — einmal beim Start gelesen
     version = laufendeVersion,     // die Version, die läuft — steht oben in der Leiste

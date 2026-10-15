@@ -752,11 +752,20 @@ tr.gleich td { color: var(--leise); }
     return { wirt, schatten, frage: q => frage(q, true), oeffnen: () => knopf.click() }
   }
 
-  window.journaliAdvisor = { start, TEXTE }
+  /// Start über die Zeile zum Einbinden (15.10.2026): das Fenster merkt sich als journaliAdvisor.fenster — ein Knopf der Seite öffnet es damit wieder
+  /// („Produktberater starten“ in journali); data-open="1" öffnet es gleich, schwebend (eingebettet ist es ohnehin offen)
+  function autostart(src, ds = {}) {
+    const f = start({ base: src.replace(/\/widget\.js(\?.*)?$/, ''), locale: ds.locale, target: ds.target, color: ds.color })
+    window.journaliAdvisor.fenster = f
+    if (ds.open === '1' && !ds.target) f.oeffnen()
+    return f
+  }
+
+  window.journaliAdvisor = { start, autostart, TEXTE }
   const skript = document.currentScript
   if (skript && skript.src) {
     const ds = skript.dataset || {}
-    const go = () => start({ base: skript.src.replace(/\/widget\.js(\?.*)?$/, ''), locale: ds.locale, target: ds.target, color: ds.color })
+    const go = () => autostart(skript.src, ds)
     document.readyState === 'loading' ? document.addEventListener('DOMContentLoaded', go) : go()
   }
 })()

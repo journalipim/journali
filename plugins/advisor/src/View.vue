@@ -4,7 +4,7 @@
 // Vorschau stellt dieselbe Frage wie ein Besucher: an den Kern als Kindprozess von journali (POST /api/advisor/<schlüssel>/preview, mit dem Recht
 // Plugins statt des Tokens) — dieselbe Abwägung wie im Dienst, mit Gedächtnis je Gespräch (09.10.2026, pflegestruktur 44).
 import { ref, computed, onMounted } from 'vue'
-import { api, store, dialog, L, t } from 'journali'
+import { api, store, dialog, L, t, beraterStarten } from 'journali'
 
 const KEY = /^[a-z][a-z0-9_-]{1,39}$/
 const liste = ref([])          // [{ key, label, pub, errors }]
@@ -128,17 +128,10 @@ function neuesGespraech() {
 /// wo der Dienst erreichbar ist — gespeichert am Berater, sonst ein Platzhalter für den Code zum Einbinden
 const dienst = computed(() => (def.value?.url || '').replace(/\/+$/, '') || 'https://advisor.example.com')
 const einbinden = computed(() => `<script src="${dienst.value}/widget.js" async><` + `/script>`)
-/// Das echte Chat-Fenster auf dieser Seite (15.10.2026): lädt widget.js vom Dienst des Beraters — so, wie eine Website es einbindet. Einmal je Seite;
-/// danach steht das Fenster unten rechts. Der Dienst lässt es nur zu, wenn diese Adresse unter Websites steht.
-function chatOeffnen() {
-  const src = `${dienst.value}/widget.js`
-  if (!document.querySelector(`script[data-berater="${cur.value}"]`)) {
-    const s = document.createElement('script')
-    s.src = src; s.async = true; s.dataset.berater = cur.value; s.dataset.locale = grussSprachen.value[0]
-    document.body.append(s)
-  }
-  store.toast(t('✆ Das Chat-Fenster steht unten rechts.'), 'ok')
-}
+/// Das echte Chat-Fenster auf dieser Seite (15.10.2026): lädt widget.js vom Dienst des Beraters — so, wie eine Website es einbindet — und öffnet es;
+/// ein zweiter Klick öffnet dasselbe wieder (web/src/berater.js, wie „Produktberater starten“ oben). Der Dienst lässt es nur zu, wenn diese Adresse
+/// unter Websites steht.
+function chatOeffnen() { beraterStarten(dienst.value, grussSprachen.value[0]) }
 const compose = computed(() => [
   `  advisor-${cur.value}:`,
   '    image: node:22-alpine',

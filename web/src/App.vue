@@ -8,6 +8,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { plugins } from './plugins.js'
 import { frageNachRegistrierung } from './registrierung.js'
 import { frageNachBetriebshinweis, zeigeTesthinweis } from './betriebshinweis.js'
+import { beraterStarten } from './berater.js'
 import { TOPICS, entries, baseTopics, topicOfPath } from './topics.js'
 import { ai } from './ai.js'
 import { menu } from './menu.js'
@@ -148,6 +149,8 @@ function railDrop(target) {
       <span v-else class="dot" :class="{ offline: store.online === false }">●</span>
       <!-- Testversion (07.10.2026): alles, was derzeit herausgegeben wird; ein Klick zeigt den Hinweis -->
       <button v-if="store.testversion" class="testversion" :title="$t('Nur für Test und Evaluation, nicht für den Produktiveinsatz.')" @click="zeigeTesthinweis">{{ $t("Testversion") }}</button>
+      <!-- Demo mit Chat-Dienst (15.10.2026): das Chat-Fenster des Produktberaters, wie auf einer Website — die Adresse nennt /api/health -->
+      <button v-if="store.berater && !abgemeldet" class="berater-start" :title="$t('das Chat-Fenster des Produktberaters zu Tannwald Outdoor, wie auf einer Website')" @click="beraterStarten(store.berater, store.lang)">{{ $t("Produktberater starten") }}</button>
       <template v-if="!abgemeldet">
       <span class="mono">#{{ store.head }}</span>
       <span class="sep">·</span>

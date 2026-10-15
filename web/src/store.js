@@ -61,6 +61,7 @@ export const store = reactive({
   // Startphase (05.10.2026, Core.Licensing.Startphase): alles ohne Grenzen — die Oberfläche zeigt nichts zu Lizenz, Limits und journali-Token
   startphase: false,
   testversion: false,   // oben das rote Feld „Testversion“ (07.10.2026)
+  berater: null,        // Demo mit Chat-Dienst (15.10.2026): seine Adresse — oben der grüne Knopf „Produktberater starten“
   ablauf: [],          // was bald endet (Test, Lizenz, Schlüssel, Abo) — ablauf.js
   demo: false,          // Demo (07.10.2026): alle melden sich als demo an — kein eigenes Konto
   // Darf ich das? Ohne Benutzer alles; sonst nach den Rechten der Rolle (Vokabular: read, write, retire, release, model, plugins, jobs, storage, users)
@@ -170,6 +171,7 @@ export const store = reactive({
       const sperreVorher = this.serverSperre
       this.startphase = h.startphase === true
       this.testversion = h.testversion === true
+      this.berater = typeof h.berater === 'string' && h.berater ? h.berater : null
       this.demo = h.demo === true
       const s = h.server ?? h
       this.serverSperre = s.ohneLizenz ? 'lizenz' : s.gesperrt ? 'gesperrt' : null

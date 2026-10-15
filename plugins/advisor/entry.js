@@ -1,4 +1,4 @@
-(function(){const s=document.createElement('style');s.textContent="\n.seiten[data-v-d065a6d1] { display: flex; gap: 0; flex: 1; min-height: 0;\n}\n.liste[data-v-d065a6d1] { width: 260px; border-right: 1px solid var(--line); overflow-y: auto;\n}\n.rechts[data-v-d065a6d1] { flex: 1; overflow-y: auto; min-width: 0;\n}\n.kopf[data-v-d065a6d1] { display: flex; gap: 6px; align-items: center; padding: 6px 8px;\n}\n.kopf .bez[data-v-d065a6d1] { flex: 1;\n}\n.neu[data-v-d065a6d1] { display: flex; gap: 4px; padding: 6px 8px;\n}\n.neu input[data-v-d065a6d1] { flex: 1; min-width: 0;\n}\n.form[data-v-d065a6d1] { width: 100%;\n}\n.felder[data-v-d065a6d1] { border: 0; padding: 0; margin: 0; min-width: 0;\n}\n.form td[data-v-d065a6d1] { height: 30px; vertical-align: middle; white-space: normal; padding: 2px 4px;\n}\n.form td.attr[data-v-d065a6d1] { color: var(--muted); white-space: nowrap; padding-left: 8px;\n}\n.row[data-v-d065a6d1] { display: flex; gap: 8px; align-items: center; flex-wrap: wrap;\n}\n.zahl[data-v-d065a6d1] { width: 70px;\n}\n.code[data-v-d065a6d1] { margin: 2px 0 8px; padding: 6px 8px; background: var(--bg2, rgba(127,127,127,.08)); border-radius: 4px; white-space: pre-wrap; word-break: break-all; font-size: 12px;\n}\n.neues-token[data-v-d065a6d1] { user-select: all; word-break: break-all;\n}\n.fehler[data-v-d065a6d1] { margin: 4px 8px; padding-left: 16px;\n}\n.treffer[data-v-d065a6d1] { margin: 4px 0; padding-left: 20px;\n}\n";document.head.append(s)})();
+(function(){const s=document.createElement('style');s.textContent="\n.seiten[data-v-7d8dd5ab] { display: flex; gap: 0; flex: 1; min-height: 0;\n}\n.liste[data-v-7d8dd5ab] { width: 260px; border-right: 1px solid var(--line); overflow-y: auto;\n}\n.rechts[data-v-7d8dd5ab] { flex: 1; overflow-y: auto; min-width: 0;\n}\n.kopf[data-v-7d8dd5ab] { display: flex; gap: 6px; align-items: center; padding: 6px 8px;\n}\n.kopf .bez[data-v-7d8dd5ab] { flex: 1;\n}\n.neu[data-v-7d8dd5ab] { display: flex; gap: 4px; padding: 6px 8px;\n}\n.neu input[data-v-7d8dd5ab] { flex: 1; min-width: 0;\n}\n.form[data-v-7d8dd5ab] { width: 100%;\n}\n.felder[data-v-7d8dd5ab] { border: 0; padding: 0; margin: 0; min-width: 0;\n}\n.form td[data-v-7d8dd5ab] { height: 30px; vertical-align: middle; white-space: normal; padding: 2px 4px;\n}\n.form td.attr[data-v-7d8dd5ab] { color: var(--muted); white-space: nowrap; padding-left: 8px;\n}\n.row[data-v-7d8dd5ab] { display: flex; gap: 8px; align-items: center; flex-wrap: wrap;\n}\n.zahl[data-v-7d8dd5ab] { width: 70px;\n}\n.code[data-v-7d8dd5ab] { margin: 2px 0 8px; padding: 6px 8px; background: var(--bg2, rgba(127,127,127,.08)); border-radius: 4px; white-space: pre-wrap; word-break: break-all; font-size: 12px;\n}\n.neues-token[data-v-7d8dd5ab] { user-select: all; word-break: break-all;\n}\n.fehler[data-v-7d8dd5ab] { margin: 4px 8px; padding-left: 16px;\n}\n.treffer[data-v-7d8dd5ab] { margin: 4px 0; padding-left: 20px;\n}\n";document.head.append(s)})();
 const m = window.journali.vue;
 const Fragment = m.Fragment;
 const computed = m.computed;
@@ -24,6 +24,7 @@ const store = h.store;
 const dialog = h.dialog;
 const t = h.t;
 const L = h.L;
+const beraterStarten = h.beraterStarten;
 const _export_sfc = (sfc, props) => {
   const target = sfc.__vccOpts || sfc;
   for (const [key, val] of props) {
@@ -329,16 +330,7 @@ const _sfc_main = {
     const dienst = computed(() => (def.value?.url || "").replace(/\/+$/, "") || "https://advisor.example.com");
     const einbinden = computed(() => `<script src="${dienst.value}/widget.js" async><\/script>`);
     function chatOeffnen() {
-      const src = `${dienst.value}/widget.js`;
-      if (!document.querySelector(`script[data-berater="${cur.value}"]`)) {
-        const s = document.createElement("script");
-        s.src = src;
-        s.async = true;
-        s.dataset.berater = cur.value;
-        s.dataset.locale = grussSprachen.value[0];
-        document.body.append(s);
-      }
-      store.toast(t("✆ Das Chat-Fenster steht unten rechts."), "ok");
+      beraterStarten(dienst.value, grussSprachen.value[0]);
     }
     const compose = computed(() => [
       `  advisor-${cur.value}:`,
@@ -1252,7 +1244,7 @@ const _sfc_main = {
     };
   }
 };
-const View = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-d065a6d1"]]);
+const View = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-7d8dd5ab"]]);
 const entry = {
   views: [{ path: "advisor", topic: "export", order: 50, label: t("Produktberatung"), icon: "✆", hint: t("Fragen von Besuchern einer Website an die Produkte eines Publikationsbaums — als Chat-Fenster und für KI-Agenten"), component: View }]
 };

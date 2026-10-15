@@ -51,11 +51,13 @@ test('mit der Adresse des Dienstes: echter Code zum Einbinden, und „✆ Chat-F
     assert.ok(w.find('.einbinden').text().includes('https://chat.example/mcp'))
     const knopf = w.find('button.chat-oeffnen')
     assert.ok(knopf.exists(), 'mit Adresse: der Knopf')
+    delete window.journaliAdvisor
     await knopf.trigger('click'); await knopf.trigger('click'); await warte(w)
-    const skripte = [...document.querySelectorAll('script[data-berater="shop"]')]
+    const skripte = [...document.querySelectorAll('script[data-journali-advisor]')]
     assert.equal(skripte.length, 1, 'einmal je Seite')
     assert.equal(skripte[0].getAttribute('src'), 'https://chat.example/widget.js')
     assert.equal(skripte[0].dataset.locale, 'de')
+    assert.equal(skripte[0].dataset.open, '1', 'gleich offen (web/src/berater.js)')
     assert.equal(knopf.element.closest('[data-demo="aus"]'), null, 'auch in der Demo')
     skripte.forEach(s => s.remove())
   } finally { ende() }
