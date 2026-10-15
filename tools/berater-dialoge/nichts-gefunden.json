@@ -4,6 +4,12 @@
   "schritte": [
     { "eingabe": "auto",
       "erwartet": { "unbekannt": ["auto"], "treffer_max": 0, "woerter": [] },
-      "vorbild": "Autos führen wir nicht. Ich helfe bei Bekleidung und Ausrüstung für draussen." }
+      "vorbild": "Autos führen wir nicht. Ich helfe bei Bekleidung und Ausrüstung für draussen." },
+    { "eingabe": "vitamine",
+      "erwartet": { "unbekannt": ["vitamine"], "treffer_max": 0 },
+      "vorbild": "Vitamine führen wir nicht." },
+    { "eingabe": "erfüllung",
+      "erwartet": { "unbekannt": ["erfüllung"], "treffer_max": 0 },
+      "vorbild": "Dazu habe ich nichts im Sortiment." }
   ]
 }

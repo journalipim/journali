@@ -348,8 +348,9 @@ export function erstelleKern(o) {
         const k = korrektur(u, namen4)
         const liste = k ? [] : assoz.zu(u, loc)
         const probe = liste.length ? await waehle(z, loc, { art: [], ordnen: liste, angaben: [], probe: true, take: 1, gruppe: null }) : null
-        // in der Reihenfolge der Liste (die bedeutendsten zuerst) — nach Häufigkeit gewönnen allgemeine Wörter („atmungsaktiv“ für „tennis“)
-        const im = new Set((probe?.words ?? []).filter(x => x.n > 0).map(x => x.word))
+        // in der Reihenfolge der Liste (die bedeutendsten zuerst) — nach Häufigkeit gewönnen allgemeine Wörter („atmungsaktiv“ für „tennis“).
+        // Nur, was als ganzes Wort oder im Namen steht (ganz, 15.10.2026): „vitamine“ → „frisch“ fand 23 Jacken, die die Imprägnierung „auffrischen“
+        const im = new Set((probe?.words ?? []).filter(x => (x.ganz ?? x.n) > 0).map(x => x.word))
         const drin = liste.filter(x => im.has(x)).slice(0, MAX_ASSOZ)
         if (k) {
           corrected.push({ from: u, to: k })

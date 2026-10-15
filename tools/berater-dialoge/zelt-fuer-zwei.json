@@ -1,0 +1,9 @@
+{
+  "name": "Ein leichtes Zelt für zwei, ohne „Personen“",
+  "locale": "de",
+  "schritte": [
+    { "eingabe": "leichtes Zelt für zwei",
+      "erwartet": { "alle_treffer_enthalten": "Zelt", "angaben": [["persons", "2"], ["weight", "low"]], "woerter": ["zelt"] },
+      "vorbild": "Für zwei Personen, die leichtesten zuerst — das leichteste wiegt 1,4 kg." }
+  ]
+}

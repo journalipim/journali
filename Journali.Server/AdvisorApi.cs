@@ -472,9 +472,13 @@ public static partial class AdvisorApi
     public const int MaxVerlauf = 6;
     /// <summary>
     /// Treffer nur nach Sinn: der beste darf höchstens so weit weg sein (Kosinus-Abstand), und er muss sich um mindestens <see cref="SinnAbhebung"/>
-    /// von der Mitte aller Abstände abheben — sonst ist nichts näher als der Rest, und der Berater sagt, dass nichts passt. Geschätzt, nicht gemessen.
+    /// von der Mitte aller Abstände abheben — sonst ist nichts näher als der Rest, und der Berater sagt, dass nichts passt.
+    /// Gemessen am 15.10.2026 (multilingual-e5-small, 203 Produkte der Demo, bester Abstand je Eingabe): Wünsche ohne Wort aus dem Sortiment
+    /// 0,140 („schuhe für die berge“), 0,153 („regenjacke“), 0,168 („etwas gegen kalte füsse“), 0,172 („kaffee kochen unterwegs“); Wörter ohne
+    /// Bezug 0,186 („erfüllung“), 0,191 („liebe“), 0,193 („vitamine“), 0,202 („glück“), 0,204 („auto“), 0,211 („gitarre“). Die Abhebung von der
+    /// Mitte lag in beiden Gruppen bei 0,02 und trennt nicht. Vorher galt 0,25 (geschätzt), und „erfüllung“ zeigte acht Produkte.
     /// </summary>
-    public const double SinnObergrenze = 0.25;
+    public const double SinnObergrenze = 0.18;
     public const double SinnAbhebung = 0.02;
     public const int MaxLockern = 4;
     /// <summary>
@@ -626,9 +630,39 @@ public static partial class AdvisorApi
         return aus;
     }
 
-    /// <summary>Das erste Bild eines Produkts — seins, sonst das der ersten Variante, die eines hat.</summary>
-    private static string? ErstesBild(Catalog c, Tree tree, ModelCatalog model, Eintrag e, string role, bool admin) =>
-        Bilder(c, tree, model, e.Product, role, admin).FirstOrDefault() ?? e.Varianten.Select(v => Bilder(c, tree, model, v, role, admin).FirstOrDefault()).FirstOrDefault(b => b is not null);
+    /// <summary>
+    /// Das erste Bild eines Produkts — seins, sonst das der ersten Variante, die eines hat. Mit Angaben, die die Varianten trennen (15.10.2026), das
+    /// der ersten Variante, die sie erfüllt: „Farbe: Rot“ zeigt die rote Jacke, nicht die grüne, die zuerst angelegt wurde.
+    /// </summary>
+    private static string? ErstesBild(Catalog c, Tree tree, ModelCatalog model, Eintrag e, string role, bool admin,
+        IReadOnlyList<(AttributeDefinition Def, string Op, string Value)>? filter = null, string? locale = null, string? channel = null)
+    {
+        if (filter is { Count: > 0 } && locale is not null && channel is not null)
+        {
+            var passend = e.Varianten.Where(v => VariantePasst(tree, model, v, filter, locale, channel)).ToList();
+            if (passend.Count > 0 && passend.Count < e.Varianten.Count && passend.Select(v => Bilder(c, tree, model, v, role, admin).FirstOrDefault()).FirstOrDefault(b => b is not null) is { } bild)
+                return bild;
+        }
+        return Bilder(c, tree, model, e.Product, role, admin).FirstOrDefault() ?? e.Varianten.Select(v => Bilder(c, tree, model, v, role, admin).FirstOrDefault()).FirstOrDefault(b => b is not null);
+    }
+
+    /// <summary>Erfüllt eine Variante die Angaben? Ein Attribut ohne Wert an ihr zählt als erfüllt, „leicht“ und „hell“ auch (sie ordnen nur).</summary>
+    private static bool VariantePasst(Tree tree, ModelCatalog model, Node v, IReadOnlyList<(AttributeDefinition Def, string Op, string Value)> filter, string locale, string channel)
+    {
+        foreach (var (def, op, value) in filter)
+        {
+            if (op is "low" or "high" || WertAm(tree, model, v, def, locale, channel) is not { Length: > 0 } roh) continue;
+            var werte = def.Multiple || def.Type == AttributeTypes.Enum ? Teile(roh).ToList() : [roh];
+            var ok = op switch
+            {
+                "le" => Zahl(value) is { } g && werte.Any(w => Zahl(w) is { } z && z <= g),
+                "ge" => Zahl(value) is { } g && werte.Any(w => Zahl(w) is { } z && z >= g),
+                _ => werte.Contains(value, StringComparer.OrdinalIgnoreCase),
+            };
+            if (!ok) return false;
+        }
+        return true;
+    }
 
     // ---- Zählung je Tag (Betrieb, nicht Journal) ----
 
@@ -970,10 +1004,11 @@ public static partial class AdvisorApi
             Auth.AdvisorTokenWiderrufen(dataDir, key, id) > 0 ? Results.Ok(new { removed = true }) : Results.NotFound());
     }
 
-    /// <summary>Eine Karte für die Trefferliste: Name, Kennungen, Bild, die ersten Werte der Sicht.</summary>
-    private static object Karte(Catalog c, Tree tree, ModelCatalog model, Eintrag e, List<AttributeDefinition> attr, string loc, string channel, string role, bool admin, int werte) => new
+    /// <summary>Eine Karte für die Trefferliste: Name, Kennungen, Bild (das der Variante, die die Angaben erfüllt), die ersten Werte der Sicht.</summary>
+    private static object Karte(Catalog c, Tree tree, ModelCatalog model, Eintrag e, List<AttributeDefinition> attr, string loc, string channel, string role, bool admin, int werte,
+        IReadOnlyList<(AttributeDefinition Def, string Op, string Value)>? filter = null) => new
     {
-        id = e.Product.Id, name = e.Name, keys = tree.KeysOf(model, e.Product), image = ErstesBild(c, tree, model, e, role, admin), variants = e.Varianten.Count,
+        id = e.Product.Id, name = e.Name, keys = tree.KeysOf(model, e.Product), image = ErstesBild(c, tree, model, e, role, admin, filter, loc, channel), variants = e.Varianten.Count,
         values = attr.Where(a => a.Type != AttributeTypes.Html && a.Key != "name").Select(a => (a, Werte(tree, model, e, a, loc, channel))).Where(x => x.Item2.Count > 0).Take(werte)
             .Select(x => new { key = x.a.Key, label = Bez(x.a.Label, loc, model) ?? x.a.Key, value = AlsText(model, x.a, x.Item2, loc) }).ToList(),
         text = KartenText(tree, model, e, attr, loc, channel),

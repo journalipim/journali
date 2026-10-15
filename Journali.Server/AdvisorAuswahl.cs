@@ -221,8 +221,8 @@ public static partial class AdvisorApi
                 var fac = Facetten(tree, model, reihe, attr, gefiltert, loc, b.Channel);
                 // welche Attribute bei den Treffern Werte haben — der Kern übernimmt Vorlieben nur, wo es sie gibt
                 var vorhanden = attr.Where(a => IstFacette(a) && reihe.Take(200).Any(e => Werte(tree, model, e, a, loc, b.Channel).Count > 0)).Select(a => a.Key).ToList();
-                var karten = reihe.Skip(skip).Take(take).Select(e => Karte(c, tree, model, e, attr, loc, b.Channel, role, admin, 4)).ToList();
-                var woerter = art.Concat(ordnen).Select(w => new { word = w, n = b.Produkte.Count(e => Staerke(e, w) > 0), name = b.Produkte.Count(e => Staerke(e, w) >= 2) }).ToList();
+                var karten = reihe.Skip(skip).Take(take).Select(e => Karte(c, tree, model, e, attr, loc, b.Channel, role, admin, 4, filter)).ToList();
+                var woerter = art.Concat(ordnen).Select(w => new { word = w, n = b.Produkte.Count(e => Staerke(e, w) > 0), ganz = b.Produkte.Count(e => Staerke(e, w) >= 1), name = b.Produkte.Count(e => Staerke(e, w) >= 2) }).ToList();
                 object? fokus = blick is null ? null : new
                 {
                     id = blick.Product.Id, name = blick.Name,

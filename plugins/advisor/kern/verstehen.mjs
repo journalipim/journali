@@ -33,6 +33,9 @@ const NEIN = new Set(['nicht', 'ohne', 'kein', 'keine', 'not', 'no', 'without', 
 const ZAHL_TYPEN = new Set(['integer', 'decimal'])
 
 const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+// die Grundform eines Eigenschaftsworts (15.10.2026): „leichtes“ → „leicht“, „lightweight“ → „light“ — die Angabe heisst „Gewicht: leicht“
+// (nicht bei der Zeit: „lange warm“ ist ein Umstandswort, „lang“ wäre falsch)
+const grundform = (wort, liste) => liste.filter(x => wort.toLowerCase().startsWith(x)).sort((a, b) => a.length - b.length)[0] ?? wort.toLowerCase()
 // eine Zahl, auch negativ („-10“, „minus 10“)
 const ZAHL = '((?:-|−|minus\\s*)?\\d+(?:[.,]\\d+)?)'
 const zahlWert = s => s.replace(/^(?:−|minus\s*)/i, '-').replace(',', '.').replace(/\s+/g, '')
@@ -180,6 +183,17 @@ export function erkenne(vok, q, { vorhanden = null, gesetzt = null } = {}) {
     rest = weg(rest, m.index, m[0].length)
   }
 
+  // „Zelt für zwei“ ohne „Personen“ (15.10.2026): „für“ und eine Zahl bis zwölf, danach nichts, ein Satzzeichen oder „und, mit, in“ — gilt
+  // dem Zahlenattribut ohne Einheit, das Personen zählt. „für 2 Tage“ bleibt, wie es ist.
+  const personen = attr.filter(a => a.type === 'integer' && !a.unit && frei(a) && namen(a).some(n => /^(personen|persons|people|leute)$/i.test(n.trim())))
+  if (personen.length === 1) {
+    const m = /(?<![\p{L}\p{N}])(?:für|fuer|for)\s+(\d{1,2})(?=\s*(?:$|[,.;!?)]|(?:und|mit|in|and|with)(?![\p{L}])))/iu.exec(rest)
+    if (m && Number(m[1]) >= 1 && Number(m[1]) <= 12) {
+      aus.push({ attribute: personen[0].key, op: 'eq', value: m[1] })
+      rest = weg(rest, m.index, m[0].length)
+    }
+  }
+
   // unter null Grad: höchstens 0 am Attribut, dessen Einheit Temperatur misst
   const kalt = attr.filter(a => istZahl(a) && frei(a) && ((a.quantity ?? '').toLowerCase() === 'temperature' || /°c|°f|grad|degree/i.test([a.unit, ...(a.unitLabels ?? [])].join(' '))))
   const frost = FROST.find(w => ganz(rest, w) >= 0)
@@ -200,7 +214,7 @@ export function erkenne(vok, q, { vorhanden = null, gesetzt = null } = {}) {
     if (!def) continue
     for (const [liste, op] of [[wenig, 'low'], [viel, 'high']]) {
       const wort = [...liste].sort((a, b) => b.length - a.length).find(x => ganz(rest, x) >= 0)
-      if (wort) { aus.push({ attribute: def.key, op, value: wort.toLowerCase() }); rest = weg(rest, ganz(rest, wort), wort.length); break }
+      if (wort) { aus.push({ attribute: def.key, op, value: groesse === 'time' ? wort.toLowerCase() : grundform(wort, liste) }); rest = weg(rest, ganz(rest, wort), wort.length); break }
     }
   }
 

@@ -358,6 +358,30 @@ public class AdvisorTests
         Assert.Equal(HttpStatusCode.NotFound, (await w.Http.GetAsync(w.Url + $"/api/advisor/werkzeug/image/{geheim}")).StatusCode);
     }
 
+    [Fact]
+    public async Task Mit_einer_Angabe_zeigt_die_Karte_das_Bild_der_passenden_Variante()
+    {
+        // 15.10.2026: „Farbe: Rot“ zeigte die grüne Jacke — das Bild der ersten Variante, gleich, welche die Angabe erfüllt
+        await using var w = await Welt.Neu();
+        w.C.With((_, _, write) =>
+        {
+            var v = w.Ids["bohr-blau"] = Journali.Core.Entries.Ids.New(Roles.Variant);
+            write("t", v, Types.VariantCreated, new VariantCreated(w.Ids["bohr"], new()), null);
+            write("t", v, Types.AttributeSet, new AttributeSet("color", null, null, "blue"), null);
+            write("t", v, Types.AttributeSet, new AttributeSet(Model.SkuAttribute, null, null, "SKU-bohr-blau"), null);
+            write("t", v, Types.ReleaseGranted, new ReleaseGranted("web", null), null);
+            return 0;
+        });
+        var rot = w.Bild("bohr-v");
+        var blau = w.Bild("bohr-blau");
+        string? BildVon(JsonElement j) => j.GetProperty("hits").EnumerateArray().Single(h => h.GetProperty("name").GetString() == "Bohrhammer Pro").GetProperty("image").GetString();
+        Assert.Equal(rot, BildVon((await w.Auswahl(new { })).Json));
+        Assert.Equal(blau, BildVon((await w.Auswahl(new { angaben = new[] { new { attribute = "color", op = "eq", value = "blue" } } })).Json));
+        Assert.Equal(rot, BildVon((await w.Auswahl(new { angaben = new[] { new { attribute = "color", op = "eq", value = "red" } } })).Json));
+        // eine Angabe, die alle Varianten erfüllen, ändert nichts
+        Assert.Equal(rot, BildVon((await w.Auswahl(new { angaben = new[] { new { attribute = "leistung", op = "ge", value = "500" } } })).Json));
+    }
+
     // ---- Grenzen und Fehler
 
     [Fact]
@@ -923,6 +947,9 @@ public class AdvisorTests
         Assert.Equal(["a", "b"], AdvisorApi.SinnAuswahl([("a", 0.10), ("b", 0.11), ("c", 0.19), ("d", 0.20), ("e", 0.21)]));
         // der beste ist zu weit weg
         Assert.Empty(AdvisorApi.SinnAuswahl([("a", 0.30), ("b", 0.40), ("c", 0.41)]));
+        // gemessen in der Demo (15.10.2026): „erfüllung“ hebt sich so weit ab wie ein echter Wunsch, liegt aber weiter weg
+        Assert.Empty(AdvisorApi.SinnAuswahl([("a", 0.186), ("b", 0.19), ("c", 0.21), ("d", 0.21), ("e", 0.22)]));
+        Assert.Equal(["a", "b"], AdvisorApi.SinnAuswahl([("a", 0.140), ("b", 0.145), ("c", 0.164), ("d", 0.165), ("e", 0.17)]));
         Assert.Empty(AdvisorApi.SinnAuswahl([]));
     }
 

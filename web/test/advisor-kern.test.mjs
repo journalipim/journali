@@ -46,6 +46,8 @@ const PRODUKTE = {
 }
 const imNamen = (p, w) => p.name.toLowerCase().split(/\s+/).some(t => formen(w).some(f => t.startsWith(f)))
 const imText = (p, w) => imNamen(p, w) || (p.name + ' ' + p.text).toLowerCase().split(/\s+/).some(t => formen(w).some(f => t.startsWith(f)))
+// wie Staerke(e, w) >= 1 im Server: im Namen oder als ganzes Wort im Text, nicht nur als Wortanfang
+const ganzesWort = (p, w) => imNamen(p, w) || (p.name + ' ' + p.text).toLowerCase().split(/[^\p{L}\p{N}]+/u).some(t => formen(w).includes(t))
 const passt = (p, a) => a.op === 'le' ? Number(p.werte[a.attribute]) <= Number(a.value) : a.op === 'ge' ? Number(p.werte[a.attribute]) >= Number(a.value)
   : a.op === 'low' || a.op === 'high' ? p.werte[a.attribute] !== undefined : p.werte[a.attribute] === a.value
 const label = a => {
@@ -84,7 +86,7 @@ function journali({ ki = null, docs = [] } = {}) {
       status: 200, json: {
         locale: 'de', total: r.length, hits: r.slice(0, body.take ?? 6).map(p => ({ id: p.id, name: p.name, values: [] })), facets: [], similar: false, relax,
         present: [...new Set(r.flatMap(p => Object.keys(p.werte)))], filter: angaben.map(label),
-        words: [...(body.art ?? []), ...(body.ordnen ?? [])].map(w => ({ word: w, n: KATALOG.filter(p => imText(p, w)).length, name: KATALOG.filter(p => imNamen(p, w)).length })),
+        words: [...(body.art ?? []), ...(body.ordnen ?? [])].map(w => ({ word: w, n: KATALOG.filter(p => imText(p, w)).length, ganz: KATALOG.filter(p => ganzesWort(p, w)).length, name: KATALOG.filter(p => imNamen(p, w)).length })),
         group: VOK.groups.find(g => g.key === body.gruppe) ? { key: body.gruppe, label: VOK.groups.find(g => g.key === body.gruppe).label } : null,
         focus: fokus ? { id: fokus.id, name: fokus.name, values: /wasserdicht/.test(body.satz) ? [{ key: 'wasserdicht', label: 'Wasserdicht', value: fokus.text.includes('wasserdicht') ? 'ja' : 'nein' }] : [] } : null,
         warning: null,
@@ -169,6 +171,13 @@ test('Angaben aus Kundensätzen: Zahlwörter, Geld, Einheiten, Zeit, Ja/Nein mit
   const a = q => erkenne(v, q).angaben
   assert.deepEqual(a('Zelt für zwei Personen'), [{ attribute: 'persons', op: 'eq', value: '2' }])
   assert.deepEqual(a('tent for two people'), [{ attribute: 'persons', op: 'eq', value: '2' }])
+  // ohne „Personen“ (15.10.2026): „für zwei“ am Ende, vor einem Satzzeichen oder „mit“ — „für 2 Tage“ nicht
+  assert.deepEqual(a('leichtes Zelt für zwei'), [{ attribute: 'persons', op: 'eq', value: '2' }, { attribute: 'weight', op: 'low', value: 'leicht' }])
+  assert.deepEqual(a('ein Zelt für 3, grün'), [{ attribute: 'persons', op: 'eq', value: '3' }])
+  assert.deepEqual(a('tent for two with two vestibules'), [{ attribute: 'persons', op: 'eq', value: '2' }])
+  assert.deepEqual(a('Rucksack für 2 Tage'), [])
+  assert.deepEqual(a('Zelt für 20'), [], 'mehr als zwölf: keine Personenzahl')
+  assert.deepEqual(a('ein lightweight tent'), [{ attribute: 'weight', op: 'low', value: 'light' }], 'die Grundform')
   assert.deepEqual(a('Regenjacke unter 200 Euro'), [{ attribute: 'price', op: 'le', value: '200' }])
   assert.deepEqual(a('Jacke für 150 €'), [{ attribute: 'price', op: 'le', value: '150' }], 'ein Betrag ohne Vergleich ist eine Obergrenze')
   assert.deepEqual(a('ab 100 Euro'), [{ attribute: 'price', op: 'ge', value: '100' }])
@@ -197,8 +206,8 @@ test('Angaben aus Kundensätzen: Zahlwörter, Geld, Einheiten, Zeit, Ja/Nein mit
   assert.deepEqual(erkenne(importiert, 'unter 200 Euro').angaben, [{ attribute: 'price', op: 'le', value: '200' }])
   // „leicht“: zwei Attribute messen Masse — es gilt das, das die Produkte der genannten Art haben
   const masse = { attributes: [Z('max_load_kg', 'Empfohlene Zuladung', 'Recommended load', 'integer', 'kg', ['Kilogramm'], 'mass'), Z('weight', 'Gewicht', 'Weight', 'decimal', 'kg', ['Kilogramm'], 'mass')] }
-  assert.deepEqual(erkenne(masse, 'leichtes Zelt').angaben, [{ attribute: 'max_load_kg', op: 'low', value: 'leichtes' }], 'ohne Wissen über die Art: das erste')
-  assert.deepEqual(erkenne(masse, 'leichtes Zelt', { vorhanden: ['weight', 'persons'] }).angaben, [{ attribute: 'weight', op: 'low', value: 'leichtes' }])
+  assert.deepEqual(erkenne(masse, 'leichtes Zelt').angaben, [{ attribute: 'max_load_kg', op: 'low', value: 'leicht' }], 'ohne Wissen über die Art: das erste')
+  assert.deepEqual(erkenne(masse, 'leichtes Zelt', { vorhanden: ['weight', 'persons'] }).angaben, [{ attribute: 'weight', op: 'low', value: 'leicht' }])
 })
 
 test('ein Tippfehler, der nur über den Wortanfang trifft, wird als gelesen gemeldet; die Art einer neuen Eingabe bestimmt die Attribute', async () => {
@@ -219,7 +228,7 @@ test('„leicht“ ist wenig Masse am Zahlenattribut, dessen Einheit Masse misst
     LISTE('groesse', 'Grösse', [['m', 'M', 'M']]),
   ] }
   const { angaben, rest } = erkenne(v, 'ein leichtes Zelt, eher gross')
-  assert.deepEqual(angaben, [{ attribute: 'gewicht', op: 'low', value: 'leichtes' }, { attribute: 'volumen', op: 'high', value: 'gross' }])
+  assert.deepEqual(angaben, [{ attribute: 'gewicht', op: 'low', value: 'leicht' }, { attribute: 'volumen', op: 'high', value: 'gross' }])
   assert.deepEqual(woerter(rest), ['zelt', 'eher'])
   assert.deepEqual(erkenne({ attributes: [v.attributes[1]] }, 'leicht').angaben, [], 'ohne Attribut für Masse kein Filter')
   assert.deepEqual(erkenne(v, 'Jacke M').angaben, [], 'ein „M“ allein ist kein Filter')
@@ -587,6 +596,9 @@ test('ein Wort in keinem Produkt mit Assoziationen sucht über deren Wörter, di
   assert.deepEqual((await kern.antworte({ gespraech: G, schritt: { art: 'weg', kind: 'word', word: 'januar' } })).words, [])
   // „sommer“ → „luftig“, „leicht“: das Ravik Zelt
   assert.deepEqual((await kern.antworte({ gespraech: 'anders-0004', q: 'sommer' })).hits.map(h => h.id), ['z2'])
+  // ein Wort der Liste nur als Wortanfang („war“ in „warm“) zählt nicht (15.10.2026: „vitamine“ → „frisch“ fand „frischt die Imprägnierung auf“)
+  const vit = await erstelleKern({ journali: journali().fn, assoziationen: { de: { vitamine: ['war'] } } }).antworte({ gespraech: 'anders-0006', q: 'vitamine' })
+  assert.deepEqual([vit.unknown, vit.texte.hinweise.some(h => h.includes('suche ich nach'))], [['vitamine'], false])
   // ohne Assoziation bleibt es unbekannt, und das Grundwissen führt zurück
   assert.ok((await kern.antworte({ gespraech: 'anders-0005', q: 'bundeskanzler' })).sortiment)
 })
