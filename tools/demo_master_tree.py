@@ -131,7 +131,7 @@ SUBGROUPS = {
     ],
     "equipment": [
         ("Zelte", "Tents", ["color"], 10, "Zelt", "Tent", PALETTE_NATURE, (199, 599), (1.4, 3.8),
-         ("Silikonbeschichtetes Nylon, Aluminiumgestänge, 3000 mm Wassersäule", "Silicone-coated nylon, aluminium poles, 3000 mm hydrostatic head"), "tent"),
+         ("Silikonbeschichtetes Nylon, Aluminiumgestänge", "Silicone-coated nylon, aluminium poles"), "tent"),
         ("Schlafsäcke", "Sleeping bags", ["color", "size"], 10, "Schlafsack", "Sleeping bag", PALETTE_TECH, (89, 349), (0.7, 1.9),
          ("Daune 800 cuin, aus zertifizierter Herkunft", "800 fill-power down from certified sources"), "sleepingbag"),
         ("Isomatten", "Sleeping pads", ["color", "size"], 8, "Isomatte", "Sleeping pad", PALETTE_TECH, (49, 189), (0.35, 0.9),
@@ -321,8 +321,26 @@ def ensure_model(api: Api) -> None:
     attr("ean", "EAN", "EAN", "text")
     attr("price", "Preis (EUR)", "Price (EUR)", "decimal")
     attr("size", "Grösse", "Size", "enum", list="size")
-    attr("shoe_size", "Schuhgrösse", "Shoe size", "enum", list="shoe_size")
-    attr("capacity", "Füllmenge", "Capacity", "enum", list="capacity")
+    # Schuhgrösse und Füllmenge gelten nur an ihren Sortimenten (15.10.2026): Heimat ist die Technikgruppe des ersten Sortiments mit dieser
+    # Achse, die übrigen kommen als Mitgliedschaft dazu (n:m, pflegestruktur 36). In MasterGroup standen sie an jedem Knoten, auch an Lampen.
+    definiert = {g["key"] for g in as_list(model.get("groups")) if isinstance(g, dict) and g.get("defined")}
+    for key, de, en in (("shoe_size", "Schuhgrösse", "Shoe size"), ("capacity", "Füllmenge", "Capacity")):
+        eigene = list(dict.fromkeys(INHALT.K[sg[0]]["gruppe"] for subs in SUBGROUPS.values() for sg in subs if key in sg[2] and sg[0] in INHALT.K))
+        if not eigene:
+            attr(key, de, en, "enum", list=key)
+            continue
+        for g, gde, gen in eigene:
+            if g not in definiert:
+                api.put(f"/api/model/groups/{g}", {"key": g, "label": labels(gde, gen)})
+                definiert.add(g)
+        heimat, weitere = eigene[0][0], sorted(g for g, _, _ in eigene[1:])
+        if key not in attrs:
+            body = {"key": key, "label": labels(de, en), "type": "enum", "list": key, "group": heimat, **({"groups": weitere} if weitere else {})}
+            api.put(f"/api/model/attributes/{key}", body)
+            attrs[key] = body
+        elif attrs[key].get("group") == home:
+            # ein früherer Lauf legte es in MasterGroup: umziehen
+            api.call("PUT", f"/api/model/attributes/{key}", soft=True, json={**attrs[key], "group": heimat, "groups": weitere})
 
     # Farbe: die Liste des Attributs color; fehlt das Attribut, entsteht es mit einer Liste color. Die Demo nimmt nur Farben, die die
     # Liste kennt — fremde Listen bekommen keine Werte dazu. Kennt sie keine, kommen die Demo-Farben in die Liste.
@@ -406,7 +424,8 @@ def gruppen_anhaengen(api: Api, node: str, attributes: list[str], gruppe: tuple[
         print(f"  Attribute in der Gruppe {key}: {', '.join(mitglied)}")
 
 
-TANNWALD_ATTRS = ["name", "description", "material", "weight", "brand", "sku", "ean", "price", "size", "shoe_size", "capacity", "color"]
+# Schuhgrösse und Füllmenge nicht: sie gelten über die Technikgruppen ihrer Sortimente (ensure_model), nicht an der ganzen Marke
+TANNWALD_ATTRS = ["name", "description", "material", "weight", "brand", "sku", "ean", "price", "size", "color"]
 SERVER_ATTRS = ["name", "sku", "ean", "price"]
 
 

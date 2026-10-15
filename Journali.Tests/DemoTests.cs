@@ -397,7 +397,7 @@ public class DemoTests
     // die Hashes setzt tools/pdf_einfach.py aus denselben Bausteinen (10.10.2026): PdfEinfach.cs setzt Byte für Byte gleich
     [InlineData("Garantie und Service.pdf", "f3653bb11262cf637d3c4e3d4b8a0f3ae6dfa12d9f0d4adefac0208f4de969b6")]
     [InlineData("Datenblatt Fjell Jacke.pdf", "b5ba23d62c7e9cc4e1c71589a65e02a852097b217017e86b2d36d7ffca56c1d9")]
-    [InlineData("Datenblatt Fjell 5 Zelt.pdf", "8394f10232f4e86cdc86cb8c790e0be60e63e985f7654b7aa7bc651fe1e48eb3")]
+    [InlineData("Datenblatt Fjell 5 Zelt.pdf", "dfc694d8d6bf92aeb0c0a7179cd77541847064bbd92783e92ecaf2594e25895e")]
     public void Eine_Unterlage_ist_dasselbe_PDF_wie_aus_dem_Generator(string name, string sha)
     {
         using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllBytes(Demo.TannwaldDatei));
