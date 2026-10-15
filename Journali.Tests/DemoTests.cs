@@ -367,6 +367,16 @@ public class DemoTests
                 Assert.DoesNotContain(t.Nodes.Values, x => x.Role == Roles.Rubric && x.Label.GetValueOrDefault("de") == "Zelte" && Wurzel(t, x) == shop.Id);
                 return 0;
             });
+            // 15.10.2026: jede weitere Farbe hat ein eigenes Bild an ihren Varianten — „Farbe: Rot“ zeigt im Produktberater die rote Ausführung;
+            // Schuhgrösse und Füllmenge gelten an ihren Sortimenten, nicht über MasterGroup an jedem Knoten
+            c.Lesen((m, t) =>
+            {
+                var mitBild = t.Nodes.Values.Count(v => v.Role == Roles.Variant && c.Relations.From(v.Id).Any(r => r.Type == "image"));
+                Assert.True(mitBild >= 250, $"{mitBild} Varianten mit eigenem Bild");
+                Assert.Equal("tw_wanderschuhe", m.Attributes["shoe_size"].Group);
+                Assert.Equal("tw_flaschen", m.Attributes["capacity"].Group);
+                return 0;
+            });
             // 14.10.2026: der Produktberater der Demo auf dem Baum Product Advisor, ohne MCP; Adresse und Websites seines Chat-Dienstes (15.10.2026)
             // nur, wenn einer läuft — hier keiner
             var beraterDaten = c.Lesen((_, _) => c.Plugins.All[AdvisorApi.Plugin].Data.GetValueOrDefault(AdvisorApi.Prefix + Demo.BeraterKey));

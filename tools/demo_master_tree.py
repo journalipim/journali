@@ -804,12 +804,15 @@ def build(api: Api, out_dir: str | None, want: int, anreichern: bool = False, pd
                 base_price = round(rnd.uniform(*price_range)) - 0.05
                 combos = [(c, s) for c in colors for s in seconds][:6]
                 fuers_blatt = []
+                je_farbe: dict[str, list[str]] = {}   # Farbe → ihre Varianten (für die Bilder je Farbe)
                 for color, second in combos:
                     axis_values = {}
                     if color: axis_values["color"] = color
                     if second_axis and second: axis_values[second_axis] = second
                     variant = api.created("/api/variants", {"product": product, "axisValues": axis_values})
                     counts["variants"] += 1
+                    if color:
+                        je_farbe.setdefault(color, []).append(variant)
                     sku_no += 1
                     sku = f"TW-{prefix}-{sku_no}" + (f"-{color[:3].upper()}" if color else "") + (f"-{second.upper()}" if second else "")
                     api.set_value(variant, "sku", sku)
@@ -844,6 +847,20 @@ def build(api: Api, out_dir: str | None, want: int, anreichern: bool = False, pd
                 if rel:
                     api.soft_post(f"/api/relations/{rel['stream']}/attributes", {"attribute": "inherit", "value": "true"})
                     api.soft_post(f"/api/relations/{rel['stream']}/attributes", {"attribute": "position", "value": "1"})
+
+                # jede weitere Farbe bekommt ein eigenes Bild an ihren Varianten (15.10.2026): „Farbe: Rot“ zeigt im Produktberater die rote
+                # Ausführung — mit nur dem Bild der ersten Farbe gab es keine, und die Karte zeigte die grüne Jacke
+                for farbe in [c for c in colors[1:] if c and je_farbe.get(c)]:
+                    png = make_image(shape, farbe, name_de, f"TW-{prefix}-{sku_no}")
+                    bild = api.post("/api/media", files={"file": (f"{model.lower().replace(' ', '-')}-{shape}-{farbe}.png", png, "image/png")})
+                    counts["media"] += 1
+                    api.soft_post(f"/api/media/{bild['id']}/attributes", {"attribute": "alt_text", "locale": "de", "value": f"{name_de} in {farbe}"})
+                    api.soft_post(f"/api/media/{bild['id']}/attributes", {"attribute": "alt_text", "locale": "en", "value": f"{name_en} in {farbe}"})
+                    api.soft_post(f"/api/media/{bild['id']}/attributes", {"attribute": "copyright", "value": f"{BRAND} Demo — generiert"})
+                    for v in je_farbe[farbe]:
+                        rel = api.call("POST", "/api/relations", soft=True, json={"type": "image", "from": v, "to": bild["id"]})
+                        if rel:
+                            api.soft_post(f"/api/relations/{rel['stream']}/attributes", {"attribute": "position", "value": "1"})
 
                 if info and mit_dokumenten:
                     unterlagen += dokument(api, product, f"Datenblatt {name_de}.pdf",
