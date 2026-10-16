@@ -5,6 +5,12 @@
 //   node tools/blog.mjs check                     Anmeldung prüfen
 //   node tools/blog.mjs draft blog/<datei>.md     Beitrag als Entwurf anlegen; die Nummer des Beitrags steht danach in der Datei (wp: …)
 //   node tools/blog.mjs draft <datei> --replace   einen Entwurf neu schreiben — was in WordPress daran geändert wurde, ist dann weg
+//   node tools/blog.mjs update <datei>.md [--dry] [--from <rev>]
+//                                                 einen veröffentlichten oder geplanten Beitrag neu schreiben (Titel, Auszug, Inhalt) — nur,
+//                                                 wenn er in WordPress dem letzten Stand entspricht: dem Abgleich in blog/wp-beitraege.json,
+//                                                 sonst der Datei in git (<rev>, sonst HEAD); --dry zeigt nur, was sich ändert
+//   node tools/blog.mjs ld <datei>.md […] [--dry]  nur die strukturierten Daten (JSON-LD) eines Beitrags setzen — der übrige Inhalt bleibt, wie er in
+//                                                 WordPress ist (auch eingefügte Bilder); Titel, Auszug und Datum kommen aus WordPress
 //   node tools/blog.mjs page site/index.html      eine HTML-Seite als Entwurfsseite: der Inhalt von <main> in <div class="jx">, in einem Block
 //                                                 „Individuelles HTML“ — ohne eigenes CSS, das steht einmal im CSS-Plugin
 //   node tools/blog.mjs page <datei.html> --blocks [--section <id>] [--title <t>] [--slug <s>]
@@ -24,6 +30,7 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { execFileSync } from 'node:child_process'
 
 // ---------------------------------------------------------------- Kopf der Datei (front matter)
 
@@ -76,6 +83,10 @@ export function inline(s) {
 }
 
 const absatz = html => `<!-- wp:paragraph -->\n<p>${html}</p>\n<!-- /wp:paragraph -->`
+/// Der Hinweis unter einem Fachartikel steht in kleiner Schrift (README, 05.10.2026) — so, wie WordPress den Block schreibt
+export const KI_HINWEIS = '*Erstellt mit Unterstützung von KI.*'
+const KLEIN = '<!-- wp:paragraph {"fontSize":"small"} -->\n<p class="has-small-font-size">'
+const klein = html => `${KLEIN}${html}</p>\n<!-- /wp:paragraph -->`
 
 function ueberschrift(level, html) {
   const a = level === 2 ? '' : ` {"level":${level}}`
@@ -142,10 +153,130 @@ export function bloecke(md) {
       const teile = []
       while (i < zeilen.length && !leer(zeilen[i]) && !/^(#{1,6}\s|```|>|\s*[-*+]\s|\s*\d+[.)]\s|!\[)/.test(zeilen[i])) teile.push(zeilen[i++].trim())
       if (teile.length === 0) teile.push(zeilen[i++].trim())
-      out.push(absatz(inline(teile.join(' '))))
+      const roh = teile.join(' ')
+      out.push(roh === KI_HINWEIS ? klein(inline(roh)) : absatz(inline(roh)))
     }
   }
   return out.join('\n\n')
+}
+
+// ---------------------------------------------------------------- strukturierte Daten (16.10.2026)
+
+/// Markdown als Klartext: Verweise werden ihr Text, Auszeichnung fällt weg
+export const klartext = md => md.replace(/\[([^\]]+)\]\([^)\s]+\)/g, '$1').replace(/\*\*([^*]+)\*\*/g, '$1').replace(/(^|[^\w*])\*([^*\s][^*]*)\*/g, '$1$2')
+  .replace(/`([^`]+)`/g, '$1').replace(/\s+/g, ' ').trim()
+
+/// Die Zeilen eines Abschnitts: ab der Überschrift 2 mit diesem Text bis vor die nächste Überschrift 1 oder 2
+function abschnittMd(md, titel) {
+  const zeilen = md.replace(/\r\n/g, '\n').split('\n')
+  const start = zeilen.findIndex(z => new RegExp(`^#{1,2}\\s+${titel}\\s*$`, 'i').test(z))
+  if (start < 0) return []
+  const rest = zeilen.slice(start + 1)
+  const ende = rest.findIndex(z => /^#{1,2}\s/.test(z))
+  return ende < 0 ? rest : rest.slice(0, ende)
+}
+
+/// Die häufigen Fragen eines Beitrags: im Abschnitt „## Häufige Fragen“ je „### Frage“ der Absatz darunter als Antwort
+export function haeufigeFragen(md) {
+  const aus = []
+  const zeilen = abschnittMd(md, 'Häufige Fragen')
+  for (let i = 0; i < zeilen.length; i++) {
+    const m = zeilen[i].match(/^###\s+(.*)$/)
+    if (!m) continue
+    let j = i + 1
+    while (j < zeilen.length && !zeilen[j].trim()) j++
+    const absatzZeilen = []
+    while (j < zeilen.length && zeilen[j].trim() && !/^#{1,6}\s/.test(zeilen[j])) absatzZeilen.push(zeilen[j++])
+    if (absatzZeilen.length) aus.push({ frage: klartext(m[1]), antwort: klartext(absatzZeilen.join(' ')) })
+  }
+  return aus
+}
+
+/// Die Adressen im Abschnitt „## Quellen“
+export const quellen = md => [...new Set(abschnittMd(md, 'Quellen').join('\n').match(/https?:\/\/[^\s)\]]+/g) ?? [])]
+
+/// Ein Fachartikel (Kategorie Wissen) bekommt strukturierte Daten
+export const istWissen = kopf => [].concat(kopf.categories ?? []).includes('Wissen')
+
+/// Die strukturierten Daten eines Fachartikels als Block (JSON-LD): Article mit Titel, Beschreibung, Sprache, Daten, Herausgeber, Schlagwörtern
+/// und Quellen; dazu FAQPage aus „Häufige Fragen“ — Suchmaschinen und KI lesen Frage und Antwort daraus, ohne die Seite deuten zu müssen
+export function strukturierteDaten(kopf, rumpf, { url = null, veroeffentlicht = null, geaendert = null, site = 'https://journali.de' } = {}) {
+  const rubrik = [].concat(kopf.categories ?? [])[0] ?? null
+  const org = { '@type': 'Organization', name: 'journali', url: site.replace(/\/+$/, '') + '/' }
+  const schlag = [].concat(kopf.tags ?? []), q = quellen(rumpf), fragen = haeufigeFragen(rumpf)
+  const artikel = {
+    '@type': istWissen(kopf) ? 'Article' : 'BlogPosting', headline: kopf.title, ...(kopf.excerpt ? { description: kopf.excerpt } : {}), inLanguage: 'de-DE',
+    ...(veroeffentlicht ? { datePublished: veroeffentlicht } : {}), ...(geaendert ? { dateModified: geaendert } : {}),
+    author: org, publisher: org, ...(url ? { url, mainEntityOfPage: url } : {}),
+    ...(schlag.length ? { keywords: schlag.join(', ') } : {}), ...(rubrik ? { articleSection: rubrik } : {}), ...(q.length ? { citation: q } : {}),
+  }
+  const graph = [artikel]
+  if (fragen.length) graph.push({ '@type': 'FAQPage', ...(url ? { url } : {}), mainEntity: fragen.map(f => ({ '@type': 'Question', name: f.frage, acceptedAnswer: { '@type': 'Answer', text: f.antwort } })) })
+  const json = JSON.stringify({ '@context': 'https://schema.org', '@graph': graph }).replace(/</g, '\\u003c')   // kein </script> im Text
+  return `<!-- wp:html -->\n<script type="application/ld+json">${json}</script>\n<!-- /wp:html -->`
+}
+
+/// Die Adresse eines Beitrags aus Datum und Slug (Permalinks /JJJJ/MM/TT/slug/)
+const adresse = (site, datum, slug) => datum && slug ? `${site.replace(/\/+$/, '')}/${datum.slice(0, 4)}/${datum.slice(5, 7)}/${datum.slice(8, 10)}/${slug}/` : null
+
+/// Der Inhalt eines Beitrags: Blöcke, bei einem Fachartikel dazu die strukturierten Daten
+export function beitragsInhalt(kopf, rumpf, daten = {}) {
+  const html = bloecke(rumpf)
+  return istWissen(kopf) ? `${html}\n\n${strukturierteDaten(kopf, rumpf, daten)}` : html
+}
+
+/// Die strukturierten Daten am Ende eines Inhalts — der Block, den das Werkzeug anhängt
+const DATEN_AM_ENDE = /\s*<!-- wp:html -->\n<script type="application\/ld\+json">[\s\S]*?<\/script>\n<!-- \/wp:html -->\s*$/
+
+/// Vergleichbar machen: ohne die strukturierten Daten am Ende, kleine Schrift wie ein Absatz — beides setzt das Werkzeug selbst
+const vergleichbar = s => s.replace(/\r\n/g, '\n').replace(DATEN_AM_ENDE, '')
+  .split(KLEIN).join('<!-- wp:paragraph -->\n<p>').trimEnd()
+
+
+/**
+ * Nur die strukturierten Daten eines Beitrags setzen (16.10.2026): der Block am Ende wird angehängt oder ersetzt, alles andere bleibt Byte für
+ * Byte, wie es in WordPress steht — auch dort eingefügte Bilder. Titel, Auszug, Datum und Adresse nimmt es aus WordPress, Schlagwörter,
+ * Rubrik, häufige Fragen und Quellen aus der Datei.
+ */
+export async function datenSetzen(api, z, text, { probe = false, jetzt = new Date() } = {}) {
+  const { kopf, rumpf } = kopfLesen(text)
+  if (!kopf.wp) throw new Error('wp missing in the front matter — the post does not exist yet')
+  const da = await api('GET', `posts/${kopf.wp}?context=edit`)
+  const crlf = da.content.raw.includes('\r\n')
+  const ohne = da.content.raw.replace(/\r\n/g, '\n').replace(DATEN_AM_ENDE, '')
+  const url = da.status === 'publish' && da.link && !/\?p=\d+/.test(da.link) ? da.link : adresse(z.url, da.date, da.slug || da.generated_slug)
+  const block = strukturierteDaten({ ...kopf, title: da.title.raw || kopf.title, excerpt: da.excerpt.raw || kopf.excerpt }, rumpf,
+    { url, veroeffentlicht: da.status === 'draft' ? null : (da.date_gmt ? da.date_gmt + 'Z' : da.date), geaendert: jetzt.toISOString().slice(0, 19) + 'Z', site: z.url })
+  let inhalt = `${ohne.trimEnd()}\n\n${block}`
+  if (crlf) inhalt = inhalt.replace(/\n/g, '\r\n')
+  const r = { id: +kopf.wp, status: da.status, url, vorher: DATEN_AM_ENDE.test(da.content.raw.replace(/\r\n/g, '\n')), fragen: haeufigeFragen(rumpf).length }
+  if (probe) return { ...r, probe: true }
+  await api('POST', `posts/${kopf.wp}`, { content: inhalt })
+  return r
+}
+
+/**
+ * Einen veröffentlichten oder geplanten Beitrag neu schreiben: Titel, Auszug, Inhalt — Status, Datum, Slug und Schlagwörter bleiben.
+ * Nur, wenn er in WordPress dem letzten Stand entspricht: dem Hash aus dem Abgleich (stand), sonst dem Inhalt aus `vorher` (die Datei in git).
+ * Liefert, was sich ändert, und den neuen Abgleich; mit probe schreibt es nichts.
+ */
+export async function aktualisieren(api, z, text, { vorher = null, stand = null, probe = false, jetzt = new Date() } = {}) {
+  const { kopf, rumpf } = kopfLesen(text)
+  if (!kopf.wp) throw new Error('wp missing in the front matter — the post does not exist yet, use draft')
+  const da = await api('GET', `posts/${kopf.wp}?context=edit`)
+  if (da.status === 'draft') throw new Error(`post ${kopf.wp} is a draft — use draft --replace`)
+  const live = vergleichbar(da.content.raw)
+  const gleich = stand ? hash(live) === stand : vorher !== null && live === vergleichbar(bloecke(kopfLesen(vorher).rumpf))
+  if (!gleich) throw new Error(`post ${kopf.wp} was changed in WordPress since the last version — not overwritten`)
+  const url = da.status === 'publish' && da.link && !/\?p=\d+/.test(da.link) ? da.link : adresse(z.url, da.date, da.slug || da.generated_slug)
+  const inhalt = beitragsInhalt(kopf, rumpf, { url, veroeffentlicht: da.date_gmt ? da.date_gmt + 'Z' : da.date, geaendert: jetzt.toISOString().slice(0, 19) + 'Z', site: z.url })
+  const aenderung = {
+    id: +kopf.wp, status: da.status, url, titel: da.title.raw === kopf.title ? null : [da.title.raw, kopf.title],
+    auszug: (da.excerpt.raw ?? '') !== (kopf.excerpt ?? ''), fragen: haeufigeFragen(rumpf).length, zeichen: [da.content.raw.length, inhalt.length],
+  }
+  if (probe) return { ...aenderung, probe: true }
+  const p = await api('POST', `posts/${kopf.wp}`, { title: kopf.title, content: inhalt, ...(kopf.excerpt ? { excerpt: kopf.excerpt } : {}) })
+  return { ...aenderung, status: p.status, stand: hash(vergleichbar(p.content?.raw ?? inhalt)) }
 }
 
 // ---------------------------------------------------------------- Seiten und ihr CSS
@@ -292,7 +423,7 @@ export async function entwurf(api, z, text, { ersetzen = false } = {}) {
   const { kopf, rumpf } = kopfLesen(text)
   if (!kopf.title) throw new Error('title missing in the front matter')
   const beitrag = {
-    title: kopf.title, content: bloecke(rumpf), status: 'draft',
+    title: kopf.title, content: beitragsInhalt(kopf, rumpf, { veroeffentlicht: kopf.date ? wpDatum(kopf.date) : null, url: adresse(z.url, kopf.date ? wpDatum(kopf.date) : null, kopf.slug), site: z.url }), status: 'draft',
     ...(kopf.excerpt ? { excerpt: kopf.excerpt } : {}), ...(kopf.slug ? { slug: kopf.slug } : {}), ...(kopf.date ? { date: wpDatum(kopf.date) } : {}),
     tags: await begriffe(api, 'tags', kopf.tags), categories: await begriffe(api, 'categories', kopf.categories),
   }
@@ -327,8 +458,8 @@ async function main(argv) {
     console.log(`written: ${ziel} — its content goes into the CSS plugin once`)
     return
   }
-  if (!['check', 'draft', 'page', 'drafts', 'tags'].includes(befehl) || (['draft', 'page', 'tags'].includes(befehl) && !datei)) {
-    console.log('usage: node tools/blog.mjs check | draft <file.md> [--replace] | tags <file.md> | page <file.html> [--blocks] [--section <id>] [--title <t>] [--slug <s>] [--id <n>] | css <file.html> | drafts')
+  if (!['check', 'draft', 'page', 'drafts', 'tags', 'update', 'ld'].includes(befehl) || (['draft', 'page', 'tags', 'update', 'ld'].includes(befehl) && !datei)) {
+    console.log('usage: node tools/blog.mjs check | draft <file.md> [--replace] | update <file.md> [--dry] [--from <rev>] | ld <file.md> [...] [--dry] | tags <file.md> | page <file.html> [--blocks] [--section <id>] [--title <t>] [--slug <s>] [--id <n>] | css <file.html> | drafts')
     process.exitCode = 2
     return
   }
@@ -339,6 +470,24 @@ async function main(argv) {
   } else if (befehl === 'tags') {
     const r = await schlagwoerter(api, fs.readFileSync(datei, 'utf8'))
     console.log(`tags ${r.id}: ${r.tags.length}`)
+  } else if (befehl === 'ld') {
+    for (const d of [datei, ...rest.filter(x => !x.startsWith('--'))]) {
+      const r = await datenSetzen(api, z, fs.readFileSync(d, 'utf8'), { probe: rest.includes('--dry') })
+      console.log(`${r.probe ? 'would set' : 'set'} structured data ${r.vorher ? '(replaced)' : '(new)'} post ${r.id} (${r.status}), ${r.fragen} questions: ${r.url ?? ''}`)
+    }
+  } else if (befehl === 'update') {
+    const text = fs.readFileSync(datei, 'utf8')
+    const standDatei = path.join(path.dirname(datei), 'wp-beitraege.json')
+    let staende = {}; try { staende = JSON.parse(fs.readFileSync(standDatei, 'utf8')) } catch { }
+    const { kopf } = kopfLesen(text)
+    const ri = rest.indexOf('--from'), rev = ri >= 0 ? rest[ri + 1] : 'HEAD'
+    let vorher = null
+    if (!staende[kopf.wp]) try { vorher = execFileSync('git', ['show', `${rev}:./${datei.replace(/\\/g, '/')}`], { encoding: 'utf8' }) } catch { }
+    const r = await aktualisieren(api, z, text, { vorher, stand: staende[kopf.wp]?.hash ?? null, probe: rest.includes('--dry') })
+    console.log(`${r.probe ? 'would update' : 'updated'} post ${r.id} (${r.status}) ${r.url ?? ''}`)
+    if (r.titel) console.log(`  title: ${r.titel[0]} -> ${r.titel[1]}`)
+    console.log(`  excerpt ${r.auszug ? 'changed' : 'unchanged'}, ${r.fragen} questions, content ${r.zeichen[0]} -> ${r.zeichen[1]} chars`)
+    if (!r.probe) { staende[kopf.wp] = { datei: path.basename(datei), hash: r.stand }; fs.writeFileSync(standDatei, JSON.stringify(staende, null, 2) + '\n') }
   } else if (befehl === 'draft') {
     const text = fs.readFileSync(datei, 'utf8')
     const r = await entwurf(api, z, text, { ersetzen: rest.includes('--replace') })

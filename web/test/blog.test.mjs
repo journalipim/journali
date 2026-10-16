@@ -2,7 +2,8 @@
 // nachgebauten WordPress-Server, nicht gegen die Seite.
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { kopfLesen, kopfSetzen, inline, bloecke, seitenBlock, cssUnter, abschnitt, htmlBloecke, wp, entwurf, zugang, seite, hash, schlagwoerter, wpDatum } from '../../tools/blog.mjs'
+import { kopfLesen, kopfSetzen, inline, bloecke, seitenBlock, cssUnter, abschnitt, htmlBloecke, wp, entwurf, zugang, seite, hash, schlagwoerter, wpDatum,
+  haeufigeFragen, quellen, strukturierteDaten, klartext, aktualisieren, datenSetzen, KI_HINWEIS } from '../../tools/blog.mjs'
 
 test('Kopf lesen und setzen — der Rest der Datei bleibt', () => {
   const t = '---\r\ntitle: Multi-Server\r\ntags: [Betrieb, Lizenz]\r\n---\r\nText\r\n'
@@ -63,7 +64,7 @@ test('Zugang aus der Umgebung oder der Datei — ohne beides eine Meldung, die s
 
 /// Ein nachgebauter WordPress-Server: Beiträge, Schlagwörter, Kategorien
 function wordpress() {
-  const posts = new Map(), tags = [], rufe = []
+  const posts = new Map(), tags = [], kategorien = [], rufe = []
   let n = 100
   const f = async (url, o) => {
     const pfad = url.replace(/^https:\/\/blog\.test\/wp-json\/wp\/v2\//, '')
@@ -73,6 +74,8 @@ function wordpress() {
     let m
     // wie WordPress: Namen maskiert gespeichert, gesucht wird im maskierten Namen, ein doppelter Name wird abgewiesen
     if (o.method === 'GET' && pfad.startsWith('tags?')) { const q = decodeURIComponent(pfad.match(/search=([^&]*)/)?.[1] ?? '').toLowerCase(); return ok(tags.filter(t => t.name.toLowerCase().includes(q))) }
+    if (o.method === 'GET' && pfad.startsWith('categories?')) { const q = decodeURIComponent(pfad.match(/search=([^&]*)/)?.[1] ?? '').toLowerCase(); return ok(kategorien.filter(t => t.name.toLowerCase().includes(q))) }
+    if (o.method === 'POST' && pfad === 'categories') { const t = { id: ++n, name: body.name }; kategorien.push(t); return ok(t) }
     if (o.method === 'POST' && pfad === 'tags') {
       const name = body.name.replace(/&/g, '&amp;')
       if (tags.some(t => t.name === name)) return { ok: false, status: 400, text: async () => JSON.stringify({ message: 'term_exists' }) }
@@ -178,4 +181,135 @@ test('Schlagwörter setzen ändert nur Schlagwörter — auch an einem veröffen
   await schlagwoerter(api, r.text.replace('tags: [Alt]', 'tags: [Import & Export]'))
   await schlagwoerter(api, r.text.replace('tags: [Alt]', 'tags: [Import & Export]'))
   assert.equal(w.tags.filter(t => t.name === 'Import &amp; Export').length, 1)
+})
+
+// ---- Fachartikel für Suchmaschinen und KI (16.10.2026): strukturierte Daten, häufige Fragen, ein veröffentlichter Beitrag neu geschrieben
+
+const FACH = `---
+title: Digitaler Produktpass (DPP): Rechtsgrundlage, Pflichten und Daten
+excerpt: Was der Digitale Produktpass enthält und ab wann er Pflicht ist.
+slug: digitaler-produktpass-erklaert
+tags: [Compliance, Digitaler Produktpass]
+categories: [Wissen]
+wp: 101
+---
+Der **Digitale Produktpass (DPP)** ist ein Datensatz.
+
+## Häufige Fragen
+
+### Ab wann ist der Batteriepass Pflicht?
+
+Der Batteriepass ist ab dem **18. Februar 2027** Pflicht, nach [Art. 77](https://eur-lex.europa.eu/x).
+
+### Was hat ein PIM-System damit zu tun?
+
+Ein PIM-System hält die Daten
+über die Lebensdauer.
+
+*${'Erstellt mit Unterstützung von KI.'}*
+
+## Quellen
+
+- Verordnung (EU) 2024/1781: [https://eur-lex.europa.eu/eli/reg/2024/1781/oj](https://eur-lex.europa.eu/eli/reg/2024/1781/oj)
+- Batterieverordnung: [https://eur-lex.europa.eu/b](https://eur-lex.europa.eu/b)
+`
+
+test('der KI-Hinweis steht in kleiner Schrift — so, wie WordPress den Block schreibt', () => {
+  assert.equal(bloecke(KI_HINWEIS), '<!-- wp:paragraph {"fontSize":"small"} -->\n<p class="has-small-font-size"><em>Erstellt mit Unterstützung von KI.</em></p>\n<!-- /wp:paragraph -->')
+  assert.match(bloecke('Ein Satz *Erstellt mit Unterstützung von KI.*'), /^<!-- wp:paragraph -->/, 'nur der Satz allein')
+})
+
+test('häufige Fragen: je Überschrift 3 der Absatz darunter, als Klartext; Quellen aus dem Abschnitt Quellen', () => {
+  const { rumpf } = kopfLesen(FACH)
+  assert.deepEqual(haeufigeFragen(rumpf), [
+    { frage: 'Ab wann ist der Batteriepass Pflicht?', antwort: 'Der Batteriepass ist ab dem 18. Februar 2027 Pflicht, nach Art. 77.' },
+    { frage: 'Was hat ein PIM-System damit zu tun?', antwort: 'Ein PIM-System hält die Daten über die Lebensdauer.' },
+  ])
+  assert.deepEqual(haeufigeFragen('## Anderes\n\n### Frage?\n\nText.'), [], 'nur im Abschnitt Häufige Fragen')
+  assert.deepEqual(quellen(rumpf), ['https://eur-lex.europa.eu/eli/reg/2024/1781/oj', 'https://eur-lex.europa.eu/b'])
+  assert.equal(klartext('**fett** und *kursiv*, [Text](https://x.de) und `code`'), 'fett und kursiv, Text und code')
+})
+
+test('strukturierte Daten eines Fachartikels: Article mit Quellen, FAQPage aus den häufigen Fragen — kein </script> im Text', () => {
+  const { kopf, rumpf } = kopfLesen(FACH)
+  const block = strukturierteDaten({ ...kopf, excerpt: 'a </script> b' }, rumpf, { url: 'https://x.de/a/', veroeffentlicht: '2026-09-06T07:00:00Z', geaendert: '2026-10-16T10:00:00Z', site: 'https://x.de' })
+  assert.match(block, /^<!-- wp:html -->\n<script type="application\/ld\+json">/)
+  assert.doesNotMatch(block.slice(0, -40), /<\/script>[\s\S]*<\/script>/, 'nur ein Ende des Skripts')
+  const daten = JSON.parse(block.match(/<script type="application\/ld\+json">([\s\S]*)<\/script>/)[1])
+  const [artikel, faq] = daten['@graph']
+  assert.equal(daten['@context'], 'https://schema.org')
+  assert.equal(artikel['@type'], 'Article'); assert.equal(artikel.headline, kopf.title); assert.equal(artikel.description, 'a </script> b')
+  assert.deepEqual([artikel.inLanguage, artikel.datePublished, artikel.dateModified, artikel.url, artikel.mainEntityOfPage], ['de-DE', '2026-09-06T07:00:00Z', '2026-10-16T10:00:00Z', 'https://x.de/a/', 'https://x.de/a/'])
+  assert.deepEqual(artikel.publisher, { '@type': 'Organization', name: 'journali', url: 'https://x.de/' })
+  assert.equal(artikel.keywords, 'Compliance, Digitaler Produktpass')
+  assert.deepEqual(artikel.citation, ['https://eur-lex.europa.eu/eli/reg/2024/1781/oj', 'https://eur-lex.europa.eu/b'])
+  assert.equal(faq['@type'], 'FAQPage')
+  assert.deepEqual(faq.mainEntity[0], { '@type': 'Question', name: 'Ab wann ist der Batteriepass Pflicht?', acceptedAnswer: { '@type': 'Answer', text: 'Der Batteriepass ist ab dem 18. Februar 2027 Pflicht, nach Art. 77.' } })
+  // ohne häufige Fragen nur der Artikel
+  assert.equal(JSON.parse(strukturierteDaten(kopf, 'Text.').match(/>(\{.*\})</)[1])['@graph'].length, 1)
+})
+
+test('ein Fachartikel als Entwurf bekommt die strukturierten Daten, ein anderer Beitrag nicht', async () => {
+  const w = wordpress(); const z = { url: 'https://blog.test', user: 'u', password: 'p' }
+  const api = wp(z, w.f)
+  const r = await entwurf(api, z, FACH.replace('wp: 101\n', 'date: 2026-11-03\n'))
+  const inhalt = w.posts.get(r.id).content
+  assert.match(inhalt, /"@type":"FAQPage"/)
+  assert.match(inhalt, /"url":"https:\/\/blog\.test\/2026\/11\/03\/digitaler-produktpass-erklaert\/"/, 'die Adresse aus Datum und Slug')
+  const r2 = await entwurf(api, z, '---\ntitle: Werbung\ncategories: [Neuigkeiten]\n---\nText.\n')
+  assert.doesNotMatch(w.posts.get(r2.id).content, /ld\+json/)
+})
+
+test('einen veröffentlichten Beitrag neu schreiben — nur, wenn er in WordPress dem letzten Stand entspricht', async () => {
+  const w = wordpress(); const z = { url: 'https://blog.test', user: 'u', password: 'p' }
+  const api = wp(z, w.f)
+  const alt = FACH.replace('title: Digitaler Produktpass (DPP): Rechtsgrundlage, Pflichten und Daten', 'title: Der Digitale Produktpass').replace(/## Häufige Fragen[\s\S]*?(?=\*Erstellt)/, '')
+  // in WordPress: der alte Stand, den KI-Hinweis von Hand in kleiner Schrift — wie auf journali.de
+  const { rumpf: altRumpf } = kopfLesen(alt)
+  w.posts.set(101, { id: 101, status: 'publish', link: 'https://blog.test/2026/09/06/digitaler-produktpass-erklaert/', date: '2026-09-06T09:00:00', date_gmt: '2026-09-06T07:00:00',
+    slug: 'digitaler-produktpass-erklaert', title: { raw: 'Der Digitale Produktpass' }, excerpt: { raw: '' }, content: { raw: bloecke(altRumpf).replace(/\n/g, '\r\n') } })
+  const probe = await aktualisieren(api, z, FACH, { vorher: alt, probe: true, jetzt: new Date('2026-10-16T10:00:00Z') })
+  assert.equal(probe.probe, true); assert.deepEqual(probe.titel, ['Der Digitale Produktpass', 'Digitaler Produktpass (DPP): Rechtsgrundlage, Pflichten und Daten'])
+  assert.equal(probe.fragen, 2); assert.equal(probe.auszug, true)
+  assert.equal(w.rufe.filter(r => r.methode === 'POST').length, 0, 'die Probe schreibt nichts')
+  const r = await aktualisieren(api, z, FACH, { vorher: alt, jetzt: new Date('2026-10-16T10:00:00Z') })
+  const post = w.posts.get(101), letzter = w.rufe.at(-1)
+  assert.deepEqual(Object.keys(letzter.body).sort(), ['content', 'excerpt', 'title'], 'Status, Datum, Slug und Schlagwörter gehen nicht hinaus')
+  assert.equal(post.status, 'publish')
+  assert.match(post.content, /"datePublished":"2026-09-06T07:00:00Z","dateModified":"2026-10-16T10:00:00Z"/)
+  assert.match(post.content, /"url":"https:\/\/blog\.test\/2026\/09\/06\/digitaler-produktpass-erklaert\/"/)
+  assert.ok(r.stand)
+  // danach gilt der Abgleich: noch einmal geht — wurde in WordPress etwas geändert, nicht
+  post.content = { raw: post.content }
+  await aktualisieren(api, z, FACH, { stand: r.stand })
+  post.content = { raw: post.content.raw === undefined ? post.content : post.content.raw }
+  w.posts.get(101).content = { raw: 'in WordPress bearbeitet' }
+  await assert.rejects(aktualisieren(api, z, FACH, { stand: r.stand }), /changed in WordPress since the last version — not overwritten/)
+  await assert.rejects(aktualisieren(api, z, FACH, { vorher: FACH }), /changed in WordPress/)
+  w.posts.get(101).status = 'draft'
+  await assert.rejects(aktualisieren(api, z, FACH, { stand: r.stand }), /is a draft — use draft --replace/)
+  await assert.rejects(aktualisieren(api, z, FACH.replace('wp: 101\n', '')), /wp missing/)
+})
+
+test('nur die strukturierten Daten setzen: der übrige Inhalt bleibt Byte für Byte — auch eingefügte Bilder; ein zweites Mal ersetzt den Block', async () => {
+  const w = wordpress(); const z = { url: 'https://blog.test', user: 'u', password: 'p' }
+  const api = wp(z, w.f)
+  const live = '<!-- wp:paragraph -->\r\n<p>Text</p>\r\n<!-- /wp:paragraph -->\r\n\r\n<p><img class="wp-image-175" src="https://blog.test/b.png"></p>'
+  w.posts.set(40, { id: 40, status: 'publish', link: 'https://blog.test/2026/10/04/digitaler-produktpass/', date: '2026-10-04T09:00:00', date_gmt: '2026-10-04T07:00:00',
+    title: { raw: 'Digitaler Produktpass – journali zeigt euch, was noch fehlt' }, excerpt: { raw: 'Auszug aus WordPress.' }, content: { raw: live } })
+  const datei = '---\ntitle: Alt\ntags: [Compliance]\ncategories: [Neuigkeiten]\nwp: 40\n---\nText\n'
+  assert.equal((await datenSetzen(api, z, datei, { probe: true })).probe, true)
+  assert.equal(w.rufe.filter(r => r.methode === 'POST').length, 0)
+  await datenSetzen(api, z, datei, { jetzt: new Date('2026-10-16T10:00:00Z') })
+  const neu = w.posts.get(40).content
+  assert.ok(neu.startsWith(live), 'der Inhalt aus WordPress bleibt, wie er ist')
+  assert.match(neu, /\r\n\r\n<!-- wp:html -->\r\n<script type="application\/ld\+json">/, 'mit den Zeilenenden aus WordPress')
+  const daten = JSON.parse(neu.match(/ld\+json">(.*)<\/script>/)[1])['@graph'][0]
+  assert.deepEqual([daten['@type'], daten.headline, daten.description, daten.articleSection, daten.url], ['BlogPosting', 'Digitaler Produktpass – journali zeigt euch, was noch fehlt', 'Auszug aus WordPress.', 'Neuigkeiten', 'https://blog.test/2026/10/04/digitaler-produktpass/'])
+  assert.deepEqual(Object.keys(w.rufe.at(-1).body), ['content'], 'nur der Inhalt geht hinaus')
+  // ein zweites Mal: der Block wird ersetzt, nicht ein zweiter angehängt
+  w.posts.get(40).content = { raw: neu }
+  const r = await datenSetzen(api, z, datei)
+  assert.equal(r.vorher, true)
+  assert.equal((w.posts.get(40).content.match(/ld\+json/g) ?? []).length, 1)
 })
