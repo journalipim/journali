@@ -48,13 +48,13 @@ Derselbe Dienst bedient unter `/mcp` einen **MCP-Server** (Streamable HTTP, Antw
 - `get_product` – ein Produkt mit seinen Attributen, Bildern und Varianten,
 - `compare_products` – Produkte nebeneinander.
 
-Der Dienst spricht **zwei Generationen der Spezifikation**: 2026-07-28 ohne Handshake – jede Anfrage nennt ihre Version im Kopf und im Rumpf, `server/discover` sagt, was der Server kann – und 2025-11-25, 2025-06-18 und 2025-03-26 mit `initialize`, ohne Sitzung. Eine Anmeldung gibt es am MCP-Endpunkt nicht: Er zeigt, was die Website ohnehin zeigt. Ob ein Berater MCP anbietet, steht an ihm. Mehr zum Protokoll: [MCP erklärt](/?p=103).
+Der Dienst spricht **zwei Generationen der Spezifikation**: 2026-07-28 ohne Handshake – jede Anfrage nennt ihre Version im Kopf und im Rumpf, `server/discover` sagt, was der Server kann – und 2025-11-25, 2025-06-18 und 2025-03-26 mit `initialize`, ohne Sitzung. Eine Anmeldung gibt es am MCP-Endpunkt nicht: Er zeigt, was die Website ohnehin zeigt. Ob ein Berater MCP anbietet, steht an ihm. Mehr zum Protokoll: [MCP erklärt](/2026/09/20/mcp-model-context-protocol-erklaert/).
 
 ## Unterlagen: der Berater schlägt in euren Dokumenten nach
 
 Für Fragen zu Pflege, Gebrauch, Größe oder einem Problem nutzt der Berater, was journali schon hat: den **Dokumentindex** (Abschnitte mit Seite und Überschrift) und die **Vektoren der Abschnitte** aus dem Plugin embed. Kein eigener Index, keine Kopie. Die Unterlagen eines Beraters sind die Dokumente an seinen Produkten, Varianten und den Gruppen darüber – eine Pflegeanleitung an der Gruppe „Hosen“ gilt für jede Hose.
 
-Die Grenze, ab der ein Abschnitt passt, ist **gemessen**: an 499 Abschnitten von Testunterlagen, mit Fragen zu Pflege und Reparatur und mit Fragen ohne Bezug. Ein Dokument selbst gibt der Dienst nur heraus, wenn es zu den Unterlagen gehört, und immer mit `Content-Security-Policy: sandbox`. Mehr zum Prinzip: [RAG erklärt](/?p=102).
+Die Grenze, ab der ein Abschnitt passt, ist **gemessen**: an 499 Abschnitten von Testunterlagen, mit Fragen zu Pflege und Reparatur und mit Fragen ohne Bezug. Ein Dokument selbst gibt der Dienst nur heraus, wenn es zu den Unterlagen gehört, und immer mit `Content-Security-Policy: sandbox`. Mehr zum Prinzip: [RAG erklärt](/2026/10/04/rag-retrieval-augmented-generation-erklaert/).
 
 ## Grenzen und Herkunft
 

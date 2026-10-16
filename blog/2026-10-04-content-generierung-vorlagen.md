@@ -67,7 +67,7 @@ Das Beste: **Vorlage und Formel lesen sich gegenseitig.** Eine Vorlage setzt das
 
 Für Fließtext gibt es einen zweiten Weg: **✦ KI im Editor eines Textfelds**. Die KI bekommt die echten Produktdaten des Knotens und überarbeitet euren Text – verbessern, kürzen, ausführlicher – oder schreibt einen neuen: als Liste aus den Produktdaten oder als Marketingtext, sachlich, emotional oder vergleichend. Eine eigene Anweisung geht auch. Das Ergebnis landet im Entwurf; **gespeichert wird erst, wenn ihr speichert.**
 
-Mehr dazu in [KI in journali](/?p=45) – und wie eure Texte zur Quelle für KI-Antworten werden, zeigt der Beitrag zu [GEO](/?p=43).
+Mehr dazu in [KI in journali](/2026/10/04/ki-in-journali/) – und wie eure Texte zur Quelle für KI-Antworten werden, zeigt der Beitrag zu [GEO](/2026/10/04/geo/).
 
 ## Und jetzt?
 

@@ -54,11 +54,11 @@ Betrifft ein Grund nur einen Teil der Varianten, steht „n von m Varianten“ d
 
 ## Den Stand einer Rubrik einfrieren
 
-Der Katalog ist geschlossen, die Pflege geht weiter? Eine Rubrik lässt sich auf einen **Journalstand einfrieren.** Alles darunter liest die Pflege dann wie zu diesem Zeitpunkt: Freigaben, Verkaufsländer, Varianten. Kopiert wird nichts, es ist ein Zeiger ins Journal. Was danach neu angelegt wurde, ist im eingefrorenen Baum „noch nicht vorhanden“, und der Stand lässt sich wieder aufheben. Wie aus einem Stand ein unveränderliches Dokument wird, steht im Beitrag [Versionen](/?p=69).
+Der Katalog ist geschlossen, die Pflege geht weiter? Eine Rubrik lässt sich auf einen **Journalstand einfrieren.** Alles darunter liest die Pflege dann wie zu diesem Zeitpunkt: Freigaben, Verkaufsländer, Varianten. Kopiert wird nichts, es ist ein Zeiger ins Journal. Was danach neu angelegt wurde, ist im eingefrorenen Baum „noch nicht vorhanden“, und der Stand lässt sich wieder aufheben. Wie aus einem Stand ein unveränderliches Dokument wird, steht im Beitrag [Versionen](/2026/09/04/versionen/).
 
 ## Aus dem Baum wird eine Datei
 
-Die Ausleitung ist kein Bild auf dem Bildschirm, sie ist die Quelle der Exporte. Ein Export-Job für **CSV oder Excel** nimmt statt eines Teilbaums einen Publikationsbaum: Dann geht hinaus, was für den Kanal freigegeben ist und im Markt verkauft wird. Für **BMEcat nach Vorlage** werden die Rubriken zu Kataloggruppen, und Zurückgehaltenes steht in den Statistiken des Laufs. Mehr zu Profilen und Jobs im Beitrag [Import und Export](/?p=71).
+Die Ausleitung ist kein Bild auf dem Bildschirm, sie ist die Quelle der Exporte. Ein Export-Job für **CSV oder Excel** nimmt statt eines Teilbaums einen Publikationsbaum: Dann geht hinaus, was für den Kanal freigegeben ist und im Markt verkauft wird. Für **BMEcat nach Vorlage** werden die Rubriken zu Kataloggruppen, und Zurückgehaltenes steht in den Statistiken des Laufs. Mehr zu Profilen und Jobs im Beitrag [Import und Export](/2026/10/05/import-export/).
 
 ## Und jetzt?
 

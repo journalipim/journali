@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Presse – journali</title>
+<link rel="icon" href="logo-32.png">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","name":"Presse – journali","description":"Angaben zu journali PIM für Redaktionen: Kurzbeschreibung, Fakten, Themen, Bildmaterial, Demo und Kontakt.","url":"https://journali.de/presse/","inLanguage":"de-DE","publisher":{"@type":"Organization","name":"journali","url":"https://journali.de/"}}
+</script>
+<style>body{font:16px/1.55 system-ui,"Segoe UI",sans-serif;max-width:760px;margin:40px auto;padding:0 20px;color:#1f2328;background:#fff} h1{font-size:28px} h2{font-size:20px;margin-top:28px}
+@media (prefers-color-scheme: dark){body{background:#111418;color:#e6e8eb} a{color:#60a5fa}}</style></head>
+<body>
+<main>
+<h1>Presse</h1>
+<p>Diese Seite enthält die Angaben, mit denen Redaktionen über journali berichten können: Kurzbeschreibung, Fakten, Themen, Bildmaterial und Kontakt.</p>
+
+<section id="kurz">
+<p class="kicker">Zum Übernehmen</p>
+<h2>journali in einem Satz</h2>
+<p>journali ist ein PIM-System für Hersteller und Händler, das zeigt, welche Produktdaten für Shop, Katalog und Digitalen Produktpass noch fehlen, die Pflege so schnell wie in einer Tabelle ermöglicht und die Daten geprüft in jeden Kanal ausgibt.</p>
+
+<h2>journali in drei Sätzen</h2>
+<p>journali ist ein PIM-System (Produktinformationsmanagement) für Hersteller und Händler, die ihre Produktdaten an einer Stelle pflegen wollen. Es speichert jede Änderung als nummerierten Eintrag mit Urheber und Zeitpunkt in einem Journal und überschreibt nichts – frühere Stände bleiben abrufbar, Versionen frieren die Dokumente ein, die zu einem Stand ausgeliefert wurden. Prüfungen für den Digitalen Produktpass, die Verpackungsverordnung (PPWR) und Umweltaussagen (EmpCo) zeigen Lücken vor der Ausgabe; KI lässt sich mit eigenem Schlüssel anbinden, ohne Schlüssel arbeiten die Plugins regelbasiert.</p>
+</section>
+
+<section id="fakten">
+<h2>Fakten</h2>
+<ul>
+<li><b>Art:</b> PIM-System (Produktinformationsmanagement) für Hersteller technischer Produkte, Händler mit Varianten, IT-Abteilungen und Agenturen.</li>
+<li><b>Name:</b> „journali PIM“ ist eine beim Deutschen Patent- und Markenamt angemeldete Marke.</li>
+<li><b>Status:</b> Pre-Release · 2026. Bis zum produktiven Release erscheint journali als Testversion, ausschließlich zu Test- und Evaluationszwecken; die Beschreibungen auf journali.de beziehen sich auf das produktive Release.</li>
+<li><b>Lizenz:</b> Elastic License 2.0 (ELv2) mit zusätzlicher Erlaubnis, die Software Dritten als gehosteten Dienst bereitzustellen. Der Quelltext wird unter dieser Lizenz veröffentlicht (Source Available, keine Open-Source-Lizenz); die Repositories auf GitHub sind noch nicht öffentlich.</li>
+<li><b>Betrieb:</b> Docker-Paket (Docker Compose) mit PostgreSQL 18, selbst betrieben. Medien liegen wahlweise in Postgres, im Dateisystem oder in S3-kompatiblem Object Storage; der Wechsel ist ein Kopierlauf.</li>
+<li><b>Technik:</b> Server mit ASP.NET Core (.NET 8), Oberfläche mit Vue 3; Erweiterungen als Plugins, die ohne neues Image ausgetauscht werden.</li>
+</ul>
+
+<h2>Schwerpunkte</h2>
+<ul>
+<li><b>Journal und Nachvollziehbarkeit:</b> Werte, Namen, Zuordnungen, Freigaben und das Datenmodell stehen als Einträge im Journal; der Stand jedes Zeitpunkts lässt sich wiederherstellen.</li>
+<li><b>Versionen:</b> Eine Version ist ein Zeiger auf den Journalstand eines Produkts plus die ausgelieferten Dokumente – unveränderlich, mit Aufbewahrungsfrist, zurückziehbar, aber nicht löschbar.</li>
+<li><b>Pflege wie in einer Tabelle:</b> Bearbeitung in der Zelle, Tastatur durch die Liste und Massenbearbeitung mit Bereich ziehen, ausfüllen und Einfügen aus der Zwischenablage.</li>
+<li><b>Digitaler Produktpass (ESPR):</b> Prüfregeln als Plugin ordnen Datenpunkte zu, zeigen Lücken und legen fehlende Attribute an.</li>
+<li><b>PPWR:</b> Material, Gewicht, Recyclinganteil und Wiederverwendbarkeit je Verpackungseinheit werden für ganze Teilbäume geprüft.</li>
+<li><b>EmpCo:</b> Das Plugin liest alle Texte je Sprache und zeigt, welche Umweltaussagen unzulässig oder nachweispflichtig sind.</li>
+<li><b>ETIM und GS1 GPC:</b> Klassen zuweisen, Merkmale auf eigene Attribute abbilden, Vollständigkeit je Klasse sehen; Ausleitung als ETIM-BMEcat.</li>
+<li><b>KI mit eigenem Schlüssel:</b> Den Anbieter wählt der Anwender und bringt seinen eigenen Schlüssel mit; jeder Vorschlag wird übernommen, geändert oder verworfen und steht mit Urheber im Journal.</li>
+<li><b>GEO:</b> Texte für Suchmaschinen und KI-Antworten aus den echten Produktdaten, dazu Schema.org-Product-JSON-LD je Produkt.</li>
+<li><b>RAG:</b> Der RAG-Export erzeugt je Produkt und Sprache ein zitierfähiges Markdown-Dokument und eine nodes.jsonl mit Metadaten.</li>
+<li><b>Produktberater mit MCP:</b> Ein Chat-Fenster für die eigene Website antwortet aus den Produkten eines Publikationsbaums, auch ohne KI; KI-Agenten stellen dieselben Fragen über MCP.</li>
+</ul>
+</section>
+
+<section id="themen">
+<h2>Themen für Redaktionen</h2>
+<p>Zu diesen Themen hat journali Fachartikel veröffentlicht:</p>
+<div class="grid">
+<div class="card"><h3>Digitaler Produktpass</h3><p>Datenpunkte des Produktpasses (ESPR) zuordnen, Lücken sehen und Nachweise am Wert hinterlegen. <a href="https://journali.de/2026/09/06/digitaler-produktpass-erklaert/">Wissensseite →</a></p></div>
+<div class="card"><h3>PPWR – Verpackungsverordnung</h3><p>Verpackungsdaten wie Material, Gewicht, Recyclinganteil und Wiederverwendbarkeit je Verpackungseinheit. <a href="https://journali.de/2026/09/06/ppwr-verpackungsverordnung-erklaert/">Wissensseite →</a></p></div>
+<div class="card"><h3>EmpCo – Umweltaussagen</h3><p>Die Richtlinie (EU) 2024/825 verbietet seit dem 27. September 2026 pauschale Umweltaussagen und verlangt Nachweise. <a href="https://journali.de/2026/09/05/empco-umweltaussagen-erklaert/">Wissensseite →</a></p></div>
+<div class="card"><h3>GEO – Generative Engine Optimization</h3><p>Produkttexte, die Suchmaschinen und KI-Antworten zitieren, und strukturierte Daten je Produkt. <a href="https://journali.de/2026/09/26/geo-generative-engine-optimization-erklaert/">Wissensseite →</a></p></div>
+<div class="card"><h3>RAG – Retrieval Augmented Generation</h3><p>Produktdaten als zitierfähige Dokumente für Vektor-Stores und KI-Assistenten. <a href="https://journali.de/2026/10/04/rag-retrieval-augmented-generation-erklaert/">Wissensseite →</a></p></div>
+<div class="card"><h3>MCP – Model Context Protocol</h3><p>KI-Agenten stellen über MCP Fragen an die Produkte eines Publikationsbaums. <a href="https://journali.de/2026/09/20/mcp-model-context-protocol-erklaert/">Wissensseite →</a></p></div>
+</div>
+</section>
+
+<section id="bildmaterial">
+<h2>Bildmaterial</h2>
+<ul>
+<li>Logo als PNG, 615 × 615 Pixel: <a href="/logo.png">logo.png</a></li>
+<li>Logo als PNG, 128 × 128 Pixel: <a href="/logo-128.png">logo-128.png</a></li>
+<li>Screenshots der Oberfläche auf Anfrage über den Kontakt unten.</li>
+</ul>
+</section>
+
+<section id="ausprobieren">
+<h2>Ausprobieren</h2>
+<ul>
+<li><a href="https://journali.de/journali-testen/">Demo im Browser</a> – ohne Installation, mit zwei erfundenen Beispielkatalogen; Anmeldename und Passwort stehen auf der Seite. Die Demo wird täglich zurückgesetzt.</li>
+<li>journali auf GitHub: <a href="https://github.com/journalipim">github.com/journalipim</a> – dort erscheint der Quelltext, sobald er veröffentlicht ist.</li>
+<li>Beiträge zu neuen Funktionen in der Kategorie <a href="https://journali.de/category/entwicklung/">Entwicklung</a>, Fachartikel in der Kategorie <a href="https://journali.de/category/wissen/">Wissen</a>.</li>
+</ul>
+</section>
+
+<section id="kontakt">
+<h2>Kontakt für die Presse</h2>
+<p>Anfragen von Redaktionen gehen an die Kontaktangaben im <a href="https://journali.de/impressum/">Impressum</a>.</p>
+</section>
+</main>
+</body></html>

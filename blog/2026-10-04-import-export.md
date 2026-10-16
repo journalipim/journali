@@ -59,7 +59,7 @@ Das heißt: **Dasselbe Profil schreibt wöchentlich in das eine und täglich in 
 
 ## Raus, so wie ihr es braucht
 
-Der Tabellenexport liefert einen Teilbaum als **Excel oder CSV**: Rollen, Sprachen, Sicht, eigene oder auch geerbte Werte. **Der Import liest genau diese Datei wieder ein** – mit Kennungen. In Excel kommen auf Wunsch die Relationen als zweites Blatt dazu; der Import legt sie wieder an, auch in einem anderen System. Ein Export-Job nimmt statt eines Teilbaums auch einen Publikationsbaum – dann geht hinaus, was für den Kanal freigegeben ist. BMEcat mit ETIM und die KI-Wissensbasis haben eigene Beiträge: [ETIM](/?p=42), [RAG-ready](/?p=46).
+Der Tabellenexport liefert einen Teilbaum als **Excel oder CSV**: Rollen, Sprachen, Sicht, eigene oder auch geerbte Werte. **Der Import liest genau diese Datei wieder ein** – mit Kennungen. In Excel kommen auf Wunsch die Relationen als zweites Blatt dazu; der Import legt sie wieder an, auch in einem anderen System. Ein Export-Job nimmt statt eines Teilbaums auch einen Publikationsbaum – dann geht hinaus, was für den Kanal freigegeben ist. BMEcat mit ETIM und die KI-Wissensbasis haben eigene Beiträge: [ETIM](/2026/10/04/etim-klassifikation/), [RAG-ready](/2026/10/04/rag-ready/).
 
 ## JSON: alles raus, alles wieder rein
 
