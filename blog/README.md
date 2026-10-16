@@ -63,6 +63,12 @@ eigenes CSS.
 Aussage, das Wichtigste fett, am Ende ein Verweis auf die Seite. Angesprochen wird mit „ihr“ wie auf der Startseite. Jede Aussage stimmt trotzdem:
 nichts, was journali nicht kann. Die sachliche Beschreibung steht in `docs/` und in der Hilfe.
 
+**Leitgedanke: Zukunft hat Herkunft** (16.10.2026). In journali stecken Erfahrungen aus 40 Jahren Programmierung, Arbeit mit Produktdaten
+und Berufspraxis. Das gehört in die Begründung, nicht als Schlagwort in jeden Beitrag: dort, wo eine Entscheidung aus dieser Erfahrung kommt –
+etwa das Journal, weil überschriebene Daten in der Praxis immer wieder Ärger machen, oder die Pflege wie in einer Tabelle, weil Fachabteilungen so
+arbeiten. Formuliert ohne Namen und ohne Person: „In journali stecken Erfahrungen aus 40 Jahren …“ oder mit „wir“, nicht „der Entwickler …“.
+Es ersetzt nicht den Nutzen: zuerst das Problem und was es löst (Merkmal, Vorteil, Nutzen), die Herkunft sagt, warum man darauf vertrauen kann.
+
 **Wortwahl wörtlich prüfen**: eine Überschrift wird im Alltagssinn gelesen. Nicht „Das Journal ist die Wahrheit“, sondern „Single Source of
 Truth“; nicht „Belege“ (Kassenquittung), sondern eingefrorene Dokumente; nicht „mitlaufen“, sondern „mitwachsen“; nicht „ein Paket, das läuft“,
 sondern „durchstarten vom ersten Moment an“.
