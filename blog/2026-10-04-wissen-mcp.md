@@ -15,7 +15,7 @@ wp: 103
 - Die Nachrichten sind JSON-RPC 2.0 in UTF-8 und gehen über stdio oder Streamable HTTP.
 - Die erste Version der Spezifikation trägt das Datum 5. November 2024, die aktuelle ist vom 28. Juli 2026.
 - Das Protokoll kann seine Grundsätze zur Sicherheit nicht selbst erzwingen; eine Anmeldung ist optional und stützt sich bei HTTP auf OAuth 2.1.
-- Ein MCP-Dienst für journali ist als Entwurf geplant und nicht gebaut; entschieden ist, dass er nur liest.
+- In journali spricht der Produktberater MCP: sein Dienst bietet die Werkzeuge `search_products`, `get_product` und `compare_products`; ein allgemeiner MCP-Dienst für die Pflege ist als Entwurf geplant und liest nur.
 
 ## Wie ist das Model Context Protocol aufgebaut?
 
@@ -87,9 +87,11 @@ Bei stdio läuft der Server auf dem Rechner der Person und mit deren Rechten. Di
 
 Mehr dazu: [Integration im PIM journali](https://journali.de/2026/10/02/integration/) und [Das Journal als Single Source of Truth in journali](https://journali.de/2026/09/01/journal-single-source-of-truth/).
 
-### MCP in journali: geplant, nicht gebaut
+### MCP in journali: der Produktberater spricht MCP, der allgemeine Dienst ist geplant
 
-Ein MCP-Dienst ist für journali **als Entwurf geplant und nicht gebaut**. Der Entwurf sieht vor:
+**Gebaut ist der MCP-Server des Produktberaters.** Der Dienst des Journali KI Produktberaters beantwortet unter `/mcp` Anfragen über Streamable HTTP, in der Version vom 28. Juli 2026 und in den älteren Versionen mit `initialize`. Er bietet drei Werkzeuge: `search_products`, `get_product` und `compare_products`. Ein KI-Agent sieht damit die Produkte, die der Berater zeigt – aus einem Publikationsbaum, mit den Rechten einer Rolle und den Attributen einer Sicht – und liest nur.
+
+**Ein allgemeiner MCP-Dienst für die Pflege ist als Entwurf geplant und nicht gebaut.** Der Entwurf sieht vor:
 
 - **Ein eigener Prozess**, der nur über die Schnittstelle spricht. Zwei Betriebsarten: vom Assistenten selbst gestartet (stdio) oder als Dienst über HTTP in einem eigenen Container.
 - **Werkzeuge über vorhandenen Endpunkten:** Suche nach Knoten, ein Knoten mit seinen Attributen je Sprache und Kanal, ein Teilbaum als Tabelle, die freigegebene Version eines Produkts mit ihren Belegen, der Verlauf eines Werts, das Modell und die Ausleitung eines Publikationsbaums.
@@ -130,7 +132,7 @@ Mit der MCP-Spezifikation vom 28. Juli 2026 entfällt der Verbindungsaufbau übe
 
 ### Was hat ein PIM-System mit MCP zu tun?
 
-Ein KI-Assistent, der über MCP auf Produktdaten zugreift, nennt Werte aus dem System, in dem sie gepflegt werden, und ein falscher oder veralteter Wert erscheint dann in seiner Antwort. Darum zählt, dass der Assistent die gepflegte Quelle zum Zeitpunkt der Frage liest, nur mit den Rechten einer Person zugreift und jede Änderung mit Urheber und Zeitpunkt nachvollziehbar bleibt. Im PIM-System journali ist ein MCP-Dienst als Entwurf geplant und nicht gebaut; heute gibt es die REST-Schnittstelle unter /api mit API-Token je Person, und jede Änderung ist ein Eintrag im Journal.
+Ein KI-Assistent, der über MCP auf Produktdaten zugreift, nennt Werte aus dem System, in dem sie gepflegt werden, und ein falscher oder veralteter Wert erscheint dann in seiner Antwort. Darum zählt, dass der Assistent die gepflegte Quelle zum Zeitpunkt der Frage liest, nur mit den Rechten einer Person zugreift und jede Änderung mit Urheber und Zeitpunkt nachvollziehbar bleibt. Im PIM-System journali spricht der Produktberater MCP mit den Werkzeugen search_products, get_product und compare_products; ein allgemeiner MCP-Dienst für die Pflege ist als Entwurf geplant. Heute gibt es dafür die REST-Schnittstelle unter /api mit API-Token je Person, und jede Änderung ist ein Eintrag im Journal.
 
 *Erstellt mit Unterstützung von KI.*
 
