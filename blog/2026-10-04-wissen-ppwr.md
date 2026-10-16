@@ -1,12 +1,21 @@
 ---
-title: PPWR – was die EU-Verpackungsverordnung von Produktdaten verlangt
-excerpt: Die Verordnung (EU) 2025/40 gilt seit dem 12. August 2026 und verlangt bis 2040 schrittweise Angaben zu Material, Stoffen, Recyclingfähigkeit, Rezyklat, Leerraum und Kennzeichnung jeder Verpackung – mit Nachweis.
+title: EU-Verpackungsverordnung (PPWR): Pflichten, Fristen, Produktdaten
+excerpt: Was die EU-Verpackungsverordnung (PPWR) ab wann verlangt, wen sie betrifft und welche Verpackungsdaten mit Nachweis zu pflegen sind.
 slug: ppwr-verpackungsverordnung-erklaert
 tags: [Compliance, PPWR, Datenqualität]
 categories: [Wissen]
 wp: 98
 ---
-Seit dem **12. August 2026** gilt die **Verordnung (EU) 2025/40 über Verpackungen und Verpackungsabfälle**, kurz PPWR (Packaging and Packaging Waste Regulation). Sie betrifft jede Verpackung, die in der EU in Verkehr gebracht wird – von der Faltschachtel über den Versandkarton bis zur Palettenfolie. Für Unternehmen ist sie vor allem eine Datenaufgabe: Material, Gewicht, Stoffe, Recyclingfähigkeit und Rezyklatanteil jeder Verpackung müssen bekannt und belegt sein.
+Die **EU-Verpackungsverordnung (PPWR, Packaging and Packaging Waste Regulation)** ist die **Verordnung (EU) 2025/40 über Verpackungen und Verpackungsabfälle**; sie gilt seit dem **12. August 2026** und legt Anforderungen an Nachhaltigkeit und Kennzeichnung jeder Verpackung fest, die in der EU in Verkehr gebracht wird. Sie betrifft jede Verpackung – von der Faltschachtel über den Versandkarton bis zur Palettenfolie. Für Unternehmen ist sie vor allem eine Datenaufgabe: Material, Gewicht, Stoffe, Recyclingfähigkeit und Rezyklatanteil jeder Verpackung müssen bekannt und belegt sein.
+
+## Auf einen Blick
+
+- Die PPWR ist seit dem 11. Februar 2025 in Kraft, gilt seit dem 12. August 2026 (Art. 71) und hebt die Richtlinie 94/62/EG auf (Art. 70).
+- Seit dem 12. August 2026 darf die Summe aus Blei, Cadmium, Quecksilber und sechswertigem Chrom in einer Verpackung 100 mg/kg nicht überschreiten (Art. 5 Abs. 4).
+- Ab dem 1. Januar 2030, teils später, sind nur noch Verpackungen der Recyclingfähigkeits-Leistungsstufen A, B oder C zulässig (Art. 6 Abs. 3).
+- Ab dem 1. Januar 2030 gelten für Kunststoffverpackungen Rezyklatquoten zwischen 10 % und 35 % (Art. 7 Abs. 1), ab dem 1. Januar 2040 zwischen 25 % und 65 % (Art. 7 Abs. 2).
+- Auf Verlangen einer Behörde ist die technische Dokumentation innerhalb von zehn Tagen vorzulegen (Art. 15 Abs. 10).
+- Wer Ware unter eigener Marke in Verkehr bringt, gilt als Erzeuger und hat dessen Pflichten (Art. 21).
 
 ## Eine Verordnung statt nationaler Umsetzungen
 
@@ -21,7 +30,7 @@ Die Ziele nennt Artikel 1: Anforderungen an Nachhaltigkeit und Kennzeichnung fü
 | In Kraft | 11. Februar 2025 |
 | Gilt ab | 12. August 2026 (Art. 71) |
 
-## Die Pflichten gelten in Stufen
+## Ab wann gelten die Pflichten der PPWR?
 
 Die Verordnung gilt seit August 2026, viele Anforderungen setzen aber später ein. Häufig nennt die Verordnung zwei Zeitpunkte: ein festes Datum und eine Frist nach Inkrafttreten eines Rechtsakts der Kommission. Es gilt der spätere der beiden.
 
@@ -69,7 +78,7 @@ Die Einhaltung von Stoffgrenzen, Recyclingfähigkeit, Rezyklatanteil und Minimie
 
 Hinzu kommt der Onlinehandel: Die Angaben der Kennzeichnung müssen **vor dem Kauf auch im Online-Verkauf** zur Verfügung stehen (Art. 12 Abs. 5). Damit gehören sie in die Produktdaten, aus denen Shop und Marktplätze ihre Angaben beziehen.
 
-## Wen die Verordnung betrifft
+## Wen betrifft die PPWR?
 
 Die PPWR spricht von **Wirtschaftsakteuren** (Art. 3 Nr. 12). Ein Unternehmen kann mehrere Rollen zugleich haben.
 
@@ -84,7 +93,7 @@ Die PPWR spricht von **Wirtschaftsakteuren** (Art. 3 Nr. 12). Ein Unternehmen ka
 
 Wichtig für den Handel: Wer Ware **unter eigener Marke** in Verkehr bringt, gilt als Erzeuger und hat dessen Pflichten (Art. 21). **Online-Plattformen** holen vor der Zulassung eines Anbieters dessen Registerangaben ein (Art. 45 Abs. 4).
 
-## Wie Lösungen aussehen
+## Wie lassen sich Verpackungsdaten für die PPWR vorbereiten?
 
 ### Ein Datenmodell für Verpackungen
 
@@ -125,7 +134,39 @@ Das Plugin **Verpackung (PPWR)** gehört zur Datenanalyse in journali und setzt 
 - **Vererbbare Attribute** für Konformitätserklärung, Registernummer und Inverkehrbringer; Sonderfälle werden am Knoten gesetzt und gelten darunter.
 - **Nachweis am Wert:** Jeder übernommene Vorschlag erhält Quelle, Weg und Prüfdatum. Jede Änderung ist ein Eintrag im Journal.
 
-Details und Bedienung beschreibt der Beitrag [PPWR in journali](/?p=48).
+Details und Bedienung beschreibt der Beitrag [Verpackungsdaten nach PPWR im PIM journali prüfen](https://journali.de/2026/10/04/verpackungsverordnung-ppwr/).
+
+Verwandte Themen: [Digitaler Produktpass (DPP) erklärt](https://journali.de/2026/09/06/digitaler-produktpass-erklaert/), [Umweltaussagen nach EmpCo erklärt](https://journali.de/2026/09/05/empco-umweltaussagen-erklaert/).
+
+## Häufige Fragen
+
+### Was ist die PPWR?
+
+Die PPWR ist die EU-Verpackungsverordnung, die Verordnung (EU) 2025/40 über Verpackungen und Verpackungsabfälle, und gilt seit dem 12. August 2026 unmittelbar in jedem Mitgliedstaat. Die PPWR legt Anforderungen an Nachhaltigkeit und Kennzeichnung für den gesamten Lebenszyklus einer Verpackung fest und hebt die Richtlinie 94/62/EG auf.
+
+### Ab wann gilt die PPWR?
+
+Die PPWR gilt seit dem 12. August 2026 (Art. 71); in Kraft ist sie seit dem 11. Februar 2025. Viele Anforderungen der PPWR setzen später ein, etwa die Leerraumbeschränkung für Verkaufsverpackungen am 12. Februar 2028 sowie die Leistungsstufen der Recyclingfähigkeit und die Rezyklatquoten ab dem 1. Januar 2030.
+
+### Welche Daten verlangt die PPWR zu einer Verpackung?
+
+Die PPWR verlangt Angaben zu Material und Gewicht jedes Verpackungsbestandteils, zu Stoffen wie Schwermetallen und PFAS sowie zu Recyclingfähigkeit, Rezyklatanteil, Leerraum und Kennzeichnung. Die Einhaltung der Anforderungen ist in der technischen Dokumentation nach Anhang VII nachzuweisen.
+
+### Wie viel Leerraum ist in einer Verpackung nach der PPWR erlaubt?
+
+Nach der PPWR darf der Leerraum bei Um-, Transport- und E-Commerce-Verpackungen ab dem 1. Januar 2030 höchstens 50 % betragen (Art. 24 Abs. 1). Bei Verkaufsverpackungen ist der Leerraum nach der PPWR ab dem 12. Februar 2028 auf das nötige Mindestmaß beschränkt (Art. 24 Abs. 4).
+
+### Wie viel Rezyklat müssen Kunststoffverpackungen nach der PPWR enthalten?
+
+Ab dem 1. Januar 2030, teils später, verlangt die PPWR in Kunststoffverpackungen 30 % Rezyklat bei kontaktempfindlichen Verpackungen aus PET, 10 % bei kontaktempfindlichen aus anderen Kunststoffen, 30 % bei Einweggetränkeflaschen und 35 % bei allen übrigen (Art. 7 Abs. 1). Ab dem 1. Januar 2040 gelten in derselben Reihenfolge 50 %, 25 %, 65 % und 65 % (Art. 7 Abs. 2).
+
+### Wer gilt nach der PPWR als Erzeuger?
+
+Erzeuger nach der PPWR ist, wer die Verpackung oder das verpackte Produkt herstellt oder unter eigenem Namen oder eigener Marke herstellen lässt (Art. 15); auch wer Ware unter eigener Marke in Verkehr bringt, hat die Pflichten des Erzeugers (Art. 21). Der Erzeuger führt die Konformitätsbewertung durch, erstellt die technische Dokumentation und stellt die EU-Konformitätserklärung aus.
+
+### Was hat ein PIM-System mit der PPWR zu tun?
+
+Die PPWR verlangt, dass die Angaben der Kennzeichnung vor dem Kauf auch im Online-Verkauf zur Verfügung stehen (Art. 12 Abs. 5); damit gehören sie in die Produktdaten, aus denen Shop und Marktplätze ihre Angaben beziehen. Im PIM-System journali prüft das Plugin Verpackung (PPWR) einen Teilbaum gegen 29 Datenpunkte und hält an jedem übernommenen Wert Quelle, Weg und Prüfdatum fest.
 
 *Dieser Beitrag ist kein Rechtsrat. Er fasst die Verordnung nach dem Stand vom 4. Oktober 2026 zusammen; maßgeblich ist der im Amtsblatt veröffentlichte Rechtstext.*
 

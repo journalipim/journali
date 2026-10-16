@@ -1,12 +1,21 @@
 ---
-title: Der Digitale Produktpass – Rechtsgrundlage, Pflichten und Daten
-excerpt: Was die Ökodesign-Verordnung (EU) 2024/1781 und die Batterieverordnung (EU) 2023/1542 zum Digitalen Produktpass festlegen, wen das betrifft und wie sich die Produktdaten dafür vorbereiten lassen.
+title: Digitaler Produktpass (DPP): Rechtsgrundlage, Pflichten und Daten
+excerpt: Was der Digitale Produktpass (DPP) nach ESPR und Batterieverordnung enthält, ab wann er Pflicht ist, wen er betrifft und welche Daten er braucht.
 slug: digitaler-produktpass-erklaert
 tags: [Compliance, Digitaler Produktpass, Datenqualität, Import & Export]
 categories: [Wissen]
 wp: 99
 ---
 Der **Digitale Produktpass (DPP)** ist ein elektronischer Datensatz zu einem Produkt, der über einen Datenträger am Produkt abgerufen wird, etwa über einen QR-Code. Er enthält Angaben zu Identität, Herkunft, Material, Konformität, Reparatur und Entsorgung. Welche Angaben genau, legt die EU **je Produktgruppe** fest. Rechtsgrundlage ist die **Ökodesign-Verordnung (EU) 2024/1781 (ESPR)**. Als erster Pass wird der **Batteriepass nach (EU) 2023/1542 ab dem 18. Februar 2027** verpflichtend.
+
+## Auf einen Blick
+
+- Rechtsgrundlage des Digitalen Produktpasses ist die Ökodesign-Verordnung (EU) 2024/1781 (ESPR), die seit dem 18. Juli 2024 in Kraft ist (Art. 80).
+- Die ESPR selbst verpflichtet kein Produkt zu einem Pass; das tun erst delegierte Rechtsakte nach Art. 4 je Produktgruppe, in der Regel mit mindestens 18 Monaten zwischen Inkrafttreten und Geltung.
+- Als erster Pass ist der Batteriepass nach Art. 77 der Batterieverordnung (EU) 2023/1542 ab dem 18. Februar 2027 Pflicht.
+- Das Register der Kommission nach Art. 13 ESPR ist nach Angaben der Kommission seit dem 20. Juli 2026 in Betrieb.
+- Pflichten zum Produktpass haben Hersteller, Importeure, Vertreiber, Händler und Online-Marktplätze (Art. 10 Abs. 3, Art. 27, 29–31 und 35 ESPR).
+- Die Daten im Pass müssen richtig, vollständig und aktuell sein (Art. 9 Abs. 1) und maschinenlesbar ohne Anbieterbindung übertragbar sein (Art. 10 Abs. 1 Buchst. d).
 
 ## Woher es kommt: die ESPR als Rahmen, delegierte Rechtsakte je Produktgruppe
 
@@ -42,9 +51,9 @@ Zwischen Inkrafttreten und Geltung eines solchen Rechtsakts liegen in der Regel 
 
 Die Termine nach dem 20.07.2026 stammen aus dem **vorläufigen Zeitplan der Kommission**, ausgenommen der Batteriepass. Für jede Produktgruppe gilt erst das, was im veröffentlichten Rechtsakt steht, mit der Übergangsfrist ab seinem Inkrafttreten.
 
-### Der Batteriepass als erster Pass
+### Ab wann ist der Batteriepass Pflicht?
 
-Nach Art. 77 der Batterieverordnung braucht ab dem 18. Februar 2027 jede in Verkehr gebrachte **Batterie für leichte Verkehrsmittel, Industriebatterie mit mehr als 2 kWh und Elektrofahrzeugbatterie** einen Batteriepass. Er enthält Angaben zum Batteriemodell und zur einzelnen Batterie nach Anhang XIII, auch Angaben aus ihrer Nutzung. Ein Teil ist öffentlich, ein Teil nur notifizierten Stellen, Marktüberwachungsbehörden und der Kommission zugänglich, ein Teil nur Personen mit berechtigtem Interesse, etwa Reparatur- und Recyclingbetrieben. Abgerufen wird er über einen **QR-Code mit individueller Kennung** nach ISO/IEC 15459. In der konsolidierten Fassung vom 13. August 2026 ist der Termin unverändert.
+Nach Art. 77 der Batterieverordnung braucht ab dem 18. Februar 2027 jede in Verkehr gebrachte **Batterie für leichte Verkehrsmittel, Industriebatterie mit mehr als 2 kWh und Elektrofahrzeugbatterie** einen Batteriepass. Er enthält Angaben zum Batteriemodell und zur einzelnen Batterie nach Anhang XIII, auch Angaben aus ihrer Nutzung. Ein Teil ist öffentlich, ein Teil nur notifizierten Stellen, Marktüberwachungsbehörden und der Kommission zugänglich, ein Teil nur Personen mit berechtigtem Interesse, etwa Reparatur- und Recyclingbetrieben. Abgerufen wird er über einen **QR-Code mit individueller Kennung** nach ISO/IEC 15459. In der konsolidierten Version vom 13. August 2026 ist der Termin unverändert.
 
 ## Was es schwierig macht
 
@@ -57,7 +66,7 @@ Für die Technik des Passes liegen Normen vor. Der Aufwand liegt bei den **Daten
 - **Pflege über die Lebensdauer.** Die Daten müssen **richtig, vollständig und aktuell** sein (Art. 9 Abs. 1). Der Pass bleibt verfügbar, auch nach einer Insolvenz (Art. 11 Buchst. e). Eine **Sicherungskopie** liegt bei einem unabhängigen Drittdienstleister (Art. 10 Abs. 4). Ein neuer Pass wird mit dem ursprünglichen verknüpft (Art. 11 Buchst. d).
 - **Offene Detailregeln.** Datenpunkte, Passebene und Zugriffsrechte stehen erst im jeweiligen Rechtsakt. Wer heute beginnt, arbeitet mit Anhang III und dem Arbeitsplan.
 
-## Wen es betrifft
+## Wen betrifft der Digitale Produktpass?
 
 Die Pflichten folgen der Rolle im Markt:
 
@@ -71,7 +80,7 @@ Die Pflichten folgen der Rolle im Markt:
 
 Für eingeführte Produkte steht im Register auch der Warencode; Zollbehörden können Pass- und Registerdaten für ihre Kontrollen nutzen (Art. 13 Abs. 1, Art. 15 Abs. 4). **Betroffen ist damit jeder, der ein Produkt einer erfassten Produktgruppe in der EU anbietet**, nicht nur der Hersteller. Welche Gruppen das sind, ergibt sich aus dem Arbeitsplan und den einzelnen Rechtsakten, für Batterien aus der Batterieverordnung.
 
-## Wie Lösungen aussehen
+## Wie sieht ein Datenmodell für den Digitalen Produktpass aus?
 
 Ein Produktpass entsteht aus Stammdaten, die es in den meisten Unternehmen schon gibt – verteilt auf Artikelstamm, Datenblätter, Konformitätsakten und Lieferantenerklärungen. Eine Lösung beginnt deshalb beim **Datenmodell**, nicht beim QR-Code:
 
@@ -97,16 +106,48 @@ In journali prüft das Plugin **Digitaler Produktpass** die Produktdaten gegen d
 
 Datenträger, Registrierung und Sicherungskopie erzeugt das Plugin nicht. Die geprüften Daten gehen über die Exporte (CSV, Excel, JSON) oder die API an das System, das den Pass ausstellt.
 
-Mehr dazu: [Digitaler Produktpass in journali](/?p=40).
+Mehr dazu: [Digitaler Produktpass im PIM journali prüfen](https://journali.de/2026/10/04/digitaler-produktpass/).
 
-*Dieser Beitrag gibt den Stand vom 4. Oktober 2026 wieder und ist keine Rechtsberatung. Maßgeblich sind die Rechtstexte in der jeweils geltenden Fassung.*
+Verwandte Themen: [EU-Verpackungsverordnung (PPWR) erklärt](https://journali.de/2026/09/06/ppwr-verpackungsverordnung-erklaert/), [Umweltaussagen nach EmpCo erklärt](https://journali.de/2026/09/05/empco-umweltaussagen-erklaert/).
+
+## Häufige Fragen
+
+### Was ist der Digitale Produktpass?
+
+Der Digitale Produktpass (DPP) ist ein elektronischer Datensatz zu einem Produkt, der über einen Datenträger am Produkt abgerufen wird, etwa über einen QR-Code. Welche Angaben er enthält, legt die EU je Produktgruppe in delegierten Rechtsakten zur Ökodesign-Verordnung (EU) 2024/1781 (ESPR) fest.
+
+### Ab wann ist der Digitale Produktpass Pflicht?
+
+Der Digitale Produktpass ist für eine Produktgruppe erst Pflicht, wenn ein delegierter Rechtsakt nach Art. 4 der ESPR ihn festlegt; zwischen Inkrafttreten und Geltung liegen in der Regel mindestens 18 Monate. Als erster Pass ist der Batteriepass ab dem 18. Februar 2027 Pflicht. Für Eisen und Stahl sieht der vorläufige Zeitplan der Kommission einen Rechtsakt im 4. Quartal 2026 vor, für Textilien, Aluminium und Reifen im 3. oder 4. Quartal 2027.
+
+### Ab wann ist der Batteriepass Pflicht?
+
+Der Batteriepass ist nach Art. 77 der Batterieverordnung (EU) 2023/1542 ab dem 18. Februar 2027 Pflicht. Er gilt für Batterien für leichte Verkehrsmittel, Industriebatterien mit mehr als 2 kWh und Elektrofahrzeugbatterien und wird über einen QR-Code mit individueller Kennung nach ISO/IEC 15459 abgerufen.
+
+### Welche Daten gehören in den Digitalen Produktpass?
+
+Welche Daten in den Digitalen Produktpass gehören, legt der delegierte Rechtsakt je Produktgruppe aus den Angaben in Anhang III der ESPR fest. Dazu zählen Angaben zu Identität, Herkunft, Material, Konformität, Reparatur und Entsorgung sowie eindeutige Kennungen für das Produkt, die Wirtschaftsteilnehmer und die Fertigungsstätte.
+
+### Wer muss den Digitalen Produktpass bereitstellen?
+
+Hersteller und Importeure sorgen dafür, dass der Digitale Produktpass und seine Sicherungskopie vorliegen (Art. 27 und 29 ESPR). Vertreiber stellen vor der Bereitstellung sicher, dass der Pass vorliegt, und Händler machen ihn für Kunden leicht zugänglich, auch im Fernabsatz (Art. 30 und 31 ESPR).
+
+### Wie lange muss der Digitale Produktpass verfügbar sein?
+
+Der Digitale Produktpass bleibt mindestens für die voraussichtliche Lebensdauer des Produkts verfügbar; die Dauer legt der delegierte Rechtsakt fest (Art. 9 Abs. 2). Der Pass bleibt auch nach einer Insolvenz verfügbar, und eine Sicherungskopie liegt bei einem unabhängigen Drittdienstleister (Art. 10 Abs. 4, Art. 11 Buchst. e).
+
+### Was hat ein PIM-System mit dem Digitalen Produktpass zu tun?
+
+Der Digitale Produktpass entsteht aus Stammdaten wie GTIN, Hersteller, Gewicht und Anleitung, die meist schon im Produktdatenbestand gepflegt sind; dort lassen sich die Datenpunkte als Attribute modellieren, Lücken je Produkt sichtbar machen und Nachweise je Wert festhalten. Im PIM-System journali prüft das Plugin Digitaler Produktpass die Produktdaten gegen 39 Datenpunkte und gibt die geprüften Daten über die Exporte oder die API an das System weiter, das den Pass ausstellt.
+
+*Dieser Beitrag gibt den Stand vom 4. Oktober 2026 wieder und ist keine Rechtsberatung. Maßgeblich sind die Rechtstexte in der jeweils geltenden Version.*
 
 *Erstellt mit Unterstützung von KI.*
 
 ## Quellen
 
 - Verordnung (EU) 2024/1781 (Ökodesign-Verordnung, ESPR), ABl. L vom 28.6.2024, insbesondere Art. 1, 4, 9–13, 15, 18, 27, 29–31, 35, 38, 79, 80 und Anhang III: [https://eur-lex.europa.eu/eli/reg/2024/1781/oj](https://eur-lex.europa.eu/eli/reg/2024/1781/oj)
-- Verordnung (EU) 2023/1542 (Batterieverordnung), Art. 77 und Anhang XIII; konsolidierte Fassung vom 13.08.2026: [https://eur-lex.europa.eu/legal-content/DE/TXT/?uri=CELEX:02023R1542-20260813](https://eur-lex.europa.eu/legal-content/DE/TXT/?uri=CELEX:02023R1542-20260813)
+- Verordnung (EU) 2023/1542 (Batterieverordnung), Art. 77 und Anhang XIII; konsolidierte Version vom 13.08.2026: [https://eur-lex.europa.eu/legal-content/DE/TXT/?uri=CELEX:02023R1542-20260813](https://eur-lex.europa.eu/legal-content/DE/TXT/?uri=CELEX:02023R1542-20260813)
 - Mitteilung der Kommission „Arbeitsplan 2025-2030 für Ökodesign für nachhaltige Produkte und für die Energieverbrauchskennzeichnung“, COM(2025) 187 vom 16.4.2025: [https://eur-lex.europa.eu/legal-content/DE/TXT/?uri=CELEX:52025DC0187](https://eur-lex.europa.eu/legal-content/DE/TXT/?uri=CELEX:52025DC0187)
 - Europäische Kommission, Pressemitteilung IP/25/1071 vom 16.4.2025: [https://ec.europa.eu/commission/presscorner/detail/en/ip_25_1071](https://ec.europa.eu/commission/presscorner/detail/en/ip_25_1071)
 - Europäische Kommission, Digital Product Passport (Zeitplan, Register): [https://single-market-economy.ec.europa.eu/single-market/digital-product-passport_en](https://single-market-economy.ec.europa.eu/single-market/digital-product-passport_en)

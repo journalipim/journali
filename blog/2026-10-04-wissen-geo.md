@@ -1,18 +1,26 @@
 ---
-title: GEO – Generative Engine Optimization für Produktdaten
-excerpt: Was Generative Engine Optimization bedeutet, warum KI-gestützte Suchen Fakten mit Einheit und strukturierte Daten brauchen und was das für die Pflege von Produktdaten heißt.
+title: Generative Engine Optimization (GEO): Produktdaten für KI-Suchen
+excerpt: Was Generative Engine Optimization (GEO) bedeutet und welche Produktdaten KI-gestützte Suchen brauchen, um ein Produkt richtig wiederzugeben.
 slug: geo-generative-engine-optimization-erklaert
 tags: [KI, GEO, Schema.org, Content]
 categories: [Wissen]
 wp: 101
 ---
-Neben der Trefferliste gibt es KI-gestützte Suchen und Assistenten, die auf eine Frage nach einem Produkt **eine formulierte Antwort** geben. **Generative Engine Optimization (GEO)** bezeichnet die Arbeit an Inhalten, damit KI-gestützte Suchen und Assistenten sie finden, richtig wiedergeben und als Quelle nennen. Für Produktdaten heißt das vor allem: **klare Aussagen, prüfbare Werte und eine maschinenlesbare Struktur.**
+**Generative Engine Optimization (GEO)** bezeichnet die Arbeit an Inhalten, damit KI-gestützte Suchen und Assistenten sie finden, richtig wiedergeben und als Quelle nennen. Solche Suchen und Assistenten geben neben der Trefferliste auf eine Frage nach einem Produkt **eine formulierte Antwort**. Für Produktdaten heißt das vor allem: **klare Aussagen, prüfbare Werte und eine maschinenlesbare Struktur.**
+
+## Auf einen Blick
+
+- Der Begriff GEO stammt aus einem Forschungsbeitrag, der im November 2023 auf arXiv erschienen ist (arXiv:2311.09735).
+- Der Forschungsbeitrag untersucht neun Arten, einen Text zu überarbeiten, an einer Testsammlung von 10 000 Suchanfragen.
+- In dieser Testumgebung erhöhten Zahlen, Zitate und Quellenangaben die Sichtbarkeit am deutlichsten; das Anhäufen von Schlüsselwörtern brachte wenig bis nichts.
+- GEO ergänzt SEO: Bei SEO ist die Einheit die Seite, bei GEO die einzelne Aussage.
+- Für Produkte gibt es bei Schema.org den Typ `Product`; technische Merkmale werden als `additionalProperty` vom Typ `PropertyValue` mit Wert und Einheit angegeben.
 
 ## Woher es kommt: von der Trefferliste zur generierten Antwort
 
 Eine klassische Suche liefert eine Rangfolge von Seiten. Auswahl, Lesen und Vergleichen bleiben beim Menschen. KI-gestützte Suchen arbeiten anders: Sie holen passende Quellen, fassen sie mit einem Sprachmodell zusammen und geben **eine einzige Antwort** aus, häufig mit Verweisen auf einige der verwendeten Quellen.
 
-Der Begriff GEO stammt aus einem **Forschungsbeitrag, der im November 2023 auf arXiv erschienen ist** (überarbeitete Fassung 2024). Er beschreibt GEO als Verfahren, mit dem Anbieter von Inhalten deren Sichtbarkeit in generierten Antworten verbessern – ohne Einblick in die Systeme, nur anhand des Ergebnisses. Dazu gehören:
+Der Begriff GEO stammt aus einem **Forschungsbeitrag, der im November 2023 auf arXiv erschienen ist** (überarbeitete Version 2024). Er beschreibt GEO als Verfahren, mit dem Anbieter von Inhalten deren Sichtbarkeit in generierten Antworten verbessern – ohne Einblick in die Systeme, nur anhand des Ergebnisses. Dazu gehören:
 
 - eine Testsammlung von **10 000 Suchanfragen** aus mehreren Themenbereichen,
 - **neun Arten, einen Text zu überarbeiten**, etwa mit Statistiken, Zitaten, Quellenangaben, Fachbegriffen oder zusätzlichen Schlüsselwörtern,
@@ -20,7 +28,7 @@ Der Begriff GEO stammt aus einem **Forschungsbeitrag, der im November 2023 auf a
 
 Das Ergebnis in dieser Testumgebung: **Zahlen, Zitate und Quellenangaben** erhöhten die Sichtbarkeit am deutlichsten, das Anhäufen von Schlüsselwörtern brachte **wenig bis nichts**. Die Wirkung unterschied sich zudem **je nach Themenbereich**.
 
-### GEO ergänzt SEO, es ersetzt sie nicht
+### Was ist der Unterschied zwischen GEO und SEO?
 
 | | SEO | GEO |
 |---|---|---|
@@ -44,7 +52,7 @@ Beides hängt zusammen: Eine generierte Antwort beruht auf gefundenen Quellen. *
 
 **Messbarkeit.** Antworten unterscheiden sich je nach Formulierung der Frage, Zeitpunkt und System. Eine Rangposition, die sich ablesen lässt, gibt es nicht. Verlässlich prüfen lässt sich dagegen **der eigene Datenbestand**: ob Werte vorhanden, vollständig und widerspruchsfrei sind.
 
-## Wen es betrifft
+## Wen betrifft GEO?
 
 Betroffen ist jeder, dessen Produkte vor dem Kauf recherchiert werden. Besonders:
 
@@ -54,7 +62,7 @@ Betroffen ist jeder, dessen Produkte vor dem Kauf recherchiert werden. Besonders
 
 Je mehr ein Produkt erklärt werden muss, desto mehr hängt die Qualität einer generierten Antwort von **vollständigen und eindeutigen Produktdaten** ab.
 
-## Wie Lösungen aussehen
+## Wie bereitet man Produktdaten für GEO auf?
 
 ### Ein Definitionssatz am Anfang
 
@@ -100,9 +108,41 @@ In journali, einem System für Produktinformationen, ist jeder Wert einmal gepfl
 - Auf Anforderung **schlägt die KI aus den vorhandenen Produktdaten** einen Definitionssatz, eine Kurzbeschreibung, drei Fragen mit Antworten und fünf bis acht Suchbegriffe vor. Gespeichert wird erst, wenn ein Anwender den Vorschlag übernimmt.
 - **Schema.org-Product-JSON-LD** entsteht ohne KI aus den Daten: Name, SKU, Kategorie aus dem Pfad im Produktbaum und bis zu 40 Eigenschaften mit Wert und Einheit.
 
-Für einen eigenen Assistenten exportiert das Plugin **KI-Wissensbasis** je Produkt und Sprache ein Dokument mit allen Werten und der freigegebenen Version als Zitierstelle ([RAG-ready](/?p=46)).
+Für einen eigenen Assistenten exportiert das Plugin **KI-Wissensbasis** je Produkt und Sprache ein Dokument mit allen Werten und der freigegebenen Version als Zitierstelle ([KI-Wissensbasis im PIM journali (RAG-ready)](https://journali.de/2026/10/04/rag-ready/)).
 
-Mehr dazu: [GEO in journali](/?p=43).
+Mehr dazu: [GEO-Texte im PIM journali](https://journali.de/2026/10/04/geo/).
+
+Verwandte Themen: [Retrieval-Augmented Generation (RAG) erklärt](https://journali.de/2026/10/04/rag-retrieval-augmented-generation-erklaert/), [Model Context Protocol (MCP) erklärt](https://journali.de/2026/09/20/mcp-model-context-protocol-erklaert/).
+
+## Häufige Fragen
+
+### Was ist Generative Engine Optimization (GEO)?
+
+Generative Engine Optimization (GEO) bezeichnet die Arbeit an Inhalten, damit KI-gestützte Suchen und Assistenten sie finden, richtig wiedergeben und als Quelle nennen. Der Begriff GEO stammt aus einem Forschungsbeitrag, der im November 2023 auf arXiv erschienen ist.
+
+### Was ist der Unterschied zwischen GEO und SEO?
+
+SEO zielt auf einen Platz in einer Trefferliste und den Klick auf die eigene Seite, GEO auf die Verwendung und Nennung in einer generierten Antwort. Bei SEO ist die Einheit die Seite, bei GEO die einzelne Aussage. GEO ergänzt SEO, denn eine Seite, die nicht gefunden wird, wird auch nicht zitiert.
+
+### Was erhöht die Sichtbarkeit in KI-Antworten?
+
+Im Forschungsbeitrag zu GEO erhöhten Zahlen, Zitate und Quellenangaben die Sichtbarkeit in generierten Antworten am deutlichsten. Das Anhäufen von Schlüsselwörtern brachte in dieser Testumgebung wenig bis nichts, und die Wirkung unterschied sich je nach Themenbereich.
+
+### Wie sollte eine Produktbeschreibung für KI-Suchen beginnen?
+
+Eine Produktbeschreibung für KI-gestützte Suchen beginnt mit einem Definitionssatz, der sagt, was das Produkt ist: „[Produkt] ist ein [Gattung] für [Zweck], das [Unterscheidungsmerkmal].“ Diesen Satz kann eine generierte Antwort ohne Umformulierung übernehmen.
+
+### Welche strukturierten Daten helfen bei GEO?
+
+Für GEO eignen sich strukturierte Daten nach Schema.org im Format JSON-LD: für Produkte der Typ `Product` mit Eigenschaften wie `name`, `sku`, `gtin` und `category`, für Seiten mit häufigen Fragen der Typ `FAQPage`. Technische Merkmale stehen als `additionalProperty` vom Typ `PropertyValue` mit `value` und der Einheit als `unitCode` oder `unitText`.
+
+### Wie misst man den Erfolg von GEO?
+
+Den Erfolg von GEO kann man nicht an einer Rangposition ablesen, weil sich generierte Antworten je nach Formulierung der Frage, Zeitpunkt und System unterscheiden. Verlässlich prüfen lässt sich der eigene Datenbestand: ob Werte vorhanden, vollständig und widerspruchsfrei sind.
+
+### Was hat ein PIM-System mit GEO zu tun?
+
+Ein PIM-System ist die Stelle, an der jeder Produktwert einmal gepflegt und in alle Kanäle ausgegeben wird – nur so nennen Shop, Datenblatt, Marktplatz, Katalog und strukturierte Daten auf Dauer denselben Wert. Weicht ein Kanal ab, ist für Menschen wie für Sprachmodelle unklar, welcher Wert gilt. Im PIM journali ist jeder Wert je Sprache und mit Einheit gepflegt, und das Plugin GEO-Texte erzeugt daraus ohne KI Schema.org-Product-JSON-LD.
 
 *Erstellt mit Unterstützung von KI.*
 
