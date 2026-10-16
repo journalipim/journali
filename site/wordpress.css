@@ -11,10 +11,10 @@
 .jx header nav a { color:#cbd5e1; text-decoration:none; }
 .jx header nav a.navcta { border:1px solid #475569; border-radius:8px; padding:6px 12px; color:#fff; }
 .jx .inhalt { max-width:1040px; margin:0 auto; padding:0 20px; }
-.jx .hero { padding:56px 0 48px; display:grid; grid-template-columns:1.1fr .9fr; gap:56px; align-items:center; }
-.jx .eyebrow { display:inline-flex; gap:9px; align-items:center; padding:7px 13px; border:1px solid var(--line); border-radius:999px; background:var(--pane); font-size:13px; font-weight:700; color:var(--accent); }
+.jx .hero { padding:28px 0 40px; display:grid; grid-template-columns:1.1fr .9fr; gap:56px; align-items:center; }
+.jx .eyebrow { display:inline-flex; text-decoration:none; gap:9px; align-items:center; padding:7px 13px; border:1px solid var(--line); border-radius:999px; background:var(--pane); font-size:13px; font-weight:700; color:var(--accent); }
 .jx .dot { width:8px; height:8px; border-radius:50%; background:var(--accent); box-shadow:0 0 0 5px var(--accent-soft); }
-.jx h1 { font-size:clamp(44px, 6vw, 84px); line-height:.96; letter-spacing:-.04em; margin:22px 0 22px; }
+.jx h1 { font-size:clamp(44px, 6vw, 84px); line-height:.96; letter-spacing:-.04em; margin:16px 0 18px; }
 .jx .grad { background:linear-gradient(105deg, #0a2d91, #4d91ff); -webkit-background-clip:text; background-clip:text; color:transparent; }
 .jx .hero p.def { font-size:20px; color:var(--text); max-width:640px; margin:0 0 20px; }
 .jx .actions { display:flex; gap:12px; flex-wrap:wrap; }
@@ -66,6 +66,6 @@
   .jx .logo-card { width:220px; }
 }
 @media (max-width:640px) {
-  .jx .hero { padding:36px 0 24px; }
+  .jx .hero { padding:20px 0 24px; }
   .jx header nav { display:none; }
 }
