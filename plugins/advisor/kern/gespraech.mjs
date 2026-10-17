@@ -449,9 +449,18 @@ export function erstelleKern(o) {
 
     // ---- nichts erkannt (09.10.2026): kein Wort steht in einem Produkt, nichts ist eine Angabe — und journali findet nichts, oder es ist eine
     // Frage und journali nennt nur nach dem Sinn ähnliche Produkte („wie wird das wetter?“). Dann nennt der Berater, wobei er hilft.
-    if (eingabe && !schritt && !neueAngaben.length && !offen.length && !neueWoerter.length && !corrected.length && unknown.length && (sel.total === 0 || (sel.similar && fragt(eingabe))))
+    if (eingabe && !schritt && !neueAngaben.length && !offen.length && !neueWoerter.length && !corrected.length && unknown.length && (sel.total === 0 || (sel.similar && fragt(eingabe)))) {
+      // mit KI (17.10.2026): ein, zwei Sätze, die auf die Eingabe eingehen und zum Sortiment führen; die Gruppen bleiben als Chips darunter. Ohne
+      // Text (keine KI, Tagesgrenze, Fehler) der feste Satz wie bisher
+      let kiWarnung = null
+      if (vok.ki && ki) {
+        const k = await kiText(loc, { auftrag: 'fremd', satz: eingabe, verlauf: z.verlauf.slice(-MAX_VERLAUF) })
+        if (k.text) return { ...sortiment('', [], null), answer: k.text, total: 0, similar: false, unknown, words: z.woerter, filter: z.angaben }
+        kiWarnung = k.warning ?? null
+      }
       return { ...sortiment(T.helfen((vok.groups ?? []).length > 0), fragt(eingabe) ? [] : [T.unbekannt(unknown)], T.andereFragen),
-        total: 0, similar: false, unknown, words: z.woerter, filter: z.angaben }
+        total: 0, similar: false, unknown, words: z.woerter, filter: z.angaben, ...(kiWarnung ? { warning: kiWarnung } : {}) }
+    }
 
     // ---- die Sätze
     const ranked = weich.filter(w => z.woerter.includes(w))

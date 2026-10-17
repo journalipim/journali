@@ -28,7 +28,8 @@ public static partial class AdvisorApi
     /// <param name="Problem">eine Frage nach einem Problem oder zur Pflege — in einem engen Rahmen gilt <see cref="AdvisorApi.DokProblemGrenze"/></param>
     public sealed record DocsAnfrage(string? Satz = null, List<string>? Art = null, string? Fokus = null, string? Locale = null, bool? Problem = null);
     public sealed record KiUnterlage(string? Quelle, string? Text);
-    /// <param name="Auftrag"><c>angaben</c> (übersetze den Satz in Angaben) oder <c>antwort</c> (ein Text zu den Treffern oder zum Produkt im Blick)</param>
+    /// <param name="Auftrag"><c>angaben</c> (übersetze den Satz in Angaben), <c>antwort</c> (ein Text zu den Treffern oder zum Produkt im Blick) oder
+    /// <c>fremd</c> (eine Eingabe ohne Bezug zum Sortiment: ein, zwei Sätze, die zum Sortiment führen — 17.10.2026)</param>
     public sealed record KiAuftrag(string? Auftrag = null, string? Satz = null, List<string>? Verlauf = null, List<string>? Treffer = null, List<string>? Merkmale = null,
         List<KiUnterlage>? Unterlagen = null, string? Fokus = null, string? Locale = null);
 
@@ -288,6 +289,19 @@ public static partial class AdvisorApi
                         warning = (string?)null,
                     };
                 }));
+            }
+
+            // eine Eingabe ohne Bezug zum Sortiment (17.10.2026): „glück“, „vitamine“ — die KI geht darauf ein und führt zu den Bereichen des
+            // Sortiments; die nennt der Server, nicht der Aufrufer. Die Gruppen stehen im Fenster darunter als Chips.
+            if (body.Auftrag == "fremd")
+            {
+                if (satz.Length == 0) return Bad("Ein Auftrag an die KI braucht einen Satz.");
+                var bereiche = Uebersicht(b).Select(g => g.Label).Take(MaxBereiche).ToList();
+                var (sf, uf) = PromptFremd(satz, verlauf, d.Label ?? key, bereiche, loc);
+                var r = await AiApi.AskAsync(req, c, jobsDir, null, null, sf, uf, 200, false, 1, "advisor", ct, fuerTeam: d.Team);
+                return Results.Ok(r.Fehler is null
+                    ? new { text = (string?)r.Text.Trim(), angaben = Array.Empty<object>(), names = Array.Empty<string>(), warning = (string?)null }
+                    : new { text = (string?)null, angaben = Array.Empty<object>(), names = Array.Empty<string>(), warning = (string?)KiNichtVerfuegbar(req, r.Fehler) });
             }
 
             var unterlagen = (body.Unterlagen ?? []).Where(u => !string.IsNullOrWhiteSpace(u.Text)).Take(MaxUnterlagen)

@@ -570,7 +570,9 @@ tr.gleich td { color: var(--leise); }
       const antwort = el('div', 'karten antwort')
       const b = el('div', 'blase sortiment')
       for (const h of r.texte?.hinweise || []) b.append(el('div', 'gelesen', h))
-      b.append(el('span', 'satz', r.texte?.satz || ''))
+      // eine Eingabe ohne Bezug, mit KI (17.10.2026): ihr Text statt des festen Satzes, mit dem Hinweis, dass ihn eine KI geschrieben hat
+      if (r.answer) { b.append(el('span', 'satz', r.answer)); b.append(el('span', 'hinweis', T.ki)) }
+      if (r.texte?.satz || !r.answer) b.append(el('span', 'satz', r.texte?.satz || ''))
       if (r.sortiment.length) {
         const c = el('div', 'chips')
         for (const g of r.sortiment) {

@@ -538,6 +538,15 @@ test('die Rückführung: Hinweis, Satz, die Gruppen als Chips und der Nachsatz i
     'Ich kann Ihnen mit den Produkten weiterhelfen, die wir im Angebot haben:', 'Zelte (3)', 'Zu anderen Fragen kann ich leider keine Auskunft geben.'])
 })
 
+test('eine Eingabe ohne Bezug, mit KI: ihr Satz mit dem Hinweis, darunter die Gruppen als Chips (17.10.2026)', async () => {
+  const w = starte({ ...standard(), '/api/ask': antwort({ sortiment: [{ key: 'k-1', label: 'Zelte', n: 3 }], answer: 'Glück führen wir nicht, aber Zelte schon.' },
+    { satz: '', hinweise: [], nachsatz: null }) })
+  await warte()
+  await w.frage('glück')
+  const b = w.$('.blase.sortiment')
+  assert.deepEqual([...b.children].map(x => x.textContent), ['Glück führen wir nicht, aber Zelte schon.', 'Text von einer KI erstellt', 'Zelte (3)'])
+})
+
 test('Gruss, Dank und Abschied: eine Blase mit dem Satz des Kerns', async () => {
   const w = starte({ ...standard(), '/api/ask': [200, { kurz: true, texte: { satz: 'Gern geschehen.', hinweise: [] } }] })
   await warte()

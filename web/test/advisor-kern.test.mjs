@@ -637,6 +637,26 @@ test('mit KI: was die Regeln nicht erkannt haben, übersetzt die KI in Angaben �
   assert.ok(!ohne.rufe.some(r => r.pfad === 'ki'))
 })
 
+test('mit KI: eine Eingabe ohne Bezug zum Sortiment bekommt einen Satz der KI, die Gruppen bleiben als Chips (17.10.2026)', async () => {
+  const j = journali({ ki: b => b.auftrag === 'fremd' ? { text: 'Glück führen wir nicht, aber für gute Tage draussen haben wir einiges.' } : { angaben: [], names: [] } })
+  const a = await erstelleKern({ journali: j.fn, assoziationen: {} }).antworte({ gespraech: G, q: 'glück' })
+  assert.equal(a.answer, 'Glück führen wir nicht, aber für gute Tage draussen haben wir einiges.')
+  assert.deepEqual([a.texte.satz, a.texte.hinweise, a.texte.nachsatz], ['', [], null], 'kein fester Satz neben dem der KI')
+  assert.deepEqual(a.sortiment.map(g => g.key), ['k-schlafen', 'k-kleidung'])
+  assert.deepEqual(a.unknown, ['glück'])
+  const auftrag = j.rufe.find(r => r.pfad === 'ki' && r.body.auftrag === 'fremd').body
+  assert.equal(auftrag.satz, 'glück')
+  assert.ok(!('gruppen' in auftrag), 'die Bereiche nennt der Server')
+  // ohne Text der KI (Tagesgrenze, kein Schlüssel): der feste Satz, der Grund steht dabei
+  const ohne = journali({ ki: b => b.auftrag === 'fremd' ? { text: null, warning: 'KI: Tagesgrenze erreicht' } : { angaben: [], names: [] } })
+  const f = await erstelleKern({ journali: ohne.fn, assoziationen: {} }).antworte({ gespraech: G, q: 'glück' })
+  assert.deepEqual([f.answer ?? null, f.texte.hinweise, f.warning], [null, ['„glück“ steht in keinem Produkt.'], 'KI: Tagesgrenze erreicht'])
+  // ohne KI am Berater wird sie nicht gefragt
+  const keine = journali()
+  await erstelleKern({ journali: keine.fn, assoziationen: {} }).antworte({ gespraech: G, q: 'glück' })
+  assert.ok(!keine.rufe.some(r => r.pfad === 'ki'))
+})
+
 test('ohne Gespräch (MCP): verstehen, auswählen, Tippfehler — nichts wird gemerkt', async () => {
   const j = journali()
   const kern = erstelleKern({ journali: j.fn })

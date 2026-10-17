@@ -2864,6 +2864,10 @@ für jede spätere Stelle, die beraten will. Beide sprechen mit journali nur üb
 5. **KI** — `POST /api/advisor/{key}/ki`: der Auftrag des Beraters (Frage, Treffer, Auszüge, Verlauf) und die freigegebenen
    Werkzeuge. journali ruft die KI mit dem Schlüssel des Teams und führt jeden Werkzeugaufruf selbst aus (Abschnitt 43) — die
    Schleife KI ↔ Werkzeug läuft in journali, weil dort die Geheimnisse liegen. Zurück: der Text und welche Werkzeuge gerufen wurden.
+   Aufträge: `angaben` (einen Satz in Angaben übersetzen), `antwort` (ein Text zu den Treffern, zum Produkt im Blick oder aus den
+   Unterlagen) und `fremd` (17.10.2026): eine Eingabe ohne Bezug zum Sortiment („glück“) bekommt ein, zwei Sätze, die darauf eingehen
+   und zu den Bereichen des Sortiments führen — die Bereiche nennt der Server, keine Produkte, Preise oder Tatsachen zur Eingabe. Ohne
+   Text der KI bleibt der feste Satz.
 
 `/ask` bleibt, bis das Fenster und der MCP-Server des Dienstes den Kern nutzen; dann fällt es weg.
 
