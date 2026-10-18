@@ -275,6 +275,14 @@ public static class AiApi
         string? fuerTeam = null)
     {
         if (Actor(req) is not { } actor) return (ActorMissing(), "", [], "", "", "", "");
+        // die Demo (18.10.2026): ihr Schlüssel, ihr Modell, ihre Grenzen — keine Suche im Internet, kurze Antworten, wenige Anfragen je Besucher
+        if (Demo.An)
+        {
+            if (Demo.KiPruefen(Demo.Absender.Value ?? req.HttpContext.Connection.RemoteIpAddress?.ToString(), req.HttpContext.Items["advisor"] is string, web,
+                    (system?.Length ?? 0) + frage.Length) is { } grenze)
+                return (Bad(grenze.Vorlage, grenze.Werte), "", [], "", "", "", "");
+            maxTokens = Math.Min(maxTokens, Demo.KiMaxTokens);
+        }
         var (fehler, team, zahler, provider, key, lokalUrl) = c.Lesen((_, _) =>
         {
             // team: ein Berater (08.10.2026) gehört keinem Team — seine Definition nennt, wessen Schlüssel gilt
@@ -294,6 +302,7 @@ public static class AiApi
 
         var amTeam = c.Lesen((_, _) => c.Teams.Get(zahler)?.Models.GetValueOrDefault(provider));
         var model = Blank(amTeam) ?? Blank(wantModel) ?? (provider == "anthropic" ? "claude-sonnet-5-5" : provider == Lokal ? (LokalModell ?? (await LokalModelleAsync(lokalUrl, ct)).FirstOrDefault() ?? "") : "gpt-5");
+        if (Demo.An && provider == "anthropic") model = Blank(Demo.KiModell) ?? Demo.KiModellVorgabe;   // in der Demo gilt ihr Modell, gleich was die Anfrage nennt
         if (provider == Lokal && model == "") return (Bad("Das lokale Modell hat kein Modell geladen."), "", [], "", "", "", "");
         try
         {

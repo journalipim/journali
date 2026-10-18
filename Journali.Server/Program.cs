@@ -143,6 +143,11 @@ Demo.Einstieg = Environment.GetEnvironmentVariable("JOURNALI_DEMO_EINSTIEG");   
 Demo.BeraterUrl = Environment.GetEnvironmentVariable("JOURNALI_DEMO_BERATER_URL");
 Demo.BeraterOrigins = (Environment.GetEnvironmentVariable("JOURNALI_DEMO_BERATER_ORIGINS") ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 Demo.BeraterTokenDatei = Environment.GetEnvironmentVariable("JOURNALI_DEMO_BERATER_TOKEN");
+// KI in der Demo (18.10.2026): der Schlüssel aus einer Datei, das Modell, die Grenzen je Besucher und Tag
+Demo.KiSchluesselDatei = Environment.GetEnvironmentVariable("JOURNALI_DEMO_KI_SCHLUESSEL");
+Demo.KiModell = Environment.GetEnvironmentVariable("JOURNALI_DEMO_KI_MODELL");
+if (int.TryParse(Environment.GetEnvironmentVariable("JOURNALI_DEMO_KI_JE_BESUCHER"), out var kiJeBesucher) && kiJeBesucher >= 0) Demo.KiJeBesucher = kiJeBesucher;
+if (int.TryParse(Environment.GetEnvironmentVariable("JOURNALI_DEMO_KI_JE_TAG"), out var kiJeTag) && kiJeTag >= 0) Demo.KiJeTag = kiJeTag;
 // Server auf derselben Datenbank (pflegestruktur 41): Kennung, Puls, Rolle. Der erste Takt gleich hier, damit der Start weiss, ob er Hauptserver ist
 var verbund = new Verbund(db, catalog, dataDir, typeof(Program).Assembly.GetName().Version?.ToString(3), System.IO.File.GetLastWriteTimeUtc(typeof(Program).Assembly.Location));
 try { verbund.Takt(); } catch (Exception e) { Console.WriteLine($"journali: server not registered — {e.Message}"); }

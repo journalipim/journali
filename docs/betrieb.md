@@ -691,6 +691,12 @@ ausser bei den Werten der Produkte, die pflegt man wie sonst.
   das Fenster einbinden (durch Komma getrennt, auch die Adresse der Demo selbst — „✆ Chat-Fenster“ in der Vorschau lädt es dort).
   `JOURNALI_DEMO_BERATER_TOKEN` nennt eine Datei in einem Volume, das beide sehen: die Demo legt das Token des Dienstes hinein und übernimmt es
   nach jedem Neustart wieder in den leeren Tresor (`Demo.BeraterToken`); der Dienst liest es mit `JOURNALI_ADVISOR_TOKEN_FILE`.
+- **KI** (18.10.2026): `JOURNALI_DEMO_KI_SCHLUESSEL` nennt eine Datei mit dem KI-Schlüssel der Demo (Anbieter anthropic); der Start legt ihn in den
+  leeren Tresor des Init Teams (`Demo.KiSchluessel`), ohne Datei bleibt die Demo ohne KI. Jede KI-Anfrage der Demo läuft mit ihrem Modell
+  (`JOURNALI_DEMO_KI_MODELL`, Vorgabe `claude-haiku-5-5`), ohne Suche im Internet, mit höchstens 4096 Token Antwort und 16 000 Zeichen Anfrage, und
+  zählt je Besucher und Tag (`JOURNALI_DEMO_KI_JE_BESUCHER`, Vorgabe 20) und für alle am Tag (`JOURNALI_DEMO_KI_JE_TAG`, Vorgabe 400) —
+  `Demo.KiPruefen` in `AiApi.AskAsync`. Der Chat-Dienst zählt nur zum Tag; ihn begrenzt die Tagesgrenze seines Beraters (mit Schlüssel KI an, 300).
+  Eine Ausgabengrenze beim Anbieter bleibt die harte Grenze.
 - **Eingabefilter** (07.10.2026, `Eingabefilter.cs`): was Besucher als Text schreiben (Datenpflege, Struktur, Ausleitung), darf keinen Link,
   keine E-Mail-Adresse, keine Telefonnummer und keinen Begriff der Sperrliste enthalten und höchstens 2000 Zeichen lang sein; sonst 400 „Diese
   Eingabe ist nicht zulässig.“ Die Sperrliste liegt beim Betrieb der Demo, nicht im Repo: `JOURNALI_DEMO_SPERRLISTE` nennt die Datei (eine Zeile

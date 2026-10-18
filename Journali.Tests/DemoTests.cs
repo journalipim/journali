@@ -386,6 +386,7 @@ public class DemoTests
             Assert.Equal("onlineshop", berater.View);
             Assert.False(berater.Mcp);
             Assert.Null(berater.Url);
+            Assert.False(berater.Ki);   // ohne Datei mit KI-Schlüssel (18.10.2026) antwortet er ohne KI
             // 14.10.2026: freigegeben für web — vorher leiteten beide Bäume nichts aus, und der Produktberater hatte kein Produkt
             c.Lesen((m, t) =>
             {
@@ -479,6 +480,48 @@ public class DemoTests
 [Collection("Startphase")]
 public class DemoAnmeldungTests
 {
+    [Fact]
+    public void Die_KI_der_Demo_sucht_nicht_im_Internet_und_zaehlt_je_Besucher_und_Tag()
+    {
+        // 18.10.2026: ein Besucher probiert aus — er recherchiert kein Projekt auf dem Guthaben der Demo
+        Demo.KiZaehlerLeeren();
+        var (jeBesucher, jeTag) = (Demo.KiJeBesucher, Demo.KiJeTag);
+        Demo.KiJeBesucher = 3; Demo.KiJeTag = 5;
+        try
+        {
+            Assert.Equal("In der Demo sucht die KI nicht im Internet.", Demo.KiPruefen("1.2.3.4", false, true, 10)?.Vorlage);
+            Assert.Equal("Eine KI-Anfrage hat in der Demo höchstens {0} Zeichen.", Demo.KiPruefen("1.2.3.4", false, false, Demo.KiMaxZeichen + 1)?.Vorlage);
+            for (var i = 0; i < 3; i++) Assert.Null(Demo.KiPruefen("1.2.3.4", false, false, 10));
+            var genug = Demo.KiPruefen("1.2.3.4", false, false, 10);
+            Assert.Equal("Die {0} KI-Anfragen je Besucher und Tag sind verbraucht.", genug?.Vorlage);
+            Assert.Equal([3], genug!.Value.Werte);
+            Assert.Null(Demo.KiPruefen("5.6.7.8", false, false, 10));                        // ein anderer Besucher
+            Assert.Null(Demo.KiPruefen("9.9.9.9", true, false, 10));                         // der Chat-Dienst zählt nur zum Tag
+            Assert.Equal("Die KI-Anfragen der Demo sind für heute verbraucht.", Demo.KiPruefen("5.6.7.8", false, false, 10)?.Vorlage);   // 5 am Tag
+            Assert.Equal("Die KI-Anfragen der Demo sind für heute verbraucht.", Demo.KiPruefen("9.9.9.9", true, false, 10)?.Vorlage);
+        }
+        finally { Demo.KiJeBesucher = jeBesucher; Demo.KiJeTag = jeTag; Demo.KiZaehlerLeeren(); }
+    }
+
+    [Fact]
+    public void Der_KI_Schluessel_der_Demo_kommt_aus_einer_Datei_in_den_Tresor_des_Init_Teams()
+    {
+        // 18.10.2026: der Tresor ist nach dem täglichen Neustart leer, die Datei liegt beim Betrieb und bleibt
+        var wurzel = Directory.CreateTempSubdirectory("demo-ki").FullName;
+        var datei = Path.Combine(wurzel, "ki-schluessel");
+        Demo.KiSchluesselDatei = datei;
+        try
+        {
+            Assert.False(Demo.KiSchluessel(wurzel));   // ohne Datei keine KI
+            Assert.False(Demo.KiAn);
+            File.WriteAllText(datei, "  sk-ant-test-0123456789abcdef" + Environment.NewLine);
+            Assert.True(Demo.KiSchluessel(wurzel));
+            Assert.True(Demo.KiAn);
+            Assert.Equal("sk-ant-test-0123456789abcdef", Secrets.Get(wurzel, TeamApi.SecretKey(Model.InitTeam))["anthropic"]);
+        }
+        finally { Demo.KiSchluesselDatei = null; Demo.KiSchluessel(wurzel); Directory.Delete(wurzel, true); }
+    }
+
     [Fact]
     public void Das_Token_des_Chat_Dienstes_steht_in_einer_Datei_und_uebersteht_den_Neustart()
     {

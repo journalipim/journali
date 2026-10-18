@@ -200,6 +200,7 @@ public static class Demo
         c.MaxPubTrees = 2;   // Online-Shop und Product Advisor, gleich was der Tarif sagt
         n += Publikationsbaum(c);
         n += Freigaben(c);
+        if (dataDir is not null) KiSchluessel(dataDir);   // vor dem Berater: mit Schlüssel antwortet er mit KI
         n += Berater(c);
         if (dataDir is not null) BeraterToken(dataDir);
         // die Publikationsbäume der Demo und keiner mehr, wie eine Grenze des Tarifs: anlegen geht nicht, löschen sperrt Gesperrt (Knoten zurückziehen)
@@ -798,6 +799,61 @@ public static class Demo
     /// <summary>Die Datei, in die die Demo das Token ihres Chat-Dienstes legt (<c>JOURNALI_DEMO_BERATER_TOKEN</c>) — der Dienst liest sie beim Start.</summary>
     public static string? BeraterTokenDatei { get; set; }
 
+    // ---- KI in der Demo (18.10.2026) ----
+
+    /// <summary>Die Datei mit dem KI-Schlüssel der Demo (<c>JOURNALI_DEMO_KI_SCHLUESSEL</c>): einmal angelegt, liegt sie beim Betrieb und übersteht
+    /// den täglichen Neustart; der Start legt den Schlüssel in den leeren Tresor des Init Teams. Ohne Datei bleibt die Demo ohne KI.</summary>
+    public static string? KiSchluesselDatei { get; set; }
+    /// <summary>Das Modell der Demo (<c>JOURNALI_DEMO_KI_MODELL</c>), sonst <see cref="KiModellVorgabe"/> — es gilt für jede KI-Anfrage der Demo,
+    /// gleich, was eine Anfrage oder das Team nennt.</summary>
+    public static string? KiModell { get; set; }
+    public const string KiModellVorgabe = "claude-haiku-5-5";
+    /// <summary>Hat die Demo einen Schlüssel? Gesetzt beim Einrichten.</summary>
+    public static bool KiAn { get; private set; }
+    /// <summary>So viele KI-Anfragen je Besucher (Adresse) und Tag (<c>JOURNALI_DEMO_KI_JE_BESUCHER</c>) — ein Besucher probiert aus, er recherchiert
+    /// kein Projekt auf dem Guthaben der Demo.</summary>
+    public static int KiJeBesucher { get; set; } = 20;
+    /// <summary>So viele KI-Anfragen am Tag für alle zusammen (<c>JOURNALI_DEMO_KI_JE_TAG</c>), auch die des Chat-Dienstes.</summary>
+    public static int KiJeTag { get; set; } = 400;
+    /// <summary>Höchstens so lang wird eine Antwort (<c>max_tokens</c>) — die Untergrenze des Anbieters bleibt (<see cref="AiApi.AnthropicMindestTokens"/>).</summary>
+    public const int KiMaxTokens = 4096;
+    /// <summary>Höchstens so viele Zeichen Systemtext und Frage zusammen.</summary>
+    public const int KiMaxZeichen = 16000;
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<(DateOnly Tag, string Wer), int> KiGezaehlt = new();
+
+    /// <summary>
+    /// Darf diese KI-Anfrage in der Demo laufen? Keine Suche im Internet, nicht zu lang, höchstens <see cref="KiJeBesucher"/> je Besucher und Tag
+    /// und <see cref="KiJeTag"/> für alle. Der Chat-Dienst (<paramref name="dienst"/>) fragt für viele Besucher — ihn begrenzt die Tagesgrenze seines
+    /// Beraters, hier zählt er nur zum Tag. Liefert die Vorlage einer Meldung mit ihren Werten, sonst null; gezählt wird nur, was durchgeht.
+    /// </summary>
+    public static (string Vorlage, object[] Werte)? KiPruefen(string? besucher, bool dienst, bool web, int zeichen)
+    {
+        if (web) return Bad("In der Demo sucht die KI nicht im Internet.");
+        if (zeichen > KiMaxZeichen) return Bad("Eine KI-Anfrage hat in der Demo höchstens {0} Zeichen.", KiMaxZeichen);
+        var heute = DateOnly.FromDateTime(DateTime.Now);
+        foreach (var alt in KiGezaehlt.Keys.Where(k => k.Tag != heute).ToList()) KiGezaehlt.TryRemove(alt, out _);
+        if (KiGezaehlt.GetValueOrDefault((heute, "")) >= KiJeTag) return Bad("Die KI-Anfragen der Demo sind für heute verbraucht.");
+        var wer = dienst ? null : besucher ?? "?";
+        if (wer is not null && KiGezaehlt.GetValueOrDefault((heute, wer)) >= KiJeBesucher) return Bad("Die {0} KI-Anfragen je Besucher und Tag sind verbraucht.", KiJeBesucher);
+        KiGezaehlt.AddOrUpdate((heute, ""), 1, (_, n) => n + 1);
+        if (wer is not null) KiGezaehlt.AddOrUpdate((heute, wer), 1, (_, n) => n + 1);
+        return null;
+    }
+    public static void KiZaehlerLeeren() => KiGezaehlt.Clear();
+    /// <summary>Eine Meldung als Vorlage mit Werten — <c>AiApi</c> macht daraus die Antwort; so heisst sie wie jede Servermeldung (Prüfstand der Übersetzungen)</summary>
+    private static (string Vorlage, object[] Werte) Bad(string vorlage, params object[] werte) => (vorlage, werte);
+
+    /// <summary>Der KI-Schlüssel der Demo in den Tresor des Init Teams (Anbieter anthropic); ohne Datei oder mit leerer Datei nichts. Liefert, ob einer da ist.</summary>
+    public static bool KiSchluessel(string dataDir)
+    {
+        KiAn = false;
+        if (KiSchluesselDatei is not { Length: > 0 } datei || !File.Exists(datei)) return false;
+        var schluessel = File.ReadAllText(datei).Trim();
+        if (schluessel.Length < 20) return false;
+        Secrets.Set(dataDir, TeamApi.SecretKey(Model.InitTeam), new() { ["anthropic"] = schluessel });
+        return KiAn = true;
+    }
+
     /// <summary>
     /// Das Token des Chat-Dienstes (15.10.2026): steht in <see cref="BeraterTokenDatei"/> schon eines, kommt es wieder in den Tresor — er ist nach dem
     /// täglichen Neustart leer, die Datei liegt in einem Volume und bleibt; sonst gibt die Demo ein neues aus und schreibt es hinein. Der Dienst startet
@@ -819,8 +875,8 @@ public static class Demo
 
     /// <summary>
     /// Der Produktberater (14.10.2026): ein Berater auf dem Baum „Product Advisor“, damit ✆ Produktberatung in der Demo etwas zeigt — anlegen dürfen
-    /// Besucher keinen (Plugin-Daten sind gesperrt). Gefragt wird in der Vorschau der Ansicht; der Dienst mit Chat-Fenster und MCP läuft in der Demo
-    /// nicht, darum ohne MCP und ohne Token. Ohne KI: die Demo hat keinen Schlüssel. Was schon da ist, bleibt.
+    /// Besucher keinen (Plugin-Daten sind gesperrt). Gefragt wird in der Vorschau der Ansicht und im Chat-Fenster des Dienstes; ohne MCP. Mit KI,
+    /// wenn die Demo einen Schlüssel hat (18.10.2026: <see cref="KiAn"/>, das Init Team zahlt, 300 Antworten der KI am Tag). Was schon da ist, bleibt.
     /// </summary>
     public static int Berater(Catalog c)
     {
@@ -836,7 +892,7 @@ public static class Demo
             // 18.10.2026: der Beispielshop beim Namen — in der Demo hielt man den Berater sonst für die Hilfe zu journali
             Greeting: new() { ["de"] = "Hallo! Ich berate zu den Produkten des Beispielshops Tannwald Outdoor, etwa Zelte, Jacken oder Wanderschuhe. Wonach suchen Sie?",
                 ["en"] = "Hello! I advise on the products of the sample shop Tannwald Outdoor, such as tents, jackets or hiking boots. What are you looking for?" },
-            Ki: false, Mcp: false, Limits: new(JeTag: 5000),
+            Ki: KiAn, Team: KiAn ? Model.InitTeam : null, Mcp: false, Limits: new(JeTag: 5000, KiJeTag: KiAn ? 300 : null),
             // der Chat-Dienst neben der Demo (15.10.2026), wenn einer läuft: seine Adresse und die Websites, die das Fenster einbinden
             Url: string.IsNullOrWhiteSpace(BeraterUrl) ? null : BeraterUrl.TrimEnd('/'), Origins: BeraterOrigins.Length > 0 ? BeraterOrigins : null);
         return c.With((_, _, write) => { write(Anwender, Plugins.Stream + AdvisorApi.Plugin, Types.PluginDataSet, new PluginDataSet(AdvisorApi.Prefix + BeraterKey, def.Write()), null); return 1; });
