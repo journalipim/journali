@@ -30,6 +30,9 @@ node tools/blog.mjs meta blog/<datei>.md --replace
 
 Was in WordPress schon anders steht, bleibt — es kann dort geschrieben sein. `--replace` überschreibt es.
 
+Welche Felder die REST-API führt, legt die WordPress-Seite fest: bei Beiträgen Beschreibung und Keyphrase, bei Seiten (Stand 18.10.2026) nur
+die Beschreibung. Ein Feld, das sie nicht führt, meldet `meta` als „not in the REST API“ — es steht in der Datei und wird in WordPress eingetragen.
+
 ## Beiträge
 
 Ein Beitrag ist eine Markdown-Datei in `blog/`, Name `JJJJ-MM-TT-<slug>.md`, mit Kopf:

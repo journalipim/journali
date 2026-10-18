@@ -454,17 +454,19 @@ export function seoFelder(kopf) {
 
 /**
  * Nur Felder des SEO-Plugins eines Beitrags oder einer Seite setzen (art: posts oder pages) — Inhalt, Titel und Status bleiben. Was in WordPress
- * schon anders steht, bleibt (es kann dort geschrieben sein); mit ersetzen nicht. Liefert { id, status, neu, gleich, behalten, gesetzt } mit den
- * Namen der Felder.
+ * schon anders steht, bleibt (es kann dort geschrieben sein); mit ersetzen nicht. Ein Feld, das die REST-API dort nicht führt, steht in fehlt.
+ * Liefert { id, status, neu, gleich, behalten, fehlt, gesetzt } mit den Namen der Felder.
  */
 export async function metaSetzen(api, art, id, felder, { probe = false, ersetzen = false } = {}) {
   if (!Object.keys(felder).length) throw new Error(`${art} ${id}: nothing to set`)
   const d = felder[META_BESCHREIBUNG]
   if (d && d.length > MAX_BESCHREIBUNG) throw new Error(`${art} ${id}: description has ${d.length} characters, at most ${MAX_BESCHREIBUNG}`)
   const da = await api('GET', `${art}/${id}?context=edit`)
-  const neu = {}, r = { id: +id, status: da.status, neu: [], gleich: [], behalten: [], gesetzt: false }
+  const neu = {}, r = { id: +id, status: da.status, neu: [], gleich: [], behalten: [], fehlt: [], gesetzt: false }
   for (const [k, v] of Object.entries(felder)) {
-    const vorher = da.meta?.[k] ?? ''
+    // ein Feld, das die REST-API für diese Art nicht führt, übergeht WordPress beim Schreiben ohne Fehler (18.10.2026: die Keyphrase bei Seiten)
+    if (!(k in (da.meta ?? {}))) { r.fehlt.push(FELDNAME[k] ?? k); continue }
+    const vorher = da.meta[k] ?? ''
     if (vorher === v) r.gleich.push(FELDNAME[k] ?? k)
     else if (vorher && !ersetzen) r.behalten.push(FELDNAME[k] ?? k)
     else { neu[k] = v; r.neu.push(FELDNAME[k] ?? k) }
@@ -540,9 +542,10 @@ async function main(argv) {
       : [...fs.readdirSync(path.join(repo, 'blog')).filter(f => /^\d{4}-.*\.md$/.test(f)).map(f => path.join(repo, 'blog', f)), path.join(repo, 'site', 'seiten-beschreibungen.json')]
     const opt = { probe: rest.includes('--dry') || datei === '--dry', ersetzen: rest.includes('--replace') || datei === '--replace' }
     // je Feld gezählt: set (oder would set), unchanged (steht schon so in WordPress), kept (dort steht anderes, und es bleibt)
-    const zaehler = { gesetzt: 0, gleich: 0, behalten: 0 }
+    const zaehler = { gesetzt: 0, gleich: 0, behalten: 0, fehlt: 0 }
     const melde = (art, r, name) => {
-      zaehler.gesetzt += r.neu.length; zaehler.gleich += r.gleich.length; zaehler.behalten += r.behalten.length
+      zaehler.gesetzt += r.neu.length; zaehler.gleich += r.gleich.length; zaehler.behalten += r.behalten.length; zaehler.fehlt += r.fehlt.length
+      if (r.fehlt.length) console.log(`not in the REST API ${art} ${r.id} ${r.fehlt.join(', ')}: ${name} — set it in WordPress`)
       if (r.neu.length) console.log(`${r.gesetzt ? 'set' : 'would set'} ${art} ${r.id} (${r.status}) ${r.neu.join(', ')}: ${name}`)
       if (r.behalten.length) console.log(`kept ${art} ${r.id} (${r.status}) ${r.behalten.join(', ')}: ${name}`)
     }
@@ -558,7 +561,7 @@ async function main(argv) {
       if (!Object.keys(felder).length) continue
       melde('post', await metaSetzen(api, 'posts', kopf.wp, felder, opt), path.basename(d))
     }
-    console.log(`fields: ${opt.probe ? 'would set' : 'set'} ${zaehler.gesetzt}, unchanged ${zaehler.gleich}, kept ${zaehler.behalten}`)
+    console.log(`fields: ${opt.probe ? 'would set' : 'set'} ${zaehler.gesetzt}, unchanged ${zaehler.gleich}, kept ${zaehler.behalten}, not in the REST API ${zaehler.fehlt}`)
   } else if (befehl === 'update') {
     const text = fs.readFileSync(datei, 'utf8')
     const standDatei = path.join(path.dirname(datei), 'wp-beitraege.json')

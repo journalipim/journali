@@ -346,6 +346,11 @@ test('Meta-Beschreibung und Keyphrase (18.10.2026): aus dem Kopf; gesetzt wird n
   assert.equal(w.seiten.get(7).meta[META_BESCHREIBUNG], 'Aus der Datei.')
   await assert.rejects(metaSetzen(api, 'posts', 40, { [META_BESCHREIBUNG]: 'x'.repeat(156) }), /at most 155/)
   await assert.rejects(metaSetzen(api, 'posts', 40, {}), /nothing to set/)
+  // ein Feld, das die REST-API dort nicht führt (die Keyphrase bei Seiten): gemeldet, nicht geschrieben
+  w.seiten.set(8, { id: 8, status: 'publish', meta: { [META_BESCHREIBUNG]: '' } })
+  const ohne = await metaSetzen(api, 'pages', 8, { [META_BESCHREIBUNG]: 'B.', [META_KEYPHRASE]: 'B' })
+  assert.deepEqual([ohne.neu, ohne.fehlt], [['description'], ['keyphrase']])
+  assert.deepEqual(w.rufe.at(-1).body, { meta: { [META_BESCHREIBUNG]: 'B.' } })
   // ein neuer Entwurf bringt beides mit
   const e = await entwurf(api, { url: 'https://blog.test', user: 'u', password: 'p' }, '---\ntitle: T\nexcerpt: Ein Auszug.\nkeyphrase: Auszug\n---\nText.\n')
   assert.deepEqual(w.posts.get(e.id).meta, { [META_BESCHREIBUNG]: 'Ein Auszug.', [META_KEYPHRASE]: 'Auszug' })
