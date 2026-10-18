@@ -767,6 +767,16 @@ public class AdvisorTests
         // wo es Besseres gibt, fällt der Wortanfang weg — wo nicht, zählt er
         Assert.Equal(["Brenna 5 Zelt"], AdvisorApi.MitWoertern([matte, zelt], ["zelte"]).Select(e => e.Name).ToList());
         Assert.Equal(["Akkuschrauber kompakt"], AdvisorApi.MitWoertern([schrauber, zelt], ["akku"]).Select(e => e.Name).ToList());
+        // der zweite Teil eines zusammengesetzten Namens (18.10.2026): „schuhe für den winter“ zeigte Hosen, deren Text Schuhe erwähnt
+        var schuh = E("Varde 3 Wanderschuh", "Für Tagestouren.");
+        var hose = E("Kilden Hose", "Passt über die Schuhe, auch im Winter.");
+        var handschuh = E("Lunde Handschuh", "Warm.");
+        Assert.Equal(1.9, AdvisorApi.Staerke(schuh, "schuhe"));
+        Assert.Equal(1, AdvisorApi.Staerke(hose, "schuhe"));
+        Assert.Equal(["Varde 3 Wanderschuh"], AdvisorApi.MitWoertern([hose, schuh], ["schuhe"]).Select(e => e.Name).ToList());
+        // beginnt ein Name mit dem Wort, bleiben die zusammengesetzten hinten
+        Assert.Equal(["Schuhcreme"], AdvisorApi.MitWoertern([handschuh, E("Schuhcreme", "Pflege.")], ["schuh"]).Select(e => e.Name).ToList());
+        Assert.Equal(0, AdvisorApi.Staerke(E("Kugel", "rund"), "kel"));   // zu kurz für ein Wortende
     }
 
     [Fact]

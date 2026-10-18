@@ -1,0 +1,9 @@
+{
+  "name": "Schuhe für den Winter — ein zusammengesetzter Name",
+  "locale": "de",
+  "schritte": [
+    { "eingabe": "schuhe für den winter",
+      "erwartet": { "alle_treffer_enthalten": "schuh", "treffer_min": 1, "woerter": ["schuhe", "winter"] },
+      "vorbild": "Für den Winter: diese Wanderschuhe, die mit Membran zuerst. Soll es ein hoher Schaft sein?" }
+  ]
+}

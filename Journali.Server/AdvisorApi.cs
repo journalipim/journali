@@ -359,6 +359,9 @@ public static partial class AdvisorApi
         var formen = Formen(w);
         var name = e.Name.ToLowerInvariant();
         if (formen.Any(f => AmWortanfang(name, f))) return 2;
+        // der zweite Teil eines zusammengesetzten Namens (18.10.2026): „schuhe“ trifft „Wanderschuh“ — vorher fand es nur Hosen, deren Text Schuhe
+        // erwähnt. Knapp unter dem Anfang: gibt es Namen, die mit dem Wort beginnen, bleiben „Handschuhe“ hinten
+        if (formen.Any(f => AmWortende(name, f))) return 1.9;
         if (formen.Any(f => GanzesWort(e.Text, f))) return 1;
         return formen.Any(f => AmWortanfang(e.Text, f)) ? 0.5 : 0;
     }
@@ -394,6 +397,15 @@ public static partial class AdvisorApi
         foreach (var w in woerter)
             if (basis.Count > 0 && basis.Max(e => Staerke(e, w)) is var beste) { stufe[w] = beste; basis = basis.Where(e => Staerke(e, w) >= beste).ToList(); }
         return liste.Where(e => woerter.All(w => Staerke(e, w) is var s && s > 0 && s >= stufe.GetValueOrDefault(w))).ToList();
+    }
+
+    /// <summary>Steht <paramref name="w"/> am Ende eines längeren Worts — als zweiter Teil eines zusammengesetzten („schuh“ in „wanderschuh“)? Ab vier Zeichen.</summary>
+    private static bool AmWortende(string text, string w)
+    {
+        if (w.Length < 4) return false;
+        for (var i = text.IndexOf(w, StringComparison.Ordinal); i >= 0; i = text.IndexOf(w, i + 1, StringComparison.Ordinal))
+            if (i > 0 && char.IsLetter(text[i - 1]) && (i + w.Length == text.Length || !char.IsLetterOrDigit(text[i + w.Length]))) return true;
+        return false;
     }
 
     private static bool AmWortanfang(string text, string w)

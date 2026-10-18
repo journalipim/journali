@@ -303,12 +303,15 @@ export function namenWoerter(vok) {
 /// Steht ein Wort im Namen eines Produkts (am Anfang eines Worts, auch gebeugt)? Dann ist es die Art: „zelt“, „hose“, „akku“ (Akkuschrauber)
 export function istArt(w, namenSet) {
   const f = formen(w)
-  for (const n of namenSet) if (f.some(x => n.startsWith(x))) return true
+  for (const n of namenSet) if (f.some(x => n.startsWith(x) || amEnde(n, x))) return true
   return false
 }
+
+/// Der zweite Teil eines zusammengesetzten Worts (18.10.2026): „schuh“ in „wanderschuh“ — ab vier Zeichen
+const amEnde = (n, x) => x.length >= 4 && n.length > x.length && n.endsWith(x)
 
 /// Steht ein Wort im Namen dieses einen Produkts?
 export function imNamen(w, name) {
   const teile = woerter(name).flatMap(t => [t, ...t.split('-')])
-  return formen(w).some(f => teile.some(t => t.startsWith(f)))
+  return formen(w).some(f => teile.some(t => t.startsWith(f) || amEnde(t, f)))
 }

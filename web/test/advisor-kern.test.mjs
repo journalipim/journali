@@ -243,6 +243,10 @@ test('Fragen und Arten', () => {
   assert.ok(istArt('akku', namen), '„akku“ steht am Anfang von Akkuschrauber')
   assert.ok(istArt('tool', namen), 'ein Teil eines zusammengesetzten Namens')
   assert.ok(!istArt('wasserdicht', namen))
+  // der zweite Teil eines zusammengesetzten Namens (18.10.2026): „schuhe“ ist die Art bei „Wanderschuh“ — kurze Wörter nicht
+  const schuhe = namenWoerter({ words: [{ word: 'wanderschuh' }, { word: 'trailschuh' }, { word: 'kugel' }] })
+  assert.ok(istArt('schuhe', schuhe))
+  assert.ok(!istArt('gel', schuhe), 'unter vier Zeichen kein Wortende')
 })
 
 // ---- das Gespräch
