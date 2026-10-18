@@ -1142,6 +1142,31 @@ public class AdvisorTests
     }
 
     [Fact]
+    public async Task Anrede_und_Ton_stehen_am_Berater_und_gehen_an_KI_Kern_und_Fenster()
+    {
+        // 18.10.2026: „Sie“ oder „du“ in den festen Sätzen und den Texten der KI, dazu der Ton der KI — Vorgabe „Sie“ und freundlich
+        Assert.Contains("mit „Sie“", AdvisorApi.Prompt("x", [], []).System);
+        Assert.Contains("freundlich und zugewandt", AdvisorApi.Prompt("x", [], []).System);
+        var (du, _) = AdvisorApi.Prompt("x", [], [], anrede: "du", ton: "locker");
+        Assert.Contains("mit „du“", du); Assert.Contains("locker und herzlich", du); Assert.DoesNotContain("„Sie“", du);
+        Assert.Contains("sachlich und knapp", AdvisorApi.PromptFremd("glück", [], "x", [], "de", "sie", "sachlich").System);
+        Assert.Equal("sie", new AdvisorApi.Definition(Anrede: "Ihr").AnredeOderSie);
+        Assert.Equal("freundlich", new AdvisorApi.Definition(Ton: "laut").TonOderFreundlich);
+
+        await using var w = await Welt.Neu();
+        var (_, info) = await w.Get("/api/advisor/werkzeug/info");
+        Assert.Equal(["sie", "freundlich"], new[] { info.GetProperty("anrede").GetString(), info.GetProperty("ton").GetString() });
+        w.Setze(w.Standard() with { Anrede = "du", Ton = "locker" });
+        (_, info) = await w.Get("/api/advisor/werkzeug/info");
+        Assert.Equal(["du", "locker"], new[] { info.GetProperty("anrede").GetString(), info.GetProperty("ton").GetString() });
+        var (_, vok) = await w.Get("/api/advisor/werkzeug/vocabulary");
+        Assert.Equal("du", vok.GetProperty("anrede").GetString());
+        // die Vorschau: der Kern sagt „du“
+        var j = await w.Sag("was kannst du?");
+        Assert.Contains("was du beschreibst", j.GetProperty("texte").GetProperty("satz").GetString());
+    }
+
+    [Fact]
     public void Die_Bitte_an_die_KI_bei_einer_Eingabe_ohne_Bezug_nennt_Shop_Bereiche_und_Sprache()
     {
         var (system, user) = AdvisorApi.PromptFremd("glück", ["zelt"], "Tannwald Outdoor", ["Ausrüstung", "Bekleidung"], "de");

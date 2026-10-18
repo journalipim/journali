@@ -39,6 +39,8 @@ function sauber(d) {
     label: String(d.label ?? '').trim() || null, pub: d.pub || null, role: d.role || null, view: d.view || null, locales: d.locales ?? [],
     greeting: gruss, ki: !!d.ki, team: d.ki ? (d.team || null) : null, mcp: d.mcp !== false, origins: d.origins ?? [], limits: g,
     url: String(d.url ?? '').trim().replace(/\/+$/, '') || null,
+    // Anrede und Ton (18.10.2026): die Vorgabe („Sie“, freundlich) bleibt leer
+    anrede: d.anrede === 'du' ? 'du' : null, ton: ['sachlich', 'locker'].includes(d.ton) ? d.ton : null,
   }
 }
 
@@ -57,7 +59,8 @@ onMounted(() => { ladeListe(); ladeAuswahl() })
 async function oeffne(key) {
   try {
     const d = await api.get('/api/plugins/advisor/data/' + encodeURIComponent('def:' + key)) ?? {}
-    def.value = { label: '', pub: '', role: '', view: '', locales: [], greeting: {}, ki: false, team: '', mcp: true, origins: [], limits: {}, url: '', ...JSON.parse(JSON.stringify(d)) }
+    def.value = { label: '', pub: '', role: '', view: '', locales: [], greeting: {}, ki: false, team: '', mcp: true, origins: [], limits: {}, url: '', anrede: 'sie', ton: 'freundlich', ...JSON.parse(JSON.stringify(d)) }
+    def.value.anrede ??= 'sie'; def.value.ton ??= 'freundlich'
     def.value.limits ??= {}; def.value.greeting ??= {}; def.value.locales ??= []
     basis.value = JSON.stringify(sauber(def.value))
     cur.value = key; neuesToken.value = ''; vorschau.value = null; vorschauGespraech.value = neueKennung()
@@ -188,9 +191,12 @@ const compose = computed(() => [
             <span v-if="!def.locales.length" class="muted" :title="$t('ohne Auswahl gilt die Leitsprache')">{{ ' ' + $t('· Leitsprache {0}', [leitsprache]) }}</span></div></td></tr>
           <tr v-for="l in grussSprachen" :key="'g' + l"><td class="attr">{{ $t('Begrüssung {0}', [l]) }}</td>
             <td><input v-model="def.greeting[l]" class="gruss" style="width:100%" :title="$t('der erste Satz im Chat-Fenster')" /></td></tr>
+          <tr><td class="attr" :title="$t('in den festen Sätzen des Beraters und in den Texten der KI')">{{ $t('Anrede') }}</td>
+            <td><select v-model="def.anrede" class="anrede"><option value="sie">{{ $t('Sie') }}</option><option value="du">{{ $t('du') }}</option></select></td></tr>
           <tr><td class="attr">{{ $t('KI') }}</td><td><div class="row">
             <label :title="$t('die KI des gewählten Teams schreibt zu den Treffern einen kurzen Text — sonst antwortet der Berater ohne KI')"><input type="checkbox" v-model="def.ki" class="ki" />{{ ' ' + $t('Text zu den Treffern') }}</label>
             <select v-if="def.ki" v-model="def.team" class="team" :title="$t('mit dessen KI-Schlüssel, gezählt bei diesem Team')"><option value="">—</option><option v-for="tm in teams" :key="tm.key" :value="tm.key">{{ tm.label || tm.key }}</option></select>
+            <select v-if="def.ki" v-model="def.ton" class="ton" :title="$t('wie die KI schreibt — die Fakten bleiben dieselben')"><option value="sachlich">{{ $t('sachlich') }}</option><option value="freundlich">{{ $t('freundlich') }}</option><option value="locker">{{ $t('locker') }}</option></select>
           </div></td></tr>
           <tr><td class="attr">{{ $t('MCP') }}</td><td><label :title="$t('fremde KI-Agenten fragen den Dienst unter /mcp mit denselben Grenzen')"><input type="checkbox" v-model="def.mcp" class="mcp" />{{ ' ' + $t('Werkzeuge für KI-Agenten') }}</label></td></tr>
           <tr><td class="attr" :title="$t('wo der Dienst des Beraters erreichbar ist — für den Code zum Einbinden und das Chat-Fenster hier')">{{ $t('Dienst') }}</td>

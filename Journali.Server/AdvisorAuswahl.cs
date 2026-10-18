@@ -123,7 +123,7 @@ public static partial class AdvisorApi
                 string[] sprachen = d!.Locales is { Length: > 0 } l ? l : [model.MasterLocale ?? "de"];
                 return new
                 {
-                    locale = loc, locales = sprachen, etag, products = b.Produkte.Count, ki = d.Ki,
+                    locale = loc, locales = sprachen, etag, products = b.Produkte.Count, ki = d.Ki, anrede = d.AnredeOderSie,
                     attributes = AttributeMitAchsen(model, d.View!, b).Select(a => Vokabel(model, a, loc, achsen.Contains(a.Key))).ToList(),
                     words = NamenZaehlung(b).Select(x => new { word = x.Wort, n = x.N }).ToList(),
                     groups = Uebersicht(b).Select(g => new { key = g.Key, label = g.Label, n = g.N }).ToList(),
@@ -297,7 +297,7 @@ public static partial class AdvisorApi
             {
                 if (satz.Length == 0) return Bad("Ein Auftrag an die KI braucht einen Satz.");
                 var bereiche = Uebersicht(b).Select(g => g.Label).Take(MaxBereiche).ToList();
-                var (sf, uf) = PromptFremd(satz, verlauf, d.Label ?? key, bereiche, loc);
+                var (sf, uf) = PromptFremd(satz, verlauf, d.Label ?? key, bereiche, loc, d.AnredeOderSie, d.TonOderFreundlich);
                 var r = await AiApi.AskAsync(req, c, jobsDir, null, null, sf, uf, 200, false, 1, "advisor", ct, fuerTeam: d.Team);
                 return Results.Ok(r.Fehler is null
                     ? new { text = (string?)r.Text.Trim(), angaben = Array.Empty<object>(), names = Array.Empty<string>(), warning = (string?)null }
@@ -318,7 +318,7 @@ public static partial class AdvisorApi
                 return (satz, t, (body.Merkmale ?? []).Where(x => x is { Length: > 0 and <= 80 }).Take(MaxFacetten).ToList());
             });
             if (frage.Length == 0 && verlauf.Count == 0) return Bad("Ein Auftrag an die KI braucht einen Satz.");
-            var (sys, usr) = Prompt(frage, treffer, merkmale, verlauf, unterlagen);
+            var (sys, usr) = Prompt(frage, treffer, merkmale, verlauf, unterlagen, d.AnredeOderSie, d.TonOderFreundlich);
             var antwort = await AiApi.AskAsync(req, c, jobsDir, null, null, sys, usr, 600, false, 1, "advisor", ct, fuerTeam: d.Team);
             return Results.Ok(antwort.Fehler is null
                 ? new { text = (string?)antwort.Text, angaben = Array.Empty<object>(), names = Array.Empty<string>(), warning = (string?)null }

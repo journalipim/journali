@@ -691,3 +691,14 @@ test('das schwebende Fenster lässt sich vergrössern und wieder verkleinern; ei
   await warte()
   assert.ok(!e.schatten.querySelector('.kopf .groesse'))
 })
+
+test('„du“ am Berater (18.10.2026): auch das Eingabefeld fragt so', async () => {
+  const w = starte({ ...standard(), '/api/info': [200, { label: 'Shop', greeting: {}, locales: ['de'], locale: 'de', anrede: 'du' }] })
+  await warte()
+  const feld = w.$('input')
+  assert.equal(feld.placeholder, 'Wonach suchst du?')
+  assert.equal(feld.getAttribute('aria-label'), 'Wonach suchst du?')
+  const sie = starte()
+  await warte()
+  assert.equal(sie.$('input').placeholder, 'Wonach suchen Sie?')
+})

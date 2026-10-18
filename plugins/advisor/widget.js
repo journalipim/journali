@@ -27,7 +27,7 @@
   }
   const TEXTE = {
     de: {
-      oeffnen: 'Produktberatung', schliessen: 'Schliessen', frage: 'Wonach suchen Sie?', senden: 'Fragen',
+      oeffnen: 'Produktberatung', schliessen: 'Schliessen', frage: 'Wonach suchen Sie?', frageDu: 'Wonach suchst du?', senden: 'Fragen',
       bis: 'bis', ab: 'ab', details: 'Details', vergleichen: 'Vergleichen', vergleich: n => `${n} vergleichen`,
       nochmal: 'Noch einmal fragen', unterlagen: 'Aus den Unterlagen:', weiterlesen: 'Weiterlesen', dokument: 'Dokument', dokumentLeer: 'Zu diesem Dokument gibt es keinen Text.', seite: n => `S. ${n}`,
       zurueck: 'Zurück', fehler: 'Der Berater antwortet gerade nicht.', zuviel: 'Zu viele Fragen in kurzer Zeit.', varianten: n => `${n} Ausführungen`, ki: 'Text von einer KI erstellt',
@@ -41,7 +41,7 @@
       stattJa: n => n === 1 ? 'Ja, 1 Produkt' : `Ja, ${n} Produkte`,
     },
     en: {
-      oeffnen: 'Product advice', schliessen: 'Close', frage: 'What are you looking for?', senden: 'Ask',
+      oeffnen: 'Product advice', schliessen: 'Close', frage: 'What are you looking for?', frageDu: 'What are you looking for?', senden: 'Ask',
       bis: 'up to', ab: 'from', details: 'Details', vergleichen: 'Compare', vergleich: n => `Compare ${n}`,
       nochmal: 'Ask again', unterlagen: 'From the documentation:', weiterlesen: 'Read more', dokument: 'Document', dokumentLeer: 'There is no text for this document.', seite: n => `p. ${n}`,
       zurueck: 'Back', fehler: 'The advisor is not answering right now.', zuviel: 'Too many questions in a short time.', varianten: n => `${n} versions`, ki: 'Text written by an AI',
@@ -747,6 +747,8 @@ tr.gleich td { color: var(--leise); }
     rufe('/api/info').then(i => {
       zustand.info = i
       if (i && i.label) { titel.textContent = i.label; knopf.textContent = i.label }
+      // „du“ am Berater (18.10.2026): auch das Eingabefeld fragt so
+      if (i && i.anrede === 'du') { eingabe.placeholder = T.frageDu; eingabe.setAttribute('aria-label', T.frageDu) }
       const gruss = i && i.greeting && (i.greeting[sprache] || i.greeting[i.locale])
       if (gruss) blase(gruss)
     }).catch(() => {})

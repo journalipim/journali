@@ -9,6 +9,7 @@ import { erkenne, fragt, istArt, namenWoerter, istProblem } from '../../plugins/
 import { erstelleKern } from '../../plugins/advisor/kern/gespraech.mjs'
 import { stellen, trifft, treffer, saetze } from '../../plugins/advisor/kern/stellen.mjs'
 import { erstelleAssoziationen } from '../../plugins/advisor/kern/assoziationen.mjs'
+import { texte } from '../../plugins/advisor/kern/texte.mjs'
 import { erstelleLernen, vorschlaege } from '../../plugins/advisor/kern/lernen.mjs'
 import { alsText } from '../../plugins/advisor/vorschlaege.mjs'
 import fs from 'node:fs'
@@ -722,4 +723,16 @@ test('das Gelernte liegt in einer Datei des Dienstes, überlebt einen Neustart u
     fs.writeFileSync(datei, '{ kaputt')
     assert.deepEqual(erstelleLernen({ datei }).stand().ohneTreffer, {})
   } finally { fs.rmSync(dir, { recursive: true, force: true }) }
+})
+
+test('„du“ am Berater (18.10.2026): die festen Sätze mit „du“ — im Englischen gibt es den Unterschied nicht', () => {
+  const sie = texte('de'), du = texte('de', 'du')
+  assert.equal(sie.gruss, 'Hallo. Wonach suchen Sie?')
+  assert.equal(du.gruss, 'Hallo. Wonach suchst du?')
+  assert.equal(du.helfen(true), 'Ich kann dir mit den Produkten weiterhelfen, die wir im Angebot haben:')
+  assert.equal(du.welche(['Rot', 'Blau']), 'Meinst du Rot oder Blau?')
+  assert.equal(du.treffer(2), sie.treffer(2), 'was keine Anrede hat, bleibt')
+  for (const [k, v] of Object.entries(du)) if (typeof v === 'string') assert.doesNotMatch(v, /\b(Sie|Ihnen|Ihr|Ihre)\b/, k)
+  for (const k of ['hilftDas', 'gruss', 'koennen', 'welche']) assert.ok(k in du, k)
+  assert.equal(texte('en', 'du').gruss, texte('en').gruss)
 })

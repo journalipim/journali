@@ -456,8 +456,8 @@ unter `/app`.
 ## Produktberater (Plugin advisor)
 
 Ein Berater beantwortet Fragen von Besuchern einer Website zu den Produkten eines Publikationsbaums (`docs/pflegestruktur.md` 42).
-Angelegt wird er unter ⇪ Export → Produktberatung: Publikationsbaum, Rolle, Sicht, Sprachen, Begrüssung, wahlweise KI mit Team,
-MCP, Websites und Grenzen. Dort gibt es auch das Token für seinen Dienst — nur beim Ausgeben sichtbar.
+Angelegt wird er unter ⇪ Export → Produktberatung: Publikationsbaum, Rolle, Sicht, Sprachen, Begrüssung, Anrede („Sie“ oder „du“ — in
+seinen festen Sätzen und in den Texten der KI), wahlweise KI mit Team und Ton (sachlich, freundlich, locker), MCP, Websites und Grenzen. Dort gibt es auch das Token für seinen Dienst — nur beim Ausgeben sichtbar.
 
 Der Dienst läuft im **eigenen Container**, ohne eigenes Image: `node:22-alpine` mit dem Verzeichnis des Plugins (nur lesen).
 Er braucht nur HTTP zu journali, keine Datenbank, keinen Medienspeicher. Neben `compose.yaml`:

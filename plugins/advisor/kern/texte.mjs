@@ -87,7 +87,16 @@ export const TEXTE = {
   },
 }
 
-export const texte = locale => String(locale ?? '').toLowerCase().startsWith('de') ? TEXTE.de : TEXTE.en
+/// Die Sätze mit „du“ (18.10.2026): am Berater einstellbar, sonst gilt „Sie“. Nur im Deutschen — im Englischen gibt es den Unterschied nicht.
+export const DU = {
+  hilftDas: 'Hilft dir das weiter?',
+  gruss: 'Hallo. Wonach suchst du?',
+  koennen: 'Ich suche passende Produkte zu dem, was du beschreibst — etwa „leichtes Zelt für zwei“ —, grenze mit dir ein und beantworte Fragen zu den gezeigten Produkten, etwa „sind die wasserdicht?“.',
+  helfen: mitGruppen => mitGruppen ? 'Ich kann dir mit den Produkten weiterhelfen, die wir im Angebot haben:' : 'Ich kann dir mit den Produkten weiterhelfen, die wir im Angebot haben.',
+  welche: l => `Meinst du ${liste(l, 'oder')}?`,
+}
+
+export const texte = (locale, anrede = 'sie') => String(locale ?? '').toLowerCase().startsWith('de') ? (anrede === 'du' ? { ...TEXTE.de, ...DU } : TEXTE.de) : TEXTE.en
 
 /// Eine Angabe als Text: „Farbe: Rot“, „Leistung: bis 900 W“, „leicht“
 export function angabeText(a, locale) {

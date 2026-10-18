@@ -130,7 +130,7 @@ export function erstelle(o) {
 
       // Chat-Fenster
       if (req.method === 'GET' && pfad === '/api/info')
-        return sende(res, 200, { label: i.label, greeting: i.greeting, locales: i.locales, locale: i.locale, ki: i.ki, products: i.products }, cors)
+        return sende(res, 200, { label: i.label, greeting: i.greeting, locales: i.locales, locale: i.locale, ki: i.ki, anrede: i.anrede, products: i.products }, cors)
       const bild = /^\/api\/image\/([^/]+)$/.exec(pfad)
       if (req.method === 'GET' && bild) {
         const r = await holen(basis + 'image/' + encodeURIComponent(decodeURIComponent(bild[1])) + (url.searchParams.get('gross') ? '?gross=true' : ''), { headers: kopf })

@@ -209,7 +209,7 @@ export function erstelleKern(o) {
     const { z, id } = hole(gespraech)
     const { vok, namen, namen4 } = await vokabular(locale)
     const loc = vok.locale
-    const T = texte(loc)
+    const T = texte(loc, vok.anrede)   // „Sie“ oder „du“, am Berater eingestellt (18.10.2026)
     let eingabe = String(q ?? '').trim().slice(0, 300)
     const hinweise = [], corrected = [], unknown = [], uebernommen = []
     let warning = null

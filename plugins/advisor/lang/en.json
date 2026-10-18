@@ -70,5 +70,13 @@
  "ab": "from",
  "wo der Dienst des Beraters erreichbar ist — für den Code zum Einbinden und das Chat-Fenster hier": "where the advisor’s service is reachable — for the embed code and the chat window here",
  "das Chat-Fenster des Dienstes auf dieser Seite, wie auf einer Website": "the service’s chat window on this page, as on a website",
- "✆ Chat-Fenster": "✆ Chat window"
+ "✆ Chat-Fenster": "✆ Chat window",
+ "Anrede": "Form of address",
+ "in den festen Sätzen des Beraters und in den Texten der KI": "in the advisor’s fixed sentences and in the AI’s texts",
+ "Sie": "formal (Sie)",
+ "du": "informal (du)",
+ "wie die KI schreibt — die Fakten bleiben dieselben": "how the AI writes — the facts stay the same",
+ "sachlich": "factual",
+ "freundlich": "friendly",
+ "locker": "casual"
 }
