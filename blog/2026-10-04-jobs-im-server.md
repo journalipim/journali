@@ -5,7 +5,8 @@ slug: jobs-im-server
 tags: [Jobs, Betrieb, Import & Export]
 categories: [Entwicklung]
 wp: 73
-description: Importe, Exporte, Sicherungen, Datenblätter und Skripte laufen als Jobs auf dem Server – nach Zeitplan oder auf Knopfdruck, mit Log und Trockenlauf.
+description: Jobs im Server: Importe, Exporte, Sicherungen, Datenblätter und Skripte laufen nach Zeitplan oder auf Knopfdruck – mit Log und Trockenlauf.
+keyphrase: Jobs im Server
 ---
 Der große Import läuft – und dann klappt jemand den Laptop zu. **In journali ist das egal.** Importe, Exporte, Sicherungen und Datenblätter laufen als **Jobs im Server**, nicht im Browser. Ob irgendwo ein Fenster offen ist, spielt keine Rolle.
 

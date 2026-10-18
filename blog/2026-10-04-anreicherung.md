@@ -5,6 +5,8 @@ slug: anreicherung
 tags: [KI, Datenqualität, Datenpflege]
 categories: [Entwicklung]
 wp: 38
+description: Anreicherung in journali: leere Attribute auf einen Blick, Vorschläge mit Quelle und Sicherheit, übernommen mit einem Klick – mit Herkunft im Journal.
+keyphrase: Anreicherung
 ---
 Die Produkte sind angelegt, Name, Artikelnummer und EAN stehen – aber bei Gewicht, Material oder Schutzart bleibt das Feld leer. Die Daten gibt es, nur eben beim Hersteller. **Mit der Anreicherung holt journali sie zu euch.**
 

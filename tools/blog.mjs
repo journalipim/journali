@@ -22,9 +22,10 @@
 //   node tools/blog.mjs tags blog/<datei>.md      nur Schlagwörter und Kategorien aus dem Kopf übernehmen — der Inhalt bleibt, auch veröffentlicht
 //   node tools/blog.mjs drafts                    die Entwürfe auflisten
 //   node tools/blog.mjs meta [<datei> …] [--dry] [--replace]
-//                                                 nur die Meta-Beschreibung des SEO-Plugins setzen (18.10.2026) — aus „description:“ im Kopf, sonst
-//                                                 aus dem Auszug, wenn er höchstens 155 Zeichen hat; Seiten aus site/seiten-beschreibungen.json. Ohne
-//                                                 Datei alle Beiträge in blog/ und alle Seiten. Eine vorhandene Beschreibung bleibt, mit --replace nicht
+//                                                 nur Meta-Beschreibung und Fokus-Keyphrase des SEO-Plugins setzen (18.10.2026) — aus „description:“
+//                                                 im Kopf (sonst dem Auszug, wenn er höchstens 155 Zeichen hat) und „keyphrase:“; Seiten aus
+//                                                 site/seiten-beschreibungen.json. Ohne Datei alle Beiträge in blog/ und alle Seiten. Was in WordPress
+//                                                 schon anders steht, bleibt, mit --replace nicht
 //
 // Zugang: ein Anwendungspasswort aus WordPress (Benutzer → Profil → Anwendungspasswörter), nie im Repo. Er steht in
 // %USERPROFILE%\.journali\wordpress.json — { "url": "https://…", "user": "…", "password": "xxxx xxxx …" } — oder in den Umgebungsvariablen
@@ -436,19 +437,41 @@ export function beschreibung(kopf) {
   return d || null
 }
 
+/// Die Fokus-Keyphrase im SEO-Plugin (18.10.2026): das Wort oder die Wortgruppe, unter der ein Beitrag gefunden werden soll — wörtlich in Titel
+/// und Beschreibung, je Beitrag eine andere
+export const META_KEYPHRASE = '_yoast_wpseo_focuskw'
+/// Wie die Felder in der Ausgabe heissen
+const FELDNAME = { [META_BESCHREIBUNG]: 'description', [META_KEYPHRASE]: 'keyphrase' }
+
+/// Die Felder des SEO-Plugins aus dem Kopf eines Beitrags oder einem Eintrag der Seiten: Beschreibung und Keyphrase — was fehlt, fehlt
+export function seoFelder(kopf) {
+  const f = {}
+  const d = beschreibung(kopf)
+  if (d) f[META_BESCHREIBUNG] = d
+  if (kopf.keyphrase) f[META_KEYPHRASE] = kopf.keyphrase
+  return f
+}
+
 /**
- * Nur die Meta-Beschreibung eines Beitrags oder einer Seite setzen (art: posts oder pages) — Inhalt, Titel und Status bleiben. Eine Beschreibung,
- * die schon da ist, bleibt (sie kann in WordPress geschrieben sein); mit ersetzen nicht. Liefert { id, status, vorher, gleich, gesetzt }.
+ * Nur Felder des SEO-Plugins eines Beitrags oder einer Seite setzen (art: posts oder pages) — Inhalt, Titel und Status bleiben. Was in WordPress
+ * schon anders steht, bleibt (es kann dort geschrieben sein); mit ersetzen nicht. Liefert { id, status, neu, gleich, behalten, gesetzt } mit den
+ * Namen der Felder.
  */
-export async function beschreibungSetzen(api, art, id, text, { probe = false, ersetzen = false } = {}) {
-  if (!text) throw new Error(`${art} ${id}: no description`)
-  if (text.length > MAX_BESCHREIBUNG) throw new Error(`${art} ${id}: description has ${text.length} characters, at most ${MAX_BESCHREIBUNG}`)
+export async function metaSetzen(api, art, id, felder, { probe = false, ersetzen = false } = {}) {
+  if (!Object.keys(felder).length) throw new Error(`${art} ${id}: nothing to set`)
+  const d = felder[META_BESCHREIBUNG]
+  if (d && d.length > MAX_BESCHREIBUNG) throw new Error(`${art} ${id}: description has ${d.length} characters, at most ${MAX_BESCHREIBUNG}`)
   const da = await api('GET', `${art}/${id}?context=edit`)
-  const vorher = da.meta?.[META_BESCHREIBUNG] ?? ''
-  const r = { id: +id, status: da.status, vorher, gleich: vorher === text, gesetzt: false }
-  if (vorher === text || (vorher && !ersetzen)) return r
+  const neu = {}, r = { id: +id, status: da.status, neu: [], gleich: [], behalten: [], gesetzt: false }
+  for (const [k, v] of Object.entries(felder)) {
+    const vorher = da.meta?.[k] ?? ''
+    if (vorher === v) r.gleich.push(FELDNAME[k] ?? k)
+    else if (vorher && !ersetzen) r.behalten.push(FELDNAME[k] ?? k)
+    else { neu[k] = v; r.neu.push(FELDNAME[k] ?? k) }
+  }
+  if (!r.neu.length) return r
   if (probe) return { ...r, probe: true }
-  await api('POST', `${art}/${id}`, { meta: { [META_BESCHREIBUNG]: text } })
+  await api('POST', `${art}/${id}`, { meta: neu })
   return { ...r, gesetzt: true }
 }
 
@@ -459,7 +482,7 @@ export async function entwurf(api, z, text, { ersetzen = false } = {}) {
   const beitrag = {
     title: kopf.title, content: beitragsInhalt(kopf, rumpf, { veroeffentlicht: kopf.date ? wpDatum(kopf.date) : null, url: adresse(z.url, kopf.date ? wpDatum(kopf.date) : null, kopf.slug), site: z.url }), status: 'draft',
     ...(kopf.excerpt ? { excerpt: kopf.excerpt } : {}), ...(kopf.slug ? { slug: kopf.slug } : {}), ...(kopf.date ? { date: wpDatum(kopf.date) } : {}),
-    ...(beschreibung(kopf) ? { meta: { [META_BESCHREIBUNG]: beschreibung(kopf) } } : {}),
+    ...(Object.keys(seoFelder(kopf)).length ? { meta: seoFelder(kopf) } : {}),
     tags: await begriffe(api, 'tags', kopf.tags), categories: await begriffe(api, 'categories', kopf.categories),
   }
   if (!beitrag.categories.length) delete beitrag.categories
@@ -516,25 +539,26 @@ async function main(argv) {
     const liste = angegeben.length ? angegeben
       : [...fs.readdirSync(path.join(repo, 'blog')).filter(f => /^\d{4}-.*\.md$/.test(f)).map(f => path.join(repo, 'blog', f)), path.join(repo, 'site', 'seiten-beschreibungen.json')]
     const opt = { probe: rest.includes('--dry') || datei === '--dry', ersetzen: rest.includes('--replace') || datei === '--replace' }
-    const zaehler = { gesetzt: 0, gleich: 0, vorhanden: 0 }
+    // je Feld gezählt: set (oder would set), unchanged (steht schon so in WordPress), kept (dort steht anderes, und es bleibt)
+    const zaehler = { gesetzt: 0, gleich: 0, behalten: 0 }
     const melde = (art, r, name) => {
-      // gleich: steht schon so in WordPress; kept: dort steht eine andere, die bleibt (18.10.2026: vorher hiess auch eine gleiche „kept“)
-      const was = r.gesetzt ? 'set' : r.probe ? 'would set' : r.gleich ? 'unchanged' : 'kept'
-      zaehler[r.gesetzt || r.probe ? 'gesetzt' : was === 'kept' ? 'vorhanden' : 'gleich']++
-      if (was !== 'unchanged') console.log(`${was} ${art} ${r.id} (${r.status}): ${name}`)
+      zaehler.gesetzt += r.neu.length; zaehler.gleich += r.gleich.length; zaehler.behalten += r.behalten.length
+      if (r.neu.length) console.log(`${r.gesetzt ? 'set' : 'would set'} ${art} ${r.id} (${r.status}) ${r.neu.join(', ')}: ${name}`)
+      if (r.behalten.length) console.log(`kept ${art} ${r.id} (${r.status}) ${r.behalten.join(', ')}: ${name}`)
     }
     for (const d of liste) {
       if (d.endsWith('.json')) {
-        for (const [id, s] of Object.entries(JSON.parse(fs.readFileSync(d, 'utf8')))) melde('page', await beschreibungSetzen(api, 'pages', id, s.description, opt), s.seite ?? id)
+        for (const [id, s] of Object.entries(JSON.parse(fs.readFileSync(d, 'utf8')))) melde('page', await metaSetzen(api, 'pages', id, seoFelder(s), opt), s.seite ?? id)
         continue
       }
       const { kopf } = kopfLesen(fs.readFileSync(d, 'utf8'))
       if (!kopf.wp) continue
-      const text = beschreibung(kopf)
-      if (!text) { console.log(`no description: ${path.basename(d)} — excerpt longer than ${MAX_BESCHREIBUNG} characters, description: missing`); continue }
-      melde('post', await beschreibungSetzen(api, 'posts', kopf.wp, text, opt), path.basename(d))
+      const felder = seoFelder(kopf)
+      if (!felder[META_BESCHREIBUNG]) console.log(`no description: ${path.basename(d)} — excerpt longer than ${MAX_BESCHREIBUNG} characters, description: missing`)
+      if (!Object.keys(felder).length) continue
+      melde('post', await metaSetzen(api, 'posts', kopf.wp, felder, opt), path.basename(d))
     }
-    console.log(`${opt.probe ? 'would set' : 'set'} ${zaehler.gesetzt}, unchanged ${zaehler.gleich}, kept ${zaehler.vorhanden}`)
+    console.log(`fields: ${opt.probe ? 'would set' : 'set'} ${zaehler.gesetzt}, unchanged ${zaehler.gleich}, kept ${zaehler.behalten}`)
   } else if (befehl === 'update') {
     const text = fs.readFileSync(datei, 'utf8')
     const standDatei = path.join(path.dirname(datei), 'wp-beitraege.json')

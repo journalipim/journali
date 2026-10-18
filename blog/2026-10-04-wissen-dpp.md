@@ -5,6 +5,8 @@ slug: digitaler-produktpass-erklaert
 tags: [Compliance, Digitaler Produktpass, Datenqualität, Import & Export]
 categories: [Wissen]
 wp: 99
+description: Digitaler Produktpass (DPP): was er nach ESPR und Batterieverordnung enthält, ab wann er Pflicht ist, wen er betrifft und welche Daten er braucht.
+keyphrase: Digitaler Produktpass
 ---
 Der **Digitale Produktpass (DPP)** ist ein elektronischer Datensatz zu einem Produkt, der über einen Datenträger am Produkt abgerufen wird, etwa über einen QR-Code. Er enthält Angaben zu Identität, Herkunft, Material, Konformität, Reparatur und Entsorgung. Welche Angaben genau, legt die EU **je Produktgruppe** fest. Rechtsgrundlage ist die **Ökodesign-Verordnung (EU) 2024/1781 (ESPR)**. Als erster Pass wird der **Batteriepass nach (EU) 2023/1542 ab dem 18. Februar 2027** verpflichtend.
 

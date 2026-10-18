@@ -6,6 +6,7 @@ tags: [GitHub, Betrieb, Architektur]
 categories: [Entwicklung]
 wp: 124
 description: journali.de für alles, was entsteht, und die Organisation journalipim auf GitHub für Quellcode und Plugins – der Überblick, wo was zu finden ist.
+keyphrase: GitHub
 ---
 journali wächst – und mit journali die Orte, an denen ihr es findet. Hier ist der Überblick: **wo was liegt, heute und sobald der Quellcode öffentlich wird.**
 

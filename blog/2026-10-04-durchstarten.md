@@ -5,7 +5,8 @@ slug: durchstarten
 tags: [Betrieb, Docker, PostgreSQL]
 categories: [Entwicklung]
 wp: 74
-description: Zwei Befehle, ein Browserfenster, ein Einrichtungscode – und ihr pflegt Produktdaten. journali kommt als Docker-Paket mit PostgreSQL.
+description: journali mit Docker Compose: zwei Befehle, ein Browserfenster, ein Einrichtungscode – und ihr pflegt Produktdaten, mit PostgreSQL im Paket.
+keyphrase: Docker Compose
 ---
 Kein Installationsmarathon, keine Wochen mit Einrichtung: **journali kommt als Docker-Paket** – Server und PostgreSQL zusammen in einer `compose.yaml`. Zwei Befehle, ein Browserfenster, und ihr pflegt eure ersten Produktdaten.
 

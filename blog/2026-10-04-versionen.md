@@ -5,7 +5,8 @@ slug: versionen
 tags: [Versionen, Datenblatt, Journal]
 categories: [Entwicklung]
 wp: 69
-description: Eine Version ist ein Zeiger auf den Journalstand eines Produkts plus die eingefrorenen Dokumente, die damit hinausgingen – unveränderlich, hash-adressiert.
+description: Versionen in journali: ein Zeiger auf den Journalstand eines Produkts plus die eingefrorenen Dokumente, die damit hinausgingen – unveränderlich.
+keyphrase: Versionen
 ---
 Ein Kunde fragt nach: Welches Datenblatt habt ihr im März verschickt? Welche Werte standen darin? In vielen Systemen beginnt jetzt die Suche in Postfächern, Netzlaufwerken und alten Exporten. **In journali öffnet ihr die Version.** Dort steht der Stand des Produkts von damals – und das Dokument, das hinausging, Byte für Byte.
 

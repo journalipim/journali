@@ -5,7 +5,8 @@ slug: content-generierung-vorlagen
 tags: [Content, Mehrsprachigkeit, Datenpflege]
 categories: [Entwicklung]
 wp: 76
-description: Vorlagen setzen Produkttexte aus euren Attributen zusammen – regelbasiert, in jeder Sprache, ohne KI. Ändert sich ein Wert, ist der Text schon neu.
+description: Content-Generierung mit Vorlagen: Produkttexte aus euren Attributen – regelbasiert, in jeder Sprache, ohne KI. Ändert sich ein Wert, ist der Text neu.
+keyphrase: Content-Generierung
 ---
 Kurztitel, Katalogzeilen, Aufzählungen für den Shop: Ein großer Teil eurer Produkttexte steckt längst in euren Daten – Name, Farbe, Länge, Gewicht. **Mit Vorlagen setzt journali diese Texte selbst zusammen.** Regelbasiert, nachvollziehbar, in jeder Sprache – und **ganz ohne KI**.
 

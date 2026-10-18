@@ -6,7 +6,8 @@ tags: [KI, Suche, Integration, Datenqualität]
 categories: [Entwicklung]
 date: 2026-10-14 06:00
 wp: 233
-description: Ein Chat-Fenster auf eurer Website beantwortet Fragen zu euren Produkten aus euren Daten – mit Rückfragen, Vergleich und Merkzettel, auch ohne KI.
+description: Der Produktberater: ein Chat-Fenster auf eurer Website beantwortet Fragen zu euren Produkten aus euren Daten – mit Rückfragen und Vergleich, auch ohne KI.
+keyphrase: Produktberater
 ---
 „Ein Zelt für zwei, unter 3 kg.“ So fragt ein Mensch, nicht ein Suchfeld. **Der Journali KI Produktberater beantwortet solche Fragen auf eurer Website – aus euren gepflegten Produktdaten, mit den Merkmalen, nach denen sich die Treffer unterscheiden, und mit einer Rückfrage, die weiterhilft.** Und das Beste: Der größte Teil davon braucht keine KI.
 

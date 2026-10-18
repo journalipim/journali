@@ -15,11 +15,12 @@ Ein Anwendungspasswort aus WordPress: Benutzer → Profil → Anwendungspasswör
 Alternativ die Umgebungsvariablen `JOURNALI_WP_URL`, `JOURNALI_WP_USER`, `JOURNALI_WP_PASSWORD`. `node tools/blog.mjs check` prüft die
 Anmeldung. Anwendungspasswörter verlangt WordPress über HTTPS.
 
-## Meta-Beschreibung
+## Meta-Beschreibung und Keyphrase
 
 Das SEO-Plugin der Seite zeigt Suchmaschinen eine Meta-Beschreibung, höchstens 155 Zeichen. Bei einem Beitrag kommt sie aus `description:` im
-Kopf, sonst aus `excerpt:`, wenn der Auszug höchstens 155 Zeichen hat; ist er länger, braucht der Beitrag eine `description:`. Die Seiten haben
-ihre in `site/seiten-beschreibungen.json`. `draft` setzt sie beim Anlegen; für alles andere:
+Kopf, sonst aus `excerpt:`, wenn der Auszug höchstens 155 Zeichen hat; ist er länger, braucht der Beitrag eine `description:`. Die
+Fokus-Keyphrase steht in `keyphrase:` — wörtlich in Titel und Beschreibung, je Beitrag eine andere (sonst meldet das Plugin, dass sie schon
+verwendet wird). Die Seiten haben beides in `site/seiten-beschreibungen.json`. `draft` setzt es beim Anlegen; für alles andere:
 
 ```
 node tools/blog.mjs meta --dry        zeigt, was gesetzt würde
@@ -27,7 +28,7 @@ node tools/blog.mjs meta              alle Beiträge in blog/ und alle Seiten
 node tools/blog.mjs meta blog/<datei>.md --replace
 ```
 
-Eine Beschreibung, die in WordPress schon steht, bleibt — sie kann dort geschrieben sein. `--replace` überschreibt sie.
+Was in WordPress schon anders steht, bleibt — es kann dort geschrieben sein. `--replace` überschreibt es.
 
 ## Beiträge
 

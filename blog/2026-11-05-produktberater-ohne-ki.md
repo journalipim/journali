@@ -7,6 +7,7 @@ categories: [Entwicklung]
 date: 2026-11-05 06:00
 wp: 255
 description: Zwei Personen, unter 200 Euro, mindestens 400 Lumen, für Minusgrade: Der Produktberater macht aus Kundensätzen genaue Angaben – ohne KI-Anbindung.
+keyphrase: ohne KI
 ---
 Ein Kunde schreibt nicht „persons = 2“. Er schreibt **„Ich brauche ein Zelt für zwei Personen“**. Er schreibt „unter 200 Euro“, „mit Rotlicht“, „für Minusgrade“ – und erwartet, dass ihn jemand versteht. **Der [Journali KI Produktberater](/?p=233) versteht das auch dann, wenn ihr gar keine KI anbindet.** Er liest die Sätze gegen eure Produktdaten: Attribute, Einheiten, Wertelisten, Namen. Mit KI wird die Antwort zusätzlich ein Text – nötig ist sie dafür nicht.
 

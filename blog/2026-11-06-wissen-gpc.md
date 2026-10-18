@@ -6,6 +6,7 @@ tags: [Klassifikation, GS1 GPC]
 categories: [Wissen]
 date: 2026-11-06 06:00
 wp: 162
+keyphrase: Global Product Classification
 ---
 Die **Global Product Classification (GPC)** ist die Produktklassifikation von GS1: Sie gibt jedem Produkt eine Kategorie, die weltweit gleich ist – und jeder Kategorie die Attribute, mit denen ein Produkt dort beschrieben wird. Ein Händler bekommt Produktdaten von hunderten Lieferanten und muss sie in seinem System einordnen. Ohne gemeinsame Kategorien heißt dieselbe Ware überall anders.
 

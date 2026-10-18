@@ -5,7 +5,8 @@ slug: gpc-klassifikation
 tags: [Klassifikation, GS1 GPC, KI]
 categories: [Entwicklung]
 wp: 44
-description: journali liest die GS1-Produktklassifikation ein, hilft beim Finden des Bricks und legt beim Zuweisen alle Attribute der Klasse am Produkt an.
+description: GPC in journali: liest die GS1-Produktklassifikation ein, hilft beim Finden des Bricks und legt beim Zuweisen alle Attribute der Klasse an.
+keyphrase: GPC in journali
 ---
 Segment, Family, Class, Brick: Die **GS1-Produktklassifikation GPC** ordnet Produkte in vier Ebenen, und der Brick ist die Klasse, die ein Produkt bekommt. **journali kann jetzt GPC** – ihr lest die Veröffentlichung ein, findet den passenden Brick und weist ihn zu. Und im selben Moment stehen alle Attribute dieser Klasse an eurem Produkt bereit.
 

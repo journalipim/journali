@@ -7,6 +7,7 @@ categories: [Wissen]
 date: 2026-11-03 06:00
 wp: 161
 description: ETIM klassifiziert technische Produkte über Klassen, Merkmale, Werte und Einheiten – Aufbau, Freigaben und der Weg der Daten in BMEcat erklärt.
+keyphrase: ETIM
 ---
 **ETIM** ist ein gemeinsames Klassifikationsmodell für technische Produkte: Jedes technische Produkt gehört in eine Klasse, und jede Klasse legt fest, welche Merkmale es gibt und in welcher Form ihre Werte stehen. Ohne ein solches Modell nennt ein Hersteller eine Eigenschaft „Breite“, der nächste „B“, der dritte „Gehäusebreite in mm“. Für einen Großhändler, der Tausende Artikel von vielen Lieferanten vergleichbar anbieten will, ist das ein Problem: **Dieselbe Eigenschaft heißt bei jedem Lieferanten anders.**
 

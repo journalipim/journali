@@ -5,6 +5,7 @@ slug: rag-retrieval-augmented-generation-erklaert
 tags: [KI, RAG, Suche, Versionen]
 categories: [Wissen]
 wp: 102
+keyphrase: Retrieval-Augmented Generation
 ---
 **Retrieval-Augmented Generation (RAG)** ist ein Ansatz, der eine Suche in eigenen Dokumenten mit der Textgenerierung eines Sprachmodells verbindet. Ein KI-Assistent, der Fragen zu Produkten beantwortet, klingt nach einer einfachen Aufgabe. In der Praxis scheitert er oft an zwei Stellen: Das Sprachmodell kennt die Produkte nicht, und es sagt nicht, woher eine Antwort stammt. RAG setzt an beiden Stellen an.
 

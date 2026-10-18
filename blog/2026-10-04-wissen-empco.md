@@ -5,6 +5,7 @@ slug: empco-umweltaussagen-erklaert
 tags: [Compliance, EmpCo, Datenqualität, Mehrsprachigkeit]
 categories: [Wissen]
 wp: 100
+keyphrase: EmpCo-Richtlinie
 ---
 Die **Richtlinie (EU) 2024/825**, kurz **EmpCo** („Empowering Consumers for the Green Transition“), ist eine EU-Richtlinie des Verbraucherrechts, die pauschale Umweltaussagen ohne Nachweis, Nachhaltigkeitssiegel ohne Zertifizierung und Klimaaussagen, die auf Kompensation beruhen, verbietet. Ihre Regeln sind seit dem **27. September 2026** anzuwenden. In Deutschland gelten sie über das **Gesetz gegen den unlauteren Wettbewerb (UWG)**. Betroffen sind Wörter wie „umweltfreundlich“, „klimaneutral“ und „langlebig“, die in vielen Produkttexten stehen.
 

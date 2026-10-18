@@ -5,7 +5,8 @@ slug: digitaler-produktpass
 tags: [Compliance, Digitaler Produktpass, Datenqualität, KI]
 categories: [Entwicklung]
 wp: 40
-description: Der Digitale Produktpass in journali: 39 Datenpunkte nach ESPR und Batteriepass prüfen, fehlende Attribute anlegen und füllen – mit Beleg an jedem Wert.
+description: Digitaler Produktpass in journali: 39 Datenpunkte nach ESPR und Batteriepass prüfen, fehlende Attribute anlegen und füllen – mit Beleg an jedem Wert.
+keyphrase: Produktpass
 ---
 Der Digitale Produktpass kommt – und mit ihm die Frage: **Haben wir die Daten dafür überhaupt?** journali beantwortet sie mit einem Klick. Das Plugin **Digitaler Produktpass** prüft einen ganzen Ast eures Produktbaums gegen die Datenpunkte des Passes und zeigt euch Knoten für Knoten, was da ist, was fehlt und was nicht stimmt.
 

@@ -5,7 +5,8 @@ slug: import-export
 tags: [Import & Export, Excel, Jobs]
 categories: [Entwicklung]
 wp: 71
-description: CSV, Excel, JSON und Zwischenablage: Der Datenmapper schlägt die Zuordnung vor, und ein Plan zeigt vor dem Schreiben, was neu und was geändert ist.
+description: Import und Export in journali: CSV, Excel, JSON und Zwischenablage – der Datenmapper schlägt die Zuordnung vor, ein Plan zeigt, was sich ändert.
+keyphrase: Import und Export
 ---
 Die Lieferantenliste kommt als Excel, das ERP legt jede Nacht eine CSV ab, der Shop will morgens eine frische Datei. **In journali ist das kein Projekt, sondern ein paar Klicks** – und danach ein Job, der es nach Zeitplan selbst erledigt.
 

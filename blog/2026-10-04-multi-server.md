@@ -5,6 +5,8 @@ slug: multi-server
 tags: [Betrieb, Architektur, PostgreSQL]
 categories: [Entwicklung]
 wp: 26
+description: Multi-Server: journali verteilt sich auf mehrere Server – alle auf demselben Journal, alle nach wenigen Sekunden auf demselben Stand.
+keyphrase: Multi-Server
 ---
 Ein Server war gestern. **journali läuft ab sofort auf mehreren Servern gleichzeitig** – alle auf derselben Datenbank, alle auf demselben Journal. Der große Import läuft in der Zentrale, das Team am anderen Standort arbeitet auf seinem eigenen Server vor Ort, und niemand bremst niemanden aus.
 

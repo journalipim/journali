@@ -5,7 +5,8 @@ slug: bleib-am-ball
 tags: [Mailings]
 categories: [Entwicklung]
 wp: 151
-description: Zwei Mailings zur Wahl: journali news für neue Funktionen, journali Wissen für Fachartikel. Anmelden mit einem Klick, abmelden genauso.
+description: journali per E-Mail: journali news für neue Funktionen, journali Wissen für Fachartikel. Anmelden mit einem Klick, abmelden genauso.
+keyphrase: journali per E-Mail
 ---
 Bei journali entsteht laufend Neues – neue Funktionen, neue Fachartikel. Damit ihr nichts verpasst, **kommt journali ab sofort auch per E-Mail zu euch**. Oben im Menü findet ihr dafür **[Bleib am Ball!](/journali-mailings/)**.
 

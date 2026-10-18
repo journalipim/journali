@@ -6,6 +6,8 @@ tags: [Betrieb, Architektur, Journal]
 categories: [Entwicklung]
 date: 2026-10-16 06:00
 wp: 155
+description: Wer darf was in journali: Anwender, Rollen mit Rechten und Teams – jede Person sieht und tut, was ihre Rolle erlaubt.
+keyphrase: Wer darf was
 ---
 Montagmorgen. Die Redaktion pflegt Produkttexte, der Übersetzungsdienst braucht nur seinen Teilbaum, das Marketing lädt Bilder herunter, die IT legt neue Kolleginnen und Kollegen an, und eine zweite Abteilung nutzt ihre eigenen KI-Schlüssel. In vielen Systemen heißt das: ein Konto für alle oder ein Berg von Sonderregeln. **In journali richtet ihr es einmal ein – und jede Person sieht und tut genau das, wofür sie da ist.**
 

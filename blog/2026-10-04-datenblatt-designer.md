@@ -5,7 +5,8 @@ slug: datenblatt-designer
 tags: [Datenblatt, Versionen, Jobs, Mehrsprachigkeit]
 categories: [Entwicklung]
 wp: 39
-description: Bausteine per Drag & Drop auf die Seite, sofort mit echten Werten in jeder Sprache – und die Datenblätter eines ganzen Teilbaums auf einmal als Job.
+description: Der Datenblatt-Designer: Bausteine per Drag & Drop auf die Seite, sofort mit echten Werten in jeder Sprache – und ganze Teilbäume auf einmal als Job.
+keyphrase: Datenblatt-Designer
 ---
 Ihr pflegt eure Produktdaten einmal – **und das Datenblatt entsteht genau daraus**. Kein Abtippen in eine Vorlage, kein Kopieren von Werten, kein „welcher Stand steht eigentlich im PDF?“. Der Datenblatt-Designer in journali baut eure Blätter direkt aus dem, was im Journal steht.
 

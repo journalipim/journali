@@ -5,6 +5,7 @@ slug: ki-produktberater-agentic-commerce-erklaert
 tags: [KI, Produktberater, MCP, Agentic Commerce]
 categories: [Wissen]
 wp: 260
+keyphrase: Agentic Commerce
 ---
 Ein **KI-Produktberater** ist ein Programm auf der Website eines Shops oder Herstellers, das Fragen von Besuchern in natürlicher Sprache annimmt und mit passenden Produkten aus dem eigenen Sortiment beantwortet – mit Rückfragen, Eingrenzen und Vergleich. Mit **Agentic Commerce** hängt er zusammen, weil dieselben Fragen zunehmend auch KI-Agenten stellen, die im Auftrag eines Menschen suchen, vergleichen und kaufen, und weil beide dieselben genauen, maschinenlesbaren Produktdaten brauchen. Agentic Commerce gilt laut der Onlinehändlerbefragung 2026 der FHNW als neuer Vertriebskanal, der 2026 noch wenig verbreitet ist.
 

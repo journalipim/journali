@@ -6,6 +6,7 @@ tags: [KI, Datenqualität, Übersetzung, Suche]
 categories: [Entwicklung]
 wp: 45
 description: journali bindet die KI eures Teams an – Anbieter nach Wahl, Schlüssel sicher beim Server. Und vieles läuft ganz ohne KI-Anbieter auf eurem Server.
+keyphrase: KI in journali
 ---
 Eine KI im PIM ist nur so gut wie die Daten, die sie bekommt – und die Kontrolle, die ihr darüber behaltet. **journali gibt der KI eure echten Produktdaten und euch das letzte Wort.** Kein Vorschlag landet ungefragt im Journal.
 

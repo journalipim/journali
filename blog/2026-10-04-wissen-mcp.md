@@ -5,6 +5,7 @@ slug: mcp-model-context-protocol-erklaert
 tags: [KI, MCP, Integration, REST API]
 categories: [Wissen]
 wp: 103
+keyphrase: Model Context Protocol
 ---
 **Das Model Context Protocol (MCP) ist ein offener Standard, der einheitlich regelt, wie ein KI-Assistent auf die Systeme zugreift, in denen Daten gepflegt werden.** Ein KI-Assistent kennt nur, was sein Modell enthält und was ihm im Gespräch gegeben wird. Für aktuelle technische Daten, Varianten oder Freigaben braucht er Zugriff auf diese Systeme. Dieser Artikel beschreibt, wie das Protokoll aufgebaut ist, welche Fragen es offen lässt und welche Anforderungen sich daraus für Produktdaten ergeben.
 

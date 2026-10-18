@@ -5,6 +5,7 @@ slug: geo-generative-engine-optimization-erklaert
 tags: [KI, GEO, Schema.org, Content]
 categories: [Wissen]
 wp: 101
+keyphrase: Generative Engine Optimization
 ---
 **Generative Engine Optimization (GEO)** bezeichnet die Arbeit an Inhalten, damit KI-gestützte Suchen und Assistenten sie finden, richtig wiedergeben und als Quelle nennen. Solche Suchen und Assistenten geben neben der Trefferliste auf eine Frage nach einem Produkt **eine formulierte Antwort**. Für Produktdaten heißt das vor allem: **klare Aussagen, prüfbare Werte und eine maschinenlesbare Struktur.**
 

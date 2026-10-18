@@ -5,6 +5,7 @@ slug: ppwr-verpackungsverordnung-erklaert
 tags: [Compliance, PPWR, Datenqualität]
 categories: [Wissen]
 wp: 98
+keyphrase: EU-Verpackungsverordnung
 ---
 Die **EU-Verpackungsverordnung (PPWR, Packaging and Packaging Waste Regulation)** ist die **Verordnung (EU) 2025/40 über Verpackungen und Verpackungsabfälle**; sie gilt seit dem **12. August 2026** und legt Anforderungen an Nachhaltigkeit und Kennzeichnung jeder Verpackung fest, die in der EU in Verkehr gebracht wird. Sie betrifft jede Verpackung – von der Faltschachtel über den Versandkarton bis zur Palettenfolie. Für Unternehmen ist sie vor allem eine Datenaufgabe: Material, Gewicht, Stoffe, Recyclingfähigkeit und Rezyklatanteil jeder Verpackung müssen bekannt und belegt sein.
 

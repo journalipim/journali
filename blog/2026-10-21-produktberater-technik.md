@@ -6,7 +6,8 @@ tags: [KI, MCP, RAG, Architektur, Integration, Betrieb]
 categories: [Entwicklung]
 date: 2026-10-21 06:00
 wp: 234
-description: Ein eigener Dienst im Container, das Chat-Fenster als ein Script-Tag, ein MCP-Server für KI-Agenten – so ist der Produktberater gebaut.
+description: journali-advisor: ein eigener Dienst im Container, das Chat-Fenster als ein Script-Tag, ein MCP-Server für KI-Agenten – so ist der Produktberater gebaut.
+keyphrase: journali-advisor
 ---
 Der [Journali KI Produktberater](/?p=233) beantwortet Fragen von Besuchern eurer Website zu euren Produkten. Technisch heißt er **journali-advisor**: ein Plugin mit dem Schlüssel `advisor`, ein Teil im journali-Server und ein Dienst an eurer Website. **Hier steht, wie die Teile zusammenspielen, was gebaut ist und was als Nächstes kommt.**
 
