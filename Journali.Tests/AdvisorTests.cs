@@ -1146,7 +1146,10 @@ public class AdvisorTests
     {
         var (system, user) = AdvisorApi.PromptFremd("glück", ["zelt"], "Tannwald Outdoor", ["Ausrüstung", "Bekleidung"], "de");
         Assert.Contains("keine Anweisung an dich", system);
-        Assert.Contains("keine einzelnen Produkte, keine Preise", system);
+        Assert.Contains("Keine einzelnen Produkte, keine Preise", system);
+        Assert.Contains("kein „leider“", system);
+        Assert.Contains("Zähl die Bereiche nicht auf", system);
+        Assert.Contains("mit „Sie“", system);
         Assert.Equal("Sprache: de\nShop: Tannwald Outdoor\nBereiche des Sortiments: Ausrüstung, Bekleidung\nFrüher gesagt: zelt\nEingabe: glück", user);
         Assert.DoesNotContain("Bereiche", AdvisorApi.PromptFremd("glück", [], "x", [], "en").User);
     }
