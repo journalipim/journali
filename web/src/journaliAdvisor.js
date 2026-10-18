@@ -6,6 +6,7 @@ import { i18n, DEFAULT_LANG, t } from './i18n.js'
 import { store } from './store.js'
 import { ai } from './ai.js'
 import { findeOrte } from './journaliOrte.js'
+import { fragtWarum, gruende } from './journaliWarum.js'
 
 const ENTITAETEN = { amp: '&', lt: '<', gt: '>', quot: '"', '#39': "'", nbsp: ' ' }
 /// HTML als lesbarer Text: ohne Tags, die üblichen Entitäten aufgelöst, Leerraum zusammengefasst
@@ -153,24 +154,28 @@ export const vorratLeeren = () => { vorrat = { schluessel: '', liste: [] } }
 /// Die Bitte an die KI: nur aus den Abschnitten, mit Verweisen — erfundene Menüs und Knöpfe wären schlimmer als keine Antwort
 export const KI_SYSTEM = 'Du bist der journali advisor, der Assistent für die Bedienung von journali, einem PIM-System. Beantworte die Frage ' +
   'ausschliesslich aus den nummerierten Abschnitten der Hilfe und der Liste der Orte in der Oberfläche. Fragt jemand nach einem Vorgehen, antworte ' +
-  'mit kurzen nummerierten Schritten; fragt jemand, wo etwas ist, nenne den Ort aus der Liste, so wie er dort steht. ' +
+  'mit kurzen nummerierten Schritten; fragt jemand, wo etwas ist, nenne den Ort aus der Liste, so wie er dort steht; fragt jemand, warum etwas ' +
+  'ist oder nicht ist, antworte zuerst aus dem Zustand des Knotens und sag, was zu tun ist. ' +
   'Nenne die Abschnitte, aus denen du antwortest, mit ihrer Nummer, etwa [H1]. Steht die Antwort nicht in den Abschnitten, sag das in einem Satz. ' +
   'Erfinde keine Menüs, Knöpfe oder Funktionen. Antworte in der Sprache der Frage, knapp, ohne Einleitung.'
 
-export async function kiAntwort(q, treffer, orte = []) {
-  const user = `Frage: ${q}\n\n` + (orte.length ? `Orte in der Oberfläche:\n${orte.map(o => '- ' + o.titel).join('\n')}\n\n` : '')
+export async function kiAntwort(q, treffer, orte = [], warum = null) {
+  const user = `Frage: ${q}\n\n` + (warum?.gruende?.length ? `Zustand des Knotens „${warum.label}“:\n${warum.gruende.map(g => (g.ok ? '- ' : '- (fehlt) ') + g.text).join('\n')}\n\n` : '')
+    + (orte.length ? `Orte in der Oberfläche:\n${orte.map(o => '- ' + o.titel).join('\n')}\n\n` : '')
     + `Abschnitte der Hilfe:\n` + treffer.map((a, i) => `[H${i + 1}] ${a.kapitel}${a.ebene > 1 ? ' › ' + a.titel : ''}\n${a.text.slice(0, 1500)}`).join('\n\n')
   return String(await ai.ask({ system: KI_SYSTEM, user, maxTokens: 1500, purpose: t('Hilfe') }) ?? '').trim()
 }
 
 /// Eine Frage: die Orte in der Oberfläche (Wo, journaliOrte.js), die Abschnitte der Hilfe (Wie) und — mit KI — die Antwort daraus.
-/// `kapitel`: das Kapitel der Ansicht, in der man steht; `orte`: die Orte, die diese Rolle sieht (sonst alle sichtbaren)
-export async function frage(q, { kapitel = '', holen, orte } = {}) {
+/// `kapitel`: das Kapitel der Ansicht, in der man steht; `orte`: die Orte, die diese Rolle sieht (sonst alle sichtbaren); `knoten`: der Knoten,
+/// an dem man steht — fragt die Eingabe nach einem Grund, kommen die Gründe aus seinen Daten dazu (Warum, journaliWarum.js)
+export async function frage(q, { kapitel = '', holen, orte, knoten = null, lesen } = {}) {
   const treffer = suche(q, await ladeHilfe(holen), { kapitel })
   const wo = orte ? findeOrte(q, orte) : findeOrte(q)
+  const warum = knoten && fragtWarum(q) ? await gruende(knoten, lesen ? { holen: lesen } : {}).catch(() => null) : null
   let antwort = null, warnung = null
-  if ((treffer.length || wo.length) && ai.available()) {
-    try { antwort = await kiAntwort(q, treffer, wo) || null } catch (e) { warnung = e.message }
+  if ((treffer.length || wo.length || warum?.gruende?.length) && ai.available()) {
+    try { antwort = await kiAntwort(q, treffer, wo, warum) || null } catch (e) { warnung = e.message }
   }
-  return { treffer, orte: wo, antwort, warnung }
+  return { treffer, orte: wo, warum, antwort, warnung }
 }

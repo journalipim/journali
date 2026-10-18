@@ -66,9 +66,14 @@ Reihenfolge: Wie → Wo → Warum, jeweils erst ohne KI.
   mit Wörtern und Recht; was die Rolle nicht sieht, fällt weg (in der Demo ⬡ Plugins). Die Antwort zeigt bis zu zwei Orte als Link („Zu finden
   unter: ⚙ Einstellungen › ◈ IAM“), die KI bekommt sie als Liste und nennt nur sie.
 
+- **Warum** (18.10.2026, gebaut): `web/src/journaliWarum.js` — steht man an einem Knoten (`/tree/<id>`) und fragt nach einem Grund („warum“,
+  „nicht“, „kein“, „fehlt“), kommen die Gründe aus seinen Daten: fehlende Pflichtwerte je Kanal und Sprache (mit Namen), Freigaben (eigen
+  und über den Fallback-Kanal), die Ausleitung je Publikationsbaum mit dem Grund des Servers, der Status. Grün, was gilt; rot, was fehlt.
+  Die KI bekommt sie als „Zustand des Knotens“ und antwortet zuerst daraus.
+
 ## Nächste Schritte
 
-1. **Warum**: Gründe aus den Daten für den Knoten, an dem man steht (Ausleitung, Prüfungen, Rechte, Kontingent, Vererbung).
+1. **Warum, weiter**: Prüfungen der Datenanalyse am Knoten, Rechte (warum Speichern abgewiesen wird), Kontingent, woher ein geerbter Wert kommt.
 2. **Artikel**: Blog und Wissen dazu, sobald geklärt ist, woran man veröffentlichte Beiträge erkennt.
 3. **Lernen**: Fragen ohne Treffer zählen (im Journal? eher nicht — Betrieb; wie `lernen.json` beim product advisor).
 4. Die Hilfe selbst: ein Abschnitt über den journali advisor, und „Attribut anlegen“ im Kapitel Modell.
