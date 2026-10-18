@@ -22,6 +22,17 @@ public class AiCacheTests
         Assert.DoesNotContain("tools", json);
     }
 
+    [Theory]
+    [InlineData(16, 4096)]
+    [InlineData(200, 4096)]
+    [InlineData(16000, 16000)]
+    public void Max_tokens_hat_eine_Untergrenze_weil_das_Denken_mitzaehlt(int angefragt, int gesendet)
+    {
+        // 18.10.2026: mit 200 endete die Antwort von Claude Sonnet 5.5 vor dem ersten Textblock — das Denken vor der Antwort zählt gegen max_tokens
+        var json = JsonSerializer.Serialize(AiApi.AnthropicBody("claude-sonnet-5-5", angefragt, "S", "T", false, 0), Opt);
+        Assert.Contains($"\"max_tokens\":{gesendet},", json);
+    }
+
     [Fact]
     public void Ohne_Systemtext_kein_system_Feld()
     {

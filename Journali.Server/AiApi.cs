@@ -116,12 +116,20 @@ public static class AiApi
     /// </summary>
     public static object AnthropicBody(string model, int maxTokens, string? system, string user, bool web, int maxSearches)
     {
+        maxTokens = Math.Max(maxTokens, AnthropicMindestTokens);
         var sys = string.IsNullOrWhiteSpace(system) ? null : new object[] { new { type = "text", text = system, cache_control = new { type = "ephemeral" } } };
         var messages = new[] { new { role = "user", content = user } };
         return web
             ? new { model, max_tokens = maxTokens, system = sys, messages, tools = new object[] { new { type = "web_search_20250305", name = "web_search", max_uses = maxSearches } } }
             : (object)new { model, max_tokens = maxTokens, system = sys, messages };
     }
+
+    /// <summary>
+    /// Untergrenze für <c>max_tokens</c> bei Anthropic (18.10.2026): die aktuellen Modelle denken vor der Antwort (adaptiv; abschalten lehnt die API bei
+    /// Claude Sonnet 5.5 und Opus 5.5 ab), und das Denken zählt gegen <c>max_tokens</c>. Mit 200 (Produktberater, „glück“) und 300 (Angaben aus einem
+    /// Satz) endete die Antwort vor dem ersten Textblock — leer, ohne Fehler. Berechnet wird, was erzeugt wird, nicht die Grenze.
+    /// </summary>
+    public const int AnthropicMindestTokens = 4096;
 
     /// <summary>Eingang und Ausgang aus <c>usage</c>: die Cache-Felder zählen zum Eingang — auch gelesener Cache ging über die Leitung.</summary>
     public static (int In, int Out) AnthropicUsage(JsonElement us)
@@ -130,8 +138,9 @@ public static class AiApi
         return (Feld("input_tokens") + Feld("cache_creation_input_tokens") + Feld("cache_read_input_tokens"), Feld("output_tokens"));
     }
 
-    /// <summary>Ein Aufruf beim Anbieter: Text und Quellen, die gemessenen Bytes hin und zurück, die gemeldeten Tokenzahlen.</summary>
-    public static async Task<(string Text, List<object> Sources, long BytesIn, long BytesOut, int TokensIn, int TokensOut)> Call(string provider, string key, string model, string? system, string user, int maxTokens, bool web, int maxSearches, CancellationToken ct)
+    /// <summary>Ein Aufruf beim Anbieter: Text und Quellen, die gemessenen Bytes hin und zurück, die gemeldeten Tokenzahlen — und warum die Antwort
+    /// endete (bei Anthropic <c>stop_reason</c>; ein leerer Text ohne ihn hiesse nichts)</summary>
+    public static async Task<(string Text, List<object> Sources, long BytesIn, long BytesOut, int TokensIn, int TokensOut, string? Ende)> Call(string provider, string key, string model, string? system, string user, int maxTokens, bool web, int maxSearches, CancellationToken ct)
     {
         using var req = new HttpRequestMessage();
         object body;
@@ -168,7 +177,7 @@ public static class AiApi
         if (!res.IsSuccessStatusCode)
             throw new InvalidOperationException(root.TryGetProperty("error", out var err) && err.TryGetProperty("message", out var m) ? m.GetString() ?? res.ReasonPhrase ?? "Fehler" : $"{(int)res.StatusCode} {res.ReasonPhrase}");
         var sources = new List<object>(); var text = new StringBuilder();
-        int tin = 0, tout = 0;
+        int tin = 0, tout = 0; string? ende = null;
         if (provider == "anthropic")
         {
             foreach (var block in root.GetProperty("content").EnumerateArray())
@@ -180,6 +189,7 @@ public static class AiApi
                             sources.Add(new { url = u, title = cit.TryGetProperty("title", out var ti) ? ti.GetString() ?? u : u });
             }
             if (root.TryGetProperty("usage", out var us)) (tin, tout) = AnthropicUsage(us);
+            if (root.TryGetProperty("stop_reason", out var sr) && sr.ValueKind == JsonValueKind.String) ende = sr.GetString();
         }
         else if (provider == Lokal)
         {
@@ -207,7 +217,7 @@ public static class AiApi
             }
         }
         // 04.10.2026: zurück gingen hier die Tokenzahlen als Bytes — das Austauschvolumen zeigte Token statt gemessener Bytes
-        return (text.ToString(), sources, bytesIn, bytesOut, tin, tout);
+        return (text.ToString(), sources, bytesIn, bytesOut, tin, tout, ende);
     }
 
     public static void Map(RouteGroupBuilder api, string jobsDir)
@@ -287,10 +297,12 @@ public static class AiApi
         if (provider == Lokal && model == "") return (Bad("Das lokale Modell hat kein Modell geladen."), "", [], "", "", "", "");
         try
         {
-            var (text, sources, hin, zurueck, tokenHin, tokenZurueck) = await Call(provider, key, model, system, frage, maxTokens, web, Math.Max(1, maxSearches), ct);
+            var (text, sources, hin, zurueck, tokenHin, tokenZurueck, ende) = await Call(provider, key, model, system, frage, maxTokens, web, Math.Max(1, maxSearches), ct);
             var heute = DateOnly.FromDateTime(DateTime.Today);
             c.With((_, _, write) => write(actor, Teams.UsageStream + zahler, Types.AiUsed,
                 new AiUsed(provider, model, actor, tokenHin, tokenZurueck, 1, heute.ToString("yyyy-MM-dd"), team == zahler ? null : team, hin, zurueck, purpose), null));
+            // ohne Text (18.10.2026): gezählt ist der Aufruf, gemeldet wird er als Fehler mit dem Grund — vorher ging ein leerer Text als Antwort durch
+            if (string.IsNullOrWhiteSpace(text)) return (Bad("Die KI hat keinen Text geliefert ({0}).", ende ?? "leer"), "", sources, team, zahler, provider, model);
             return (null, text, sources, team, zahler, provider, model);
         }
         catch (Exception e) { return (Bad(e.Message), "", [], "", "", "", ""); }
