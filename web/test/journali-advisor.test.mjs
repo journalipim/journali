@@ -6,7 +6,7 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import './ui.mjs'
 
-const { abschnitte, suche, begriffe, stamm, frage, ladeHilfe, vorratLeeren, KI_SYSTEM } = await import('../src/journaliAdvisor.js')
+const { abschnitte, suche, begriffe, stamm, frage, ladeHilfe, vorratLeeren, KI_SYSTEM, pluginAbschnitte } = await import('../src/journaliAdvisor.js')
 const { ai } = await import('../src/ai.js')
 const { store } = await import('../src/store.js')
 
@@ -115,6 +115,16 @@ test('Wo: die Orte der Oberfläche, die diese Rolle sieht — ein Link statt ein
     store.auth = { enabled: true, user: 'demo', rights: ['read', 'write', 'plugins'] }; store.demo = true
     assert.ok(!orte().some(o => o.to === '/plugins'))
   } finally { store.auth = auth; store.demo = demo }
+})
+
+test('die Plugins, die wirken, als Abschnitte — was ein Plugin kann, steht nicht in der Hilfe (18.10.2026: „wie lege ich ETIM an“)', () => {
+  const manifest = k => JSON.parse(fs.readFileSync(new URL(`../../plugins/${k}/plugin.json`, import.meta.url), 'utf8'))
+  const liste = [{ key: 'etim', manifest: manifest('etim') }, { key: 'dpp', manifest: manifest('dpp') }, { key: 'ppwr', manifest: manifest('ppwr') }]
+  const p = pluginAbschnitte(liste, k => k !== 'ppwr')
+  assert.deepEqual(p.map(a => [a.slug, a.titel, a.plugin]), [['plugins', 'ETIM', 'etim'], ['plugins', 'Digitaler Produktpass', 'dpp']], 'nur, was wirkt')
+  assert.ok(p.every(a => a.text.length > 50), 'mit der Beschreibung aus dem Manifest')
+  assert.equal(suche('wie lege ich ETIM an', [...ALLE, ...p])[0].plugin, 'etim')
+  assert.ok(suche('Digitaler Produktpass prüfen', [...ALLE, ...p]).some(a => a.plugin === 'dpp'))
 })
 
 test('die Hilfe wird einmal je Sprache und Startphase geladen', async () => {

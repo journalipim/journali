@@ -16,6 +16,7 @@ const KNOTEN = {
     completeness: [{ channel: 'web', locale: 'en', required: 3, filled: 1, missing: ['name', 'description'] }, { channel: 'web', locale: 'de', required: 3, filled: 3, missing: [] }],
     releases: [], releasedVia: [] },
   'v-rot': { id: 'v-rot', role: 'variant', name: 'Fjell 5 Zelt, Rot', status: 'active', completeness: [], releases: [{ channel: 'web', locale: null }], releasedVia: [] },
+  'v-blau': { id: 'v-blau', role: 'variant', name: 'Fjell 5 Zelt, Blau', status: 'active', completeness: [], releases: [], releasedVia: [] },
   'g-zelte': { id: 'g-zelte', role: 'group', name: 'Zelte', hasStatus: false, completeness: [], releases: [], releasedVia: [] },
 }
 const BAEUME = [{ id: 'r-shop', label: 'Online-Shop', channel: 'web' }, { id: 'r-print', label: 'Katalog', channel: 'print' }]
@@ -43,14 +44,13 @@ test('fragt die Eingabe nach einem Grund? — und an welchem Knoten man steht', 
   assert.equal(knotenAusPfad('/model'), null)
 })
 
-test('die Gründe am Produkt: fehlende Pflichtwerte mit Namen, keine Freigabe, je Baum ausgeleitet oder warum nicht', async () => {
+test('die Gründe am Produkt: fehlende Pflichtwerte mit Namen, je Baum ausgeleitet oder warum nicht — freigegeben werden die Varianten', async () => {
   store.model = MODELL
   const g = await gruende('p-zelt', { holen: lesen })
   assert.equal(g.label, 'Fjell 5 Zelt')
   assert.deepEqual(g.gruende.map(x => [x.ok, x.text]), [
     [true, 'Status: active.'],
     [false, 'web/en: es fehlen Name, Beschreibung.'],
-    [false, 'Keine Freigabe an diesem Knoten.'],
     [false, '„Online-Shop“: wird nicht ausgeleitet — nicht freigegeben für web — Freigabe an der Variante, Pflegebaum ✓ Freigaben'],
     [false, '„Katalog“: nicht im Baum.'],
   ])
@@ -58,6 +58,8 @@ test('die Gründe am Produkt: fehlende Pflichtwerte mit Namen, keine Freigabe, j
   const v = await gruende('v-rot', { holen: lesen })
   assert.ok(v.gruende.some(x => x.ok && x.text === 'Freigegeben für web.'))
   assert.ok(v.gruende.some(x => x.ok && x.text === '„Online-Shop“: wird ausgeleitet.'))
+  // eine Variante ohne Freigabe sagt es (18.10.2026: am Produkt nicht — dort stand es in der Demo am Zelt, das ausgeleitet wird)
+  assert.ok((await gruende('v-blau', { holen: lesen })).gruende.some(x => !x.ok && x.text === 'Keine Freigabe an diesem Knoten.'))
   // eine Gruppe: keine Ausleitung, kein Status, kein „keine Freigabe“
   assert.deepEqual((await gruende('g-zelte', { holen: lesen })).gruende, [])
   assert.equal(await gruende('gibt-es-nicht', { holen: lesen }), null)
@@ -70,7 +72,7 @@ test('frage: am Knoten und mit „warum“ kommen die Gründe dazu — die KI be
   try {
     ai.available = () => false
     const ohne = await frage('Warum ist das Zelt nicht im Shop?', { holen, knoten: 'p-zelt', lesen, orte: [] })
-    assert.equal(ohne.warum.gruende.length, 5)
+    assert.equal(ohne.warum.gruende.length, 4)
     assert.equal((await frage('Wie pflege ich ein Zelt?', { holen, knoten: 'p-zelt', lesen, orte: [] })).warum, null, 'ohne Frage nach dem Grund keine Gründe')
     assert.equal((await frage('Warum fehlt das?', { holen, lesen, orte: [] })).warum, null, 'ohne Knoten keine Gründe')
     ai.available = () => true
@@ -99,7 +101,7 @@ test('im Fenster: am Knoten die Gründe, grün was gilt, rot was fehlt', async (
     document.querySelector('.ja-eingabe').dispatchEvent(new win.Event('submit', { cancelable: true })); await ruhe()
     assert.equal(document.querySelector('.ja-warum-kopf').textContent, 'Am Knoten Fjell 5 Zelt:')
     const gruende = [...document.querySelectorAll('.ja-grund')]
-    assert.equal(gruende.length, 5)
+    assert.equal(gruende.length, 4)
     assert.ok(gruende[0].classList.contains('pos') && gruende[0].textContent.startsWith('✓'))
     assert.ok(gruende[1].classList.contains('neg') && gruende[1].textContent.startsWith('✗'))
     assert.equal(document.querySelector('.ja-leer'), null, 'mit Gründen kein „steht nichts in der Hilfe“')

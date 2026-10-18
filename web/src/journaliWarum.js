@@ -36,7 +36,9 @@ export async function gruende(id, { holen = p => api.get(p) } = {}) {
   const geerbt = (n.releasedVia ?? []).map(r => `${kanal(r.channel, r.locale)} ← ${r.via}`)
   if (eigen.length) aus.push({ ok: true, text: t('Freigegeben für {0}.', [eigen.join(', ')]) })
   if (geerbt.length) aus.push({ ok: true, text: t('Freigabe über den Fallback-Kanal: {0}.', [geerbt.join(', ')]) })
-  if (!eigen.length && !geerbt.length && n.role !== 'group') aus.push({ ok: false, text: t('Keine Freigabe an diesem Knoten.') })
+  // freigegeben werden die Varianten (Publication.DecideVariant): am Produkt hiesse „keine Freigabe“ nichts — ob seine Varianten freigegeben
+  // sind, sagt die Ausleitung darunter (18.10.2026: in der Demo stand es am Zelt, das der Product Advisor ausleitet)
+  if (!eigen.length && !geerbt.length && n.role === 'variant') aus.push({ ok: false, text: t('Keine Freigabe an diesem Knoten.') })
   // die Ausleitung je Publikationsbaum — Produkte und Varianten; eine Gruppe wird nicht ausgeleitet, nur was darunter steht
   if (n.role === 'product' || n.role === 'variant') {
     const baeume = await holen('/api/pub').catch(() => [])

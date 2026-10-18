@@ -33,11 +33,14 @@ async function fragen() {
   finally { laeuft.value = false; ansEnde(); nextTick(() => feld.value?.focus()) }
 }
 
+/// **fett** aus der Antwort der KI als fett, ohne HTML — sie soll kein Markdown schreiben, tut es aber manchmal (18.10.2026)
+const fett = text => String(text).split(/\*\*(.+?)\*\*/g).map((s, i) => ({ text: s, fett: i % 2 === 1 })).filter(s => s.text)
+
 /// Ein Ort der Oberfläche (Wo): hingehen — das Fenster bleibt offen
 function geheZu(o) { if (router) router.push(o.to); else location.hash = o.to }
 
 /// Ein Abschnitt: das Kapitel an dieser Stelle — die Einleitung eines Kapitels ohne Sprung
-function zeige(a) { openHelp(a.slug, a.ebene > 1 ? a.titel : '') }
+function zeige(a) { openHelp(a.slug, a.ebene > 1 && !a.plugin ? a.titel : '') }   // ein Plugin: das Kapitel Plugins, ohne Sprung
 </script>
 
 <template>
@@ -54,7 +57,7 @@ function zeige(a) { openHelp(a.slug, a.ebene > 1 ? a.titel : '') }
           <div class="ja-blase">
             <div v-if="!e.treffer" class="muted ja-laeuft">…</div>
             <template v-else>
-              <div v-if="e.antwort" class="ja-antwort">{{ e.antwort }}</div>
+              <div v-if="e.antwort" class="ja-antwort"><template v-for="(s, k) in fett(e.antwort)" :key="k"><strong v-if="s.fett">{{ s.text }}</strong><template v-else>{{ s.text }}</template></template></div>
               <div v-if="e.antwort" class="muted ja-ki" :title="$t('aus den Abschnitten darunter')">{{ $t('Text von einer KI erstellt') }}</div>
               <div v-if="e.warnung" class="neg ja-warnung">✗ {{ e.warnung }}</div>
               <div v-if="e.warum?.gruende?.length" class="ja-warum">

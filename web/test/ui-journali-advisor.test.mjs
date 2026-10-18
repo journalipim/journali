@@ -70,12 +70,13 @@ test('ohne KI: die Abschnitte der Hilfe — ein Klick öffnet das Kapitel an der
 test('mit KI: die Antwort über den Abschnitten, mit Hinweis — ein Fehler der KI steht als Warnung da', async () => {
   server(); vorratLeeren()
   const verfuegbar = ai.available, ask = ai.ask
-  ai.available = () => true; ai.ask = async () => '1. Unter Modell ein Attribut anlegen [H1]'
+  ai.available = () => true; ai.ask = async () => '1. Unter **⊞ Modell** ein Attribut anlegen [H1]'
   const w = mount(JournaliAdvisor)
   try {
     openAdvisor(); await ruhe()
     await frage('Wie lege ich ein Attribut an?')
-    assert.equal(document.querySelector('.ja-antwort').textContent, '1. Unter Modell ein Attribut anlegen [H1]')
+    assert.equal(document.querySelector('.ja-antwort').textContent, '1. Unter ⊞ Modell ein Attribut anlegen [H1]')
+    assert.equal(document.querySelector('.ja-antwort strong')?.textContent, '⊞ Modell', '**fett** steht fett da, ohne Sternchen')
     assert.equal(document.querySelector('.ja-ki').textContent, 'Text von einer KI erstellt')
     assert.equal(document.querySelector('.ja-satz'), null)
     assert.ok(document.querySelectorAll('.ja-abschnitt').length >= 1, 'die Abschnitte bleiben darunter')

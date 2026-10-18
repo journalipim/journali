@@ -29,7 +29,7 @@ A value can differ per **language** and per **channel**. The star is the value w
 
 ## Asking the journali advisor
 
-The journali advisor answers questions about using journali; in the **?** menu it comes right after the help for the current view. It finds the matching sections of this help ("How do I create an attribute?"), names places in the interface as a link ("Where do I find the roles?") and — at a node — the reasons from its data ("Why is this not in the shop?"): missing required values, releases, the publication per publication tree. With an AI key of the team, the AI writes a short answer from them, with references to the sections.
+The journali advisor answers questions about using journali; in the **?** menu it comes right after the help for the current view. It finds the matching sections of this help, names places in the interface as a link and — at a node — the reasons from its data: missing required values, releases, the publication per publication tree. With an AI key of the team, the AI writes a short answer from them, with references to the sections.
 
 ## Where things live
 

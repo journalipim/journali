@@ -7,6 +7,8 @@ import { store } from './store.js'
 import { ai } from './ai.js'
 import { findeOrte } from './journaliOrte.js'
 import { fragtWarum, gruende } from './journaliWarum.js'
+import { plugins } from './plugins.js'
+import { L } from './i18n.js'
 
 const ENTITAETEN = { amp: '&', lt: '<', gt: '>', quot: '"', '#39': "'", nbsp: ' ' }
 /// HTML als lesbarer Text: ohne Tags, die üblichen Entitäten aufgelöst, Leerraum zusammengefasst
@@ -149,6 +151,16 @@ export async function ladeHilfe(holen = (...a) => fetch(...a)) {
 }
 export const vorratLeeren = () => { vorrat = { schluessel: '', liste: [] } }
 
+/// Die Plugins, die wirken, als Abschnitte (18.10.2026): Bezeichnung und Beschreibung aus dem Manifest — dieselbe, die ⬡ Plugins zeigt. Die Hilfe
+/// beschreibt den Kern; was ein Plugin kann (ETIM, Digitaler Produktpass …), steht nur dort
+export function pluginAbschnitte(liste = plugins.list, wirkt = k => plugins.active(k)) {
+  return (liste ?? []).filter(p => wirkt(p.key)).map(p => {
+    const m = p.manifest ?? {}
+    const text = (typeof m.description === 'string' ? m.description : L(m.description) || m.description?.de || '').trim()
+    return text ? { slug: 'plugins', kapitel: t('Plugins'), titel: L(m.label) || m.label?.de || p.key, text, ebene: 2, plugin: p.key } : null
+  }).filter(Boolean)
+}
+
 // ---- die Antwort der KI
 
 /// Die Bitte an die KI: nur aus den Abschnitten, mit Verweisen — erfundene Menüs und Knöpfe wären schlimmer als keine Antwort
@@ -157,7 +169,8 @@ export const KI_SYSTEM = 'Du bist der journali advisor, der Assistent für die B
   'mit kurzen nummerierten Schritten; fragt jemand, wo etwas ist, nenne den Ort aus der Liste, so wie er dort steht; fragt jemand, warum etwas ' +
   'ist oder nicht ist, antworte zuerst aus dem Zustand des Knotens und sag, was zu tun ist. ' +
   'Nenne die Abschnitte, aus denen du antwortest, mit ihrer Nummer, etwa [H1]. Steht die Antwort nicht in den Abschnitten, sag das in einem Satz. ' +
-  'Erfinde keine Menüs, Knöpfe oder Funktionen. Antworte in der Sprache der Frage, knapp, ohne Einleitung.'
+  'Erfinde keine Menüs, Knöpfe oder Funktionen. Antworte in der Sprache der Frage, knapp, ohne Einleitung und ohne Markdown — nur nummerierte ' +
+  'Schritte als Zeilen mit 1., 2., 3.'
 
 export async function kiAntwort(q, treffer, orte = [], warum = null) {
   const user = `Frage: ${q}\n\n` + (warum?.gruende?.length ? `Zustand des Knotens „${warum.label}“:\n${warum.gruende.map(g => (g.ok ? '- ' : '- (fehlt) ') + g.text).join('\n')}\n\n` : '')
@@ -170,7 +183,7 @@ export async function kiAntwort(q, treffer, orte = [], warum = null) {
 /// `kapitel`: das Kapitel der Ansicht, in der man steht; `orte`: die Orte, die diese Rolle sieht (sonst alle sichtbaren); `knoten`: der Knoten,
 /// an dem man steht — fragt die Eingabe nach einem Grund, kommen die Gründe aus seinen Daten dazu (Warum, journaliWarum.js)
 export async function frage(q, { kapitel = '', holen, orte, knoten = null, lesen } = {}) {
-  const treffer = suche(q, await ladeHilfe(holen), { kapitel })
+  const treffer = suche(q, [...await ladeHilfe(holen), ...pluginAbschnitte()], { kapitel })
   const wo = orte ? findeOrte(q, orte) : findeOrte(q)
   const warum = knoten && fragtWarum(q) ? await gruende(knoten, lesen ? { holen: lesen } : {}).catch(() => null) : null
   let antwort = null, warnung = null

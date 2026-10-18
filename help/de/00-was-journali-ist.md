@@ -29,7 +29,7 @@ Ein Wert kann je **Sprache** und je **Kanal** verschieden sein. Der Stern ist de
 
 ## Fragen an den journali advisor
 
-Der journali advisor beantwortet Fragen zur Bedienung; im Menü **?** steht er gleich nach der Hilfe zur Ansicht. Er findet die passenden Abschnitte dieser Hilfe („Wie lege ich ein Attribut an?“), nennt Orte in der Oberfläche als Link („Wo finde ich die Rollen?“) und — steht man an einem Knoten — die Gründe aus dessen Daten („Warum ist das nicht im Shop?“): fehlende Pflichtwerte, Freigaben, die Ausleitung je Publikationsbaum. Mit einem KI-Schlüssel des Teams schreibt die KI daraus eine kurze Antwort mit Verweisen auf die Abschnitte.
+Der journali advisor beantwortet Fragen zur Bedienung; im Menü **?** steht er gleich nach der Hilfe zur Ansicht. Er findet die passenden Abschnitte dieser Hilfe, nennt Orte in der Oberfläche als Link und — steht man an einem Knoten — die Gründe aus dessen Daten: fehlende Pflichtwerte, Freigaben, die Ausleitung je Publikationsbaum. Mit einem KI-Schlüssel des Teams schreibt die KI daraus eine kurze Antwort mit Verweisen auf die Abschnitte.
 
 ## Wo etwas liegt
 
