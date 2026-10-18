@@ -5,6 +5,7 @@ slug: etim-klassifikation
 tags: [Klassifikation, ETIM, BMEcat, Import & Export]
 categories: [Entwicklung]
 wp: 42
+description: journali holt die ETIM-Freigabe ins Journal, schlägt die Klasse vor, ordnet ETIM-Attribute zu und liefert BMEcat nach ETIM-Guideline 5.0.
 ---
 Großhandel und Datenpools wollen ETIM: eine Klasse je Produkt, gefüllte ETIM-Attribute und einen BMEcat, der beim Empfänger sauber durchläuft. **In journali ist das kein Nebenprojekt mehr, sondern ein Plugin** – von der Freigabe über die Pflege bis zur fertigen Datei.
 

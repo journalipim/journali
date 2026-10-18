@@ -5,6 +5,7 @@ slug: verpackungsverordnung-ppwr
 tags: [Compliance, PPWR, Datenqualität, KI]
 categories: [Entwicklung]
 wp: 48
+description: Material, Rezyklat, Recyclingfähigkeit, Kennzeichnung: Das Plugin Verpackung (PPWR) zeigt je Teilbaum, welche Verpackungsdaten fehlen.
 ---
 Die Verpackungsverordnung (EU) 2025/40 gilt seit dem 12. August 2026. Damit geht es um jede Faltschachtel, jedes Inlay und jeden Beutel: Material, Gewicht, Rezyklat, Recyclingfähigkeit, Kennzeichnung. **journali zeigt euch mit einem Klick, was davon in euren Produktdaten fehlt** – für eine ganze Produktgruppe auf einmal. Das Plugin dafür heißt **Verpackung (PPWR)**.
 

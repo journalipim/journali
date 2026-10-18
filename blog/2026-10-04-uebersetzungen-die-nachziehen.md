@@ -5,6 +5,7 @@ slug: uebersetzungen-die-nachziehen
 tags: [Übersetzung, Mehrsprachigkeit, Workflow, XLIFF]
 categories: [Entwicklung]
 wp: 47
+description: journali weiß je Sprache, was übersetzt ist, was fehlt und was nachzuziehen ist – mit Workflow-Zustand je Sprache und XLIFF hin und zurück.
 ---
 Der deutsche Text ist geprüft, der englische fertig, der französische liegt noch bei der Agentur – und gestern hat jemand die Beschreibung im Deutschen nachgeschärft. Was ist jetzt veraltet? Welche Sprache darf raus? **journali weiß es. Für jeden Wert, in jeder Sprache.**
 

@@ -5,6 +5,7 @@ slug: empco-werbeaussagen
 tags: [Compliance, EmpCo, Datenqualität, Mehrsprachigkeit]
 categories: [Entwicklung]
 wp: 41
+description: Die Richtlinie (EU) 2024/825 ist anzuwenden: journali zeigt in jedem Produkttext und jeder Sprache unzulässige oder belegpflichtige Formulierungen.
 ---
 „Umweltfreundlich“, „klimaneutral“, „100 % recycelt“ – solche Wörter stehen schnell in einem Produkttext. Seit dem **27. September 2026** ist die **Richtlinie (EU) 2024/825** (Empowering Consumers, kurz EmpCo) anzuwenden, in Deutschland über das UWG. Sie macht genau solche Aussagen unzulässig oder belegpflichtig. Bei tausenden Produkten in mehreren Sprachen findet niemand alle Stellen von Hand. **journali findet sie für euch.**
 

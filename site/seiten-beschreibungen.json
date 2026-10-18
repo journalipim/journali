@@ -1,0 +1,22 @@
+{
+  "7": {
+    "seite": "Startseite",
+    "description": "journali PIM speichert jede Änderung an Produktdaten als unveränderlichen Eintrag im Journal – nachvollziehbar, wiederherstellbar, mit Versionen."
+  },
+  "222": {
+    "seite": "journali testen",
+    "description": "journali in der Demo ausprobieren – direkt im Browser, ohne Installation, mit zwei Beispielkatalogen: Leuchten und die Outdoor-Marke Tannwald."
+  },
+  "133": {
+    "seite": "journali Mailings",
+    "description": "journali news für neue Funktionen, journali Wissen für Fachartikel: Ihr wählt, was ihr per E-Mail bekommt, und meldet euch jederzeit ab."
+  },
+  "11": {
+    "seite": "Datenschutzerklärung",
+    "description": "Datenschutzerklärung von journali.de: welche Informationen beim Besuch der Seite erfasst werden und wofür sie verwendet werden."
+  },
+  "10": {
+    "seite": "Impressum",
+    "description": "Impressum von journali.de: Anbieter, Kontakt und Hinweise zur Haftung."
+  }
+}

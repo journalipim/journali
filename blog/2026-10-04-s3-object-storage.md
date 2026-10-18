@@ -5,6 +5,7 @@ slug: s3-object-storage
 tags: [Medien, S3, Betrieb]
 categories: [Entwicklung]
 wp: 49
+description: Bilder und Dokumente in PostgreSQL, im Dateisystem oder in S3-kompatiblem Speicher – umgestellt in den Einstellungen, ohne dass sich eine Id ändert.
 ---
 Produktbilder, Datenblätter, Zertifikate, riesige TIFFs aus der Fotoproduktion – Medien wachsen schneller als alles andere. **Bei journali entscheidet ihr, wo sie liegen:** in PostgreSQL, in einem Verzeichnis auf dem Server oder in jedem S3-kompatiblen Object Storage. Und wenn ihr später woanders hinwollt, zieht ihr einfach um.
 

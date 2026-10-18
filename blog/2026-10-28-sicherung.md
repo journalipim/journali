@@ -6,6 +6,7 @@ tags: [Betrieb, Jobs, Journal, Architektur, PostgreSQL]
 categories: [Entwicklung]
 date: 2026-10-28 06:00
 wp: 159
+description: Vollsicherung per Knopfdruck oder als Job mit Zeitplan, zurück in ein leeres System – der Server baut alle Abbilder aus dem Journal neu.
 ---
 Der Server ist weg: Festplatte defekt, Umzug auf neue Hardware oder ein Update, das schiefgelaufen ist. Für diesen Fall bringt journali eine **Vollsicherung** mit und einen Weg, sie in ein leeres System einzuspielen – mit Einträgen, Medien, Zugängen und Plugins. Hier steht, was sie umfasst, was sie nicht umfasst und warum die Probe dazugehört.
 

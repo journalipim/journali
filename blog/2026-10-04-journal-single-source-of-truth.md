@@ -5,6 +5,7 @@ slug: journal-single-source-of-truth
 tags: [Journal, Architektur, Versionen]
 categories: [Entwicklung]
 wp: 68
+description: In journali ist jede Änderung ein nummerierter Eintrag mit Urheber und Zeitpunkt. Nichts wird überschrieben, jeder frühere Stand lässt sich nachrechnen.
 ---
 Ein Wert wird korrigiert, eine Übersetzung kommt dazu, ein Produkt wird freigegeben. Der neue Wert ersetzt einfach den alten? **Nicht in journali.** Jede Änderung ist ein neuer Eintrag im Journal – und dieses Journal ist die **Single Source of Truth** für alles, was in journali steht.
 

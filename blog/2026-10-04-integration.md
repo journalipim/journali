@@ -5,6 +5,7 @@ slug: integration
 tags: [Integration, REST API, Excel, Import & Export]
 categories: [Entwicklung]
 wp: 75
+description: Pflegen in Excel oder OnlyOffice, Quellsysteme und Solr als Plugins, JSON per Job und eine REST-Schnittstelle – journali ist offen nach allen Seiten.
 ---
 Produktdaten kommen aus einem Quellsystem, werden in Tabellen gepflegt und gehen an Shops, Portale und Skripte weiter. **journali spricht mit all dem – und zwar über eine einzige Schnittstelle.**
 

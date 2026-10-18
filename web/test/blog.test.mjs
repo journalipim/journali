@@ -2,8 +2,10 @@
 // nachgebauten WordPress-Server, nicht gegen die Seite.
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import fs from 'node:fs'
 import { kopfLesen, kopfSetzen, inline, bloecke, seitenBlock, cssUnter, abschnitt, htmlBloecke, wp, entwurf, zugang, seite, hash, schlagwoerter, wpDatum,
-  haeufigeFragen, quellen, strukturierteDaten, klartext, aktualisieren, datenSetzen, KI_HINWEIS } from '../../tools/blog.mjs'
+  haeufigeFragen, quellen, strukturierteDaten, klartext, aktualisieren, datenSetzen, KI_HINWEIS, beschreibung, beschreibungSetzen, META_BESCHREIBUNG,
+  MAX_BESCHREIBUNG } from '../../tools/blog.mjs'
 
 test('Kopf lesen und setzen — der Rest der Datei bleibt', () => {
   const t = '---\r\ntitle: Multi-Server\r\ntags: [Betrieb, Lizenz]\r\n---\r\nText\r\n'
@@ -64,7 +66,7 @@ test('Zugang aus der Umgebung oder der Datei — ohne beides eine Meldung, die s
 
 /// Ein nachgebauter WordPress-Server: Beiträge, Schlagwörter, Kategorien
 function wordpress() {
-  const posts = new Map(), tags = [], kategorien = [], rufe = []
+  const posts = new Map(), seiten = new Map(), tags = [], kategorien = [], rufe = []
   let n = 100
   const f = async (url, o) => {
     const pfad = url.replace(/^https:\/\/blog\.test\/wp-json\/wp\/v2\//, '')
@@ -82,14 +84,14 @@ function wordpress() {
       const t = { id: ++n, name }; tags.push(t); return ok(t)
     }
     if (o.method === 'POST' && pfad === 'posts') { const p = { id: ++n, status: body.status, link: `https://blog.test/?p=${n}`, ...body }; posts.set(p.id, p); return ok(p) }
-    if ((m = pfad.match(/^posts\/(\d+)/))) {
-      const p = posts.get(+m[1])
+    if ((m = pfad.match(/^(posts|pages)\/(\d+)/))) {
+      const p = (m[1] === 'pages' ? seiten : posts).get(+m[2])
       if (o.method === 'GET') return ok(p)
       Object.assign(p, body); return ok(p)
     }
     return { ok: false, status: 404, text: async () => JSON.stringify({ message: 'nicht nachgebaut: ' + pfad }) }
   }
-  return { f, posts, tags, rufe }
+  return { f, posts, seiten, tags, rufe }
 }
 
 test('Entwurf anlegen: Blöcke, Schlagwörter (fehlende neu), Nummer zurück in die Datei — ein zweites Mal legt keinen zweiten an', async () => {
@@ -312,4 +314,39 @@ test('nur die strukturierten Daten setzen: der übrige Inhalt bleibt Byte für B
   const r = await datenSetzen(api, z, datei)
   assert.equal(r.vorher, true)
   assert.equal((w.posts.get(40).content.match(/ld\+json/g) ?? []).length, 1)
+})
+
+test('Meta-Beschreibung (18.10.2026): aus description, sonst dem kurzen Auszug; gesetzt wird nur sie, eine vorhandene bleibt', async () => {
+  assert.equal(beschreibung({ description: 'Kurz.', excerpt: 'Auszug.' }), 'Kurz.')
+  assert.equal(beschreibung({ excerpt: 'Auszug.' }), 'Auszug.')
+  assert.equal(beschreibung({ excerpt: 'x'.repeat(MAX_BESCHREIBUNG + 1) }), null, 'ein langer Auszug ist keine Beschreibung')
+  assert.throws(() => beschreibung({ description: 'x'.repeat(MAX_BESCHREIBUNG + 1) }), /at most 155/)
+  const w = wordpress(); const api = wp({ url: 'https://blog.test', user: 'u', password: 'p' }, w.f)
+  w.posts.set(40, { id: 40, status: 'publish', content: { raw: 'Inhalt' }, meta: { [META_BESCHREIBUNG]: '' } })
+  w.seiten.set(7, { id: 7, status: 'publish', content: { raw: 'Seite' }, meta: { [META_BESCHREIBUNG]: 'in WordPress geschrieben' } })
+  assert.equal((await beschreibungSetzen(api, 'posts', 40, 'Neu.', { probe: true })).probe, true)
+  assert.equal(w.rufe.filter(r => r.methode === 'POST').length, 0, 'die Probe schreibt nichts')
+  assert.equal((await beschreibungSetzen(api, 'posts', 40, 'Neu.')).gesetzt, true)
+  assert.deepEqual(w.rufe.at(-1).body, { meta: { [META_BESCHREIBUNG]: 'Neu.' } }, 'nur die Beschreibung geht hinaus')
+  assert.equal(w.posts.get(40).content.raw, 'Inhalt')
+  assert.equal((await beschreibungSetzen(api, 'posts', 40, 'Neu.')).gesetzt, false, 'gleich: nichts zu tun')
+  // eine Beschreibung aus WordPress bleibt — mit ersetzen nicht
+  assert.equal((await beschreibungSetzen(api, 'pages', 7, 'Aus der Datei.')).gesetzt, false)
+  assert.equal(w.seiten.get(7).meta[META_BESCHREIBUNG], 'in WordPress geschrieben')
+  assert.equal((await beschreibungSetzen(api, 'pages', 7, 'Aus der Datei.', { ersetzen: true })).gesetzt, true)
+  assert.equal(w.seiten.get(7).meta[META_BESCHREIBUNG], 'Aus der Datei.')
+  await assert.rejects(beschreibungSetzen(api, 'posts', 40, 'x'.repeat(156)), /at most 155/)
+  // ein neuer Entwurf bringt sie mit
+  const r = await entwurf(api, { url: 'https://blog.test', user: 'u', password: 'p' }, '---\ntitle: T\nexcerpt: Ein Auszug.\n---\nText.\n')
+  assert.equal(w.posts.get(r.id).meta[META_BESCHREIBUNG], 'Ein Auszug.')
+})
+
+test('Meta-Beschreibung: jeder Beitrag in blog/ und jede Seite hat eine, höchstens 155 Zeichen', () => {
+  const blog = new URL('../../blog/', import.meta.url)
+  for (const f of fs.readdirSync(blog).filter(f => /^\d{4}-.*\.md$/.test(f))) {
+    const { kopf } = kopfLesen(fs.readFileSync(new URL(f, blog), 'utf8'))
+    assert.ok(beschreibung(kopf), `${f}: description fehlt (der Auszug hat mehr als ${MAX_BESCHREIBUNG} Zeichen)`)
+  }
+  for (const [id, s] of Object.entries(JSON.parse(fs.readFileSync(new URL('../../site/seiten-beschreibungen.json', import.meta.url), 'utf8'))))
+    assert.ok(s.description && s.description.length <= MAX_BESCHREIBUNG, `Seite ${id}`)
 })

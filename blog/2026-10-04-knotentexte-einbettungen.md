@@ -5,6 +5,7 @@ slug: suche-nach-sinn
 tags: [KI, Suche, Mehrsprachigkeit]
 categories: [Entwicklung]
 wp: 34
+description: Jeder Produktknoten bekommt seinen eigenen Vektor: journali findet Produkte und Dokumente nach Bedeutung – lokal gerechnet, ohne Schlüssel, ohne Anbieter.
 ---
 Ihr sucht „wasserdichte Arbeitsschuhe“ – und im Datenblatt steht „Schutzklasse S3, wasserabweisendes Obermaterial“. Eine Wortsuche findet da nichts. **journali findet es.** Denn journali sucht nicht nur nach Wörtern, sondern nach Sinn.
 

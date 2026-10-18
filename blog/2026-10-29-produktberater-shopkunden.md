@@ -6,6 +6,7 @@ tags: [KI, MCP, Integration, Architektur, Betrieb]
 categories: [Entwicklung]
 date: 2026-10-29 06:00
 wp: 235
+description: Wer fragt, was der Produktberater sich merkt und was nie ins Journal kommt: anonym, mit einem Gedächtnis im Dienst.
 ---
 Ein Besucher fragt nach einem Zelt. Ein angemeldeter Kunde fragt nach demselben Zelt und will seinen Preis sehen. **Für den [Journali KI Produktberater](/?p=233) sind das zwei verschiedene Lagen – und in beiden gilt: Kein Passwort geht durch den Chat, und nichts über eure Besucher kommt ins Journal.** Hier steht, wie die Teile zusammenhängen, was heute gebaut ist und was als Konzept entschieden ist.
 

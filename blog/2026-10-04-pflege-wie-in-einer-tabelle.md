@@ -5,6 +5,7 @@ slug: pflege-wie-in-einer-tabelle
 tags: [Datenpflege, Journal, Excel]
 categories: [Entwicklung]
 wp: 70
+description: Produktdaten direkt in der Zelle pflegen, mit der Tastatur durch die Liste, ganze Bereiche auf einmal – und jede Änderung steht sofort im Journal.
 ---
 Formular öffnen, Wert eintragen, speichern, zurück zur Liste, nächstes Produkt? **Nicht in journali.** Hier pflegt ihr Produktdaten direkt in der Zelle: klicken, tippen, Enter, weiter. Keine Seitenwechsel, keine Formulare.
 

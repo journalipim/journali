@@ -21,6 +21,10 @@
 //   node tools/blog.mjs css site/index.html       das CSS der Seite nach site/wordpress.css, jede Regel unter .jx — der Inhalt kommt einmal ins CSS-Plugin
 //   node tools/blog.mjs tags blog/<datei>.md      nur Schlagwörter und Kategorien aus dem Kopf übernehmen — der Inhalt bleibt, auch veröffentlicht
 //   node tools/blog.mjs drafts                    die Entwürfe auflisten
+//   node tools/blog.mjs meta [<datei> …] [--dry] [--replace]
+//                                                 nur die Meta-Beschreibung des SEO-Plugins setzen (18.10.2026) — aus „description:“ im Kopf, sonst
+//                                                 aus dem Auszug, wenn er höchstens 155 Zeichen hat; Seiten aus site/seiten-beschreibungen.json. Ohne
+//                                                 Datei alle Beiträge in blog/ und alle Seiten. Eine vorhandene Beschreibung bleibt, mit --replace nicht
 //
 // Zugang: ein Anwendungspasswort aus WordPress (Benutzer → Profil → Anwendungspasswörter), nie im Repo. Er steht in
 // %USERPROFILE%\.journali\wordpress.json — { "url": "https://…", "user": "…", "password": "xxxx xxxx …" } — oder in den Umgebungsvariablen
@@ -418,6 +422,36 @@ export function wpDatum(wert) {
   return `${j}-${mo}-${t}T${h}:${mi}:00`
 }
 
+// ---------------------------------------------------------------- Meta-Beschreibung (18.10.2026)
+
+/// Die Meta-Beschreibung im SEO-Plugin der Seite: ein Metadatum des Beitrags oder der Seite, über die REST-API schreibbar
+export const META_BESCHREIBUNG = '_yoast_wpseo_metadesc'
+/// So viele Zeichen zeigt eine Suchmaschine von einer Beschreibung; was länger ist, wird abgeschnitten
+export const MAX_BESCHREIBUNG = 155
+
+/// Die Meta-Beschreibung eines Beitrags: „description:“ im Kopf, sonst der Auszug, wenn er kurz genug ist; sonst keine
+export function beschreibung(kopf) {
+  const d = kopf.description || (kopf.excerpt && kopf.excerpt.length <= MAX_BESCHREIBUNG ? kopf.excerpt : null)
+  if (d && d.length > MAX_BESCHREIBUNG) throw new Error(`description has ${d.length} characters, at most ${MAX_BESCHREIBUNG}`)
+  return d || null
+}
+
+/**
+ * Nur die Meta-Beschreibung eines Beitrags oder einer Seite setzen (art: posts oder pages) — Inhalt, Titel und Status bleiben. Eine Beschreibung,
+ * die schon da ist, bleibt (sie kann in WordPress geschrieben sein); mit ersetzen nicht. Liefert { id, status, vorher, gesetzt }.
+ */
+export async function beschreibungSetzen(api, art, id, text, { probe = false, ersetzen = false } = {}) {
+  if (!text) throw new Error(`${art} ${id}: no description`)
+  if (text.length > MAX_BESCHREIBUNG) throw new Error(`${art} ${id}: description has ${text.length} characters, at most ${MAX_BESCHREIBUNG}`)
+  const da = await api('GET', `${art}/${id}?context=edit`)
+  const vorher = da.meta?.[META_BESCHREIBUNG] ?? ''
+  const r = { id: +id, status: da.status, vorher, gesetzt: false }
+  if (vorher === text || (vorher && !ersetzen)) return r
+  if (probe) return { ...r, probe: true }
+  await api('POST', `${art}/${id}`, { meta: { [META_BESCHREIBUNG]: text } })
+  return { ...r, gesetzt: true }
+}
+
 /// Einen Beitrag als Entwurf anlegen — oder, mit ersetzen, einen Entwurf neu schreiben. Liefert { id, link, edit, text } (text: die Datei mit wp: im Kopf)
 export async function entwurf(api, z, text, { ersetzen = false } = {}) {
   const { kopf, rumpf } = kopfLesen(text)
@@ -425,6 +459,7 @@ export async function entwurf(api, z, text, { ersetzen = false } = {}) {
   const beitrag = {
     title: kopf.title, content: beitragsInhalt(kopf, rumpf, { veroeffentlicht: kopf.date ? wpDatum(kopf.date) : null, url: adresse(z.url, kopf.date ? wpDatum(kopf.date) : null, kopf.slug), site: z.url }), status: 'draft',
     ...(kopf.excerpt ? { excerpt: kopf.excerpt } : {}), ...(kopf.slug ? { slug: kopf.slug } : {}), ...(kopf.date ? { date: wpDatum(kopf.date) } : {}),
+    ...(beschreibung(kopf) ? { meta: { [META_BESCHREIBUNG]: beschreibung(kopf) } } : {}),
     tags: await begriffe(api, 'tags', kopf.tags), categories: await begriffe(api, 'categories', kopf.categories),
   }
   if (!beitrag.categories.length) delete beitrag.categories
@@ -458,8 +493,8 @@ async function main(argv) {
     console.log(`written: ${ziel} — its content goes into the CSS plugin once`)
     return
   }
-  if (!['check', 'draft', 'page', 'drafts', 'tags', 'update', 'ld'].includes(befehl) || (['draft', 'page', 'tags', 'update', 'ld'].includes(befehl) && !datei)) {
-    console.log('usage: node tools/blog.mjs check | draft <file.md> [--replace] | update <file.md> [--dry] [--from <rev>] | ld <file.md> [...] [--dry] | tags <file.md> | page <file.html> [--blocks] [--section <id>] [--title <t>] [--slug <s>] [--id <n>] | css <file.html> | drafts')
+  if (!['check', 'draft', 'page', 'drafts', 'tags', 'update', 'ld', 'meta'].includes(befehl) || (['draft', 'page', 'tags', 'update', 'ld'].includes(befehl) && !datei)) {
+    console.log('usage: node tools/blog.mjs check | draft <file.md> [--replace] | update <file.md> [--dry] [--from <rev>] | ld <file.md> [...] [--dry] | meta [<file> ...] [--dry] [--replace] | tags <file.md> | page <file.html> [--blocks] [--section <id>] [--title <t>] [--slug <s>] [--id <n>] | css <file.html> | drafts')
     process.exitCode = 2
     return
   }
@@ -475,6 +510,30 @@ async function main(argv) {
       const r = await datenSetzen(api, z, fs.readFileSync(d, 'utf8'), { probe: rest.includes('--dry') })
       console.log(`${r.probe ? 'would set' : 'set'} structured data ${r.vorher ? '(replaced)' : '(new)'} post ${r.id} (${r.status}), ${r.fragen} questions: ${r.url ?? ''}`)
     }
+  } else if (befehl === 'meta') {
+    const repo = path.join(path.dirname(fileURLToPath(import.meta.url)), '..')
+    const angegeben = [datei, ...rest].filter(x => x && !x.startsWith('--'))
+    const liste = angegeben.length ? angegeben
+      : [...fs.readdirSync(path.join(repo, 'blog')).filter(f => /^\d{4}-.*\.md$/.test(f)).map(f => path.join(repo, 'blog', f)), path.join(repo, 'site', 'seiten-beschreibungen.json')]
+    const opt = { probe: rest.includes('--dry') || datei === '--dry', ersetzen: rest.includes('--replace') || datei === '--replace' }
+    const zaehler = { gesetzt: 0, gleich: 0, vorhanden: 0 }
+    const melde = (art, r, name) => {
+      const was = r.gesetzt ? 'set' : r.probe ? 'would set' : r.vorher && r.vorher !== '' && !opt.ersetzen ? 'kept' : 'unchanged'
+      zaehler[r.gesetzt || r.probe ? 'gesetzt' : was === 'kept' ? 'vorhanden' : 'gleich']++
+      if (was !== 'unchanged') console.log(`${was} ${art} ${r.id} (${r.status}): ${name}`)
+    }
+    for (const d of liste) {
+      if (d.endsWith('.json')) {
+        for (const [id, s] of Object.entries(JSON.parse(fs.readFileSync(d, 'utf8')))) melde('page', await beschreibungSetzen(api, 'pages', id, s.description, opt), s.seite ?? id)
+        continue
+      }
+      const { kopf } = kopfLesen(fs.readFileSync(d, 'utf8'))
+      if (!kopf.wp) continue
+      const text = beschreibung(kopf)
+      if (!text) { console.log(`no description: ${path.basename(d)} — excerpt longer than ${MAX_BESCHREIBUNG} characters, description: missing`); continue }
+      melde('post', await beschreibungSetzen(api, 'posts', kopf.wp, text, opt), path.basename(d))
+    }
+    console.log(`${opt.probe ? 'would set' : 'set'} ${zaehler.gesetzt}, unchanged ${zaehler.gleich}, kept ${zaehler.vorhanden}`)
   } else if (befehl === 'update') {
     const text = fs.readFileSync(datei, 'utf8')
     const standDatei = path.join(path.dirname(datei), 'wp-beitraege.json')

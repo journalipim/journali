@@ -5,6 +5,7 @@ slug: datenqualitaet-die-mitwaechst
 tags: [Datenqualität, Workflow, Compliance]
 categories: [Entwicklung]
 wp: 72
+description: In journali stehen die Regeln im Modell – Pflicht je Kanal und Sprache, Muster, Listen, eindeutige Kennungen. Wächst das Modell, wächst die Prüfung mit.
 ---
 Gute Produktdaten entstehen nicht an einem großen Aufräumtag. Sie entstehen, wenn jede Regel dort steht, wo sie gilt – und **für jeden Knoten gilt, der dazukommt**. Genau so arbeitet journali: Die Regeln stehen im Modell, und das Modell wächst mit euren Daten.
 
