@@ -39,6 +39,23 @@ async function zeigen(opts) {
   return { ...w, root }
 }
 
+test('die KI liest Art und Pfad richtig herum: eine Gruppe ist eine Produktgruppe, der Pfad läuft von der Wurzel her (18.10.2026)', async () => {
+  const w = ctx()
+  const rows = [{ id: 'g-root', role: 'group', label: 'Mastertree', parent: null }, { id: 'g-aus', role: 'group', label: 'Ausrüstung', parent: 'g-root' },
+    { id: 'g-iso', role: 'group', label: 'Isomatten', parent: 'g-aus', groups: 'enrich_geo' }]
+  const byId = new Map(rows.map(r => [r.id, r]))
+  w.ctx.tree = { ...w.ctx.tree, rows, byId, ancestors: id => { const out = []; for (let p = byId.get(id)?.parent; p; p = byId.get(p)?.parent) out.unshift(byId.get(p)); return out } }
+  w.ctx.api.get = async () => ({ role: 'group', name: 'Isomatten', values: [], ancestors: [], computed: [], axisValues: {} })
+  const gefragt = []; const ask = w.ctx.ai.ask
+  w.ctx.ai.ask = async a => { gefragt.push(a.user); return ask(a) }
+  localStorage.setItem('journali.geo.node', 'g-iso')
+  const root = document.createElement('div'); document.body.append(root)
+  await geo.views[0].mount(root, w.ctx); await ruhe()
+  ;[...root.querySelectorAll('button')].find(b => /Vorschlagen/.test(b.textContent)).click(); await ruhe()
+  assert.match(gefragt[0], /^Produktgruppe: Isomatten\nPfad \(von oben\): Mastertree › Ausrüstung\nEigenschaften:/)
+  root.remove()
+})
+
 test('die fünf Felder tragen als Zielattribut ihr geo_*-Attribut', async () => {
   const { root } = await zeigen()
   const ziele = [...root.querySelectorAll('select[title="Zielattribut"]')].map(s => s.value)

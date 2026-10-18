@@ -20,7 +20,10 @@ export const PRESETS = [
   ['mk_compare', t('@ Marketingtext vergleichend'), t('Schreibe einen Produkttext (3 bis 5 Sätze), der dieses Produkt gegen üblich ausgestattete Geräte derselben Art abgrenzt: worin es sich unterscheidet, was das dem Käufer bringt. Nur Unterschiede, die aus den Produktdaten hervorgehen; keine Namen fremder Hersteller, keine erfundenen Vergleichswerte.'), 'gen'],
 ]
 
-/// Fakten des Knotens in einer Sprache: Name, Pfad, SKU, Attribute mit Label und Wert (eigen oder geerbt)
+/// Wie der Knoten in der Anfrage heisst: eine Gruppe ist kein Produkt (18.10.2026)
+export const ART = { product: 'Produkt', variant: 'Variante', group: 'Produktgruppe' }
+
+/// Fakten des Knotens in einer Sprache: Name, Art, Pfad, SKU, Attribute mit Label und Wert (eigen oder geerbt)
 export async function facts(nodeId, locale) {
   const model = store.model; if (!nodeId || !model) return null
   const n = await api.get(`/api/nodes/${encodeURIComponent(nodeId)}`)
@@ -46,7 +49,9 @@ export async function facts(nodeId, locale) {
     rows.push(`- ${d.label?.[locale] || L(d.label) || d.key}: ${v}${d.unit ? ' ' + d.unit : ''}`)
   }
   const row = tree.byId.get(nodeId)
-  return { name: row?.label ?? n.name ?? nodeId, path: tree.ancestors(nodeId).map(a => a.label).reverse().join(' › '), keys: tree.keyText(row), rows }
+  // der Pfad von der Wurzel zum Knoten darüber (18.10.2026): umgedreht stand die Wurzel rechts, wo man das Genaueste liest, und die KI schrieb über
+  // „die Mastertree“ in der Produktgruppe Isomatten
+  return { name: row?.label ?? n.name ?? nodeId, art: ART[n.role ?? row?.role] ?? 'Produkt', path: tree.ancestors(nodeId).map(a => a.label).join(' › '), keys: tree.keyText(row), rows }
 }
 
 /// Text umschreiben. instruction: Schlüssel aus PRESETS oder freier Text. html: Ergebnis als HTML (p, ul/li, b, i), sonst reiner Text.
@@ -57,7 +62,7 @@ export async function rewrite({ instruction, current, html, label, locale, node 
   const f = await facts(node, locale).catch(() => null)
   const system = t('Du bist Redakteur für Produktdaten. Sprache: {0}. Nur Fakten aus den Produktdaten, keine Erfindungen, keine Superlative.', [locale || store.model?.masterLocale || 'de']) + ' '
     + (html ? t('Antworte nur mit HTML (erlaubt: p, ul, ol, li, b, i, h3, br), ohne Erklärung, ohne Code-Zäune.') : t('Antworte nur mit dem reinen Text, ohne Erklärung, ohne Anführungszeichen.'))
-  const user = `Feld: ${label || 'Text'}\n` + (f ? `Produkt: ${f.name}\nPfad: ${f.path}\nSchlüssel: ${f.keys}\nProduktdaten:\n${f.rows.join('\n')}\n\n` : '')
+  const user = `Feld: ${label || 'Text'}\n` + (f ? `${f.art}: ${f.name}\nPfad (von oben): ${f.path}\nSchlüssel: ${f.keys}\nProduktdaten:\n${f.rows.join('\n')}\n\n` : '')
     + (current ? `Bisheriger Text:\n${current}\n\n` : '') + t('Aufgabe: {0}', [task])
   const out = await ai.ask({ system, user, maxTokens: 1500, temperature: 0.2, purpose: t('Editor') })
   return String(out).replace(/^```[a-z]*\n?|```$/g, '').trim()

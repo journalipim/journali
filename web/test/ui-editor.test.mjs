@@ -95,6 +95,27 @@ test('Listenwerte gehen als Wort an die KI, nicht als Code', async () => {
   } finally { api.get = orig; ai.ask = origAsk }
 })
 
+test('die KI liest Art und Pfad richtig herum: eine Gruppe ist eine Produktgruppe, der Pfad läuft von der Wurzel her (18.10.2026)', async () => {
+  // vorher: „Produkt: Isomatten / Pfad: Ausrüstung › Tannwald Outdoor › Mastertree“ — die KI schrieb über „die Mastertree“
+  const { store } = await import('../src/store.js')
+  const { tree } = await import('../src/tree.js')
+  store.model = { masterLocale: 'de', locales: [{ code: 'de' }], groups: [], lists: [], attributes: [] }
+  const rows = [{ id: 'g-root', label: 'Mastertree', parent: null, role: 'group' }, { id: 'g-tw', label: 'Tannwald Outdoor', parent: 'g-root', role: 'group' },
+    { id: 'g-aus', label: 'Ausrüstung', parent: 'g-tw', role: 'group' }, { id: 'g-iso', label: 'Isomatten', parent: 'g-aus', role: 'group' }]
+  const vorher = { rows: tree.rows, byId: tree.byId }
+  tree.rows = rows; tree.byId = new Map(rows.map(r => [r.id, r]))
+  const { api } = await import('../src/api.js')
+  const orig = api.get, gefragt = []
+  api.get = async () => ({ id: 'g-iso', role: 'group', values: [], ancestors: [], computed: [] })
+  ai.ask = async a => { gefragt.push(a.user); return 'TEXT' }
+  try {
+    const f = await aiText.facts('g-iso', 'de')
+    assert.deepEqual([f.art, f.name, f.path], ['Produktgruppe', 'Isomatten', 'Mastertree › Tannwald Outdoor › Ausrüstung'])
+    await aiText.rewrite({ instruction: 'mk_plain', label: 'Kurzbeschreibung', locale: 'de', node: 'g-iso' })
+    assert.match(gefragt[0], /^Feld: Kurzbeschreibung\nProduktgruppe: Isomatten\nPfad \(von oben\): Mastertree › Tannwald Outdoor › Ausrüstung\n/)
+  } finally { api.get = orig; ai.ask = origAsk; tree.rows = vorher.rows; tree.byId = vorher.byId }
+})
+
 // Der KI-Knopf und die „erzeugen“-Knöpfe sind magenta, nur solange die Frage etwas kostet (29.09.2026,
 // dritter Anbieter „lokal“): mit dem lokalen Modell bleibt die Leiste da, verliert aber die Farbe. Der Editor
 // wird nach body teleportiert — gesucht wird im Dokument (domButton), nicht im Wrapper.

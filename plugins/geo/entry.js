@@ -34,6 +34,10 @@ const FIELDS = [
 ]
 
 /// Fakten eines Knotens: Name, Pfad, SKU, Attribute mit Label und Wert (eigen oder geerbt) in einer Sprache
+/// Wie der Knoten in der Anfrage heisst: eine Gruppe ist kein Produkt
+const ART = { product: 'Produkt', variant: 'Variante', group: 'Produktgruppe' }
+const kopfzeilen = f => `${f.art}: ${f.name}\nPfad (von oben): ${f.path}\n` + (f.sku ? `SKU: ${f.sku}\n` : '')
+
 async function facts(ctx, id, locale) {
   const { api, store, tree } = ctx; const model = store.model
   const n = await api.get(`/api/nodes/${encodeURIComponent(id)}`)
@@ -53,8 +57,9 @@ async function facts(ctx, id, locale) {
     rows.push({ key: d.key, label: d.label?.[locale] || L(d.label) || d.key, value: String(v), unit: d.unit ?? '' })
   }
   const row = tree.byId.get(id)
-  const path = tree.ancestors(id).map(a => a.label).reverse().join(' › ')
-  return { id, role: n.role, name: row?.label ?? n.name ?? id, sku: row?.sku ?? '', path, rows, axes: n.axisValues ?? {} }
+  // von der Wurzel zum Knoten darüber (18.10.2026): umgedreht stand die Wurzel rechts, und die KI schrieb über „die Mastertree“ in der Gruppe Isomatten
+  const path = tree.ancestors(id).map(a => a.label).join(' › ')
+  return { id, role: n.role, art: ART[n.role ?? row?.role] ?? 'Produkt', name: row?.label ?? n.name ?? id, sku: row?.sku ?? '', path, rows, axes: n.axisValues ?? {} }
 }
 
 function jsonLd(f, locale) {
@@ -85,7 +90,7 @@ async function mount(root, ctx) {
       const f = await facts(ctx, st.node, st.locale)
       say(`frage ${ai.label()} …`)
       const system = t('Du schreibst Produkttexte für Suchmaschinen und KI-Antworten (GEO). Sprache: {0}. Nur Fakten aus den Daten, keine Erfindungen, keine Superlative. Antworte als JSON: { "definition": string, "description": string, "faq": [{ "q": string, "a": string }] (genau 3), "keywords": string[] (5–8) }.', [st.locale])
-      const user = `Produkt: ${f.name}\nPfad: ${f.path}\nSKU: ${f.sku}\nEigenschaften:\n` + f.rows.map(r => `- ${r.label}: ${r.value}${r.unit ? ' ' + r.unit : ''}`).join('\n')
+      const user = kopfzeilen(f) + `Eigenschaften:\n` + f.rows.map(r => `- ${r.label}: ${r.value}${r.unit ? ' ' + r.unit : ''}`).join('\n')
       const j = await ai.ask({ system, user, json: true, maxTokens: 1500, purpose: t('Geodaten') })
       st.result = { facts: f, definition: j.definition ?? '', description: j.description ?? '', faq: Array.isArray(j.faq) ? j.faq : [], keywords: Array.isArray(j.keywords) ? j.keywords.join(', ') : String(j.keywords ?? '') }
       say(t('{0} Eigenschaften · Vorschlag von {1}', [f.rows.length, ai.label()])); draw()
@@ -218,7 +223,7 @@ async function analyse({ ctx, node, locale, box, say }) {
   const reife = reifeVon({ row: { id: node, role: f.role }, values, columns, relations: { [node]: verbunden } })
   say(`frage ${ai.label()} …`)
   const system = t('Du bewertest, wie gut ein Produkt als Quelle für KI-Antworten taugt (GEO). Sprache: {0}. Du kennst nur die gelieferten Daten: keine Websuche, keine Annahmen über andere Seiten, nichts erfinden. Antworte als JSON: { "bewertung": [{ "kriterium": string, "punkte": Zahl 0–10, "begruendung": string }] (Entitätserkennung, Faktenbasis, Abdeckung typischer Fragen, Entscheidungshilfe, Strukturdaten), "fragen": [{ "cluster": "problem" | "anwendung" | "eigenschaft" | "entscheidung", "frage": string }] (je Cluster drei Fragen, wie Käufer sie einem KI-Assistenten stellen), "entscheidung": string (ein bis zwei Sätze: wann dieses Produkt, wann eine Alternative — nur aus den genannten Relationen), "empfehlungen": string[] (höchstens vier, je ein kurzer Satz) }. Jede Begründung ist ein kurzer Satz. Antworte knapp: die Länge der Antwort bestimmt die Wartezeit.', [locale])
-  const user = `Produkt: ${f.name}\nPfad: ${f.path}\nSKU: ${f.sku}\nEigenschaften:\n` + f.rows.map(r => `- ${r.label}: ${r.value}${r.unit ? ' ' + r.unit : ''}`).join('\n')
+  const user = kopfzeilen(f) + `Eigenschaften:\n` + f.rows.map(r => `- ${r.label}: ${r.value}${r.unit ? ' ' + r.unit : ''}`).join('\n')
     + `\nRelationen: ${verbunden.length ? verbunden.map(r => `${r.label}: ${r.other.label}`).join('; ') : 'keine'}`
     + `\nGEO-Reife (aus den Daten gerechnet): Fakten ${reife.punkte.fakten}/25 (${reife.fakten} Werte), Fragen & Antworten ${reife.punkte.fragen}/25, Entscheidung ${reife.punkte.entscheidung}/25, Berechnung ${reife.punkte.berechnung}/25`
   const j = await ai.ask({ system, user, json: true, maxTokens: 1500, purpose: t('GEO-Analyse') })

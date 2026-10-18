@@ -1,8 +1,8 @@
 {
  "key": "geo",
- "version": "1.5.4",
- "hash": "08e4d7a3b38f08388fa63e1b668fb70a8692311ecef8b610961f4b37c111e706",
- "issued": "2026-10-07",
+ "version": "1.5.5",
+ "hash": "23c9850d45bac3bd0a9cbb509d46e00e4894992b62c537af26a9909c087f20ac",
+ "issued": "2026-10-18",
  "issuer": "journali",
- "sig": "/VB5w+tsUsIgVKzM1dniMQikVZcIubSk9/A+EZPQ3wZClf9yYue8GQPPxJ9LDi/DVBAPm+N20qXRQ/NcQXJg8Q=="
+ "sig": "wGHYQ7MmaI74FQhiktTa0T/W1mWa2Pyi2CL5AmZoImRUbq5wrw5dkizZbFcc5PcPHjp0FGVayMtZwIoEsnzgtA=="
 }
