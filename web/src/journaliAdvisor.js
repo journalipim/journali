@@ -5,6 +5,7 @@
 import { i18n, DEFAULT_LANG, t } from './i18n.js'
 import { store } from './store.js'
 import { ai } from './ai.js'
+import { findeOrte } from './journaliOrte.js'
 
 const ENTITAETEN = { amp: '&', lt: '<', gt: '>', quot: '"', '#39': "'", nbsp: ' ' }
 /// HTML als lesbarer Text: ohne Tags, die üblichen Entitäten aufgelöst, Leerraum zusammengefasst
@@ -26,6 +27,8 @@ export function abschnitte(slug, kapitel, html, startphase = false) {
 // Wörter, die eine Frage stellen, aber nichts suchen
 const FUELL = new Set(('wie mache macht machen mach tue tun ich du man wir sie es er kann kannst koennen können muss soll sollte will möchte moechte geht ' +
   'wo finde findet finden warum wieso weshalb wann was wer welche welcher welches ist sind wird werden wurde war hat habe haben gibt ' +
+  // Verben, die nichts über den Ort sagen (18.10.2026: „ändere“ führte zu den „Änderungen“ im Journal)
+  'ändere ändern änderst ändert sehe siehst sieht sehen bekomme bekommt kriege ' +
   'der die das den dem des ein eine einen einem einer eines und oder mit für fuer von zu zum zur im in auf aus bei nach über ueber unter vom ' +
   'mir mich mein meine meinen dir dich sich nicht kein keine noch schon bitte hier da dann so auch nur als wenn dass denn mal etwas alle jetzt ' +
   'how do does i you we where why when what which who is are can the a an to of in on for with my it this that').split(' '))
@@ -66,7 +69,7 @@ export function begriffe(q) {
   return aus
 }
 /// Trifft das Wort selbst (oder ein Nachbar)?
-const trifftWort = (b, tok) => tok === b.w || tok === b.s || (b.s.length >= 4 && tok.startsWith(b.s)) || (b.s.length >= 5 && tok.includes(b.s))
+export const trifftWort = (b, tok) => tok === b.w || tok === b.s || (b.s.length >= 4 && tok.startsWith(b.s)) || (b.s.length >= 5 && tok.includes(b.s))
   || b.nachbarn.some(x => tok.startsWith(x))
 /// … oder nur die Verbindung mit einer Vorsilbe („lege … an“ → „anlegen“)?
 const trifftVerbunden = (b, tok) => b.mit.some(x => x.length >= 3 && tok.startsWith(x))
@@ -149,21 +152,25 @@ export const vorratLeeren = () => { vorrat = { schluessel: '', liste: [] } }
 
 /// Die Bitte an die KI: nur aus den Abschnitten, mit Verweisen — erfundene Menüs und Knöpfe wären schlimmer als keine Antwort
 export const KI_SYSTEM = 'Du bist der journali advisor, der Assistent für die Bedienung von journali, einem PIM-System. Beantworte die Frage ' +
-  'ausschliesslich aus den nummerierten Abschnitten der Hilfe. Fragt jemand nach einem Vorgehen, antworte mit kurzen nummerierten Schritten. ' +
+  'ausschliesslich aus den nummerierten Abschnitten der Hilfe und der Liste der Orte in der Oberfläche. Fragt jemand nach einem Vorgehen, antworte ' +
+  'mit kurzen nummerierten Schritten; fragt jemand, wo etwas ist, nenne den Ort aus der Liste, so wie er dort steht. ' +
   'Nenne die Abschnitte, aus denen du antwortest, mit ihrer Nummer, etwa [H1]. Steht die Antwort nicht in den Abschnitten, sag das in einem Satz. ' +
   'Erfinde keine Menüs, Knöpfe oder Funktionen. Antworte in der Sprache der Frage, knapp, ohne Einleitung.'
 
-export async function kiAntwort(q, treffer) {
-  const user = `Frage: ${q}\n\nAbschnitte der Hilfe:\n` + treffer.map((a, i) => `[H${i + 1}] ${a.kapitel}${a.ebene > 1 ? ' › ' + a.titel : ''}\n${a.text.slice(0, 1500)}`).join('\n\n')
+export async function kiAntwort(q, treffer, orte = []) {
+  const user = `Frage: ${q}\n\n` + (orte.length ? `Orte in der Oberfläche:\n${orte.map(o => '- ' + o.titel).join('\n')}\n\n` : '')
+    + `Abschnitte der Hilfe:\n` + treffer.map((a, i) => `[H${i + 1}] ${a.kapitel}${a.ebene > 1 ? ' › ' + a.titel : ''}\n${a.text.slice(0, 1500)}`).join('\n\n')
   return String(await ai.ask({ system: KI_SYSTEM, user, maxTokens: 1500, purpose: t('Hilfe') }) ?? '').trim()
 }
 
-/// Eine Frage: die Abschnitte und — mit KI — die Antwort daraus. `kapitel`: das Kapitel der Ansicht, in der man steht
-export async function frage(q, { kapitel = '', holen } = {}) {
+/// Eine Frage: die Orte in der Oberfläche (Wo, journaliOrte.js), die Abschnitte der Hilfe (Wie) und — mit KI — die Antwort daraus.
+/// `kapitel`: das Kapitel der Ansicht, in der man steht; `orte`: die Orte, die diese Rolle sieht (sonst alle sichtbaren)
+export async function frage(q, { kapitel = '', holen, orte } = {}) {
   const treffer = suche(q, await ladeHilfe(holen), { kapitel })
+  const wo = orte ? findeOrte(q, orte) : findeOrte(q)
   let antwort = null, warnung = null
-  if (treffer.length && ai.available()) {
-    try { antwort = await kiAntwort(q, treffer) || null } catch (e) { warnung = e.message }
+  if ((treffer.length || wo.length) && ai.available()) {
+    try { antwort = await kiAntwort(q, treffer, wo) || null } catch (e) { warnung = e.message }
   }
-  return { treffer, antwort, warnung }
+  return { treffer, orte: wo, antwort, warnung }
 }

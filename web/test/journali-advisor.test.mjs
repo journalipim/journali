@@ -80,7 +80,8 @@ test('frage: ohne KI nur die Abschnitte — mit KI eine Antwort aus ihnen, mit V
     const mit = await frage('Wie lege ich ein Attribut an?', { holen })
     assert.equal(mit.antwort, '1. Unter Modell … [H1]')
     assert.equal(bitte.system, KI_SYSTEM)
-    assert.match(bitte.user, /^Frage: Wie lege ich ein Attribut an\?\n\nAbschnitte der Hilfe:\n\[H1\] Das Modell › Attribute\n/)
+    assert.match(bitte.user, /^Frage: Wie lege ich ein Attribut an\?\n\nOrte in der Oberfläche:\n- ⊞ Modell\n\nAbschnitte der Hilfe:\n\[H1\] Das Modell › Attribute\n/)
+    assert.deepEqual(mit.orte.map(o => o.to), ['/model'], 'Wo: das Modell — nicht der Baum, wo man auch anlegt')
     assert.match(KI_SYSTEM, /ausschliesslich aus den nummerierten Abschnitten/)
     assert.match(KI_SYSTEM, /Erfinde keine Menüs, Knöpfe oder Funktionen/)
 
@@ -91,6 +92,29 @@ test('frage: ohne KI nur die Abschnitte — mit KI eine Antwort aus ihnen, mit V
     const fehler = await frage('Sicherung', { holen })
     assert.ok(fehler.treffer.length); assert.equal(fehler.warnung, 'KI nicht verfügbar')
   } finally { ai.available = verfuegbar; ai.ask = ask; vorratLeeren() }
+})
+
+test('Wo: die Orte der Oberfläche, die diese Rolle sieht — ein Link statt eines Satzes', async () => {
+  const { findeOrte, orte } = await import('../src/journaliOrte.js')
+  const auth = store.auth, demo = store.demo
+  try {
+    store.auth = { enabled: true, user: 'a', rights: ['read', 'write', 'users', 'model'] }
+    const ziel = q => findeOrte(q).map(o => o.to)
+    assert.deepEqual(ziel('Wo finde ich die Rollen?'), ['/settings#users'])
+    assert.deepEqual(ziel('wie ändere ich mein Passwort'), ['/settings'])
+    assert.equal(ziel('wo kann ich Bilder hochladen')[0], '/media')
+    assert.deepEqual(ziel('wo stelle ich den Mailserver ein'), ['/settings#mail'])
+    assert.deepEqual(ziel('Wie lege ich ein Attribut an?'), ['/model'])
+    assert.deepEqual(ziel('Bananenbrot'), [])
+    assert.ok(orte().some(o => o.titel.endsWith('◈ IAM')))
+    // ohne das Recht: der Ort ist nicht da — und wird nicht genannt
+    store.auth = { enabled: true, user: 'b', rights: ['read', 'write'] }
+    assert.ok(!orte().some(o => o.to === '/settings#users' || o.to === '/settings#mail'))
+    assert.ok(!ziel('Wo finde ich die Rollen?').includes('/settings#users'))
+    // ⬡ Plugins nicht in der Demo
+    store.auth = { enabled: true, user: 'demo', rights: ['read', 'write', 'plugins'] }; store.demo = true
+    assert.ok(!orte().some(o => o.to === '/plugins'))
+  } finally { store.auth = auth; store.demo = demo }
 })
 
 test('die Hilfe wird einmal je Sprache und Startphase geladen', async () => {

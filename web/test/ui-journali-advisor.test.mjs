@@ -85,6 +85,23 @@ test('mit KI: die Antwort über den Abschnitten, mit Hinweis — ein Fehler der 
   } finally { ai.available = verfuegbar; ai.ask = ask; closeAdvisor(); await ruhe(); w.unmount() }
 })
 
+test('Wo: ein Ort als Link — ein Klick geht hin, das Fenster bleibt offen', async () => {
+  server(); vorratLeeren()
+  const { store } = await import('../src/store.js')
+  const auth = store.auth; store.auth = { enabled: true, user: 'a', rights: ['read', 'users'] }
+  const verfuegbar = ai.available; ai.available = () => false
+  const w = mount(JournaliAdvisor)
+  try {
+    openAdvisor(); await ruhe()
+    await frage('Wo finde ich die Rollen?')
+    const links = [...document.querySelectorAll('.ja-ort-link')]
+    assert.deepEqual(links.map(l => l.textContent.trim()), ['⚙ Einstellungen › ◈ IAM'])
+    links[0].click(); await ruhe()
+    assert.equal(location.hash, '#/settings#users')
+    assert.equal(advisor.open, true)
+  } finally { store.auth = auth; ai.available = verfuegbar; closeAdvisor(); await ruhe(); w.unmount() }
+})
+
 test('Esc schliesst das Fenster', async () => {
   server(); vorratLeeren()
   const w = mount(JournaliAdvisor)

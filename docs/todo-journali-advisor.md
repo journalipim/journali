@@ -62,10 +62,13 @@ Reihenfolge: Wie → Wo → Warum, jeweils erst ohne KI.
 - Aufgefallen: die Hilfe sagt nicht, **wie** man ein Attribut anlegt (Kapitel Modell beschreibt nur, was ein Attribut hat) — genau das
   soll das Lernen sichtbar machen.
 
+- **Wo** (18.10.2026, gebaut): `web/src/journaliOrte.js` — die Ansichten der Leiste, die Reiter der Einstellungen und die Ansichten der Plugins
+  mit Wörtern und Recht; was die Rolle nicht sieht, fällt weg (in der Demo ⬡ Plugins). Die Antwort zeigt bis zu zwei Orte als Link („Zu finden
+  unter: ⚙ Einstellungen › ◈ IAM“), die KI bekommt sie als Liste und nennt nur sie.
+
 ## Nächste Schritte
 
-1. **Wo**: eine Karte der Oberfläche (Ansichten, Reiter, Menüs mit Recht) — „wo finde ich die Rollen?“ antwortet mit einem Link.
-2. **Warum**: Gründe aus den Daten für den Knoten, an dem man steht (Ausleitung, Prüfungen, Rechte, Kontingent, Vererbung).
-3. **Artikel**: Blog und Wissen dazu, sobald geklärt ist, woran man veröffentlichte Beiträge erkennt.
-4. **Lernen**: Fragen ohne Treffer zählen (im Journal? eher nicht — Betrieb; wie `lernen.json` beim product advisor).
-5. Die Hilfe selbst: ein Abschnitt über den journali advisor, und „Attribut anlegen“ im Kapitel Modell.
+1. **Warum**: Gründe aus den Daten für den Knoten, an dem man steht (Ausleitung, Prüfungen, Rechte, Kontingent, Vererbung).
+2. **Artikel**: Blog und Wissen dazu, sobald geklärt ist, woran man veröffentlichte Beiträge erkennt.
+3. **Lernen**: Fragen ohne Treffer zählen (im Journal? eher nicht — Betrieb; wie `lernen.json` beim product advisor).
+4. Die Hilfe selbst: ein Abschnitt über den journali advisor, und „Attribut anlegen“ im Kapitel Modell.
