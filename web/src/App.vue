@@ -17,6 +17,8 @@ import { istAbgemeldet } from './abgemeldet.js'
 import UsageMini from './components/UsageMini.vue'
 import HelpButton from './components/HelpButton.vue'
 import HelpPanel from './components/HelpPanel.vue'
+import JournaliAdvisor from './components/JournaliAdvisor.vue'
+import { openAdvisor } from './help.js'
 import ServerSperre from './components/ServerSperre.vue'
 import { t as t_ } from './i18n.js'
 
@@ -46,9 +48,9 @@ watch(() => [store.auth.known, store.auth.user, store.auth.rights], () => { frag
 // Demo: die Klasse am Dokument blendet aus, was data-demo="aus" trägt — auch in den Ansichten der Plugins
 watch(() => store.demo, d => document.documentElement.classList.toggle('demo', !!d), { immediate: true })   // Hinweise zum Betrieb, einmal bestätigt
 plugins.beobachte(store)   // nach der Anmeldung und nach einem neuen Serverstand neu laden — sonst fehlen Gruppen in der Leiste
-beobachteDienste(store, plugins)   // die Berater mit Adresse ihres Dienstes — der grüne Knopf „Produktberater starten“ (18.10.2026)
+beobachteDienste(store, plugins)   // die Berater mit Adresse ihres Dienstes — der grüne Knopf „product advisor“ (18.10.2026)
 /// In der Demo der Dienst aus /api/health, sonst die Berater mit Adresse; einer startet gleich, mehrere bieten eine Auswahl
-const chatDienste = computed(() => store.berater ? [{ key: 'demo', label: 'Tannwald Outdoor', url: store.berater }] : chat.dienste)
+const chatDienste = computed(() => store.berater ? [{ key: 'demo', label: 'Beispielshop Tannwald Outdoor', url: store.berater }] : chat.dienste)
 function chatStarten(e) {
   const d = chatDienste.value
   if (d.length === 1) return beraterStarten(d[0].url, store.lang)
@@ -145,6 +147,7 @@ function railDrop(target) {
     <div v-if="store.dbDown && route.path !== '/setup'" class="dbdown" :title="$t('Der Server verbindet sich neu, sobald die Datenbank zurück ist.')">{{ $t("✗ Datenbank nicht erreichbar") }}</div>
     <!-- Hilfe: ein Fenster über allem, kein Seitenwechsel -->
     <HelpPanel />
+    <JournaliAdvisor />
     <main class="content">
       <div v-if="crashed" class="pane" style="flex:1"><div class="empty"><div class="neg" style="font-weight:600">{{ $t("✗ Diese Ansicht ist abgestürzt") }}</div><div class="mono muted" style="margin:8px 0">{{ crashed }}</div><button class="primary" @click="crashed = null; $router.push('/tree')">{{ $t("▣ Zum Baum") }}</button> <button @click="reload">{{ $t("↻ Neu laden") }}</button></div></div>
       <router-view v-else />
@@ -157,9 +160,11 @@ function railDrop(target) {
       <span v-else class="dot" :class="{ offline: store.online === false }">●</span>
       <!-- Testversion (07.10.2026): alles, was derzeit herausgegeben wird; ein Klick zeigt den Hinweis -->
       <button v-if="store.testversion" class="testversion" :title="$t('Nur für Test und Evaluation, nicht für den Produktiveinsatz.')" @click="zeigeTesthinweis">{{ $t("Testversion") }}</button>
+      <!-- journali advisor (18.10.2026): Fragen zur Bedienung — in der Demo als blauer Knopf, sonst nur im Hilfemenü -->
+      <button v-if="store.demo && !abgemeldet" class="journali-advisor-start" :title="$t('Fragen zur Bedienung, beantwortet aus der Hilfe')" @click="openAdvisor()">journali advisor</button>
       <!-- Das Chat-Fenster des Produktberaters, wie auf einer Website (15.10.2026 Demo, 18.10.2026 jede Instanz): die Adresse des Dienstes nennt in der
-           Demo /api/health, sonst die Definition des Beraters -->
-      <button v-if="chatDienste.length && !abgemeldet" class="berater-start" :title="chatDienste.length === 1 ? $t('das Chat-Fenster des Produktberaters {0}, wie auf einer Website', [chatDienste[0].label]) : $t('{0} Produktberater mit Chat-Dienst', [chatDienste.length])" @click="chatStarten">{{ $t("Produktberater starten") }}</button>
+           Demo /api/health, sonst die Definition des Beraters — grün, der journali advisor blau -->
+      <button v-if="chatDienste.length && !abgemeldet" class="berater-start" :title="chatDienste.length === 1 ? $t('das Chat-Fenster des Produktberaters {0}, wie auf einer Website', [chatDienste[0].label]) : $t('{0} Produktberater mit Chat-Dienst', [chatDienste.length])" @click="chatStarten">product advisor</button>
       <template v-if="!abgemeldet">
       <span class="mono">#{{ store.head }}</span>
       <span class="sep">·</span>

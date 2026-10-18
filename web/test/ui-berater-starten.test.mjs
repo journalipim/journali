@@ -44,8 +44,8 @@ test('der Knopf steht rechts neben „Testversion“, nur mit Adresse eines Dien
   const app = fs.readFileSync(new URL('../src/App.vue', import.meta.url), 'utf8')
   const testversion = app.indexOf('class="testversion"'), knopf = app.indexOf('class="berater-start"')
   assert.ok(testversion > 0 && knopf > testversion, 'gleich danach')
-  assert.match(app, /<button v-if="chatDienste\.length && !abgemeldet" class="berater-start"[^>]*@click="chatStarten">\{\{ \$t\("Produktberater starten"\) \}\}<\/button>/)
-  assert.match(app, /const chatDienste = computed\(\(\) => store\.berater \? \[\{ key: 'demo', label: 'Tannwald Outdoor', url: store\.berater \}\] : chat\.dienste\)/, 'in der Demo der Dienst aus /api/health')
+  assert.match(app, /<button v-if="chatDienste\.length && !abgemeldet" class="berater-start"[^>]*@click="chatStarten">product advisor<\/button>/)
+  assert.match(app, /const chatDienste = computed\(\(\) => store\.berater \? \[\{ key: 'demo', label: 'Beispielshop Tannwald Outdoor', url: store\.berater \}\] : chat\.dienste\)/, 'in der Demo der Dienst aus /api/health')
   assert.match(fs.readFileSync(new URL('../src/style.css', import.meta.url), 'utf8'), /\.status \.berater-start \{ background: #15803d;/, 'grün')
 })
 

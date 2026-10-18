@@ -56,7 +56,7 @@ test('der ✕ schliesst; das Menü öffnet das Fenster statt zu navigieren', asy
 
   const gezeigt = []
   const items = helpItems(() => {}, '/tree/p-1', s => gezeigt.push(s))
-  items[0].action(); items[1].action()
+  items[0].action(); items.find(i => /Alle Kapitel/.test(i.label)).action()   // dazwischen steht der journali advisor (18.10.2026)
   assert.deepEqual(gezeigt, ['baum', ''], 'erst das Kapitel zur Ansicht, dann alle')
   w.unmount()
 })

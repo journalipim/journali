@@ -8,8 +8,13 @@ import { t } from './i18n.js'
 import { store } from './store.js'
 
 /// Das Hilfefenster: offen und welches Kapitel. Es liegt über der Ansicht — wer nachliest, bleibt, wo er war.
-export const hilfe = reactive({ open: false, chapter: '' })
-export function openHelp(chapter = '') { if (chapter) hilfe.chapter = chapter; hilfe.open = true }
+/// abschnitt (18.10.2026): die Überschrift, zu der das Fenster springt — so öffnet der journali advisor einen Abschnitt
+export const hilfe = reactive({ open: false, chapter: '', abschnitt: '' })
+export function openHelp(chapter = '', abschnitt = '') { if (chapter) hilfe.chapter = chapter; hilfe.abschnitt = abschnitt; hilfe.open = true }
+/// journali advisor (18.10.2026): der Assistent für die Bedienung — offen oder zu (components/JournaliAdvisor.vue)
+export const advisor = reactive({ open: false })
+export function openAdvisor() { advisor.open = true }
+export function closeAdvisor() { advisor.open = false }
 export function closeHelp() { hilfe.open = false }
 
 export const HELP_LINKS = [
@@ -43,6 +48,8 @@ export function chapterFor(path) {
 export function helpItems(open = url => window.open(url, '_blank', 'noopener'), path = location.pathname, zeig = openHelp) {
   return [
     { label: t('? Hilfe zu dieser Ansicht'), icon: '?', action: () => zeig(chapterFor(path)) },
+    // der Assistent (18.10.2026): Fragen zur Bedienung, beantwortet aus der Hilfe — im produktiven Betrieb nur hier, in der Demo auch oben
+    { label: 'journali advisor', icon: '⌕', title: t('Fragen zur Bedienung, beantwortet aus der Hilfe'), action: () => openAdvisor() },
     { label: t('Alle Kapitel'), icon: '≡', action: () => zeig('') },
     // die Beschreibung der Schnittstelle, lesbar — nicht in der Demo (07.10.2026): dort ist sie gesperrt (Demo.Gesperrt)
     ...(store.demo ? [] : [{ label: t('{ } Schnittstelle (API)'), icon: '{}', action: () => open('/schnittstelle') }]),

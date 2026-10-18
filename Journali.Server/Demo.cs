@@ -833,7 +833,9 @@ public static class Demo
             Role: c.Lesen((_, _) => c.Users.Roles.ContainsKey("reader")) ? "reader" : Rolle,
             View: c.Lesen((m, _) => m.Views.ContainsKey("onlineshop")) ? "onlineshop" : null,
             Locales: ["de", "en"],
-            Greeting: new() { ["de"] = "Wonach suchen Sie?", ["en"] = "What are you looking for?" },
+            // 18.10.2026: der Beispielshop beim Namen — in der Demo hielt man den Berater sonst für die Hilfe zu journali
+            Greeting: new() { ["de"] = "Hallo! Ich berate zu den Produkten des Beispielshops Tannwald Outdoor, etwa Zelte, Jacken oder Wanderschuhe. Wonach suchen Sie?",
+                ["en"] = "Hello! I advise on the products of the sample shop Tannwald Outdoor, such as tents, jackets or hiking boots. What are you looking for?" },
             Ki: false, Mcp: false, Limits: new(JeTag: 5000),
             // der Chat-Dienst neben der Demo (15.10.2026), wenn einer läuft: seine Adresse und die Websites, die das Fenster einbinden
             Url: string.IsNullOrWhiteSpace(BeraterUrl) ? null : BeraterUrl.TrimEnd('/'), Origins: BeraterOrigins.Length > 0 ? BeraterOrigins : null);

@@ -3,7 +3,7 @@
 // Kapitel links, Text rechts, Suche über alle Kapitel. Der Inhalt kommt als fertiges HTML aus /help/<code>/
 // (web/build-help.mjs); gibt es ein Kapitel in der Oberflächensprache nicht, kommt das deutsche.
 // Geöffnet wird es über help.js (openHelp), geschlossen mit Esc, dem ✕ oder einem Klick daneben.
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 import { i18n, DEFAULT_LANG } from '../i18n.js'
 import { hilfe, closeHelp } from '../help.js'
 import { store } from '../store.js'
@@ -30,8 +30,14 @@ async function ladeIndex() {
   }
   alle.value = []
 }
+// welches Kapitel steht da oder lädt gerade — öffnen setzt Kapitel und offen zugleich, und beide Beobachter laden (18.10.2026: das zweite Laden
+// setzte den Sprung zum Abschnitt zurück)
+let geladen = ''
 async function ladeKapitel(slug) {
-  if (!slug) { html.value = ''; return }
+  if (!slug) { html.value = ''; geladen = ''; return }
+  const schluessel = lang.value + '/' + slug
+  if (schluessel === geladen) { if (!busy.value) nextTick(springe); return }
+  geladen = schluessel
   busy.value = true
   try {
     for (const code of [lang.value, DEFAULT_LANG]) {
@@ -39,7 +45,16 @@ async function ladeKapitel(slug) {
       if (r.ok) { html.value = await r.text(); return }
     }
     html.value = ''
-  } finally { busy.value = false; if (body.value) body.value.scrollTop = 0 }
+  } catch (e) { geladen = ''; throw e }
+  finally { busy.value = false; if (body.value) body.value.scrollTop = 0; nextTick(springe) }
+}
+/// Zum Abschnitt springen, den der journali advisor nennt (18.10.2026): die Überschrift mit diesem Text, kurz markiert
+function springe() {
+  const s = hilfe.abschnitt
+  if (!s || !body.value) return
+  const h = [...body.value.querySelectorAll('h2, h3')].find(x => x.textContent.trim() === s)
+  if (h) { h.scrollIntoView?.({ block: 'start' }); h.classList.add('markiert') }
+  hilfe.abschnitt = ''
 }
 async function ladeTexte() {
   for (const k of index.value) {
@@ -62,7 +77,8 @@ watch(() => hilfe.open, async auf => {
   else ladeKapitel(hilfe.chapter)
 }, { immediate: true })
 watch(() => hilfe.chapter, s => { if (hilfe.open) ladeKapitel(s) })
-watch(() => i18n.global.locale.value, async () => { if (!index.value.length) return; await ladeIndex(); texts.value = {}; ladeKapitel(hilfe.chapter) })
+watch(() => hilfe.abschnitt, s => { if (s && hilfe.open && !busy.value && html.value) nextTick(springe) })   // dasselbe Kapitel, ein anderer Abschnitt
+watch(() => i18n.global.locale.value, async () => { if (!index.value.length) return; await ladeIndex(); texts.value = {}; geladen = ''; ladeKapitel(hilfe.chapter) })
 watch(q, s => { if (s.trim()) ladeTexte() })
 </script>
 
@@ -111,6 +127,7 @@ watch(q, s => { if (s.trim()) ladeTexte() })
 .help-text :deep(table) { border-collapse: collapse; margin: 8px 0; }
 .help-text :deep(td), .help-text :deep(th) { border: 1px solid var(--line); padding: 4px 8px; text-align: left; vertical-align: top; }
 .help-text :deep(a) { color: var(--accent); }
+.help-text :deep(.markiert) { background: var(--accent-soft); border-radius: 3px; }
 /* Startphase: was nur mit Lizenz gilt, steht nicht da — und umgekehrt (05.10.2026) */
 .help-text.startphase :deep(.nur-lizenz), .help-text:not(.startphase) :deep(.nur-startphase) { display: none; }
 .x { border: 0; background: none; color: var(--muted); font-size: 14px; padding: 0 6px; }
