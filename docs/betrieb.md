@@ -491,6 +491,12 @@ Auf der Website:
 der Website gehört in die Liste „Websites“ des Beraters, sonst antwortet der Dienst dem Browser mit 403. KI-Agenten erreichen
 denselben Dienst unter `https://advisor.example.com/mcp` (MCP, Streamable HTTP; 2026-07-28 und die Versionen mit `initialize`).
 
+**Aus journali starten** (18.10.2026): trägt ein Berater unter „Dienst“ die Adresse seines Dienstes, steht oben rechts der grüne Knopf
+„Produktberater starten“ — er lädt das Chat-Fenster vom Dienst auf die Seite, wie eine Website es einbindet; mit mehreren solchen Beratern
+bietet er eine Auswahl. Damit der Dienst das Fenster zulässt, gehört auch die Adresse von journali selbst in „Websites“, lokal etwa
+`http://localhost:5000` (der Dienst aus `toolserater` läuft auf `http://localhost:8190`), auf einem eigenen Server die Adresse, unter der
+man journali im Browser öffnet. Sehen kann den Knopf, wer lesen darf; in der Demo nennt `/api/health` den Dienst.
+
 | Weg am Dienst | was |
 |---|---|
 | `GET /widget.js` | das Chat-Fenster — mit Fingerabdruck (ETag), der Browser fragt jedes Mal nach |

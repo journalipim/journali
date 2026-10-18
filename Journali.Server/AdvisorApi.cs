@@ -872,7 +872,9 @@ public static partial class AdvisorApi
             return Results.Ok(c.Lesen((model, tree) => liste.Select(kv =>
             {
                 var (d, fehler) = Definition.Read(kv.Value);
-                return new { key = kv.Key, label = d?.Label, pub = d?.Pub, errors = fehler is not null ? [fehler] : Fehler(d!, model, tree, c.Users, c.Teams) };
+                // url (18.10.2026): die Adresse des Dienstes — oben der Knopf „Produktberater starten“, auch ausserhalb der Demo
+                return new { key = kv.Key, label = d?.Label, pub = d?.Pub, url = string.IsNullOrWhiteSpace(d?.Url) ? null : d!.Url.TrimEnd('/'),
+                    errors = fehler is not null ? [fehler] : Fehler(d!, model, tree, c.Users, c.Teams) };
             }).ToList()));
         });
 

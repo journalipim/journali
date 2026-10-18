@@ -1130,6 +1130,18 @@ public class AdvisorTests
     }
 
     [Fact]
+    public async Task Die_Liste_der_Berater_nennt_die_Adresse_ihres_Dienstes()
+    {
+        // 18.10.2026: oben der Knopf „Produktberater starten“ auch ausserhalb der Demo — die Oberfläche nimmt die Berater mit Adresse
+        await using var w = await Welt.Neu();
+        var (_, ohne) = await w.Get("/api/advisor");
+        Assert.Equal(JsonValueKind.Null, ohne.EnumerateArray().Single().GetProperty("url").ValueKind);
+        w.Setze(w.Standard() with { Url = "http://localhost:8190/" });
+        var (_, mit) = await w.Get("/api/advisor");
+        Assert.Equal("http://localhost:8190", mit.EnumerateArray().Single().GetProperty("url").GetString());
+    }
+
+    [Fact]
     public void Die_Bitte_an_die_KI_bei_einer_Eingabe_ohne_Bezug_nennt_Shop_Bereiche_und_Sprache()
     {
         var (system, user) = AdvisorApi.PromptFremd("glück", ["zelt"], "Tannwald Outdoor", ["Ausrüstung", "Bekleidung"], "de");
