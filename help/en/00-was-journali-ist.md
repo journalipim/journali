@@ -27,6 +27,10 @@ A value can differ per **language** and per **channel**. The star is the value w
 | Plugins | import, export, data sheets, translation, checks, jobs |
 | Journal | the history of all changes, with filter and search |
 
+## Asking the journali advisor
+
+The journali advisor answers questions about using journali; in the **?** menu it comes right after the help for the current view. It finds the matching sections of this help ("How do I create an attribute?"), names places in the interface as a link ("Where do I find the roles?") and — at a node — the reasons from its data ("Why is this not in the shop?"): missing required values, releases, the publication per publication tree. With an AI key of the team, the AI writes a short answer from them, with references to the sections.
+
 ## Where things live
 
 Everything factual is in the journal in the database. Images and documents live in the asset store, in the database, in a directory or in an S3-compatible store. Passwords, tokens, mail and storage settings are kept encrypted in the vault in the database, without a database in files at the server — never in the journal.

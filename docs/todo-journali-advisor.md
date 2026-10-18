@@ -59,8 +59,8 @@ Reihenfolge: Wie → Wo → Warum, jeweils erst ohne KI.
   Die Suche gewichtet jeden Begriff nach seiner Seltenheit in der Hilfe; ein Verb, das nur mit seiner Vorsilbe trifft („lege … an“), zählt
   halb; ein Treffer als Teil eines längeren Worts zählt halb; Nachbarwörter (`NACHBARN`: „löschen“ → „zurückziehen“, „Bild“ → „Medien“ …).
   Prüfstand: `web/test/journali-advisor.test.mjs` an den echten Kapiteln.
-- Aufgefallen: die Hilfe sagt nicht, **wie** man ein Attribut anlegt (Kapitel Modell beschreibt nur, was ein Attribut hat) — genau das
-  soll das Lernen sichtbar machen.
+- Aufgefallen und behoben (18.10.2026): die Hilfe sagte nicht, **wie** man ein Attribut anlegt — jetzt Modell › Ein Attribut anlegen,
+  dazu „Fragen an den journali advisor“ in Was journali ist (de und en). Solche Lücken soll das Lernen sichtbar machen.
 
 - **Wo** (18.10.2026, gebaut): `web/src/journaliOrte.js` — die Ansichten der Leiste, die Reiter der Einstellungen und die Ansichten der Plugins
   mit Wörtern und Recht; was die Rolle nicht sieht, fällt weg (in der Demo ⬡ Plugins). Die Antwort zeigt bis zu zwei Orte als Link („Zu finden
@@ -76,4 +76,3 @@ Reihenfolge: Wie → Wo → Warum, jeweils erst ohne KI.
 1. **Warum, weiter**: Prüfungen der Datenanalyse am Knoten, Rechte (warum Speichern abgewiesen wird), Kontingent, woher ein geerbter Wert kommt.
 2. **Artikel**: Blog und Wissen dazu, sobald geklärt ist, woran man veröffentlichte Beiträge erkennt.
 3. **Lernen**: Fragen ohne Treffer zählen (im Journal? eher nicht — Betrieb; wie `lernen.json` beim product advisor).
-4. Die Hilfe selbst: ein Abschnitt über den journali advisor, und „Attribut anlegen“ im Kapitel Modell.

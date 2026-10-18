@@ -18,6 +18,12 @@ Ein Attribut hat:
 
 Ein Attribut lässt sich zurückziehen, solange kein Knoten es als Namensattribut trägt. Werte im Journal bleiben dabei erhalten.
 
+### Ein Attribut anlegen
+
+1. Unter ⊞ Modell links **Attribute** wählen.
+2. Oben im Feld *neues Attribut (Name)* den Namen eingeben und Enter drücken oder **+** klicken. Aus dem Namen entsteht der Schlüssel (aus „Zutat“ wird `zutat`), der Name wird die Bezeichnung in der Leitsprache; der Typ ist zuerst Text.
+3. Am Attribut Typ, Gruppe, Achsen und Pflicht einstellen. Am Knoten steht das Attribut zum Pflegen da, sobald eine seiner Gruppen dort gilt (siehe Attributgruppen).
+
 ## Attribut-Typen
 
 Der Typ legt fest, was ein Wert ist, wie die Zelle ihn erfasst und wie journali ihn prüft. Er wird in der Modellansicht unter **Typ** gewählt. Ändert man den Typ eines Attributs mit Werten, prüft journali die vorhandenen Werte gegen die neue Definition und meldet, wie viele nicht passen.

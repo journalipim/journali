@@ -18,6 +18,12 @@ An attribute has:
 
 An attribute can be retired as long as no node carries it as its name attribute. Values in the journal are preserved.
 
+### Creating an attribute
+
+1. Under ⊞ Model, choose **Attributes** on the left.
+2. Type the name into the field *new attribute (name)* at the top and press Enter or click **+**. The key is formed from the name ("Ingredient" becomes `ingredient`), the name becomes the label in the master language; the type starts as text.
+3. Set type, group, axes and requirement on the attribute. The attribute appears at a node for editing as soon as one of its groups applies there (see attribute groups).
+
 ## Attribute types
 
 The type determines what a value is, how the cell captures it and how journali checks it. It is chosen in the model view under **Type**. If you change the type of an attribute that has values, journali checks the existing values against the new definition and reports how many do not fit.

@@ -45,7 +45,7 @@ test('Begriffe: Füllwörter fallen weg, Endungen auch — eine Vorsilbe verbind
 
 test('die Fragen der Anwender führen ins richtige Kapitel', () => {
   const erster = q => orte(q)[0] ?? ''
-  assert.equal(erster('Wie lege ich ein Attribut an?'), 'modell › Attribute')
+  assert.equal(erster('Wie lege ich ein Attribut an?'), 'modell › Ein Attribut anlegen')   // seit 18.10.2026 steht es in der Hilfe
   assert.equal(erster('Wo finde ich die Rollen?'), 'anwender-rollen-und-teams › Rollen und Rechte')
   assert.equal(erster('wie importiere ich eine Excel-Datei'), 'import-und-export › Import')
   assert.match(erster('wie mache ich eine Sicherung'), /^sicherung-und-wiederherstellung › /)
@@ -72,7 +72,7 @@ test('frage: ohne KI nur die Abschnitte — mit KI eine Antwort aus ihnen, mit V
     ai.available = () => false
     let gefragt = 0; ai.ask = async () => { gefragt++; return 'x' }
     const ohne = await frage('Wie lege ich ein Attribut an?', { holen })
-    assert.equal(ohne.treffer[0].titel, 'Attribute')
+    assert.equal(ohne.treffer[0].titel, 'Ein Attribut anlegen')
     assert.deepEqual([ohne.antwort, gefragt], [null, 0], 'ohne KI wird sie nicht gefragt')
 
     ai.available = () => true
@@ -80,7 +80,7 @@ test('frage: ohne KI nur die Abschnitte — mit KI eine Antwort aus ihnen, mit V
     const mit = await frage('Wie lege ich ein Attribut an?', { holen })
     assert.equal(mit.antwort, '1. Unter Modell … [H1]')
     assert.equal(bitte.system, KI_SYSTEM)
-    assert.match(bitte.user, /^Frage: Wie lege ich ein Attribut an\?\n\nOrte in der Oberfläche:\n- ⊞ Modell\n\nAbschnitte der Hilfe:\n\[H1\] Das Modell › Attribute\n/)
+    assert.match(bitte.user, /^Frage: Wie lege ich ein Attribut an\?\n\nOrte in der Oberfläche:\n- ⊞ Modell\n\nAbschnitte der Hilfe:\n\[H1\] Das Modell › Ein Attribut anlegen\n/)
     assert.deepEqual(mit.orte.map(o => o.to), ['/model'], 'Wo: das Modell — nicht der Baum, wo man auch anlegt')
     assert.match(KI_SYSTEM, /ausschliesslich aus den nummerierten Abschnitten/)
     assert.match(KI_SYSTEM, /Erfinde keine Menüs, Knöpfe oder Funktionen/)
