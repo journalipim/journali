@@ -58,3 +58,8 @@ test('jede Einstellungsseite setzt ihre Überschriften in einen Abschnitt', () =
   }
   assert.deepEqual(ohne, [], 'Überschrift ohne Abschnitt: sie bekommt dann die Vorgabe des Browsers')
 })
+
+test('ein Textfeld schreibt in der Schrift der Oberfläche wie ein Eingabefeld — eine Festbreitenschrift setzt nur, wer sie braucht (18.10.2026)', () => {
+  const css = fs.readFileSync(new URL('../src/style.css', import.meta.url), 'utf8')
+  assert.match(css, /input, button, select, textarea \{\s*font: inherit;/)
+})

@@ -200,7 +200,8 @@ html.demo [data-demo="aus"] { display: none !important; }
 .toolbar h1 { font-size: 14px; margin: 0; font-weight: 600; }
 .toolbar.hint { white-space: nowrap; overflow: hidden; }
 
-input, button, select {
+/* textarea dazu (18.10.2026): sonst nimmt es die Festbreitenschrift des Browsers — „Websites“ beim Berater stand anders da als „Dienst“ */
+input, button, select, textarea {
   font: inherit;
   color: inherit;
 }
