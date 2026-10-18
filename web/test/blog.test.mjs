@@ -329,9 +329,11 @@ test('Meta-Beschreibung (18.10.2026): aus description, sonst dem kurzen Auszug; 
   assert.equal((await beschreibungSetzen(api, 'posts', 40, 'Neu.')).gesetzt, true)
   assert.deepEqual(w.rufe.at(-1).body, { meta: { [META_BESCHREIBUNG]: 'Neu.' } }, 'nur die Beschreibung geht hinaus')
   assert.equal(w.posts.get(40).content.raw, 'Inhalt')
-  assert.equal((await beschreibungSetzen(api, 'posts', 40, 'Neu.')).gesetzt, false, 'gleich: nichts zu tun')
+  const nochmal = await beschreibungSetzen(api, 'posts', 40, 'Neu.')
+  assert.deepEqual([nochmal.gesetzt, nochmal.gleich], [false, true], 'gleich: nichts zu tun')
   // eine Beschreibung aus WordPress bleibt — mit ersetzen nicht
-  assert.equal((await beschreibungSetzen(api, 'pages', 7, 'Aus der Datei.')).gesetzt, false)
+  const bleibt = await beschreibungSetzen(api, 'pages', 7, 'Aus der Datei.')
+  assert.deepEqual([bleibt.gesetzt, bleibt.gleich], [false, false], 'eine andere bleibt')
   assert.equal(w.seiten.get(7).meta[META_BESCHREIBUNG], 'in WordPress geschrieben')
   assert.equal((await beschreibungSetzen(api, 'pages', 7, 'Aus der Datei.', { ersetzen: true })).gesetzt, true)
   assert.equal(w.seiten.get(7).meta[META_BESCHREIBUNG], 'Aus der Datei.')

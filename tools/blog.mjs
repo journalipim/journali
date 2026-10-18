@@ -438,14 +438,14 @@ export function beschreibung(kopf) {
 
 /**
  * Nur die Meta-Beschreibung eines Beitrags oder einer Seite setzen (art: posts oder pages) — Inhalt, Titel und Status bleiben. Eine Beschreibung,
- * die schon da ist, bleibt (sie kann in WordPress geschrieben sein); mit ersetzen nicht. Liefert { id, status, vorher, gesetzt }.
+ * die schon da ist, bleibt (sie kann in WordPress geschrieben sein); mit ersetzen nicht. Liefert { id, status, vorher, gleich, gesetzt }.
  */
 export async function beschreibungSetzen(api, art, id, text, { probe = false, ersetzen = false } = {}) {
   if (!text) throw new Error(`${art} ${id}: no description`)
   if (text.length > MAX_BESCHREIBUNG) throw new Error(`${art} ${id}: description has ${text.length} characters, at most ${MAX_BESCHREIBUNG}`)
   const da = await api('GET', `${art}/${id}?context=edit`)
   const vorher = da.meta?.[META_BESCHREIBUNG] ?? ''
-  const r = { id: +id, status: da.status, vorher, gesetzt: false }
+  const r = { id: +id, status: da.status, vorher, gleich: vorher === text, gesetzt: false }
   if (vorher === text || (vorher && !ersetzen)) return r
   if (probe) return { ...r, probe: true }
   await api('POST', `${art}/${id}`, { meta: { [META_BESCHREIBUNG]: text } })
@@ -518,7 +518,8 @@ async function main(argv) {
     const opt = { probe: rest.includes('--dry') || datei === '--dry', ersetzen: rest.includes('--replace') || datei === '--replace' }
     const zaehler = { gesetzt: 0, gleich: 0, vorhanden: 0 }
     const melde = (art, r, name) => {
-      const was = r.gesetzt ? 'set' : r.probe ? 'would set' : r.vorher && r.vorher !== '' && !opt.ersetzen ? 'kept' : 'unchanged'
+      // gleich: steht schon so in WordPress; kept: dort steht eine andere, die bleibt (18.10.2026: vorher hiess auch eine gleiche „kept“)
+      const was = r.gesetzt ? 'set' : r.probe ? 'would set' : r.gleich ? 'unchanged' : 'kept'
       zaehler[r.gesetzt || r.probe ? 'gesetzt' : was === 'kept' ? 'vorhanden' : 'gleich']++
       if (was !== 'unchanged') console.log(`${was} ${art} ${r.id} (${r.status}): ${name}`)
     }
