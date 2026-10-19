@@ -459,8 +459,27 @@ Ein Berater beantwortet Fragen von Besuchern einer Website zu den Produkten eine
 Angelegt wird er unter ⇪ Export → Produktberatung: Publikationsbaum, Rolle, Sicht, Sprachen, Begrüssung, Anrede („Sie“ oder „du“ — in
 seinen festen Sätzen und in den Texten der KI), wahlweise KI mit Team und Ton (sachlich, freundlich, locker) und Quellen (Werkzeuge von Zugängen der Art MCP-Server, die die KI nutzen darf — `docs/pflegestruktur.md` 43), MCP, Websites und Grenzen. Dort gibt es auch das Token für seinen Dienst — nur beim Ausgeben sichtbar.
 
+**Schritt für Schritt** (19.10.2026):
+
+1. **Berater anlegen** — ⇪ Export → Produktberatung: Publikationsbaum, Rolle, Sicht, Sprachen, Begrüssung; speichern. Die Vorschau
+   darunter antwortet wie der Dienst; steht ✗ in der Liste, antwortet der Berater nicht.
+2. **Token** — ＋ Token. Es ist nur in diesem Moment sichtbar; es gilt nur für die Fragen dieses Beraters, nicht für die übrige
+   Schnittstelle.
+3. **Dienst starten** — je nachdem, wo er läuft: neben journali in derselben `compose.yaml` (unten), **auf Unraid** oder **auf einem
+   anderen Rechner** (beide weiter unten).
+4. **Prüfen** — `curl http://localhost:8090/health` auf dem Rechner des Dienstes: `{"ok":true,"advisor":"shop","products":…}`.
+   Mit `503` nennt `error` den Grund: journali nicht erreichbar (Adresse in `JOURNALI`), das Token ungültig oder widerrufen, oder ein
+   Fehler am Berater.
+5. **Reverse Proxy** — eine öffentliche Adresse mit TLS (etwa `https://advisor.example.com`) auf den Port des Dienstes; dazu
+   `JOURNALI_PROXY=1`, sonst zählen alle Besucher als einer (die Adresse des Proxys) und die Grenze je Besucher gilt für alle zusammen.
+6. **Am Berater eintragen** — unter „Dienst“ die öffentliche Adresse, unter „Websites“ die Adressen des Shops und, für den Knopf
+   „Produktberater starten“, die Adresse von journali selbst; speichern. Der Dienst liest die Angaben des Beraters spätestens nach
+   einer Minute neu.
+7. **Einbinden** — das Tag aus der Ansicht des Beraters auf der Website (unten „Auf der Website“).
+
 Der Dienst läuft im **eigenen Container**, ohne eigenes Image: `node:22-alpine` mit dem Verzeichnis des Plugins (nur lesen).
-Er braucht nur HTTP zu journali, keine Datenbank, keinen Medienspeicher. Neben `compose.yaml`:
+Er braucht nur HTTP zu journali, keine Datenbank, keinen Medienspeicher. Neben `compose.yaml` (die Ansicht des Beraters zeigt
+denselben Block mit seinem Schlüssel):
 
 ```yaml
   advisor-shop:
@@ -480,6 +499,52 @@ Er braucht nur HTTP zu journali, keine Datenbank, keinen Medienspeicher. Neben `
 Der Reverse Proxy (TLS) gibt **nur diesen Port** nach aussen, etwa als `https://advisor.example.com`; der journali-Server bleibt
 innen. `JOURNALI_PROXY=1` liest die Adresse des Besuchers aus `X-Forwarded-For` — nur setzen, wenn der Port allein am Proxy hängt
 (wie bei `127.0.0.1:8090`), sonst kann jeder Besucher eine Adresse vortäuschen und die Grenze je Besucher umgehen.
+
+**Auf Unraid** läuft der Dienst aus **demselben Image wie journali** — es enthält `node` und `plugins/advisor`, und ein „force
+update“ hält beide auf demselben Stand. Die Vorlage `unraid/journali-advisor.xml` startet statt des Servers
+`node /app/plugins/advisor/serve.mjs` (ExtraParams `--entrypoint node`, PostArgs):
+
+1. `unraid/journali-advisor.xml` auf den USB-Stick kopieren (`config/plugins/dockerMan/templates-user/my-journali-advisor.xml`).
+2. *Docker* → *Add Container* → *Template*: `journali-advisor`. **Repository** wie bei der App journali (die eigene Gitea oder `ghcr.io`).
+3. **JOURNALI**: die Adresse des Unraid-Servers im Netz mit dem Port der App journali (`http://<Server>:8080`) — aus dem Container
+   heraus ist `localhost` der Container selbst. **JOURNALI_ADVISOR**: der Schlüssel des Beraters. **JOURNALI_ADVISOR_TOKEN**: das Token
+   (maskiert) — oder es liegt als Datei `token` im Pfad Daten (`/mnt/user/appdata/journali-advisor`) und
+   `JOURNALI_ADVISOR_TOKEN_FILE=/daten/token`.
+4. *Apply*; *WebUI* öffnet `/health` (Schritt 4 oben).
+5. Den Reverse Proxy auf `<Server>:8090` richten. `JOURNALI_PROXY` steht in der Vorlage auf `1`; ohne Proxy auf `0` stellen.
+
+Ein zweiter Berater ist eine zweite App aus derselben Vorlage: anderer Name, anderer Port, anderer Schlüssel, eigenes Token.
+
+**Auf einem anderen Rechner** (etwa ein Server im Netz, während journali im Haus läuft):
+
+- **Der Dienst braucht einen Weg zu journali.** `JOURNALI` ist die Adresse, unter der dieser Rechner journali erreicht — über einen
+  Reverse Proxy mit TLS (`https://pim.example.com`) oder über ein VPN. Steht journali dafür im Netz, gibt der Proxy davor für die
+  Adresse des Dienstes am besten nur `/api/advisor/<berater>/` frei: das Token des Beraters gilt ohnehin nur dort, aber ein journali
+  **ohne Anwender** ist offen, und dann schützt nur der Proxy die übrige Schnittstelle.
+- **Das Verzeichnis `plugins/advisor`** gehört auf diesen Rechner, im Stand von journali — aus dem Repo oder aus dem Container von
+  journali (`docker cp <container>:/app/plugins/advisor ./advisor`). Nach einem neuen Stand von journali wird es neu kopiert; der Dienst
+  und journali sprechen dieselbe Schnittstelle (`/api/advisor/{key}/…`).
+- Dann wie oben, nur mit der Adresse von journali und dem kopierten Verzeichnis:
+
+```yaml
+services:
+  advisor-shop:
+    image: node:22-alpine
+    command: ["node", "/advisor/serve.mjs"]
+    environment:
+      JOURNALI: https://pim.example.com
+      JOURNALI_ADVISOR: shop
+      JOURNALI_ADVISOR_TOKEN_FILE: /run/advisor/token
+      JOURNALI_PROXY: "1"
+      JOURNALI_ADVISOR_DATA: /daten
+    volumes: ["./advisor:/advisor:ro", "./token:/run/advisor/token:ro", "advisor-shop-daten:/daten"]
+    ports: ["127.0.0.1:8090:8090"]
+    restart: unless-stopped
+volumes:
+  advisor-shop-daten:
+```
+
+`./token` ist eine Datei mit dem Token, nur für den Betreiber lesbar; sie gehört in kein Repo.
 
 Auf der Website:
 

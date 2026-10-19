@@ -32,7 +32,7 @@ If a setting is missing, ✗ appears in the list with the reason below it; the a
 
 ## The service and the website
 
-Visitors do not reach journali but the service of the advisor, a separate container that talks to journali only via the interface. The setup is described in `docs/betrieb.md` under "Produktberater". On the website one tag is enough:
+Visitors do not reach journali but the service of the advisor, a separate container that talks to journali only via the interface. The setup is described in `docs/betrieb.md` under "Produktberater", step by step — next to journali, on Unraid (template `unraid/journali-advisor.xml`) or on another machine. On the website one tag is enough:
 
 ```html
 <script src="https://advisor.example.com/widget.js" async></script>

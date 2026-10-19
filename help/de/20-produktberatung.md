@@ -32,7 +32,7 @@ Fehlt eine Angabe, steht ✗ in der Liste und der Grund darunter; der Berater an
 
 ## Der Dienst und die Website
 
-Besucher erreichen nicht journali, sondern den Dienst des Beraters, einen eigenen Container, der nur über die Schnittstelle mit journali spricht. Die Einrichtung steht in `docs/betrieb.md` unter „Produktberater“. Auf der Website genügt ein Tag:
+Besucher erreichen nicht journali, sondern den Dienst des Beraters, einen eigenen Container, der nur über die Schnittstelle mit journali spricht. Die Einrichtung steht in `docs/betrieb.md` unter „Produktberater“, Schritt für Schritt — neben journali, auf Unraid (Vorlage `unraid/journali-advisor.xml`) oder auf einem anderen Rechner. Auf der Website genügt ein Tag:
 
 ```html
 <script src="https://advisor.example.com/widget.js" async></script>
