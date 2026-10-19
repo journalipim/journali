@@ -1,4 +1,4 @@
-(function(){const s=document.createElement('style');s.textContent="\n.seiten[data-v-ca946ae5] { display: flex; gap: 0; flex: 1; min-height: 0;\n}\n.liste[data-v-ca946ae5] { width: 260px; border-right: 1px solid var(--line); overflow-y: auto;\n}\n.rechts[data-v-ca946ae5] { flex: 1; overflow-y: auto; min-width: 0;\n}\n.kopf[data-v-ca946ae5] { display: flex; gap: 6px; align-items: center; padding: 6px 8px;\n}\n.kopf .bez[data-v-ca946ae5] { flex: 1;\n}\n.neu[data-v-ca946ae5] { display: flex; gap: 4px; padding: 6px 8px;\n}\n.neu input[data-v-ca946ae5] { flex: 1; min-width: 0;\n}\n.form[data-v-ca946ae5] { width: 100%;\n}\n.felder[data-v-ca946ae5] { border: 0; padding: 0; margin: 0; min-width: 0;\n}\n.form td[data-v-ca946ae5] { height: 30px; vertical-align: middle; white-space: normal; padding: 2px 4px;\n}\n.form td.attr[data-v-ca946ae5] { color: var(--muted); white-space: nowrap; padding-left: 8px;\n}\n.row[data-v-ca946ae5] { display: flex; gap: 8px; align-items: center; flex-wrap: wrap;\n}\n.zahl[data-v-ca946ae5] { width: 70px;\n}\n.code[data-v-ca946ae5] { margin: 2px 0 8px; padding: 6px 8px; background: var(--bg2, rgba(127,127,127,.08)); border-radius: 4px; white-space: pre-wrap; word-break: break-all; font-size: 12px;\n}\n.neues-token[data-v-ca946ae5] { user-select: all; word-break: break-all;\n}\n.fehler[data-v-ca946ae5] { margin: 4px 8px; padding-left: 16px;\n}\n.treffer[data-v-ca946ae5] { margin: 4px 0; padding-left: 20px;\n}\n";document.head.append(s)})();
+(function(){const s=document.createElement('style');s.textContent="\n.seiten[data-v-fe8836a7] { display: flex; gap: 0; flex: 1; min-height: 0;\n}\n.liste[data-v-fe8836a7] { width: 260px; border-right: 1px solid var(--line); overflow-y: auto;\n}\n.rechts[data-v-fe8836a7] { flex: 1; overflow-y: auto; min-width: 0;\n}\n.kopf[data-v-fe8836a7] { display: flex; gap: 6px; align-items: center; padding: 6px 8px;\n}\n.kopf .bez[data-v-fe8836a7] { flex: 1;\n}\n.neu[data-v-fe8836a7] { display: flex; gap: 4px; padding: 6px 8px;\n}\n.neu input[data-v-fe8836a7] { flex: 1; min-width: 0;\n}\n.form[data-v-fe8836a7] { width: 100%;\n}\n.felder[data-v-fe8836a7] { border: 0; padding: 0; margin: 0; min-width: 0;\n}\n.form td[data-v-fe8836a7] { height: 30px; vertical-align: middle; white-space: normal; padding: 2px 4px;\n}\n.form td.attr[data-v-fe8836a7] { color: var(--muted); white-space: nowrap; padding-left: 8px;\n}\n.row[data-v-fe8836a7] { display: flex; gap: 8px; align-items: center; flex-wrap: wrap;\n}\n.zahl[data-v-fe8836a7] { width: 70px;\n}\n.code[data-v-fe8836a7] { margin: 2px 0 8px; padding: 6px 8px; background: var(--bg2, rgba(127,127,127,.08)); border-radius: 4px; white-space: pre-wrap; word-break: break-all; font-size: 12px;\n}\n.neues-token[data-v-fe8836a7] { user-select: all; word-break: break-all;\n}\n.fehler[data-v-fe8836a7] { margin: 4px 8px; padding-left: 16px;\n}\n.treffer[data-v-fe8836a7] { margin: 4px 0; padding-left: 20px;\n}\n";document.head.append(s)})();
 const m = window.journali.vue;
 const Fragment = m.Fragment;
 const computed = m.computed;
@@ -66,120 +66,130 @@ const _hoisted_22 = ["title"];
 const _hoisted_23 = ["value"];
 const _hoisted_24 = ["title"];
 const _hoisted_25 = ["value"];
-const _hoisted_26 = { class: "attr" };
-const _hoisted_27 = { class: "chips" };
-const _hoisted_28 = ["onClick"];
+const _hoisted_26 = ["title"];
+const _hoisted_27 = ["value"];
+const _hoisted_28 = { key: 0 };
 const _hoisted_29 = ["title"];
-const _hoisted_30 = { class: "attr" };
-const _hoisted_31 = ["onUpdate:modelValue", "title"];
-const _hoisted_32 = ["title"];
-const _hoisted_33 = { value: "sie" };
-const _hoisted_34 = { value: "du" };
-const _hoisted_35 = { class: "attr" };
-const _hoisted_36 = { class: "row" };
-const _hoisted_37 = ["title"];
-const _hoisted_38 = ["title"];
-const _hoisted_39 = ["value"];
-const _hoisted_40 = ["title"];
-const _hoisted_41 = { value: "sachlich" };
-const _hoisted_42 = { value: "freundlich" };
-const _hoisted_43 = { value: "locker" };
-const _hoisted_44 = {
+const _hoisted_30 = {
   key: 0,
+  class: "neg kunden-privat"
+};
+const _hoisted_31 = { key: 1 };
+const _hoisted_32 = ["title"];
+const _hoisted_33 = { class: "attr" };
+const _hoisted_34 = { class: "chips" };
+const _hoisted_35 = ["onClick"];
+const _hoisted_36 = ["title"];
+const _hoisted_37 = { class: "attr" };
+const _hoisted_38 = ["onUpdate:modelValue", "title"];
+const _hoisted_39 = ["title"];
+const _hoisted_40 = { value: "sie" };
+const _hoisted_41 = { value: "du" };
+const _hoisted_42 = { class: "attr" };
+const _hoisted_43 = { class: "row" };
+const _hoisted_44 = ["title"];
+const _hoisted_45 = ["title"];
+const _hoisted_46 = ["value"];
+const _hoisted_47 = ["title"];
+const _hoisted_48 = { value: "sachlich" };
+const _hoisted_49 = { value: "freundlich" };
+const _hoisted_50 = { value: "locker" };
+const _hoisted_51 = {
+  key: 2,
   class: "quellen"
 };
-const _hoisted_45 = ["title"];
-const _hoisted_46 = {
+const _hoisted_52 = ["title"];
+const _hoisted_53 = {
   key: 0,
   class: "muted"
 };
-const _hoisted_47 = { class: "row" };
-const _hoisted_48 = ["title", "onClick"];
-const _hoisted_49 = {
+const _hoisted_54 = { class: "row" };
+const _hoisted_55 = ["title", "onClick"];
+const _hoisted_56 = {
   key: 0,
   class: "muted"
 };
-const _hoisted_50 = {
+const _hoisted_57 = {
   key: 1,
   class: "neg"
 };
-const _hoisted_51 = ["title"];
-const _hoisted_52 = ["checked", "onChange"];
-const _hoisted_53 = { class: "attr" };
-const _hoisted_54 = ["title"];
-const _hoisted_55 = ["title"];
-const _hoisted_56 = ["title"];
-const _hoisted_57 = ["title"];
-const _hoisted_58 = { class: "row grenzen" };
-const _hoisted_59 = ["title"];
-const _hoisted_60 = ["title"];
+const _hoisted_58 = ["title"];
+const _hoisted_59 = ["checked", "onChange"];
+const _hoisted_60 = { class: "attr" };
 const _hoisted_61 = ["title"];
 const _hoisted_62 = ["title"];
-const _hoisted_63 = { "data-demo": "aus" };
+const _hoisted_63 = ["title"];
 const _hoisted_64 = ["title"];
-const _hoisted_65 = { class: "grid" };
-const _hoisted_66 = { class: "muted" };
-const _hoisted_67 = { class: "muted" };
-const _hoisted_68 = { style: { "width": "24px" } };
-const _hoisted_69 = ["title", "onClick"];
-const _hoisted_70 = {
+const _hoisted_65 = { class: "row grenzen" };
+const _hoisted_66 = ["title"];
+const _hoisted_67 = ["title"];
+const _hoisted_68 = ["title"];
+const _hoisted_69 = ["title"];
+const _hoisted_70 = { "data-demo": "aus" };
+const _hoisted_71 = ["title"];
+const _hoisted_72 = { class: "grid" };
+const _hoisted_73 = { class: "muted" };
+const _hoisted_74 = { class: "muted" };
+const _hoisted_75 = { style: { "width": "24px" } };
+const _hoisted_76 = ["title", "onClick"];
+const _hoisted_77 = {
   class: "row",
   style: { "padding": "4px 8px" }
 };
-const _hoisted_71 = ["disabled", "title"];
-const _hoisted_72 = ["title"];
-const _hoisted_73 = ["title"];
-const _hoisted_74 = ["placeholder"];
-const _hoisted_75 = ["disabled", "title"];
-const _hoisted_76 = ["title"];
-const _hoisted_77 = ["title"];
-const _hoisted_78 = {
+const _hoisted_78 = ["disabled", "title"];
+const _hoisted_79 = ["title"];
+const _hoisted_80 = ["title"];
+const _hoisted_81 = ["placeholder"];
+const _hoisted_82 = ["disabled", "title"];
+const _hoisted_83 = ["title"];
+const _hoisted_84 = ["title"];
+const _hoisted_85 = {
   key: 1,
   class: "vorschau",
   style: { "padding": "0 8px 8px" }
 };
-const _hoisted_79 = {
+const _hoisted_86 = {
   key: 0,
   class: "neg"
 };
-const _hoisted_80 = {
+const _hoisted_87 = {
   key: 0,
   class: "satz"
 };
-const _hoisted_81 = {
+const _hoisted_88 = {
   key: 1,
   class: "frage"
 };
-const _hoisted_82 = ["title"];
-const _hoisted_83 = {
+const _hoisted_89 = ["title"];
+const _hoisted_90 = {
   key: 3,
   class: "grid about"
 };
-const _hoisted_84 = { class: "attr" };
-const _hoisted_85 = ["title"];
-const _hoisted_86 = {
+const _hoisted_91 = { class: "attr" };
+const _hoisted_92 = ["title"];
+const _hoisted_93 = {
   key: 4,
   class: "neg ki-fehler"
 };
-const _hoisted_87 = ["title"];
-const _hoisted_88 = ["title"];
-const _hoisted_89 = { class: "treffer" };
-const _hoisted_90 = { class: "muted" };
-const _hoisted_91 = {
+const _hoisted_94 = ["title"];
+const _hoisted_95 = ["title"];
+const _hoisted_96 = { class: "treffer" };
+const _hoisted_97 = { class: "muted" };
+const _hoisted_98 = {
   key: 6,
   class: "muted facetten"
 };
-const _hoisted_92 = ["title"];
-const _hoisted_93 = {
+const _hoisted_99 = ["title"];
+const _hoisted_100 = {
   style: { "padding": "4px 8px" },
   class: "einbinden",
   "data-demo": "aus"
 };
-const _hoisted_94 = { class: "muted" };
-const _hoisted_95 = { class: "code" };
-const _hoisted_96 = { class: "muted" };
-const _hoisted_97 = { class: "code" };
-const _hoisted_98 = { class: "code" };
+const _hoisted_101 = { class: "muted" };
+const _hoisted_102 = { class: "code" };
+const _hoisted_103 = { class: "muted" };
+const _hoisted_104 = { class: "code" };
+const _hoisted_105 = { class: "code" };
 const _sfc_main = {
   __name: "View",
   setup(__props) {
@@ -201,6 +211,7 @@ const _sfc_main = {
     const keyOk = computed(() => KEY.test(neuKey.value) && !liste.value.some((b) => b.key === neuKey.value));
     const fehler = computed(() => liste.value.find((b) => b.key === cur.value)?.errors ?? []);
     const geaendert = computed(() => !!def.value && JSON.stringify(sauber(def.value)) !== basis.value);
+    const privat = computed(() => /PRIVATE/.test(def.value?.kunden?.key ?? ""));
     const websites = computed({
       get: () => (def.value?.origins ?? []).join("\n"),
       set: (v) => {
@@ -231,6 +242,8 @@ const _sfc_main = {
         anrede: d.anrede === "du" ? "du" : null,
         ton: ["sachlich", "locker"].includes(d.ton) ? d.ton : null,
         // fremde Quellen: nur Zugänge mit freigegebenen Werkzeugen, geordnet — so vergleicht „ungespeichert“ richtig
+        // angemeldete Kunden (19.10.2026, pflegestruktur 44): ohne Sicht für Kunden steht nichts davon am Berater
+        kunden: d.kunden?.view ? { view: d.kunden.view, key: String(d.kunden.key ?? "").trim() || null, issuer: String(d.kunden.issuer ?? "").trim() || null } : null,
         quellen: (() => {
           const q = (d.quellen ?? []).filter((x) => x.werkzeuge?.length).map((x) => ({ zugang: x.zugang, werkzeuge: [...x.werkzeuge].sort() })).sort((a, b) => a.zugang.localeCompare(b.zugang));
           return q.length ? q : null;
@@ -290,6 +303,7 @@ const _sfc_main = {
         def.value.anrede ??= "sie";
         def.value.ton ??= "freundlich";
         def.value.quellen ??= [];
+        def.value.kunden = { view: "", key: "", issuer: "", ...def.value.kunden ?? {} };
         def.value.limits ??= {};
         def.value.greeting ??= {};
         def.value.locales ??= [];
@@ -320,6 +334,10 @@ const _sfc_main = {
       }
     }
     async function speichern() {
+      if (privat.value) {
+        store.toast(t("Ein privater Schlüssel wird nicht gespeichert."));
+        return;
+      }
       try {
         await schreibe(cur.value, def.value);
         await ladeListe();
@@ -416,7 +434,7 @@ const _sfc_main = {
             1
             /* TEXT */
           ),
-          _cache[17] || (_cache[17] = createElementVNode(
+          _cache[20] || (_cache[20] = createElementVNode(
             "span",
             { class: "grow" },
             null,
@@ -520,7 +538,7 @@ const _sfc_main = {
                 type: "button",
                 class: "primary speichern",
                 "data-demo": "aus",
-                disabled: !geaendert.value,
+                disabled: !geaendert.value || privat.value,
                 onClick: speichern
               }, toDisplayString(_ctx.$t("Speichern")), 9, _hoisted_15),
               createElementVNode("button", {
@@ -554,7 +572,7 @@ const _sfc_main = {
               disabled: !!unref(store).demo
             }, [
               createElementVNode("table", _hoisted_19, [
-                _cache[22] || (_cache[22] = createElementVNode(
+                _cache[26] || (_cache[26] = createElementVNode(
                   "colgroup",
                   null,
                   [
@@ -578,7 +596,7 @@ const _sfc_main = {
                           class: "pub"
                         },
                         [
-                          _cache[18] || (_cache[18] = createElementVNode(
+                          _cache[21] || (_cache[21] = createElementVNode(
                             "option",
                             { value: "" },
                             "—",
@@ -618,7 +636,7 @@ const _sfc_main = {
                           class: "rolle"
                         },
                         [
-                          _cache[19] || (_cache[19] = createElementVNode(
+                          _cache[22] || (_cache[22] = createElementVNode(
                             "option",
                             { value: "" },
                             "—",
@@ -658,7 +676,7 @@ const _sfc_main = {
                           class: "sicht"
                         },
                         [
-                          _cache[20] || (_cache[20] = createElementVNode(
+                          _cache[23] || (_cache[23] = createElementVNode(
                             "option",
                             { value: "" },
                             "—",
@@ -686,15 +704,108 @@ const _sfc_main = {
                     ])
                   ]),
                   createElementVNode("tr", null, [
+                    createElementVNode("td", {
+                      class: "attr",
+                      title: _ctx.$t("mit gültigem Nachweis des Shops liest der Berater mit dieser Sicht, etwa mit einem anderen Preisfeld — ohne Nachweis gilt die Sicht oben")
+                    }, toDisplayString(_ctx.$t("Sicht für Kunden")), 9, _hoisted_26),
+                    createElementVNode("td", null, [
+                      withDirectives(createElementVNode(
+                        "select",
+                        {
+                          "onUpdate:modelValue": _cache[5] || (_cache[5] = ($event) => def.value.kunden.view = $event),
+                          class: "kunden-sicht"
+                        },
+                        [
+                          _cache[24] || (_cache[24] = createElementVNode(
+                            "option",
+                            { value: "" },
+                            "—",
+                            -1
+                            /* CACHED */
+                          )),
+                          (openBlock(true), createElementBlock(
+                            Fragment,
+                            null,
+                            renderList(sichten.value, (v) => {
+                              return openBlock(), createElementBlock("option", {
+                                key: v.key,
+                                value: v.key
+                              }, toDisplayString(v.label), 9, _hoisted_27);
+                            }),
+                            128
+                            /* KEYED_FRAGMENT */
+                          ))
+                        ],
+                        512
+                        /* NEED_PATCH */
+                      ), [
+                        [vModelSelect, def.value.kunden.view]
+                      ])
+                    ])
+                  ]),
+                  def.value.kunden.view ? (openBlock(), createElementBlock("tr", _hoisted_28, [
+                    createElementVNode("td", {
+                      class: "attr",
+                      title: _ctx.$t("der öffentliche Schlüssel des Shops (PEM, ECDSA P-256 oder RSA), mit dem er die Nachweise seiner angemeldeten Kunden signiert")
+                    }, toDisplayString(_ctx.$t("Schlüssel des Shops")), 9, _hoisted_29),
+                    createElementVNode("td", null, [
+                      withDirectives(createElementVNode(
+                        "textarea",
+                        {
+                          "onUpdate:modelValue": _cache[6] || (_cache[6] = ($event) => def.value.kunden.key = $event),
+                          class: "kunden-schluessel",
+                          rows: "4",
+                          spellcheck: "false",
+                          placeholder: "-----BEGIN PUBLIC KEY-----",
+                          style: { "width": "100%", "font-family": "monospace" }
+                        },
+                        null,
+                        512
+                        /* NEED_PATCH */
+                      ), [
+                        [vModelText, def.value.kunden.key]
+                      ]),
+                      privat.value ? (openBlock(), createElementBlock(
+                        "div",
+                        _hoisted_30,
+                        "✗ " + toDisplayString(_ctx.$t("Ein privater Schlüssel wird nicht gespeichert.")),
+                        1
+                        /* TEXT */
+                      )) : createCommentVNode("v-if", true)
+                    ])
+                  ])) : createCommentVNode("v-if", true),
+                  def.value.kunden.view ? (openBlock(), createElementBlock("tr", _hoisted_31, [
+                    createElementVNode("td", {
+                      class: "attr",
+                      title: _ctx.$t("wenn gesetzt, gilt nur ein Nachweis, der diesen Aussteller (iss) nennt")
+                    }, toDisplayString(_ctx.$t("Aussteller")), 9, _hoisted_32),
+                    createElementVNode("td", null, [
+                      withDirectives(createElementVNode(
+                        "input",
+                        {
+                          "onUpdate:modelValue": _cache[7] || (_cache[7] = ($event) => def.value.kunden.issuer = $event),
+                          class: "kunden-aussteller",
+                          placeholder: "https://shop.example.com",
+                          style: { "width": "100%" }
+                        },
+                        null,
+                        512
+                        /* NEED_PATCH */
+                      ), [
+                        [vModelText, def.value.kunden.issuer]
+                      ])
+                    ])
+                  ])) : createCommentVNode("v-if", true),
+                  createElementVNode("tr", null, [
                     createElementVNode(
                       "td",
-                      _hoisted_26,
+                      _hoisted_33,
                       toDisplayString(_ctx.$t("Sprachen")),
                       1
                       /* TEXT */
                     ),
                     createElementVNode("td", null, [
-                      createElementVNode("div", _hoisted_27, [
+                      createElementVNode("div", _hoisted_34, [
                         (openBlock(true), createElementBlock(
                           Fragment,
                           null,
@@ -703,7 +814,7 @@ const _sfc_main = {
                               key: c,
                               class: normalizeClass(["view-chip sprache", { on: def.value.locales.includes(c) }]),
                               onClick: ($event) => sprache(c)
-                            }, toDisplayString(c), 11, _hoisted_28);
+                            }, toDisplayString(c), 11, _hoisted_35);
                           }),
                           128
                           /* KEYED_FRAGMENT */
@@ -712,7 +823,7 @@ const _sfc_main = {
                           key: 0,
                           class: "muted",
                           title: _ctx.$t("ohne Auswahl gilt die Leitsprache")
-                        }, toDisplayString(" " + _ctx.$t("· Leitsprache {0}", [leitsprache.value])), 9, _hoisted_29)) : createCommentVNode("v-if", true)
+                        }, toDisplayString(" " + _ctx.$t("· Leitsprache {0}", [leitsprache.value])), 9, _hoisted_36)) : createCommentVNode("v-if", true)
                       ])
                     ])
                   ]),
@@ -725,7 +836,7 @@ const _sfc_main = {
                       }, [
                         createElementVNode(
                           "td",
-                          _hoisted_30,
+                          _hoisted_37,
                           toDisplayString(_ctx.$t("Begrüssung {0}", [l])),
                           1
                           /* TEXT */
@@ -736,7 +847,7 @@ const _sfc_main = {
                             class: "gruss",
                             style: { "width": "100%" },
                             title: _ctx.$t("der erste Satz im Chat-Fenster")
-                          }, null, 8, _hoisted_31), [
+                          }, null, 8, _hoisted_38), [
                             [vModelText, def.value.greeting[l]]
                           ])
                         ])
@@ -749,25 +860,25 @@ const _sfc_main = {
                     createElementVNode("td", {
                       class: "attr",
                       title: _ctx.$t("in den festen Sätzen des Beraters und in den Texten der KI")
-                    }, toDisplayString(_ctx.$t("Anrede")), 9, _hoisted_32),
+                    }, toDisplayString(_ctx.$t("Anrede")), 9, _hoisted_39),
                     createElementVNode("td", null, [
                       withDirectives(createElementVNode(
                         "select",
                         {
-                          "onUpdate:modelValue": _cache[5] || (_cache[5] = ($event) => def.value.anrede = $event),
+                          "onUpdate:modelValue": _cache[8] || (_cache[8] = ($event) => def.value.anrede = $event),
                           class: "anrede"
                         },
                         [
                           createElementVNode(
                             "option",
-                            _hoisted_33,
+                            _hoisted_40,
                             toDisplayString(_ctx.$t("Sie")),
                             1
                             /* TEXT */
                           ),
                           createElementVNode(
                             "option",
-                            _hoisted_34,
+                            _hoisted_41,
                             toDisplayString(_ctx.$t("du")),
                             1
                             /* TEXT */
@@ -783,13 +894,13 @@ const _sfc_main = {
                   createElementVNode("tr", null, [
                     createElementVNode(
                       "td",
-                      _hoisted_35,
+                      _hoisted_42,
                       toDisplayString(_ctx.$t("KI")),
                       1
                       /* TEXT */
                     ),
                     createElementVNode("td", null, [
-                      createElementVNode("div", _hoisted_36, [
+                      createElementVNode("div", _hoisted_43, [
                         createElementVNode("label", {
                           title: _ctx.$t("die KI des gewählten Teams schreibt zu den Treffern einen kurzen Text — sonst antwortet der Berater ohne KI")
                         }, [
@@ -797,7 +908,7 @@ const _sfc_main = {
                             "input",
                             {
                               type: "checkbox",
-                              "onUpdate:modelValue": _cache[6] || (_cache[6] = ($event) => def.value.ki = $event),
+                              "onUpdate:modelValue": _cache[9] || (_cache[9] = ($event) => def.value.ki = $event),
                               class: "ki"
                             },
                             null,
@@ -811,14 +922,14 @@ const _sfc_main = {
                             1
                             /* TEXT */
                           )
-                        ], 8, _hoisted_37),
+                        ], 8, _hoisted_44),
                         def.value.ki ? withDirectives((openBlock(), createElementBlock("select", {
                           key: 0,
-                          "onUpdate:modelValue": _cache[7] || (_cache[7] = ($event) => def.value.team = $event),
+                          "onUpdate:modelValue": _cache[10] || (_cache[10] = ($event) => def.value.team = $event),
                           class: "team",
                           title: _ctx.$t("mit dessen KI-Schlüssel, gezählt bei diesem Team")
                         }, [
-                          _cache[21] || (_cache[21] = createElementVNode(
+                          _cache[25] || (_cache[25] = createElementVNode(
                             "option",
                             { value: "" },
                             "—",
@@ -832,56 +943,56 @@ const _sfc_main = {
                               return openBlock(), createElementBlock("option", {
                                 key: tm.key,
                                 value: tm.key
-                              }, toDisplayString(tm.label || tm.key), 9, _hoisted_39);
+                              }, toDisplayString(tm.label || tm.key), 9, _hoisted_46);
                             }),
                             128
                             /* KEYED_FRAGMENT */
                           ))
-                        ], 8, _hoisted_38)), [
+                        ], 8, _hoisted_45)), [
                           [vModelSelect, def.value.team]
                         ]) : createCommentVNode("v-if", true),
                         def.value.ki ? withDirectives((openBlock(), createElementBlock("select", {
                           key: 1,
-                          "onUpdate:modelValue": _cache[8] || (_cache[8] = ($event) => def.value.ton = $event),
+                          "onUpdate:modelValue": _cache[11] || (_cache[11] = ($event) => def.value.ton = $event),
                           class: "ton",
                           title: _ctx.$t("wie die KI schreibt — die Fakten bleiben dieselben")
                         }, [
                           createElementVNode(
                             "option",
-                            _hoisted_41,
+                            _hoisted_48,
                             toDisplayString(_ctx.$t("sachlich")),
                             1
                             /* TEXT */
                           ),
                           createElementVNode(
                             "option",
-                            _hoisted_42,
+                            _hoisted_49,
                             toDisplayString(_ctx.$t("freundlich")),
                             1
                             /* TEXT */
                           ),
                           createElementVNode(
                             "option",
-                            _hoisted_43,
+                            _hoisted_50,
                             toDisplayString(_ctx.$t("locker")),
                             1
                             /* TEXT */
                           )
-                        ], 8, _hoisted_40)), [
+                        ], 8, _hoisted_47)), [
                           [vModelSelect, def.value.ton]
                         ]) : createCommentVNode("v-if", true)
                       ])
                     ])
                   ]),
-                  def.value.ki ? (openBlock(), createElementBlock("tr", _hoisted_44, [
+                  def.value.ki ? (openBlock(), createElementBlock("tr", _hoisted_51, [
                     createElementVNode("td", {
                       class: "attr",
                       title: _ctx.$t("MCP-Server, deren Werkzeuge die KI des Beraters nutzen darf — eingerichtet unter ⌁ Zugänge, Art MCP-Server")
-                    }, toDisplayString(_ctx.$t("Quellen")), 9, _hoisted_45),
+                    }, toDisplayString(_ctx.$t("Quellen")), 9, _hoisted_52),
                     createElementVNode("td", null, [
                       !mcpZugaenge.value.length ? (openBlock(), createElementBlock(
                         "div",
-                        _hoisted_46,
+                        _hoisted_53,
                         toDisplayString(_ctx.$t("kein MCP-Zugang")),
                         1
                         /* TEXT */
@@ -894,7 +1005,7 @@ const _sfc_main = {
                             key: z.key,
                             class: "quelle"
                           }, [
-                            createElementVNode("div", _hoisted_47, [
+                            createElementVNode("div", _hoisted_54, [
                               createElementVNode(
                                 "strong",
                                 null,
@@ -907,10 +1018,10 @@ const _sfc_main = {
                                 class: "werkzeuge-laden",
                                 title: _ctx.$t("die Werkzeuge des MCP-Servers lesen"),
                                 onClick: ($event) => ladeWerkzeuge(z)
-                              }, toDisplayString(_ctx.$t("Werkzeuge")), 9, _hoisted_48),
-                              werkzeugListe.value[z.key] === null ? (openBlock(), createElementBlock("span", _hoisted_49, "…")) : typeof werkzeugListe.value[z.key] === "string" ? (openBlock(), createElementBlock(
+                              }, toDisplayString(_ctx.$t("Werkzeuge")), 9, _hoisted_55),
+                              werkzeugListe.value[z.key] === null ? (openBlock(), createElementBlock("span", _hoisted_56, "…")) : typeof werkzeugListe.value[z.key] === "string" ? (openBlock(), createElementBlock(
                                 "span",
-                                _hoisted_50,
+                                _hoisted_57,
                                 "✗ " + toDisplayString(werkzeugListe.value[z.key]),
                                 1
                                 /* TEXT */
@@ -929,13 +1040,13 @@ const _sfc_main = {
                                     type: "checkbox",
                                     checked: frei(z.key, w.name),
                                     onChange: ($event) => schalte(z.key, w.name)
-                                  }, null, 40, _hoisted_52),
+                                  }, null, 40, _hoisted_59),
                                   createTextVNode(
                                     toDisplayString(" " + w.name),
                                     1
                                     /* TEXT */
                                   )
-                                ], 8, _hoisted_51);
+                                ], 8, _hoisted_58);
                               }),
                               128
                               /* KEYED_FRAGMENT */
@@ -950,7 +1061,7 @@ const _sfc_main = {
                   createElementVNode("tr", null, [
                     createElementVNode(
                       "td",
-                      _hoisted_53,
+                      _hoisted_60,
                       toDisplayString(_ctx.$t("MCP")),
                       1
                       /* TEXT */
@@ -963,7 +1074,7 @@ const _sfc_main = {
                           "input",
                           {
                             type: "checkbox",
-                            "onUpdate:modelValue": _cache[9] || (_cache[9] = ($event) => def.value.mcp = $event),
+                            "onUpdate:modelValue": _cache[12] || (_cache[12] = ($event) => def.value.mcp = $event),
                             class: "mcp"
                           },
                           null,
@@ -977,19 +1088,19 @@ const _sfc_main = {
                           1
                           /* TEXT */
                         )
-                      ], 8, _hoisted_54)
+                      ], 8, _hoisted_61)
                     ])
                   ]),
                   createElementVNode("tr", null, [
                     createElementVNode("td", {
                       class: "attr",
                       title: _ctx.$t("wo der Dienst des Beraters erreichbar ist — für den Code zum Einbinden und das Chat-Fenster hier")
-                    }, toDisplayString(_ctx.$t("Dienst")), 9, _hoisted_55),
+                    }, toDisplayString(_ctx.$t("Dienst")), 9, _hoisted_62),
                     createElementVNode("td", null, [
                       withDirectives(createElementVNode(
                         "input",
                         {
-                          "onUpdate:modelValue": _cache[10] || (_cache[10] = ($event) => def.value.url = $event),
+                          "onUpdate:modelValue": _cache[13] || (_cache[13] = ($event) => def.value.url = $event),
                           class: "dienst-url",
                           style: { "width": "100%" },
                           placeholder: "https://advisor.example.com"
@@ -1006,12 +1117,12 @@ const _sfc_main = {
                     createElementVNode("td", {
                       class: "attr",
                       title: _ctx.$t("je Zeile eine Adresse, etwa https://www.example.com — nur diese Websites dürfen das Chat-Fenster einbinden")
-                    }, toDisplayString(_ctx.$t("Websites")), 9, _hoisted_56),
+                    }, toDisplayString(_ctx.$t("Websites")), 9, _hoisted_63),
                     createElementVNode("td", null, [
                       withDirectives(createElementVNode(
                         "textarea",
                         {
-                          "onUpdate:modelValue": _cache[11] || (_cache[11] = ($event) => websites.value = $event),
+                          "onUpdate:modelValue": _cache[14] || (_cache[14] = ($event) => websites.value = $event),
                           class: "websites",
                           rows: "2",
                           style: { "width": "100%" },
@@ -1034,9 +1145,9 @@ const _sfc_main = {
                     createElementVNode("td", {
                       class: "attr",
                       title: _ctx.$t("je Besucher zählt der Dienst, je Tag zählt journali; leer heisst Vorgabe")
-                    }, toDisplayString(_ctx.$t("Grenzen")), 9, _hoisted_57),
+                    }, toDisplayString(_ctx.$t("Grenzen")), 9, _hoisted_64),
                     createElementVNode("td", null, [
-                      createElementVNode("div", _hoisted_58, [
+                      createElementVNode("div", _hoisted_65, [
                         createElementVNode("label", {
                           title: _ctx.$t("Fragen je Besucher und Minute (Vorgabe 20)")
                         }, [
@@ -1050,7 +1161,7 @@ const _sfc_main = {
                             {
                               type: "number",
                               min: "0",
-                              "onUpdate:modelValue": _cache[12] || (_cache[12] = ($event) => def.value.limits.jeBesucherMinute = $event),
+                              "onUpdate:modelValue": _cache[15] || (_cache[15] = ($event) => def.value.limits.jeBesucherMinute = $event),
                               class: "zahl"
                             },
                             null,
@@ -1059,7 +1170,7 @@ const _sfc_main = {
                           ), [
                             [vModelText, def.value.limits.jeBesucherMinute]
                           ])
-                        ], 8, _hoisted_59),
+                        ], 8, _hoisted_66),
                         createElementVNode("label", {
                           title: _ctx.$t("Fragen je Besucher und Tag (Vorgabe 300)")
                         }, [
@@ -1073,7 +1184,7 @@ const _sfc_main = {
                             {
                               type: "number",
                               min: "0",
-                              "onUpdate:modelValue": _cache[13] || (_cache[13] = ($event) => def.value.limits.jeBesucherTag = $event),
+                              "onUpdate:modelValue": _cache[16] || (_cache[16] = ($event) => def.value.limits.jeBesucherTag = $event),
                               class: "zahl"
                             },
                             null,
@@ -1082,7 +1193,7 @@ const _sfc_main = {
                           ), [
                             [vModelText, def.value.limits.jeBesucherTag]
                           ])
-                        ], 8, _hoisted_60),
+                        ], 8, _hoisted_67),
                         createElementVNode("label", {
                           title: _ctx.$t("Fragen aller Besucher je Tag (leer: ohne Grenze)")
                         }, [
@@ -1096,7 +1207,7 @@ const _sfc_main = {
                             {
                               type: "number",
                               min: "0",
-                              "onUpdate:modelValue": _cache[14] || (_cache[14] = ($event) => def.value.limits.jeTag = $event),
+                              "onUpdate:modelValue": _cache[17] || (_cache[17] = ($event) => def.value.limits.jeTag = $event),
                               class: "zahl je-tag"
                             },
                             null,
@@ -1105,7 +1216,7 @@ const _sfc_main = {
                           ), [
                             [vModelText, def.value.limits.jeTag]
                           ])
-                        ], 8, _hoisted_61),
+                        ], 8, _hoisted_68),
                         createElementVNode("label", {
                           title: _ctx.$t("Texte der KI je Tag (leer: ohne Grenze)")
                         }, [
@@ -1119,7 +1230,7 @@ const _sfc_main = {
                             {
                               type: "number",
                               min: "0",
-                              "onUpdate:modelValue": _cache[15] || (_cache[15] = ($event) => def.value.limits.kiJeTag = $event),
+                              "onUpdate:modelValue": _cache[18] || (_cache[18] = ($event) => def.value.limits.kiJeTag = $event),
                               class: "zahl"
                             },
                             null,
@@ -1128,19 +1239,19 @@ const _sfc_main = {
                           ), [
                             [vModelText, def.value.limits.kiJeTag]
                           ])
-                        ], 8, _hoisted_62)
+                        ], 8, _hoisted_69)
                       ])
                     ])
                   ])
                 ])
               ])
             ], 8, _hoisted_18),
-            createElementVNode("div", _hoisted_63, [
+            createElementVNode("div", _hoisted_70, [
               createElementVNode("div", {
                 class: "step-band",
                 title: _ctx.$t("der Dienst meldet sich mit einem Token an; es gilt nur für die Fragen an diesen Berater")
-              }, toDisplayString(_ctx.$t("Token")) + " · " + toDisplayString(tokens.value.length), 9, _hoisted_64),
-              createElementVNode("table", _hoisted_65, [
+              }, toDisplayString(_ctx.$t("Token")) + " · " + toDisplayString(tokens.value.length), 9, _hoisted_71),
+              createElementVNode("table", _hoisted_72, [
                 createElementVNode("tbody", null, [
                   (openBlock(true), createElementBlock(
                     Fragment,
@@ -1158,7 +1269,7 @@ const _sfc_main = {
                           ),
                           createElementVNode(
                             "span",
-                            _hoisted_66,
+                            _hoisted_73,
                             toDisplayString(tk.id) + "…",
                             1
                             /* TEXT */
@@ -1166,18 +1277,18 @@ const _sfc_main = {
                         ]),
                         createElementVNode(
                           "td",
-                          _hoisted_67,
+                          _hoisted_74,
                           toDisplayString(new Date(tk.at).toLocaleString()),
                           1
                           /* TEXT */
                         ),
-                        createElementVNode("td", _hoisted_68, [
+                        createElementVNode("td", _hoisted_75, [
                           createElementVNode("button", {
                             type: "button",
                             class: "x widerrufen",
                             title: _ctx.$t("Token widerrufen"),
                             onClick: ($event) => tokenWiderrufen(tk.id)
-                          }, "✕", 8, _hoisted_69)
+                          }, "✕", 8, _hoisted_76)
                         ])
                       ]);
                     }),
@@ -1186,25 +1297,25 @@ const _sfc_main = {
                   ))
                 ])
               ]),
-              createElementVNode("div", _hoisted_70, [
+              createElementVNode("div", _hoisted_77, [
                 createElementVNode("button", {
                   type: "button",
                   class: "token-neu",
                   disabled: geaendert.value,
                   title: geaendert.value ? _ctx.$t("ungespeicherte Änderungen") : _ctx.$t("ein neues Token für den Dienst"),
                   onClick: tokenAusgeben
-                }, toDisplayString(_ctx.$t("＋ Token")), 9, _hoisted_71),
+                }, toDisplayString(_ctx.$t("＋ Token")), 9, _hoisted_78),
                 neuesToken.value ? (openBlock(), createElementBlock("code", {
                   key: 0,
                   class: "neues-token",
                   title: _ctx.$t("nur jetzt sichtbar — als JOURNALI_ADVISOR_TOKEN des Dienstes")
-                }, toDisplayString(neuesToken.value), 9, _hoisted_72)) : createCommentVNode("v-if", true)
+                }, toDisplayString(neuesToken.value), 9, _hoisted_79)) : createCommentVNode("v-if", true)
               ])
             ]),
             createElementVNode("div", {
               class: "step-band",
               title: _ctx.$t("dieselbe Frage, die ein Besucher stellt — mit Text der KI, wenn der Berater sie nutzt")
-            }, toDisplayString(_ctx.$t("Vorschau")), 9, _hoisted_73),
+            }, toDisplayString(_ctx.$t("Vorschau")), 9, _hoisted_80),
             createElementVNode(
               "form",
               {
@@ -1214,11 +1325,11 @@ const _sfc_main = {
               },
               [
                 withDirectives(createElementVNode("input", {
-                  "onUpdate:modelValue": _cache[16] || (_cache[16] = ($event) => vorschauFrage.value = $event),
+                  "onUpdate:modelValue": _cache[19] || (_cache[19] = ($event) => vorschauFrage.value = $event),
                   class: "vorschau-frage",
                   style: { "flex": "1" },
                   placeholder: _ctx.$t("Frage eines Besuchers")
-                }, null, 8, _hoisted_74), [
+                }, null, 8, _hoisted_81), [
                   [vModelText, vorschauFrage.value]
                 ]),
                 createElementVNode("button", {
@@ -1226,28 +1337,28 @@ const _sfc_main = {
                   class: "vorschau-los",
                   disabled: geaendert.value,
                   title: geaendert.value ? _ctx.$t("ungespeicherte Änderungen") : ""
-                }, toDisplayString(_ctx.$t("Fragen")), 9, _hoisted_75),
+                }, toDisplayString(_ctx.$t("Fragen")), 9, _hoisted_82),
                 createElementVNode("button", {
                   type: "button",
                   class: "vorschau-neu",
                   title: _ctx.$t("ein neues Gespräch: die gesammelten Angaben fallen weg"),
                   onClick: neuesGespraech
-                }, "↺", 8, _hoisted_76),
+                }, "↺", 8, _hoisted_83),
                 def.value.url && !geaendert.value ? (openBlock(), createElementBlock("button", {
                   key: 0,
                   type: "button",
                   class: "chat-oeffnen",
                   title: _ctx.$t("das Chat-Fenster des Dienstes auf dieser Seite, wie auf einer Website"),
                   onClick: chatOeffnen
-                }, toDisplayString(_ctx.$t("✆ Chat-Fenster")), 9, _hoisted_77)) : createCommentVNode("v-if", true)
+                }, toDisplayString(_ctx.$t("✆ Chat-Fenster")), 9, _hoisted_84)) : createCommentVNode("v-if", true)
               ],
               32
               /* NEED_HYDRATION */
             ),
-            vorschau.value ? (openBlock(), createElementBlock("div", _hoisted_78, [
+            vorschau.value ? (openBlock(), createElementBlock("div", _hoisted_85, [
               vorschau.value.error ? (openBlock(), createElementBlock(
                 "div",
-                _hoisted_79,
+                _hoisted_86,
                 "✗ " + toDisplayString(vorschau.value.error),
                 1
                 /* TEXT */
@@ -1257,7 +1368,7 @@ const _sfc_main = {
                 [
                   vorschau.value.texte?.satz || vorschau.value.texte?.ueber ? (openBlock(), createElementBlock(
                     "div",
-                    _hoisted_80,
+                    _hoisted_87,
                     toDisplayString(vorschau.value.texte.ueber ? vorschau.value.texte.ueber + " " : "") + toDisplayString(vorschau.value.texte.satz),
                     1
                     /* TEXT */
@@ -1283,7 +1394,7 @@ const _sfc_main = {
                   createCommentVNode(" die Frage des Beraters gehört zur Antwort, wie im Chat-Fenster (14.10.2026: die Vorschau liess sie weg) "),
                   vorschau.value.texte?.statt || vorschau.value.texte?.frage ? (openBlock(), createElementBlock(
                     "div",
-                    _hoisted_81,
+                    _hoisted_88,
                     toDisplayString([vorschau.value.texte.statt, vorschau.value.texte.frage].filter(Boolean).join(" ")),
                     1
                     /* TEXT */
@@ -1292,8 +1403,8 @@ const _sfc_main = {
                     key: 2,
                     class: "muted gesammelt",
                     title: _ctx.$t("was der Kern aus dem Gespräch gesammelt hat")
-                  }, toDisplayString([...vorschau.value.words ?? [], ...(vorschau.value.filter ?? []).map(angabe)].join(" · ")), 9, _hoisted_82)) : createCommentVNode("v-if", true),
-                  vorschau.value.about?.values?.length ? (openBlock(), createElementBlock("table", _hoisted_83, [
+                  }, toDisplayString([...vorschau.value.words ?? [], ...(vorschau.value.filter ?? []).map(angabe)].join(" · ")), 9, _hoisted_89)) : createCommentVNode("v-if", true),
+                  vorschau.value.about?.values?.length ? (openBlock(), createElementBlock("table", _hoisted_90, [
                     createElementVNode("tbody", null, [
                       (openBlock(true), createElementBlock(
                         Fragment,
@@ -1304,7 +1415,7 @@ const _sfc_main = {
                           }, [
                             createElementVNode(
                               "td",
-                              _hoisted_84,
+                              _hoisted_91,
                               toDisplayString(v.label),
                               1
                               /* TEXT */
@@ -1326,10 +1437,10 @@ const _sfc_main = {
                   createElementVNode("div", {
                     class: "muted",
                     title: vorschau.value.warning || ""
-                  }, toDisplayString(_ctx.$t("{0} Treffer", [vorschau.value.total])) + toDisplayString(vorschau.value.warning && !vorschau.value.warning.startsWith("KI") ? " · " + _ctx.$t("nur Wortsuche") : ""), 9, _hoisted_85),
+                  }, toDisplayString(_ctx.$t("{0} Treffer", [vorschau.value.total])) + toDisplayString(vorschau.value.warning && !vorschau.value.warning.startsWith("KI") ? " · " + _ctx.$t("nur Wortsuche") : ""), 9, _hoisted_92),
                   vorschau.value.warning?.startsWith("KI") ? (openBlock(), createElementBlock(
                     "div",
-                    _hoisted_86,
+                    _hoisted_93,
                     "✗ " + toDisplayString(vorschau.value.warning),
                     1
                     /* TEXT */
@@ -1338,7 +1449,7 @@ const _sfc_main = {
                     key: 5,
                     class: "ki-text",
                     title: _ctx.$t("Text von einer KI erstellt")
-                  }, "✧ " + toDisplayString(vorschau.value.answer), 9, _hoisted_87)) : createCommentVNode("v-if", true),
+                  }, "✧ " + toDisplayString(vorschau.value.answer), 9, _hoisted_94)) : createCommentVNode("v-if", true),
                   (openBlock(true), createElementBlock(
                     Fragment,
                     null,
@@ -1347,12 +1458,12 @@ const _sfc_main = {
                         key: u.n,
                         class: "unterlage muted",
                         title: u.text
-                      }, "⎘ U" + toDisplayString(u.n) + " " + toDisplayString(u.heading || u.name) + " · " + toDisplayString(u.name), 9, _hoisted_88);
+                      }, "⎘ U" + toDisplayString(u.n) + " " + toDisplayString(u.heading || u.name) + " · " + toDisplayString(u.name), 9, _hoisted_95);
                     }),
                     128
                     /* KEYED_FRAGMENT */
                   )),
-                  createElementVNode("ol", _hoisted_89, [
+                  createElementVNode("ol", _hoisted_96, [
                     (openBlock(true), createElementBlock(
                       Fragment,
                       null,
@@ -1367,7 +1478,7 @@ const _sfc_main = {
                           ),
                           createElementVNode(
                             "span",
-                            _hoisted_90,
+                            _hoisted_97,
                             toDisplayString((h2.values ?? []).map((v) => v.label + ": " + v.value).join(" · ")),
                             1
                             /* TEXT */
@@ -1380,7 +1491,7 @@ const _sfc_main = {
                   ]),
                   vorschau.value.facets?.length ? (openBlock(), createElementBlock(
                     "div",
-                    _hoisted_91,
+                    _hoisted_98,
                     toDisplayString(_ctx.$t("Facetten")) + ": " + toDisplayString(vorschau.value.facets.map((f) => f.label).join(", ")),
                     1
                     /* TEXT */
@@ -1394,37 +1505,37 @@ const _sfc_main = {
               class: "step-band",
               "data-demo": "aus",
               title: _ctx.$t("der Dienst läuft im eigenen Container und spricht nur über /api mit journali — docs/betrieb.md")
-            }, toDisplayString(_ctx.$t("Einbinden")), 9, _hoisted_92),
-            createElementVNode("div", _hoisted_93, [
+            }, toDisplayString(_ctx.$t("Einbinden")), 9, _hoisted_99),
+            createElementVNode("div", _hoisted_100, [
               createElementVNode(
                 "div",
-                _hoisted_94,
+                _hoisted_101,
                 toDisplayString(_ctx.$t("Website")),
                 1
                 /* TEXT */
               ),
               createElementVNode(
                 "pre",
-                _hoisted_95,
+                _hoisted_102,
                 toDisplayString(einbinden.value),
                 1
                 /* TEXT */
               ),
               createElementVNode(
                 "div",
-                _hoisted_96,
+                _hoisted_103,
                 toDisplayString(_ctx.$t("MCP")),
                 1
                 /* TEXT */
               ),
               createElementVNode(
                 "pre",
-                _hoisted_97,
+                _hoisted_104,
                 toDisplayString(dienst.value) + "/mcp",
                 1
                 /* TEXT */
               ),
-              _cache[23] || (_cache[23] = createElementVNode(
+              _cache[27] || (_cache[27] = createElementVNode(
                 "div",
                 { class: "muted" },
                 "compose.yaml",
@@ -1433,7 +1544,7 @@ const _sfc_main = {
               )),
               createElementVNode(
                 "pre",
-                _hoisted_98,
+                _hoisted_105,
                 toDisplayString(compose.value),
                 1
                 /* TEXT */
@@ -1445,7 +1556,7 @@ const _sfc_main = {
     };
   }
 };
-const View = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-ca946ae5"]]);
+const View = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-fe8836a7"]]);
 const entry = {
   views: [{ path: "advisor", topic: "export", order: 50, label: t("Produktberatung"), icon: "✆", hint: t("Fragen von Besuchern einer Website an die Produkte eines Publikationsbaums — als Chat-Fenster und für KI-Agenten"), component: View }]
 };

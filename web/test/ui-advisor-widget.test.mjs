@@ -49,7 +49,7 @@ function dienst(antworten) {
   const rufe = []
   const fetch = async (url, o = {}) => {
     const body = o.body ? JSON.parse(o.body) : undefined
-    rufe.push({ url, method: o.method ?? 'GET', body })
+    rufe.push({ url, method: o.method ?? 'GET', body, kunde: o.headers?.['x-advisor-customer'] })
     const pfad = url.replace('https://advisor.test', '')
     const r = antworten[pfad.split('?')[0]] ?? antworten['*']
     const [status, json] = typeof r === 'function' ? r(body, rufe) : r ?? [404, { error: 'x' }]
@@ -701,4 +701,26 @@ test('„du“ am Berater (18.10.2026): auch das Eingabefeld fragt so', async ()
   const sie = starte()
   await warte()
   assert.equal(sie.$('input').placeholder, 'Wonach suchen Sie?')
+})
+
+test('ein angemeldeter Kunde (19.10.2026): data-customer und journaliAdvisor.kunde() geben dem Fenster den Nachweis, jede Anfrage trägt ihn', async () => {
+  const a = laden()
+  const d = dienst(standard())
+  win.fetch = d.fetch
+  a.autostart('https://advisor.test/widget.js', { locale: 'de', customer: 'eyJhbGciOiJFUzI1NiJ9.eyJzdWIiOiJLLTEwMDEifQ.c2lnbmF0dXI' })
+  await warte()
+  const sr = win.document.querySelector('[data-journali-advisor]').shadowRoot
+  sr.querySelector('input[type=text]').value = 'Bohrhammer'
+  sr.querySelector('form').dispatchEvent(new win.Event('submit', { bubbles: true, cancelable: true })); await warte()
+  assert.ok(d.rufe.length >= 2)
+  assert.ok(d.rufe.every(r => r.kunde === 'eyJhbGciOiJFUzI1NiJ9.eyJzdWIiOiJLLTEwMDEifQ.c2lnbmF0dXI'), 'Info und Frage mit dem Nachweis')
+  // erneuert, dann abgemeldet
+  a.kunde('neu.er.nachweis')
+  sr.querySelector('input[type=text]').value = 'leise'
+  sr.querySelector('form').dispatchEvent(new win.Event('submit', { bubbles: true, cancelable: true })); await warte()
+  assert.equal(d.rufe.at(-1).kunde, 'neu.er.nachweis')
+  a.kunde(null)
+  sr.querySelector('input[type=text]').value = 'rot'
+  sr.querySelector('form').dispatchEvent(new win.Event('submit', { bubbles: true, cancelable: true })); await warte()
+  assert.equal(d.rufe.at(-1).kunde, undefined, 'abgemeldet: ohne Kopf')
 })

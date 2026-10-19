@@ -27,6 +27,8 @@ const leitsprache = computed(() => store.model?.masterLocale ?? sprachen.value[0
 const keyOk = computed(() => KEY.test(neuKey.value) && !liste.value.some(b => b.key === neuKey.value))
 const fehler = computed(() => liste.value.find(b => b.key === cur.value)?.errors ?? [])
 const geaendert = computed(() => !!def.value && JSON.stringify(sauber(def.value)) !== basis.value)
+/// Ein privater Schlüssel gehört nicht ins Journal — dort lässt sich nichts löschen (19.10.2026)
+const privat = computed(() => /PRIVATE/.test(def.value?.kunden?.key ?? ''))
 const websites = computed({
   get: () => (def.value?.origins ?? []).join('\n'),
   set: v => { def.value.origins = String(v).split(/[\s,]+/).map(s => s.trim().replace(/\/+$/, '')).filter(Boolean) },
@@ -44,6 +46,8 @@ function sauber(d) {
     // Anrede und Ton (18.10.2026): die Vorgabe („Sie“, freundlich) bleibt leer
     anrede: d.anrede === 'du' ? 'du' : null, ton: ['sachlich', 'locker'].includes(d.ton) ? d.ton : null,
     // fremde Quellen: nur Zugänge mit freigegebenen Werkzeugen, geordnet — so vergleicht „ungespeichert“ richtig
+    // angemeldete Kunden (19.10.2026, pflegestruktur 44): ohne Sicht für Kunden steht nichts davon am Berater
+    kunden: d.kunden?.view ? { view: d.kunden.view, key: String(d.kunden.key ?? '').trim() || null, issuer: String(d.kunden.issuer ?? '').trim() || null } : null,
     quellen: (() => { const q = (d.quellen ?? []).filter(x => x.werkzeuge?.length).map(x => ({ zugang: x.zugang, werkzeuge: [...x.werkzeuge].sort() })).sort((a, b) => a.zugang.localeCompare(b.zugang)); return q.length ? q : null })(),
   }
 }
@@ -84,6 +88,7 @@ async function oeffne(key) {
     const d = await api.get('/api/plugins/advisor/data/' + encodeURIComponent('def:' + key)) ?? {}
     def.value = { label: '', pub: '', role: '', view: '', locales: [], greeting: {}, ki: false, team: '', mcp: true, origins: [], limits: {}, url: '', anrede: 'sie', ton: 'freundlich', ...JSON.parse(JSON.stringify(d)) }
     def.value.anrede ??= 'sie'; def.value.ton ??= 'freundlich'; def.value.quellen ??= []
+    def.value.kunden = { view: '', key: '', issuer: '', ...(def.value.kunden ?? {}) }
     def.value.limits ??= {}; def.value.greeting ??= {}; def.value.locales ??= []
     basis.value = JSON.stringify(sauber(def.value))
     cur.value = key; neuesToken.value = ''; vorschau.value = null; vorschauGespraech.value = neueKennung()
@@ -103,6 +108,7 @@ async function anlegen() {
 }
 
 async function speichern() {
+  if (privat.value) { store.toast(t('Ein privater Schlüssel wird nicht gespeichert.')); return }
   try { await schreibe(cur.value, def.value); await ladeListe(); await oeffne(cur.value); store.toast(t('Gespeichert'), 'ok') }
   catch (e) { store.toast(e.message) }
 }
@@ -195,7 +201,7 @@ const compose = computed(() => [
       <div v-if="def" class="rechts">
         <div class="kopf">
           <input v-model="def.label" class="bez" :placeholder="$t('Bezeichnung')" :title="$t('steht im Kopf des Chat-Fensters')" />
-          <button type="button" class="primary speichern" data-demo="aus" :disabled="!geaendert" @click="speichern">{{ $t('Speichern') }}</button>
+          <button type="button" class="primary speichern" data-demo="aus" :disabled="!geaendert || privat" @click="speichern">{{ $t('Speichern') }}</button>
           <button type="button" class="entfernen" data-demo="aus" :title="$t('Berater entfernen')" @click="entfernen">✕</button>
         </div>
         <ul v-if="fehler.length" class="fehler neg"><li v-for="(e, i) in fehler" :key="i">✗ {{ e }}</li></ul>
@@ -209,6 +215,13 @@ const compose = computed(() => [
             <td><select v-model="def.role" class="rolle"><option value="">—</option><option v-for="r in rollen" :key="r.key" :value="r.key">{{ r.label || r.key }}</option></select></td></tr>
           <tr><td class="attr" :title="$t('nur die Attribute dieser Sicht erscheinen am Produkt, in den Facetten und im Vergleich')">{{ $t('Sicht') }}</td>
             <td><select v-model="def.view" class="sicht"><option value="">—</option><option v-for="v in sichten" :key="v.key" :value="v.key">{{ v.label }}</option></select></td></tr>
+          <tr><td class="attr" :title="$t('mit gültigem Nachweis des Shops liest der Berater mit dieser Sicht, etwa mit einem anderen Preisfeld — ohne Nachweis gilt die Sicht oben')">{{ $t('Sicht für Kunden') }}</td>
+            <td><select v-model="def.kunden.view" class="kunden-sicht"><option value="">—</option><option v-for="v in sichten" :key="v.key" :value="v.key">{{ v.label }}</option></select></td></tr>
+          <tr v-if="def.kunden.view"><td class="attr" :title="$t('der öffentliche Schlüssel des Shops (PEM, ECDSA P-256 oder RSA), mit dem er die Nachweise seiner angemeldeten Kunden signiert')">{{ $t('Schlüssel des Shops') }}</td>
+            <td><textarea v-model="def.kunden.key" class="kunden-schluessel" rows="4" spellcheck="false" placeholder="-----BEGIN PUBLIC KEY-----" style="width:100%;font-family:monospace"></textarea>
+              <div v-if="privat" class="neg kunden-privat">✗ {{ $t('Ein privater Schlüssel wird nicht gespeichert.') }}</div></td></tr>
+          <tr v-if="def.kunden.view"><td class="attr" :title="$t('wenn gesetzt, gilt nur ein Nachweis, der diesen Aussteller (iss) nennt')">{{ $t('Aussteller') }}</td>
+            <td><input v-model="def.kunden.issuer" class="kunden-aussteller" placeholder="https://shop.example.com" style="width:100%" /></td></tr>
           <tr><td class="attr">{{ $t('Sprachen') }}</td><td><div class="chips">
             <span v-for="c in sprachen" :key="c" class="view-chip sprache" :class="{ on: def.locales.includes(c) }" @click="sprache(c)">{{ c }}</span>
             <span v-if="!def.locales.length" class="muted" :title="$t('ohne Auswahl gilt die Leitsprache')">{{ ' ' + $t('· Leitsprache {0}', [leitsprache]) }}</span></div></td></tr>

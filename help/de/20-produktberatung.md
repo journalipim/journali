@@ -40,6 +40,10 @@ Besucher erreichen nicht journali, sondern den Dienst des Beraters, einen eigene
 
 KI-Agenten erreichen denselben Dienst unter `https://advisor.example.com/mcp`, mit den Werkzeugen `search_products`, `get_product` und `compare_products`. Alle drei lesen nur.
 
+## Angemeldete Kunden
+
+Ein Berater kann angemeldeten Kunden des Shops eine andere Sicht zeigen als Gästen, etwa mit einem anderen Preisfeld. Unter Sicht für Kunden steht diese Sicht, darunter der öffentliche Schlüssel des Shops und wahlweise der Aussteller. Der Shop meldet seine Kunden selbst an und gibt dem Chat-Fenster einen kurzlebigen, signierten Nachweis mit; journali prüft ihn mit dem Schlüssel. Ohne gültigen Nachweis gilt die Sicht für Gäste. Was der Shop dafür ausstellt, steht in `docs/betrieb.md` unter „Angemeldete Kunden“.
+
 ## Grenzen
 
 | Grenze | Vorgabe | zählt |

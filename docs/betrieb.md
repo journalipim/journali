@@ -487,9 +487,38 @@ Auf der Website:
 <script src="https://advisor.example.com/widget.js" async></script>
 ```
 
-`data-locale="en"`, `data-target="#advisor"` (in ein Element statt schwebend) und `data-color="#0b6e4f"` sind wählbar. Die Adresse
+`data-locale="en"`, `data-target="#advisor"` (in ein Element statt schwebend), `data-color="#0b6e4f"` und `data-customer` (unten) sind wählbar. Die Adresse
 der Website gehört in die Liste „Websites“ des Beraters, sonst antwortet der Dienst dem Browser mit 403. KI-Agenten erreichen
 denselben Dienst unter `https://advisor.example.com/mcp` (MCP, Streamable HTTP; 2026-07-28 und die Versionen mit `initialize`).
+
+**Angemeldete Kunden** (19.10.2026, `docs/pflegestruktur.md` 44): ein Berater kann angemeldeten Kunden des Shops eine andere Sicht
+zeigen als Gästen, etwa mit einem anderen Preisfeld. journali verwaltet dafür keine Konten — der Shop meldet an und stellt dem Kunden einen
+kurzlebigen, signierten Nachweis aus (ein JWT). Am Berater stehen die **Sicht für Kunden**, der **öffentliche Schlüssel des Shops** und
+wahlweise der **Aussteller**. Ein Schlüsselpaar für den Shop:
+
+```bash
+openssl ecparam -name prime256v1 -genkey -noout -out shop-privat.pem
+```
+
+```bash
+openssl ec -in shop-privat.pem -pubout -out shop-oeffentlich.pem
+```
+
+`shop-oeffentlich.pem` gehört an den Berater, `shop-privat.pem` bleibt im Shop. Der Shop signiert je angemeldetem Kunden einen Nachweis mit
+dem Kopf `{"alg":"ES256","typ":"JWT"}` (mit einem RSA-Schlüssel `RS256`) und dem Inhalt:
+
+| Feld | was |
+|---|---|
+| `sub` | die Kundennummer |
+| `aud` | der Schlüssel des Beraters (etwa `shop`) |
+| `exp` | Ablauf in Sekunden seit 1970 — höchstens 15 Minuten ab jetzt |
+| `iss` | der Aussteller, wenn er am Berater steht |
+| `nbf` | wahlweise: gilt erst ab |
+
+Auf der Seite eines angemeldeten Kunden steht er am Tag (`data-customer="eyJ…"`), oder die Seite gibt ihn später mit
+`journaliAdvisor.kunde(nachweis)` — auch zum Erneuern vor dem Ablauf; `journaliAdvisor.kunde(null)` meldet ab. Das Fenster schickt ihn bei
+jeder Anfrage im Kopf `X-Advisor-Customer`, der Dienst reicht ihn durch, journali prüft ihn. Ist er abgelaufen, gefälscht oder für einen
+anderen Berater, antwortet der Berater wie einem Gast. Gespeichert wird der Nachweis nirgends.
 
 **Aus journali starten** (18.10.2026): trägt ein Berater unter „Dienst“ die Adresse seines Dienstes, steht oben rechts der grüne Knopf
 „Produktberater starten“ — er lädt das Chat-Fenster vom Dienst auf die Seite, wie eine Website es einbindet; mit mehreren solchen Beratern

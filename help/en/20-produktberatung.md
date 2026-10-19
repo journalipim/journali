@@ -40,6 +40,10 @@ Visitors do not reach journali but the service of the advisor, a separate contai
 
 AI agents reach the same service at `https://advisor.example.com/mcp`, with the tools `search_products`, `get_product` and `compare_products`. All three only read.
 
+## Signed-in customers
+
+An advisor can show signed-in customers of the shop a different view than guests, for example with a different price field. View for customers holds this view, below it the shop's public key and optionally the issuer. The shop signs in its customers itself and hands the chat window a short-lived, signed proof; journali checks it with the key. Without a valid proof the view for guests applies. What the shop issues for this is described in `docs/betrieb.md` under "Angemeldete Kunden".
+
 ## Limits
 
 | Limit | Default | counted by |

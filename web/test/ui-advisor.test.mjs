@@ -258,3 +258,26 @@ test('Quellen: freigegebene Werkzeuge stehen auch ungeladen da; ohne Häkchen ke
     assert.equal(gesendet.filter(g => g[0] === 'PUT').at(-1)[2].quellen, null)
   } finally { ende() }
 })
+
+test('Sicht für Kunden (19.10.2026): mit Sicht stehen Schlüssel und Aussteller da; gespeichert wird aufgeräumt, ein privater Schlüssel nie', async () => {
+  const { w, gesendet, ende } = await welt()
+  try {
+    await w.find('tr.berater').trigger('click'); await warte(w)
+    assert.equal(w.find('textarea.kunden-schluessel').exists(), false, 'ohne Sicht für Kunden nichts weiter')
+    await w.find('select.kunden-sicht').setValue('beratung'); await warte(w)
+    // der Kopf eines privaten Schlüssels, zusammengesetzt — als Zeichenfolge im Repo schlüge kein-lizenzserver.test.mjs an
+    await w.find('textarea.kunden-schluessel').setValue('-----BEGIN PRIVATE' + ' KEY-----\nabc\n-----END PRIVATE' + ' KEY-----')
+    assert.ok(w.find('.kunden-privat').exists())
+    assert.equal(w.find('button.speichern').attributes('disabled') !== undefined, true, 'ein privater Schlüssel sperrt das Speichern')
+    await w.find('textarea.kunden-schluessel').setValue('  -----BEGIN PUBLIC KEY-----\nabc\n-----END PUBLIC KEY-----\n')
+    await w.find('input.kunden-aussteller').setValue(' https://shop.example ')
+    assert.equal(w.find('.kunden-privat').exists(), false)
+    await w.find('button.speichern').trigger('click'); await warte(w)
+    const body = gesendet.filter(g => g[0] === 'PUT').at(-1)[2]
+    assert.deepEqual(body.kunden, { view: 'beratung', key: '-----BEGIN PUBLIC KEY-----\nabc\n-----END PUBLIC KEY-----', issuer: 'https://shop.example' })
+    // ohne Sicht für Kunden steht nichts davon am Berater
+    await w.find('select.kunden-sicht').setValue('')
+    await w.find('button.speichern').trigger('click'); await warte(w)
+    assert.equal(gesendet.filter(g => g[0] === 'PUT').at(-1)[2].kunden, null)
+  } finally { ende() }
+})

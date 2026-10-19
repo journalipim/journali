@@ -2818,7 +2818,7 @@ Protokoll steht im Log, nicht im Journal.
 - Schritt 2 hängt am Shop: wie er seine Kunden anmeldet und ob er einen signierten Nachweis ausstellen kann. Erst mit einem
   konkreten Shop und einem konkreten Fremdsystem.
 
-## 44. Berater und journali — der Berater versteht, journali wählt aus (09.10.2026, Schritte 1–4 und das Lernen gebaut)
+## 44. Berater und journali — der Berater versteht, journali wählt aus (09.10.2026, Schritte 1–4 und das Lernen gebaut; der Nachweis des Kunden 19.10.2026)
 
 **Stand (09.10.2026).** Gebaut: die Schnittstelle Version 2 (`AdvisorAuswahl.cs`: `vocabulary`, `select`, `docs`, `ki`); der Kern im
 Plugin (`plugins/advisor/kern/`: `woerter.mjs`, `verstehen.mjs`, `texte.mjs`, `gespraech.mjs`); er läuft im Dienst und in journali als
@@ -3014,6 +3014,16 @@ Wörterbuch, ein fehlendes Attribut in der Sicht. Gespeichert im Container des D
    Protokoll nennt höchstens, dass ein Nachweis galt.
 5. Gegenüber dem MCP-Server des Shops reicht journali den Nachweis weiter oder tauscht ihn dort gegen ein Token des Shops (OAuth
    Token Exchange) — je nachdem, was der Shop anbietet.
+
+**Gebaut (19.10.2026): Punkte 1–4, mit einer Sicht für Kunden.** Am Berater `kunden: { view, key, issuer }` — die Sicht für angemeldete
+Kunden (etwa mit einem anderen Preisfeld), der öffentliche Schlüssel des Shops als PEM (ECDSA P-256 oder RSA) und wahlweise der Aussteller.
+`AdvisorKunde.Pruefe` prüft ES256 oder RS256, `aud` = Schlüssel des Beraters, `iss` (wenn am Berater gesetzt), `exp` in der Zukunft und
+höchstens 15 Minuten entfernt, `nbf` (wenn da); 60 Sekunden Spiel für die Uhren. Gilt der Nachweis, liest der Berater in jeder Anfrage
+(Vokabular, Auswahl, Unterlagen, KI, Produkt, Variante, Vergleich) mit der Sicht für Kunden; sonst ist der Besucher anonym, ohne Fehler.
+Der Bestand und der Kern halten das Vokabular je Sicht getrennt. Das Fenster nimmt den Nachweis aus `data-customer` oder
+`journaliAdvisor.kunde(nachweis)` (`null` meldet ab), der Dienst reicht ihn im Kopf `X-Advisor-Customer` durch, wenn er die Form eines JWT
+hat. Ein privater Schlüssel ist am Berater ein Fehler, und die Ansicht speichert ihn nicht. Nicht gebaut: eine JWKS-Adresse statt des
+PEM, die Kundengruppe `grp`, Punkt 5.
 
 **Preise in der Auswahl.** Kommen Preise aus dem System des Shops, fragt journali sie für die Kandidaten der Auswahl in einem
 Aufruf an (`tools/call` eines freigegebenen Werkzeugs, mit Nachweis), filtert und ordnet danach und schickt sie mit den Karten.

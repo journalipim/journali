@@ -40,6 +40,11 @@ public static partial class AdvisorApi
     public sealed record Grenzen(int? JeBesucherMinute = null, int? JeBesucherTag = null, int? JeTag = null, int? KiJeTag = null);
     /// <summary>Eine fremde Quelle des Beraters (19.10.2026, pflegestruktur 43): ein Zugang der Art mcp und die Werkzeuge, die er davon nutzen darf.</summary>
     public sealed record Quelle(string Zugang, string[] Werkzeuge);
+    /// <summary>Angemeldete Kunden des Shops (19.10.2026, pflegestruktur 44): mit gültigem Nachweis (<see cref="AdvisorKunde"/>) liest der Berater
+    /// mit der Sicht <paramref name="View"/> statt mit seiner eigenen.</summary>
+    /// <param name="Key">der öffentliche Schlüssel des Shops (PEM, ECDSA P-256 oder RSA), mit dem er seine Nachweise signiert</param>
+    /// <param name="Issuer">wenn gesetzt: der Aussteller (<c>iss</c>), den ein Nachweis nennen muss</param>
+    public sealed record Kunde(string? View = null, string? Key = null, string? Issuer = null);
 
     /// <summary>Ein Berater, wie er als Plugin-Daten im Journal steht.</summary>
     /// <param name="Pub">Wurzel des Publikationsbaums</param>
@@ -50,7 +55,7 @@ public static partial class AdvisorApi
     /// <param name="Url">wo sein Dienst erreichbar ist (15.10.2026) — für den Code zum Einbinden und „✆ Chat-Fenster“ in der Ansicht; leer: unbekannt</param>
     public sealed record Definition(string? Label = null, string? Pub = null, string? Role = null, string? View = null, string[]? Locales = null,
         Dictionary<string, string>? Greeting = null, bool Ki = false, string? Team = null, bool Mcp = true, string[]? Origins = null, Grenzen? Limits = null,
-        string? Url = null, string? Anrede = null, string? Ton = null, List<Quelle>? Quellen = null)
+        string? Url = null, string? Anrede = null, string? Ton = null, List<Quelle>? Quellen = null, Kunde? Kunden = null)
     {
         /// <summary>Wie der Berater den Besucher anspricht (18.10.2026): „sie“ (Vorgabe) oder „du“ — in seinen festen Sätzen und in den Texten der KI</summary>
         public string AnredeOderSie => Anrede == "du" ? "du" : "sie";
@@ -83,6 +88,11 @@ public static partial class AdvisorApi
         if (d.View is not { Length: > 0 } view || !model.Views.ContainsKey(view)) f.Add("keine Sicht");
         foreach (var l in d.Locales ?? []) if (!model.Locales.ContainsKey(l)) f.Add($"Sprache {l} gibt es nicht");
         if (d.Ki && (d.Team is not { Length: > 0 } t || teams.Get(t) is null)) f.Add("KI ohne Team");
+        if (d.Kunden?.View is { Length: > 0 } kv)
+        {
+            if (!model.Views.ContainsKey(kv)) f.Add("keine Sicht für Kunden");
+            if (AdvisorKunde.SchluesselFehler(d.Kunden.Key) is { } sf) f.Add(sf);
+        }
         foreach (var o in d.Origins ?? []) if (!Uri.TryCreate(o, UriKind.Absolute, out var u) || u.Scheme is not ("https" or "http") || u.AbsolutePath != "/") f.Add($"Website {o} ist keine Adresse der Form https://name");
         return f;
     }
@@ -138,12 +148,13 @@ public static partial class AdvisorApi
     public sealed record Bestand(Catalog Von, long Head, string Json, string Locale, string Channel, List<Eintrag> Produkte, Dictionary<string, Eintrag> NachId,
         Dictionary<string, string> Dokumente, HashSet<string> NamenWoerter, List<Gruppe> Gruppen);
 
-    private static readonly ConcurrentDictionary<(string Key, string Locale), Bestand> _bestand = new();
+    // je Sicht ein Bestand (19.10.2026): Gäste und angemeldete Kunden fragen abwechselnd — ein Schlüssel ohne Sicht baute ihn jedes Mal neu
+    private static readonly ConcurrentDictionary<(string Key, string Locale, string View), Bestand> _bestand = new();
 
     public static Bestand BestandVon(Catalog c, string key, Definition d, string locale)
     {
         var json = d.Write(); var head = c.Head;
-        if (_bestand.TryGetValue((key, locale), out var alt) && ReferenceEquals(alt.Von, c) && alt.Head == head && alt.Json == json) return alt;
+        if (_bestand.TryGetValue((key, locale, d.View ?? ""), out var alt) && ReferenceEquals(alt.Von, c) && alt.Head == head && alt.Json == json) return alt;
         var neu = c.Lesen((model, tree) =>
         {
             var root = tree.Nodes[d.Pub!];
@@ -210,7 +221,7 @@ public static partial class AdvisorApi
             var gruppenListe = folge.Select(k => new Gruppe(k, gruppen[k].Label, gruppen[k].Tiefe, produkte.Count(e => e.Gruppen.Contains(k)))).Where(g => g.N > 0).ToList();
             return new Bestand(c, head, json, locale, root.Channel ?? "", produkte, nachId, dokumente, namenWoerter, gruppenListe);
         });
-        _bestand[(key, locale)] = neu;
+        _bestand[(key, locale, d.View ?? "")] = neu;
         return neu;
     }
 
@@ -1125,6 +1136,13 @@ public static partial class AdvisorApi
         var def = d;
         var fehler = c.Lesen((model, tree) => Fehler(def, model, tree, c.Users, c.Teams));
         if (fehler.Count > 0) { nein = Bad("Berater {0}: {1}", key, string.Join(", ", fehler)); return true; }
+        // ein angemeldeter Kunde (19.10.2026): mit gültigem Nachweis gilt die Sicht für Kunden — sonst ist der Besucher anonym, ohne Fehler
+        if (d.Kunden?.View is { Length: > 0 } kundenSicht && req.Headers[AdvisorKunde.Kopf].ToString() is { Length: > 0 } nachweis
+            && AdvisorKunde.Pruefe(nachweis, d.Kunden.Key, d.Kunden.Issuer, key, DateTimeOffset.UtcNow) is { } kunde)
+        {
+            req.HttpContext.Items["advisor-kunde"] = kunde;
+            d = d with { View = kundenSicht };
+        }
         nein = null;
         return false;
     }

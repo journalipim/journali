@@ -83,5 +83,12 @@
  "Quellen": "Sources",
  "kein MCP-Zugang": "no MCP connection",
  "die Werkzeuge des MCP-Servers lesen": "read the MCP server’s tools",
- "Werkzeuge": "Tools"
+ "Werkzeuge": "Tools",
+ "Sicht für Kunden": "View for customers",
+ "Schlüssel des Shops": "Shop key",
+ "Aussteller": "Issuer",
+ "mit gültigem Nachweis des Shops liest der Berater mit dieser Sicht, etwa mit einem anderen Preisfeld — ohne Nachweis gilt die Sicht oben": "with a valid proof from the shop the advisor reads with this view, for example with a different price field — without a proof the view above applies",
+ "der öffentliche Schlüssel des Shops (PEM, ECDSA P-256 oder RSA), mit dem er die Nachweise seiner angemeldeten Kunden signiert": "the shop’s public key (PEM, ECDSA P-256 or RSA) it uses to sign the proofs of its signed-in customers",
+ "wenn gesetzt, gilt nur ein Nachweis, der diesen Aussteller (iss) nennt": "if set, only a proof naming this issuer (iss) is valid",
+ "Ein privater Schlüssel wird nicht gespeichert.": "A private key is not saved."
 }

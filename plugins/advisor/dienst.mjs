@@ -15,12 +15,19 @@
 // Je Besucher (Adresse) zählt der Dienst Fragen je Minute und Tag; die Tagesgrenze des Beraters zählt journali. Websites, die das Chat-Fenster
 // einbinden dürfen, nennt die Definition des Beraters (CORS); ein fremder Origin bekommt 403, auch am MCP-Endpunkt (Schutz vor DNS-Rebinding).
 // Protokolliert wird kein Inhalt einer Frage.
+// Ein angemeldeter Kunde (19.10.2026, pflegestruktur 44): schickt das Fenster den Nachweis des Shops im Kopf X-Advisor-Customer, reicht der Dienst
+// ihn unverändert an journali weiter — neben seinem Token, nie anstelle davon. Er prüft ihn nicht und merkt ihn sich nicht.
 import { createHash } from 'node:crypto'
 import { verarbeite } from './mcp.mjs'
 import { erstelleKern } from './kern/gespraech.mjs'
 
 export const MAX_KOERPER = 16 * 1024
 const VORGABE = { jeBesucherMinute: 20, jeBesucherTag: 300 }
+/// Ein Nachweis hat die Form eines JWT (drei Teile, base64url) und ist höchstens 4096 Zeichen lang — sonst wird er nicht weitergereicht
+export function nachweis(wert) {
+  const w = Array.isArray(wert) ? wert[0] : wert
+  return typeof w === 'string' && w.length <= 4096 && /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]*$/.test(w) ? w : null
+}
 
 /**
  * @param {{ journali: string, advisor: string, token: string, widget?: string, fetch?: typeof fetch, proxy?: boolean, jetzt?: () => number, infoDauer?: number,
@@ -113,7 +120,7 @@ export function erstelle(o) {
       const erlaubt = !origin || (i.origins ?? []).map(normal).includes(normal(origin))
       const cors = origin && erlaubt ? { 'access-control-allow-origin': origin, vary: 'Origin' } : {}
       if (!erlaubt) return sende(res, 403, istMcp ? { jsonrpc: '2.0', error: { code: -32600, message: 'Origin not allowed' } } : { error: 'Diese Website darf den Berater nicht einbinden.' })
-      if (req.method === 'OPTIONS') return sende(res, 204, undefined, { ...cors, 'access-control-allow-methods': 'GET, POST', 'access-control-allow-headers': 'content-type, mcp-protocol-version, mcp-method, mcp-name', 'access-control-max-age': '600' })
+      if (req.method === 'OPTIONS') return sende(res, 204, undefined, { ...cors, 'access-control-allow-methods': 'GET, POST', 'access-control-allow-headers': 'content-type, x-advisor-customer, mcp-protocol-version, mcp-method, mcp-name', 'access-control-max-age': '600' })
 
       if (istMcp) {
         if (!i.mcp) return sende(res, 404, { error: 'MCP ist für diesen Berater aus.' })
@@ -128,7 +135,9 @@ export function erstelle(o) {
         return sende(res, r.status, r.json, cors)
       }
 
-      // Chat-Fenster
+      // Chat-Fenster — mit dem Nachweis eines angemeldeten Kunden, wenn das Fenster einen hat
+      const kunde = nachweis(req.headers['x-advisor-customer'])
+      const alsKunde = kunde ? { 'x-advisor-customer': kunde } : {}
       if (req.method === 'GET' && pfad === '/api/info')
         return sende(res, 200, { label: i.label, greeting: i.greeting, locales: i.locales, locale: i.locale, ki: i.ki, anrede: i.anrede, products: i.products }, cors)
       const bild = /^\/api\/image\/([^/]+)$/.exec(pfad)
@@ -140,7 +149,7 @@ export function erstelle(o) {
       }
       const dok = /^\/api\/doc\/([^/]+)$/.exec(pfad)
       if (req.method === 'GET' && dok) {
-        const r = await journali('doc/' + encodeURIComponent(decodeURIComponent(dok[1])))
+        const r = await journali('doc/' + encodeURIComponent(decodeURIComponent(dok[1])), undefined, alsKunde)
         return sende(res, r.status, r.json, cors)
       }
       const produkt = /^\/api\/(product|variant)\/([^/]+)$/.exec(pfad)
@@ -148,14 +157,14 @@ export function erstelle(o) {
       if (!(req.method === 'GET' && produkt) && wege[pfad] !== req.method) return sende(res, 404, { error: 'Nicht gefunden.' }, cors)
       if (pfad === '/api/vocabulary') {
         const loc = url.searchParams.get('locale')
-        const r = await journali('vocabulary' + (loc ? '?locale=' + encodeURIComponent(loc) : ''))
+        const r = await journali('vocabulary' + (loc ? '?locale=' + encodeURIComponent(loc) : ''), undefined, alsKunde)
         return sende(res, r.status, r.json, cors)
       }
       const warten = zaehle(adresse(req), i.limits)
       if (warten) return sende(res, 429, { error: 'Zu viele Fragen in kurzer Zeit.' }, { ...cors, 'retry-after': String(warten) })
       if (produkt) {
         const loc = url.searchParams.get('locale')
-        const r = await journali(produkt[1] + '/' + encodeURIComponent(decodeURIComponent(produkt[2])) + (loc ? '?locale=' + encodeURIComponent(loc) : ''))
+        const r = await journali(produkt[1] + '/' + encodeURIComponent(decodeURIComponent(produkt[2])) + (loc ? '?locale=' + encodeURIComponent(loc) : ''), undefined, alsKunde)
         // geöffnet: das Produkt ist im Blick des Gesprächs — eine Frage danach („ist es wasserdicht?“) gilt ihm
         if (r.status === 200 && kennung(url.searchParams.get('gespraech'))) kern.merke(url.searchParams.get('gespraech'), { id: r.json?.id ?? decodeURIComponent(produkt[2]), name: r.json?.name ?? null })
         return sende(res, r.status, r.json, cors)
@@ -163,7 +172,7 @@ export function erstelle(o) {
       const b = await koerper(req)
       if (pfad === '/api/ask') {
         const schritt = b.schritt && typeof b.schritt === 'object' && !Array.isArray(b.schritt) ? b.schritt : null
-        const antwort = await kern.antworte({ gespraech: kennung(b.gespraech), q: String(b.q ?? '').slice(0, 300), schritt, locale: typeof b.locale === 'string' ? b.locale.slice(0, 10) : null })
+        const antwort = await kern.antworte({ gespraech: kennung(b.gespraech), q: String(b.q ?? '').slice(0, 300), schritt, locale: typeof b.locale === 'string' ? b.locale.slice(0, 10) : null, kunde })
         return sende(res, 200, antwort, cors)
       }
       if (pfad === '/api/event') {
@@ -171,9 +180,9 @@ export function erstelle(o) {
         return sende(res, 204, undefined, cors)
       }
       // die Schnittstelle Version 2, durchgereicht — ohne KI (sie kostet), die nur der Kern fragt
-      const r = pfad === '/api/select' ? await journali('select', b)
-        : pfad === '/api/docs' ? await journali('docs', b)
-        : await journali('compare', { ids: Array.isArray(b.ids) ? b.ids.slice(0, 4) : [], locale: b.locale })
+      const r = pfad === '/api/select' ? await journali('select', b, alsKunde)
+        : pfad === '/api/docs' ? await journali('docs', b, alsKunde)
+        : await journali('compare', { ids: Array.isArray(b.ids) ? b.ids.slice(0, 4) : [], locale: b.locale }, alsKunde)
       return sende(res, r.status, r.json, cors)
     } catch (e) {
       if (e.status && e.status < 500 && e.json) return sende(res, e.status, e.json)   // eine Antwort von journali (Tagesgrenze, Fehler am Berater) geht durch

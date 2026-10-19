@@ -1278,4 +1278,54 @@ public class AdvisorTests
         Assert.Equal(HttpStatusCode.NotFound, (await w.Get($"/api/advisor/werkzeug/variant/{p}")).Status);
         Assert.Equal(HttpStatusCode.NotFound, (await w.Get($"/api/advisor/werkzeug/variant/{w.Ids["neu-v"]}")).Status);
     }
+
+    // ---- angemeldete Kunden (19.10.2026, pflegestruktur 44)
+
+    [Fact]
+    public async Task Ein_angemeldeter_Kunde_liest_mit_der_Sicht_fuer_Kunden()
+    {
+        await using var w = await Welt.Neu();
+        using var shop = System.Security.Cryptography.ECDsa.Create(System.Security.Cryptography.ECCurve.NamedCurves.nistP256);
+        // die Sicht für Kunden zeigt zusätzlich die Gruppe intern — hier steht der Preis, den nur Kunden sehen
+        w.C.With((_, _, write) => write("t", Model.ViewStream + "kunde", Types.ViewDefined, new ViewDefinition("kunde", Labels.Of("Kunde", "Customer"), [new ViewItem("mastergroup"), new ViewItem("technik"), new ViewItem("intern")], Roles.Product), null));
+        w.Setze(w.Standard() with { Kunden = new AdvisorApi.Kunde("kunde", shop.ExportSubjectPublicKeyInfoPem(), "https://shop.example") });
+
+        async Task<List<string>> Werte(string? nachweis)
+        {
+            using var req = new HttpRequestMessage(HttpMethod.Get, w.Url + $"/api/advisor/werkzeug/product/{w.Ids["bohr"]}");
+            if (nachweis is not null) req.Headers.Add(AdvisorKunde.Kopf, nachweis);
+            var r = await w.Http.SendAsync(req);
+            Assert.Equal(HttpStatusCode.OK, r.StatusCode);
+            var j = JsonDocument.Parse(await r.Content.ReadAsStringAsync()).RootElement;
+            return j.GetProperty("values").EnumerateArray().Select(v => v.GetProperty("key").GetString()!).ToList();
+        }
+        var exp = DateTimeOffset.UtcNow.AddMinutes(10).ToUnixTimeSeconds();
+        var gueltig = AdvisorKundeTests.Jwt(shop, "ES256", new { sub = "K-1001", aud = "werkzeug", iss = "https://shop.example", exp });
+        Assert.DoesNotContain("einkauf", await Werte(null));
+        Assert.Contains("einkauf", await Werte(gueltig));
+        // abgelaufen oder für einen anderen Berater: anonym, ohne Fehler
+        Assert.DoesNotContain("einkauf", await Werte(AdvisorKundeTests.Jwt(shop, "ES256", new { sub = "K-1001", aud = "werkzeug", iss = "https://shop.example", exp = DateTimeOffset.UtcNow.AddMinutes(-5).ToUnixTimeSeconds() })));
+        Assert.DoesNotContain("einkauf", await Werte(AdvisorKundeTests.Jwt(shop, "ES256", new { sub = "K-1001", aud = "anderer", iss = "https://shop.example", exp })));
+        // das Vokabular je Sicht: der Kern hält es für Gäste und Kunden getrennt
+        using var vk = new HttpRequestMessage(HttpMethod.Get, w.Url + "/api/advisor/werkzeug/vocabulary");
+        vk.Headers.Add(AdvisorKunde.Kopf, gueltig);
+        var kunde = JsonDocument.Parse(await (await w.Http.SendAsync(vk)).Content.ReadAsStringAsync()).RootElement;
+        var (_, gast) = await w.Get("/api/advisor/werkzeug/vocabulary");
+        Assert.NotEqual(gast.GetProperty("etag").GetString(), kunde.GetProperty("etag").GetString());
+        Assert.Contains(kunde.GetProperty("attributes").EnumerateArray(), a => a.GetProperty("key").GetString() == "einkauf");
+        Assert.DoesNotContain(gast.GetProperty("attributes").EnumerateArray(), a => a.GetProperty("key").GetString() == "einkauf");
+    }
+
+    [Fact]
+    public async Task Eine_Sicht_fuer_Kunden_ohne_oeffentlichen_Schluessel_ist_ein_Fehler_am_Berater()
+    {
+        await using var w = await Welt.Neu();
+        using var shop = System.Security.Cryptography.ECDsa.Create(System.Security.Cryptography.ECCurve.NamedCurves.nistP256);
+        w.Setze(w.Standard() with { Kunden = new AdvisorApi.Kunde("gibtsnicht", shop.ExportPkcs8PrivateKeyPem()) });
+        var (status, j) = await w.Get("/api/advisor");
+        Assert.Equal(HttpStatusCode.OK, status);
+        var fehler = j.EnumerateArray().Single().GetProperty("errors").EnumerateArray().Select(e => e.GetString()).ToList();
+        Assert.Contains("keine Sicht für Kunden", fehler);
+        Assert.Contains("Schlüssel des Shops ist kein öffentlicher Schlüssel (PEM)", fehler);
+    }
 }

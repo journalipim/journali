@@ -18,7 +18,7 @@ const FRAGE = { locale: 'de', total: 1, hits: [{ id: 'p1', name: 'Bohrhammer Pro
 async function welt({ info = INFO, unten = false } = {}) {
   const rufe = []
   const fetch = async (url, o = {}) => {
-    rufe.push({ url, method: o.method ?? 'GET', auth: o.headers?.authorization, body: o.body ? JSON.parse(o.body) : undefined })
+    rufe.push({ url, method: o.method ?? 'GET', auth: o.headers?.authorization, kunde: o.headers?.['x-advisor-customer'], body: o.body ? JSON.parse(o.body) : undefined })
     if (unten) throw new Error('ECONNREFUSED')
     const pfad = url.replace('http://journali:8080/api/advisor/shop/', '')
     const antwort = (status, json) => ({ status, text: async () => JSON.stringify(json), headers: new Headers({ 'content-type': 'application/json' }) })
@@ -293,5 +293,38 @@ test('die Schnittstelle Version 2 geht durch, ein gemerktes Produkt notiert das 
     assert.equal((await post(w.url + '/api/select', { art: ['bohrhammer'] })).status, 200)
     assert.equal((await post(w.url + '/api/docs', { satz: 'pflege' })).status, 200)
     assert.equal((await post(w.url + '/api/event', { gespraech: 'a1b2c3d4e5f6a7b8', art: 'gemerkt', id: 'p1' })).status, 204)
+  } finally { await w.ende() }
+})
+
+// ---- ein angemeldeter Kunde (19.10.2026, pflegestruktur 44)
+
+const NACHWEIS = 'eyJhbGciOiJFUzI1NiJ9.eyJzdWIiOiJLLTEwMDEifQ.c2lnbmF0dXI'
+
+test('der Nachweis eines angemeldeten Kunden geht unverändert an journali — neben dem Token, bei jeder Frage des Kerns und jedem Durchreichen', async () => {
+  const w = await welt()
+  try {
+    const kopf = { origin: 'https://shop.example', 'x-advisor-customer': NACHWEIS }
+    const vorab = await fetch(w.url + '/api/ask', { method: 'OPTIONS', headers: { origin: 'https://shop.example' } })
+    assert.match(vorab.headers.get('access-control-allow-headers'), /x-advisor-customer/, 'der Browser darf den Kopf schicken')
+    // erst ein Gast, dann ein Kunde: das Vokabular holt der Kern für den Kunden eigens — seine Sicht hat andere Attribute
+    await post(w.url + '/api/ask', { q: 'Bohrhammer', locale: 'de' }, { origin: 'https://shop.example' })
+    assert.ok(w.rufe.every(r => r.kunde === undefined), 'ohne Nachweis kein Kopf')
+    const n = w.rufe.length
+    assert.equal((await post(w.url + '/api/ask', { q: 'Bohrhammer', locale: 'de' }, kopf)).status, 200)
+    const alsKunde = w.rufe.slice(n)
+    assert.ok(alsKunde.some(r => r.url.includes('/vocabulary')), 'das Vokabular für Kunden')
+    assert.ok(alsKunde.some(r => r.url.endsWith('/select')))
+    assert.ok(alsKunde.every(r => r.kunde === NACHWEIS && r.auth === 'Bearer ' + TOKEN), 'jede Frage mit Nachweis und Token')
+    // Produkt, Vokabular, Auswahl und Vergleich, durchgereicht
+    for (const [pfad, body] of [['/api/product/p1'], ['/api/vocabulary'], ['/api/select', { satz: 'x' }], ['/api/compare', { ids: ['p1', 'p2'] }]]) {
+      const m = w.rufe.length
+      const r = body ? await post(w.url + pfad, body, kopf) : await fetch(w.url + pfad, { headers: kopf })
+      assert.equal(r.status, 200, pfad)
+      assert.equal(w.rufe[m].kunde, NACHWEIS, pfad)
+    }
+    // was nicht die Form eines Nachweises hat, geht nicht weiter
+    const m = w.rufe.length
+    await fetch(w.url + '/api/product/p1', { headers: { ...kopf, 'x-advisor-customer': 'kein nachweis' } })
+    assert.equal(w.rufe[m].kunde, undefined)
   } finally { await w.ende() }
 })

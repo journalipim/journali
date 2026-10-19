@@ -1,6 +1,8 @@
 // Das Chat-Fenster des Produktberaters (docs/pflegestruktur.md 42) — eingebunden mit einem Tag auf der Website:
 //   <script src="https://advisor.example.com/widget.js" async></script>
 // Wahlweise: data-locale="en" (sonst die des Browsers), data-target="#advisor" (in dieses Element statt schwebend), data-color="#0a6" (Akzent).
+// Ein angemeldeter Kunde (19.10.2026, pflegestruktur 44): data-customer="<Nachweis des Shops>" oder journaliAdvisor.kunde(nachweis) — auch zum
+// Erneuern, null meldet ab. Das Fenster schickt ihn bei jeder Anfrage im Kopf X-Advisor-Customer mit; es liest und speichert ihn nicht.
 // Kein Paket, kein Framework; alles im Shadow DOM, damit die Seite und das Fenster sich nicht gegenseitig gestalten. Werte aus den Produktdaten
 // kommen nur als Text in die Seite (textContent), nie als HTML. Gespeichert wird nichts — kein Cookie, kein Speicher im Browser.
 // Ein Gespräch (08.10.2026): jede Eingabe ergänzt die bisherigen Angaben (Wörter und Filter, als Chips über den Treffern, einzeln zu entfernen).
@@ -179,6 +181,7 @@ tr.gleich td { color: var(--leise); }
     // das Gespräch führt der Kern im Dienst; hier stehen nur seine Kennung und — zum Anzeigen — die gesammelten Wörter und Filter der letzten Antwort
     // merkzettel: id → { id, name, art: 'produkt' | 'variante' } — in der Reihenfolge des Merkens; alles nur im Arbeitsspeicher der Seite
     const zustand = { gespraech: kennung(), woerter: [], filter: [], gruppe: null, auswahl: new Set(), merkzettel: new Map(), info: null, laeuft: false }
+    let kunde = typeof o.customer === 'string' && o.customer ? o.customer : null
 
     const wirt = document.createElement('div')
     wirt.setAttribute('data-journali-advisor', '')
@@ -225,7 +228,8 @@ tr.gleich td { color: var(--leise); }
     zu.addEventListener('click', () => { fenster.hidden = true; knopf.hidden = false; schliesseAnsicht() })
 
     async function rufe(pfad, body) {
-      const r = await holen(basis + pfad, body === undefined ? {} : { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
+      const kopf = kunde ? { 'x-advisor-customer': kunde } : {}
+      const r = await holen(basis + pfad, body === undefined ? { headers: kopf } : { method: 'POST', headers: { 'content-type': 'application/json', ...kopf }, body: JSON.stringify(body) })
       let j = null; try { j = await r.json() } catch { j = null }
       if (!r.ok) throw Object.assign(new Error(r.status === 429 ? T.zuviel : T.fehler), { status: r.status })
       return j
@@ -753,19 +757,22 @@ tr.gleich td { color: var(--leise); }
       if (gruss) blase(gruss)
     }).catch(() => {})
 
-    return { wirt, schatten, frage: q => frage(q, true), oeffnen: () => knopf.click() }
+    return { wirt, schatten, frage: q => frage(q, true), oeffnen: () => knopf.click(), kunde: n => { kunde = typeof n === 'string' && n ? n : null } }
   }
 
   /// Start über die Zeile zum Einbinden (15.10.2026): das Fenster merkt sich als journaliAdvisor.fenster — ein Knopf der Seite öffnet es damit wieder
   /// („Produktberater starten“ in journali); data-open="1" öffnet es gleich, schwebend (eingebettet ist es ohnehin offen)
   function autostart(src, ds = {}) {
-    const f = start({ base: src.replace(/\/widget\.js(\?.*)?$/, ''), locale: ds.locale, target: ds.target, color: ds.color })
+    const f = start({ base: src.replace(/\/widget\.js(\?.*)?$/, ''), locale: ds.locale, target: ds.target, color: ds.color, customer: ds.customer })
     window.journaliAdvisor.fenster = f
+    if (window.journaliAdvisor.wartend !== undefined) { f.kunde(window.journaliAdvisor.wartend); delete window.journaliAdvisor.wartend }
     if (ds.open === '1' && !ds.target) f.oeffnen()
     return f
   }
 
-  window.journaliAdvisor = { start, autostart, TEXTE }
+  /// Der Nachweis eines angemeldeten Kunden für das eingebundene Fenster — die Website ruft das nach der Anmeldung und vor dem Ablauf
+  function kunde(n) { if (window.journaliAdvisor.fenster) window.journaliAdvisor.fenster.kunde(n); else window.journaliAdvisor.wartend = n }
+  window.journaliAdvisor = { start, autostart, kunde, TEXTE }
   const skript = document.currentScript
   if (skript && skript.src) {
     const ds = skript.dataset || {}

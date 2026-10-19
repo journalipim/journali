@@ -5,6 +5,7 @@
 // Das Gedächtnis eines Gesprächs liegt hier, im Arbeitsspeicher, 30 Minuten nach der letzten Eingabe weg: Wörter und Angaben (woher: gesagt,
 // geklickt, KI, übernommen), Vorlieben über einen Themenwechsel, gesehene und abgelehnte Produkte, das Produkt im Blick, der Verlauf. Die Kennung
 // eines Gesprächs ist zufällig und trägt keine Person; ohne Kennung (ein Agent über MCP) steht jede Frage für sich. Nichts davon geht ins Journal.
+import { AsyncLocalStorage } from 'node:async_hooks'
 import { woerter, gleichesWort, korrektur, ganz, weg, formen } from './woerter.mjs'
 import { erkenne, fragt, namenWoerter, istArt, imNamen, istProblem } from './verstehen.mjs'
 import { texte, angabeText } from './texte.mjs'
@@ -18,6 +19,9 @@ export const MAX_VERLAUF = 6
 export const MAX_GESPRAECHE = 20_000
 export const MAX_ABGELEHNT = 50
 const KENNUNG = /^[A-Za-z0-9_-]{8,64}$/
+/// Der Nachweis eines angemeldeten Kunden (19.10.2026, pflegestruktur 44) für die Dauer einer Antwort: jede Frage an journali trägt ihn im Kopf,
+/// journali prüft ihn und liest dann mit der Sicht für Kunden. Der Kern prüft ihn nicht und merkt ihn sich nicht im Gespräch.
+const KUNDE = new AsyncLocalStorage()
 
 const fehler = r => Object.assign(new Error(r.json?.error ?? `journali: HTTP ${r.status}`), { status: r.status, json: r.json })
 const gleich = (a, b) => a.attribute === b.attribute && a.op === b.op && String(a.value) === String(b.value)
@@ -47,7 +51,7 @@ const ALLGEMEIN = new Set(['verkauft', 'verkaufen', 'verkaufst', 'führt', 'fueh
  *           assoziationen?: Record<string, Record<string, string[]>> }} o — assoziationen: je Sprache Stichwort → Wörter, sonst die Grundausstattung
  */
 export function erstelleKern(o) {
-  const journali = o.journali
+  const journali = (pfad, body, kopf = {}) => { const k = KUNDE.getStore(); return o.journali(pfad, body, k ? { ...kopf, 'x-advisor-customer': k } : kopf) }
   const jetzt = o.jetzt ?? Date.now
   const lernen = o.lernen ?? null
   const assoz = erstelleAssoziationen(o.assoziationen ?? null)
@@ -56,9 +60,10 @@ export function erstelleKern(o) {
   const vokabeln = new Map()
   let aufrufe = 0
 
-  /// Das Vokabular je Sprache, gemerkt; nach vokabularDauer fragt der Kern mit dem ETag nach (304: unverändert)
+  /// Das Vokabular je Sprache, gemerkt; nach vokabularDauer fragt der Kern mit dem ETag nach (304: unverändert). Für angemeldete Kunden getrennt —
+  /// ihre Sicht hat andere Attribute (etwa ein anderes Preisfeld)
   async function vokabular(locale) {
-    const k = locale || ''
+    const k = (KUNDE.getStore() ? 'kunde|' : '') + (locale || '')
     const alt = vokabeln.get(k)
     if (alt && jetzt() - alt.am < (o.vokabularDauer ?? 30_000)) return alt
     const r = await journali('vocabulary' + (locale ? '?locale=' + encodeURIComponent(locale) : ''), undefined, alt ? { 'if-none-match': alt.vok.etag } : {})
@@ -205,7 +210,9 @@ export function erstelleKern(o) {
    * { art: 'weg', kind: 'filter', attribute, op, value } · { art: 'weg', kind: 'gruppe' } · { art: 'statt' } · { art: 'ablehnen', id, name } ·
    * { art: 'gruppe', key, label } (eine Gruppe des Sortiments)
    */
-  async function antworte({ gespraech = null, q = '', schritt = null, locale = null, ki = true, take = 6 } = {}) {
+  /// kunde: der Nachweis des Shops, wenn der Besucher dort angemeldet ist — unverändert an journali
+  function antworte({ kunde = null, ...a } = {}) { return KUNDE.run(typeof kunde === 'string' && kunde ? kunde : null, () => antworteJetzt(a)) }
+  async function antworteJetzt({ gespraech = null, q = '', schritt = null, locale = null, ki = true, take = 6 } = {}) {
     const { z, id } = hole(gespraech)
     const { vok, namen, namen4 } = await vokabular(locale)
     const loc = vok.locale
