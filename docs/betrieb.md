@@ -457,7 +457,7 @@ unter `/app`.
 
 Ein Berater beantwortet Fragen von Besuchern einer Website zu den Produkten eines Publikationsbaums (`docs/pflegestruktur.md` 42).
 Angelegt wird er unter ⇪ Export → Produktberatung: Publikationsbaum, Rolle, Sicht, Sprachen, Begrüssung, Anrede („Sie“ oder „du“ — in
-seinen festen Sätzen und in den Texten der KI), wahlweise KI mit Team und Ton (sachlich, freundlich, locker), MCP, Websites und Grenzen. Dort gibt es auch das Token für seinen Dienst — nur beim Ausgeben sichtbar.
+seinen festen Sätzen und in den Texten der KI), wahlweise KI mit Team und Ton (sachlich, freundlich, locker) und Quellen (Werkzeuge von Zugängen der Art MCP-Server, die die KI nutzen darf — `docs/pflegestruktur.md` 43), MCP, Websites und Grenzen. Dort gibt es auch das Token für seinen Dienst — nur beim Ausgeben sichtbar.
 
 Der Dienst läuft im **eigenen Container**, ohne eigenes Image: `node:22-alpine` mit dem Verzeichnis des Plugins (nur lesen).
 Er braucht nur HTTP zu journali, keine Datenbank, keinen Medienspeicher. Neben `compose.yaml`:
@@ -915,6 +915,8 @@ zum Plugin `driver` (`DriverApi.cs`, `Treiber.cs`), keine ist ein eigenes Plugin
 | `ftp` | Dateien | `host`, `port`, `user`, `pfad` (Startverzeichnis), `tls` (explizites TLS) | `password` |
 | `ixp` | Anmeldung | `url` | `token` (Bearer) |
 | `solr` | Anmeldung | `url`, `user` | `password` (Basic) |
+| `http` | Anmeldung | `url`, `auth` (ohne, Bearer, Basic, eigener Kopf), `user`, `header` | `secret` |
+| `mcp` | Anmeldung | `url`, `auth` (ohne, Bearer, eigener Kopf), `header` | `secret` |
 
 Die Felder stehen im Journal (`plugin:driver`, `zugang:<key>`), das Geheimnis im Tresor — die Liste nennt nur seinen
 Namen. Endpunkte:
@@ -928,6 +930,8 @@ Namen. Endpunkte:
 - `GET /api/drivers/{zugang}/relay?path=` — nur bei einer Anmeldung: der Server fragt die Quelle unter ihrer Adresse
   (Pfad relativ, ohne `..`, ohne fremden Rechner) und hängt die Anmeldung an. So liest die Ansicht von IXP und Solr
   ihre Quelle, ohne dass das Geheimnis den Server verlässt.
+- `GET /api/drivers/{zugang}/mcp/tools` — nur bei einem MCP-Server: seine Werkzeuge (`{ tools: [{ name, description }] }`).
+  Gerufen werden sie nur vom Server, für die KI eines Produktberaters (`docs/pflegestruktur.md` 43).
 
 **Im Job:** ein Parameter vom Typ `driver` (mit `art`) wird im Job-Dialog eine Auswahl der Zugänge dieser Art; der
 JobRunner reicht Felder und Geheimnisse als `JOURNALI_<PARAM>_<FELD>` an den Prozess (`JOURNALI_ZUGANG_URL`,

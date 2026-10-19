@@ -42,6 +42,8 @@ public static class DriverApi
         new("ixp", "IXP (Anmeldung)", false, ["url"], ["token"]),
         new("solr", "Solr (Anmeldung)", false, ["url", "user"], ["password"]),
         new("http", "HTTP/REST", false, ["url", "auth", "user", "header"], ["secret"]),
+        // ein MCP-Server (19.10.2026, pflegestruktur 43): der Produktberater fragt ihn über journali — Anmeldung wie bei http (Bearer oder eigener Kopf)
+        new("mcp", "MCP-Server", false, ["url", "auth", "header"], ["secret"]),
     ];
 
     /// <summary>Arten, deren Quelle über die Weiterleitung gelesen und beschickt wird — nie direkt, denn das Geheimnis bleibt beim Server.</summary>
@@ -167,11 +169,27 @@ public static class DriverApi
                     var n = (await TreiberFuer(z, jobsDir)!.ListeAsync("/", ct)).Count;
                     return Results.Ok(new { ok = true, text = $"{n}" });
                 }
+                // ein MCP-Server: er antwortet, wenn er seine Werkzeuge nennt — die Zahl steht da
+                if (z.Art == "mcp") return Results.Ok(new { ok = true, text = $"{(await McpClient.WerkzeugeAsync(z.Felder.GetValueOrDefault("url") ?? "", McpAnmeldung(z, jobsDir), ct)).Count}" });
                 using var res = await Weiter(z, Geheim(jobsDir, z.Key), z.Art == "solr" ? "/admin/ping" : "/", ct);
                 return Results.Ok(new { ok = res.IsSuccessStatusCode, text = $"{(int)res.StatusCode}" });
             }
-            catch (Exception e) when (e is IOException or HttpRequestException or ArgumentException or TaskCanceledException or InvalidOperationException)
+            catch (Exception e) when (e is IOException or HttpRequestException or ArgumentException or TaskCanceledException or InvalidOperationException or McpClient.McpException or UriFormatException)
             { return Results.Ok(new { ok = false, text = e.Message }); }
+        });
+
+        // Die Werkzeuge eines MCP-Servers (19.10.2026): Name und Beschreibung — am Produktberater wählt man, welche er nutzen darf
+        api.MapGet("/drivers/{zugang}/mcp/tools", async (string zugang, Catalog c, CancellationToken ct) =>
+        {
+            if (Alle(c).FirstOrDefault(x => x.Key == zugang) is not { } z) return Bad("Zugang {0} gibt es nicht.", zugang);
+            if (z.Art != "mcp") return Bad("Zugang {0} ist kein MCP-Server.", zugang);
+            try
+            {
+                var w = await McpClient.WerkzeugeAsync(z.Felder.GetValueOrDefault("url") ?? "", McpAnmeldung(z, jobsDir), ct);
+                return Results.Ok(new { tools = w.Select(x => new { name = x.Name, description = x.Beschreibung }).ToList() });
+            }
+            catch (Exception e) when (e is HttpRequestException or TaskCanceledException or McpClient.McpException or InvalidOperationException or UriFormatException)
+            { return Results.Json(ModelApi.Err("MCP-Server: {0}", e.Message), statusCode: 502); }
         });
 
         // Die Weiterleitung: der Server liest die Quelle (IXP, Solr, HTTP) und beschickt sie, hängt die Anmeldung an —
@@ -254,6 +272,13 @@ public static class DriverApi
     /// <summary>Die Geheimnisse eines Zugangs — nur für den Server und für Prozesse, nie für den Browser.</summary>
     public static Dictionary<string, string> Geheim(string jobsDir, string zugang) => Secrets.Get(jobsDir, Secrets.ProfileKey(Plugin, zugang));
 
+    /// <summary>Die Anmeldung eines Zugangs der Art mcp für den MCP-Client — das Geheimnis aus dem Tresor (19.10.2026)</summary>
+    public static McpClient.Anmeldung McpAnmeldung(Zugang z, string jobsDir)
+    {
+        var geheim = Geheim(jobsDir, z.Key);
+        return new McpClient.Anmeldung(Anmeldung(z, geheim), Kopf(z, geheim));
+    }
+
     /// <summary>Zugang und Geheimnisse zu einem Namen — für den JobRunner (Parameter vom Typ driver, Fächer an einem Zugang).</summary>
     public static (Zugang Zugang, Dictionary<string, string> Geheim)? Aufloesen(Catalog c, string jobsDir, string? zugang) =>
         string.IsNullOrWhiteSpace(zugang) || Alle(c).FirstOrDefault(x => x.Key == zugang.Trim()) is not { } z ? null : (z, Geheim(jobsDir, z.Key));
@@ -292,7 +317,7 @@ public static class DriverApi
         "ixp" when geheim.GetValueOrDefault("token") is { Length: > 0 } t => new("Bearer", t),
         "solr" when z.Felder.GetValueOrDefault("user") is { Length: > 0 } u =>
             new("Basic", Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes($"{u}:{geheim.GetValueOrDefault("password")}"))),
-        "http" when z.Felder.GetValueOrDefault("auth") == "bearer" && geheim.GetValueOrDefault("secret") is { Length: > 0 } t => new("Bearer", t),
+        "http" or "mcp" when z.Felder.GetValueOrDefault("auth") == "bearer" && geheim.GetValueOrDefault("secret") is { Length: > 0 } t => new("Bearer", t),
         "http" when z.Felder.GetValueOrDefault("auth") == "basic" && z.Felder.GetValueOrDefault("user") is { Length: > 0 } u =>
             new("Basic", Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes($"{u}:{geheim.GetValueOrDefault("secret")}"))),
         _ => null,
@@ -300,7 +325,7 @@ public static class DriverApi
 
     /// <summary>Ein Kopf über Authorization hinaus: HTTP mit <c>auth=header</c> trägt sein Geheimnis in einem eigenen Kopf (etwa <c>X-API-Key</c>).</summary>
     public static (string Name, string Wert)? Kopf(Zugang z, IReadOnlyDictionary<string, string> geheim) =>
-        z.Art == "http" && z.Felder.GetValueOrDefault("auth") == "header"
+        z.Art is "http" or "mcp" && z.Felder.GetValueOrDefault("auth") == "header"
             && z.Felder.GetValueOrDefault("header") is { Length: > 0 } h && geheim.GetValueOrDefault("secret") is { Length: > 0 } s
             ? (h, s) : null;
 

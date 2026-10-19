@@ -14,6 +14,8 @@ const basis = ref('')          // gespeicherte Form — ungespeichert ist, was d
 const meldung = ref('')
 const neuKey = ref('')
 const pubs = ref([]), rollen = ref([]), teams = ref([])
+// fremde Quellen (19.10.2026, pflegestruktur 43): Zugänge der Art mcp und ihre Werkzeuge — geladen, wenn jemand sie sehen will
+const mcpZugaenge = ref([]), werkzeugListe = ref({})
 const tokens = ref([]), neuesToken = ref('')
 const vorschauFrage = ref(''), vorschau = ref(null), vorschauGespraech = ref('')
 /// eine zufällige Kennung je Vorschau-Gespräch — der Kern merkt sich damit, was schon gefragt wurde
@@ -41,6 +43,8 @@ function sauber(d) {
     url: String(d.url ?? '').trim().replace(/\/+$/, '') || null,
     // Anrede und Ton (18.10.2026): die Vorgabe („Sie“, freundlich) bleibt leer
     anrede: d.anrede === 'du' ? 'du' : null, ton: ['sachlich', 'locker'].includes(d.ton) ? d.ton : null,
+    // fremde Quellen: nur Zugänge mit freigegebenen Werkzeugen, geordnet — so vergleicht „ungespeichert“ richtig
+    quellen: (() => { const q = (d.quellen ?? []).filter(x => x.werkzeuge?.length).map(x => ({ zugang: x.zugang, werkzeuge: [...x.werkzeuge].sort() })).sort((a, b) => a.zugang.localeCompare(b.zugang)); return q.length ? q : null })(),
   }
 }
 
@@ -50,9 +54,28 @@ async function ladeListe() {
   // genau ein Berater: gleich offen — die Liste hätte nur eine Zeile (14.10.2026, in der Demo der von Tannwald)
   if (!cur.value && liste.value.length === 1) await oeffne(liste.value[0].key)
 }
+/// Die Werkzeuge eines MCP-Zugangs — der Server fragt den fremden Server; die Antwort steht unter dem Zugang
+async function ladeWerkzeuge(z) {
+  werkzeugListe.value = { ...werkzeugListe.value, [z.key]: null }
+  try { werkzeugListe.value = { ...werkzeugListe.value, [z.key]: (await api.get(`/api/drivers/${encodeURIComponent(z.key)}/mcp/tools`))?.tools ?? [] } }
+  catch (e) { werkzeugListe.value = { ...werkzeugListe.value, [z.key]: e.message } }
+}
+const frei = (z, w) => (def.value.quellen ?? []).some(q => q.zugang === z && q.werkzeuge.includes(w))
+function schalte(z, w) {
+  const qs = (def.value.quellen ?? []).map(q => ({ ...q, werkzeuge: [...q.werkzeuge] }))
+  let q = qs.find(x => x.zugang === z)
+  if (!q) { q = { zugang: z, werkzeuge: [] }; qs.push(q) }
+  q.werkzeuge = q.werkzeuge.includes(w) ? q.werkzeuge.filter(x => x !== w) : [...q.werkzeuge, w]
+  def.value.quellen = qs.filter(x => x.werkzeuge.length)
+}
+/// freigegeben, aber (noch) nicht geladen: die Namen stehen trotzdem da
+const freigegeben = z => (def.value.quellen ?? []).find(q => q.zugang === z)?.werkzeuge ?? []
+
 async function ladeAuswahl() {
   const sicher = async p => { try { return await api.get(p) ?? [] } catch { return [] } }
-  ;[pubs.value, rollen.value, teams.value] = await Promise.all([sicher('/api/pub'), sicher('/api/auth/roles'), sicher('/api/teams')])
+  let zugaenge
+  ;[pubs.value, rollen.value, teams.value, zugaenge] = await Promise.all([sicher('/api/pub'), sicher('/api/auth/roles'), sicher('/api/teams'), sicher('/api/drivers')])
+  mcpZugaenge.value = (Array.isArray(zugaenge) ? zugaenge : []).filter(z => z.art === 'mcp')
 }
 onMounted(() => { ladeListe(); ladeAuswahl() })
 
@@ -60,7 +83,7 @@ async function oeffne(key) {
   try {
     const d = await api.get('/api/plugins/advisor/data/' + encodeURIComponent('def:' + key)) ?? {}
     def.value = { label: '', pub: '', role: '', view: '', locales: [], greeting: {}, ki: false, team: '', mcp: true, origins: [], limits: {}, url: '', anrede: 'sie', ton: 'freundlich', ...JSON.parse(JSON.stringify(d)) }
-    def.value.anrede ??= 'sie'; def.value.ton ??= 'freundlich'
+    def.value.anrede ??= 'sie'; def.value.ton ??= 'freundlich'; def.value.quellen ??= []
     def.value.limits ??= {}; def.value.greeting ??= {}; def.value.locales ??= []
     basis.value = JSON.stringify(sauber(def.value))
     cur.value = key; neuesToken.value = ''; vorschau.value = null; vorschauGespraech.value = neueKennung()
@@ -198,6 +221,17 @@ const compose = computed(() => [
             <select v-if="def.ki" v-model="def.team" class="team" :title="$t('mit dessen KI-Schlüssel, gezählt bei diesem Team')"><option value="">—</option><option v-for="tm in teams" :key="tm.key" :value="tm.key">{{ tm.label || tm.key }}</option></select>
             <select v-if="def.ki" v-model="def.ton" class="ton" :title="$t('wie die KI schreibt — die Fakten bleiben dieselben')"><option value="sachlich">{{ $t('sachlich') }}</option><option value="freundlich">{{ $t('freundlich') }}</option><option value="locker">{{ $t('locker') }}</option></select>
           </div></td></tr>
+          <tr v-if="def.ki" class="quellen"><td class="attr" :title="$t('MCP-Server, deren Werkzeuge die KI des Beraters nutzen darf — eingerichtet unter ⌁ Zugänge, Art MCP-Server')">{{ $t('Quellen') }}</td><td>
+            <div v-if="!mcpZugaenge.length" class="muted">{{ $t('kein MCP-Zugang') }}</div>
+            <div v-for="z in mcpZugaenge" :key="z.key" class="quelle">
+              <div class="row"><strong>{{ z.label || z.key }}</strong>
+                <button type="button" class="werkzeuge-laden" :title="$t('die Werkzeuge des MCP-Servers lesen')" @click="ladeWerkzeuge(z)">{{ $t('Werkzeuge') }}</button>
+                <span v-if="werkzeugListe[z.key] === null" class="muted">…</span>
+                <span v-else-if="typeof werkzeugListe[z.key] === 'string'" class="neg">✗ {{ werkzeugListe[z.key] }}</span></div>
+              <label v-for="w in (Array.isArray(werkzeugListe[z.key]) ? werkzeugListe[z.key] : freigegeben(z.key).map(name => ({ name })))" :key="w.name" class="werkzeug" :title="w.description || ''">
+                <input type="checkbox" :checked="frei(z.key, w.name)" @change="schalte(z.key, w.name)" />{{ ' ' + w.name }}</label>
+            </div>
+          </td></tr>
           <tr><td class="attr">{{ $t('MCP') }}</td><td><label :title="$t('fremde KI-Agenten fragen den Dienst unter /mcp mit denselben Grenzen')"><input type="checkbox" v-model="def.mcp" class="mcp" />{{ ' ' + $t('Werkzeuge für KI-Agenten') }}</label></td></tr>
           <tr><td class="attr" :title="$t('wo der Dienst des Beraters erreichbar ist — für den Code zum Einbinden und das Chat-Fenster hier')">{{ $t('Dienst') }}</td>
             <td><input v-model="def.url" class="dienst-url" style="width:100%" placeholder="https://advisor.example.com" /></td></tr>

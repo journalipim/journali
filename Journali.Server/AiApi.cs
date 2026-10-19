@@ -1,6 +1,7 @@
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Journali.Core.Entries;
 using Journali.Core.Projections;
 using static Journali.Server.ModelApi;
@@ -25,6 +26,19 @@ public static class AiApi
 {
     public sealed record AskBody(string? Provider, string? Model, string? System, string? User, int? MaxTokens, bool? Web, int? MaxSearches, string? Purpose);
     private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromMinutes(5) };
+    /// <summary>Für Tests: statt des Anbieters (sonst der HttpClient oben).</summary>
+    public static Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>>? Senden { get; set; }
+    private static Task<HttpResponseMessage> SendeAsync(HttpRequestMessage req, CancellationToken ct) => Senden is { } s ? s(req, ct) : Http.SendAsync(req, ct);
+
+    /// <summary>
+    /// Ein Werkzeug für die KI (19.10.2026, pflegestruktur 43): Name (Buchstaben, Ziffern, _ und -), Beschreibung, Eingabe als JSON-Schema — und
+    /// was journali tut, wenn die KI es ruft. Der Aufruf läuft in journali (das Geheimnis des Zugangs bleibt beim Server); die KI bekommt nur das Ergebnis.
+    /// </summary>
+    public sealed record KiWerkzeug(string Name, string? Beschreibung, JsonElement Schema, Func<JsonElement, CancellationToken, Task<(string Text, bool Fehler)>> Aufruf);
+    /// <summary>So viele Werkzeugaufrufe je Anfrage — danach antwortet die KI mit dem, was sie hat.</summary>
+    public const int MaxWerkzeugAufrufe = 4;
+    /// <summary>So lang darf ein Ergebnis sein, das an die KI geht.</summary>
+    public const int MaxWerkzeugErgebnis = 6000;
 
     /// <summary>Der dritte Anbieter (29.09.2026): ein Modell auf dem eigenen Server, erreichbar über die Ollama-Schnittstelle.</summary>
     public const string Lokal = "lokal";
@@ -169,7 +183,7 @@ public static class AiApi
         var gesendet = JsonSerializer.Serialize(body, new JsonSerializerOptions { DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull });
         var bytesIn = Encoding.UTF8.GetByteCount(gesendet);
         req.Content = new StringContent(gesendet, Encoding.UTF8, "application/json");
-        using var res = await Http.SendAsync(req, ct);
+        using var res = await SendeAsync(req, ct);
         var raw = await res.Content.ReadAsStringAsync(ct);
         var bytesOut = Encoding.UTF8.GetByteCount(raw);
         using var doc = JsonDocument.Parse(string.IsNullOrWhiteSpace(raw) ? "{}" : raw);
@@ -218,6 +232,73 @@ public static class AiApi
         }
         // 04.10.2026: zurück gingen hier die Tokenzahlen als Bytes — das Austauschvolumen zeigte Token statt gemessener Bytes
         return (text.ToString(), sources, bytesIn, bytesOut, tin, tout, ende);
+    }
+
+    /// <summary>
+    /// Die Anfrage an die Anthropic-API mit Werkzeugen (19.10.2026): ruft die KI eines (stop_reason tool_use), führt journali es aus und schickt das
+    /// Ergebnis zurück — die Antwort der KI bleibt dabei unverändert im Gespräch (auch ihr Nachdenken). Höchstens <see cref="MaxWerkzeugAufrufe"/>
+    /// Aufrufe; danach bekommt sie „keine weiteren“ und antwortet. Bytes und Tokens zählen über alle Runden.
+    /// </summary>
+    public static async Task<(string Text, List<object> Sources, long BytesIn, long BytesOut, int TokensIn, int TokensOut, string? Ende)> CallMitWerkzeugen(
+        string key, string model, string? system, string user, int maxTokens, IReadOnlyList<KiWerkzeug> werkzeuge, CancellationToken ct)
+    {
+        var sys = string.IsNullOrWhiteSpace(system) ? null : new JsonArray(new JsonObject { ["type"] = "text", ["text"] = system, ["cache_control"] = new JsonObject { ["type"] = "ephemeral" } });
+        var tools = new JsonArray(werkzeuge.Select(w => (JsonNode)new JsonObject
+        {
+            ["name"] = w.Name, ["description"] = w.Beschreibung ?? w.Name, ["input_schema"] = JsonNode.Parse(w.Schema.ValueKind == JsonValueKind.Object ? w.Schema.GetRawText() : "{\"type\":\"object\"}"),
+        }).ToArray());
+        var gespraech = new JsonArray(new JsonObject { ["role"] = "user", ["content"] = user });
+        long hin = 0, zurueck = 0; int tin = 0, tout = 0, aufrufe = 0; string? ende = null; var text = new StringBuilder();
+        for (var runde = 0; runde <= MaxWerkzeugAufrufe + 1; runde++)
+        {
+            var body = new JsonObject { ["model"] = model, ["max_tokens"] = Math.Max(maxTokens, AnthropicMindestTokens), ["messages"] = gespraech.DeepClone(), ["tools"] = tools.DeepClone() };
+            if (sys is not null) body["system"] = sys.DeepClone();
+            using var req = new HttpRequestMessage(HttpMethod.Post, "https://api.anthropic.com/v1/messages");
+            req.Headers.TryAddWithoutValidation("x-api-key", key);
+            req.Headers.TryAddWithoutValidation("anthropic-version", "2023-06-01");
+            var gesendet = body.ToJsonString();
+            hin += Encoding.UTF8.GetByteCount(gesendet);
+            req.Content = new StringContent(gesendet, Encoding.UTF8, "application/json");
+            using var res = await SendeAsync(req, ct);
+            var raw = await res.Content.ReadAsStringAsync(ct);
+            zurueck += Encoding.UTF8.GetByteCount(raw);
+            using var doc = JsonDocument.Parse(string.IsNullOrWhiteSpace(raw) ? "{}" : raw);
+            var root = doc.RootElement;
+            if (!res.IsSuccessStatusCode)
+                throw new InvalidOperationException(root.TryGetProperty("error", out var err) && err.TryGetProperty("message", out var m) ? m.GetString() ?? "Fehler" : $"{(int)res.StatusCode} {res.ReasonPhrase}");
+            if (root.TryGetProperty("usage", out var us)) { var (i, o) = AnthropicUsage(us); tin += i; tout += o; }
+            ende = root.TryGetProperty("stop_reason", out var sr) && sr.ValueKind == JsonValueKind.String ? sr.GetString() : null;
+            text.Clear();
+            var rufe = new List<(string Id, string Name, JsonElement Eingabe)>();
+            var inhalt = root.TryGetProperty("content", out var ct2) && ct2.ValueKind == JsonValueKind.Array ? ct2 : default;
+            if (inhalt.ValueKind == JsonValueKind.Array)
+                foreach (var block in inhalt.EnumerateArray())
+                {
+                    var art = block.TryGetProperty("type", out var ty) ? ty.GetString() : null;
+                    if (art == "text" && block.TryGetProperty("text", out var tx)) text.Append(tx.GetString());
+                    else if (art == "tool_use" && block.TryGetProperty("id", out var id) && block.TryGetProperty("name", out var nm))
+                        rufe.Add((id.GetString() ?? "", nm.GetString() ?? "", block.TryGetProperty("input", out var ein) ? ein.Clone() : default));
+                }
+            if (ende != "tool_use" || rufe.Count == 0) return (text.ToString(), [], hin, zurueck, tin, tout, ende);
+            gespraech.Add(new JsonObject { ["role"] = "assistant", ["content"] = JsonNode.Parse(inhalt.GetRawText()) });
+            var ergebnisse = new JsonArray();
+            foreach (var (id, name, eingabe) in rufe)
+            {
+                string ergebnis; bool fehler;
+                if (werkzeuge.FirstOrDefault(w => w.Name == name) is not { } w) (ergebnis, fehler) = ("Dieses Werkzeug gibt es nicht.", true);
+                else if (aufrufe >= MaxWerkzeugAufrufe) (ergebnis, fehler) = ("Keine weiteren Werkzeugaufrufe — antworte mit dem, was da ist.", true);
+                else
+                {
+                    aufrufe++;
+                    try { (ergebnis, fehler) = await w.Aufruf(eingabe, ct); }
+                    catch (Exception e) when (e is not OperationCanceledException || !ct.IsCancellationRequested) { (ergebnis, fehler) = ("Das Werkzeug antwortet nicht: " + e.Message, true); }
+                }
+                if (ergebnis.Length > MaxWerkzeugErgebnis) ergebnis = ergebnis[..MaxWerkzeugErgebnis] + " …";
+                ergebnisse.Add(new JsonObject { ["type"] = "tool_result", ["tool_use_id"] = id, ["content"] = ergebnis, ["is_error"] = fehler });
+            }
+            gespraech.Add(new JsonObject { ["role"] = "user", ["content"] = ergebnisse });
+        }
+        return (text.ToString(), [], hin, zurueck, tin, tout, ende);
     }
 
     public static void Map(RouteGroupBuilder api, string jobsDir)
@@ -272,7 +353,7 @@ public static class AiApi
     /// </summary>
     public static async Task<(IResult? Fehler, string Text, List<object> Sources, string Team, string Payer, string Provider, string Model)> AskAsync(
         HttpRequest req, Catalog c, string jobsDir, string? wantProvider, string? wantModel, string? system, string frage, int maxTokens, bool web, int maxSearches, string? purpose, CancellationToken ct,
-        string? fuerTeam = null)
+        string? fuerTeam = null, IReadOnlyList<KiWerkzeug>? werkzeuge = null)
     {
         if (Actor(req) is not { } actor) return (ActorMissing(), "", [], "", "", "", "");
         // die Demo (18.10.2026): ihr Schlüssel, ihr Modell, ihre Grenzen — keine Suche im Internet, kurze Antworten, wenige Anfragen je Besucher
@@ -306,7 +387,10 @@ public static class AiApi
         if (provider == Lokal && model == "") return (Bad("Das lokale Modell hat kein Modell geladen."), "", [], "", "", "", "");
         try
         {
-            var (text, sources, hin, zurueck, tokenHin, tokenZurueck, ende) = await Call(provider, key, model, system, frage, maxTokens, web, Math.Max(1, maxSearches), ct);
+            // mit Werkzeugen nur beim Anbieter anthropic (19.10.2026) — die anderen antworten ohne, wie bisher
+            var (text, sources, hin, zurueck, tokenHin, tokenZurueck, ende) = werkzeuge is { Count: > 0 } && provider == "anthropic" && !web
+                ? await CallMitWerkzeugen(key, model, system, frage, maxTokens, werkzeuge, ct)
+                : await Call(provider, key, model, system, frage, maxTokens, web, Math.Max(1, maxSearches), ct);
             var heute = DateOnly.FromDateTime(DateTime.Today);
             c.With((_, _, write) => write(actor, Teams.UsageStream + zahler, Types.AiUsed,
                 new AiUsed(provider, model, actor, tokenHin, tokenZurueck, 1, heute.ToString("yyyy-MM-dd"), team == zahler ? null : team, hin, zurueck, purpose), null));

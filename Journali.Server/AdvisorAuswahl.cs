@@ -297,8 +297,9 @@ public static partial class AdvisorApi
             {
                 if (satz.Length == 0) return Bad("Ein Auftrag an die KI braucht einen Satz.");
                 var bereiche = Uebersicht(b).Select(g => g.Label).Take(MaxBereiche).ToList();
-                var (sf, uf) = PromptFremd(satz, verlauf, d.Label ?? key, bereiche, loc, d.AnredeOderSie, d.TonOderFreundlich);
-                var r = await AiApi.AskAsync(req, c, jobsDir, null, null, sf, uf, 200, false, 1, "advisor", ct, fuerTeam: d.Team);
+                var quellen = await AdvisorQuellen.WerkzeugeAsync(c, d, key, jobsDir, ct);   // fremde Quellen (MCP, 19.10.2026)
+                var (sf, uf) = PromptFremd(satz, verlauf, d.Label ?? key, bereiche, loc, d.AnredeOderSie, d.TonOderFreundlich, quellen.Count > 0);
+                var r = await AiApi.AskAsync(req, c, jobsDir, null, null, sf, uf, 200, false, 1, "advisor", ct, fuerTeam: d.Team, werkzeuge: quellen);
                 return Results.Ok(r.Fehler is null
                     ? new { text = (string?)r.Text.Trim(), angaben = Array.Empty<object>(), names = Array.Empty<string>(), warning = (string?)null }
                     : new { text = (string?)null, angaben = Array.Empty<object>(), names = Array.Empty<string>(), warning = (string?)KiNichtVerfuegbar(req, r.Fehler) });
@@ -318,8 +319,9 @@ public static partial class AdvisorApi
                 return (satz, t, (body.Merkmale ?? []).Where(x => x is { Length: > 0 and <= 80 }).Take(MaxFacetten).ToList());
             });
             if (frage.Length == 0 && verlauf.Count == 0) return Bad("Ein Auftrag an die KI braucht einen Satz.");
-            var (sys, usr) = Prompt(frage, treffer, merkmale, verlauf, unterlagen, d.AnredeOderSie, d.TonOderFreundlich);
-            var antwort = await AiApi.AskAsync(req, c, jobsDir, null, null, sys, usr, 600, false, 1, "advisor", ct, fuerTeam: d.Team);
+            var werkzeuge = await AdvisorQuellen.WerkzeugeAsync(c, d, key, jobsDir, ct);   // fremde Quellen (MCP, 19.10.2026)
+            var (sys, usr) = Prompt(frage, treffer, merkmale, verlauf, unterlagen, d.AnredeOderSie, d.TonOderFreundlich, werkzeuge.Count > 0);
+            var antwort = await AiApi.AskAsync(req, c, jobsDir, null, null, sys, usr, 600, false, 1, "advisor", ct, fuerTeam: d.Team, werkzeuge: werkzeuge);
             return Results.Ok(antwort.Fehler is null
                 ? new { text = (string?)antwort.Text, angaben = Array.Empty<object>(), names = Array.Empty<string>(), warning = (string?)null }
                 : new { text = (string?)null, angaben = Array.Empty<object>(), names = Array.Empty<string>(), warning = (string?)KiNichtVerfuegbar(req, antwort.Fehler) });

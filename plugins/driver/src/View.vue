@@ -123,7 +123,7 @@ function browsen(z) {
           <select v-else-if="f === 'auth'" v-model="form.felder[f]" style="width:240px">
             <option value="">{{ $t("ohne") }}</option>
             <option value="bearer">{{ $t("Bearer-Token") }}</option>
-            <option value="basic">{{ $t("Basic (Anwender und Geheimnis)") }}</option>
+            <option v-if="form.art !== 'mcp'" value="basic">{{ $t("Basic (Anwender und Geheimnis)") }}</option>
             <option value="header">{{ $t("eigener Kopf") }}</option>
           </select>
           <input v-else v-model="form.felder[f]" style="width:240px" autocomplete="off" :placeholder="HILFE[f] ?? ''" :title="HILFE[f] ?? ''" /></td></tr>

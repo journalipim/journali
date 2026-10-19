@@ -246,6 +246,7 @@ public static class Auth
         // Die Liste der Zugänge (ohne Geheimnisse) und die Weiterleitung einer Anmeldung braucht, wer importiert — das ist Pflege
         if (path.StartsWith("/api/drivers") && path.EndsWith("/relay")) return Rights.Write;   // die Weiterleitung (auch schreibend): das Geheimnis bleibt beim Server
         if (path.StartsWith("/api/drivers") && read && (path is "/api/drivers" or "/api/drivers/arten")) return Rights.Write;
+        if (path.StartsWith("/api/drivers") && read && path.EndsWith("/mcp/tools")) return Rights.Plugins;   // die Werkzeuge eines MCP-Servers: wählt, wer Berater einrichtet (19.10.2026)
         if (path.StartsWith("/api/files") || path.StartsWith("/api/drivers")) return Rights.Jobs;   // Dateibrowser und Zugänge: Jobs — oder Storage (Allowed)
         // Skripte (37): der Quelltext gehört dem, der schreiben darf. Die Liste ohne Quelltext, das Anstossen und der
         // Stand eines Laufs gehören dem anderen Recht — so bedient jemand eine Auswertung, ohne je Quelltext zu sehen.

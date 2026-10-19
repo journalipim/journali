@@ -20,6 +20,8 @@ async function welt({ daten = {}, fehler = [], antwort = null } = {}) {
     if (p === '/api/pub') return [{ id: 'r1', label: 'Online-Shop', channel: 'web', market: null }, { id: 'r2', label: 'Katalog', channel: 'print', market: 'de' }]
     if (p === '/api/auth/roles') return [{ key: 'admin', label: 'Administrator' }, { key: 'reader', label: 'Leser' }]
     if (p === '/api/teams') return [{ key: 'init', label: 'Init Team' }]
+    if (p === '/api/drivers') return [{ key: 'lokal', art: 'file', label: 'Dieser Server' }, { key: 'shopmcp', art: 'mcp', label: 'Shop-System' }]
+    if (p === '/api/drivers/shopmcp/mcp/tools') return { tools: [{ name: 'verfuegbarkeit', description: 'Bestand je Artikel' }, { name: 'bestellen', description: 'Bestellung' }] }
     if (p.startsWith('/api/plugins/advisor/data/')) return gespeichert[decodeURIComponent(p.split('/').pop())] ?? null
     if (p === '/api/advisor/shop/tokens') return tokens
     return []
@@ -220,5 +222,39 @@ test('entfernen nimmt die Token und die Definition weg', async () => {
     await w.find('button.entfernen').trigger('click'); await warte(w)
     assert.deepEqual(gesendet.filter(g => g[0] === 'DELETE').map(g => g[1]), ['/api/advisor/shop/tokens/abcdef123456', '/api/plugins/advisor/data/' + encodeURIComponent('def:shop')])
     assert.equal(w.findAll('tr.berater').length, 0)
+  } finally { ende() }
+})
+
+test('Quellen (MCP, 19.10.2026): mit KI die Zugänge der Art MCP-Server, ihre Werkzeuge zum Freigeben — gespeichert wird, was angekreuzt ist', async () => {
+  const { w, gesendet, ende } = await welt()
+  try {
+    await w.find('tr.berater').trigger('click'); await warte(w)
+    assert.equal(w.find('tr.quellen').exists(), false, 'ohne KI keine Quellen')
+    await w.find('input.ki').setValue(true); await warte(w)
+    assert.deepEqual(w.findAll('tr.quellen .quelle strong').map(x => x.text()), ['Shop-System'], 'nur Zugänge der Art mcp')
+    await w.find('button.werkzeuge-laden').trigger('click'); await warte(w)
+    const werkzeuge = w.findAll('label.werkzeug')
+    assert.deepEqual(werkzeuge.map(x => x.text()), ['verfuegbarkeit', 'bestellen'])
+    assert.equal(werkzeuge[0].attributes('title'), 'Bestand je Artikel')
+    await werkzeuge[0].find('input').trigger('change'); await warte(w)
+    await w.find('select.team').setValue('init')
+    await w.find('button.speichern').trigger('click'); await warte(w)
+    const body = gesendet.filter(g => g[0] === 'PUT').at(-1)[2]
+    assert.deepEqual(body.quellen, [{ zugang: 'shopmcp', werkzeuge: ['verfuegbarkeit'] }])
+  } finally { ende() }
+})
+
+test('Quellen: freigegebene Werkzeuge stehen auch ungeladen da; ohne Häkchen keine Quelle', async () => {
+  const { w, gesendet, ende } = await welt({ daten: { 'def:shop': { label: 'Shop', pub: 'r1', role: 'reader', view: 'sellable', locales: ['de'], greeting: {}, ki: true, team: 'init', mcp: true,
+    origins: [], limits: {}, quellen: [{ zugang: 'shopmcp', werkzeuge: ['verfuegbarkeit'] }] } } })
+  try {
+    await w.find('tr.berater').trigger('click'); await warte(w)
+    const werkzeuge = w.findAll('label.werkzeug')
+    assert.deepEqual(werkzeuge.map(x => x.text()), ['verfuegbarkeit'])
+    assert.equal(werkzeuge[0].find('input').element.checked, true)
+    assert.equal(w.find('button.speichern').attributes('disabled') !== undefined, true, 'unverändert')
+    await werkzeuge[0].find('input').trigger('change'); await warte(w)
+    await w.find('button.speichern').trigger('click'); await warte(w)
+    assert.equal(gesendet.filter(g => g[0] === 'PUT').at(-1)[2].quellen, null)
   } finally { ende() }
 })

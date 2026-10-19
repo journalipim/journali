@@ -1,4 +1,4 @@
-(function(){const s=document.createElement('style');s.textContent="\n.x[data-v-040eedb9] { border: 0; background: none; color: var(--muted); padding: 0 4px; cursor: pointer;\n}\n.x[data-v-040eedb9]:hover { color: var(--accent);\n}\n.form td.attr[data-v-040eedb9] { white-space: nowrap; color: var(--muted);\n}\n";document.head.append(s)})();
+(function(){const s=document.createElement('style');s.textContent="\n.x[data-v-9bcdc84f] { border: 0; background: none; color: var(--muted); padding: 0 4px; cursor: pointer;\n}\n.x[data-v-9bcdc84f]:hover { color: var(--accent);\n}\n.form td.attr[data-v-9bcdc84f] { white-space: nowrap; color: var(--muted);\n}\n";document.head.append(s)})();
 const m = window.journali.vue;
 const Fragment = m.Fragment;
 const computed = m.computed;
@@ -71,7 +71,10 @@ const _hoisted_28 = { value: "ja" };
 const _hoisted_29 = ["onUpdate:modelValue"];
 const _hoisted_30 = { value: "" };
 const _hoisted_31 = { value: "bearer" };
-const _hoisted_32 = { value: "basic" };
+const _hoisted_32 = {
+  key: 0,
+  value: "basic"
+};
 const _hoisted_33 = { value: "header" };
 const _hoisted_34 = ["onUpdate:modelValue", "placeholder", "title"];
 const _hoisted_35 = { class: "attr" };
@@ -472,13 +475,13 @@ const _sfc_main = {
                         1
                         /* TEXT */
                       ),
-                      createElementVNode(
+                      form.value.art !== "mcp" ? (openBlock(), createElementBlock(
                         "option",
                         _hoisted_32,
                         toDisplayString(_ctx.$t("Basic (Anwender und Geheimnis)")),
                         1
                         /* TEXT */
-                      ),
+                      )) : createCommentVNode("v-if", true),
                       createElementVNode(
                         "option",
                         _hoisted_33,
@@ -578,7 +581,7 @@ const _sfc_main = {
     };
   }
 };
-const View = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-040eedb9"]]);
+const View = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-9bcdc84f"]]);
 const entry = {
   views: [{ path: "zugaenge", topic: "tools", label: t("Zugänge"), icon: "⌁", hint: t("Dateisystem, FTP, WebDAV, Anmeldungen an MySQL, Solr, IXP — einmal einrichten, von jedem Plugin nutzbar"), component: View }]
 };

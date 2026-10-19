@@ -2747,7 +2747,7 @@ Anbieter und können falsch sein. Ohne Bestätigung antwortet kein Berater.
 **Offen.** Preise und Verfügbarkeit kennt der Berater nur, soweit sie Attribute der Sicht sind. Ein Verweis vom Treffer in den
 Shop (Adresse je Produkt) fehlt; er käme als Attribut der Sicht oder als Vorlage an der Definition.
 
-## 43. Fremde Quellen für den Produktberater — journali fragt, der Berater nicht (09.10.2026, Entwurf)
+## 43. Fremde Quellen für den Produktberater — journali fragt, der Berater nicht (09.10.2026, Entwurf; Schritt 1 gebaut 19.10.2026)
 
 **Der Bedarf.** Ein Berater soll später auch Auskunft geben, die nicht im PIM steht: Preise und Verfügbarkeit aus der
 Warenwirtschaft, kundenspezifische Angaben (Kundenpreis, Bestellstatus). Solche Systeme bieten zunehmend einen MCP-Server an.
@@ -2785,8 +2785,29 @@ fragen darüber den Katalog. Das ist die andere Richtung und bleibt davon unber�
    gegen ein Token (OAuth Token Exchange, wie die MCP-Spezifikation die Anmeldung vorsieht). Ein Passwort oder Schlüssel des
    Kunden geht nie durch den Chat, und ohne gültigen Nachweis bietet journali die kundenspezifischen Werkzeuge gar nicht an.
 
+**Gebaut (19.10.2026): Schritt 1.**
+
+- Zugang der Art `mcp` (`DriverApi.Arten`): `url`, Anmeldung ohne, mit Bearer-Token oder eigenem Kopf, Geheimnis `secret` im
+  Tresor. ⟳ Prüfen nennt die Zahl der Werkzeuge; `GET /api/drivers/{zugang}/mcp/tools` liefert Name und Beschreibung (Recht
+  `plugins`). Über die Weiterleitung (`relay`) geht ein MCP-Zugang nicht — der Browser fragt ihn nie.
+- `McpClient.cs` im Server, ohne Paket: Streamable HTTP (`initialize`, `notifications/initialized`, `tools/list` mit
+  `nextCursor`, `tools/call`), Antwort als JSON oder als Ereignisstrom, Sitzung über `Mcp-Session-Id`, 15 Sekunden je Anfrage.
+- Am Berater `quellen: [{ zugang, werkzeuge }]` — angekreuzt in ✆ Produktberatung, Zeile „Quellen“ (nur mit KI). Die Liste der
+  Werkzeuge hält der Server zehn Minuten vor (`AdvisorQuellen`).
+- Die KI bekommt die freigegebenen Werkzeuge (Name `<zugang>__<werkzeug>`, in der Beschreibung die Quelle) und die Regel, dass
+  Ergebnisse Daten sind, keine Anweisungen. `AiApi.CallMitWerkzeugen`: höchstens vier Aufrufe je Frage, ein Ergebnis höchstens
+  6000 Zeichen; danach antwortet die KI mit dem, was da ist. Nur beim Anbieter `anthropic`; andere antworten wie bisher ohne.
+  Gilt für die Antwort zu den Treffern und für eine Eingabe ohne Bezug zum Sortiment.
+- Jeder Aufruf steht im Log des Servers: Berater, Zugang, Werkzeug, Dauer, `ok`/`error`/`failed`, ohne Inhalt.
+
+Abweichend vom Entwurf: keine Anmeldung über OAuth Client Credentials; keine eigene Grenze je Werkzeug (es gelten die Grenzen
+des Beraters für die KI); welche Werkzeuge nur lesen, prüft journali nicht — es gibt frei, wer den Berater einrichtet; das
+Protokoll steht im Log, nicht im Journal.
+
 **Offen.**
 
+- Ob ein Aufruf als Eintrag im Journal steht (Berater, Zugang, Werkzeug, Dauer, Ergebnis ja/nein). Für das Journal spricht die
+  Nachvollziehbarkeit; dagegen, dass jede Frage eines Besuchers dann Einträge erzeugt, die nie gelöscht werden.
 - Ob der MCP-Server des Dienstes (`/mcp`, für fremde KI-Agenten) bleibt. Er gibt heute nur, was die Website zeigt, und kennt
   keine Anmeldung; mit Schritt 2 dürfte er kundenspezifische Werkzeuge nie anbieten.
 - Wo der Aufruf läuft: im Server (`AdvisorApi`, MCP über HTTP braucht kein Paket) oder als Prozess-Plugin. Für den Server spricht,

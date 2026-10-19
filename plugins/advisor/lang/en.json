@@ -78,5 +78,10 @@
  "wie die KI schreibt — die Fakten bleiben dieselben": "how the AI writes — the facts stay the same",
  "sachlich": "factual",
  "freundlich": "friendly",
- "locker": "casual"
+ "locker": "casual",
+ "MCP-Server, deren Werkzeuge die KI des Beraters nutzen darf — eingerichtet unter ⌁ Zugänge, Art MCP-Server": "MCP servers whose tools the advisor’s AI may use — set up under ⌁ Connections, type MCP server",
+ "Quellen": "Sources",
+ "kein MCP-Zugang": "no MCP connection",
+ "die Werkzeuge des MCP-Servers lesen": "read the MCP server’s tools",
+ "Werkzeuge": "Tools"
 }

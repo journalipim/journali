@@ -176,3 +176,21 @@ test('die Art HTTP/REST: die Anmeldung ist eine Wahl, das Geheimnis ist ein Pass
     assert.match(w.text(), /Kopf/)
   } finally { api.get = get }
 })
+
+test('die Art MCP-Server (19.10.2026): Anmeldung ohne, mit Bearer-Token oder eigenem Kopf — Basic steht nicht zur Wahl', async () => {
+  const get = api.get
+  api.get = async p => (p === '/api/drivers/arten'
+    ? [{ key: 'file', label: 'x', dateien: true, felder: [], geheim: [] }, { key: 'mcp', label: 'MCP-Server', dateien: false, felder: ['url', 'auth', 'header'], geheim: ['secret'] }]
+    : [{ key: 'lokal', art: 'file', label: '⌂ Dieser Server', felder: {}, dateien: true, geheim: [] }])
+  try {
+    const { default: View } = await import('../../plugins/driver/src/View.vue')
+    const w = mount(View)
+    await new Promise(r => setTimeout(r, 0)); await w.vm.$nextTick()
+    await w.find('select').setValue('mcp')
+    await w.vm.$nextTick()
+    const auth = w.findAll('select').find(s => s.text().includes('Bearer-Token'))
+    assert.ok(auth, 'die Anmeldung ist eine Wahl')
+    assert.deepEqual(auth.findAll('option').map(o => o.attributes('value')), ['', 'bearer', 'header'])
+    assert.equal(w.findAll('input[type=password]').length, 1, 'das Geheimnis ist ein Passwortfeld')
+  } finally { api.get = get }
+})
