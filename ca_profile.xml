@@ -1,0 +1,9 @@
+<CommunityApplications>
+  <Profile>
+**journali** - a product information management system (PIM): products, variants, attributes, translations, media and publication trees in one journal that is the single source of truth, extended by plugins.
+
+The Unraid templates live in `unraid/` (journali, its database journali-db, and journali-advisor for the product advisor of a website); the image is built by GitHub Actions to `ghcr.io/journalipim/journali`. Questions and bug reports: GitHub issues.
+  </Profile>
+  <Icon>https://raw.githubusercontent.com/journalipim/journali/master/unraid/journali.png</Icon>
+  <WebPage>https://github.com/journalipim/journali</WebPage>
+</CommunityApplications>

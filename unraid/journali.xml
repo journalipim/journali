@@ -1,11 +1,12 @@
 <?xml version="1.0"?>
 <!--
-  Unraid-Vorlage für journali (docs/betrieb.md → Unraid). Dieselbe Vorlage für jede Registry — nur Repository ändert sich:
-  die eigene Gitea (<host>:<port>/<besitzer>/journali:latest, gebaut von .gitea/workflows/docker.yml) oder ghcr.io.
+  Unraid-Vorlage für journali (Community Applications; docs/betrieb.md → Unraid). Das Image baut .github/workflows/docker.yml
+  nach ghcr.io/journalipim/journali. Wer stattdessen das Image der eigenen Gitea nimmt (.gitea/workflows/docker.yml), trägt
+  unter Repository <host>:<port>/<besitzer>/journali:latest ein.
   Die Datenbank ist eine eigene App: Postgres 18 mit der Erweiterung vector (unraid/journali-db.xml, Image
   pgvector/pgvector:pg18). Die Verbindung gibt man beim ersten Aufruf im Einrichtungsdialog ein, sie steht danach in
   db.json im Datenverzeichnis. Ohne die Erweiterung läuft journali, nur die Suche nach Sinn und die Frage an die
-  Dokumente fehlen.
+  Dokumente fehlen. Texte für Unraid englisch: das ist das Publikum der Community Applications.
 -->
 <Container version="2">
   <Name>journali</Name>
@@ -15,20 +16,23 @@
   <MyIP/>
   <Shell>bash</Shell>
   <Privileged>false</Privileged>
-  <Support>https://journali.de</Support>
+  <Support>https://github.com/journalipim/journali/issues</Support>
   <Project>https://journali.de</Project>
-  <Overview>journali — Produktinformationen pflegen: ein Journal als Wahrheit, Modell, Baum, Übersetzung, Publikation und Plugins. Braucht eine PostgreSQL-Datenbank als eigene App (journali-db, Postgres 18 mit der Erweiterung vector); die Verbindung wird beim ersten Aufruf im Einrichtungsdialog eingetragen.</Overview>
+  <ReadMe>https://github.com/journalipim/journali#readme</ReadMe>
+  <Overview>journali is a product information management system (PIM) in the browser: products and variants, attributes and attribute groups, translations, media with derived images, publication trees per channel and market, workflows and releases. Every change is an entry in a journal, the single source of truth, so the history of each value stays visible. Plugins add import and export (CSV, Excel, JSON), data quality checks, scheduled jobs, AI texts and a product advisor for a website.&#xD;
+&#xD;
+Test version for testing and evaluation. Needs PostgreSQL 18; install the app journali-db first (PostgreSQL 18 with the vector extension for semantic search) or use an existing PostgreSQL 18. The first visit of the web UI asks for the database connection and creates the first administrator. Licence: AGPL-3.0.</Overview>
   <Category>Productivity: Tools:</Category>
   <WebUI>http://[IP]:[PORT:8080]/</WebUI>
-  <TemplateURL/>
-  <Icon>https://journali.de/logo-128.png</Icon>
+  <TemplateURL>https://raw.githubusercontent.com/journalipim/journali/master/unraid/journali.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/journalipim/journali/master/unraid/journali.png</Icon>
   <ExtraParams>--restart unless-stopped</ExtraParams>
   <PostArgs/>
   <CPUset/>
-  <Requires>journali-db: PostgreSQL 18 mit der Erweiterung vector (Image pgvector/pgvector:pg18, Vorlage unraid/journali-db.xml)</Requires>
-  <Config Name="Oberfläche" Target="8080" Default="8080" Mode="tcp" Description="Port der Oberfläche" Type="Port" Display="always" Required="true" Mask="false">8080</Config>
-  <Config Name="Daten" Target="/data/jobs" Default="/mnt/user/appdata/journali" Mode="rw" Description="Datenverzeichnis: Verbindung zur Datenbank (db.json), Jobs, Schnappschuss, Spiegel des Journals" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/journali</Config>
-  <Config Name="JOURNALI_JOBS" Target="JOURNALI_JOBS" Default="/data/jobs" Mode="" Description="Datenverzeichnis im Container — passt zum Pfad Daten" Type="Variable" Display="advanced" Required="true" Mask="false">/data/jobs</Config>
-  <Config Name="JOURNALI_MEDIA" Target="JOURNALI_MEDIA" Default="postgres" Mode="" Description="Wo Medien liegen: postgres (in der Datenbank), ein Verzeichnis oder s3://bucket" Type="Variable" Display="advanced" Required="true" Mask="false">postgres</Config>
-  <Config Name="TZ" Target="TZ" Default="Europe/Berlin" Mode="" Description="Zeitzone" Type="Variable" Display="advanced" Required="false" Mask="false">Europe/Berlin</Config>
+  <Requires>journali-db: PostgreSQL 18 with the vector extension (image pgvector/pgvector:pg18, template unraid/journali-db.xml)</Requires>
+  <Config Name="Web UI" Target="8080" Default="8080" Mode="tcp" Description="Port of the web UI" Type="Port" Display="always" Required="true" Mask="false">8080</Config>
+  <Config Name="Data" Target="/data/jobs" Default="/mnt/user/appdata/journali" Mode="rw" Description="Data directory: database connection (db.json), jobs, snapshot, mirror of the journal" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/journali</Config>
+  <Config Name="JOURNALI_JOBS" Target="JOURNALI_JOBS" Default="/data/jobs" Mode="" Description="Data directory inside the container, matching the path Data" Type="Variable" Display="advanced" Required="true" Mask="false">/data/jobs</Config>
+  <Config Name="JOURNALI_MEDIA" Target="JOURNALI_MEDIA" Default="postgres" Mode="" Description="Where media are stored: postgres (in the database), a directory, or s3://bucket" Type="Variable" Display="advanced" Required="true" Mask="false">postgres</Config>
+  <Config Name="TZ" Target="TZ" Default="Europe/Berlin" Mode="" Description="Time zone of the container" Type="Variable" Display="advanced" Required="false" Mask="false">Europe/Berlin</Config>
 </Container>

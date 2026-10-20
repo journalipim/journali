@@ -18,19 +18,20 @@
   <MyIP/>
   <Shell>bash</Shell>
   <Privileged>false</Privileged>
-  <Support>https://journali.de</Support>
+  <Support>https://github.com/journalipim/journali/issues</Support>
   <Project>https://journali.de</Project>
-  <Overview>PostgreSQL 18 mit der Erweiterung vector — die Datenbank für journali. Die Erweiterung legt journali beim ersten Start selbst an. Das Passwort wird hier vergeben und danach im Einrichtungsdialog von journali eingetragen.</Overview>
+  <ReadMe>https://github.com/journalipim/journali#readme</ReadMe>
+  <Overview>PostgreSQL 18 with the vector extension: the database for journali. journali creates the extension itself on its first start. Set the password here; the first visit of the journali web UI asks for it again.</Overview>
   <Category>Productivity: Tools:</Category>
-  <TemplateURL/>
-  <Icon>https://journali.de/logo-128.png</Icon>
+  <TemplateURL>https://raw.githubusercontent.com/journalipim/journali/master/unraid/journali-db.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/journalipim/journali/master/unraid/journali.png</Icon>
   <ExtraParams>--restart unless-stopped</ExtraParams>
   <PostArgs/>
   <CPUset/>
-  <Config Name="Port" Target="5432" Default="5432" Mode="tcp" Description="Port der Datenbank — journali verbindet sich damit" Type="Port" Display="always" Required="true" Mask="false">5432</Config>
-  <Config Name="Daten" Target="/var/lib/postgresql" Default="/mnt/user/appdata/journali-db" Mode="rw" Description="Datenverzeichnis der Datenbank" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/journali-db</Config>
-  <Config Name="POSTGRES_PASSWORD" Target="POSTGRES_PASSWORD" Default="" Mode="" Description="Passwort des Benutzers postgres — dasselbe wird im Einrichtungsdialog von journali eingetragen" Type="Variable" Display="always" Required="true" Mask="true"/>
-  <Config Name="POSTGRES_USER" Target="POSTGRES_USER" Default="postgres" Mode="" Description="Benutzer der Datenbank" Type="Variable" Display="advanced" Required="false" Mask="false">postgres</Config>
-  <Config Name="POSTGRES_DB" Target="POSTGRES_DB" Default="journali" Mode="" Description="Name der Datenbank" Type="Variable" Display="advanced" Required="false" Mask="false">journali</Config>
-  <Config Name="TZ" Target="TZ" Default="Europe/Berlin" Mode="" Description="Zeitzone" Type="Variable" Display="advanced" Required="false" Mask="false">Europe/Berlin</Config>
+  <Config Name="Port" Target="5432" Default="5432" Mode="tcp" Description="Port of the database; journali connects to it" Type="Port" Display="always" Required="true" Mask="false">5432</Config>
+  <Config Name="Data" Target="/var/lib/postgresql" Default="/mnt/user/appdata/journali-db" Mode="rw" Description="Data directory of the database" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/journali-db</Config>
+  <Config Name="POSTGRES_PASSWORD" Target="POSTGRES_PASSWORD" Default="" Mode="" Description="Password of the user postgres; the same password goes into the setup dialog of journali" Type="Variable" Display="always" Required="true" Mask="true"/>
+  <Config Name="POSTGRES_USER" Target="POSTGRES_USER" Default="postgres" Mode="" Description="Database user" Type="Variable" Display="advanced" Required="false" Mask="false">postgres</Config>
+  <Config Name="POSTGRES_DB" Target="POSTGRES_DB" Default="journali" Mode="" Description="Name of the database" Type="Variable" Display="advanced" Required="false" Mask="false">journali</Config>
+  <Config Name="TZ" Target="TZ" Default="Europe/Berlin" Mode="" Description="Time zone of the container" Type="Variable" Display="advanced" Required="false" Mask="false">Europe/Berlin</Config>
 </Container>

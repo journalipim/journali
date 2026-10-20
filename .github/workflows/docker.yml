@@ -1,7 +1,8 @@
 # Image nach ghcr.io/journalipim/journali: bei jedem Push auf master als `latest` (und `sha-<kurz>`),
 # bei einem Tag v1.2.3 zusätzlich als `1.2.3`, `1.2` und `1`. Gebaut wird das Dockerfile im Repo, das die
 # Oberfläche und die Hilfe selbst baut; Ergebnis ist das autarke Laufzeit-Image (docs/betrieb.md → Verteilen).
-# Das Paket auf ghcr.io ist so sichtbar wie das Repo; für `docker pull` ohne Anmeldung muss es öffentlich sein.
+# Das Paket hat seine eigene Sichtbarkeit (nicht die des Repos); für `docker pull` ohne Anmeldung ist es öffentlich —
+# einmal öffentlich, lässt es sich nicht wieder auf privat stellen.
 name: docker
 on:
   push:

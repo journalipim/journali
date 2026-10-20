@@ -2,11 +2,11 @@
 <!--
   Unraid-Vorlage für den Dienst eines Produktberaters (docs/betrieb.md → Produktberater, „Auf Unraid“). Er läuft aus
   demselben Image wie journali: es bringt node und plugins/advisor mit. Darum steht Repository hier wie in der App
-  journali (die eigene Gitea oder ghcr.io), und ein „force update“ hält beide auf demselben Stand. Gestartet wird
-  statt des Servers node mit serve.mjs (ExtraParams und PostArgs).
+  journali, und ein „force update“ hält beide auf demselben Stand. Gestartet wird statt des Servers node mit serve.mjs
+  (ExtraParams und PostArgs).
 
   Je Berater eine App: Name, Port, JOURNALI_ADVISOR und das Token unterscheiden sich. Das Token gibt
-  ⇪ Export → Produktberatung aus (＋ Token); es steht nur im maskierten Feld oder als Datei im Pfad Daten
+  ⇪ Export → Produktberatung aus (＋ Token); es steht nur im maskierten Feld oder als Datei im Pfad Data
   (JOURNALI_ADVISOR_TOKEN_FILE=/daten/token).
 -->
 <Container version="2">
@@ -17,24 +17,25 @@
   <MyIP/>
   <Shell>sh</Shell>
   <Privileged>false</Privileged>
-  <Support>https://journali.de</Support>
+  <Support>https://github.com/journalipim/journali/issues</Support>
   <Project>https://journali.de</Project>
-  <Overview>Dienst eines Produktberaters von journali: das Chat-Fenster für eine Website und MCP für KI-Agenten. Fragt journali über die Schnittstelle mit dem Token des Beraters; braucht keine Datenbank. Läuft aus dem Image von journali.</Overview>
+  <ReadMe>https://github.com/journalipim/journali#readme</ReadMe>
+  <Overview>The service of a journali product advisor: the chat window for a website and MCP for AI agents. It asks journali through its API with the token of the advisor and needs no database of its own. Runs from the journali image; set up the advisor in journali first (Export, Product advisor) and issue a token there.</Overview>
   <Category>Productivity: Tools:</Category>
   <WebUI>http://[IP]:[PORT:8090]/health</WebUI>
-  <TemplateURL/>
-  <Icon>https://journali.de/logo-128.png</Icon>
+  <TemplateURL>https://raw.githubusercontent.com/journalipim/journali/master/unraid/journali-advisor.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/journalipim/journali/master/unraid/journali.png</Icon>
   <ExtraParams>--restart unless-stopped --entrypoint node</ExtraParams>
   <PostArgs>/app/plugins/advisor/serve.mjs</PostArgs>
   <CPUset/>
-  <Requires>journali: die App, deren Berater dieser Dienst beantwortet — mit demselben Repository</Requires>
-  <Config Name="Dienst" Target="8090" Default="8090" Mode="tcp" Description="Port des Dienstes — der Reverse Proxy leitet die öffentliche Adresse hierher" Type="Port" Display="always" Required="true" Mask="false">8090</Config>
-  <Config Name="Daten" Target="/daten" Default="/mnt/user/appdata/journali-advisor" Mode="rw" Description="Das Lernen (lernen.json) und wahlweise das Token als Datei" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/journali-advisor</Config>
-  <Config Name="JOURNALI" Target="JOURNALI" Default="http://SERVER:8080" Mode="" Description="Adresse von journali, wie dieser Container es erreicht: die Adresse des Unraid-Servers im Netz und der Port der App journali" Type="Variable" Display="always" Required="true" Mask="false">http://SERVER:8080</Config>
-  <Config Name="JOURNALI_ADVISOR" Target="JOURNALI_ADVISOR" Default="shop" Mode="" Description="Schlüssel des Beraters (⇪ Export → Produktberatung)" Type="Variable" Display="always" Required="true" Mask="false">shop</Config>
-  <Config Name="JOURNALI_ADVISOR_TOKEN" Target="JOURNALI_ADVISOR_TOKEN" Default="" Mode="" Description="Token des Beraters (ja_…), ausgegeben unter ＋ Token — leer, wenn JOURNALI_ADVISOR_TOKEN_FILE gesetzt ist" Type="Variable" Display="always" Required="false" Mask="true"></Config>
-  <Config Name="JOURNALI_ADVISOR_TOKEN_FILE" Target="JOURNALI_ADVISOR_TOKEN_FILE" Default="" Mode="" Description="statt des Felds: Pfad einer Datei mit dem Token, etwa /daten/token" Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
-  <Config Name="JOURNALI_ADVISOR_DATA" Target="JOURNALI_ADVISOR_DATA" Default="/daten" Mode="" Description="Verzeichnis für das Lernen — passt zum Pfad Daten; leer: nur im Arbeitsspeicher" Type="Variable" Display="advanced" Required="false" Mask="false">/daten</Config>
-  <Config Name="JOURNALI_PROXY" Target="JOURNALI_PROXY" Default="1" Mode="" Description="1 hinter einem Reverse Proxy: die Adresse des Besuchers aus X-Forwarded-For — sonst zählen alle Besucher als einer" Type="Variable" Display="advanced" Required="false" Mask="false">1</Config>
-  <Config Name="TZ" Target="TZ" Default="Europe/Berlin" Mode="" Description="Zeitzone" Type="Variable" Display="advanced" Required="false" Mask="false">Europe/Berlin</Config>
+  <Requires>journali: the app whose advisor this service answers, with the same repository</Requires>
+  <Config Name="Service" Target="8090" Default="8090" Mode="tcp" Description="Port of the service; the reverse proxy forwards the public address here" Type="Port" Display="always" Required="true" Mask="false">8090</Config>
+  <Config Name="Data" Target="/daten" Default="/mnt/user/appdata/journali-advisor" Mode="rw" Description="What the advisor learns (lernen.json) and optionally the token as a file" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/journali-advisor</Config>
+  <Config Name="JOURNALI" Target="JOURNALI" Default="http://SERVER:8080" Mode="" Description="Address of journali as this container reaches it: the address of the Unraid server in the network and the port of the app journali" Type="Variable" Display="always" Required="true" Mask="false">http://SERVER:8080</Config>
+  <Config Name="JOURNALI_ADVISOR" Target="JOURNALI_ADVISOR" Default="shop" Mode="" Description="Key of the advisor in journali" Type="Variable" Display="always" Required="true" Mask="false">shop</Config>
+  <Config Name="JOURNALI_ADVISOR_TOKEN" Target="JOURNALI_ADVISOR_TOKEN" Default="" Mode="" Description="Token of the advisor (ja_...); empty if JOURNALI_ADVISOR_TOKEN_FILE is set" Type="Variable" Display="always" Required="false" Mask="true"></Config>
+  <Config Name="JOURNALI_ADVISOR_TOKEN_FILE" Target="JOURNALI_ADVISOR_TOKEN_FILE" Default="" Mode="" Description="Instead of the field: path of a file with the token, e.g. /daten/token" Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="JOURNALI_ADVISOR_DATA" Target="JOURNALI_ADVISOR_DATA" Default="/daten" Mode="" Description="Directory for what the advisor learns, matching the path Data; empty: memory only" Type="Variable" Display="advanced" Required="false" Mask="false">/daten</Config>
+  <Config Name="JOURNALI_PROXY" Target="JOURNALI_PROXY" Default="1" Mode="" Description="1 behind a reverse proxy: the visitor address comes from X-Forwarded-For; otherwise all visitors count as one" Type="Variable" Display="advanced" Required="false" Mask="false">1</Config>
+  <Config Name="TZ" Target="TZ" Default="Europe/Berlin" Mode="" Description="Time zone of the container" Type="Variable" Display="advanced" Required="false" Mask="false">Europe/Berlin</Config>
 </Container>

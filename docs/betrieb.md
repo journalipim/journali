@@ -253,7 +253,8 @@ Repo, angemeldet bei den Community Applications.
 
 **Image:** `ghcr.io/journalipim/journali` — `latest` ist der Stand von `master`, `1.2.3`/`1.2`/`1` ein Tag `v1.2.3`,
 `sha-<kurz>` jeder Commit. Gebaut vom Workflow `.github/workflows/docker.yml` aus dem Dockerfile (linux/amd64);
-das Paket ist so sichtbar wie das Repo, `docker pull` ohne Anmeldung braucht ein öffentliches Paket.
+das Paket hat seine eigene Sichtbarkeit, nicht die des Repos; `docker pull` ohne Anmeldung braucht ein öffentliches Paket, und ein
+öffentliches lässt sich nicht wieder auf privat stellen.
 `compose.yaml` nennt das Image und behält `build: .` — `docker compose pull` holt es, `docker compose up --build`
 baut es aus dem Checkout unter demselben Namen. Neuer Stand: `docker compose pull && docker compose up -d`.
 
@@ -508,7 +509,7 @@ update“ hält beide auf demselben Stand. Die Vorlage `unraid/journali-advisor.
 2. *Docker* → *Add Container* → *Template*: `journali-advisor`. **Repository** wie bei der App journali (die eigene Gitea oder `ghcr.io`).
 3. **JOURNALI**: die Adresse des Unraid-Servers im Netz mit dem Port der App journali (`http://<Server>:8080`) — aus dem Container
    heraus ist `localhost` der Container selbst. **JOURNALI_ADVISOR**: der Schlüssel des Beraters. **JOURNALI_ADVISOR_TOKEN**: das Token
-   (maskiert) — oder es liegt als Datei `token` im Pfad Daten (`/mnt/user/appdata/journali-advisor`) und
+   (maskiert) — oder es liegt als Datei `token` im Pfad Data (`/mnt/user/appdata/journali-advisor`) und
    `JOURNALI_ADVISOR_TOKEN_FILE=/daten/token`.
 4. *Apply*; *WebUI* öffnet `/health` (Schritt 4 oben).
 5. Den Reverse Proxy auf `<Server>:8090` richten. `JOURNALI_PROXY` steht in der Vorlage auf `1`; ohne Proxy auf `0` stellen.
