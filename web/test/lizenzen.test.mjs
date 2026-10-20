@@ -20,7 +20,8 @@ test('die Lizenztexte und die Angaben zu libvips liegen bei', () => {
   assert.match(lies('licenses/texte/LGPL-3.0.txt'), /GNU LESSER GENERAL PUBLIC LICENSE\s+Version 3/)
   const vips = lies('licenses/libvips.md')
   for (const s of ['github.com/libvips/libvips', 'github.com/lovell/sharp-libvips', 'versions.json', 'Reverse Engineering']) assert.ok(vips.includes(s), s)
-  assert.match(lies('LICENSE'), /THIRD-PARTY COMPONENTS[\s\S]*reverse engineer[\s\S]*for debugging/)
+  // seit 20.10.2026 AGPL-3.0: sie schränkt das Ändern und Untersuchen der LGPL-Bibliotheken nicht ein — vorher stand das als Zusatz in LICENSE
+  assert.match(lies('LICENSE'), /^\s*GNU AFFERO GENERAL PUBLIC LICENSE/)
 })
 
 test('je direkte Abhängigkeit von Oberfläche und Server ein Ordner mit Lizenztext', () => {

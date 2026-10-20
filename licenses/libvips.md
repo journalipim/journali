@@ -27,5 +27,5 @@ journali verwendet libvips und die enthaltenen Bibliotheken unverändert. Der Qu
 libvips ist eine eigene Datei (`libvips-cpp.so.*`), die sharp zur Laufzeit lädt. Wer eine geänderte oder andere Version verwenden
 will, ersetzt das Paket oder die Datei; im Container liegt `plugins/` als Bind-Mount, dazu ist kein neues Image nötig.
 
-Die Lizenz von journali gilt nicht für diese Bibliotheken und verbietet weder ihr Ändern noch das Untersuchen (Reverse Engineering),
-das zum Beheben von Fehlern in einer geänderten Version nötig ist (`LICENSE`, Abschnitt „Third-party components“).
+Die Lizenz von journali (AGPL-3.0, `LICENSE`) gilt nicht für diese Bibliotheken und verbietet weder ihr Ändern noch das Untersuchen
+(Reverse Engineering), das zum Beheben von Fehlern in einer geänderten Version nötig ist.

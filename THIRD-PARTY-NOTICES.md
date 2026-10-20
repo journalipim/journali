@@ -1,6 +1,6 @@
 # Fremde Bestandteile und ihre Lizenzen
 
-journali selbst steht unter der Elastic License 2.0 mit einer zusätzlichen Erlaubnis (`LICENSE`). Diese Datei nennt,
+journali selbst steht unter der GNU Affero General Public License, Version 3 (`LICENSE`). Diese Datei nennt,
 was von anderen kommt, unter welcher Lizenz und woher — und dankt allen, die es geschrieben haben.
 
 Die Lizenztexte liegen im Image unter `licenses/` (`licenses/README.md`): die Texte selbst, je Paket der Oberfläche und
@@ -57,8 +57,8 @@ Node.js-Binärdatei aus `node:22-bookworm-slim` (MIT, mit den Lizenzen ihrer Bes
 
 libvips ist dynamisch gebunden und liegt als eigene Bibliothek im Paket `@img/sharp-libvips-*`; sie lässt sich dort
 austauschen. Sie enthält weitere Bibliotheken unter LGPL-3.0, MPL-1.1, MIT, BSD und ähnlichen Lizenzen. Lizenzen, Versionen,
-Quelltext und Austausch: `licenses/libvips.md`. Die Lizenz von journali schränkt die Rechte aus der LGPL nicht ein (`LICENSE`,
-Abschnitt „Third-party components“).
+Quelltext und Austausch: `licenses/libvips.md`. Die Lizenz von journali gilt für libvips nicht; die Rechte aus der LGPL
+bleiben, wie sie sind.
 
 ## Danke
 

@@ -1,12 +1,12 @@
 # Licence
 
-journali is licensed under the **Elastic License 2.0** with an additional permission for hosting. The source code is publicly available (source available); this is not an open-source license. The full text is in the file LICENSE in the source code.
+journali is free software under the **GNU Affero General Public License, version 3** (AGPL-3.0), an open-source licence. The full text is in the file LICENSE in the source code.
 
 ## In three sentences
 
 - You may use, copy, modify, distribute journali and run it for third parties as a hosted service.
-- You may not change, disable or circumvent the licence key functionality, and you may not remove or obscure any functionality that is protected by it.
-- You may not remove licence and copyright notices; whoever modifies the software marks the modification, and whoever passes it on passes these terms on with it.
+- Whoever distributes a modified version or offers it as a network service gives its users the source code under the same licence.
+- Licence and copyright notices are kept.
 
 <!-- lizenz -->
 ## What that means for operation
@@ -19,9 +19,9 @@ The tiers and their limits are part of the software and apply in every installat
 Currently there are no tiers and no limits: every installation has the full scope, self-hosted or at a hoster.
 <!-- /startphase -->
 
-## Additional permission
+## Trademark
 
-The Elastic License 2.0 forbids offering the software to third parties as a hosted or managed service. journali expressly lifts this prohibition. All other terms remain.
+"journali PIM" is a trademark filed with the German Patent and Trade Mark Office (DPMA). The licence grants no rights in it: a modified or derived version is not distributed or offered under this name.
 
 ## Other arrangements
 
@@ -29,8 +29,8 @@ Other licence terms are possible on request. The contact address is on the websi
 
 ## Third-party components
 
-journali contains libraries by others, each under its own license. `THIRD-PARTY-NOTICES.md` lists them; the license texts are in the image under `licenses/`. The journali license does not apply to them; in particular it does not restrict the rights under the LGPL to libvips (`licenses/libvips.md`).
+journali contains libraries by others, each under its own license. `THIRD-PARTY-NOTICES.md` lists them; the license texts are in the image under `licenses/`. The journali licence does not apply to them; the rights under the LGPL to libvips remain as they are (`licenses/libvips.md`).
 
 ## Liability
 
-The software is provided as is, without warranty, as far as the law allows. The wording is in the licence under No Liability.
+The software is provided as is, without warranty, as far as the law allows. The wording is in sections 15 and 16 of the licence.

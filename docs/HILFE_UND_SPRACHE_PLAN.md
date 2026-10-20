@@ -96,7 +96,7 @@ ist Vorschlag.
 | 12 | Nutzungslimits und Lizenzierung | Token = Journaleinträge, was zählt und was nicht, Woche/Monat, Tarife und Grenzen, Test, Kostenlos, Lizenzschlüssel, Reset, Abo je Team, ohne Internet, 7 Tage Kulanz |
 | 13 | Sicherung und Wiederherstellung | von Hand (⇅ B&R), als Job (backup), was gesichert wird, zurück in ein leeres System, Spiegel und Schnappschuss |
 | 14 | Datenschutz | was journali über Personen speichert, crypto-shredding (geplant), KI-Schlüssel und Volumen |
-| 15 | Lizenz | Elastic License 2.0 in drei Sätzen, Zusatzerlaubnis Hosting; Wortlaut in `LICENSE` |
+| 15 | Lizenz | AGPL-3.0 in drei Sätzen, Marke; Wortlaut in `LICENSE` |
 | 16 | Tastatur | die Kürzel der Leiste, des Baums, der Zellen |
 | 17 | Glossar | Anwender, Team, Kanal, Achse, Version, Kennung, Abbild, Strom … |
 
@@ -118,11 +118,12 @@ der Prüfstand `kein-name.test.mjs` liest auch `help/`.
 2. **vue-i18n als Paket** — mit eigenem Nachrichten-Übersetzer (`{0}`, `{name}`; kein Maskieren von `{ | @`) und
    flachem Auflöser (Punkte im Schlüssel). Fehlt ein Schlüssel, ist er selbst die Nachricht — der Rückfall auf Deutsch.
 3. **`marked` als devDependency** für die Hilfe beim Bau.
-4. **Lizenz: Elastic License 2.0 plus veröffentlichte Zusatzerlaubnis für Hosting.** Nicht AGPL — sie erlaubt Forks,
-   die Limits entfernen und neu veröffentlichen. ELv2 verbietet genau das Umgehen der
-   Lizenzschlüssel-Funktion; das Hosting-Verbot der ELv2 hebt die Zusatzerlaubnis auf — Hoster (etwa Hetzner) dürfen
-   journali als Paket anbieten, die Tarife kaufen die Kunden weiter bei journali. Einzelne Verträge daneben bleiben
-   möglich, solange journali alleiniger Rechteinhaber ist (Beitragsvereinbarung/CLA für Beiträge). Keine Rechtsberatung.
+4. **Lizenz: AGPL-3.0** (20.10.2026; bis dahin Elastic License 2.0 mit einer Zusatzerlaubnis für Hosting). Grund: die
+   Aufnahme in die Community Applications auf Unraid verlangt eine OSI-anerkannte Lizenz, und dort soll sich zeigen, wie
+   journali ankommt. Folge: die Tarife schützt die Lizenz nicht mehr — eine Fassung ohne Grenzen darf weitergegeben
+   werden, mit Quelltext. Es bleiben die Marke „journali PIM“ (eine geänderte Fassung trägt den Namen nicht), das
+   signierte Tarifblatt und andere Lizenzbedingungen auf Anfrage; die Lizenz späterer Fassungen lässt sich ändern,
+   solange journali alleiniger Rechteinhaber ist (keine fremden Beiträge, `CONTRIBUTING.md`). Keine Rechtsberatung.
 5. **Adressen** für Docker-Image und Git kommen, sobald es sie gibt (Platzhalter in `help.js`).
 6. **Servermeldungen bleiben deutsch** bis Stufe 3.
 
@@ -145,7 +146,7 @@ im Shim, Bezeichnungen des Modells folgen der Oberflächensprache (`L()`).
 
 Teil 2 gebaut am 24.09.2026: 18 Kapitel unter `help/de` und `help/en`, `web/build-help.mjs` baut sie zu
 `wwwroot/help/<code>/`, `HelpPanel.vue` als Fenster über der Ansicht (seit 25.09.2026; davor eine Ansicht unter `/help/:chapter`), der ?-Knopf öffnet das Kapitel zur Ansicht
-(`help.js: chapterFor`). `LICENSE` in der Wurzel (ELv2 plus Zusatzerlaubnis). Offen: README zur Installation
+(`help.js: chapterFor`). `LICENSE` in der Wurzel (AGPL-3.0 seit 20.10.2026). Offen: README zur Installation
 auf Git, Lizenzhinweis im Startbanner, `ScriptEditor.vue`, mehrzeilige Texte, Servermeldungen (Stufe 4).
 
 Stufe 4 gebaut am 24.09.2026: Servermeldungen kommen als `{ error, template, args }` — die Vorlage ist der deutsche Text

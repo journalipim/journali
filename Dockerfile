@@ -50,6 +50,7 @@ RUN dotnet publish Journali.Server/Journali.Server.csproj -c Release -o /app --n
 
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
 # Testversion (07.10.2026): steht auch am Image
+LABEL org.opencontainers.image.licenses="AGPL-3.0-only"
 LABEL org.opencontainers.image.description="journali PIM - test version for testing and evaluation only, not suitable for production use."
 WORKDIR /app
 # node für Prozess-Plugins (Jobs: backup, json, export, datasheet) — nur die Binärdatei, kein npm

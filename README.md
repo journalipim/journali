@@ -50,8 +50,10 @@ selbst bauen will: `docker compose up --build -d`. Alles Weitere zu Umgebung, Sp
 
 ## Quelltext und Beiträge
 
-Der Quelltext ist öffentlich einsehbar (Source Available) und zum Lesen, Herunterladen und Betreiben da — Lizenz: Elastic License
-2.0 mit Hosting-Erlaubnis ([LICENSE](LICENSE)), keine Open-Source-Lizenz. Pull Requests werden
+Copyright (C) 2026 Taloan. journali ist freie Software unter der **GNU Affero General Public License, Version 3**
+([LICENSE](LICENSE)): nutzen, ändern und weitergeben ist erlaubt; wer eine geänderte Fassung weitergibt oder als Dienst im
+Netz anbietet, macht deren Quelltext den Nutzern unter derselben Lizenz zugänglich. Andere Lizenzbedingungen sind auf
+Anfrage möglich. Pull Requests werden
 nicht angenommen und automatisch geschlossen ([CONTRIBUTING.md](CONTRIBUTING.md)). Ergänzungen sind Plugins
 ([docs/plugins-zertifizierung.md](docs/plugins-zertifizierung.md)); Siegel und Katalog von journali gelten nur eigenen Plugins.
 Eine Schwachstelle meldet man vertraulich ([SECURITY.md](SECURITY.md)); schwere bekannte Fehler stehen in

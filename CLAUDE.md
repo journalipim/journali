@@ -52,7 +52,7 @@ Zwei Repos, und sie gehen verschiedene Wege:
 | `journali` | `origin` | `github` |
 | `journali-lizenz` | `origin` | **nie** |
 
-Dieses Repo wird veröffentlicht (ELv2) und hat darum beide Fernablagen — ein Commit geht nach `origin` **und**
+Dieses Repo wird veröffentlicht (AGPL-3.0, seit 20.10.2026) und hat darum beide Fernablagen — ein Commit geht nach `origin` **und**
 nach `github`. Der Lizenzserver liegt ausschliesslich auf der Gitea und bekommt keine zweite Fernablage. **Nichts von dort kommt hierher** — kein Quelltext, kein privater
 Ausstellerschlüssel, keine Datenbankzugänge, kein Webhook-Geheimnis, keine Shop-Varianten, keine Anleitung zum
 vServer. Was journali braucht, ist das gemeinsame Format (`Journali.Core/Licensing/Vertrag.cs`) und der
