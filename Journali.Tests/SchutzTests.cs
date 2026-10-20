@@ -21,28 +21,28 @@ public class SchutzTests
     public void Nach_acht_Fehlversuchen_ist_der_Name_eine_Minute_gesperrt()
     {
         var uhr = new Uhr(); var b = new LoginBremse(() => uhr.Jetzt);
-        for (var i = 0; i < LoginBremse.FehlversuchePerName - 1; i++) { b.Fehler("u:taloan", LoginBremse.FehlversuchePerName); Assert.Null(b.Gesperrt("u:taloan")); }
-        b.Fehler("u:taloan", LoginBremse.FehlversuchePerName);
-        Assert.Equal(LoginBremse.Sperre, b.Gesperrt("u:taloan"));
+        for (var i = 0; i < LoginBremse.FehlversuchePerName - 1; i++) { b.Fehler("u:u1", LoginBremse.FehlversuchePerName); Assert.Null(b.Gesperrt("u:u1")); }
+        b.Fehler("u:u1", LoginBremse.FehlversuchePerName);
+        Assert.Equal(LoginBremse.Sperre, b.Gesperrt("u:u1"));
         Assert.Null(b.Gesperrt("u:anna"));                                   // ein anderer Name ist nicht betroffen
-        uhr.Jetzt += TimeSpan.FromSeconds(59); Assert.NotNull(b.Gesperrt("u:taloan"));
-        uhr.Jetzt += TimeSpan.FromSeconds(2); Assert.Null(b.Gesperrt("u:taloan"));   // nach der Minute darf er wieder
+        uhr.Jetzt += TimeSpan.FromSeconds(59); Assert.NotNull(b.Gesperrt("u:u1"));
+        uhr.Jetzt += TimeSpan.FromSeconds(2); Assert.Null(b.Gesperrt("u:u1"));   // nach der Minute darf er wieder
     }
 
     [Fact]
     public void Ein_Versuch_waehrend_der_Sperre_setzt_sie_wieder_auf_die_volle_Minute()
     {
         var uhr = new Uhr(); var b = new LoginBremse(() => uhr.Jetzt);
-        for (var i = 0; i < LoginBremse.FehlversuchePerName; i++) b.Fehler("u:taloan", LoginBremse.FehlversuchePerName);
+        for (var i = 0; i < LoginBremse.FehlversuchePerName; i++) b.Fehler("u:u1", LoginBremse.FehlversuchePerName);
         uhr.Jetzt += TimeSpan.FromSeconds(38);
-        Assert.Equal(TimeSpan.FromSeconds(22), b.Gesperrt("u:taloan"));
-        b.Verlaengern("u:taloan");
-        Assert.Equal(LoginBremse.Sperre, b.Gesperrt("u:taloan"));            // wieder 60 Sekunden
-        uhr.Jetzt += TimeSpan.FromSeconds(30); b.Verlaengern("u:taloan");
-        Assert.Equal(LoginBremse.Sperre, b.Gesperrt("u:taloan"));            // und jedes Mal von vorn
+        Assert.Equal(TimeSpan.FromSeconds(22), b.Gesperrt("u:u1"));
+        b.Verlaengern("u:u1");
+        Assert.Equal(LoginBremse.Sperre, b.Gesperrt("u:u1"));            // wieder 60 Sekunden
+        uhr.Jetzt += TimeSpan.FromSeconds(30); b.Verlaengern("u:u1");
+        Assert.Equal(LoginBremse.Sperre, b.Gesperrt("u:u1"));            // und jedes Mal von vorn
         uhr.Jetzt += LoginBremse.Sperre + TimeSpan.FromSeconds(1);
-        Assert.Null(b.Gesperrt("u:taloan"));                                 // wer wartet, kommt durch
-        b.Verlaengern("u:taloan"); Assert.Null(b.Gesperrt("u:taloan"));        // ohne Sperre verlängert nichts
+        Assert.Null(b.Gesperrt("u:u1"));                                 // wer wartet, kommt durch
+        b.Verlaengern("u:u1"); Assert.Null(b.Gesperrt("u:u1"));        // ohne Sperre verlängert nichts
         b.Verlaengern("u:niemand"); Assert.Null(b.Gesperrt("u:niemand"));
     }
 
@@ -50,12 +50,12 @@ public class SchutzTests
     public void Eine_richtige_Anmeldung_setzt_den_Zaehler_zurueck_und_alte_Fehler_verfallen()
     {
         var uhr = new Uhr(); var b = new LoginBremse(() => uhr.Jetzt);
-        for (var i = 0; i < 7; i++) b.Fehler("u:taloan", 8);
-        b.Erfolg("u:taloan");
-        for (var i = 0; i < 7; i++) b.Fehler("u:taloan", 8);
-        Assert.Null(b.Gesperrt("u:taloan"));   // 7 + 7 Fehler mit einem Erfolg dazwischen sperren nicht
+        for (var i = 0; i < 7; i++) b.Fehler("u:u1", 8);
+        b.Erfolg("u:u1");
+        for (var i = 0; i < 7; i++) b.Fehler("u:u1", 8);
+        Assert.Null(b.Gesperrt("u:u1"));   // 7 + 7 Fehler mit einem Erfolg dazwischen sperren nicht
         uhr.Jetzt += LoginBremse.Fenster + TimeSpan.FromSeconds(1);   // Fehler ausserhalb des Fensters zählen nicht mit
-        b.Fehler("u:taloan", 8); Assert.Null(b.Gesperrt("u:taloan"));
+        b.Fehler("u:u1", 8); Assert.Null(b.Gesperrt("u:u1"));
     }
 
     [Fact]
@@ -143,7 +143,7 @@ public class SchutzTests
     public void Ein_Aufruf_ohne_Sitzung_nimmt_nur_einen_kleinen_Koerper(string pfad)
     {
         var c = new Catalog(new MemoryJournal()); c.Rebuild(); c.SeedMissing();
-        c.With((_, _, w) => w("system", Users.Stream + "taloan", Types.UserDefined, new UserDefined("Taloan", null, "admin", true), null));
+        c.With((_, _, w) => w("system", Users.Stream + "u1", Types.UserDefined, new UserDefined("U1", null, "admin", true), null));
         var ctx = new DefaultHttpContext(); ctx.Request.Path = pfad; ctx.Request.Method = "POST";
         var g = new Grenze(); ctx.Features.Set<IHttpMaxRequestBodySizeFeature>(g);
         Auth.Middleware(c, Path.GetTempPath())(ctx, () => Task.CompletedTask).GetAwaiter().GetResult();

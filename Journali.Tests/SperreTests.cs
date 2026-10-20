@@ -16,7 +16,7 @@ public class SperreTests
     private static (Catalog C, string Dir) NeueInstanz(bool mitBenutzer)
     {
         var c = new Catalog(new MemoryJournal()); c.Rebuild(); c.SeedMissing();
-        if (mitBenutzer) c.With((_, _, w) => w("system", Users.Stream + "taloan", Types.UserDefined, new UserDefined("Taloan", null, "admin", true), null));
+        if (mitBenutzer) c.With((_, _, w) => w("system", Users.Stream + "u1", Types.UserDefined, new UserDefined("U1", null, "admin", true), null));
         var dir = Path.Combine(Path.GetTempPath(), "journali-sperre-" + Guid.NewGuid().ToString("N")[..8]);
         Directory.CreateDirectory(dir);
         return (c, dir);

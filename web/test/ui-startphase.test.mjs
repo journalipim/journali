@@ -16,13 +16,13 @@ function server() {
   globalThis.fetch = async url => {
     const path = String(url).replace(/^https?:\/\/[^/]+/, '').split('?')[0]
     abrufe.push(path)
-    const body = path === '/api/teams' ? [{ key: 'init', label: 'Init Team', payer: 'init', managers: ['taloan'], keys: [], primary: true, members: 1, entriesWeek: 100, entriesMonth: 400 }]
+    const body = path === '/api/teams' ? [{ key: 'init', label: 'Init Team', payer: 'init', managers: ['u1'], keys: [], primary: true, members: 1, entriesWeek: 100, entriesMonth: 400 }]
       : path.endsWith('/members') ? []
       : path === '/api/teams/free' ? []
       : path === '/api/licence' ? { tarif: { key: 'pro', label: 'Pro' }, geprueft: true, entriesWeek: 100, entriesMonth: 400 }
       : path.endsWith('/tokens/journali') ? { team: 'init', payer: 'init', payerLabel: 'Init Team', limits: { week: 1, month: 1 }, used: {}, mine: {}, head: 1, today: '2026-10-05', resetWeek: '2026-10-05', resetMonth: '2026-11-01', history: [] }
       : path.endsWith('/usage') ? { days: [] }
-      : path === '/api/auth/people' || path === '/api/auth/users' ? [{ key: 'taloan', name: 'Taloan' }]
+      : path === '/api/auth/people' || path === '/api/auth/users' ? [{ key: 'u1', name: 'U1' }]
       : {}
     return { ok: true, status: 200, text: async () => JSON.stringify(body) }
   }
@@ -34,7 +34,7 @@ for (const startphase of [true, false]) {
   test(`Team-Reiter ${startphase ? 'in der Startphase: ohne' : 'ohne Startphase: mit'} Lizenz und Limits`, async () => {
     server()
     store.startphase = startphase
-    store.auth = { known: true, enabled: true, user: 'taloan', role: 'admin', rights: ['read', 'team', 'users'] }
+    store.auth = { known: true, enabled: true, user: 'u1', role: 'admin', rights: ['read', 'team', 'users'] }
     const w = mount(TeamsSettings); await ruhe()
     const text = w.text()
     assert.equal(/journali Limits/.test(text), !startphase, 'Limits')
@@ -46,7 +46,7 @@ for (const startphase of [true, false]) {
   test(`Teams verwalten ${startphase ? 'in der Startphase: KI-Schlüssel statt Token, keine Spalten Woche und Monat' : 'ohne Startphase: Token, Woche, Monat'}`, async () => {
     server()
     store.startphase = startphase
-    store.auth = { known: true, enabled: true, user: 'taloan', role: 'admin', rights: ['read', 'team', 'users'] }
+    store.auth = { known: true, enabled: true, user: 'u1', role: 'admin', rights: ['read', 'team', 'users'] }
     const w = mount(TeamsAdmin); await ruhe()
     const koepfe = w.findAll('th').map(th => th.text())
     assert.equal(koepfe.includes('KI-Schlüssel'), startphase)
@@ -61,7 +61,7 @@ test('Startphase: keine Frage nach der Registrierung, keine Abfrage des Kontinge
   const abrufe = server()
   store.startphase = true
   store.registriert = null
-  store.auth = { known: true, enabled: true, user: 'taloan', role: 'admin', rights: ['read', 'users'] }
+  store.auth = { known: true, enabled: true, user: 'u1', role: 'admin', rights: ['read', 'users'] }
   assert.equal(await frageNachRegistrierung(), false)
   const get = api.get; let gefragt = 0
   api.get = async p => { gefragt++; return get(p) }

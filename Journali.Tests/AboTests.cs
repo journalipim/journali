@@ -103,7 +103,7 @@ public class AboTests
     public async Task Abo_verbinden_hebt_die_Grenzen_und_den_Tarif()
     {
         var w = new Welt();
-        var (stand, fehler) = await w.Abos.VerbindenAsync(w.C, "de", Key, "taloan");
+        var (stand, fehler) = await w.Abos.VerbindenAsync(w.C, "de", Key, "u1");
         Assert.Null(fehler);
         Assert.True(stand!.Geprueft);
         Assert.Equal((200_000, 1_000_000), w.C.With((_, _, _) => w.C.Teams.LimitAt("de", Heute)));
@@ -116,7 +116,7 @@ public class AboTests
     public async Task Ohne_Verbindung_gilt_der_letzte_Stand_sieben_Tage()
     {
         var w = new Welt();
-        await w.Abos.VerbindenAsync(w.C, "de", Key, "taloan");
+        await w.Abos.VerbindenAsync(w.C, "de", Key, "u1");
         Assert.NotNull(w.C.With((_, _, _) => w.C.Teams.AboAt("de", Heute.AddDays(6))));
         Assert.Null(w.C.With((_, _, _) => w.C.Teams.AboAt("de", Heute.AddDays(8))));
         Assert.Equal((10_000, 50_000), w.C.With((_, _, _) => w.C.Teams.LimitAt("de", Heute.AddDays(8))));   // danach: was das Team ohne Abo hat
@@ -127,7 +127,7 @@ public class AboTests
     {
         var w = new Welt();
         w.Server.Antwort = (_, e) => e with { Plan = "unlimited" };             // nach dem Signieren geändert
-        var (stand, fehler) = await w.Abos.VerbindenAsync(w.C, "de", Key, "taloan");
+        var (stand, fehler) = await w.Abos.VerbindenAsync(w.C, "de", Key, "u1");
         Assert.Null(stand);
         Assert.Contains("Signatur", fehler);
         Assert.Null(w.C.With((_, _, _) => w.C.Teams.Get("de")!.Abo));
@@ -138,7 +138,7 @@ public class AboTests
     public async Task Ein_fremder_Lizenzserver_wird_abgewiesen()
     {
         var w = new Welt(vertraut: false);
-        var (stand, fehler) = await w.Abos.VerbindenAsync(w.C, "de", Key, "taloan");
+        var (stand, fehler) = await w.Abos.VerbindenAsync(w.C, "de", Key, "u1");
         Assert.Null(stand);
         Assert.Contains("Signatur", fehler);
         Assert.Null(w.C.With((_, _, _) => w.C.Teams.Get("de")!.Abo));
@@ -204,7 +204,7 @@ public class AboTests
     {
         var w = new Welt();
         w.Server.Blatt = Blatt(w.Server.Aussteller, 2, z => z.Key == "free" ? z with { Week = 12_000, Plugins = [.. z.Plugins!, "etim"] } : z);
-        Assert.Null((await w.Abos.VerbindenAsync(w.C, "de", Key, "taloan")).Fehler);
+        Assert.Null((await w.Abos.VerbindenAsync(w.C, "de", Key, "u1")).Fehler);
         Assert.Equal(2, w.C.Tarife.Version);
         Assert.Equal(12_000, w.C.Tarife.Free.Week);
         Assert.True(w.C.Tarife.Free.Erlaubt("etim"));
@@ -212,10 +212,10 @@ public class AboTests
 
         // eine ältere Version und eine mit fremder Signatur bleiben draussen
         w.Server.Blatt = Blatt(w.Server.Aussteller, 1, z => z with { Week = 1 });
-        await w.Abos.VerbindenAsync(w.C, "de", Key, "taloan");
+        await w.Abos.VerbindenAsync(w.C, "de", Key, "u1");
         using var fremd = ECDsa.Create(ECCurve.NamedCurves.nistP256);
         w.Server.Blatt = Blatt(fremd, 9, z => z with { Week = 1 });
-        await w.Abos.VerbindenAsync(w.C, "de", Key, "taloan");
+        await w.Abos.VerbindenAsync(w.C, "de", Key, "u1");
         Assert.Equal(2, w.C.Tarife.Version);
         Assert.Equal(12_000, w.C.Tarife.Free.Week);
     }
@@ -238,7 +238,7 @@ public class AboTests
     public async Task Das_Tarifblatt_kommt_auch_ohne_Abo()
     {
         var w = new Welt();
-        w.C.Registrierung(true, "taloan");
+        w.C.Registrierung(true, "u1");
         w.Server.Blatt = Tarifblaetter(w.Server.Aussteller, 4, z => z, [new RabattZeile("START50", "Einführung bis Ende Oktober", new DateOnly(2026, 10, 31))]);
         Assert.Equal(0, await w.Abos.AuffrischenAsync(w.C));                   // kein Team hat ein Abo
         Assert.Equal(0, w.Server.Anfragen);                                     // nach einem Stand fragt niemand
@@ -266,13 +266,13 @@ public class AboTests
         Assert.Equal(0, await w.Abos.AuffrischenAsync(w.C));
         Assert.Equal(0, w.Server.Blattanfragen);
 
-        w.C.Registrierung(false, "taloan");
+        w.C.Registrierung(false, "u1");
         Assert.Equal(0, await w.Abos.AuffrischenAsync(w.C));
         Assert.Equal(0, w.Server.Blattanfragen);
         Assert.False(w.C.Registriert);
 
         // ein Abo ist Zustimmung genug: dafür spricht die Instanz ohnehin mit dem Lizenzserver
-        await w.Abos.VerbindenAsync(w.C, "de", Key, "taloan");
+        await w.Abos.VerbindenAsync(w.C, "de", Key, "u1");
         w.Uhr.Jetzt = Jetzt + Abos.Auffrischen + TimeSpan.FromMinutes(1);
         await w.Abos.AuffrischenAsync(w.C);
         Assert.Equal(1, w.Server.Blattanfragen);
@@ -321,9 +321,9 @@ public class AboTests
     {
         var w = new Welt();
         w.Server.Antwort = (_, e) => { var x = e with { Request = new string('0', 64), Sig = null }; return x with { Sig = Signaturen.Signiere(w.Server.Aussteller, x.Rumpf) }; };
-        Assert.Contains("nicht zu dieser Anfrage", (await w.Abos.VerbindenAsync(w.C, "de", Key, "taloan")).Fehler);
+        Assert.Contains("nicht zu dieser Anfrage", (await w.Abos.VerbindenAsync(w.C, "de", Key, "u1")).Fehler);
         w.Server.Antwort = (_, e) => { var x = e with { Team = "es", Sig = null }; return x with { Sig = Signaturen.Signiere(w.Server.Aussteller, x.Rumpf) }; };
-        Assert.Contains("anderes Team", (await w.Abos.VerbindenAsync(w.C, "de", Key, "taloan")).Fehler);
+        Assert.Contains("anderes Team", (await w.Abos.VerbindenAsync(w.C, "de", Key, "u1")).Fehler);
     }
 
     [Fact]
@@ -331,18 +331,18 @@ public class AboTests
     {
         var w = new Welt();
         w.Server.Fehler = "Der Schlüssel gilt für eine andere Instanz oder ein anderes Team.";
-        Assert.Equal(w.Server.Fehler, (await w.Abos.VerbindenAsync(w.C, "de", Key, "taloan")).Fehler);
+        Assert.Equal(w.Server.Fehler, (await w.Abos.VerbindenAsync(w.C, "de", Key, "u1")).Fehler);
         w.Adresse = null;
-        Assert.Contains("Kein Lizenzserver", (await w.Abos.VerbindenAsync(w.C, "de", Key, "taloan")).Fehler);
+        Assert.Contains("Kein Lizenzserver", (await w.Abos.VerbindenAsync(w.C, "de", Key, "u1")).Fehler);
         w.Adresse = "https://lizenz.example";
-        Assert.Contains("anderes Team ab", (await w.Abos.VerbindenAsync(w.C, "it", Key, "taloan")).Fehler);   // Italien rechnet über Deutschland ab
+        Assert.Contains("anderes Team ab", (await w.Abos.VerbindenAsync(w.C, "it", Key, "u1")).Fehler);   // Italien rechnet über Deutschland ab
     }
 
     [Fact]
     public async Task Taeglich_auffrischen_mit_dem_gemerkten_Schluessel()
     {
         var w = new Welt();
-        await w.Abos.VerbindenAsync(w.C, "de", Key, "taloan");
+        await w.Abos.VerbindenAsync(w.C, "de", Key, "u1");
         Assert.Equal(0, await w.Abos.AuffrischenAsync(w.C));                   // gerade erst geholt
         // sofort (neuer Hauptserver, ein Server ohne Lizenz): auch ein junger Stand wird neu gefragt — der Lizenzserver kennt vielleicht einen neuen Zusatz
         w.Server.Plan = "proplus";
@@ -360,10 +360,10 @@ public class AboTests
     public async Task Ein_Team_sofort_auffrischen()
     {
         var w = new Welt();
-        await w.Abos.VerbindenAsync(w.C, "de", Key, "taloan");
+        await w.Abos.VerbindenAsync(w.C, "de", Key, "u1");
         Assert.Equal(Key, w.Server.LetzterKey);
         w.Server.Plan = "pro";                                                  // von Hand geändert — ohne 20 Stunden zu warten
-        var (stand, fehler) = await w.Abos.AuffrischenAsync(w.C, "de", "taloan");
+        var (stand, fehler) = await w.Abos.AuffrischenAsync(w.C, "de", "u1");
         Assert.Null(fehler);
         Assert.Equal("pro", stand!.Plan);
         Assert.Equal("pro", w.C.With((_, _, _) => w.C.Teams.Get("de")!.Abo!.Plan));
@@ -380,7 +380,7 @@ public class AboTests
         Assert.Equal(0, await w.Abos.AuffrischenAsync(w.C));                   // ohne Stand und ohne Schlüssel fragt niemand
         Assert.Equal(0, w.Server.Anfragen);
 
-        var (stand, fehler) = await w.Abos.AuffrischenAsync(w.C, "de", "taloan");
+        var (stand, fehler) = await w.Abos.AuffrischenAsync(w.C, "de", "u1");
         Assert.Null(fehler);
         Assert.Equal("enterprise", stand!.Plan);
         Assert.Null(w.Server.LetzterKey);                                       // die Anfrage nennt nur Instanz und Team

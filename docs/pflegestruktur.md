@@ -1441,7 +1441,7 @@ Vorschlag, der zum Journal passt:
   `PluginEnabled` / `PluginDisabled`, `PluginRemoved`. Wer welches Werkzeug
   wann mit welcher Version benutzt hat, ist damit nachvollziehbar — und die
   Stapel eines Plugins tragen seinen Schlüssel als Urheber (`X-Actor`
-  `taloan via solr@1.2`).
+  `u1 via solr@1.2`).
 - **Verwaltung** in der Oberfläche unter ⚙ → Plugins: Liste mit Version,
   Stand, Schalter; „installieren" nimmt ein Verzeichnis/Archiv entgegen und
   legt es nach `plugins/`; die Oberfläche lädt aktive Browser-Plugins beim
@@ -2268,7 +2268,7 @@ im Ergebnis und Rückgabewert 1 — kein Absturz.
 
 **Offen.**
 
-**Nicht bevormunden** (29.09.2026). der Quelltext von journali ist öffentlich einsehbar (Source Available, ELv2); wer `scriptum.write` hat, kann ohnehin alles, was
+**Nicht bevormunden** (29.09.2026). der Quelltext von journali ist öffentlich einsehbar (AGPL-3.0); wer `scriptum.write` hat, kann ohnehin alles, was
 der Serverprozess kann (er könnte längst per `fetch` Fremdcode ziehen). Einen Anwender mit erteilten Rechten davor zu
 schützen ist **nicht unsere Aufgabe** — das Sicherheitsnetz sind die gestaffelten Umgebungen des Betreibers
 (dev→test→preview→prod), nicht paternalistischer Produktcode. Was bleibt, ist **kein** Paternalismus, sondern Schutz

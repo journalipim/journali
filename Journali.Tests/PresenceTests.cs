@@ -14,10 +14,10 @@ public class PresenceTests
     public void Wer_hier_ist_sieht_die_anderen_aber_nicht_sich_selbst()
     {
         var p = new Presence(null);
-        Assert.Empty(p.Puls("taloan", "v-1", Jetzt));                       // allein
-        Assert.Equal(["taloan"], p.Puls("admin", "v-1", Jetzt));            // admin sieht taloan
-        Assert.Equal(["admin"], p.Puls("taloan", "v-1", Jetzt));            // und umgekehrt
-        Assert.Empty(p.Puls("taloan", "v-2", Jetzt));                       // woanders ist niemand
+        Assert.Empty(p.Puls("u1", "v-1", Jetzt));                       // allein
+        Assert.Equal(["u1"], p.Puls("admin", "v-1", Jetzt));            // admin sieht u1
+        Assert.Equal(["admin"], p.Puls("u1", "v-1", Jetzt));            // und umgekehrt
+        Assert.Empty(p.Puls("u1", "v-2", Jetzt));                       // woanders ist niemand
     }
 
     [Fact]
@@ -25,18 +25,18 @@ public class PresenceTests
     {
         var p = new Presence(null);
         p.Puls("admin", "v-1", Jetzt);
-        Assert.Equal(["admin"], p.Puls("taloan", "v-1", Jetzt));
+        Assert.Equal(["admin"], p.Puls("u1", "v-1", Jetzt));
         var spaeter = Jetzt + Presence.Gilt + TimeSpan.FromSeconds(1);
-        Assert.Empty(p.Puls("taloan", "v-1", spaeter));                     // admin hat seither nicht gepulst
+        Assert.Empty(p.Puls("u1", "v-1", spaeter));                     // admin hat seither nicht gepulst
     }
 
     [Fact]
     public void Ohne_Ort_und_ohne_Namen_passiert_nichts()
     {
         var p = new Presence(null);
-        Assert.Empty(p.Puls("taloan", null, Jetzt));
-        Assert.Empty(p.Puls("taloan", "", Jetzt));
+        Assert.Empty(p.Puls("u1", null, Jetzt));
+        Assert.Empty(p.Puls("u1", "", Jetzt));
         p.Puls(null, "v-1", Jetzt);                                        // ohne Anmeldung: nur schauen, nicht melden
-        Assert.Empty(p.Puls("taloan", "v-1", Jetzt));
+        Assert.Empty(p.Puls("u1", "v-1", Jetzt));
     }
 }

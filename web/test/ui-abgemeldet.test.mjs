@@ -7,7 +7,7 @@ import { istAbgemeldet } from '../src/abgemeldet.js'
 import { readFileSync } from 'node:fs'
 
 test('die Anmeldeseite gilt immer als abgemeldet', () => {
-  assert.equal(istAbgemeldet('/login', { enabled: true, user: 'taloan' }), true, 'auch mit einem alten Benutzer im Zustand')
+  assert.equal(istAbgemeldet('/login', { enabled: true, user: 'u1' }), true, 'auch mit einem alten Benutzer im Zustand')
   assert.equal(istAbgemeldet('/login', { enabled: false }), true)
 })
 
@@ -17,7 +17,7 @@ test('mit Benutzern in der Instanz, aber ohne Sitzung, ist man abgemeldet — wo
 })
 
 test('angemeldet, oder eine Instanz ohne Benutzer: nichts ist ausgeblendet', () => {
-  assert.equal(istAbgemeldet('/tree', { enabled: true, user: 'taloan' }), false)
+  assert.equal(istAbgemeldet('/tree', { enabled: true, user: 'u1' }), false)
   assert.equal(istAbgemeldet('/tree', { enabled: false, user: null }), false, 'ohne Benutzer bleibt alles offen')
   assert.equal(istAbgemeldet('/tree', undefined), false)
 })

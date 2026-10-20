@@ -24,7 +24,7 @@ async function seite() {
   store.auth = { known: true, enabled: true, setup: false, user: null }
   const w = mount(LoginView, { global: { provide: { [routerKey]: router } } })
   await flushPromises()
-  await w.find('input[type=text]').setValue('taloan'); await w.find('input[type=password]').setValue('falsch')
+  await w.find('input[type=text]').setValue('u1'); await w.find('input[type=password]').setValue('falsch')
   return w
 }
 

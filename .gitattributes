@@ -1,5 +1,5 @@
 # Plugins werden über ihre Dateien signiert — Byte für Byte (certificate.json, tools/plugin-cert.mjs,
 # Journali.Server/PluginSeal.cs). Unter Windows schreibt Git sonst CRLF (core.autocrlf) und das Siegel bricht,
-# obwohl niemand etwas geändert hat (Taloan, 24.09.2026). Darum: Plugins immer mit LF auschecken; Binärdateien
+# obwohl niemand etwas geändert hat (24.09.2026). Darum: Plugins immer mit LF auschecken; Binärdateien
 # erkennt text=auto und lässt sie, wie sie sind.
 plugins/** text=auto eol=lf

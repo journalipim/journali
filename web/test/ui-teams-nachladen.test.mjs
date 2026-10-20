@@ -30,7 +30,7 @@ const ruhe = async () => { for (let i = 0; i < 4; i++) { await flushPromises(); 
 
 test('ein neuer Journalstand lädt die Teams nach', async () => {
   const abrufe = server([{ key: 'init', label: 'Init Team', payer: 'init', managers: [], keys: [], primary: true }])
-  store.auth = { known: true, enabled: true, user: 'taloan', role: 'admin', rights: ['read', 'team', 'users'] }
+  store.auth = { known: true, enabled: true, user: 'u1', role: 'admin', rights: ['read', 'team', 'users'] }
   store.head = 100
   const w = mount(TeamsSettings); await ruhe()
   const vorher = abrufe.filter(p => p === '/api/teams').length
