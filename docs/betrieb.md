@@ -240,6 +240,10 @@ Image zieht dadurch nur dieser eine Server; für andere Rechner im Netz bräucht
 Die Vorlage bringt Port 8080, das Datenverzeichnis (`/data/jobs` → `appdata/journali`: Verbindung zur Datenbank, Jobs,
 Schnappschuss, Spiegel) und `JOURNALI_MEDIA` mit.
 
+**Das Plugin ixp** liegt nicht in diesem Repo, sondern in einem eigenen auf der Gitea (`journali-ixp`, 22.10.2026); der Bau holt es
+nach `plugins/ixp` und bricht ab, wenn das Repo fehlt. Das Image von GitHub (`ghcr.io`) enthält es nicht. Zum Entwickeln liegt eine
+Kopie unter `plugins/ixp` (in `.gitignore`), etwa mit `git clone <gitea>/<besitzer>/journali-ixp.git plugins/ixp`.
+
 **Ein neuer Stand:** Push auf `master` — der Runner baut, und das Image liegt danach fertig im Docker des Servers.
 Dann im Docker-Tab von *Basic View* auf *Advanced View* umschalten und am Container **force update** klicken; er wird
 mit dem neuen Image neu erstellt. Unraid meldet den Stand dieser Registry nicht von selbst („not available" statt

@@ -7,8 +7,13 @@ import { win } from './ui.mjs'
 import { mount } from '@vue/test-utils'
 import { routerKey } from 'vue-router'
 import { api } from '../src/api.js'
-import { ixpUeber } from '../../plugins/ixp/core.mjs'
 import { solr, holenUeber } from '../../plugins/solr/solr.js'
+// Das Plugin ixp liegt nicht im öffentlichen Repo (22.10.2026, eigenes Repo auf der Gitea, der Bau dort holt es ins Image). Fehlt
+// plugins/ixp, werden seine Tests übersprungen.
+import fs from 'node:fs'
+const IXP = fs.existsSync(new URL('../../plugins/ixp/core.mjs', import.meta.url))
+const ixpTest = IXP ? test : test.skip
+const { ixpUeber } = IXP ? await import('../../plugins/ixp/core.mjs') : {}
 
 const router = { push() {}, replace() {}, currentRoute: { value: { path: '/', query: {} } } }
 
@@ -30,7 +35,7 @@ async function welt(art, antwort) {
 }
 const warte = async w => { for (let i = 0; i < 5; i++) { await new Promise(r => setTimeout(r, 0)); await w.vm.$nextTick() } }
 
-test('IXP: der Zugang ist eine Auswahl, ein Token-Feld gibt es nicht, gelesen wird über die Weiterleitung', async () => {
+ixpTest('IXP: der Zugang ist eine Auswahl, ein Token-Feld gibt es nicht, gelesen wird über die Weiterleitung', async () => {
   const { w, rufe, direkt, ende } = await welt('ixp', pfad => pfad.startsWith('/documents/languages') ? [{ code: 'de', languageName: 'Deutsch' }] : [])
   try {
     assert.equal(w.findAll('input[type="password"]').length, 0, 'kein Token im Browser')
@@ -68,8 +73,10 @@ test('Solr: mit Zugang kein JSONP-Skript im Dokument, gelesen wird über die Wei
 test('die Clients über einen Zugang kennen nur den Pfad hinter der Adresse', async () => {
   const pfade = []
   const holen = async p => { pfade.push(decodeURIComponent(p.split('path=')[1])); return [] }
-  await ixpUeber('quelle', holen).roots()
-  assert.equal(pfade.at(-1), '/documents/root?_limit=100')
+  if (IXP) {
+    await ixpUeber('quelle', holen).roots()
+    assert.equal(pfade.at(-1), '/documents/root?_limit=100')
+  }
   const s = solr('', holenUeber('kern', async p => { pfade.push(decodeURIComponent(p.split('path=')[1])); return { response: { numFound: 7, docs: [] } } }))
   assert.equal(await s.count(), 7)
   assert.match(pfade.at(-1), /^\/select\?q=\*%3A\*.*&wt=json$/)

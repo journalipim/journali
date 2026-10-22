@@ -4,7 +4,12 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 
 const { solr } = await import('../../plugins/solr/solr.js')
-const { analyse } = await import('../../plugins/ixp/core.mjs')
+// Das Plugin ixp liegt nicht im öffentlichen Repo (22.10.2026, eigenes Repo auf der Gitea, der Bau dort holt es ins Image). Fehlt
+// plugins/ixp, werden seine Tests übersprungen.
+import fs from 'node:fs'
+const IXP = fs.existsSync(new URL('../../plugins/ixp/core.mjs', import.meta.url))
+const ixpTest = IXP ? test : test.skip
+const { analyse } = IXP ? await import('../../plugins/ixp/core.mjs') : {}
 
 test('Solr: zaehle fragt numFound des Teilbaums mit rows=0 — kein Dokument kommt mit', async () => {
   const gefragt = []
@@ -15,7 +20,7 @@ test('Solr: zaehle fragt numFound des Teilbaums mit rows=0 — kein Dokument kom
   assert.deepEqual(q.getAll('fq'), ['main_path_id:"g-1"'])
 })
 
-test('IXP: mit hoechstens bricht die Analyse beim Laden ab, mit der Meldung der Ansicht; ohne Grenze lädt sie alles', async () => {
+ixpTest('IXP: mit hoechstens bricht die Analyse beim Laden ab, mit der Meldung der Ansicht; ohne Grenze lädt sie alles', async () => {
   // ein Baum: eine Gruppe mit 30 Produkten
   const kinder = Array.from({ length: 30 }, (_, i) => ({ id: 'p' + i, masterId: 'mp' + i, type: 'product' }))
   const client = { languages: async () => [{ code: 'de' }], versions: async () => [], children: async id => id === 'g' ? kinder : [], properties: async () => ({}) }

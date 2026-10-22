@@ -40,7 +40,10 @@ public class TarifPluginsTests
         var dir = AppContext.BaseDirectory;
         while (dir is not null && !Directory.Exists(Path.Combine(dir, "plugins"))) dir = Path.GetDirectoryName(dir);
         Assert.NotNull(dir);
-        var imRepo = Directory.GetDirectories(Path.Combine(dir!, "plugins")).Where(d => File.Exists(Path.Combine(d, "plugin.json"))).Select(Path.GetFileName).Order().ToArray();
+        // ixp liegt in einem eigenen Repo auf der Gitea (22.10.2026); der Bau dort holt es nach plugins/ixp — im Katalog steht es trotzdem
+        string[] eigenesRepo = ["ixp"];
+        var imRepo = Directory.GetDirectories(Path.Combine(dir!, "plugins")).Where(d => File.Exists(Path.Combine(d, "plugin.json"))).Select(Path.GetFileName)
+            .Union(eigenesRepo).Order().ToArray();
         Assert.Equal(imRepo, Tarife.Katalog.Select(k => k.Key).Order().ToArray());
         foreach (var t in Tarife.Saat.Alle) foreach (var p in t.Plugins ?? new HashSet<string>()) Assert.Contains(p, Tarife.Katalog.Select(k => k.Key));
     }

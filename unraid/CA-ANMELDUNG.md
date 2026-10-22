@@ -22,8 +22,9 @@ Ein Thread im Unraid-Forum ist keine Pflicht. Die Schritte mit eigenen Konten (G
    Testläufe, dann den alten Stand als Zweig `archiv/vor-umschreiben` auf die Gitea und den neuen mit `--force-with-lease`
    nach `origin` und `github`. Danach auf jedem Rechner einmal `git fetch` und `git reset --hard origin/master`, und in
    `journali-lizenz` das Submodul auf den neuen Stand.
-2. **Interne Plugins** — entscheiden, ob jedes Plugin unter `plugins/` öffentlich sein soll (`"intern": true` im Manifest).
-   Wenn nicht: im selben Umschreiben aus dem Verlauf nehmen (`--path plugins/<key> --invert-paths`) und aus dem Image.
+2. **Plugin ixp** — liegt seit 22.10.2026 in einem eigenen Repo auf der Gitea, nicht mehr hier. Aus dem Verlauf kommt es im
+   selben Umschreiben (`--path plugins/ixp --invert-paths`). Ältere Fassungen des Pakets auf ghcr.io enthalten es noch: vor dem
+   Öffentlichstellen alle Fassungen bis einschliesslich der letzten mit ixp löschen (*Package settings* → *Manage versions*).
 3. **Repo öffentlich** — GitHub → `journalipim/journali` → *Settings* → *Change visibility* → **Public**.
 4. **Image öffentlich** — GitHub → Organisation → *Packages* → `journali` → *Package settings* → *Change visibility* →
    **Public**. Ein öffentliches Paket lässt sich nicht wieder auf privat stellen. Ohne Anmeldung prüfen:

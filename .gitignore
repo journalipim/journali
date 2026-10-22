@@ -26,6 +26,8 @@ Journali.Server/jobs/
 # Ausgaben der Export-Jobs (Arbeitsverzeichnis ist das Plugin) — nie im Repo
 plugins/xport/export/
 plugins/*/node_modules/
+# Plugin ixp: eigenes Repo auf der Gitea (journali-ixp), nie im öffentlichen Repo — lokal darf es hier liegen
+plugins/ixp/
 # Plugin embed: das geladene Modell — kommt beim ersten Lauf, nie ins Repo
 plugins/embed/.cache/
 # Plugin ocr: die Sprachdaten der Erkennung — kommen beim ersten Lauf, nie ins Repo

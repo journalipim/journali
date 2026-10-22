@@ -7,6 +7,10 @@
 #   Registry   — 127.0.0.1:<Port>, so wie der Docker des Hosts sie sieht; ohne https nimmt Docker nur localhost an
 # docker:cli ist Alpine: kein Node (darum keine JS-Aktionen, `git clone` statt actions/checkout) und kein bash (darum
 # `shell: sh`, kein ${x:0:7} und `base64 | tr` statt `base64 -w0`). Einrichtung: docs/betrieb.md → Unraid.
+#
+# Das Plugin ixp liegt in einem eigenen Repo auf der Gitea (journali-ixp, 22.10.2026), nie im öffentlichen Repo: sein Quelltext
+# beschreibt eine fremde Schnittstelle. Der Bau holt es nach plugins/ixp; fehlt das Repo, bricht der Bau ab — ein Image ohne
+# ixp soll nicht still das bisherige ersetzen.
 name: docker
 on:
   push:
@@ -30,6 +34,8 @@ jobs:
           auth=$(printf '%s:%s' "$GITHUB_ACTOR" "$TOKEN" | base64 | tr -d '\n')
           git -c http.extraheader="Authorization: Basic $auth" clone --depth 1 -b "$GITHUB_REF_NAME" "$gitea/$GITHUB_REPOSITORY.git" quelle
           cd quelle
+          git -c http.extraheader="Authorization: Basic $auth" clone --depth 1 "$gitea/$GITHUB_REPOSITORY_OWNER/journali-ixp.git" plugins/ixp
+          rm -rf plugins/ixp/.git
           echo "$TOKEN" | docker login "$registry" -u "$GITHUB_ACTOR" --password-stdin
           docker build --pull -t "$bild:latest" -t "$bild:sha-$kurz" .
           docker push "$bild:latest"

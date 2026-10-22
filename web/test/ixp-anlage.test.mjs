@@ -2,8 +2,13 @@
 // der Varianten, lesbare Bezeichnungen. Eine Gruppe, die es schon gibt oder die der Anwender gewählt hat, bleibt, wie sie ist.
 import test from 'node:test'
 import assert from 'node:assert/strict'
+// Das Plugin ixp liegt nicht im öffentlichen Repo (22.10.2026, eigenes Repo auf der Gitea, der Bau dort holt es ins Image). Fehlt
+// plugins/ixp, werden seine Tests übersprungen.
+import fs from 'node:fs'
+const IXP = fs.existsSync(new URL('../../plugins/ixp/core.mjs', import.meta.url))
+const ixpTest = IXP ? test : test.skip
 
-const { planSummary, run } = await import('../../plugins/ixp/core.mjs')
+const { planSummary, run } = IXP ? await import('../../plugins/ixp/core.mjs') : {}
 
 const prop = (level, extra = {}) => ({ count: 3, html: false, classes: [], values: [], def: null, level, srcType: 'text', ...extra })
 const plan = (props, groupOf = {}, extra = {}) => ({
@@ -12,7 +17,7 @@ const plan = (props, groupOf = {}, extra = {}) => ({
 })
 const model = (groups = []) => ({ groups, attributes: [], lists: [], locales: [{ code: 'de' }] })
 
-test('planSummary: eine neue Gruppe je Ebene, aktiv ab dieser Ebene, vererbbar oberhalb der Varianten, lesbare Bezeichnung', () => {
+ixpTest('planSummary: eine neue Gruppe je Ebene, aktiv ab dieser Ebene, vererbbar oberhalb der Varianten, lesbare Bezeichnung', () => {
   const p = plan({ breite_mm: prop(1), tiefe_mm: prop(1), farbe: prop(2) }, { breite_mm: 'ixp_technik', tiefe_mm: 'ixp_technik', farbe: 'ixp_technik' })
   const s = planSummary(p, model())
   const attr = Object.fromEntries(s.newAttrs.map(a => [a.from, a]))
@@ -24,19 +29,19 @@ test('planSummary: eine neue Gruppe je Ebene, aktiv ab dieser Ebene, vererbbar o
   assert.equal(s.groupDefs.get('ixp_technik_variant').activeFrom, 'variant')
 })
 
-test('planSummary: ein Thema auf einer Ebene behält seinen Namen', () => {
+ixpTest('planSummary: ein Thema auf einer Ebene behält seinen Namen', () => {
   const s = planSummary(plan({ farbe: prop(2), gewicht: prop(2) }, { farbe: 'ixp_technik', gewicht: 'ixp_technik' }), model())
   assert.deepEqual(s.newGroups, ['ixp_technik'])
   assert.deepEqual(s.groupDefs.get('ixp_technik'), { label: { de: 'Technik', en: 'Technik' }, activeFrom: 'variant' })
 })
 
-test('planSummary: eine Gruppe, die es schon gibt, bleibt — nur vererbbar wird das Attribut, wo es oberhalb der Varianten steht', () => {
+ixpTest('planSummary: eine Gruppe, die es schon gibt, bleibt — nur vererbbar wird das Attribut, wo es oberhalb der Varianten steht', () => {
   const s = planSummary(plan({ breite_mm: prop(1), farbe: prop(2) }, { breite_mm: 'ixp_technik', farbe: 'ixp_technik' }), model([{ key: 'ixp_technik', defined: true }]))
   assert.deepEqual(s.newGroups, []); assert.equal(s.groupDefs.size, 0)
   assert.deepEqual(s.newAttrs.map(a => [a.from, a.group, a.inheritable]), [['breite_mm', 'ixp_technik', true], ['farbe', 'ixp_technik', false]])
 })
 
-test('run: legt die Gruppen mit „aktiv ab“ an und schreibt vererbbare Attribute mit lesbarer Bezeichnung', async () => {
+ixpTest('run: legt die Gruppen mit „aktiv ab“ an und schreibt vererbbare Attribute mit lesbarer Bezeichnung', async () => {
   const gesendet = [], gesagt = []
   const env = {
     api: { get: async () => ({ groups: [], attachedGroups: [], values: [] }), post: async (p, b, m) => { gesendet.push([m ?? 'POST', p, b]); return { results: [], batch: 'b' } }, batchChunked: async () => ({ batch: 'b', results: [], errors: [], refs: new Map() }) },
@@ -54,7 +59,7 @@ test('run: legt die Gruppen mit „aktiv ab“ an und schreibt vererbbare Attrib
   assert.ok(gesagt.some(z => z.startsWith('Gruppe ixp_technik_product (ab product) angelegt')), gesagt.join('\n'))
 })
 
-test('planSummary: Wörter mit Umlaut in den Namen der Quelle machen aus dem Schlüssel einen Namen mit Umlaut', () => {
+ixpTest('planSummary: Wörter mit Umlaut in den Namen der Quelle machen aus dem Schlüssel einen Namen mit Umlaut', () => {
   const p = plan({ schluesselweite_mm: prop(2), kraft_n: prop(2) }, { schluesselweite_mm: 'ixp_technik', kraft_n: 'ixp_technik' }, { items: [{ role: 'variant', doc: { name: 'Ölschauglas Sechskant' } }, { role: 'variant', doc: { name: 'Schlüsselweite' } }] })
   const s = planSummary(p, model())
   assert.equal(s.newAttrs.find(a => a.from === 'schluesselweite_mm').label, 'Schlüsselweite mm')
