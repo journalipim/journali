@@ -18,12 +18,20 @@ Ein Thema in Arbeit; die nächste Sitzung liest hier weiter, an welchem Rechner 
   Icon, `ca_profile.xml` und das Image antworten mit 200, `plugins/ixp` mit 404, auf GitHub nur der Zweig `master`).
 - Die Organisation musste öffentliche Pakete erst erlauben (Organisation → Settings → Packages → Package creation → Public).
 
+## Eingereicht (22.10.2026)
+
+- Bei <https://ca.unraid.net/submit> eingereicht, Anzeigename „journali's Repository“ (der Name „Taloan's Repository“ war vergeben).
+  Scan: 3 Docker-Apps (journali, journali-db, journali-advisor), alle Images abrufbar; zwei Hinweise, die nicht stoppen:
+  `not_unraid_application: 5` (fünf XML-Dateien der Plugins, keine Vorlagen) und ein Duplikat (`journali-db` nutzt
+  `pgvector/pgvector:pg18` wie eine vorhandene App — Moderation prüft).
+
 ## Offen
 
-1. Selbst installieren: `unraid/journali-db.xml` und `unraid/journali.xml` auf dem Unraid als Vorlage, Datenbank zuerst.
-2. Bei <https://ca.unraid.net/submit> einreichen (Validate, Scan — erwartet sind drei Apps —, Submit); Schritte in
-   `unraid/CA-ANMELDUNG.md`.
-3. Ob die CA-Moderation eine AGPL-App mit einer Marke und einem Tarifmodell aufnimmt, zeigt die Prüfung.
+1. Auf die Moderation warten (einige Tage). Rückfragen kommen vom Unraid-Konto des Anwenders; bei geänderten Vorlagen danach im
+   Submit-Bereich erneut Validate und Scan.
+2. Selbst installieren aus dem öffentlichen Image (`unraid/journali-db.xml`, `unraid/journali.xml`) und prüfen, was ein fremder
+   Anwender sieht — noch nicht gemacht.
+3. Fragen zur Lizenz (AGPL-3.0), zur Marke „journali PIM“ und zum Duplikat: kurz und sachlich auf Englisch beantworten.
 
 ## Auf anderen Rechnern
 
