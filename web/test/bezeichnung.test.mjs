@@ -12,7 +12,7 @@ const dateien = dir => fs.readdirSync(path.join(root, dir), { recursive: true })
 
 test('die frühere Lizenz steht nirgends mehr, wo ein Leser sie sieht', () => {
   const treffer = []
-  for (const f of ['README.md', 'CONTRIBUTING.md', 'THIRD-PARTY-NOTICES.md', ...dateien('help'), ...dateien('blog'), ...dateien('site'), ...dateien('web/src'), 'web/public/lang/en.json'])
+  for (const f of ['README.md', 'README.de.md', 'CONTRIBUTING.md', 'SECURITY.md', 'THIRD-PARTY-NOTICES.md', ...dateien('help'), ...dateien('blog'), ...dateien('site'), ...dateien('web/src'), 'web/public/lang/en.json'])
     fs.readFileSync(path.join(root, f), 'utf8').split('\n').forEach((z, i) => {
       if (/Elastic License|ELv2|source[ -]available/i.test(z)) treffer.push(`${f}:${i + 1}`)
     })

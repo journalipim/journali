@@ -1,4 +1,32 @@
-# Sicherheit
+# Security
+
+## Reporting a vulnerability
+
+A vulnerability does not belong in a public issue. Report it confidentially through GitHub: in the repository under
+**Security → Report a vulnerability**. Only the reporter and journali see the report.
+
+Helpful are: the affected version (at the top of the user interface), what can be exploited and how, and whether it is
+already being exploited.
+
+## What happens then
+
+1. journali confirms receipt and checks the report.
+2. The vulnerability is rated and fixed; the fix comes with a new version.
+3. The release notes name the fixed vulnerability; if needed there is an identifier (CVE) and a security advisory in the repository.
+4. journali reports an actively exploited vulnerability as manufacturer where the Cyber Resilience Act (EU 2024/2847) requires it.
+
+## Which versions get fixes
+
+Security fixes are provided for the latest released version. They are free of charge.
+
+## Known bugs
+
+Serious bugs, especially those with a risk of data loss, are listed in [BEKANNTE-FEHLER.md](BEKANNTE-FEHLER.md) and in the
+release notes of the version that fixes them.
+
+---
+
+## Sicherheit (deutsch)
 
 ## Eine Schwachstelle melden
 
