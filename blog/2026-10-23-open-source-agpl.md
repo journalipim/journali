@@ -7,6 +7,7 @@ categories: [Entwicklung]
 date: 2026-10-23 06:00
 description: journali ist Open Source unter der AGPL-3.0: Quellcode und Image sind öffentlich – nutzen, ändern, weitergeben und selbst betreiben.
 keyphrase: Open Source
+wp: 327
 ---
 **journali ist Open Source.** Seit dem 22. Oktober 2026 liegt der Quellcode öffentlich auf GitHub, das Image dazu ist öffentlich, und die Lizenz ist die **GNU Affero General Public License, Version 3 (AGPL-3.0)**. Ihr könnt journali lesen, starten, ändern und selbst betreiben.
 

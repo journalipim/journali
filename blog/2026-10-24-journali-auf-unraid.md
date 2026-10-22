@@ -7,6 +7,7 @@ categories: [Entwicklung]
 date: 2026-10-24 06:00
 description: journali auf Unraid: Vorlagen für Server, Datenbank und Produktberater – in wenigen Schritten als App, mit dem öffentlichen Image.
 keyphrase: journali auf Unraid
+wp: 328
 ---
 **journali läuft auf Unraid wie jede andere App.** Drei Vorlagen liegen im öffentlichen Repository: eine für den **Server**, eine für die **Datenbank** und eine für den **Dienst eines Produktberaters**. Das Image `ghcr.io/journalipim/journali` ist öffentlich, ihr braucht kein Konto dafür.
 
