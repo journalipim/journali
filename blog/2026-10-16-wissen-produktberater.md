@@ -97,11 +97,11 @@ Treffer, Rückfragen, Vergleich und Auszüge aus den Unterlagen entstehen ohne S
 - **Assoziationen:** Ein Wort, das in keinem Produkt steht, sucht über verbundene Wörter aus dem Sortiment: zu „festival“ nach „zelt“ und „camping“. Das Plugin bringt über 25 000 Assoziationen in Deutsch und Englisch mit.
 - **Unterlagen:** Was in keinem Attribut steht, etwa wie man einen klemmenden Reißverschluss gängig macht, nennt er als Abschnitt eines Dokuments mit Seite, aus dem Dokumentindex von journali.
 
-Mit dem Plugin `embed` sucht er auch nach dem Sinn, auf dem eigenen Server: „hält Hitze aus“ findet „temperaturbeständig bis 120 °C“. Ein Prüfstand spielt 17 Gespräche mit erwarteter Antwort gegen echte Daten. Ändert sich ein Attribut oder eine Werteliste in journali, gilt das im nächsten Gespräch; eine zweite Liste von Synonymen gibt es nicht.
+Mit dem Plugin `embed` sucht er auch nach dem Sinn, auf dem eigenen Server: „hält Hitze aus“ findet „temperaturbeständig bis 120 °C“. Ein Prüfstand spielt 19 Gespräche mit erwarteter Antwort gegen echte Daten. Ändert sich ein Attribut oder eine Werteliste in journali, gilt das im nächsten Gespräch; eine zweite Liste von Synonymen gibt es nicht.
 
 ### Was eine KI ergänzt
 
-Am Berater lässt sich die KI eines Teams einschalten, mit dessen Schlüssel und Verbrauch. Sie schreibt zwei bis vier Sätze zu den ersten fünf Treffern, im Fenster gekennzeichnet als „Text von einer KI erstellt“, und übersetzt, was die Regeln nicht erkannt haben, in Filter – nur aus Attributen und Werten der Sicht, vom Server geprüft. Sie bekommt die Treffer mit ihren Werten und keine Werkzeuge; ein Satz in den Produktdaten, der wie eine Anweisung aussieht, kann darum nichts auslösen. Welche Produkte passen, entscheidet journali. Fehlt der Schlüssel oder ist die Tagesgrenze erreicht, kommt die Antwort ohne Text, mit denselben Treffern.
+Am Berater lässt sich die KI eines Teams einschalten, mit dessen Schlüssel und Verbrauch. Sie schreibt zwei bis vier Sätze zu den ersten fünf Treffern, im Fenster gekennzeichnet als „Text von einer KI erstellt“, und übersetzt, was die Regeln nicht erkannt haben, in Filter – nur aus Attributen und Werten der Sicht, vom Server geprüft. Sie bekommt die Treffer mit ihren Werten; Werkzeuge hat sie nur aus Quellen, die der Betreiber freigibt, und deren Ergebnisse gelten als Daten, nicht als Anweisung. Welche Produkte passen, entscheidet journali. Anrede („Sie“ oder „du“) und Ton (sachlich, freundlich, locker) der Texte stellt der Betreiber am Berater ein. Fehlt der Schlüssel oder ist die Tagesgrenze erreicht, kommt die Antwort ohne Text, mit denselben Treffern.
 
 ### MCP-Werkzeuge für KI-Agenten
 
@@ -110,14 +110,14 @@ Der Dienst des Beraters bedient unter `/mcp` einen MCP-Server (Streamable HTTP, 
 ### Website, Container, Token
 
 - **Einbindung:** ein `<script>`-Tag; das Fenster erscheint schwebend oder mit `data-target` in einem Element der Seite, auf Deutsch oder Englisch. Es läuft im Shadow DOM, setzt kein Cookie und speichert nichts im Browser.
-- **Eigener Container:** Der Dienst läuft aus `node:22-alpine` mit dem Verzeichnis des Plugins, ohne npm-Pakete und ohne Datenbank. Nur er ist von außen erreichbar; der journali-Server bleibt im internen Netz.
+- **Eigener Container:** Der Dienst läuft aus `node:22-alpine` mit dem Verzeichnis des Plugins, ohne npm-Pakete und ohne Datenbank. Nur er ist von außen erreichbar; der journali-Server bleibt im internen Netz. Auf Unraid läuft der Dienst aus demselben Image wie journali.
 - **Token je Berater:** Es liegt als Hash im Tresor, liest mit der Rolle des Beraters und erreicht nur dessen Fragen.
 - **Grenzen und Herkunft:** Je Besucheradresse 20 Fragen je Minute und 300 je Tag (Vorgabe); nur eingetragene Websites dürfen das Fenster einbinden.
 - **Besucherdaten:** Das Gespräch hält der Dienst unter einer zufälligen Kennung im Arbeitsspeicher, 30 Minuten nach der letzten Eingabe ist es weg; nichts davon kommt ins Journal.
 
 ### Was offen ist
 
-Preise und Verfügbarkeit kennt der Berater nur, soweit sie Attribute der Sicht sind; ein Verweis vom Treffer in den Shop fehlt. Geplant und nicht gebaut ist, dass journali fremde MCP-Server, etwa einer Warenwirtschaft, mit einer Freigabeliste lesender Werkzeuge anbindet. Als Konzept entschieden ist ein kurzlebiger, vom Shop signierter Nachweis für angemeldete Kunden, mit dem journali Kundenpreise anfragt.
+Preise und Verfügbarkeit kennt der Berater, soweit sie Attribute der Sicht sind oder – mit KI – aus freigegebenen Quellen kommen; ein Verweis vom Treffer in den Shop fehlt. Gebaut ist, dass journali fremde MCP-Server, etwa einer Warenwirtschaft, anbindet und die KI die am Berater angekreuzten Werkzeuge aufruft. Gebaut ist auch ein kurzlebiger, vom Shop signierter Nachweis für angemeldete Kunden: Mit gültigem Nachweis liest der Berater mit der Sicht für Kunden. Noch nicht gebaut ist, dass journali mit dem Nachweis Kundenpreise beim Shop anfragt.
 
 Verwandte Themen: [MCP – das Model Context Protocol erklärt](https://journali.de/2026/09/20/mcp-model-context-protocol-erklaert/), [RAG – Retrieval-Augmented Generation erklärt](https://journali.de/2026/10/04/rag-retrieval-augmented-generation-erklaert/), [GEO – Generative Engine Optimization erklärt](https://journali.de/2026/09/26/geo-generative-engine-optimization-erklaert/).
 

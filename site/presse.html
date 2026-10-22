@@ -26,8 +26,9 @@
 <li><b>Art:</b> PIM-System (Produktinformationsmanagement) für Hersteller technischer Produkte, Händler mit Varianten, IT-Abteilungen und Agenturen.</li>
 <li><b>Name:</b> „journali PIM“ ist eine beim Deutschen Patent- und Markenamt angemeldete Marke.</li>
 <li><b>Status:</b> Pre-Release · 2026. Bis zum produktiven Release erscheint journali als Testversion, ausschließlich zu Test- und Evaluationszwecken; die Beschreibungen auf journali.de beziehen sich auf das produktive Release.</li>
-<li><b>Lizenz:</b> GNU Affero General Public License, Version 3 (AGPL-3.0), eine Open-Source-Lizenz. Andere Lizenzbedingungen sind auf Anfrage möglich; die Repositories auf GitHub sind noch nicht öffentlich.</li>
-<li><b>Betrieb:</b> Docker-Paket (Docker Compose) mit PostgreSQL 18, selbst betrieben. Medien liegen wahlweise in Postgres, im Dateisystem oder in S3-kompatiblem Object Storage; der Wechsel ist ein Kopierlauf.</li>
+<li><b>Lizenz:</b> GNU Affero General Public License, Version 3 (AGPL-3.0), eine Open-Source-Lizenz. Der Quellcode ist seit dem 22. Oktober 2026 öffentlich. Andere Lizenzbedingungen sind auf Anfrage möglich; der Name „journali PIM“ ist von der Lizenz ausgenommen.</li>
+<li><b>Veröffentlichung:</b> Quellcode auf GitHub (<a href="https://github.com/journalipim/journali">journalipim/journali</a>), Image <code>ghcr.io/journalipim/journali</code> öffentlich. Vorlagen für Unraid (journali, Datenbank, Produktberater) sind bei den Community Applications eingereicht; die Prüfung läuft.</li>
+<li><b>Betrieb:</b> Docker-Paket (Docker Compose) mit PostgreSQL 18 oder App auf Unraid, selbst betrieben. Medien liegen wahlweise in Postgres, im Dateisystem oder in S3-kompatiblem Object Storage; der Wechsel ist ein Kopierlauf.</li>
 <li><b>Technik:</b> Server mit ASP.NET Core (.NET 8), Oberfläche mit Vue 3; Erweiterungen als Plugins, die ohne neues Image ausgetauscht werden.</li>
 </ul>
 
@@ -40,10 +41,11 @@
 <li><b>PPWR:</b> Material, Gewicht, Recyclinganteil und Wiederverwendbarkeit je Verpackungseinheit werden für ganze Teilbäume geprüft.</li>
 <li><b>EmpCo:</b> Das Plugin liest alle Texte je Sprache und zeigt, welche Umweltaussagen unzulässig oder nachweispflichtig sind.</li>
 <li><b>ETIM und GS1 GPC:</b> Klassen zuweisen, Merkmale auf eigene Attribute abbilden, Vollständigkeit je Klasse sehen; Ausleitung als ETIM-BMEcat.</li>
-<li><b>KI mit eigenem Schlüssel:</b> Den Anbieter wählt der Anwender und bringt seinen eigenen Schlüssel mit; jeder Vorschlag wird übernommen, geändert oder verworfen und steht mit Urheber im Journal.</li>
+<li><b>KI mit eigenem Schlüssel:</b> Den Anbieter wählt das Team und bringt seinen eigenen Schlüssel mit, der Schlüssel liegt beim Server; jeder Vorschlag wird übernommen, geändert oder verworfen und steht mit Urheber im Journal.</li>
 <li><b>GEO:</b> Texte für Suchmaschinen und KI-Antworten aus den echten Produktdaten, dazu Schema.org-Product-JSON-LD je Produkt.</li>
 <li><b>RAG:</b> Der RAG-Export erzeugt je Produkt und Sprache ein zitierfähiges Markdown-Dokument und eine nodes.jsonl mit Metadaten.</li>
-<li><b>Produktberater mit MCP:</b> Ein Chat-Fenster für die eigene Website antwortet aus den Produkten eines Publikationsbaums, auch ohne KI; KI-Agenten stellen dieselben Fragen über MCP.</li>
+<li><b>Produktberater mit MCP:</b> Ein Chat-Fenster für die eigene Website antwortet aus den Produkten eines Publikationsbaums, auch ohne KI; KI-Agenten stellen dieselben Fragen über MCP. Anrede (Sie oder du) und Ton der KI-Texte sind einstellbar, die KI kann über MCP auf eigene Quellen zugreifen, angemeldete Kunden sehen mit einem vom Shop signierten Nachweis eine eigene Sicht. Der Dienst läuft im eigenen Container, auch auf Unraid.</li>
+<li><b>journali advisor:</b> Ein Assistent für die Bedienung beantwortet Fragen nach dem Wie, Wo und Warum aus der Hilfe, nennt Orte in der Oberfläche als Link und die Gründe aus den Daten eines Knotens.</li>
 </ul>
 </section>
 
@@ -56,6 +58,7 @@
 <div class="card"><h3>EmpCo – Umweltaussagen</h3><p>Die Richtlinie (EU) 2024/825 verbietet seit dem 27. September 2026 pauschale Umweltaussagen und verlangt Nachweise. <a href="https://journali.de/2026/09/05/empco-umweltaussagen-erklaert/">Wissensseite →</a></p></div>
 <div class="card"><h3>GEO – Generative Engine Optimization</h3><p>Produkttexte, die Suchmaschinen und KI-Antworten zitieren, und strukturierte Daten je Produkt. <a href="https://journali.de/2026/09/26/geo-generative-engine-optimization-erklaert/">Wissensseite →</a></p></div>
 <div class="card"><h3>RAG – Retrieval Augmented Generation</h3><p>Produktdaten als zitierfähige Dokumente für Vektor-Stores und KI-Assistenten. <a href="https://journali.de/2026/10/04/rag-retrieval-augmented-generation-erklaert/">Wissensseite →</a></p></div>
+<div class="card"><h3>KI-Produktberater und Agentic Commerce</h3><p>Wie ein Produktberater Fragen aus Produktdaten beantwortet und was KI-Agenten über MCP von einem Sortiment brauchen. <a href="https://journali.de/2026/10/16/ki-produktberater-agentic-commerce-erklaert/">Wissensseite →</a></p></div>
 <div class="card"><h3>MCP – Model Context Protocol</h3><p>KI-Agenten stellen über MCP Fragen an die Produkte eines Publikationsbaums. <a href="https://journali.de/2026/09/20/mcp-model-context-protocol-erklaert/">Wissensseite →</a></p></div>
 </div>
 </section>
@@ -73,7 +76,8 @@
 <h2>Ausprobieren</h2>
 <ul>
 <li><a href="https://journali.de/journali-testen/">Demo im Browser</a> – ohne Installation, mit zwei erfundenen Beispielkatalogen; Anmeldename und Passwort stehen auf der Seite. Die Demo wird täglich zurückgesetzt.</li>
-<li>journali auf GitHub: <a href="https://github.com/journalipim">github.com/journalipim</a> – dort erscheint der Quelltext, sobald er veröffentlicht ist.</li>
+<li>journali auf GitHub: <a href="https://github.com/journalipim/journali">github.com/journalipim/journali</a> – Quelltext unter der AGPL-3.0, README auf Englisch, <code>README.de.md</code> auf Deutsch.</li>
+<li>Beiträge: <a href="https://journali.de/2026/10/23/open-source-agpl/">journali ist Open Source</a> und <a href="https://journali.de/2026/10/24/journali-auf-unraid/">journali auf Unraid</a>.</li>
 <li>Beiträge zu neuen Funktionen in der Kategorie <a href="https://journali.de/category/entwicklung/">Entwicklung</a>, Fachartikel in der Kategorie <a href="https://journali.de/category/wissen/">Wissen</a>.</li>
 </ul>
 </section>

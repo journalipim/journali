@@ -1,6 +1,6 @@
 ---
 title: journali-advisor – wie der Journali KI Produktberater gebaut ist
-excerpt: Ein eigener Dienst im Container, ein Chat-Fenster als ein Script-Tag, ein MCP-Server für KI-Agenten – der Berater versteht, journali entscheidet, was er zeigt. Dazu, was als Nächstes kommt: weitere Quellen über MCP.
+excerpt: Ein eigener Dienst im Container, ein Chat-Fenster als ein Script-Tag, ein MCP-Server für KI-Agenten – der Berater versteht, journali entscheidet, was er zeigt. Dazu eigene Quellen über MCP und angemeldete Kunden.
 slug: produktberater-technik
 tags: [KI, MCP, RAG, Architektur, Integration, Betrieb]
 categories: [Entwicklung]
@@ -9,14 +9,14 @@ wp: 234
 description: journali-advisor: ein eigener Dienst im Container, das Chat-Fenster als ein Script-Tag, ein MCP-Server für KI-Agenten – so ist der Produktberater gebaut.
 keyphrase: journali-advisor
 ---
-Der [Journali KI Produktberater](/?p=233) beantwortet Fragen von Besuchern eurer Website zu euren Produkten. Technisch heißt er **journali-advisor**: ein Plugin mit dem Schlüssel `advisor`, ein Teil im journali-Server und ein Dienst an eurer Website. **Hier steht, wie die Teile zusammenspielen, was gebaut ist und was als Nächstes kommt.**
+Der [Journali KI Produktberater](/?p=233) beantwortet Fragen von Besuchern eurer Website zu euren Produkten. Technisch heißt er **journali-advisor**: ein Plugin mit dem Schlüssel `advisor`, ein Teil im journali-Server und ein Dienst an eurer Website. Nicht zu verwechseln mit dem **journali advisor**, dem Assistenten für die Bedienung von journali im Menü ?. **Hier steht, wie die Teile zusammenspielen, was gebaut ist und was noch offen ist.**
 
 ## Zwei Teile: journali innen, der Dienst außen
 
 **Eure Besucher erreichen nie den journali-Server.** Zwischen Website und PIM steht ein eigener Dienst:
 
 - **Im Server** stehen die Definition des Beraters (im Journal, als Daten des Plugins), der Bestand je Berater und Sprache und die Fragen unter `/api/advisor/{key}/…`: Vokabular, Auswahl, Unterlagen, KI, dazu Info, Produkt, Variante, Vergleich, Bild und Dokument.
-- **Der Dienst** (`serve.mjs`) läuft in einem **eigenen Container** aus `node:22-alpine` mit dem Verzeichnis des Plugins, nur lesend eingebunden – kein eigenes Image, keine npm-Pakete. Er braucht nur HTTP zu journali, keine Datenbank, keinen Medienspeicher, und die Verbindung zu journali baut immer er auf. In ihm läuft der **Kern** des Beraters: Er versteht die Eingaben und führt das Gespräch.
+- **Der Dienst** (`serve.mjs`) läuft in einem **eigenen Container** aus `node:22-alpine` mit dem Verzeichnis des Plugins, nur lesend eingebunden – kein eigenes Image (auf Unraid dasselbe Image wie journali), keine npm-Pakete. Er braucht nur HTTP zu journali, keine Datenbank, keinen Medienspeicher, und die Verbindung zu journali baut immer er auf. In ihm läuft der **Kern** des Beraters: Er versteht die Eingaben und führt das Gespräch.
 
 Der Reverse Proxy gibt nur den Port des Dienstes nach außen, etwa als `https://advisor.example.com`. Der journali-Server bleibt im internen Netz.
 
@@ -40,7 +40,7 @@ Bilder und Dokumente erscheinen nur, wenn sie heute gelten, freigegeben sind und
 <script src="https://advisor.example.com/widget.js" async></script>
 ```
 
-Mehr braucht eure Website nicht. Das Fenster läuft im **Shadow DOM**, damit Seite und Fenster sich nicht gegenseitig gestalten. Werte aus den Produktdaten setzt es nur als Text, nie als HTML. Wählbar sind `data-locale`, `data-target` (in ein Element statt schwebend) und `data-color`. Der Dienst liefert `widget.js` mit Fingerabdruck aus: Nach einem Update bekommt der Browser sofort das neue Fenster.
+Mehr braucht eure Website nicht. Das Fenster läuft im **Shadow DOM**, damit Seite und Fenster sich nicht gegenseitig gestalten. Werte aus den Produktdaten setzt es nur als Text, nie als HTML. Wählbar sind `data-locale`, `data-target` (in ein Element statt schwebend), `data-color` und `data-customer` (der Nachweis eines angemeldeten Kunden, unten). Der Dienst liefert `widget.js` mit Fingerabdruck aus: Nach einem Update bekommt der Browser sofort das neue Fenster.
 
 ## MCP für KI-Agenten
 
@@ -87,19 +87,40 @@ Dazwischen liegt die **Schnittstelle in Version 2**:
 
 Das Chat-Fenster zeigt nur noch an: Es schickt die Eingabe oder den Klick, der Kern antwortet. Wie gut der Berater antwortet, prüft ein **Prüfstand**: Gespräche mit Eingaben, Klicks und der Antwort, die ein guter Berater geben würde, gespielt gegen eine Instanz.
 
-## Weitere Quellen über MCP – angebunden von journali
+## Eigene Quellen über MCP – angebunden von journali
 
-Preise und Verfügbarkeit aus der Warenwirtschaft, Angaben aus dem Shop: Solche Systeme bieten zunehmend einen eigenen MCP-Server an. **Entschieden ist, wer sie anbindet: journali, nicht das Chat-Fenster und nicht der Dienst.** Der Dienst spricht nur mit journali.
+Preise und Verfügbarkeit aus der Warenwirtschaft, Angaben aus dem Shop: Solche Systeme bieten zunehmend einen eigenen MCP-Server an. **Wer sie anbindet, ist journali – nicht das Chat-Fenster und nicht der Dienst.** Der Dienst spricht nur mit journali. Gebaut ist der erste Schritt:
 
-Der Entwurf dafür, **geplant und noch nicht gebaut**:
+- ein **Zugang der Art MCP-Server** unter ⌁ Zugänge: Adresse und Anmeldung (ohne, Bearer-Token oder eigener Kopf); das **Geheimnis liegt im Tresor** von journali, nie am Dienst an der Website. ⟳ nennt die Zahl der Werkzeuge,
+- am Berater **angekreuzte Werkzeuge**: nur diese bietet journali der KI an – und nur, wenn die KI am Berater eingeschaltet ist,
+- **journali führt jeden Aufruf selbst aus**: höchstens vier je Frage, ein Ergebnis höchstens 6000 Zeichen; danach antwortet die KI mit dem, was da ist,
+- das Protokoll im Log des Servers hält fest, welches Werkzeug gerufen wurde, wie lange es dauerte und ob es ein Ergebnis gab – ohne Inhalt.
 
-- ein **Zugang der Art `mcp`** mit Adresse und Anmeldung (Bearer, eigener Kopf oder OAuth Client Credentials); das **Geheimnis liegt im Tresor** von journali, nie am Dienst an der Website,
-- am Berater eine **Freigabeliste**: welche Werkzeuge welcher Zugänge er nutzen darf – nur lesende, mit Grenze je Besucher und Tag,
-- die KI des Beraters bekommt die freigegebenen Werkzeuge angeboten, **journali führt jeden Aufruf selbst aus** und gibt ihr das Ergebnis,
-- ein Eintrag je Aufruf hält fest, welches Werkzeug gerufen wurde, wie lange es dauerte und ob es ein Ergebnis gab – ohne Inhalt.
+So gibt es Rechte, Grenzen und Protokoll einmal, in journali. Fremde Antworten gehen durch dieselbe Stelle wie eure eigenen Daten: **Sie sind Daten, keine Anweisungen an die KI.** Die KI ruft Werkzeuge nur bei einem Teil der KI-Anbieter auf; bei den anderen antwortet der Berater wie ohne Quellen. Welche Werkzeuge nur lesen, prüft journali nicht – das entscheidet, wer den Berater einrichtet.
 
-So gibt es Rechte, Grenzen und Protokoll einmal, in journali. Und fremde Antworten gehen durch dieselbe Stelle wie eure eigenen Daten: **Sie sind Daten, keine Anweisungen an die KI.**
+**Noch offen:** ob jeder Aufruf als Eintrag im Journal steht (dagegen spricht, dass jede Frage eines Besuchers dann Einträge erzeugt, die sich nie löschen lassen), und eine Anmeldung an der Quelle über OAuth.
+
+## Angemeldete Kunden: ein signierter Nachweis
+
+Der Kunde ist im Shop angemeldet, nicht in journali. Darum stellt der Shop einen Nachweis aus:
+
+1. Der Shop signiert je angemeldetem Kunden ein kurzlebiges JWT (ES256 oder RS256): `sub` ist die Kundennummer, `aud` der Schlüssel des Beraters, `exp` liegt höchstens 15 Minuten in der Zukunft; wahlweise kommen `iss` und `nbf` dazu.
+2. Das Fenster bekommt ihn mit `data-customer` oder später mit `journaliAdvisor.kunde(nachweis)` und schickt ihn bei jeder Anfrage im Kopf `X-Advisor-Customer` mit.
+3. Der Dienst reicht ihn durch, **journali prüft ihn** mit dem öffentlichen Schlüssel des Shops, der am Berater steht.
+4. Gilt er, liest der Berater mit der **Sicht für Kunden**; sonst antwortet er wie einem Gast. Gespeichert wird der Nachweis nirgends.
+
+Noch nicht gebaut: den Nachweis an eine fremde Quelle weiterzugeben und Kundenpreise beim Shop anzufragen. Wie die Teile zusammenhängen, steht in [Wie Besucher, Shop-Kunden und journali zusammenhängen](/?p=235).
+
+## Betrieb: neben journali, auf Unraid, auf einem anderen Rechner
+
+Der Dienst läuft im eigenen Container, an drei Orten möglich:
+
+- **neben journali** in derselben `compose.yaml`,
+- **auf Unraid** aus demselben Image wie journali (Vorlage `journali-advisor`) – ein Update hält beide auf demselben Stand, siehe [journali auf Unraid](/2026/10/24/journali-auf-unraid/),
+- **auf einem anderen Rechner** mit dem Verzeichnis des Plugins und einem Weg zu journali, etwa über einen Reverse Proxy mit TLS oder ein VPN.
+
+Hinter einem Reverse Proxy gibt `JOURNALI_PROXY=1` die Adresse des Besuchers weiter, sonst zählen alle Besucher als einer. `/health` zeigt, ob journali mit dem Token antwortet.
 
 ## Und jetzt?
 
-journali ist noch in Entwicklung – journali-advisor läuft schon, die nächsten Schritte sind entschieden. Hier entsteht etwas ganz Großes, und ihr könnt dabei sein: [Bleibt dran](/#kontakt).
+journali ist noch in Entwicklung – journali-advisor läuft schon, auch mit eigenen Quellen und angemeldeten Kunden. Hier entsteht etwas ganz Großes, und ihr könnt dabei sein: [Bleibt dran](/#kontakt).

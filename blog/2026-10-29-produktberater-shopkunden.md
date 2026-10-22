@@ -1,15 +1,15 @@
 ---
 title: Journali KI Produktberater – wie Besucher, Shop-Kunden und journali zusammenhängen
-excerpt: Wer fragt, was der Berater sich merkt und was nie ins Journal kommt: anonym, mit einem Gedächtnis im Dienst – und als Nächstes ein signierter Nachweis vom Shop für angemeldete Kunden.
+excerpt: Wer fragt, was der Berater sich merkt und was nie ins Journal kommt: Gäste bleiben anonym, angemeldete Kunden weisen sich mit einem vom Shop signierten Nachweis aus.
 slug: produktberater-besucher-und-kunden
 tags: [KI, MCP, Integration, Architektur, Betrieb]
 categories: [Entwicklung]
 date: 2026-10-29 06:00
 wp: 235
-description: Besucher, Shop-Kunden und der Produktberater: was er sich merkt und was nie ins Journal kommt – anonym, mit einem Gedächtnis im Dienst.
+description: Besucher, Shop-Kunden und der Produktberater: Gäste bleiben anonym, angemeldete Kunden bringen einen signierten Nachweis mit. Nichts kommt ins Journal.
 keyphrase: Shop-Kunden
 ---
-Ein Besucher fragt nach einem Zelt. Ein angemeldeter Kunde fragt nach demselben Zelt und will seinen Preis sehen. **Für den [Journali KI Produktberater](/?p=233) sind das zwei verschiedene Lagen – und in beiden gilt: Kein Passwort geht durch den Chat, und nichts über eure Besucher kommt ins Journal.** Hier steht, wie die Teile zusammenhängen, was heute gebaut ist und was als Konzept entschieden ist.
+Ein Besucher fragt nach einem Zelt. Ein angemeldeter Kunde fragt nach demselben Zelt und will seinen Preis sehen. **Für den [Journali KI Produktberater](/?p=233) sind das zwei verschiedene Lagen – und in beiden gilt: Kein Passwort geht durch den Chat, und nichts über eure Besucher kommt ins Journal.** Hier steht, wie die Teile zusammenhängen, was gebaut ist und was noch folgt.
 
 ## Die Teile im Überblick
 
@@ -17,14 +17,14 @@ Ein Besucher fragt nach einem Zelt. Ein angemeldeter Kunde fragt nach demselben 
 |---|---|
 | Chat-Fenster | zeigt das Gespräch auf eurer Website, ein Script-Tag |
 | Dienst (journali-advisor) | der einzige Teil, den die Website erreicht; spricht nur mit journali |
-| journali | entscheidet, was gezeigt werden darf, und wählt aus |
-| Shop | meldet seine Kunden an – journali kennt sie nicht und braucht sie nicht zu kennen |
+| journali | entscheidet, was gezeigt werden darf, und wählt aus; prüft den Nachweis eines Kunden |
+| Shop | meldet seine Kunden an und stellt ihnen den Nachweis aus – journali kennt die Kunden nicht und braucht sie nicht zu kennen |
 
 Wie Dienst, Fenster und MCP-Server gebaut sind, steht in [journali-advisor – wie der Journali KI Produktberater gebaut ist](/?p=234).
 
-## Heute: jeder Besucher ist anonym – gebaut
+## Gäste: anonym – gebaut
 
-Der Berater zeigt jedem Besucher dasselbe: die Produkte des Publikationsbaums mit den Attributen der Sicht, so weit die Rolle des Beraters sie sieht. **Eine Anmeldung gibt es nicht, weder im Fenster noch am MCP-Endpunkt.** Was der Berater zeigt, ist öffentlich – das bestätigt ihr vor dem Einschalten.
+Ohne Nachweis zeigt der Berater jedem Besucher dasselbe: die Produkte des Publikationsbaums mit den Attributen der Sicht, so weit die Rolle des Beraters sie sieht. **Am MCP-Endpunkt gibt es keine Anmeldung.** Was der Berater zeigt, ist öffentlich – das bestätigt ihr vor dem Einschalten.
 
 Das Fenster speichert nichts: **kein Cookie, kein Speicher im Browser** – nach dem Neuladen beginnt das Gespräch von vorn, auch der Merkzettel ist dann leer. Das Gespräch selbst merkt sich der Dienst (nächster Abschnitt).
 
@@ -42,34 +42,34 @@ Was das bringt: Wechselt ein Besucher vom Zelt zum Schlafsack, übernimmt der Be
 
 **Offen** ist noch, ob die Kennung ein Neuladen der Seite übersteht – das wäre ein Speicher im Browser, und den gibt es heute bewusst nicht.
 
-## Angemeldete Shop-Kunden: ein signierter Nachweis – Konzept
+## Angemeldete Shop-Kunden: ein signierter Nachweis – gebaut
 
-Für Kundenpreise, Kundengruppen oder einen Bestellstatus muss feststehen, wer fragt. Der Kunde ist in eurem Shop angemeldet, nicht in journali. **Entschieden ist der Weg, gebaut ist er noch nicht:**
+Für einen Kundenpreis zählt, wer fragt. Der Kunde ist in eurem Shop angemeldet, nicht in journali. Darum geht der Weg über einen Nachweis:
 
-1. **Der Shop stellt einen Nachweis aus.** Ist ein Kunde angemeldet, signiert der Shop mit seinem privaten Schlüssel ein kurzlebiges JWT (ES256 oder RS256): `iss` der Shop, `aud` der Berater, `sub` die Kundennummer, auf Wunsch `grp` für Kundengruppe oder Preisliste, `exp` höchstens 15 Minuten.
-2. **Das Fenster reicht ihn weiter.** Es bekommt den Nachweis beim Einbinden (`data-customer`) oder später über `journaliAdvisor.kunde(nachweis)`, auch zum Erneuern, und schickt ihn mit jeder Frage mit.
-3. **Der Dienst reicht ihn unverändert durch** – in einem eigenen Kopf `X-Advisor-Customer`, neben seinem Token, nie anstelle davon. Er prüft ihn nicht und merkt ihn sich nicht.
-4. **journali prüft ihn** bei jeder Anfrage: Signatur mit dem öffentlichen Schlüssel oder der JWKS-Adresse des Shops am Berater, dazu Aussteller, Empfänger und Ablauf.
-5. **Gegenüber dem MCP-Server des Shops** reicht journali den Nachweis weiter oder tauscht ihn dort gegen ein Token des Shops (OAuth Token Exchange) – je nachdem, was der Shop anbietet.
+1. **Der Shop stellt einen Nachweis aus.** Ist ein Kunde angemeldet, signiert der Shop mit seinem privaten Schlüssel ein kurzlebiges JWT (ES256 oder RS256): `sub` ist die Kundennummer, `aud` der Schlüssel des Beraters, `exp` höchstens 15 Minuten ab jetzt; wahlweise kommen `iss` (der Aussteller) und `nbf` dazu.
+2. **Das Fenster reicht ihn weiter.** Es bekommt den Nachweis beim Einbinden (`data-customer`) oder später über `journaliAdvisor.kunde(nachweis)`, auch zum Erneuern vor dem Ablauf, und schickt ihn mit jeder Frage im Kopf `X-Advisor-Customer` mit.
+3. **Der Dienst reicht ihn unverändert durch** – neben seinem Token, nie anstelle davon.
+4. **journali prüft ihn** bei jeder Anfrage: die Signatur mit dem öffentlichen Schlüssel des Shops am Berater, dazu Empfänger, Ablauf und, wenn dort einer steht, den Aussteller.
+5. **Gilt er, liest der Berater mit der Sicht für Kunden** – etwa mit einem anderen Preisfeld als die Sicht für Gäste.
 
-**Ein Passwort oder Schlüssel des Kunden geht nie durch den Chat.** Das Fenster sieht nur einen Nachweis, der nach wenigen Minuten abläuft und nur für diesen Berater gilt.
+**Ein Passwort oder Schlüssel des Kunden geht nie durch den Chat.** Das Fenster sieht nur einen Nachweis, der nach wenigen Minuten abläuft und nur für diesen Berater gilt. Gespeichert wird er nirgends.
 
 ## Was ohne Nachweis passiert
 
-Fehlt der Nachweis, ist er abgelaufen oder stimmt die Signatur nicht, ist der Besucher **anonym** – mit allem, was ein Berater heute schon zeigt:
+Fehlt der Nachweis, ist er abgelaufen, gefälscht oder für einen anderen Berater ausgestellt, antwortet der Berater wie einem Gast – mit allem, was er für Gäste zeigt: Treffer, Rückfragen, Vergleich und Unterlagen.
 
-- Treffer, Rückfragen, Vergleich und Unterlagen wie bisher,
-- kommen Preise aus dem Shop, die **Preise für Anonyme**, also Listenpreise,
-- **keine kundenspezifischen Werkzeuge**: journali bietet sie der KI gar nicht erst an.
+## Was noch folgt
 
-Mit gültigem Nachweis fragt journali die Preise des Kunden beim Shop an – für die Kandidaten der Auswahl in einem Aufruf – und **filtert und ordnet danach**. Ein Preisfilter wirkt so auch auf Preise, die nicht im PIM stehen. Auch das ist entschieden und kommt mit dem ersten konkreten Shop.
+Gebaut ist die andere Sicht für angemeldete Kunden. **Noch nicht gebaut** ist, dass journali mit dem Nachweis Kundenpreise beim Shop anfragt und danach filtert und ordnet, und dass es den Nachweis an eine fremde Quelle weitergibt. Beides hängt daran, wie ein konkreter Shop seine Kunden anmeldet und seine Preise anbietet.
+
+Fremde Quellen für die KI des Beraters, etwa eine Warenwirtschaft mit MCP-Server, bindet journali schon an: als Zugang, mit angekreuzten Werkzeugen am Berater. Sie liefern heute Angaben für alle Besucher gleich, ohne Kundenbezug.
 
 ## Was nie ins Journal kommt
 
 Im Journal lässt sich nichts löschen. Darum gehört dorthin nur, was Produktdaten und Einrichtung sind – die Definition des Beraters und der Verbrauch der KI. **Nie im Journal stehen:**
 
 - das Gespräch eines Besuchers, seine Vorlieben und was er gesehen oder abgelehnt hat,
-- der Nachweis des Kunden und die Kundennummer – das Protokoll nennt höchstens, dass ein Nachweis galt,
+- der Nachweis des Kunden und die Kundennummer – der Nachweis wird nirgends gespeichert,
 - die Zählung je Besucheradresse,
 - was der Berater aus dem Verkehr der Website lernt: Wörter ohne Treffer, gelesene Tippfehler, Wörter vor dem Öffnen oder Merken eines Produkts. Das zählt er ohne Gespräch und ohne Kennung, wahlweise in einer Datei im Container des Dienstes, und macht daraus Vorschläge, die ein Mensch in journali übernimmt.
 
@@ -79,11 +79,11 @@ Im Journal lässt sich nichts löschen. Darum gehört dorthin nur, was Produktda
 |---|---|
 | was gezeigt werden darf: Baum, Rolle, Sicht, Freigaben, gültige Medien | das Gespräch: Angaben, Vorlieben, Gesehenes, Abgelehntes |
 | Suche, Merkmale, Unterlagen, Vektoren | Rückfragen und Antwort in der Sprache des Besuchers |
-| KI über den Schlüssel des Teams, mit Grenzen | wann KI, wann ein Werkzeug gefragt wird |
-| fremde MCP-Werkzeuge: Zugang, Geheimnis, Freigabeliste, Prüfung des Nachweises | reicht den Nachweis nur durch |
+| KI über den Schlüssel des Teams, mit Grenzen | reicht den Nachweis nur durch |
+| fremde MCP-Werkzeuge: Zugang, Geheimnis, Freigabe; Prüfung des Nachweises | |
 
-Die Aufteilung in der Tabelle ist gebaut: die Auswahl in journali, das Verstehen im Plugin, das Gedächtnis im Dienst. **Nachweis, Kundenpreise und fremde MCP-Quellen kommen zuletzt, mit einem konkreten Shop**, denn sie hängen daran, wie der Shop seine Kunden anmeldet.
+Die Aufteilung ist gebaut: die Auswahl in journali, das Verstehen im Plugin, das Gedächtnis im Dienst, der Nachweis geprüft in journali.
 
 ## Und jetzt?
 
-journali ist noch in Entwicklung – der Journali KI Produktberater läuft schon, für angemeldete Kunden ist der Weg entschieden. Hier entsteht etwas ganz Großes, und ihr könnt dabei sein: [Bleibt dran](/#kontakt).
+journali ist noch in Entwicklung – der Journali KI Produktberater läuft schon, auch für angemeldete Kunden. Hier entsteht etwas ganz Großes, und ihr könnt dabei sein: [Bleibt dran](/#kontakt).

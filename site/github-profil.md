@@ -28,4 +28,4 @@ Alle Beiträge zur Entwicklung: **[journali.de/category/entwicklung](https://jou
 
 ## Stand
 
-journali ist in Entwicklung und noch nicht veröffentlicht. Die Quellen folgen später an dieser Stelle. Bis dahin: **[journali.de](https://journali.de)**
+journali ist eine Testversion und Open Source unter der **GNU Affero General Public License, Version 3 (AGPL-3.0)**. Der Quellcode liegt in **[journalipim/journali](https://github.com/journalipim/journali)**, das Image als `ghcr.io/journalipim/journali`. Vorlagen für Unraid sind bei den Community Applications eingereicht. Mehr: **[journali.de](https://journali.de)**

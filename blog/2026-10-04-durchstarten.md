@@ -19,7 +19,7 @@ docker compose up -d
 
 Das war's. Das Image kommt fertig gebaut, die Datenbank ist **PostgreSQL 18 mit der Erweiterung `vector`** – gleich dabei. Und das Datenbankpasswort? **Das erzeugt der erste Start selbst**, zufällig, und legt es in ein eigenes Volume. Niemand denkt sich eines aus, niemand trägt es irgendwo ein. Datenbank, Tabellen und die Erweiterung legt journali selbst an.
 
-Danach öffnet ihr `http://localhost:8080`.
+Danach öffnet ihr `http://localhost:8080`. Die `compose.yaml` liegt im öffentlichen Repo [journalipim/journali](https://github.com/journalipim/journali); der Quellcode steht unter der AGPL-3.0 ([journali ist Open Source](/2026/10/23/open-source-agpl/)).
 
 ## Ein Code, und ihr seid Administrator
 
@@ -61,7 +61,7 @@ Zurück geht sie in ein leeres System, und der Server baut seine Abbilder daraus
 
 ## Auf Unraid? Auch.
 
-Für Unraid liegen **zwei Vorlagen** im Repo: eine für journali, eine für die Datenbank – PostgreSQL 18 mit der Erweiterung `vector`. Die Verbindung tragt ihr beim ersten Aufruf im Einrichtungsdialog ein.
+Für Unraid liegen **drei Vorlagen** im öffentlichen Repo: eine für journali, eine für die Datenbank – PostgreSQL 18 mit der Erweiterung `vector` – und eine für den Dienst eines Produktberaters. Das Image `ghcr.io/journalipim/journali` ist öffentlich; bei den Community Applications ist journali eingereicht. Die Verbindung tragt ihr beim ersten Aufruf im Einrichtungsdialog ein. Die Schritte stehen in [journali auf Unraid](/2026/10/24/journali-auf-unraid/).
 
 ## Neuer Stand? Wieder zwei Befehle.
 

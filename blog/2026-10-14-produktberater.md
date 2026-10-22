@@ -49,12 +49,25 @@ Jede Antwort setzt sich aus euren Daten zusammen. **Was der Berater sagt, steht 
 
 ## KI, wenn ihr wollt – gekennzeichnet und mit eurem Schlüssel
 
-Schaltet ihr die KI an einem Berater ein, kommt zweierlei dazu:
+Schaltet ihr die KI an einem Berater ein, kommt dreierlei dazu:
 
 - Die KI schreibt **zwei bis vier Sätze zu den ersten Treffern**. Das Fenster kennzeichnet den Text als „Text von einer KI erstellt“.
 - Was die Regeln in einer Eingabe nicht erkannt haben, übersetzt die KI in Filter – nur aus den Attributen und Werten der Sicht, vom Server geprüft. Was nicht passt, fällt weg.
+- Eine Eingabe ohne Bezug zum Sortiment („glück“) beantwortet die KI mit ein, zwei Sätzen, die zu den Bereichen des Sortiments führen.
 
-Die KI ist die eures Teams: **euer Anbieter, euer Schlüssel, euer Verbrauch.** Sie bekommt die nummerierten Treffer mit ihren Werten und keine Werkzeuge. Fehlt der Schlüssel oder ist die Tagesgrenze erreicht, kommt die Antwort ohne diesen Text – die Treffer bleiben.
+Die KI ist die eures Teams: **euer Anbieter, euer Schlüssel, euer Verbrauch.** Sie bekommt die nummerierten Treffer mit ihren Werten; Werkzeuge hat sie nur, wenn ihr selbst Quellen freigebt (übernächster Abschnitt). Fehlt der Schlüssel oder ist die Tagesgrenze erreicht, kommt die Antwort ohne diesen Text – die Treffer bleiben.
+
+## Sie oder du, sachlich oder locker
+
+Am Berater stehen **Anrede** und **Ton**. „Sie“ (Vorgabe) oder „du“ gilt in den festen Sätzen des Beraters, im Eingabefeld des Fensters und in den Texten der KI. Der Ton der KI ist sachlich, freundlich (Vorgabe) oder locker – **die Fakten bleiben dieselben.** So klingt der Berater wie euer Shop.
+
+## Eigene Quellen für die KI
+
+Preise und Verfügbarkeit stehen oft nicht im PIM, sondern in der Warenwirtschaft. Bietet sie einen MCP-Server an, bindet **journali** ihn an: als Zugang der Art MCP-Server mit Adresse und Anmeldung; das **Geheimnis liegt im Tresor** von journali, nie am Dienst auf eurer Website. Am Berater kreuzt ihr an, welche Werkzeuge der KI zur Verfügung stehen. Ruft sie eines, führt journali den Aufruf aus und gibt ihr das Ergebnis – **als Daten, nicht als Anweisung**. Das gilt nur mit KI, und die KI ruft Werkzeuge nur bei einem Teil der KI-Anbieter auf; sonst antwortet der Berater wie ohne Quellen.
+
+## Angemeldete Kunden sehen mehr
+
+Ist ein Kunde im Shop angemeldet, kann der Berater ihm eine andere Sicht zeigen als Gästen – etwa mit einem anderen Preisfeld. journali verwaltet dafür keine Konten: Der Shop stellt einen **kurzlebigen, signierten Nachweis** aus, das Fenster reicht ihn weiter, journali prüft die Signatur mit dem öffentlichen Schlüssel des Shops. Ohne gültigen Nachweis gilt die Sicht für Gäste. Ein Passwort des Kunden geht nie durch den Chat. [Wie das zusammenhängt](/?p=235)
 
 ## Ihr bestimmt, was öffentlich ist
 
@@ -76,7 +89,8 @@ Dieselben Fragen stellen auch fremde KI-Agenten: Der Berater bietet einen **MCP-
 
 - **Eingebunden mit einem Tag:** ein `<script>` auf eurer Seite, schwebend mit Knopf oder in einem Element eurer Seite, auf Deutsch oder Englisch.
 - **Nichts im Browser:** Das Fenster setzt kein Cookie und speichert nichts im Browser. Gespräch und Merkzettel liegen im Arbeitsspeicher der Seite und sind nach dem Neuladen leer.
-- **Preise und Verfügbarkeit** kennt der Berater, soweit sie Attribute der Sicht sind. Ein Verweis vom Treffer in euren Shop ist noch nicht gebaut.
+- **Preise und Verfügbarkeit** kennt der Berater, soweit sie Attribute der Sicht sind oder – mit KI – aus freigegebenen Quellen kommen. Ein Verweis vom Treffer in euren Shop ist noch nicht gebaut.
+- **Betrieb:** Der Dienst läuft in einem eigenen Container – neben journali, auf Unraid oder auf einem anderen Rechner. [So ist er gebaut](/?p=234)
 - **Angelegt** wird ein Berater unter ⇪ Export → Produktberatung. Die Vorschau dort stellt dieselbe Frage wie ein Besucher.
 
 ## Und jetzt?

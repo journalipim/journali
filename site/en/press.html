@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Press – journali</title>
+<link rel="icon" href="https://journali.de/logo-32.png">
+<link rel="canonical" href="https://journali.de/en/press/">
+<link rel="alternate" hreflang="de" href="https://journali.de/presse/">
+<link rel="alternate" hreflang="en" href="https://journali.de/en/press/">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","name":"Press – journali","description":"Facts about journali PIM for editors: short description, facts, topics, images, demo and contact.","url":"https://journali.de/en/press/","inLanguage":"en","publisher":{"@type":"Organization","name":"journali","url":"https://journali.de/"}}
+</script>
+<style>body{font:16px/1.55 system-ui,"Segoe UI",sans-serif;max-width:760px;margin:40px auto;padding:0 20px;color:#1f2328;background:#fff} h1{font-size:28px} h2{font-size:20px;margin-top:28px}
+@media (prefers-color-scheme: dark){body{background:#111418;color:#e6e8eb} a{color:#60a5fa}}</style></head>
+<body>
+<main>
+<h1>Press</h1>
+<p>This page holds the facts editors can use to report on journali: short description, facts, topics, images and contact. The press page in German is <a href="https://journali.de/presse/">here</a>.</p>
+
+<section id="short">
+<p class="kicker">To copy</p>
+<h2>journali in one sentence</h2>
+<p>journali is a PIM system for manufacturers and retailers that shows which product data is still missing for shop, catalogue and Digital Product Passport, allows maintenance as fast as in a spreadsheet and publishes the data checked to every channel.</p>
+
+<h2>journali in three sentences</h2>
+<p>journali is a product information management (PIM) system for manufacturers and retailers who want to maintain their product data in one place. It stores every change as a numbered entry with author and time in a journal and overwrites nothing – earlier states stay available, and versions freeze the documents delivered for a state. Checks for the Digital Product Passport, the Packaging and Packaging Waste Regulation (PPWR) and environmental claims (EmpCo) show gaps before publication; AI can be connected with the team's own key, and without a key the plugins work rule-based.</p>
+</section>
+
+<section id="facts">
+<h2>Facts</h2>
+<ul>
+<li><b>Type:</b> PIM system (product information management) for manufacturers of technical products, retailers with variants, IT departments and agencies.</li>
+<li><b>Name:</b> “journali PIM” is a trademark filed with the German Patent and Trade Mark Office (DPMA).</li>
+<li><b>Status:</b> pre-release · 2026. Until the production release, journali is provided as a test version solely for testing and evaluation; the descriptions on journali.de refer to the production release.</li>
+<li><b>Licence:</b> GNU Affero General Public License, version 3 (AGPL-3.0), an open-source licence. The source code has been public since 22 October 2026. Other licence terms are available on request; the name “journali PIM” is not covered by the licence.</li>
+<li><b>Publication:</b> source code on GitHub (<a href="https://github.com/journalipim/journali">journalipim/journali</a>), image <code>ghcr.io/journalipim/journali</code> public. Templates for Unraid (journali, database, product advisor) have been submitted to the Community Applications; the review is pending.</li>
+<li><b>Operation:</b> Docker package (Docker Compose) with PostgreSQL 18, or an app on Unraid, self-hosted. Media are stored in Postgres, in the file system or in S3-compatible object storage; changing is a copy run.</li>
+<li><b>Technology:</b> server with ASP.NET Core (.NET 8), interface with Vue 3; extensions as plugins that are replaced without a new image.</li>
+</ul>
+
+<h2>Key points</h2>
+<ul>
+<li><b>Journal and traceability:</b> values, names, assignments, releases and the data model are entries in the journal; the state at any point in time can be restored.</li>
+<li><b>Versions:</b> a version is a pointer to the journal state of a product plus the delivered documents – immutable, with a retention period, can be withdrawn but not deleted.</li>
+<li><b>Editing like in a spreadsheet:</b> editing in the cell, keyboard through the list and bulk editing with range selection, fill and paste from the clipboard.</li>
+<li><b>Digital Product Passport (ESPR), PPWR, EmpCo:</b> check rules as plugins map data points, show gaps and check whole subtrees.</li>
+<li><b>ETIM and GS1 GPC:</b> assign classes, map characteristics to own attributes, see completeness per class; output as ETIM BMEcat.</li>
+<li><b>AI with the team's own key:</b> the team chooses the provider and brings its own key, which lies with the server; every suggestion is accepted, changed or discarded and appears with its author in the journal.</li>
+<li><b>Product advisor with MCP:</b> a chat window for the website answers from the products of a publication tree, also without AI; AI agents ask the same questions over MCP. Form of address and tone of the AI texts are adjustable, the AI can use own sources over MCP, and logged-in customers see their own view with a proof signed by the shop. The service runs in its own container, also on Unraid.</li>
+<li><b>journali advisor:</b> an assistant for using journali answers how, where and why questions from the help, names places in the interface as links and gives the reasons from the data of a node.</li>
+</ul>
+</section>
+
+<section id="images">
+<h2>Images</h2>
+<ul>
+<li>Logo as PNG, 615 × 615 pixels: <a href="https://journali.de/logo.png">logo.png</a></li>
+<li>Logo as PNG, 128 × 128 pixels: <a href="https://journali.de/logo-128.png">logo-128.png</a></li>
+<li>Screenshots of the interface on request through the contact below.</li>
+</ul>
+</section>
+
+<section id="try">
+<h2>Try it</h2>
+<ul>
+<li><a href="https://journali.de/journali-testen/">Demo in the browser</a> (in German) – no installation, with two invented sample catalogues; user name and password are on the page. The demo is reset daily.</li>
+<li>Source code: <a href="https://github.com/journalipim/journali">github.com/journalipim/journali</a>, README in English.</li>
+</ul>
+</section>
+
+<section id="contact">
+<h2>Press contact</h2>
+<p>Requests from editors go to the contact details in the <a href="https://journali.de/impressum/">imprint</a>.</p>
+</section>
+</main>
+</body></html>

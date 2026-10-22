@@ -57,11 +57,15 @@ Nicht aus einer Liste für Outdoor-Artikel. Der Berater kennt eure **Attribute m
 
 ## Geprüft, nicht vorgeführt
 
-Jede Zeile der Tabelle ist Teil eines **Prüfstands**: 17 Gespräche mit einem oder mehreren Schritten, je mit der erwarteten Antwort, die meisten mit einem Vorbild, wie ein guter Verkäufer antworten würde. Der Prüfstand spielt sie gegen echte Daten durch und zeigt jede Abweichung. Ein neuer Fall aus der Praxis wird ein neues Gespräch im Prüfstand – so fällt auf, wenn eine spätere Änderung ihn wieder bricht.
+Jede Zeile der Tabelle ist Teil eines **Prüfstands**: 19 Gespräche mit einem oder mehreren Schritten, je mit der erwarteten Antwort, die meisten mit einem Vorbild, wie ein guter Verkäufer antworten würde. Der Prüfstand spielt sie gegen echte Daten durch und zeigt jede Abweichung. Ein neuer Fall aus der Praxis wird ein neues Gespräch im Prüfstand – so fällt auf, wenn eine spätere Änderung ihn wieder bricht.
+
+## Sie oder du
+
+Die Anrede stellt ihr am Berater ein: „Sie“ (Vorgabe) oder „du“ gilt in seinen festen Sätzen und im Eingabefeld des Fensters – auch ohne KI. Eine Rückfrage wie „Meinen Sie Komforttemperatur, Extremtemperatur oder Grenztemperatur?“ steht dann in der du-Form.
 
 ## Und mit KI?
 
-Bindet ihr eine KI über den Schlüssel eures Teams an, formuliert sie die Antwort als Text und versteht auch das, was keine Regel erfasst. Die Auswahl bleibt dieselbe: **journali entscheidet, welche Produkte passen – die KI erklärt sie.** Ohne KI bekommt ihr dieselben Treffer, dieselben Rückfragen, dieselben Unterlagen.
+Bindet ihr eine KI über den Schlüssel eures Teams an, formuliert sie die Antwort als Text und versteht auch das, was keine Regel erfasst. Die Auswahl bleibt dieselbe: **journali entscheidet, welche Produkte passen – die KI erklärt sie.** Ohne KI bekommt ihr dieselben Treffer, dieselben Rückfragen, dieselben Unterlagen. Anrede und Ton der KI-Texte (sachlich, freundlich oder locker) wählt ihr am Berater; die Fakten bleiben dieselben.
 
 ## Und jetzt?
 

@@ -72,6 +72,10 @@ Ihre Regeln stehen einmal im CSS-Plugin und gelten nur unter `.jx` — das Theme
   Theme; relative Adressen (`logo-128.png`, `impressum.html`) gelten ab der Wurzel der Seite — die Dateien bleiben dort liegen.
 - Eine Seite in voller Breite braucht im Theme die Vorlage ohne Seitenleiste.
 
+**Englische Seiten** (22.10.2026): `site/en/index.html` (Hauptseite) und `site/en/press.html` (Presse) sind die englischen Fassungen, sachlich und kürzer
+als die deutschen. Sie tragen `hreflang`-Verweise auf die deutschen Seiten; die Adressen `/en/` und `/en/press/` sind der Vorschlag, in WordPress
+beim Anlegen mit `--slug` zu setzen. Beiträge bleiben deutsch. Ändert sich eine deutsche Seite, gilt dasselbe für die englische.
+
 Weitere Seiten verwenden dieselben Klassen (`hero`, `eyebrow`, `grid`, `card`, `steps`, `two`, `journal`, `kicker`, `cta` …) und brauchen kein
 eigenes CSS.
 
@@ -97,8 +101,8 @@ Tests stehen ohne Zeitraum.
 **Fachartikel (Kategorie Wissen)** enden vor „## Quellen“ mit `*Erstellt mit Unterstützung von KI.*` (05.10.2026) — nach dem Hinweis
 zur Rechtsberatung, wo es einen gibt. In WordPress steht der Satz in kleiner Schrift.
 
-**Nicht öffentlich** (04.10.2026): das Plugin und die Schnittstelle **IXP** — eine interne Schnittstelle. Sie kommt in keinem Beitrag und
-auf keiner Seite vor.
+**Nicht öffentlich** (04.10.2026): ein internes Plugin (`intern: true` im Manifest) und seine Schnittstelle. Sie kommen in keinem Beitrag und
+auf keiner Seite vor, auch nicht im Katalog der Plugins.
 
 **Keine Platzhalter für Screenshots** — die setzt ein, wer den Entwurf in WordPress fertig macht, an der Stelle, die er für richtig hält.
 
