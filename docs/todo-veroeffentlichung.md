@@ -12,15 +12,18 @@ Ein Thema in Arbeit; die nächste Sitzung liest hier weiter, an welchem Rechner 
 - Der Gitea-Bau holt ixp aus `journali-ixp` ins Image (Unraid des Betreibers behält es).
 - Alte Stände nur auf der Gitea: Zweige `archiv/vor-umschreiben` und `archiv/vor-ixp-entfernen` (beide enthalten ixp).
 
-## Offen, in dieser Reihenfolge
+## Veröffentlicht (22.10.2026)
 
-1. **Pakete auf ghcr.io**: ältere Fassungen enthalten ixp. Das ganze Paket löschen — Organisation journalipim → Packages →
-   journali → Zahnrad *Package settings* → *Delete this package*. Der nächste Bau legt es ohne ixp neu an.
-2. **Repo öffentlich stellen** (GitHub → Settings → Change visibility → Public). Nicht rückgängig zu machen.
-3. **Paket öffentlich stellen** (Package settings → Change visibility). Nicht rückgängig zu machen.
-4. Ohne Anmeldung prüfen: `docker pull ghcr.io/journalipim/journali:latest`.
-5. Selbst installieren, dann bei <https://ca.unraid.net/submit> einreichen (Validate, Scan, Submit).
-6. Ob die CA-Moderation eine AGPL-App mit einer Marke und einem Tarifmodell aufnimmt, zeigt die Prüfung.
+- Pakete auf ghcr.io gelöscht und ohne ixp neu gebaut; Repo und Paket sind öffentlich (ohne Anmeldung geprüft: Repo, Vorlagen,
+  Icon, `ca_profile.xml` und das Image antworten mit 200, `plugins/ixp` mit 404, auf GitHub nur der Zweig `master`).
+- Die Organisation musste öffentliche Pakete erst erlauben (Organisation → Settings → Packages → Package creation → Public).
+
+## Offen
+
+1. Selbst installieren: `unraid/journali-db.xml` und `unraid/journali.xml` auf dem Unraid als Vorlage, Datenbank zuerst.
+2. Bei <https://ca.unraid.net/submit> einreichen (Validate, Scan — erwartet sind drei Apps —, Submit); Schritte in
+   `unraid/CA-ANMELDUNG.md`.
+3. Ob die CA-Moderation eine AGPL-App mit einer Marke und einem Tarifmodell aufnimmt, zeigt die Prüfung.
 
 ## Auf anderen Rechnern
 
