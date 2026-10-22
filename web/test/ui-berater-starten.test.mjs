@@ -67,10 +67,18 @@ test('ausserhalb der Demo (18.10.2026): die Berater mit Adresse ihres Dienstes �
       { key: 'ohne', label: 'Ohne Dienst', url: null, errors: [] },
       { key: 'kaputt', label: 'Kaputt', url: 'http://x', errors: ['Publikationsbaum fehlt.'] },
     ] : {}
-    await diensteLaden()
+    const gefragt = []
+    const laeuft = async u => { gefragt.push(u); return { ok: true } }
+    await diensteLaden(laeuft)
     assert.deepEqual(chat.dienste, [{ key: 'shop', label: 'Shop', url: 'http://localhost:8190' }])
+    assert.deepEqual(gefragt, ['http://localhost:8190/api/info'], 'gefragt wird der Dienst selbst')
+    // eine Adresse ohne laufenden Dienst (22.10.2026): kein Knopf — er hätte keine Wirkung
+    await diensteLaden(async () => { throw new TypeError('Failed to fetch') })
+    assert.deepEqual(chat.dienste, [], 'Dienst antwortet nicht')
+    await diensteLaden(async () => ({ ok: false, status: 403 }))
+    assert.deepEqual(chat.dienste, [], 'diese Seite steht nicht unter den Websites des Beraters')
     api.get = async () => { throw new Error('403') }
-    await diensteLaden()
+    await diensteLaden(laeuft)
     assert.deepEqual(chat.dienste, [], 'ohne Leserecht kein Knopf')
   } finally { api.get = get }
 })

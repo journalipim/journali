@@ -9,11 +9,23 @@ import { api } from './api.js'
 /// Die Berater mit Adresse ihres Dienstes: [{ key, label, url }] — ohne Fehler in der Definition
 export const chat = reactive({ dienste: [] })
 
-export async function diensteLaden() {
+/// Nur Dienste, die antworten (22.10.2026): eine Adresse am Berater heisst nicht, dass dort ein Dienst läuft — ohne ihn hatte der Knopf keine
+/// Wirkung. Gefragt wird /api/info des Dienstes; er antwortet dem Browser nur, wenn diese Seite unter den Websites des Beraters steht — genau
+/// dann geht auch das Chat-Fenster.
+export async function erreichbar(url, holen = globalThis.fetch) {
+  try {
+    const r = await holen(url + '/api/info', { signal: AbortSignal.timeout(4000) })
+    return !!r?.ok
+  } catch { return false }
+}
+
+export async function diensteLaden(holen = globalThis.fetch) {
   try {
     const liste = await api.get('/api/advisor')
-    chat.dienste = (Array.isArray(liste) ? liste : []).filter(b => b.url && !(b.errors ?? []).length)
+    const mitAdresse = (Array.isArray(liste) ? liste : []).filter(b => b.url && !(b.errors ?? []).length)
       .map(b => ({ key: b.key, label: b.label || b.key, url: String(b.url).replace(/\/+$/, '') }))
+    const antworten = await Promise.all(mitAdresse.map(b => erreichbar(b.url, holen)))
+    chat.dienste = mitAdresse.filter((_, i) => antworten[i])
   } catch { chat.dienste = [] }
 }
 
